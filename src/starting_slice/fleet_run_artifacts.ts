@@ -138,6 +138,7 @@ export interface PureFleetRunArtifactFacts {
   reasoning_effort: string | null;
   provider_turn_id: string | null;
   provider_cwd: string | null;
+  code_mode_contract: typeof CODEX_STRICT_CURRENT_CONTRACT | null;
   report_recovered: boolean;
   report_receipt_bound: boolean;
   hashes: PureFleetRunArtifactHashes;
@@ -271,11 +272,26 @@ const CodexCaptureReceiptSchema = z
   })
   .strict();
 
+export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v1" as const;
+
+const CurrentCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({ schema_version: true })
+  .extend({
+    schema_version: z.literal(2),
+    code_mode_contract: z.literal(CODEX_STRICT_CURRENT_CONTRACT),
+  })
+  .strict();
+
+const AnyCodexCaptureReceiptSchema = z.union([
+  CodexCaptureReceiptSchema,
+  CurrentCodexCaptureReceiptSchema,
+]);
+
 interface CodexAuthorityFacts {
   sessionId: string;
   actualModel: CertifiedCodexModel;
   turnId: string;
   cwd: string;
+  codeModeContract: typeof CODEX_STRICT_CURRENT_CONTRACT | null;
 }
 
 function finalCodexPublicMessage(rows: unknown[]): string | null {
@@ -365,14 +381,16 @@ function parseCodexCaptureReceipt(
   rolloutText: string,
   sessionCwd: string,
   turnCwd: string,
-): { ok: true; canonicalCwd: string } | { ok: false; reason: string } {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(captureText);
-  } catch {
-    return { ok: false, reason: "Codex capture receipt is not valid JSON" };
-  }
-  const parsed = CodexCaptureReceiptSchema.safeParse(raw);
+):
+  | {
+      ok: true;
+      canonicalCwd: string;
+      codeModeContract: typeof CODEX_STRICT_CURRENT_CONTRACT | null;
+    }
+  | { ok: false; reason: string } {
+  const raw = parseJsonRejectingDuplicateKeys(captureText, "Codex capture receipt");
+  if (!raw.ok) return { ok: false, reason: raw.reason };
+  const parsed = AnyCodexCaptureReceiptSchema.safeParse(raw.value);
   if (!parsed.success) {
     return { ok: false, reason: "Codex capture receipt is not an exact runner-work-player proof" };
   }
@@ -399,7 +417,11 @@ function parseCodexCaptureReceipt(
   if (receipt.copied_rollout_sha256 !== sha256ArtifactBytes(exactUtf8Bytes(rolloutText))) {
     return { ok: false, reason: "Codex capture receipt rollout hash differs from copied bytes" };
   }
-  return { ok: true, canonicalCwd: receipt.canonical_expected_cwd };
+  return {
+    ok: true,
+    canonicalCwd: receipt.canonical_expected_cwd,
+    codeModeContract: receipt.schema_version === 2 ? receipt.code_mode_contract : null,
+  };
 }
 
 function isExactCodexTurnContextReplay(
@@ -473,11 +495,6 @@ function parseCodexAuthority(
   if (!events.ok) return events;
   const rollout = parseJsonLines(rolloutText, "Codex rollout");
   if (!rollout.ok) return rollout;
-  const inspected = inspectCodexPureEvidence(events.rows, rollout.rows, expectedModel) as
-    | { ok: true; threadId: string }
-    | { ok: false; reason: string };
-  if (!inspected.ok)
-    return { ok: false, reason: `Codex provider evidence rejected: ${inspected.reason}` };
   if (finalCodexPublicMessage(events.rows) !== report) {
     return { ok: false, reason: "Codex public final message bytes do not equal the report" };
   }
@@ -500,9 +517,6 @@ function parseCodexAuthority(
   const turn = CodexTurnContextSchema.safeParse((turnRow.row as Record<string, unknown>).payload);
   if (!turn.success)
     return { ok: false, reason: "Codex rollout turn_context is not a strict read-only xhigh turn" };
-  if (session.data.id !== inspected.threadId) {
-    return { ok: false, reason: "Codex rollout session id differs from public thread.started" };
-  }
   if (turn.data.model !== expectedModel) {
     return {
       ok: false,
@@ -522,6 +536,14 @@ function parseCodexAuthority(
     turn.data.cwd,
   );
   if (!capture.ok) return capture;
+  const inspected = inspectCodexPureEvidence(events.rows, rollout.rows, expectedModel, {
+    requireStrictCurrent: capture.codeModeContract === CODEX_STRICT_CURRENT_CONTRACT,
+  }) as { ok: true; threadId: string } | { ok: false; reason: string };
+  if (!inspected.ok)
+    return { ok: false, reason: `Codex provider evidence rejected: ${inspected.reason}` };
+  if (session.data.id !== inspected.threadId) {
+    return { ok: false, reason: "Codex rollout session id differs from public thread.started" };
+  }
   const forbiddenTerminal = rollout.rows
     .map(forbiddenCodexLifecycleType)
     .find((type): type is string => type !== null);
@@ -583,6 +605,7 @@ function parseCodexAuthority(
       actualModel: turn.data.model,
       turnId: turn.data.turn_id,
       cwd: capture.canonicalCwd,
+      codeModeContract: capture.codeModeContract,
     },
   };
 }
@@ -792,6 +815,7 @@ export function validatePureFleetRunArtifactBytes(
         reasoning_effort: "xhigh",
         provider_turn_id: authority.facts.turnId,
         provider_cwd: authority.facts.cwd,
+        code_mode_contract: authority.facts.codeModeContract,
         report_recovered: false,
         report_receipt_bound: reportReceiptBound,
         hashes,
@@ -898,6 +922,7 @@ export function validatePureFleetRunArtifactBytes(
       reasoning_effort: null,
       provider_turn_id: null,
       provider_cwd: null,
+      code_mode_contract: null,
       report_recovered: reportRecovered,
       report_receipt_bound: false,
       hashes,

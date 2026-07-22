@@ -195,8 +195,16 @@ plus an exact result emitter, normally `text(JSON.stringify(result))`.
 `functions.wait` is forbidden: a wrapper that yields or wedges instead of keeping
 the MCP completion and visible output in that single lifecycle remains invalid.
 This live prompt requirement does not retrofit a pragma requirement onto
-historical evidence; retained wrappers remain subject to the same strict parser
-and topology audit. Tool,
+historical evidence. Newly generated capture receipts use strict schema v2 and
+carry the exact `code_mode_contract: "strict-code-mode-v1"` discriminator, bound
+to the copied-rollout SHA-256. Only that authenticated receipt selects the
+current audit: the model-specific notice, every leading yield pragma, and the
+exact `result` declaration identifier and single
+`text(JSON.stringify(result))` emitter are then mandatory. Exact schema
+v1 capture receipts remain readable solely for historical artifacts and retain
+the legacy pragma-free/direct-result/content-block renderer compatibility; a
+provider row cannot opt into or out of strictness. Retained wrappers remain
+subject to the same parser and topology audit. Tool,
 arguments, status, result, order, count, identifiers, and exact visible bytes
 are cross-bound between the public events and private rollout. Any other wrapper
 activity (`ALL_TOOLS`, resources, planning, aliases, extra statements), or bare,
@@ -241,13 +249,17 @@ assistant response, and one terminal `task_complete` in order; any abort/error
 lifecycle history or row after `task_complete` rejects the run. The lifecycle
 shares one turn id, the public thread/session agree, provider is
 `openai`, sandbox is read-only, effort is `xhigh`, and both final-message fields
-equal the original provider report. For a receipt-bound run, Codex attestation
-v4 additionally hashes the original report and binding metadata and requires
+equal the original provider report. For a historical receipt-bound run, Codex
+attestation v4 hashes the original report and binding metadata and requires
 deterministic reproduction of the verified final report; ordinary Codex v3
 attestations remain readable. `turn_context.model` is Codex CLI-recorded selected-model
 provenance bound to the artifact, not a provider-signed snapshot proving which
 remote backend served the turn. The primary envelope's requested model and
 synthesized `modelUsage` are never model authority.
+Current fleet publication records the same exact contract discriminator in
+Codex attestation schema v5. Fresh runs and current resume/certification require
+v5 plus a strict v2 capture; attestation v3 and receipt-binding v4 remain
+historical-readable but cannot be mixed into a new current cohort.
 The receipt is a trusted local runner assertion made while the isolated directory
 still exists. Once cleanup deletes that directory, resume and certification can
 reparse the receipt and reject inconsistent hashes or fields but cannot re-stat
@@ -437,11 +449,13 @@ An adjacent runner-owned attestation binds each live member to its planned
 provider/model, exact singleton model provenance, unique provider session,
 completed clean primary envelope, game session, and artifact hashes. Historical
 Claude members retain v2 compatibility, and ordinary Codex v3 remains readable.
-Codex v4 additionally binds the actual provider, reasoning effort, turn id,
-working directory, public provider events, copied rollout JSONL, cwd capture
-receipt, and deterministic receipt-binding provenance when present. Diagnostic
-resume reparses those retained facts from the bytes, while certification also
-rejects reuse, links, path escape, and any model-recovered member.
+Historical Codex v4 additionally binds deterministic receipt-binding provenance
+when present. Current Codex v5 binds the actual provider, reasoning effort, turn
+id, working directory, public provider events, copied rollout JSONL, cwd capture
+receipt, strict code-mode contract, and receipt-binding provenance. Diagnostic
+resume reparses historical facts from the bytes; current resume and
+certification require v5 and also reject reuse, links, path escape, and any
+model-recovered member.
 
 ### Starting-slice certification
 

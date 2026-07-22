@@ -22,6 +22,10 @@ const V2_TEAM_BLOCK =
 const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
+const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
+const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v1";
+const CODE_MODE_WARNING_PREFIX =
+  "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
 
 function jsonl(rows: unknown[]): string {
   return `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
@@ -83,6 +87,19 @@ function publicEvents(report = REPORT): unknown[] {
       usage: { input_tokens: 10, cached_input_tokens: 2, output_tokens: 3 },
     },
   ];
+}
+
+function strictPublicEvents(report = REPORT): unknown[] {
+  const rows = publicEvents(report);
+  rows.splice(1, 0, {
+    type: "item.completed",
+    item: {
+      id: "code-mode-notice",
+      type: "error",
+      message: `${CODE_MODE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+    },
+  });
+  return rows;
 }
 
 function rollout(report = REPORT): unknown[] {
@@ -259,6 +276,17 @@ function solV2Rollout(report = REPORT): unknown[] {
   return rows;
 }
 
+function strictTerraRollout(report = REPORT): unknown[] {
+  const rows = rollout(report);
+  const wrapper = rows.find(
+    (row) =>
+      (row as { type?: string; payload?: { type?: string } }).type === "response_item" &&
+      (row as { payload?: { type?: string } }).payload?.type === "custom_tool_call",
+  ) as { payload: Record<string, unknown> };
+  wrapper.payload.input = `${CODEX_EXEC_YIELD_PRAGMA}\n${String(wrapper.payload.input)}`;
+  return rows;
+}
+
 function insertCompactedContextReplay(rows: unknown[]): void {
   const replay = structuredClone(rows[7]) as Record<string, unknown>;
   replay.timestamp = "2026-07-19T00:00:00.500Z";
@@ -272,7 +300,7 @@ function insertCompactedContextReplay(rows: unknown[]): void {
   );
 }
 
-function captureReceipt(rows: unknown[]): string {
+function captureReceipt(rows: unknown[], current = false): string {
   const rolloutBody = jsonl(rows);
   const session = rows.find((row) => (row as { type?: string }).type === "session_meta") as {
     payload: { cwd: string };
@@ -282,8 +310,9 @@ function captureReceipt(rows: unknown[]): string {
   };
   const cwd = session.payload.cwd;
   return `${JSON.stringify({
-    schema_version: 1,
+    schema_version: current ? 2 : 1,
     binding: "runner_work_player",
+    ...(current ? { code_mode_contract: STRICT_CODE_MODE_CONTRACT } : {}),
     recorded_session_cwd: cwd,
     recorded_turn_cwd: turn.payload.cwd,
     canonical_expected_cwd: cwd,
@@ -448,12 +477,12 @@ ${JSON.stringify({
 
 describe("Codex certified fleet rollout authority", () => {
   it("binds one public thread to one rollout turn and exact final report", () => {
-    const rows = rollout();
+    const rows = strictTerraRollout();
     expect(
       validateCodexFleetProviderAuthority({
-        events: jsonl(publicEvents()),
+        events: jsonl(strictPublicEvents()),
         rollout: jsonl(rows),
-        capture: captureReceipt(rows),
+        capture: captureReceipt(rows, true),
         model: "gpt-5.6-terra",
         report: REPORT,
       }),
@@ -464,8 +493,119 @@ describe("Codex certified fleet rollout authority", () => {
         actualModel: "gpt-5.6-terra",
         turnId: TURN,
         cwd: "C:\\private\\player",
+        codeModeContract: STRICT_CODE_MODE_CONTRACT,
       },
     });
+  });
+
+  it.each([
+    [
+      "a missing public code-mode notice",
+      (events: unknown[]) => events.splice(1, 1),
+      (_rows: unknown[], _receipt: Record<string, unknown>) => undefined,
+      /exact code-mode prelude/i,
+    ],
+    [
+      "an altered public code-mode notice",
+      (events: unknown[]) => {
+        const item = (events[1] as { item: { message: string } }).item;
+        item.message += " altered";
+      },
+      (_rows: unknown[], _receipt: Record<string, unknown>) => undefined,
+      /exact code-mode prelude|begin with thread/i,
+    ],
+    [
+      "a missing wrapper pragma",
+      (_events: unknown[]) => undefined,
+      (rows: unknown[], _receipt: Record<string, unknown>) => {
+        payload(rows, 10).input = String(payload(rows, 10).input).replace(
+          `${CODEX_EXEC_YIELD_PRAGMA}\n`,
+          "",
+        );
+      },
+      /forbidden wrapper program/i,
+    ],
+    [
+      "an altered wrapper pragma",
+      (_events: unknown[]) => undefined,
+      (rows: unknown[], _receipt: Record<string, unknown>) => {
+        payload(rows, 10).input = String(payload(rows, 10).input).replace("120000", "120001");
+      },
+      /forbidden wrapper program/i,
+    ],
+    [
+      "a direct-result strict wrapper",
+      (_events: unknown[]) => undefined,
+      (rows: unknown[], _receipt: Record<string, unknown>) => {
+        payload(rows, 10).input =
+          `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+          "const result = await tools.mcp__adventureforge__start_overworld({});\ntext(result);\n";
+      },
+      /forbidden wrapper program/i,
+    ],
+    [
+      "a pragma-bearing historical content renderer",
+      (_events: unknown[]) => undefined,
+      (rows: unknown[], _receipt: Record<string, unknown>) => {
+        payload(rows, 10).input =
+          `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+          "const r = await tools.mcp__adventureforge__start_overworld({});\n" +
+          "for (const c of (r?.content ?? [])) {\n" +
+          '  if (c.type === "image") image(c);\n' +
+          '  else if (c.type === "text") text(c.text);\n' +
+          "}\n";
+      },
+      /forbidden wrapper program/i,
+    ],
+    [
+      "a wrong v2 contract marker",
+      (_events: unknown[]) => undefined,
+      (_rows: unknown[], receipt: Record<string, unknown>) => {
+        receipt.code_mode_contract = "legacy";
+      },
+      /exact runner-work-player proof/i,
+    ],
+    [
+      "an extra v2 capture key",
+      (_events: unknown[]) => undefined,
+      (_rows: unknown[], receipt: Record<string, unknown>) => {
+        receipt.extra = true;
+      },
+      /exact runner-work-player proof/i,
+    ],
+  ])("rejects strict v2 with $0", (_label, mutateEvents, mutatePrivate, reason) => {
+    const events = strictPublicEvents();
+    const rows = strictTerraRollout();
+    const receipt = JSON.parse(captureReceipt(rows, true)) as Record<string, unknown>;
+    mutateEvents(events);
+    mutatePrivate(rows, receipt);
+    receipt.copied_rollout_sha256 = createHash("sha256").update(jsonl(rows)).digest("hex");
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(events),
+        rollout: jsonl(rows),
+        capture: `${JSON.stringify(receipt)}\n`,
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({ ok: false, reason: expect.stringMatching(reason) });
+  });
+
+  it("rejects duplicate strict v2 capture markers before schema selection", () => {
+    const rows = strictTerraRollout();
+    const duplicate = captureReceipt(rows, true).replace(
+      '"code_mode_contract":"strict-code-mode-v1"',
+      '"code_mode_contract":"legacy","code_mode_contract":"strict-code-mode-v1"',
+    );
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(strictPublicEvents()),
+        rollout: jsonl(rows),
+        capture: duplicate,
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({ ok: false, reason: expect.stringMatching(/duplicate JSON object key/i) });
   });
 
   it("authenticates the exact Luna v1 topology without trusting a rewritten capture receipt", () => {

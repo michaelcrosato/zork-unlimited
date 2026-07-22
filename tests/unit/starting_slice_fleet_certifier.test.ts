@@ -633,7 +633,7 @@ function sha256Text(text: string): string {
 }
 
 describe("closed fleet filesystem integrity", () => {
-  it("accepts historical v3 and receipt-bound v4 Codex pilots, then rejects lifecycle tamper", () => {
+  it("accepts strict v5 and receipt-bound v5 Codex pilots, then rejects lifecycle tamper", () => {
     const base = mkdtempSync(join(tmpdir(), "af-codex-slice-certifier-"));
     tempDirs.push(base);
     const fleetDir = join(base, "fleet", "codex-pilot");
@@ -705,6 +705,15 @@ describe("closed fleet filesystem integrity", () => {
       };
       const providerEventsBody = `${[
         { type: "thread.started", thread_id: providerSessionId },
+        {
+          type: "item.completed",
+          item: {
+            id: "item_0",
+            type: "error",
+            message:
+              "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.",
+          },
+        },
         { type: "turn.started" },
         {
           type: "item.started",
@@ -801,6 +810,7 @@ describe("closed fleet filesystem integrity", () => {
             call_id: "call-wrapper-1",
             name: "exec",
             input:
+              '// @exec: {"yield_time_ms": 120000}\n' +
               "const result = await tools.mcp__adventureforge__start_overworld();\n" +
               "text(JSON.stringify(result));\n",
             internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
@@ -858,8 +868,9 @@ describe("closed fleet filesystem integrity", () => {
         .join("\n")}\n`;
       const providerCaptureBody = `${JSON.stringify(
         {
-          schema_version: 1,
+          schema_version: 2,
           binding: "runner_work_player",
+          code_mode_contract: "strict-code-mode-v1",
           recorded_session_cwd: providerCwd,
           recorded_turn_cwd: providerCwd,
           canonical_expected_cwd: providerCwd,
@@ -886,8 +897,9 @@ describe("closed fleet filesystem integrity", () => {
         modelUsage: { [model]: {} },
       })}\n`;
       const modelAttestation = {
-        schema_version: 3,
+        schema_version: 5,
         provider: "codex",
+        code_mode_contract: "strict-code-mode-v1",
         run_seed: seed,
         model,
         persona: "default",
@@ -903,6 +915,7 @@ describe("closed fleet filesystem integrity", () => {
         provider_turn_id: providerTurnId,
         provider_cwd: providerCwd,
         report_recovered: false,
+        report_receipt_bound: false,
         receipt_hash: receipt.receiptHash,
         report_sha256: sha256Text(reportBody),
         run_sidecar_sha256: sha256Text(sidecarBody),
@@ -912,6 +925,7 @@ describe("closed fleet filesystem integrity", () => {
         provider_rollout_sha256: sha256Text(providerRolloutBody),
         provider_capture_sha256: sha256Text(providerCaptureBody),
         initial_report_sha256: null,
+        receipt_binding_sha256: null,
         recovery_metadata_sha256: null,
         recovery_envelope_sha256: null,
       };
@@ -994,7 +1008,7 @@ describe("closed fleet filesystem integrity", () => {
       target: "overworld",
       resume_enabled: false,
       evidence_schema_version: 2,
-      model_attestation_schema_version: 3,
+      model_attestation_schema_version: 5,
       build,
     };
     const manifestPath = join(fleetDir, "manifest.jsonl");
@@ -1011,13 +1025,13 @@ describe("closed fleet filesystem integrity", () => {
       summaryPath,
       `${JSON.stringify({ ...summary, receipt_bound_runs: 1 }, null, 2)}\n`,
     );
-    const rejectedV3Binding = validateStartingSlicePilot({
+    const rejectedUnbackedBindingCount = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
       expectedBuild: build,
     });
-    expect(rejectedV3Binding.validity_errors.join("\n")).toMatch(
-      /receipt-bound runs require Codex attestation v4/i,
+    expect(rejectedUnbackedBindingCount.validity_errors.join("\n")).toMatch(
+      /manifest receipt-bound runs 0 != summary 1/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
 
@@ -1103,7 +1117,7 @@ describe("closed fleet filesystem integrity", () => {
       const receiptBound = index === 0;
       const modelAttestation = {
         ...row.model_attestation,
-        schema_version: 4,
+        schema_version: 5,
         report_receipt_bound: receiptBound,
         report_sha256: receiptBound
           ? sha256Text(boundReportBody)
@@ -1139,17 +1153,30 @@ describe("closed fleet filesystem integrity", () => {
     const boundSummary = {
       ...summary,
       receipt_bound_runs: 1,
-      model_attestation_schema_version: 4,
+      model_attestation_schema_version: 5,
     };
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
     writeFileSync(manifestPath, `${boundRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
-    const acceptedBoundV4 = validateStartingSlicePilot({
+    const acceptedBoundV5 = validateStartingSlicePilot({
       root: ROOT,
       fleetDir,
       expectedBuild: build,
     });
-    expect(acceptedBoundV4.validity_errors).toEqual([]);
-    expect(acceptedBoundV4.pilot_passed).toBe(true);
+    expect(acceptedBoundV5.validity_errors).toEqual([]);
+    expect(acceptedBoundV5.pilot_passed).toBe(true);
+    writeFileSync(
+      summaryPath,
+      `${JSON.stringify({ ...boundSummary, model_attestation_schema_version: 4 }, null, 2)}\n`,
+    );
+    const rejectedCurrentAuthority = certifyStartingSliceAuthority({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedCurrentAuthority.validity_errors.join("\n")).toMatch(
+      /current Codex authority certification requires attestation v5/i,
+    );
+    writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
 
     const tamperedRollout = readFileSync(rolloutPath, "utf8")
       .trim()

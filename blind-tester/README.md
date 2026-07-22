@@ -172,8 +172,9 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
   generated artifact and a diagnostic log are copied into the bundle's
   per-seed/per-attempt archive with byte counts and SHA-256 digests.
 - **Runner attestation**: historical Claude members retain the adjacent v2
-  attestation. Ordinary historical Codex members remain readable as v3; current
-  Codex members use v4, binding the exact CLI-recorded selected
+  attestation. Ordinary historical Codex members remain readable as v3, and
+  receipt-bound historical members as v4. Current Codex members use v5, binding
+  the strict code-mode contract plus the exact CLI-recorded selected
   model, provider `openai`, effort `xhigh`, provider session/turn, verified
   isolated working directory, completed one-turn lifecycle, public events,
   original provider report, the single copied rollout, and its strict cwd capture receipt.
@@ -216,7 +217,7 @@ output` lifecycle. For current live runs, every Codex `functions.exec` wrapper
   synthesized usage fields are not authority; missing or ambiguous rollout proof
   fails closed. Certification independently reparses the retained chain and
   rejects recovery, reuse, links, and path escape. For a receipt-bound member,
-  v4 also hashes `.initial-report.txt` and `.receipt-bind.json`, reproduces the
+  v4/v5 also hash `.initial-report.txt` and `.receipt-bind.json`, reproduce the
   one-value edit from raw evidence, and records `report_receipt_bound`; it does not re-stat the
   already-deleted temporary cwd or provide a provider signature.
 - **Output**: reports plus verified `.run.json` evidence sidecars in `reports/`
@@ -235,7 +236,7 @@ output` lifecycle. For current live runs, every Codex `functions.exec` wrapper
   `.repair.meta.json`, and `.repair.json` form a complete, deterministically
   reproducible byte-bound set; rejected originals stay outside feedback
   compiler `*.md` discovery. Deterministic Codex receipt binding is recorded
-  separately in each attempt, manifest row, v4 attestation, and the summary's
+  separately in each attempt, manifest row, current v5 attestation, and the summary's
   `receipt_bound_runs`; it does not change subjective fields and remains
   certification-eligible. Recovery is diagnostic only: subjective fields
   such as confusion, bugs, stuck state, and replay intent were generated after

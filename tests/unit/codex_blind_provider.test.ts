@@ -442,7 +442,7 @@ describe("Codex pure blind provider envelope", () => {
   ])("rejects $label in a private MCP result", ({ result }) => {
     expect(inspectCodexGameplayResultForwarding(forwardingRollout(undefined, result))).toEqual({
       ok: false,
-      reason: expect.stringMatching(/no auditable successful result/i),
+      reason: expect.stringMatching(/no auditable immediate result/i),
     });
   });
 
@@ -470,6 +470,86 @@ describe("Codex pure blind provider envelope", () => {
       "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
       "text(JSON.stringify(result));\n";
     expect(inspectCodexGameplayResultForwarding(historical)).toMatchObject({ ok: true });
+  });
+
+  it("requires every canonical pragma and JSON.stringify emitter in strict-current evidence", () => {
+    const strict = { requireStrictCurrent: true };
+    expect(inspectCodexGameplayResultForwarding(forwardingRollout(), strict)).toMatchObject({
+      ok: true,
+    });
+    expect(
+      inspectCodexGameplayResultForwarding(forwardingRollout(undefined, TOOL_ERROR_RESULT), strict),
+    ).toMatchObject({ ok: true, gameplayCalls: [{ status: "failed" }] });
+
+    const missingPragma = forwardingRollout();
+    rolloutPayload(missingPragma, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "text(JSON.stringify(result));\n";
+    expect(inspectCodexGameplayResultForwarding(missingPragma, strict)).toMatchObject({
+      ok: false,
+    });
+
+    const alteredPragma = forwardingRollout();
+    rolloutPayload(alteredPragma, 0).input = String(rolloutPayload(alteredPragma, 0).input).replace(
+      "120000",
+      "120001",
+    );
+    expect(inspectCodexGameplayResultForwarding(alteredPragma, strict)).toMatchObject({
+      ok: false,
+    });
+
+    for (const extraComment of [
+      `${CODEX_EXEC_YIELD_PRAGMA}\n// extra\n`,
+      `${CODEX_EXEC_YIELD_PRAGMA}\n/* extra */\n`,
+    ]) {
+      const commented = forwardingRollout();
+      rolloutPayload(commented, 0).input = String(rolloutPayload(commented, 0).input).replace(
+        `${CODEX_EXEC_YIELD_PRAGMA}\n`,
+        extraComment,
+      );
+      expect(inspectCodexGameplayResultForwarding(commented, strict)).toMatchObject({ ok: false });
+    }
+
+    const directResult = forwardingRollout();
+    rolloutPayload(directResult, 0).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "const result = await tools.mcp__adventureforge__start_overworld({});\ntext(result);\n";
+    expect(inspectCodexGameplayResultForwarding(directResult)).toMatchObject({ ok: true });
+    expect(inspectCodexGameplayResultForwarding(directResult, strict)).toMatchObject({ ok: false });
+
+    const renamedResult = forwardingRollout();
+    rolloutPayload(renamedResult, 0).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "const r = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "text(JSON.stringify(r));\n";
+    expect(inspectCodexGameplayResultForwarding(renamedResult)).toMatchObject({ ok: true });
+    expect(inspectCodexGameplayResultForwarding(renamedResult, strict)).toMatchObject({
+      ok: false,
+    });
+
+    const contentLoop = forwardingRollout();
+    rolloutPayload(contentLoop, 0).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "const r = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "for (const c of (r?.content ?? [])) {\n" +
+      '  if (c.type === "image") image(c);\n' +
+      '  else if (c.type === "text") text(c.text);\n' +
+      "}\n";
+    rolloutPayload(contentLoop, 2).output = [
+      { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+      { type: "input_text", text: '{"state_hash":"next"}' },
+    ];
+    expect(inspectCodexGameplayResultForwarding(contentLoop)).toMatchObject({ ok: true });
+    expect(inspectCodexGameplayResultForwarding(contentLoop, strict)).toMatchObject({ ok: false });
+
+    const secondMissing = twoPrivateGameplayCalls();
+    rolloutPayload(secondMissing, 3).input = String(rolloutPayload(secondMissing, 3).input).replace(
+      `${CODEX_EXEC_YIELD_PRAGMA}\n`,
+      "",
+    );
+    expect(inspectCodexGameplayResultForwarding(secondMissing, strict)).toMatchObject({
+      ok: false,
+    });
   });
 
   it("rejects a yielded exec before its late MCP completion and native wait", () => {
@@ -573,7 +653,7 @@ describe("Codex pure blind provider envelope", () => {
         content: [{ type: "text", text: '{"state_hash":"next"}' }],
         private_only: "not present in the public result",
       }),
-      reason: /no auditable successful result/i,
+      reason: /no auditable immediate result/i,
     },
     {
       label: "an unpaired gameplay result",
@@ -1554,6 +1634,47 @@ describe("Codex pure blind provider envelope", () => {
     expect(inspectCodexPureEvents(withSparkNotice, model)).toMatchObject({ ok: false });
   });
 
+  it("requires the model-specific exact public prelude in strict-current mode", () => {
+    const rolloutRows = completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2");
+    expect(
+      inspectCodexPureEvidence(singleCodeModeWarningRows(), rolloutRows, "gpt-5.6-sol", {
+        requireStrictCurrent: true,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      buildCodexPureEnvelope({
+        rows: singleCodeModeWarningRows(),
+        rolloutRows,
+        report: "report",
+        model: "gpt-5.6-sol",
+        durationMs: 1,
+        codeModeContract: "strict-code-mode-v1",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      inspectCodexPureEvidence(validRows(), rolloutRows, "gpt-5.6-sol", {
+        requireStrictCurrent: true,
+      }),
+    ).toEqual({ ok: false, reason: expect.stringMatching(/exact code-mode prelude/i) });
+
+    const altered = singleCodeModeWarningRows();
+    altered[1]!.item!.message = `${altered[1]!.item!.message} altered`;
+    expect(
+      inspectCodexPureEvidence(altered, rolloutRows, "gpt-5.6-sol", {
+        requireStrictCurrent: true,
+      }),
+    ).toMatchObject({ ok: false });
+
+    expect(
+      inspectCodexPureEvidence(
+        sparkCodeModeRows(),
+        completeRollout(forwardingRollout(undefined, { content: [] }), "spark_disabled"),
+        SPARK_MODEL,
+        { requireStrictCurrent: true },
+      ),
+    ).toMatchObject({ ok: true });
+  });
+
   it.each([
     {
       label: "AdventureForge resource listing",
@@ -1847,6 +1968,8 @@ describe("Codex pure blind provider envelope", () => {
           "gpt-5.6-sol",
           "--started-at-ms",
           "0",
+          "--code-mode-contract",
+          "strict-code-mode-v1",
         ],
         { cwd: process.cwd(), encoding: "utf8" },
       );

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 617 -->
+<!-- historical_cycle_count: 618 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - audited_codex_code_mode
+
+- Evidence choice: ten Spark 4420-4429 runs published nothing after direct-mode tool drift, while later code-mode cohorts exposed unauthenticated prelude notices, malformed wrappers, and exact MCP tool errors that the successful-result-only audit could not represent.
+- Surface: live Codex runs force `code_mode_only`; capture v2 authenticates the exact model prelude, sole leading 120s pragma, `result` declaration, JSON emitter, and byte-identical success/error lifecycle, while fleet attestation v5 carries the same contract.
+- Counterfactual: capture v1 and attestations v3/v4 remain historical-readable but cannot resume or certify a current authority cohort; altered notices/pragma/identifier/emitter, extra comments or keys, wrong ids/cwd, missing completions, and public/private status or byte mismatches fail closed.
+- Diagnostic evidence: legacy capture-v1 Terra 4578 and Sol 4579 both passed the runtime path at 53/54 decisions, diverted Wolf-Winter, won Gallowmere, ended voluntarily, and rated 4/4; fresh capture-v2 canaries remain a landing gate and those legacy runs are not substituted for them.
+- Measured result: 67 deduplicated completed Spark streams used 283,771,470 input-plus-output tokens; the combined 4500-4509 pilot removes the original preview-option defect in 10/10 and raises strict validity from 1/20 to 3/10, while wrapper generation remains the seven-run residual and the final 100 quota-closed preplay launches are excluded.
+- Feedback/follow-through: strict compile `20260722T175728Z` has five eligible pure exits, all clarity/enjoyment 4/4 and replay-yes; event-choice authority proceeds separately, and Spark resumes only after its provider reset rather than being mistaken for an authentication failure.
+- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; focused passes cover 231 tests plus a 153-test correction pass, and independent adversarial re-review finds no P0-P2; fresh strict canaries and final combined health remain landing gates.
 
 ### Cycle result - wolf_actor_neutral_gate_guidance
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: Terra no longer reported repeated wording and Sol called preparation unusually transparent; all three still cited working-memory density, terminology, or truncation, so this is a partial presentation PASS rather than a solved onboarding claim.
 - Feedback/follow-through: compile `20260721T131104Z` has 947 verified/58 rejected reports, 196 eligible pure exits, and 172 continuing; the regenerated ledger is 946/59. Distinct player-facing paling-rail stages remain the next current-build gameplay debt.
 - Guard: compact v26, route tuple, world hash `9238b5f2…`, RNG, actions, and full/UI surfaces are unchanged; exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests, independent review found no P0-P2, and health passes 403 files/3,091 tests plus UI/all packs.
-
-### Cycle result - conditional_hill_route_tradeoff
-
-- Evidence choice: current-build players could see route costs but not the conditional cattle result before commitment, so this cycle derives one live tradeoff summary from the existing oath, evidence, preparation, allocation, and companion state without changing route math.
-- Surface: full/MCP, compact v26, CLI, and UI now show final time/supply/fatigue, arrival condition, lure DC, initial and descent alarm timing, whole-herd risk, and whether Cade's fodder changes that route; legacy tuple indices remain fixed and older saves append only the new field.
-- Counterfactual: exposed ridge is 30m/1 supply/+25 fatigue/DC10 and reaches alarm 1 on descent, ending a clean lure at alarm 4/two cattle scattered unless fodder caps it at 3; sheltered stockway is 75m/2 supplies/+10/DC12, stays at 0 on arrival, and ends clean at 3 with the herd whole regardless of fodder.
-- Pure evidence: exact clean `d55d7793` passed Terra 4328, Sol 4329, and Luna 4330; all completed Wolf-Winter at decisions 30/32/31, continued, were unstuck/replay-yes, and rated clarity/enjoyment 4/4, 3/4, and 4/5 respectively. A later operator-interrupted duplicate 4328 produced no report and is excluded.
-- Measured result: all three made preparation-coherent route choices; Sol and Luna explicitly chose sheltered because the new summary traded time/supply for rest and a calm herd, while Terra chose exposed backed by fodder and June. This is organic legibility evidence, not a randomized balance or diversity claim.
-- Feedback/follow-through: compile `20260721T120433Z` has 944 verified/58 rejected reports, 193 eligible pure exits, and 169 continuing; dense/repetitive setup remains the fresh cross-cohort presentation debt, followed by the repeated paling-rail action.
-- Guard: exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 402 files/3,080 tests plus UI/all packs, the world hash stays `9238b5f2…`, and independent review found no P0-P2.

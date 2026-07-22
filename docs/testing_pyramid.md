@@ -165,13 +165,16 @@ attestations remain compatible. Codex v3 also binds actual provider, effort,
 turn id, working directory, public events, exactly one copied rollout, and its
 strict canonical-cwd/filesystem-identity capture receipt. The receipt and rollout
 are independently rehashed; `task_complete` must be the last row and abort/error
-lifecycle history is forbidden. Current Codex v4 additionally distinguishes
+lifecycle history is forbidden. Historical Codex v4 additionally distinguishes
 deterministic receipt binding: the provider's original report and strict
 `.receipt-bind.json` metadata are hashed, the final report must reproduce by
 replacing only the existing receipt value from raw server evidence, and the
 unchanged report verifier must pass. This zero-model transformation preserves
 all subjective evidence, so it is certifiable; model-assisted report recovery
-remains forbidden. Codex
+remains forbidden. Codex v5 is the current contract: it additionally
+authenticates strict capture v2, the model-specific code-mode prelude, and every
+canonical pragma/result wrapper. Current resume and certification require v5;
+v3/v4 are historical-readable only. Codex
 `turn_context.model` is a CLI-recorded selected-model value, not a provider-signed
 remote-backend identity. Resume and certification reparse these retained facts.
 The cwd receipt is a trusted capture-time runner assertion: after cleanup they
@@ -199,7 +202,7 @@ before the 100-player spend.
 Certification fixes the count to 100 and is the only authority result. Report
 basenames must carry the cohort's current stamp, preventing historical reports
 from being relabeled as fresh. Receipt-bound Codex members remain eligible only
-when v4 attestation, original provider bytes, binding metadata, raw evidence,
+when current v5 attestation, original provider bytes, binding metadata, raw evidence,
 and the reproduced final report all agree; manifests and summaries count them
 separately from report recovery.
 Malformed evidence exits 2, a threshold miss exits 1, and a pass exits 0. Exact

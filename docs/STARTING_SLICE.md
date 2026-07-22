@@ -865,8 +865,9 @@ its confusion, bug, stuck, and replay-intent fields were generated after the
 primary prose and cannot participate in authoritative certification.
 
 Each live member has an adjacent runner-owned provider-discriminated attestation.
-Historical Claude v2 remains compatible, as does ordinary historical Codex v3.
-Current Codex v4 binds its exact CLI-recorded selected model,
+Historical Claude v2 remains compatible, as do ordinary historical Codex v3 and
+receipt-bound v4. Current Codex v5 binds the strict code-mode contract and its
+exact CLI-recorded selected model,
 provider/session/turn, effort, isolated cwd, completed lifecycle, unique game
 session, and all artifact hashes. It may also declare deterministic
 `report_receipt_bound` provenance: `.initial-report.txt` remains the exact
@@ -874,7 +875,7 @@ provider message, `.receipt-bind.json` hashes the envelope/report/raw evidence
 and one replaced field, and certification must reproduce the final report from
 those bytes. Because this starts no model turn and preserves every subjective
 field and all prose outside the receipt value, it is not report recovery and is
-eligible when every v4 check passes. An exclusive strict capture receipt
+eligible when every v5 check passes. An exclusive strict capture v2 receipt
 binds the copied rollout hash to the exact canonical expected/session/turn cwd and
 native filesystem identity; later validation reparses it and rejects
 abort/error history or any row after terminal `task_complete`.

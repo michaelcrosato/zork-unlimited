@@ -42,7 +42,9 @@ export const PURE_BASELINE_DECISIONS = 40;
 export const PURE_FLEET_EVIDENCE_SCHEMA_VERSION = 2;
 export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
 export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
-export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
+export const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
+export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1";
 export const CERTIFIED_CODEX_MODELS = [
   "gpt-5.6-sol",
   "gpt-5.6-terra",
@@ -470,6 +472,7 @@ const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
   "actual_model",
   "actual_provider",
   "build",
+  "code_mode_contract",
   "game_session_id",
   "initial_report_sha256",
   "model",
@@ -499,9 +502,14 @@ const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
   "target",
 ].sort();
 
-const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS = PURE_FLEET_CODEX_ATTESTATION_KEYS.filter(
-  (key) => key !== "receipt_binding_sha256" && key !== "report_receipt_bound",
+const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_KEYS = PURE_FLEET_CODEX_ATTESTATION_KEYS.filter(
+  (key) => key !== "code_mode_contract",
 );
+
+const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS =
+  HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_KEYS.filter(
+    (key) => key !== "receipt_binding_sha256" && key !== "report_receipt_bound",
+  );
 
 function isFleetModel(model) {
   return model === "haiku" || model === "sonnet" || model === "opus";
@@ -569,12 +577,16 @@ function isExactPureFleetAttestation(attestation) {
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
     keys.length === PURE_FLEET_CODEX_ATTESTATION_KEYS.length &&
     keys.every((key, index) => key === PURE_FLEET_CODEX_ATTESTATION_KEYS[index]);
+  const historicalReceiptBoundCodex =
+    attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    keys.length === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_KEYS[index]);
   const historicalCodex =
     attestation.schema_version === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
     keys.length === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS.length &&
     keys.every((key, index) => key === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS[index]);
   return (
-    (currentCodex || historicalCodex) &&
+    (currentCodex || historicalReceiptBoundCodex || historicalCodex) &&
     attestation.provider === "codex" &&
     isCodexFleetModel(attestation.model) &&
     attestation.actual_provider === "openai" &&
@@ -596,6 +608,7 @@ function isExactPureFleetAttestation(attestation) {
     /^[0-9a-f]{64}$/.test(attestation.provider_capture_sha256) &&
     attestation.recovery_metadata_sha256 === null &&
     attestation.recovery_envelope_sha256 === null &&
+    (currentCodex ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT : true) &&
     (historicalCodex
       ? attestation.initial_report_sha256 === null
       : typeof attestation.report_receipt_bound === "boolean" &&
@@ -705,6 +718,8 @@ function isExactPureFleetRunArtifactFacts(facts) {
     (facts.actual_provider === "anthropic" || facts.actual_provider === "openai") &&
     typeof facts.report_recovered === "boolean" &&
     typeof facts.report_receipt_bound === "boolean" &&
+    (facts.code_mode_contract === null ||
+      facts.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT) &&
     isExactFleetArtifactHashes(facts.hashes)
   );
 }
@@ -857,6 +872,12 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     return "pure fleet attestation provider does not match the planned provider";
   }
   if (
+    expectedProvider === "codex" &&
+    attestation.schema_version !== PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+  ) {
+    return `current Codex resume requires attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`;
+  }
+  if (
     !samePureFleetBuild(attestation.build, expected.build) ||
     !samePureFleetBuild(attestation.build, run?.build)
   ) {
@@ -893,11 +914,19 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
   ) {
     return "pure fleet attestation Codex rollout facts do not match authenticated artifacts";
   }
+  if (
+    attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    (attestation.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+      artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT)
+  ) {
+    return "current Codex attestation requires authenticated strict code-mode evidence";
+  }
   if (attestation.report_recovered !== artifactFacts.report_recovered) {
     return "pure fleet attestation recovery status does not match durable recovery evidence";
   }
   const attestedReceiptBound =
-    attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+    attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION ||
+    attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION
       ? attestation.report_receipt_bound
       : false;
   if (attestedReceiptBound !== artifactFacts.report_receipt_bound) {
@@ -913,7 +942,8 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     attestation.run_evidence_sha256 !== artifactFacts.hashes.run_evidence_sha256 ||
     attestation.primary_envelope_sha256 !== artifactFacts.hashes.primary_envelope_sha256 ||
     attestation.initial_report_sha256 !== artifactFacts.hashes.initial_report_sha256 ||
-    (attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+    (attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION ||
+    attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION
       ? attestation.receipt_binding_sha256 !== artifactFacts.hashes.receipt_binding_sha256
       : artifactFacts.hashes.receipt_binding_sha256 !== null) ||
     attestation.recovery_metadata_sha256 !== artifactFacts.hashes.recovery_metadata_sha256 ||
@@ -956,6 +986,7 @@ function buildPureFleetAttestation(run, expected, artifactFacts) {
           ...common,
           schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
           provider: "codex",
+          code_mode_contract: artifactFacts.code_mode_contract,
           provider_session_id: artifactFacts.provider_session_id,
           actual_provider: artifactFacts.actual_provider,
           reasoning_effort: artifactFacts.reasoning_effort,
@@ -1113,6 +1144,17 @@ export async function verifyReportForResume(
   }
   if (!parsed.ok) {
     return { ...verified, ok: false, stderr: parsed.reason, attestation: null };
+  }
+  if (
+    (expectedPure?.provider ?? "claude") === "codex" &&
+    parsed.attestation.schema_version !== PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+  ) {
+    return {
+      ...verified,
+      ok: false,
+      stderr: `current Codex resume requires attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`,
+      attestation: parsed.attestation,
+    };
   }
   const artifactValidation = await validatePureFleetRunArtifacts(
     reportMdPath,

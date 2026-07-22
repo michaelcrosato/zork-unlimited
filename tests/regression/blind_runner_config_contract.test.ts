@@ -258,6 +258,7 @@ describe("blind runner MCP config contract", () => {
     expect(codexLaunch).toContain('CODEX_CAPTURE="$OUT.codex-capture.json"');
     expect(codexLaunch).toContain('--receipt "$CODEX_CAPTURE_ARG"');
     expect(codexLaunch).toContain('--expected-cwd "$CODEX_PLAYER_CWD_ARG"');
+    expect(codexLaunch).toContain("--code-mode-contract strict-code-mode-v1");
     expect(runner).toContain("codex-rollout.mjs");
     expect(codexLaunch).toContain("--ignore-user-config");
     expect(codexLaunch).toContain("--ignore-rules");
