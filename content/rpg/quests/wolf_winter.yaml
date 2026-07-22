@@ -381,7 +381,7 @@ rooms:
               - { has_flag: strategy_lure_committed }
               - { has_flag: strategy_drive_committed }
               - { has_flag: strategy_fortify_committed }
-        locked_msg: "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed."
+        locked_msg: "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft."
 
   - id: store
     name: "The Store-Shed"

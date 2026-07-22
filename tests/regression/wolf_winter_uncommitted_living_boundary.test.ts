@@ -14,6 +14,9 @@ import { buildRpgRules, enumerateRpgActions, indexRpgPack } from "../../src/rpg/
 import type { GameState } from "../../src/core/state.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 
+const NORTH_PENDING_GUIDANCE =
+  "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft.";
+
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
@@ -215,9 +218,12 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       /released[^]*feed sack[^]*west[^]*take the winter-feed sack[^]*return east[^]*go north[^]*not available before you committed/i,
     );
     expect(committedPickup.available_actions.map((action) => action.id)).toContain("go_west");
-    expect(committedPickup.blocked_exits.find((exit) => exit.direction === "north")?.message).toBe(
-      "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed.",
-    );
+    const pendingNorth = committedPickup.blocked_exits.find(
+      (exit) => exit.direction === "north",
+    )?.message;
+    expect(pendingNorth).toBe(NORTH_PENDING_GUIDANCE);
+    expect(pendingNorth).not.toMatch(/June/i);
+    expect(pendingNorth).toMatch(/pre-cast feed/i);
     expect(compactRpgObservation(committedPickup, [], { includeActions: true }).text).toMatch(
       /go west[^]*take the winter-feed sack[^]*return east[^]*go north/i,
     );
