@@ -12,13 +12,23 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("fictional, deterministic TTRPG player-experience study");
     expect(prompt).toContain("PLAYER-SURFACE CONTRACT");
     expect(prompt).toContain("Use only AdventureForge gameplay actions exposed for this pure run");
+    expect(prompt).toContain("`text(JSON.stringify(result));`");
+    expect(prompt).toContain("A bare `text` forwards\n  nothing");
+    expect(prompt).toContain("only after you have seen that response");
     expect(prompt).toContain("mcp__adventureforge__start_overworld");
-    expect(prompt).toContain("first tool invocation");
-    expect(prompt).toContain("MCP resources are empty");
-    expect(prompt).toContain("`list_mcp_resources`");
-    expect(prompt).toContain("`list_mcp_resource_templates`");
-    expect(prompt).toContain("`read_mcp_resource`");
-    expect(prompt).toContain("only\n  permitted discovery fallback is one documented ToolSearch");
+    expect(prompt).toContain("first and only pre-game tool invocation");
+    expect(prompt).toContain("with no arguments");
+    expect(prompt).toContain(
+      "do not\n  probe, substitute another tool, or attempt to discover one",
+    );
+    for (const forbidden of [
+      "list_mcp_resources",
+      "list_mcp_resource_templates",
+      "read_mcp_resource",
+      "ToolSearch",
+    ]) {
+      expect(prompt).not.toContain(forbidden);
+    }
     expect(prompt).toContain("current in-game goal");
     expect(prompt).toContain("game presents its actual journey choice");
     expect(prompt).toContain("If you choose continue");

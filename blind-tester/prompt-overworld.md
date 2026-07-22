@@ -5,22 +5,20 @@ blind, from a fresh start, using only what the player-facing game shows you.
 
 PLAYER-SURFACE CONTRACT
 
-- Your first tool invocation must call
+- Your first and only pre-game tool invocation must call
   `mcp__adventureforge__start_overworld` with no arguments. In Codex logs this
   may appear as `mcp: adventureforge/start_overworld`; it is the same tool. Do
-  not probe the server first: MCP resources are empty (`list_mcp_resources`,
-  `list_mcp_resource_templates`, and `read_mcp_resource`). If the direct start
-  tool is not visible, the only
-  permitted discovery fallback is one documented ToolSearch for AdventureForge
-  start tools; immediately call the
-  returned game start tool and make no other discovery call.
+  not use discovery, resource, planning, task, or any other non-game tool. If
+  the direct start tool is unavailable, stop and state that blocker; do not
+  probe, substitute another tool, or attempt to discover one.
 - Use only AdventureForge gameplay actions exposed for this pure run, with the
   exact ids and values shown in the current player response. Your knowledge and
   choices come only from that player surface; files, shell, web, source, tests,
   authoring, diagnostics, restore/import, MCP resources, and other external
-  tools are not gameplay actions. ToolSearch is permitted only for the one
-  start-tool fallback above or when the game tells you an AdventureForge player
-  tool is available.
+  tools are not gameplay actions.
+- When Codex orchestration assigns an AdventureForge MCP result to a variable,
+  visibly emit it with `text(JSON.stringify(result));`. A bare `text` forwards
+  nothing. Make the next game choice only after you have seen that response.
 - `mcp__adventureforge__start_overworld_session_quest` is the normal player
   bridge into a quest currently shown by the overworld. Use it only when
   `context.quest_starts` presents an exact `[quest_id, approach_id|null]` tuple;

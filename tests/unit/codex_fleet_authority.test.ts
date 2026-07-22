@@ -25,8 +25,25 @@ function payload(rows: unknown[], index: number): Record<string, unknown> {
 }
 
 function finalOutput(rows: unknown[]): Record<string, unknown> {
-  const content = payload(rows, 3).content as Record<string, unknown>[];
+  const message = rows.find(
+    (row) =>
+      (row as { type?: string; payload?: { type?: string; role?: string } }).type ===
+        "response_item" &&
+      (row as { payload?: { type?: string; role?: string } }).payload?.type === "message" &&
+      (row as { payload?: { role?: string } }).payload?.role === "assistant",
+  ) as { payload: { content: Record<string, unknown>[] } };
+  const content = message.payload.content;
   return content[0]!;
+}
+
+function taskCompletePayload(rows: unknown[]): Record<string, unknown> {
+  return (
+    rows.find(
+      (row) =>
+        (row as { type?: string; payload?: { type?: string } }).type === "event_msg" &&
+        (row as { payload?: { type?: string } }).payload?.type === "task_complete",
+    ) as { payload: Record<string, unknown> }
+  ).payload;
 }
 
 function publicEvents(report = REPORT): unknown[] {
@@ -64,6 +81,16 @@ function publicEvents(report = REPORT): unknown[] {
 function rollout(report = REPORT): unknown[] {
   // Observed Codex CLI ordering: session, task start, turn context, final
   // assistant response, then task_complete as the terminal rollout row.
+  const inputMessage = (role: "developer" | "user", text: string) => ({
+    timestamp: "2026-07-19T00:00:00.0006Z",
+    type: "response_item",
+    payload: {
+      type: "message",
+      role,
+      content: [{ type: "input_text", text }],
+      internal_chat_message_metadata_passthrough: { turn_id: TURN },
+    },
+  });
   return [
     {
       timestamp: "2026-07-19T00:00:00.000Z",
@@ -80,6 +107,15 @@ function rollout(report = REPORT): unknown[] {
       type: "event_msg",
       payload: { type: "task_started", turn_id: TURN },
     },
+    inputMessage("developer", "permissions"),
+    inputMessage("developer", "app context"),
+    inputMessage("developer", "repository instructions"),
+    inputMessage("user", "environment context"),
+    {
+      timestamp: "2026-07-19T00:00:00.0007Z",
+      type: "world_state",
+      payload: { full: true },
+    },
     {
       timestamp: "2026-07-19T00:00:00.001Z",
       type: "turn_context",
@@ -93,12 +129,74 @@ function rollout(report = REPORT): unknown[] {
       },
     },
     {
+      timestamp: "2026-07-19T00:00:00.050Z",
+      type: "response_item",
+      payload: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: "blind prompt" }],
+        internal_chat_message_metadata_passthrough: { turn_id: TURN },
+      },
+    },
+    {
+      timestamp: "2026-07-19T00:00:00.075Z",
+      type: "event_msg",
+      payload: {
+        type: "user_message",
+        message: "blind prompt",
+        images: [],
+        local_images: [],
+        text_elements: [],
+      },
+    },
+    {
+      timestamp: "2026-07-19T00:00:00.100Z",
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call",
+        id: "wrapper-item-1",
+        status: "completed",
+        call_id: "call-wrapper-1",
+        name: "exec",
+        input:
+          "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+          "text(JSON.stringify(result));\n",
+        internal_chat_message_metadata_passthrough: { turn_id: TURN },
+      },
+    },
+    {
+      timestamp: "2026-07-19T00:00:00.200Z",
+      type: "event_msg",
+      payload: {
+        type: "mcp_tool_call_end",
+        call_id: "exec-gameplay-1",
+        invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
+        result: { Ok: { content: [] } },
+      },
+    },
+    {
+      timestamp: "2026-07-19T00:00:00.300Z",
+      type: "response_item",
+      payload: {
+        type: "custom_tool_call_output",
+        call_id: "call-wrapper-1",
+        internal_chat_message_metadata_passthrough: { turn_id: TURN },
+        output: [
+          { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+          { type: "input_text", text: '{"content":[]}' },
+        ],
+      },
+    },
+    {
       timestamp: "2026-07-19T00:00:01.000Z",
       type: "response_item",
       payload: {
         type: "message",
+        id: "final-message",
         role: "assistant",
         content: [{ type: "output_text", text: report }],
+        phase: "final_answer",
+        internal_chat_message_metadata_passthrough: { turn_id: TURN },
       },
     },
     {
@@ -110,14 +208,15 @@ function rollout(report = REPORT): unknown[] {
 }
 
 function insertCompactedContextReplay(rows: unknown[]): void {
-  const replay = structuredClone(rows[2]) as Record<string, unknown>;
+  const replay = structuredClone(rows[7]) as Record<string, unknown>;
   replay.timestamp = "2026-07-19T00:00:00.500Z";
   rows.splice(
-    3,
+    rows.length - 2,
     0,
     { type: "compacted", payload: { window_number: 2 } },
     { type: "world_state", payload: { full: true } },
     replay,
+    { type: "event_msg", payload: { type: "context_compacted" } },
   );
 }
 
@@ -317,6 +416,55 @@ describe("Codex certified fleet rollout authority", () => {
     });
   });
 
+  it.each([
+    [
+      "a private gameplay lifecycle removed behind a freshly rehashed capture",
+      (rows: unknown[]) => rows.splice(10, 3),
+      /user_message before gameplay|no AdventureForge gameplay result/i,
+    ],
+    [
+      "a private gameplay tool substituted behind a valid wrapper",
+      (rows: unknown[]) => {
+        payload(rows, 10).input =
+          "const result = await tools.mcp__adventureforge__get_overworld_session_context({});\n" +
+          "text(JSON.stringify(result));\n";
+        const invocation = payload(rows, 11).invocation as Record<string, unknown>;
+        invocation.tool = "get_overworld_session_context";
+      },
+      /public\/private gameplay lifecycle differs at call 1/i,
+    ],
+    [
+      "ALL_TOOLS wrapper activity",
+      (rows: unknown[]) => {
+        payload(rows, 10).input =
+          "const hits = ALL_TOOLS.filter((tool) => tool.name.includes('adventureforge'));\ntext(hits);\n";
+      },
+      /forbidden wrapper program/i,
+    ],
+    [
+      "an output id detached from its wrapper start",
+      (rows: unknown[]) => (payload(rows, 12).call_id = "other-output"),
+      /missing, mismatched, or truncated output/i,
+    ],
+    [
+      "a non-adjacent duplicate wrapper output",
+      (rows: unknown[]) => rows.splice(rows.length - 1, 0, structuredClone(rows[12])),
+      /orphan or unexpected tool lifecycle/i,
+    ],
+  ])("rejects $0 during fleet artifact authority validation", (_label, mutate, reason) => {
+    const rows = rollout();
+    mutate(rows);
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(rows),
+        capture: captureReceipt(rows),
+        model: "gpt-5.3-codex-spark",
+        report: REPORT,
+      }),
+    ).toEqual({ ok: false, reason: expect.stringMatching(reason) });
+  });
+
   it("authenticates a receipt-bound report against the original rollout message", () => {
     const fixture = receiptBindingFixture();
     const rolloutRows = rollout(fixture.originalReport);
@@ -381,7 +529,7 @@ describe("Codex certified fleet rollout authority", () => {
   it("accepts exact context replays immediately after each compaction", () => {
     const rows = rollout();
     insertCompactedContextReplay(rows);
-    const replay = structuredClone(rows[5]) as Record<string, unknown>;
+    const replay = structuredClone(rows[7]) as Record<string, unknown>;
     replay.timestamp = "2026-07-19T00:00:00.750Z";
     rows.splice(
       rows.length - 1,
@@ -389,6 +537,7 @@ describe("Codex certified fleet rollout authority", () => {
       { type: "compacted", payload: {} },
       { type: "world_state", payload: {} },
       replay,
+      { type: "event_msg", payload: { type: "context_compacted" } },
     );
     expect(
       validateCodexFleetProviderAuthority({
@@ -404,7 +553,7 @@ describe("Codex certified fleet rollout authority", () => {
   it.each([
     [
       "model substitution",
-      (rows: unknown[]) => (payload(rows, 2).model = "gpt-5.6-sol"),
+      (rows: unknown[]) => (payload(rows, 7).model = "gpt-5.6-sol"),
       /differs from planned/i,
     ],
     [
@@ -419,12 +568,12 @@ describe("Codex certified fleet rollout authority", () => {
     ],
     [
       "effort downgrade",
-      (rows: unknown[]) => (payload(rows, 2).effort = "high"),
+      (rows: unknown[]) => (payload(rows, 7).effort = "high"),
       /strict read-only xhigh/i,
     ],
     [
       "sandbox widening",
-      (rows: unknown[]) => (payload(rows, 2).sandbox_policy = { type: "danger-full-access" }),
+      (rows: unknown[]) => (payload(rows, 7).sandbox_policy = { type: "danger-full-access" }),
       /strict read-only xhigh/i,
     ],
     [
@@ -434,32 +583,32 @@ describe("Codex certified fleet rollout authority", () => {
     ],
     [
       "second context without compaction",
-      (rows: unknown[]) => rows.push(structuredClone(rows[2])),
-      /exact compacted pre-completion replay/i,
+      (rows: unknown[]) => rows.splice(rows.length - 1, 0, structuredClone(rows[7])),
+      /invalid compacted context replay|exact compacted pre-completion replay/i,
     ],
     [
       "altered compacted context",
       (rows: unknown[]) => {
         insertCompactedContextReplay(rows);
-        payload(rows, 5).model = "gpt-5.6-sol";
+        payload(rows, 15).model = "gpt-5.6-sol";
       },
-      /exact compacted pre-completion replay/i,
+      /invalid compacted context replay|exact compacted pre-completion replay/i,
     ],
     [
       "altered compacted context envelope",
       (rows: unknown[]) => {
         insertCompactedContextReplay(rows);
-        (rows[5] as Record<string, unknown>).untrusted_marker = true;
+        (rows[15] as Record<string, unknown>).untrusted_marker = true;
       },
-      /exact compacted pre-completion replay/i,
+      /invalid compacted context replay|exact compacted pre-completion replay/i,
     ],
     [
       "post-completion compacted context replay",
       (rows: unknown[]) => {
-        const replay = structuredClone(rows[2]);
+        const replay = structuredClone(rows[7]);
         rows.push({ type: "compacted", payload: {} }, { type: "world_state", payload: {} }, replay);
       },
-      /exact compacted pre-completion replay/i,
+      /task_complete must be the final row|exact compacted pre-completion replay/i,
     ],
     ["missing completion", (rows: unknown[]) => rows.pop(), /exactly one task_started/i],
     [
@@ -469,12 +618,13 @@ describe("Codex certified fleet rollout authority", () => {
     ],
     [
       "lifecycle turn substitution",
-      (rows: unknown[]) => (payload(rows, 4).turn_id = "419f7250-1ed0-7102-be6c-4f1d5513d91e"),
-      /lifecycle turn id differs/i,
+      (rows: unknown[]) =>
+        (taskCompletePayload(rows).turn_id = "419f7250-1ed0-7102-be6c-4f1d5513d91e"),
+      /input and initial context lifecycle is out of order|lifecycle turn id differs/i,
     ],
     [
       "completion report substitution",
-      (rows: unknown[]) => (payload(rows, 4).last_agent_message = "other"),
+      (rows: unknown[]) => (taskCompletePayload(rows).last_agent_message = "other"),
       /task_complete message bytes/i,
     ],
     [
@@ -489,23 +639,23 @@ describe("Codex certified fleet rollout authority", () => {
           type: "event_msg",
           payload: { type: "turn_aborted", turn_id: TURN, reason: "interrupted" },
         }),
-      /forbidden abort\/error lifecycle/i,
+      /forbidden private event|forbidden abort\/error lifecycle/i,
     ],
     [
       "an error terminal row after apparent completion",
       (rows: unknown[]) => rows.push({ type: "error", message: "late stream failure" }),
-      /forbidden abort\/error lifecycle/i,
+      /task_complete must be the final row|forbidden abort\/error lifecycle/i,
     ],
     [
       "nonterminal history after task_complete",
       (rows: unknown[]) => rows.push({ type: "response_item", payload: { type: "reasoning" } }),
-      /task_complete must be the final rollout row/i,
+      /task_complete must be the final row/i,
     ],
     [
       "repository cwd",
       (rows: unknown[]) => {
         payload(rows, 0).cwd = process.cwd();
-        payload(rows, 2).cwd = process.cwd();
+        payload(rows, 7).cwd = process.cwd();
       },
       /isolated player directory/i,
     ],

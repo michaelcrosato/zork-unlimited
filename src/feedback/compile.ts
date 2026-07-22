@@ -22,6 +22,7 @@ import { basename, join, resolve } from "node:path";
 import { isPureExitInterviewV2, type ExitInterview } from "../blind/exit_interview.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { parseBlindRunSidecar } from "../blind/run_evidence.js";
+import { validateAdjacentPureProviderAuthority } from "../blind/pure_artifact_gate.js";
 import { CrawlFindingSchema, type CrawlFinding } from "../crawl/findings.js";
 import { canonicalize, shortHash } from "../core/hash.js";
 import { clusterIssues, type IssueCluster, type IssueRecord } from "./cluster.js";
@@ -180,6 +181,8 @@ function resolveReport(
     if (statSync(sidecarPath).mtimeMs < statSync(filePath).mtimeMs) return { rejected: true };
     const sidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
     if (!sidecar.ok) return { rejected: true };
+    const providerAuthority = validateAdjacentPureProviderAuthority(filePath);
+    if (!providerAuthority.ok) return { rejected: true };
     verification = verifyBlindReportText(text, {
       requiredPlayMode: "pure",
       runSidecar: sidecar.sidecar,

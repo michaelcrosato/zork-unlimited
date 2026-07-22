@@ -79,10 +79,8 @@ lets Codex create its normal PATH aliases without a warning. The home contains
 only a private copy of `auth.json`, is removed on exit, ignores
 user/project config and rules, disables shell/web/apps/plugins/browser/computer,
 the unused shell snapshot, and subagent capabilities, injects only the pure
-AdventureForge MCP server, and
-pair-audits every normal game call. Exact paired/null `-32601` probes against the
-empty AdventureForge resource namespace and one bounded in-memory todo lifecycle
-are tolerated as non-gameplay transport noise; any content, success, other
+AdventureForge MCP server, and pair-audits every normal game call. The audit
+accepts no discovery, resource, planning, task, or other non-game event; another
 server, malformed lifecycle, or unbounded payload rejects the run. Codex never
 uses a report-recovery model turn. On attempt zero only, an otherwise-valid
 report whose sole verifier defect is its existing `journey_exit_receipt` value
@@ -173,6 +171,20 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
   model, provider `openai`, effort `xhigh`, provider session/turn, verified
   isolated working directory, completed one-turn lifecycle, public events,
   original provider report, the single copied rollout, and its strict cwd capture receipt.
+  Before verification or publication, the copied rollout also proves every
+  AdventureForge result reached the player. Each public gameplay call is
+  cross-bound in order to one exact private `exec -> MCP completion -> visible
+output` lifecycle. The wrapper may invoke only that allowlisted gameplay tool
+  with literal arguments and must emit the exact result bytes; extra tools,
+  statements, output, mismatched ids/results, truncation, duplication, and
+  orphan lifecycle rows reject the attempt. Private input, prompt, context,
+  compaction, assistant, and reasoning rows also have a finite authenticated
+  topology; auxiliary inputs or native-tool-shaped rows reject. Before reusing
+  a current-schema report, the feedback compiler and ledger rerun the full
+  provider authority chain, including report/envelope/session/model/capture
+  hashes. Retained seeds `2825`, `2850`, `4352`, `4353`, and `4385` predate the
+  complete authority chain and are diagnostic only; `4351`, `4354`, and `4386`
+  still satisfy it.
   `task_complete` must be the final rollout row and any abort/error lifecycle
   history rejects the run. All artifact bytes are hashed. Requested-model and
   synthesized usage fields are not authority; missing or ambiguous rollout proof
