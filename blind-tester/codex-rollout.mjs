@@ -202,6 +202,8 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v1";
+
 export function captureSingleCodexRollout(codexHome, destinationPath, receiptPath, expectedCwd) {
   const home = resolve(codexHome);
   const homeAuthority = canonicalExistingDirectory(home, "sterile Codex home");
@@ -244,8 +246,9 @@ export function captureSingleCodexRollout(codexHome, destinationPath, receiptPat
   }
 
   const receiptBody = {
-    schema_version: 1,
+    schema_version: 2,
     binding: "runner_work_player",
+    code_mode_contract: STRICT_CODE_MODE_CONTRACT,
     recorded_session_cwd: recordedSessionCwd,
     recorded_turn_cwd: recordedTurnCwd,
     canonical_expected_cwd: expectedAuthority.canonicalPath,

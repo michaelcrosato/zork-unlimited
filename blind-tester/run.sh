@@ -753,6 +753,7 @@ if [[ "$PROVIDER" == "codex" ]]; then
     --ignore-user-config \
     --ignore-rules \
     --strict-config \
+    --enable code_mode_only \
     --disable apps \
     --disable auth_elicitation \
     --disable browser_use \
@@ -800,6 +801,7 @@ if [[ "$PROVIDER" == "codex" ]]; then
     "$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" \
       --events "$CODEX_EVENTS_ARG" --rollout "$CODEX_ROLLOUT_ARG" --report "$CODEX_REPORT_ARG" \
       --model "$MODEL" --started-at-ms "$CODEX_STARTED_AT_MS" \
+      --code-mode-contract strict-code-mode-v1 \
       > "$OUT.json" 2> "$OUT.codex-audit.log"
     CODEX_AUDIT_STATUS=$?
     if [[ "$CODEX_AUDIT_STATUS" -ne 0 ]]; then

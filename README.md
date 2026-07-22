@@ -188,6 +188,11 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   direct-quest/crawler/smoke/mock modes require explicit flags and are not pure
   retention evidence. Milestone fleets run 100 seed/model variants of the same
   neutral player contract; `fleet:mock` is a zero-token structural CI stand-in.
+  Current Codex runs authenticate their exact code-mode notice, leading yield
+  pragma on every gameplay wrapper, and canonical JSON-result emitter through a
+  hash-bound capture receipt v2; fleet attestation v5 carries that same exact
+  contract marker. Legacy capture v1 and attestations v3/v4 remain historical
+  readers only and cannot satisfy a current run or resume.
 - **Tier 3 — feedback compiler** (`src/feedback/`): clusters and ranks Tier-1
   findings and verified Tier-2 reports into `hotspots.{json,md}`
   (`npm run feedback:compile`), writes a separate `retention.json` that admits

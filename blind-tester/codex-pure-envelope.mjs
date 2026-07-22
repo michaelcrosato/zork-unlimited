@@ -31,6 +31,12 @@ const ALLOWED_ROLLOUT_METADATA_ROWS = new Set([
 ]);
 const LUNA_V1_MODEL = "gpt-5.6-luna";
 const SPARK_DISABLED_MODEL = "gpt-5.3-codex-spark";
+const SPARK_CODE_MODE_UNSTABLE_WARNING_PREFIX =
+  "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
+const SPARK_CODE_MODE_METADATA_WARNING =
+  "Code Mode is enabled in configuration, but model `gpt-5.3-codex-spark` does not advertise Code Mode support. This may degrade model performance. Disable `features.code_mode` and `features.code_mode_only`, or select a model whose metadata enables Code Mode.";
+export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v1";
+const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const V2_MULTI_AGENT_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra"]);
 const SUPPORTED_CODEX_MODELS = new Set([
   ...V2_MULTI_AGENT_MODELS,
@@ -135,7 +141,14 @@ function rolloutReject(reason) {
 
 function gameplayResult(payload) {
   const result = payload?.result?.Ok;
-  if (!isRecord(result) || !hasOnlyKeys(result, ["content"]) || !Array.isArray(result.content)) {
+  if (
+    !isRecord(result) ||
+    !(
+      hasOnlyKeys(result, ["content"]) ||
+      (hasOnlyKeys(result, ["content", "isError"]) && result.isError === true)
+    ) ||
+    !Array.isArray(result.content)
+  ) {
     return null;
   }
   if (
@@ -323,7 +336,7 @@ function exactResultEmitter(statement, variableName) {
         ts.isIdentifier(value.arguments[0]) &&
         value.arguments[0].text === variableName
       ) {
-        return "json_result";
+        return "json_stringify";
       }
     }
     return null;
@@ -334,11 +347,38 @@ function exactResultEmitter(statement, variableName) {
   return exactContentLoop(statement, variableName) ? "content_blocks" : null;
 }
 
+function hasOnlyExactLeadingYieldPragma(input) {
+  if (!input.startsWith(`${CODEX_EXEC_YIELD_PRAGMA}\n`)) return false;
+  const scanner = ts.createScanner(
+    ts.ScriptTarget.ESNext,
+    false,
+    ts.LanguageVariant.Standard,
+    input,
+  );
+  const comments = [];
+  for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
+    if (
+      token === ts.SyntaxKind.SingleLineCommentTrivia ||
+      token === ts.SyntaxKind.MultiLineCommentTrivia
+    ) {
+      comments.push({ position: scanner.getTokenPos(), text: scanner.getTokenText() });
+    }
+  }
+  return (
+    comments.length === 1 &&
+    comments[0].position === 0 &&
+    comments[0].text === CODEX_EXEC_YIELD_PRAGMA
+  );
+}
+
 function inspectExactGameplayWrapper(
   input,
   invocation,
-  { allowArgumentlessFreshStart = false } = {},
+  { allowArgumentlessFreshStart = false, requireStrictCurrent = false } = {},
 ) {
+  if (requireStrictCurrent && !hasOnlyExactLeadingYieldPragma(input)) {
+    return null;
+  }
   const source = ts.createSourceFile(
     "blind-wrapper.js",
     input,
@@ -359,6 +399,7 @@ function inspectExactGameplayWrapper(
   const declaration = declarationStatement.declarationList.declarations[0];
   if (
     !ts.isIdentifier(declaration.name) ||
+    (requireStrictCurrent && declaration.name.text !== "result") ||
     !declaration.initializer ||
     !ts.isAwaitExpression(declaration.initializer) ||
     !ts.isCallExpression(declaration.initializer.expression)
@@ -394,7 +435,8 @@ function inspectExactGameplayWrapper(
     return null;
   }
   const emitter = exactResultEmitter(source.statements[1], declaration.name.text);
-  return emitter === null ? null : { tool, arguments: args.value, emitter };
+  if (emitter === null || (requireStrictCurrent && emitter !== "json_stringify")) return null;
+  return { tool, arguments: args.value, emitter };
 }
 
 const WRAPPER_BANNER_RE = /^Script completed\nWall time \d+(?:\.\d+)? seconds\nOutput:\n$/u;
@@ -415,6 +457,7 @@ function exactForwardedOutput(output, result, emitter) {
   if (!WRAPPER_BANNER_RE.test(output[0].text)) return false;
   const visible = output.slice(1).map((block) => block.text);
   if (emitter === "content_blocks") {
+    if (result.isError === true) return false;
     return sameJsonValue(
       visible,
       result.content.filter((block) => block.type === "text").map((block) => block.text),
@@ -427,7 +470,7 @@ function privateGameplayLifecycle(payload, result) {
   return {
     tool: payload.invocation.tool,
     arguments: payload.invocation.arguments,
-    status: "completed",
+    status: result.isError === true ? "failed" : "completed",
     result: { content: result.content },
     error: null,
   };
@@ -849,7 +892,7 @@ function inspectCodexRolloutStructure(rows, expectedModel) {
  * the two call-id namespaces differ, so adjacency is the binding. This audit
  * deliberately never include game-response bytes in a rejection reason.
  */
-export function inspectCodexGameplayResultForwarding(rows) {
+export function inspectCodexGameplayResultForwarding(rows, { requireStrictCurrent = false } = {}) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return rolloutReject("rollout is empty");
   }
@@ -922,13 +965,14 @@ export function inspectCodexGameplayResultForwarding(rows) {
     gameplayCallIds.add(payload.call_id);
     const wrapper = inspectExactGameplayWrapper(rowPayload.input, payload.invocation, {
       allowArgumentlessFreshStart: gameplayCalls.length === 0,
+      requireStrictCurrent,
     });
     if (!wrapper) {
       return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`);
     }
     const result = gameplayResult(payload);
     if (!result) {
-      return rolloutReject(`gameplay call ${ordinal} has no auditable successful result`);
+      return rolloutReject(`gameplay call ${ordinal} has no auditable immediate result`);
     }
     const forwarded = rows[index + 2];
     if (
@@ -1014,19 +1058,67 @@ function publicGameplayLifecycle(item) {
   };
 }
 
+function validCodeModeWarningRow(row, ordinal) {
+  if (
+    !isRecord(row) ||
+    !hasOnlyKeys(row, ["type", "item"]) ||
+    row.type !== "item.completed" ||
+    !isRecord(row.item) ||
+    !hasOnlyKeys(row.item, ["id", "type", "message"]) ||
+    !validItemId(row.item.id) ||
+    row.item.type !== "error" ||
+    typeof row.item.message !== "string"
+  ) {
+    return false;
+  }
+  if (ordinal === 0) {
+    if (!row.item.message.startsWith(SPARK_CODE_MODE_UNSTABLE_WARNING_PREFIX)) return false;
+    const configPath = row.item.message.slice(SPARK_CODE_MODE_UNSTABLE_WARNING_PREFIX.length);
+    return (
+      configPath.length > 0 &&
+      configPath.length <= 4096 &&
+      !/[\r\n]/u.test(configPath) &&
+      /^(?:[A-Za-z]:[\\/]|[\\/])(?:(?!\.{1,2}[\\/])[^\\/\r\n]+[\\/])*\.tmp[\\/]blind-codex-home[\\/]tmp\.[A-Za-z0-9]{10}[\\/]config\.toml\.$/u.test(
+        configPath,
+      )
+    );
+  }
+  return ordinal === 1 && row.item.message === SPARK_CODE_MODE_METADATA_WARNING;
+}
+
+function codeModePrelude(rows, expectedModel) {
+  if (!SUPPORTED_CODEX_MODELS.has(expectedModel) || !validCodeModeWarningRow(rows[1], 0)) {
+    return [];
+  }
+  if (expectedModel !== SPARK_DISABLED_MODEL) return [rows[1]];
+  if (!validCodeModeWarningRow(rows[2], 1) || rows[1].item.id === rows[2].item.id) {
+    return [];
+  }
+  return [rows[1], rows[2]];
+}
+
 /**
  * Authenticate the useful subset of `codex exec --json` and fail closed on any
  * tool surface outside the runner-owned AdventureForge MCP server.
  */
-export function inspectCodexPureEvents(rows) {
+export function inspectCodexPureEvents(
+  rows,
+  expectedModel = undefined,
+  { requireStrictCurrent = false } = {},
+) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return reject("Codex event stream is empty");
   }
 
-  if (rows[0]?.type !== "thread.started" || rows[1]?.type !== "turn.started") {
+  const allowedCodeModePrelude = codeModePrelude(rows, expectedModel);
+  const expectedPreludeLength = expectedModel === SPARK_DISABLED_MODEL ? 2 : 1;
+  if (requireStrictCurrent && allowedCodeModePrelude.length !== expectedPreludeLength) {
+    return reject("Codex strict-current run is missing its exact code-mode prelude");
+  }
+  const turnStartedIndex = 1 + allowedCodeModePrelude.length;
+  if (rows[0]?.type !== "thread.started" || rows[turnStartedIndex]?.type !== "turn.started") {
     return reject("Codex pure run must begin with thread.started then turn.started");
   }
-
   const threadRows = [];
   const turnStartedRows = [];
   const turnCompletedRows = [];
@@ -1037,13 +1129,16 @@ export function inspectCodexPureEvents(rows) {
   const completedGameplayCalls = [];
   const mcpCallIds = new Set();
 
-  for (const row of rows) {
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
     if (row === null || typeof row !== "object" || Array.isArray(row)) {
       return reject("Codex event stream contains a non-object row");
     }
     if (!ALLOWED_EVENT_TYPES.has(row.type)) {
       return reject(`Codex event stream contains forbidden event type ${String(row.type)}`);
     }
+
+    if (index > 0 && index <= allowedCodeModePrelude.length) continue;
 
     if (row.type === "thread.started") threadRows.push(row);
     if (row.type === "turn.started") turnStartedRows.push(row);
@@ -1163,12 +1258,21 @@ export function inspectCodexPureEvents(rows) {
 }
 
 /** Cross-bind the public Codex event stream to the private raw wrapper trace. */
-export function inspectCodexPureEvidence(publicRows, rolloutRows, expectedModel = undefined) {
-  const publicEvidence = inspectCodexPureEvents(publicRows);
+export function inspectCodexPureEvidence(
+  publicRows,
+  rolloutRows,
+  expectedModel = undefined,
+  { requireStrictCurrent = false } = {},
+) {
+  const publicEvidence = inspectCodexPureEvents(publicRows, expectedModel, {
+    requireStrictCurrent,
+  });
   if (!publicEvidence.ok) return publicEvidence;
   const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel);
   if (!rolloutStructure.ok) return rolloutStructure;
-  const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows);
+  const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows, {
+    requireStrictCurrent,
+  });
   if (!privateEvidence.ok) return privateEvidence;
   if (publicEvidence.gameplayCalls.length !== privateEvidence.gameplayCalls.length) {
     return reject("Codex public/private gameplay lifecycle count differs");
@@ -1181,7 +1285,14 @@ export function inspectCodexPureEvidence(publicRows, rolloutRows, expectedModel 
   return publicEvidence;
 }
 
-export function buildCodexPureEnvelope({ rows, rolloutRows, report, model, durationMs }) {
+export function buildCodexPureEnvelope({
+  rows,
+  rolloutRows,
+  report,
+  model,
+  durationMs,
+  codeModeContract = undefined,
+}) {
   if (typeof report !== "string" || report.trim().length === 0) {
     return reject("Codex pure run produced no final report");
   }
@@ -1191,7 +1302,12 @@ export function buildCodexPureEnvelope({ rows, rolloutRows, report, model, durat
   if (!nonNegativeInteger(durationMs)) {
     return reject("Codex pure run is missing a valid duration");
   }
-  const inspected = inspectCodexPureEvidence(rows, rolloutRows, model);
+  if (codeModeContract !== undefined && codeModeContract !== CODEX_STRICT_CURRENT_CONTRACT) {
+    return reject("Codex pure run has an unsupported code-mode contract");
+  }
+  const inspected = inspectCodexPureEvidence(rows, rolloutRows, model, {
+    requireStrictCurrent: codeModeContract === CODEX_STRICT_CURRENT_CONTRACT,
+  });
   if (!inspected.ok) return inspected;
 
   const usage = {
@@ -1257,9 +1373,17 @@ function main() {
   const reportPath = option(argv, "--report");
   const model = option(argv, "--model");
   const startedAtMs = Number(option(argv, "--started-at-ms"));
-  if (!eventsPath || !rolloutPath || !reportPath || !model || !nonNegativeInteger(startedAtMs)) {
+  const codeModeContract = option(argv, "--code-mode-contract");
+  if (
+    !eventsPath ||
+    !rolloutPath ||
+    !reportPath ||
+    !model ||
+    !nonNegativeInteger(startedAtMs) ||
+    codeModeContract !== CODEX_STRICT_CURRENT_CONTRACT
+  ) {
     console.error(
-      "Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --started-at-ms <n>",
+      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --started-at-ms <n> --code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}`,
     );
     process.exit(2);
   }
@@ -1271,6 +1395,7 @@ function main() {
       report: readFileSync(reportPath, "utf8"),
       model,
       durationMs: Math.max(0, Date.now() - startedAtMs),
+      codeModeContract,
     });
     if (!result.ok) {
       console.error(result.reason);

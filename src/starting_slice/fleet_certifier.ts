@@ -27,6 +27,8 @@ import {
 } from "../feedback/normalize.js";
 import type { CanonicalLocation } from "../feedback/schema.js";
 import {
+  PURE_FLEET_CODE_MODE_CONTRACT,
+  PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
   parsePureFleetAttestation,
   PureFleetAttestationSchema,
   pureFleetAttestationPathFor,
@@ -291,7 +293,12 @@ const FleetSummarySchema = z
     target: z.literal("overworld"),
     resume_enabled: z.boolean(),
     evidence_schema_version: z.literal(2),
-    model_attestation_schema_version: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+    model_attestation_schema_version: z.union([
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+      z.literal(5),
+    ]),
     build: PureRunBuildSchema,
   })
   .strict()
@@ -310,19 +317,22 @@ const FleetSummarySchema = z
     if (
       provider === "codex" &&
       (!summary.model.startsWith("gpt-") ||
-        ![3, 4].includes(summary.model_attestation_schema_version))
+        ![3, 4, 5].includes(summary.model_attestation_schema_version))
     ) {
       context.addIssue({
         code: "custom",
         path: ["model"],
-        message: "Codex certification requires one exact Codex model and attestation v3 or v4",
+        message: "Codex certification requires one exact Codex model and attestation v3, v4, or v5",
       });
     }
-    if ((summary.receipt_bound_runs ?? 0) > 0 && summary.model_attestation_schema_version !== 4) {
+    if (
+      (summary.receipt_bound_runs ?? 0) > 0 &&
+      ![4, 5].includes(summary.model_attestation_schema_version)
+    ) {
       context.addIssue({
         code: "custom",
         path: ["model_attestation_schema_version"],
-        message: "receipt-bound runs require Codex attestation v4",
+        message: "receipt-bound runs require Codex attestation v4 or v5",
       });
     }
   });
@@ -1159,6 +1169,15 @@ function validateAuthenticatedStartingSliceCohort(
     : resolve(root, summary.reportsDir);
   const expectedProvider = summary.provider ?? "claude";
   const errors = wolfStrategyMappingDrift(root);
+  if (
+    options.cohortKind === "authority" &&
+    expectedProvider === "codex" &&
+    summary.model_attestation_schema_version !== PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+  ) {
+    errors.push(
+      `current Codex authority certification requires attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`,
+    );
+  }
   const fleetBasename = basename(fleetDir);
   const labelBoundToDirectory = summary.label === fleetBasename;
   const displayLabel = labelBoundToDirectory ? summary.label : "invalid-fleet-label";
@@ -1353,8 +1372,8 @@ function validateAuthenticatedStartingSliceCohort(
     }
     if (row.report_receipt_bound === true) {
       manifestReceiptBoundRuns += 1;
-      if (summary.model_attestation_schema_version !== 4) {
-        errors.push(`seed ${seed}: receipt-bound row requires summary attestation v4`);
+      if (![4, 5].includes(summary.model_attestation_schema_version)) {
+        errors.push(`seed ${seed}: receipt-bound row requires summary attestation v4 or v5`);
       }
     }
     if (row.attempts !== row.attempt_history.length) {
@@ -1725,6 +1744,12 @@ function validateAuthenticatedStartingSliceCohort(
       continue;
     }
     const attestation = parsedAttestation.attestation;
+    if (
+      summary.model_attestation_schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
+      artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT
+    ) {
+      errors.push(`seed ${seed}: current Codex attestation lacks strict code-mode evidence`);
+    }
     if (attestation.schema_version !== summary.model_attestation_schema_version) {
       errors.push(
         `seed ${seed}: model attestation schema v${attestation.schema_version} differs from summary v${summary.model_attestation_schema_version}`,
@@ -1775,7 +1800,9 @@ function validateAuthenticatedStartingSliceCohort(
       errors.push(`seed ${seed}: model attestation recovery status differs from run artifacts`);
     }
     const attestationReceiptBound =
-      attestation.schema_version === 4 ? attestation.report_receipt_bound : false;
+      attestation.schema_version === 4 || attestation.schema_version === 5
+        ? attestation.report_receipt_bound
+        : false;
     if (attestationReceiptBound !== artifactFacts.report_receipt_bound) {
       errors.push(
         `seed ${seed}: model attestation receipt-binding status differs from run artifacts`,

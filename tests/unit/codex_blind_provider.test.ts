@@ -25,6 +25,15 @@ const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
+const SPARK_MODEL = "gpt-5.3-codex-spark";
+const SPARK_UNSTABLE_WARNING_PREFIX =
+  "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
+const SPARK_METADATA_WARNING =
+  "Code Mode is enabled in configuration, but model `gpt-5.3-codex-spark` does not advertise Code Mode support. This may degrade model performance. Disable `features.code_mode` and `features.code_mode_only`, or select a model whose metadata enables Code Mode.";
+const TOOL_ERROR_RESULT = {
+  content: [{ type: "text", text: '{"ok":false,"error":"move first"}' }],
+  isError: true,
+};
 
 function canonicalGameplayWrapper(call: string): string {
   return `${CODEX_EXEC_YIELD_PRAGMA}\nconst result = await ${call};\ntext(JSON.stringify(result));\n`;
@@ -34,6 +43,7 @@ type TestItem = {
   id: string;
   type: string;
   text?: string;
+  message?: string;
   server?: string;
   tool?: string;
   arguments?: Record<string, unknown>;
@@ -104,6 +114,48 @@ function validRows(): TestRow[] {
   ];
 }
 
+function sparkCodeModeRows(): TestRow[] {
+  const rows = validRows();
+  for (const row of rows) {
+    if (row.item?.id === "item_0") row.item.id = "item_2";
+    else if (row.item?.id === "item_1") row.item.id = "item_3";
+  }
+  rows.splice(
+    1,
+    0,
+    {
+      type: "item.completed",
+      item: {
+        id: "item_0",
+        type: "error",
+        message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+      },
+    },
+    {
+      type: "item.completed",
+      item: { id: "item_1", type: "error", message: SPARK_METADATA_WARNING },
+    },
+  );
+  return rows;
+}
+
+function singleCodeModeWarningRows(): TestRow[] {
+  const rows = validRows();
+  for (const row of rows) {
+    if (row.item?.id === "item_0") row.item.id = "item_1";
+    else if (row.item?.id === "item_1") row.item.id = "item_2";
+  }
+  rows.splice(1, 0, {
+    type: "item.completed",
+    item: {
+      id: "item_0",
+      type: "error",
+      message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+    },
+  });
+  return rows;
+}
+
 function forwardingRollout(
   output: unknown = undefined,
   result: Record<string, unknown> = {
@@ -161,6 +213,7 @@ function twoPrivateGameplayCalls(
   result: Record<string, unknown> = {
     content: [{ type: "text", text: '{"state_hash":"next"}' }],
   },
+  firstResult: Record<string, unknown> = result,
 ): unknown[] {
   const second = forwardingRollout(undefined, result);
   const start = rolloutPayload(second, 0);
@@ -174,7 +227,7 @@ function twoPrivateGameplayCalls(
   const invocation = completion.invocation as Record<string, unknown>;
   invocation.tool = "get_overworld_session_context";
   rolloutPayload(second, 2).call_id = "call-wrapper-2";
-  return [...forwardingRollout(undefined, result), ...second];
+  return [...forwardingRollout(undefined, firstResult), ...second];
 }
 
 function completeRollout(
@@ -329,6 +382,82 @@ describe("Codex pure blind provider envelope", () => {
     expect(inspectCodexGameplayResultForwarding(contentLoop)).toMatchObject({ ok: true });
   });
 
+  it("authenticates an exactly forwarded MCP tool error as failed gameplay", () => {
+    expect(
+      inspectCodexGameplayResultForwarding(forwardingRollout(undefined, TOOL_ERROR_RESULT)),
+    ).toEqual({
+      ok: true,
+      completedGameplayCalls: 1,
+      gameplayCalls: [
+        {
+          tool: "start_overworld",
+          arguments: {},
+          status: "failed",
+          result: { content: TOOL_ERROR_RESULT.content },
+          error: null,
+        },
+      ],
+    });
+
+    const omittedErrorMarker = forwardingRollout(undefined, TOOL_ERROR_RESULT);
+    rolloutPayload(omittedErrorMarker, 2).output = [
+      { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+      { type: "input_text", text: JSON.stringify({ content: TOOL_ERROR_RESULT.content }) },
+    ];
+    expect(inspectCodexGameplayResultForwarding(omittedErrorMarker)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+    });
+
+    const legacyRendererHidingErrorMarker = forwardingRollout(undefined, TOOL_ERROR_RESULT);
+    rolloutPayload(legacyRendererHidingErrorMarker, 0).input =
+      "const r = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "for (const c of (r?.content ?? [])) {\n" +
+      '  if (c.type === "image") image(c);\n' +
+      '  else if (c.type === "text") text(c.text);\n' +
+      "}\n";
+    rolloutPayload(legacyRendererHidingErrorMarker, 2).output = [
+      { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+      { type: "input_text", text: TOOL_ERROR_RESULT.content[0]!.text },
+    ];
+    expect(inspectCodexGameplayResultForwarding(legacyRendererHidingErrorMarker)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+    });
+  });
+
+  it.each([
+    {
+      label: "isError false",
+      result: { content: TOOL_ERROR_RESULT.content, isError: false },
+    },
+    {
+      label: "a non-boolean isError",
+      result: { content: TOOL_ERROR_RESULT.content, isError: "true" },
+    },
+    {
+      label: "an extra private field on a tool error",
+      result: { ...TOOL_ERROR_RESULT, private_only: "hidden" },
+    },
+  ])("rejects $label in a private MCP result", ({ result }) => {
+    expect(inspectCodexGameplayResultForwarding(forwardingRollout(undefined, result))).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/no auditable immediate result/i),
+    });
+  });
+
+  it("still rejects a malformed wrapper around a canonical tool error", () => {
+    const rows = forwardingRollout(undefined, TOOL_ERROR_RESULT);
+    rolloutPayload(rows, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "text(JSON.stringify(result));\n" +
+      'text("extra");\n';
+    expect(inspectCodexGameplayResultForwarding(rows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden wrapper program/i),
+    });
+  });
+
   it("accepts the canonical exec yield pragma without retroactively requiring it", () => {
     const current = forwardingRollout();
     expect(rolloutPayload(current, 0).input).toBe(
@@ -341,6 +470,86 @@ describe("Codex pure blind provider envelope", () => {
       "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
       "text(JSON.stringify(result));\n";
     expect(inspectCodexGameplayResultForwarding(historical)).toMatchObject({ ok: true });
+  });
+
+  it("requires every canonical pragma and JSON.stringify emitter in strict-current evidence", () => {
+    const strict = { requireStrictCurrent: true };
+    expect(inspectCodexGameplayResultForwarding(forwardingRollout(), strict)).toMatchObject({
+      ok: true,
+    });
+    expect(
+      inspectCodexGameplayResultForwarding(forwardingRollout(undefined, TOOL_ERROR_RESULT), strict),
+    ).toMatchObject({ ok: true, gameplayCalls: [{ status: "failed" }] });
+
+    const missingPragma = forwardingRollout();
+    rolloutPayload(missingPragma, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "text(JSON.stringify(result));\n";
+    expect(inspectCodexGameplayResultForwarding(missingPragma, strict)).toMatchObject({
+      ok: false,
+    });
+
+    const alteredPragma = forwardingRollout();
+    rolloutPayload(alteredPragma, 0).input = String(rolloutPayload(alteredPragma, 0).input).replace(
+      "120000",
+      "120001",
+    );
+    expect(inspectCodexGameplayResultForwarding(alteredPragma, strict)).toMatchObject({
+      ok: false,
+    });
+
+    for (const extraComment of [
+      `${CODEX_EXEC_YIELD_PRAGMA}\n// extra\n`,
+      `${CODEX_EXEC_YIELD_PRAGMA}\n/* extra */\n`,
+    ]) {
+      const commented = forwardingRollout();
+      rolloutPayload(commented, 0).input = String(rolloutPayload(commented, 0).input).replace(
+        `${CODEX_EXEC_YIELD_PRAGMA}\n`,
+        extraComment,
+      );
+      expect(inspectCodexGameplayResultForwarding(commented, strict)).toMatchObject({ ok: false });
+    }
+
+    const directResult = forwardingRollout();
+    rolloutPayload(directResult, 0).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "const result = await tools.mcp__adventureforge__start_overworld({});\ntext(result);\n";
+    expect(inspectCodexGameplayResultForwarding(directResult)).toMatchObject({ ok: true });
+    expect(inspectCodexGameplayResultForwarding(directResult, strict)).toMatchObject({ ok: false });
+
+    const renamedResult = forwardingRollout();
+    rolloutPayload(renamedResult, 0).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "const r = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "text(JSON.stringify(r));\n";
+    expect(inspectCodexGameplayResultForwarding(renamedResult)).toMatchObject({ ok: true });
+    expect(inspectCodexGameplayResultForwarding(renamedResult, strict)).toMatchObject({
+      ok: false,
+    });
+
+    const contentLoop = forwardingRollout();
+    rolloutPayload(contentLoop, 0).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "const r = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "for (const c of (r?.content ?? [])) {\n" +
+      '  if (c.type === "image") image(c);\n' +
+      '  else if (c.type === "text") text(c.text);\n' +
+      "}\n";
+    rolloutPayload(contentLoop, 2).output = [
+      { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
+      { type: "input_text", text: '{"state_hash":"next"}' },
+    ];
+    expect(inspectCodexGameplayResultForwarding(contentLoop)).toMatchObject({ ok: true });
+    expect(inspectCodexGameplayResultForwarding(contentLoop, strict)).toMatchObject({ ok: false });
+
+    const secondMissing = twoPrivateGameplayCalls();
+    rolloutPayload(secondMissing, 3).input = String(rolloutPayload(secondMissing, 3).input).replace(
+      `${CODEX_EXEC_YIELD_PRAGMA}\n`,
+      "",
+    );
+    expect(inspectCodexGameplayResultForwarding(secondMissing, strict)).toMatchObject({
+      ok: false,
+    });
   });
 
   it("rejects a yielded exec before its late MCP completion and native wait", () => {
@@ -444,7 +653,7 @@ describe("Codex pure blind provider envelope", () => {
         content: [{ type: "text", text: '{"state_hash":"next"}' }],
         private_only: "not present in the public result",
       }),
-      reason: /no auditable successful result/i,
+      reason: /no auditable immediate result/i,
     },
     {
       label: "an unpaired gameplay result",
@@ -620,7 +829,24 @@ describe("Codex pure blind provider envelope", () => {
     expect(
       inspectCodexPureEvidence(
         failedPublicCall,
+        completeRollout(twoPrivateGameplayCalls({ content: [], isError: true }, { content: [] })),
+      ),
+    ).toMatchObject({ ok: true, completedMcpCalls: 2 });
+
+    expect(
+      inspectCodexPureEvidence(
+        failedPublicCall,
         completeRollout(twoPrivateGameplayCalls({ content: [] })),
+      ),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/differs at call 2/i),
+    });
+
+    expect(
+      inspectCodexPureEvidence(
+        twoPublicGameplayCalls(),
+        completeRollout(twoPrivateGameplayCalls({ content: [], isError: true }, { content: [] })),
       ),
     ).toEqual({
       ok: false,
@@ -1210,6 +1436,245 @@ describe("Codex pure blind provider envelope", () => {
     });
   });
 
+  it("accepts only the exact ordered Spark code-mode compatibility prelude", () => {
+    const publicRows = sparkCodeModeRows();
+    const rolloutRows = completeRollout(
+      forwardingRollout(undefined, { content: [] }),
+      "spark_disabled",
+    );
+    expect(inspectCodexPureEvidence(publicRows, rolloutRows, SPARK_MODEL)).toMatchObject({
+      ok: true,
+      completedMcpCalls: 1,
+    });
+    const alternateIds = sparkCodeModeRows();
+    alternateIds[1]!.item!.id = "compatibility-warning-a";
+    alternateIds[2]!.item!.id = "compatibility-warning-b";
+    expect(inspectCodexPureEvents(alternateIds, SPARK_MODEL)).toMatchObject({ ok: true });
+    expect(
+      buildCodexPureEnvelope({
+        rows: publicRows,
+        rolloutRows,
+        report: "# Playthrough log\n\n# Verdict\n\n```json exit-interview\n{}\n```\n",
+        model: SPARK_MODEL,
+        durationMs: 1234,
+      }),
+    ).toMatchObject({ ok: true, envelope: { requested_model: SPARK_MODEL } });
+
+    const rejected = [
+      {
+        label: "an unspecified model",
+        rows: sparkCodeModeRows(),
+        model: undefined,
+      },
+      {
+        label: "another model",
+        rows: sparkCodeModeRows(),
+        model: "gpt-5.6-sol",
+      },
+      {
+        label: "one warning only",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows.splice(2, 1);
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "reversed warnings",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          [rows[1], rows[2]] = [rows[2]!, rows[1]!];
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a changed metadata warning",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[2]!.item!.message = `${SPARK_METADATA_WARNING} changed`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a changed unstable-warning prefix",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.message = `Changed: ${rows[1]!.item!.message}`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "an unstable-warning path outside the sterile home",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\config.toml.`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "text prefixed to the sterile-home config path",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}ALTERED EXTRA TEXT C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a dot-segment escape from the sterile home",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\..\\config.toml.`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "duplicate warning item ids",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[2]!.item!.id = rows[1]!.item!.id;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "an invalid warning item id",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.id = "";
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "an updated warning lifecycle",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.type = "item.updated";
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "an extra warning field",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          (rows[1]!.item as TestItem & { extra?: boolean }).extra = true;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a warning after turn start",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows.splice(1, 2);
+          rows.splice(2, 0, {
+            type: "item.completed",
+            item: { id: "item_1", type: "error", message: SPARK_METADATA_WARNING },
+          });
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a third warning",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows.splice(3, 0, {
+            type: "item.completed",
+            item: { id: "item_extra", type: "error", message: SPARK_METADATA_WARNING },
+          });
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a reused prelude warning object later in the turn",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows.splice(-1, 0, rows[1]!);
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+    ];
+    for (const fixture of rejected) {
+      expect(inspectCodexPureEvents(fixture.rows, fixture.model), fixture.label).toMatchObject({
+        ok: false,
+      });
+    }
+  });
+
+  it.each([
+    ["gpt-5.6-sol", "sol_v2"],
+    ["gpt-5.6-terra", "terra_v2"],
+    ["gpt-5.6-luna", "luna_v1"],
+  ] as const)("accepts the exact generic code-mode notice for %s", (model, profile) => {
+    const publicRows = singleCodeModeWarningRows();
+    const rolloutRows = completeRollout(forwardingRollout(undefined, { content: [] }), profile);
+    expect(inspectCodexPureEvidence(publicRows, rolloutRows, model)).toMatchObject({
+      ok: true,
+      completedMcpCalls: 1,
+    });
+    expect(inspectCodexPureEvents(publicRows)).toMatchObject({ ok: false });
+    expect(inspectCodexPureEvents(publicRows, SPARK_MODEL)).toMatchObject({ ok: false });
+
+    const withSparkNotice = singleCodeModeWarningRows();
+    withSparkNotice.splice(2, 0, {
+      type: "item.completed",
+      item: { id: "item-extra", type: "error", message: SPARK_METADATA_WARNING },
+    });
+    expect(inspectCodexPureEvents(withSparkNotice, model)).toMatchObject({ ok: false });
+  });
+
+  it("requires the model-specific exact public prelude in strict-current mode", () => {
+    const rolloutRows = completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2");
+    expect(
+      inspectCodexPureEvidence(singleCodeModeWarningRows(), rolloutRows, "gpt-5.6-sol", {
+        requireStrictCurrent: true,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      buildCodexPureEnvelope({
+        rows: singleCodeModeWarningRows(),
+        rolloutRows,
+        report: "report",
+        model: "gpt-5.6-sol",
+        durationMs: 1,
+        codeModeContract: "strict-code-mode-v1",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      inspectCodexPureEvidence(validRows(), rolloutRows, "gpt-5.6-sol", {
+        requireStrictCurrent: true,
+      }),
+    ).toEqual({ ok: false, reason: expect.stringMatching(/exact code-mode prelude/i) });
+
+    const altered = singleCodeModeWarningRows();
+    altered[1]!.item!.message = `${altered[1]!.item!.message} altered`;
+    expect(
+      inspectCodexPureEvidence(altered, rolloutRows, "gpt-5.6-sol", {
+        requireStrictCurrent: true,
+      }),
+    ).toMatchObject({ ok: false });
+
+    expect(
+      inspectCodexPureEvidence(
+        sparkCodeModeRows(),
+        completeRollout(forwardingRollout(undefined, { content: [] }), "spark_disabled"),
+        SPARK_MODEL,
+        { requireStrictCurrent: true },
+      ),
+    ).toMatchObject({ ok: true });
+  });
+
   it.each([
     {
       label: "AdventureForge resource listing",
@@ -1503,6 +1968,8 @@ describe("Codex pure blind provider envelope", () => {
           "gpt-5.6-sol",
           "--started-at-ms",
           "0",
+          "--code-mode-contract",
+          "strict-code-mode-v1",
         ],
         { cwd: process.cwd(), encoding: "utf8" },
       );
