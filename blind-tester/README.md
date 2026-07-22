@@ -174,8 +174,14 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
   Before verification or publication, the copied rollout also proves every
   AdventureForge result reached the player. Each public gameplay call is
   cross-bound in order to one exact private `exec -> MCP completion -> visible
-output` lifecycle. The wrapper may invoke only that allowlisted gameplay tool
-  with literal arguments and must emit the exact result bytes; extra tools,
+output` lifecycle. For current live runs, every Codex `functions.exec` wrapper
+  begins with the exact transport comment
+  `// @exec: {"yield_time_ms": 120000}`; it changes only the code-mode yield
+  boundary and adds no executable statement. The wrapper then invokes only that
+  allowlisted gameplay tool with literal arguments and emits the exact result
+  bytes. `functions.wait` is forbidden, and a yielded or wedged wrapper remains
+  invalid. Historical evidence is not retroactively required to contain the
+  comment and remains subject to the same strict parser and topology audit. Extra tools,
   statements, output, mismatched ids/results, truncation, duplication, and
   orphan lifecycle rows reject the attempt. Private input, prompt, context,
   compaction, assistant, and reasoning rows also have a finite authenticated

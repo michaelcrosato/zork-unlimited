@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 615 -->
+<!-- historical_cycle_count: 616 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - codex_blind_exec_foreground_window
+
+- Evidence choice: strict candidates 4412, 4414, and 4415 crossed the default foreground-yield boundary at 11.364s, 10.591s, and 11.961s; their late MCP completions correctly failed authority, while valid 4413 landed only 0.191s beyond the same race boundary.
+- Surface: every live Codex gameplay wrapper now starts with the exact `// @exec: {"yield_time_ms": 120000}` pragma, followed by the unchanged two executable statements; `functions.wait` is explicitly forbidden and a yielded or wedged wrapper remains invalid.
+- Counterfactual: parser, capture, validator, runner, authentication, game surfaces, 60s MCP timeout, and 1,200s outer run timeout are unchanged; historical pragma-free evidence remains readable, while a realistic yield -> late completion -> reasoning -> wait fixture rejects with the unchanged immediate-completion diagnostic.
+- Pure evidence: exact-clean Sol 4417 and Terra 4418 both publish strict `ok: true`; all 136/136 gameplay wrappers carry the pragma with zero waits, running-cell outputs, incomplete calls, failures, retries, or recovery, and both players complete Wolf-Winter plus Gallowmere before ending voluntarily at 55/51 decisions.
+- Measured result: both canaries continue at the first goal and checkpoint, rate clarity/enjoyment 4/4, remain unstuck/replay-yes, and independently retain opening-choice density as the next design signal; two no-weaken reviews find no P0-P2, while six focused suites pass 161 tests across exactly five documentation/test files.
+- Diagnostic only: Spark 4420-4429 consume 13,841,258 input/117,730 output tokens but publish 0/10 after direct-mode calls hit forbidden servers, resources, or item types; 196 raw gameplay calls remain excluded, and a separate forced-code-mode runner cycle is required before more Spark evidence.
+- Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 408 files/3,204 tests plus integrity, both typechecks, lint, format, validation, and clean diff.
 
 ### Cycle result - compact_player_prose_fidelity
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: organic recognition improved from 0/5 to 1/3 eligible fresh players—4321 collectively chose its objective over “unrelated Albany opportunities,” while 4322/4324 did not identify either shown lead; pursuit and named decline remain 0/3, so actual return-route uptake is still unproven.
 - Feedback/follow-through: compile `20260721T093045Z` remains 938 verified/58 rejected, 187 eligible pure exits, and 164 continuing; two later verified reports are below the next compile threshold, and the regenerated ledger is 939/59. Dense opening copy and the overloaded rail action remain fresh friction.
 - Guard: exact zero-finding crawl, full health, and clean independent re-review gate the landing; none of the evidence above authorizes merging a red or incompletely reviewed tree.
-
-### Cycle result - albany_return_opportunity_leads
-
-- Evidence choice: fresh Market/Greenway policy uptake remained 0/5 because the active north goal eclipsed optional Albany aftermath, so this cycle added one journey-level reminder instead of another mandatory choice or content scene.
-- Surface: unresolved visited-town authored events and already-discovered eligible jobs persist as truthful `here`, `mapped`, or `route_unmapped` Return Opportunities across completion, dawn, active play, roads, restore, full/compact MCP, and all journey UI screens; no rewards, outcomes, hidden choices, blockers, saves, hashes, or actions are exposed.
-- Counterfactual: exact Cade-here/Market-mapped/Greenway-unmapped ordering, unvisited suppression, discovery and chronology gates, departure/arrival persistence, compact bounds, clone/freeze behavior, and continuing the north goal are deterministic; independent review found no P0-P2.
-- Pure evidence: exact-feature Terra seeds 4311, 4312, 4313, 4315, and 4319 all completed Wolf-Winter, continued at the first goal, rated clarity/enjoyment 4/4, and were unstuck/replay-yes; Luna 4314 and the first 4318 launch timed out without verified publication and are excluded.
-- Measured result: deterministic visibility PASSes, but organic discoverability FAILs at 0/5: no verified player named, pursued, or declined a listed Return Opportunity, while the separate Cade dawn dispatch repeatedly drew attention and is not counted as uptake.
-- Feedback/follow-through: compile `20260721T081505Z` has 933 verified/58 rejected, 182 eligible pure exits, and 159 continuing; the ledger is 934/59 with two later reports. Improve the immediate action affordance/prominence next rather than adding content.
-- Guard: exact feature health passes 399 files/3,046 tests plus UI/all packs; final crawl `20260721T071726Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.

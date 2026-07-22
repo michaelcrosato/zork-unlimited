@@ -5,8 +5,10 @@ import { describe, expect, it } from "vitest";
 const ROOT = process.cwd();
 const prompt = readFileSync(join(ROOT, "blind-tester", "prompt-overworld.md"), "utf8");
 const protocol = readFileSync(join(ROOT, "docs", "blind_playtest_protocol.md"), "utf8");
+const readme = readFileSync(join(ROOT, "blind-tester", "README.md"), "utf8");
 const runner = readFileSync(join(ROOT, "blind-tester", "run.sh"), "utf8");
 const mockAgent = readFileSync(join(ROOT, "blind-tester", "mock-agent.mjs"), "utf8");
+const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -27,6 +29,21 @@ function protocolParagraph(marker: string): string {
 }
 
 describe("pure blind prompt + runner contract", () => {
+  it("pins one non-yielding Codex exec lifecycle without weakening historical evidence", () => {
+    const transport = promptBullet(
+      "- For every Codex `functions.exec` AdventureForge gameplay wrapper",
+    );
+    expect(transport).toBe(
+      '- For every Codex `functions.exec` AdventureForge gameplay wrapper, make the first source line exactly `// @exec: {"yield_time_ms": 120000}`. After that comment, use only two executable statements: a `const result = await` assignment whose value is one exact AdventureForge MCP gameplay call, then visibly emit it with `text(JSON.stringify(result));`. A bare `text` forwards nothing. Never call `functions.wait`; the MCP completion and visible output must remain in that single wrapper lifecycle. A truly wedged or yielded wrapper remains an invalid run. Make the next game choice only after you have seen that response.',
+    );
+    for (const contract of [prompt, protocol, readme]) {
+      expect(contract).toContain(CODEX_EXEC_YIELD_PRAGMA);
+      expect(contract).toContain("functions.wait");
+    }
+    expect(protocol).toContain("does not retrofit a pragma requirement onto\nhistorical evidence");
+    expect(readme).toContain("Historical evidence is not retroactively required");
+  });
+
   it("contains transport and game-owned exit instructions without guided coverage", () => {
     expect(prompt).toContain("fictional, deterministic TTRPG player-experience study");
     expect(prompt).toContain("PLAYER-SURFACE CONTRACT");

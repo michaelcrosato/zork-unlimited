@@ -181,9 +181,17 @@ Every AdventureForge call is separately paired by id, tool, arguments, status,
 and result; the first pair must be a successful argument-free `start_overworld`.
 The copied rollout then independently requires one adjacent three-row lifecycle
 for every public gameplay call: an `exec` wrapper, its MCP completion, and the
-player-visible wrapper output. The wrapper is parsed as code and may contain only
-one allowlisted AdventureForge gameplay invocation with literal arguments plus
-an exact result emitter (normally `text(JSON.stringify(result))`). Tool,
+player-visible wrapper output. For current live runs, every Codex `functions.exec`
+gameplay wrapper must begin with the exact transport comment
+`// @exec: {"yield_time_ms": 120000}`. The comment changes only the code-mode yield
+boundary and adds no executable statement. After it, the wrapper still contains
+only one allowlisted AdventureForge gameplay invocation with literal arguments
+plus an exact result emitter, normally `text(JSON.stringify(result))`.
+`functions.wait` is forbidden: a wrapper that yields or wedges instead of keeping
+the MCP completion and visible output in that single lifecycle remains invalid.
+This live prompt requirement does not retrofit a pragma requirement onto
+historical evidence; retained wrappers remain subject to the same strict parser
+and topology audit. Tool,
 arguments, status, result, order, count, identifiers, and exact visible bytes
 are cross-bound between the public events and private rollout. Any other wrapper
 activity (`ALL_TOOLS`, resources, planning, aliases, extra statements), or bare,
