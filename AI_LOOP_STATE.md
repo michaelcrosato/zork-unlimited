@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 616 -->
+<!-- historical_cycle_count: 617 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_actor_neutral_gate_guidance
+
+- Evidence choice: exact-clean Terra 4411 had no June flag or companion, yet the full untruncated Wolf-Winter north block named "June's gate terms" at decisions 13 and 21 while mechanics correctly waited only for pre-cast feed and then the lure's second cast.
+- Surface: the single static block is now a 171-character actor-neutral list of explicitly alternative live steps—hunt-and-hold warning, committed route resources, or the lure's second loft cast—with no predicate, state, mechanic, balance, or action change.
+- Counterfactual: no-June LURE/DRIVE/Cade-FORTIFY/Albany-FORTIFY states name relevant work without inventing June; accepted-June keep-terms remains effect-free and blocked, acknowledging combat opens HUNT, and relay/solo/ignored-choice launches remain June-free and open.
+- Pure evidence: exact-clean Terra 4431 publishes strict `ok: true` across 61/61 pragma-bound calls and 50 decisions, sees the corrected no-June block twice, diverts all three wolves with the herd whole, wins Gallowmere, continues at goal 27/checkpoint 40, and ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes.
+- Diagnostic only: Sol 4414 and Terra 4415 yielded under the retired foreground budget, Luna 4416 timed out, and fresh Luna 4430 invokes unavailable `move_overworld_session` at call 135 after an earlier stream retry; the unchanged immediate-completion audit rejects it, so every route, retention choice, rating, and finding from all four remains excluded.
+- Measured result: two independent exact-diff reviews find no P0-P2 after correcting "first-lure" to the authored "second cast" term; four route-matrix suites pass 15 tests, while valid 4431 independently repeats opening density and June-seat briefing debt for separate cycles.
+- Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full combined health passes 408 files/3,204 tests plus integrity, both typechecks, lint, format, validation, and Wolf hash `999f3882c25ba9777b0597afb6ee1ba70616987a9725ed590639476b1a8b4fa5`.
 
 ### Cycle result - codex_blind_exec_foreground_window
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: all three made preparation-coherent route choices; Sol and Luna explicitly chose sheltered because the new summary traded time/supply for rest and a calm herd, while Terra chose exposed backed by fodder and June. This is organic legibility evidence, not a randomized balance or diversity claim.
 - Feedback/follow-through: compile `20260721T120433Z` has 944 verified/58 rejected reports, 193 eligible pure exits, and 169 continuing; dense/repetitive setup remains the fresh cross-cohort presentation debt, followed by the repeated paling-rail action.
 - Guard: exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 402 files/3,080 tests plus UI/all packs, the world hash stays `9238b5f2…`, and independent review found no P0-P2.
-
-### Cycle result - albany_return_opportunity_affordance
-
-- Evidence choice: five verified players saw Return Opportunities but recognized 0/5, so this cycle added one shared pursuit sentence beside the existing leads instead of another scene, forced choice, or mandatory step.
-- Surface: full journey, compact v25, and every journey UI state now explain `here`, `mapped`, and `route_unmapped` pursuit using only already-legal town actions; the exact lead tuple, objective, state, rewards, decisions, and persistence contract are unchanged.
-- Counterfactual: guidance and compact legends remain truthful at road, story, and retention boundaries; review also forced exact cumulative old-save input fences while preserving the shipped Works marker, rejection of proof relabeling, policy-option withholding from observations and discovery results, and compact v25.
-- Pure evidence: exact feature `6e7bb9fa` passed Terra 4320/4322 and Sol 4321 through two goals; exact rebased `f76e276c` Terra 4324 completed Wolf-Winter in 31 decisions and ended at the first boundary. All four were unstuck/replay-yes at clarity/enjoyment 4/4, 4/4, 3/4, and 4/4; 4320 had no non-null lead and is uptake-ineligible.
-- Measured result: organic recognition improved from 0/5 to 1/3 eligible fresh players—4321 collectively chose its objective over “unrelated Albany opportunities,” while 4322/4324 did not identify either shown lead; pursuit and named decline remain 0/3, so actual return-route uptake is still unproven.
-- Feedback/follow-through: compile `20260721T093045Z` remains 938 verified/58 rejected, 187 eligible pure exits, and 164 continuing; two later verified reports are below the next compile threshold, and the regenerated ledger is 939/59. Dense opening copy and the overloaded rail action remain fresh friction.
-- Guard: exact zero-finding crawl, full health, and clean independent re-review gate the landing; none of the evidence above authorizes merging a red or incompletely reviewed tree.

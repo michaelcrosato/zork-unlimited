@@ -25,6 +25,8 @@ const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const NORTH_PENDING_GUIDANCE =
+  "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft.";
 
 function fixedRng(face: "best" | "worst"): Rng {
   return {
@@ -130,11 +132,13 @@ function lureRoute(opening: "clean" | "fouled" | "fouled_braced" | "hybrid"): Ro
   expect(yard.description).not.toMatch(/young wolf is through|flank-wolf holds/i);
   expect(yard.available_actions.map((option) => option.id)).toContain("go_west");
   expect(yard.available_actions.map((option) => option.id)).not.toContain("go_north");
+  expect(state.flags.june_pike_present).not.toBe(true);
   expect(yard.blocked_exits).toContainEqual({
     direction: "north",
-    message:
-      "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed.",
+    message: NORTH_PENDING_GUIDANCE,
   });
+  expect(NORTH_PENDING_GUIDANCE).not.toMatch(/June/i);
+  expect(NORTH_PENDING_GUIDANCE).toMatch(/finish the lure's second cast in the loft/i);
   act("go_west");
   act("go_up");
   const loft = buildRpgObservation(index, state);

@@ -51,6 +51,8 @@ const ACCEPT = "albany:ally_june_cattle_first";
 const RELAY = "albany:ally_june_relay_only";
 const SOLO = "albany:ally_travel_solo";
 const JUNE_PROMISE = "albany:promise_june_cattle_first";
+const NORTH_PENDING_GUIDANCE =
+  "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft.";
 
 function withoutWolfReturnJobOverlays<T extends typeof world>(manifest: T): T {
   for (const job of manifest.local_jobs) {
@@ -104,14 +106,17 @@ function act(state: GameState, actionId: string, ...rolls: number[]): GameState 
   return result.state;
 }
 
-function optionState(optionId: string): GameState {
+function optionState(optionId?: string): GameState {
   const roadWarden = registration.profiles.find((profile) => profile.id === "albany:road_warden");
   if (!roadWarden) throw new Error("Road-Warden registration must exist");
-  const character = applyOpeningAllyOption({
-    scene: ally,
-    character: roadWarden.character,
-    optionId,
-  }).characterAfter;
+  const character =
+    optionId === undefined
+      ? roadWarden.character
+      : applyOpeningAllyOption({
+          scene: ally,
+          character: roadWarden.character,
+          optionId,
+        }).characterAfter;
   return initStateForRpgPack(index, 504, { character, imports });
 }
 
@@ -308,9 +313,10 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(actionIds(withJune)).not.toContain("go_north");
     expect(boundary.blocked_exits).toContainEqual({
       direction: "north",
-      message:
-        "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed.",
+      message: NORTH_PENDING_GUIDANCE,
     });
+    expect(NORTH_PENDING_GUIDANCE).not.toMatch(/June/i);
+    expect(NORTH_PENDING_GUIDANCE).toMatch(/hunt-and-hold warning/i);
 
     withJune = act(withJune, "talk_june_pike_combat_boundary");
     expect(actionIds(withJune)).toEqual(
@@ -393,10 +399,21 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       ),
     ).toBe(true);
 
-    const solo = act(optionState(SOLO), "go_north");
-    expect(actionIds(solo)).toContain("go_north");
-    expect(actionIds(solo)).not.toContain("talk_june_pike_combat_boundary");
-    expect(buildRpgObservation(index, solo).description).not.toMatch(/June Pike/i);
+    for (const [route, start] of [
+      ["relay refusal", optionState(RELAY)],
+      ["explicit solo", optionState(SOLO)],
+      ["ignored ally choice", optionState()],
+    ] as const) {
+      expect(start.flags.june_pike_present, route).not.toBe(true);
+      const solo = act(start, "go_north");
+      expect(actionIds(solo), route).toContain("go_north");
+      expect(actionIds(solo), route).not.toContain("talk_june_pike_combat_boundary");
+      expect(buildRpgObservation(index, solo).description, route).not.toMatch(/June Pike/i);
+      expect(
+        buildRpgObservation(index, solo).blocked_exits.some((exit) => exit.direction === "north"),
+        route,
+      ).toBe(false);
+    }
   });
 
   it("lets a successful rail recover a fouled lure alive instead of forcing June-breaking blood", () => {

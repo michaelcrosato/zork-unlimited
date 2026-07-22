@@ -28,7 +28,7 @@ const FULL_DUTY_TERMS =
   /breach full duty[^]*first Albany Repair 2 easier[^]*Mobile stabilizes a recovered miss[^]*dawn/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const NORTH_PENDING_GUIDANCE =
-  "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed.";
+  "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft.";
 
 function act(state: GameState, actionId: string): GameState {
   const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === actionId);
@@ -62,6 +62,7 @@ function assertNorthBlockedOnce(state: GameState): void {
   expect(full.blocked_exits.filter((exit) => exit.direction === "north")).toEqual([
     { direction: "north", message: NORTH_PENDING_GUIDANCE },
   ]);
+  expect(NORTH_PENDING_GUIDANCE).not.toMatch(/June/i);
   expect(compactNorthExits).toEqual([]);
   expect(compactNorthBlocks).toEqual([["north", NORTH_PENDING_GUIDANCE]]);
 }
@@ -243,7 +244,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
     );
 
     assertNorthBlockedOnce(state);
-    expect(NORTH_PENDING_GUIDANCE.length).toBe(167);
+    expect(NORTH_PENDING_GUIDANCE.length).toBe(171);
     expect(NORTH_PENDING_GUIDANCE.length).toBeLessThan(180);
 
     state = act(state, "take_albany_relief_seals");
