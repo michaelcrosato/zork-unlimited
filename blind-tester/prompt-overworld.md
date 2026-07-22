@@ -16,9 +16,15 @@ PLAYER-SURFACE CONTRACT
   choices come only from that player surface; files, shell, web, source, tests,
   authoring, diagnostics, restore/import, MCP resources, and other external
   tools are not gameplay actions.
-- When Codex orchestration assigns an AdventureForge MCP result to a variable,
+- For every Codex `functions.exec` AdventureForge gameplay wrapper, make the
+  first source line exactly `// @exec: {"yield_time_ms": 120000}`. After that
+  comment, use only two executable statements: a `const result = await`
+  assignment whose value is one exact AdventureForge MCP gameplay call, then
   visibly emit it with `text(JSON.stringify(result));`. A bare `text` forwards
-  nothing. Make the next game choice only after you have seen that response.
+  nothing. Never call `functions.wait`; the MCP completion and visible output
+  must remain in that single wrapper lifecycle. A truly wedged or yielded wrapper
+  remains an invalid run. Make the next game choice
+  only after you have seen that response.
 - `mcp__adventureforge__start_overworld_session_quest` is the normal player
   bridge into a quest currently shown by the overworld. Use it only when
   `context.quest_starts` presents an exact `[quest_id, approach_id|null]` tuple;

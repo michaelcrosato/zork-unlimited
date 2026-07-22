@@ -24,6 +24,11 @@ const V2_TEAM_BLOCK =
 const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
+const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
+
+function canonicalGameplayWrapper(call: string): string {
+  return `${CODEX_EXEC_YIELD_PRAGMA}\nconst result = await ${call};\ntext(JSON.stringify(result));\n`;
+}
 
 type TestItem = {
   id: string;
@@ -114,9 +119,7 @@ function forwardingRollout(
         status: "completed",
         call_id: "call-wrapper-1",
         name: "exec",
-        input:
-          "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
-          "text(JSON.stringify(result));\n",
+        input: canonicalGameplayWrapper("tools.mcp__adventureforge__start_overworld({})"),
         internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
       },
     },
@@ -163,9 +166,9 @@ function twoPrivateGameplayCalls(
   const start = rolloutPayload(second, 0);
   start.id = "wrapper-item-2";
   start.call_id = "call-wrapper-2";
-  start.input =
-    "const result = await tools.mcp__adventureforge__get_overworld_session_context({});\n" +
-    "text(JSON.stringify(result));\n";
+  start.input = canonicalGameplayWrapper(
+    "tools.mcp__adventureforge__get_overworld_session_context({})",
+  );
   const completion = rolloutPayload(second, 1);
   completion.call_id = "exec-gameplay-2";
   const invocation = completion.invocation as Record<string, unknown>;
@@ -324,6 +327,84 @@ describe("Codex pure blind provider envelope", () => {
       { type: "input_text", text: '{"state_hash":"next"}' },
     ];
     expect(inspectCodexGameplayResultForwarding(contentLoop)).toMatchObject({ ok: true });
+  });
+
+  it("accepts the canonical exec yield pragma without retroactively requiring it", () => {
+    const current = forwardingRollout();
+    expect(rolloutPayload(current, 0).input).toBe(
+      canonicalGameplayWrapper("tools.mcp__adventureforge__start_overworld({})"),
+    );
+    expect(inspectCodexGameplayResultForwarding(current)).toMatchObject({ ok: true });
+
+    const historical = structuredClone(current);
+    rolloutPayload(historical, 0).input =
+      "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+      "text(JSON.stringify(result));\n";
+    expect(inspectCodexGameplayResultForwarding(historical)).toMatchObject({ ok: true });
+  });
+
+  it("rejects a yielded exec before its late MCP completion and native wait", () => {
+    const [wrapper, completion] = forwardingRollout();
+    const yielded = [
+      wrapper,
+      {
+        type: "response_item",
+        payload: {
+          type: "custom_tool_call_output",
+          call_id: "call-wrapper-1",
+          output: "Script running with cell ID 1\nWall time 10.5 seconds\nOutput:\n",
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+        },
+      },
+      {
+        type: "event_msg",
+        payload: { type: "token_count", info: null, rate_limits: null },
+      },
+      completion,
+      {
+        type: "response_item",
+        payload: {
+          type: "reasoning",
+          id: "reasoning-after-yield",
+          summary: [],
+          encrypted_content: "opaque",
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+        },
+      },
+      {
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          id: "wait-item-1",
+          name: "wait",
+          arguments: '{"cell_id":"1","yield_time_ms":30000,"max_tokens":10000}',
+          call_id: "call-wait-1",
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+        },
+      },
+      {
+        type: "response_item",
+        payload: {
+          type: "function_call_output",
+          call_id: "call-wait-1",
+          output: [
+            {
+              type: "input_text",
+              text: "Script completed\nWall time 11.4 seconds\nOutput:\n",
+            },
+          ],
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+        },
+      },
+    ];
+
+    const inspected = inspectCodexGameplayResultForwarding(yielded);
+    expect(inspected).toEqual({
+      ok: false,
+      reason:
+        "Codex gameplay-result forwarding audit failed: gameplay call 1 has no immediate MCP completion",
+    });
+    expect(inspected.reason).not.toContain("state_hash");
   });
 
   it.each([
@@ -549,9 +630,9 @@ describe("Codex pure blind provider envelope", () => {
 
   it("accepts each exact native Codex capture profile", () => {
     const lunaGameplay = forwardingRollout(undefined, { content: [] });
-    rolloutPayload(lunaGameplay, 0).input =
-      "const result = await tools.mcp__adventureforge__start_overworld();\n" +
-      "text(JSON.stringify(result));\n";
+    rolloutPayload(lunaGameplay, 0).input = canonicalGameplayWrapper(
+      "tools.mcp__adventureforge__start_overworld()",
+    );
     const luna = completeRollout(lunaGameplay, "luna_v1");
     expect(inspectCodexPureEvidence(validRows(), luna, "gpt-5.6-luna")).toMatchObject({
       ok: true,
@@ -839,9 +920,9 @@ describe("Codex pure blind provider envelope", () => {
 
   it("permits argumentless syntax only for the first start_overworld wrapper", () => {
     const argumentless = forwardingRollout();
-    rolloutPayload(argumentless, 0).input =
-      "const result = await tools.mcp__adventureforge__start_overworld();\n" +
-      "text(JSON.stringify(result));\n";
+    rolloutPayload(argumentless, 0).input = canonicalGameplayWrapper(
+      "tools.mcp__adventureforge__start_overworld()",
+    );
     expect(inspectCodexGameplayResultForwarding(argumentless)).toMatchObject({ ok: true });
 
     const nonemptyRecordedArguments = structuredClone(argumentless);
@@ -855,25 +936,25 @@ describe("Codex pure blind provider envelope", () => {
     });
 
     const otherTool = forwardingRollout();
-    rolloutPayload(otherTool, 0).input =
-      "const result = await tools.mcp__adventureforge__get_overworld_session_context();\n" +
-      "text(JSON.stringify(result));\n";
+    rolloutPayload(otherTool, 0).input = canonicalGameplayWrapper(
+      "tools.mcp__adventureforge__get_overworld_session_context()",
+    );
     const otherInvocation = rolloutPayload(otherTool, 1).invocation as Record<string, unknown>;
     otherInvocation.tool = "get_overworld_session_context";
     expect(inspectCodexGameplayResultForwarding(otherTool)).toMatchObject({ ok: false });
 
     const laterStart = twoPrivateGameplayCalls();
-    rolloutPayload(laterStart, 3).input =
-      "const result = await tools.mcp__adventureforge__start_overworld();\n" +
-      "text(JSON.stringify(result));\n";
+    rolloutPayload(laterStart, 3).input = canonicalGameplayWrapper(
+      "tools.mcp__adventureforge__start_overworld()",
+    );
     const laterInvocation = rolloutPayload(laterStart, 4).invocation as Record<string, unknown>;
     laterInvocation.tool = "start_overworld";
     expect(inspectCodexGameplayResultForwarding(laterStart)).toMatchObject({ ok: false });
 
     const nonemptyFreshStart = forwardingRollout();
-    rolloutPayload(nonemptyFreshStart, 0).input =
-      "const result = await tools.mcp__adventureforge__start_overworld({seed:7});\n" +
-      "text(JSON.stringify(result));\n";
+    rolloutPayload(nonemptyFreshStart, 0).input = canonicalGameplayWrapper(
+      "tools.mcp__adventureforge__start_overworld({seed:7})",
+    );
     const nonemptyInvocation = rolloutPayload(nonemptyFreshStart, 1).invocation as Record<
       string,
       unknown
