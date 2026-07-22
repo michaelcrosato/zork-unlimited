@@ -135,6 +135,23 @@ function sparkCodeModeRows(): TestRow[] {
   return rows;
 }
 
+function singleCodeModeWarningRows(): TestRow[] {
+  const rows = validRows();
+  for (const row of rows) {
+    if (row.item?.id === "item_0") row.item.id = "item_1";
+    else if (row.item?.id === "item_1") row.item.id = "item_2";
+  }
+  rows.splice(1, 0, {
+    type: "item.completed",
+    item: {
+      id: "item_0",
+      type: "error",
+      message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+    },
+  });
+  return rows;
+}
+
 function forwardingRollout(
   output: unknown = undefined,
   result: Record<string, unknown> = {
@@ -1415,6 +1432,28 @@ describe("Codex pure blind provider envelope", () => {
         ok: false,
       });
     }
+  });
+
+  it.each([
+    ["gpt-5.6-sol", "sol_v2"],
+    ["gpt-5.6-terra", "terra_v2"],
+    ["gpt-5.6-luna", "luna_v1"],
+  ] as const)("accepts the exact generic code-mode notice for %s", (model, profile) => {
+    const publicRows = singleCodeModeWarningRows();
+    const rolloutRows = completeRollout(forwardingRollout(undefined, { content: [] }), profile);
+    expect(inspectCodexPureEvidence(publicRows, rolloutRows, model)).toMatchObject({
+      ok: true,
+      completedMcpCalls: 1,
+    });
+    expect(inspectCodexPureEvents(publicRows)).toMatchObject({ ok: false });
+    expect(inspectCodexPureEvents(publicRows, SPARK_MODEL)).toMatchObject({ ok: false });
+
+    const withSparkNotice = singleCodeModeWarningRows();
+    withSparkNotice.splice(2, 0, {
+      type: "item.completed",
+      item: { id: "item-extra", type: "error", message: SPARK_METADATA_WARNING },
+    });
+    expect(inspectCodexPureEvents(withSparkNotice, model)).toMatchObject({ ok: false });
   });
 
   it.each([

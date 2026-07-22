@@ -1018,7 +1018,7 @@ function publicGameplayLifecycle(item) {
   };
 }
 
-function validSparkCodeModeWarningRow(row, ordinal) {
+function validCodeModeWarningRow(row, ordinal) {
   if (
     !isRecord(row) ||
     !hasOnlyKeys(row, ["type", "item"]) ||
@@ -1046,13 +1046,12 @@ function validSparkCodeModeWarningRow(row, ordinal) {
   return ordinal === 1 && row.item.message === SPARK_CODE_MODE_METADATA_WARNING;
 }
 
-function sparkCodeModePrelude(rows, expectedModel) {
-  if (
-    expectedModel !== SPARK_DISABLED_MODEL ||
-    !validSparkCodeModeWarningRow(rows[1], 0) ||
-    !validSparkCodeModeWarningRow(rows[2], 1) ||
-    rows[1].item.id === rows[2].item.id
-  ) {
+function codeModePrelude(rows, expectedModel) {
+  if (!SUPPORTED_CODEX_MODELS.has(expectedModel) || !validCodeModeWarningRow(rows[1], 0)) {
+    return [];
+  }
+  if (expectedModel !== SPARK_DISABLED_MODEL) return [rows[1]];
+  if (!validCodeModeWarningRow(rows[2], 1) || rows[1].item.id === rows[2].item.id) {
     return [];
   }
   return [rows[1], rows[2]];
@@ -1067,8 +1066,8 @@ export function inspectCodexPureEvents(rows, expectedModel = undefined) {
     return reject("Codex event stream is empty");
   }
 
-  const allowedSparkPrelude = sparkCodeModePrelude(rows, expectedModel);
-  const turnStartedIndex = 1 + allowedSparkPrelude.length;
+  const allowedCodeModePrelude = codeModePrelude(rows, expectedModel);
+  const turnStartedIndex = 1 + allowedCodeModePrelude.length;
   if (rows[0]?.type !== "thread.started" || rows[turnStartedIndex]?.type !== "turn.started") {
     return reject("Codex pure run must begin with thread.started then turn.started");
   }
@@ -1091,7 +1090,7 @@ export function inspectCodexPureEvents(rows, expectedModel = undefined) {
       return reject(`Codex event stream contains forbidden event type ${String(row.type)}`);
     }
 
-    if (allowedSparkPrelude.length === 2 && (index === 1 || index === 2)) continue;
+    if (index > 0 && index <= allowedCodeModePrelude.length) continue;
 
     if (row.type === "thread.started") threadRows.push(row);
     if (row.type === "turn.started") turnStartedRows.push(row);
