@@ -2,10 +2,11 @@
 # loop-stop.sh — RELIABLY stop THIS project's AFK loop, and ONLY this project's.
 #
 # PROJECT-SCOPED (2026-06-09 — critical safety fix): with several projects running
-# identical `./loop.sh` / `claude -p --model sonnet` processes, the old pattern-match
+# identical `./loop.sh` / headless-agent processes, the old pattern-match
 # approach could read OR KILL another project's loop. This version acts ONLY on the
 # exact pids THIS loop recorded: ai-runs/loop.pid (loop.sh) and ai-runs/agent.pid (the
-# worker — run_agent records the post-`exec` pid, i.e. the real claude/codex process,
+# worker — run_agent records the post-`exec` pid, i.e. the real Codex or explicitly
+# selected agent process,
 # so it's killable even if orphaned). It kills those pids + the descendants of loop.sh,
 # never a cross-project pattern.
 #

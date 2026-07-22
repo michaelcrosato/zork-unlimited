@@ -218,10 +218,11 @@ npm run fleet:mock -- --count 2                   # structural zero-token CI lan
 npm run feedback:compile                          # Tier 3: hot spots + pure retention summary
 ```
 
-The blind harness drives the external Claude Code CLI on the operator's
-subscription (default model `sonnet`) through a runner-enforced no-file,
-no-shell, no-web tool boundary. Arbitrary `BLIND_AGENT_CMD` overrides are
-rejected for pure runs because their blindness cannot be verified. Live play is
+The blind harness drives the external Codex CLI on the operator's subscription
+(default model `gpt-5.3-codex-spark`) through a runner-enforced no-file,
+no-shell, no-web tool boundary. Claude remains an explicit compatibility
+provider. Arbitrary `BLIND_AGENT_CMD` overrides are rejected for pure runs
+because their blindness cannot be verified. Live play is
 NOT part of CI or the health bar (a structural mock fleet run is — see
 [`docs/testing_pyramid.md`](./docs/testing_pyramid.md)). Separately, the
 authoring/repair agents (`bin/author.ts`, the debugger/fixer) run against a

@@ -26,7 +26,7 @@ loop.sh  (outer driver — orchestration + the bar)
 │     Must be green before the agent touches anything; red here means the
 │     world was already broken, so the cycle halts and reverts (loop.sh).
 │
-├─ 3. WORK          the operating agent (claude -p / codex exec / Agent tool)
+├─ 3. WORK          the operating agent (installed Codex CLI / explicit agent command)
 │     Reads the cycle prompt and:
 │       a. MANDATORY PURE LLM PLAYTEST — spawns a fresh, no-context player in a
 │          brand-new CORE GAME overworld session, with only the human tutorial,
@@ -112,9 +112,9 @@ at most once per N cycles. Ultraplan cycles also get a larger agent budget
 (`AI_LOOP_ULTRAPLAN_TIMEOUT_SECONDS`, default 3600s) via the per-cycle
 `agentTimeoutSeconds` that `ai-loop.ts` writes into `latest-cycle.json`.
 
-The fresh-context-per-phase shape is free here: each cycle's agent is already a new
-`claude -p`, and Step 3's implementer is a fresh `Agent`-tool subagent — so the plan
-is handed off as a _document_, not a context window.
+The fresh-context-per-phase shape is free here: each cycle's automatic agent is a new
+`codex exec` process, and Step 3's implementer is a fresh subagent — so the plan is
+handed off as a _document_, not a context window.
 
 ### The decision log (durable memory of settled questions)
 
@@ -173,9 +173,9 @@ npm run feedback:compile          # compile hot spots + mode-separated pure rete
 Key env (loop.sh's header comment is the authoritative reference): `AI_LOOP_COMMIT=1`
 to commit, `AI_LOOP_PUSH=1` to push (rejected against protected main — see the cycle
 diagram), `AI_LOOP_DELAY_SECONDS` between cycles (default 10), `AI_AGENT_CMD` to set
-the agent — the default prefers `claude -p` (model `sonnet`; override with
-`AI_LOOP_MODEL`, plus optional `AI_LOOP_EFFORT` / `AI_LOOP_BUDGET_USD`) and falls back
-to `codex exec` when only that is installed — `AI_AGENT_TIMEOUT_SECONDS` (default 2400)
+an explicit agent command — otherwise the default is the installed `codex exec` CLI;
+the outer loop does not inspect local credential files or choose a fallback provider —
+`AI_AGENT_TIMEOUT_SECONDS` (default 2400)
 to hang-kill a stuck turn, `AI_LOOP_MAX_CONSECUTIVE_FAILURES` / `AI_LOOP_MAX_TOTAL_FAILURES`
 for the circuit breakers, and `AI_LOOP_ALLOW_VERIFIER_EDITS=1` to acknowledge a
 deliberate verifier change.
