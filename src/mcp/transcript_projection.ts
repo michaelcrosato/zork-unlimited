@@ -14,6 +14,7 @@ import {
   omittedCount,
 } from "./compact_truncation.js";
 import { compactMcpTranscriptSceneId, compactMcpTranscriptSummaryValue } from "./action_labels.js";
+import { compactMcpVisibleJournalProse } from "./journal_prose.js";
 import { publicRpgStateHash } from "./rpg_state_guards.js";
 
 export type RpgEventOptions = {
@@ -131,7 +132,7 @@ export type TranscriptResponse<Args extends TranscriptArgs> = Args extends {
 const TRANSCRIPT_PROJECTION_COMPACT_TURNS = "compact-turns:v1";
 const TRANSCRIPT_PROJECTION_VISIBLE_EVENTS = "visible-events:v1";
 const TRANSCRIPT_PROJECTION_COMPACT_EVENTS = `compact-events:v${RPG_COMPACT_EVENT_VERSION}`;
-export const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v1";
+export const TRANSCRIPT_SUMMARY_PROJECTION_COMPACT = "compact-summary:v2";
 const TRANSCRIPT_SUMMARY_LIST_LIMIT = 16;
 const TRANSCRIPT_SUMMARY_JOURNAL_LIMIT = 5;
 export const TRANSCRIPT_TURN_LIMIT_DEFAULT = 64;
@@ -179,7 +180,7 @@ export function compactTranscriptSummary(
     compactMcpTranscriptSummaryValue,
   );
   const journal = compactRecent(summary.journal, TRANSCRIPT_SUMMARY_JOURNAL_LIMIT).map(
-    compactMcpTranscriptSummaryValue,
+    compactMcpVisibleJournalProse,
   );
   const omittedScenes = omittedCount(summary.scenes, scenes);
   const omittedInventory = omittedCount(summary.inventory, inventory);

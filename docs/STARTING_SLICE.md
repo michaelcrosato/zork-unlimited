@@ -395,7 +395,7 @@ and
 with the paired rail proof in
 [`wolf_strategy_counterfactual.test.ts`](../tests/starting_slice/wolf_strategy_counterfactual.test.ts).
 
-Compact v27 separates current town actions from authored one-time terms.
+Compact v28 separates current town actions from authored one-time terms.
 `service_actions` is the canonical planner-backed rest/resupply surface: each
 entry carries availability, ordinary or campaign-override provenance, exact
 minutes, and supplies/fatigue before and after. `service_offers` remains the
@@ -735,7 +735,7 @@ bypass ends at 13 and opens Rowan's existing 15-minute Civic cot, beating
 ordinary 180-minute recovery when fatigued. The unresolved charter expires
 after Wolf-Winter and is not projected as a return lead, while an
 already-discovered Works job remains
-eligible for the normal lead. Full/compact-v27/UI/MCP parity, event/job replay,
+eligible for the normal lead. Full/compact-v28/UI/MCP parity, event/job replay,
 exact current-main and cumulative neutral migration, fail-closed divergent
 hashes, and the standing/fatigue reversal live in
 [`albany_works_hazard_charter_counterfactual.test.ts`](../tests/starting_slice/albany_works_hazard_charter_counterfactual.test.ts).
@@ -746,7 +746,7 @@ current objective after the player leaves. Each lead exposes only its title,
 district, kind, and exact `here` / `mapped` / `route_unmapped` access state;
 choices, outcomes, rewards, and scene terms remain undisclosed until normal
 play reaches them. The structured journey object is authoritative, while the
-versioned compact v27 context receives only a bounded additive tuple and legend.
+versioned compact v28 context receives only a bounded additive tuple and legend.
 Projection is read-only, adds no decision or action, and is covered across the
 Wolf completion, dawn choice, northward departure, restore, MCP, and UI surfaces
 by [`albany_return_opportunity_leads.test.ts`](../tests/starting_slice/albany_return_opportunity_leads.test.ts).

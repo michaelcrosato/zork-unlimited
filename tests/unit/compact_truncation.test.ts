@@ -9,6 +9,20 @@ import {
   omittedCount,
 } from "../../src/mcp/compact_truncation.js";
 
+function hasUnpairedSurrogate(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (next < 0xdc00 || next > 0xdfff) return true;
+      index += 1;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+      return true;
+    }
+  }
+  return false;
+}
+
 describe("compact truncation helpers", () => {
   it("caps head and recent slices without mutating callers", () => {
     const values = ["a", "b", "c", "d"];
@@ -54,6 +68,26 @@ describe("compact truncation helpers", () => {
     expect(compactText(value, 0)).toBe("");
   });
 
+  it.each([720, 1200, 1120, 320, 256, 512])(
+    "keeps a Unicode scalar intact at the raised %i-character prose boundary",
+    (limit) => {
+      const prefix = "a".repeat(limit - 16);
+      const compact = compactText(`${prefix}😀${"b".repeat(500)}`, limit);
+
+      expect(compact).toBe(`${prefix}...(+502 chars)`);
+      expect(compact.length).toBeLessThanOrEqual(limit);
+      expect(hasUnpairedSurrogate(compact)).toBe(false);
+    },
+  );
+
+  it("keeps the journal boundary scalar-safe with code-unit omission accounting", () => {
+    const compact = compactText(`${"a".repeat(304)}😀${"b".repeat(500)}`, 320);
+
+    expect(compact).toBe(`${"a".repeat(304)}...(+502 chars)`);
+    expect(compact).toHaveLength(319);
+    expect(hasUnpairedSurrogate(compact)).toBe(false);
+  });
+
   it("rejects invalid text limits before truncation", () => {
     for (const limit of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
       expect(() => compactText("abc", limit)).toThrow(/non-negative finite integer/);
@@ -78,5 +112,19 @@ describe("compact truncation helpers", () => {
     for (const hashLength of [Number.NaN, Number.POSITIVE_INFINITY, 0, -1, 1.5]) {
       expect(() => compactTextWithHash("abc", 80, hashLength)).toThrow(/positive finite integer/);
     }
+  });
+
+  it("keeps hashed compaction scalar-safe without changing tiny-limit suffix behavior", () => {
+    const value = `${"a".repeat(291)}😀${"b".repeat(500)}`;
+    const compact = compactTextWithHash(value, 320, 12);
+
+    expect(compact).toMatch(
+      new RegExp(`^${"a".repeat(291)}\\.\\.\\.\\(\\+502 chars\\)#[0-9a-f]{12}$`),
+    );
+    expect(compact.length).toBeLessThanOrEqual(320);
+    expect(hasUnpairedSurrogate(compact)).toBe(false);
+    expect(compactText(value, 1)).toBe(".");
+    expect(compactTextWithHash(value, 1, 12)).toBe("#");
+    expect(compactTextWithHash(value, 13, 12)).toMatch(/^#[0-9a-f]{12}$/);
   });
 });

@@ -13,6 +13,7 @@ import {
   compactMcpTranscriptTitle,
 } from "./action_labels.js";
 import { RPG_COMPACT_EVENT_LEGEND } from "./compact_rpg_event.js";
+import { compactMcpVisibleJournalProse } from "./journal_prose.js";
 const CORE_STATE_VARS = new Set(["attack", "defense", "hp", "max_score", "score"]);
 export const COMPACT_ACTION_LIMIT = 24;
 export const COMPACT_EXIT_LIMIT = 12;
@@ -25,12 +26,12 @@ export const COMPACT_VAR_LIMIT = 16;
 const COMPACT_INVENTORY_LIMIT = 16;
 const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
-export const COMPACT_DESCRIPTION_CHAR_LIMIT = 360;
-export const COMPACT_DIALOGUE_CHAR_LIMIT = 280;
-export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 180;
+export const COMPACT_DESCRIPTION_CHAR_LIMIT = 720;
+export const COMPACT_DIALOGUE_CHAR_LIMIT = 1120;
+export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 256;
 export const COMPACT_BLOCKED_ACTION_REASON_CHAR_LIMIT = RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT;
-export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 360;
-export const RPG_COMPACT_OBSERVATION_VERSION = 17 as const;
+export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 720;
+export const RPG_COMPACT_OBSERVATION_VERSION = 18 as const;
 
 export type RpgCompactRef = string;
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -191,7 +192,7 @@ export function compactRpgObservation(
     compactMcpTranscriptSummaryValue,
   );
   const journal = compactRecent(obs.state.journal, COMPACT_JOURNAL_LIMIT).map(
-    compactMcpTranscriptSummaryValue,
+    compactMcpVisibleJournalProse,
   );
   const compactExits = compactHead(obs.exits, COMPACT_EXIT_LIMIT);
   const compactObjects = compactHead(obs.visible_objects, COMPACT_VISIBLE_REF_LIMIT);

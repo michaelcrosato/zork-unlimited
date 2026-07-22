@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 614 -->
+<!-- historical_cycle_count: 615 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - compact_player_prose_fidelity
+
+- Evidence choice: five recent exact-clean cohorts carried truncation chrome in 187/481 compact MCP responses; restoring the observed repeated prose would add only ~45,358 characters, 1.55% of their existing payload, while journal memory also leaked collision hashes intended for identifiers.
+- Surface: compact event/observation/state/overworld contracts advance to v7/v18/v2/v28, every shipped player-facing body now fits its bounded transport, and one 320-character visible journal compactor replaces identity hashing across event, state, observation, transcript, and session-summary routes.
+- Counterfactual: ids retain hashed collision safety; list caps, omission counts, legality, state, mechanics, balance, and pure prompts are unchanged; scalar-safe clipping preserves Unicode boundaries and exact code-unit omission counts for future oversized prose.
+- Pure evidence: exact-clean Terra 4413 verifies `ok: true` across 47 completed calls/40 decisions, diverts every Wolf-Winter wolf alive with Cade's herd whole, continues at goal 29, and exits voluntarily at checkpoint 40; no literal prose truncation or hash mismatch appears, clarity/enjoyment are 3/4, unstuck, replay-no.
+- Diagnostic only: Sol 4412 remains unpublished and excluded after its first wrapper yielded before the MCP completion, correctly failing the unchanged immediate-completion audit; its play, ratings, findings, and token count are not evidence.
+- Measured result: the unique shipped corpus restores 39,009 characters across all 12 quests and every real overworld/opening/service/road route; two independent re-reviews find no P0-P2, and 15 focused suites pass 242 tests under fixed 9k RPG/12k overworld response ceilings.
+- Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 408 files/3,201 tests plus integrity, both typechecks, lint, format, validation, and clean diff.
 
 ### Cycle result - overworld_service_action_surface
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: deterministic visibility PASSes, but organic discoverability FAILs at 0/5: no verified player named, pursued, or declined a listed Return Opportunity, while the separate Cade dawn dispatch repeatedly drew attention and is not counted as uptake.
 - Feedback/follow-through: compile `20260721T081505Z` has 933 verified/58 rejected, 182 eligible pure exits, and 159 continuing; the ledger is 934/59 with two later reports. Improve the immediate action affordance/prominence next rather than adding content.
 - Guard: exact feature health passes 399 files/3,046 tests plus UI/all packs; final crawl `20260721T071726Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests.
-
-### Cycle result - embedded_quest_character_continuity
-
-- Evidence choice: recurring exact-run S2 reports showed that the persistent traveler stayed intact while unexplained quest-local numbers and kit looked like a replacement character, so this cycle explains that boundary generically instead of special-casing Wolf-Winter or The Gallowmere.
-- Surface: full/compact launch, read, step, load, parent-resume, and browser views keep identity/import provenance immutable while deriving HP, combat values, skills, and kit from the live child state; a versioned save sidecar survives detached restore, while direct/generated starts omit it and GameState/proof hashes remain unchanged.
-- Counterfactual: two review passes caught a resume omission, a launch snapshot presented as live, missing recurring response fields, and save/load loss; importless/imported mutation, strict sidecar, byte-identical resave, forged direct authority, backward-compatible omission, UI, and detached full/compact lifecycle tests close each path with no remaining P0-P2.
-- Pure evidence: exact clean Terra seed 4308 (`79e7de47`) and Sol seed 4310 (`117f51cf`) are 2/2 first-attempt valid; both continued after Wolf-Winter into The Gallowmere, scored clarity/enjoyment 4/4, were unstuck/replay-yes, and reported no identity or stat discontinuity.
-- Measured result: both players understood the launch explanation, with seed 4310 explicitly reasoning about its lower quest-local defenses; the later live/read/step/save/load corrections pass deterministic tests but remain blind-unexercised, and neither two runs nor the patch claims recurring-cluster resolution at cohort scale.
-- Feedback/follow-through: compile `20260721T062538Z` remains 928 verified/58 rejected inputs; one later valid report is below the next compile threshold, and the regenerated ledger is 928 accepted/59 rejected. Fresh friction targets stale Wolf lure prose, duplicate Rowan identity, dense setup, and compact consequence length.
-- Guard: the earlier feature build passed health at 395 files/3,024 tests plus UI/all packs; the reviewed lifecycle correction passes 8 focused files/148 tests, both typechecks, lint/format/integrity, and zero-finding crawl `20260721T072702Z`, with exact full health intentionally left to landing.

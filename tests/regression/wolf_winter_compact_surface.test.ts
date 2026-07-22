@@ -1,8 +1,8 @@
 /**
  * Wolf-Winter is primarily played by blind agents through the compact MCP view.
  * Its prose therefore has to fit the surface that actually carries each string;
- * merely fitting the 360-character room context is insufficient when LOOK emits
- * the same room text as a 280-character narration event.
+ * merely fitting the room context is insufficient when LOOK emits the same room
+ * text through the independently bounded narration-event surface.
  *
  * Keep this inventory semantic. It covers authored prose that the RPG runtime can
  * project, while deliberately excluding comments, aliases, NPC descriptions (there
@@ -16,9 +16,9 @@ import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
 import {
-  MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
-  compactMcpTranscriptSummaryValue,
-} from "../../src/mcp/action_labels.js";
+  compactMcpVisibleJournalProse,
+  MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT,
+} from "../../src/mcp/journal_prose.js";
 import {
   COMPACT_EVENT_JOURNAL_CHAR_LIMIT,
   COMPACT_EVENT_NARRATION_CHAR_LIMIT,
@@ -223,9 +223,9 @@ describe("Wolf-Winter compact authored prose", () => {
 
     for (const { label, text } of entries) {
       expectExactCompact(
-        `${label} (${MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT}-character recent journal)`,
+        `${label} (${MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT}-character recent journal)`,
         text,
-        compactMcpTranscriptSummaryValue(text),
+        compactMcpVisibleJournalProse(text),
       );
       expectExactCompact(
         `${label} (${COMPACT_EVENT_JOURNAL_CHAR_LIMIT}-character journal event)`,
@@ -300,7 +300,7 @@ describe("Wolf-Winter compact authored prose", () => {
     const journalForNode = (id: string): string => {
       const effects = cade?.dialogue.nodes.find((node) => node.id === id)?.effects ?? [];
       const text = effects.map(addJournal).find((entry) => entry !== undefined) ?? "";
-      return compactMcpTranscriptSummaryValue(text);
+      return compactMcpVisibleJournalProse(text);
     };
     const counselJournal = journalForNode("cade_wolves");
     expect(counselJournal).toMatch(/quick\/open/i);

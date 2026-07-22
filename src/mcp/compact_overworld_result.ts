@@ -32,11 +32,11 @@ export type OverworldCompactDiscoveryKey = "areas" | "jobs" | "sites" | "quests"
 
 // Immediate local-action prose is the player's consequence, not rolling context.
 // Keep enough room for every shipped contact line while bounding longer area/site copy.
-export const OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT = 360;
+export const OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT = 512;
 // Service prose states the authored cause as well as the resource delta. Keep
 // it on the immediate compact response because a one-time offer disappears
 // after acceptance.
-export const OVERWORLD_COMPACT_SERVICE_TEXT_CHAR_LIMIT = 360;
+export const OVERWORLD_COMPACT_SERVICE_TEXT_CHAR_LIMIT = 512;
 // Road outcomes include the scene, chosen response, and arrival consequence.
 // Every shipped composition fits; future growth remains transparently bounded.
 export const OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT = 600;

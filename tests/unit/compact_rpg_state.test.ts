@@ -17,6 +17,7 @@ import {
   MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT,
   MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
 } from "../../src/mcp/action_labels.js";
+import { MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT } from "../../src/mcp/journal_prose.js";
 
 function ids(prefix: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);
@@ -74,6 +75,7 @@ describe("compactRpgState", () => {
     const compact = compactRpgState(state, { maxScore: 42 });
 
     expect(compact.v).toBe(RPG_COMPACT_STATE_VERSION);
+    expect(RPG_COMPACT_STATE_VERSION).toBe(2);
     expect(compact.at).toBe("room_00");
     expect(compact.step).toBe(23);
     expect(compact.seed).toBe(99);
@@ -137,7 +139,9 @@ describe("compactRpgState", () => {
     expect(compact.inv?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.flags?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compactVarKey).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
-    expect(compact.journal?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.journal?.[0]).toHaveLength(MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT);
+    expect(compact.journal?.[0]).toMatch(/\.\.\.\(\+\d+ chars\)$/);
+    expect(compact.journal?.[0]).not.toMatch(/#[0-9a-f]{12}$/);
     expect(compact.visited?.[0]).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
     expect(compact.objects?.[0]?.id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.objects?.[0]?.room).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);

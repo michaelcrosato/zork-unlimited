@@ -3246,7 +3246,9 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(String(compactJournal?.[2]).length).toBeLessThanOrEqual(
       COMPACT_EVENT_JOURNAL_CHAR_LIMIT,
     );
-    expect(JSON.stringify(compactProseStep).length).toBeLessThan(1800);
+    // Measured 2,030 after restoring the shipped flood-book narration and
+    // journal copy; retain only narrow headroom around the recurring response.
+    expect(JSON.stringify(compactProseStep).length).toBeLessThan(2100);
     expect(JSON.stringify(compactProseStep.events).length).toBeLessThan(
       JSON.stringify(fullProseStep.events).length,
     );
@@ -3418,7 +3420,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
     // payload (everything except the legend) still has to clear the prose budget.
     expect(proseBudgetStart.legend).toBeDefined();
     const { legend: _proseBudgetLegend, ...proseBudgetRecurring } = proseBudgetStart;
-    expect(JSON.stringify(proseBudgetRecurring).length).toBeLessThan(750);
+    // Measured 846 with the complete shipped room description.
+    expect(JSON.stringify(proseBudgetRecurring).length).toBeLessThan(900);
     const proseBudgetTalk = a.step_action({
       session_id: proseBudgetStart.session_id,
       action_id: "talk_pell",
@@ -3427,7 +3430,8 @@ describe("MCP tools — the play loop (§9.1)", () => {
     expect(proseBudgetTalk.context.dialogue?.[1].length).toBeLessThanOrEqual(
       COMPACT_DIALOGUE_CHAR_LIMIT,
     );
-    expect(JSON.stringify(proseBudgetTalk).length).toBeLessThan(1450);
+    // Measured 1,606 with Pell's complete dialogue instead of a clipped line.
+    expect(JSON.stringify(proseBudgetTalk).length).toBeLessThan(1700);
     const compactStartSession = a.sessions.get(compactStart.session_id);
     expect(compactStartSession.observationCache).toBeUndefined();
     expect(compactStartSession.observationProjectionCaches?.size).toBe(1);

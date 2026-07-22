@@ -37,6 +37,7 @@ import {
   compactMcpTranscriptSummaryValue,
   compactMcpTranscriptTitle,
 } from "./action_labels.js";
+import { compactMcpVisibleJournalProse } from "./journal_prose.js";
 
 export type TranscriptTurn = {
   step: number;
@@ -283,7 +284,7 @@ function normalizeTranscriptSummary(summary: TranscriptSummary): TranscriptSumma
   const scenes = compactSummaryList(summary.scenes, compactMcpTranscriptSceneId);
   const inventory = compactSummaryList(summary.inventory, compactMcpTranscriptSummaryValue);
   const flags = compactSummaryList(summary.flags, compactMcpTranscriptSummaryValue);
-  const journal = compactSummaryList(summary.journal, compactMcpTranscriptSummaryValue);
+  const journal = compactSummaryList(summary.journal, compactMcpVisibleJournalProse);
   if (
     endingId === summary.ending_id &&
     !scenes.changed &&
