@@ -25,6 +25,11 @@ const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
+const SPARK_MODEL = "gpt-5.3-codex-spark";
+const SPARK_UNSTABLE_WARNING_PREFIX =
+  "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
+const SPARK_METADATA_WARNING =
+  "Code Mode is enabled in configuration, but model `gpt-5.3-codex-spark` does not advertise Code Mode support. This may degrade model performance. Disable `features.code_mode` and `features.code_mode_only`, or select a model whose metadata enables Code Mode.";
 
 function canonicalGameplayWrapper(call: string): string {
   return `${CODEX_EXEC_YIELD_PRAGMA}\nconst result = await ${call};\ntext(JSON.stringify(result));\n`;
@@ -34,6 +39,7 @@ type TestItem = {
   id: string;
   type: string;
   text?: string;
+  message?: string;
   server?: string;
   tool?: string;
   arguments?: Record<string, unknown>;
@@ -102,6 +108,31 @@ function validRows(): TestRow[] {
       },
     },
   ];
+}
+
+function sparkCodeModeRows(): TestRow[] {
+  const rows = validRows();
+  for (const row of rows) {
+    if (row.item?.id === "item_0") row.item.id = "item_2";
+    else if (row.item?.id === "item_1") row.item.id = "item_3";
+  }
+  rows.splice(
+    1,
+    0,
+    {
+      type: "item.completed",
+      item: {
+        id: "item_0",
+        type: "error",
+        message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+      },
+    },
+    {
+      type: "item.completed",
+      item: { id: "item_1", type: "error", message: SPARK_METADATA_WARNING },
+    },
+  );
+  return rows;
 }
 
 function forwardingRollout(
@@ -1208,6 +1239,182 @@ describe("Codex pure blind provider envelope", () => {
         },
       },
     });
+  });
+
+  it("accepts only the exact ordered Spark code-mode compatibility prelude", () => {
+    const publicRows = sparkCodeModeRows();
+    const rolloutRows = completeRollout(
+      forwardingRollout(undefined, { content: [] }),
+      "spark_disabled",
+    );
+    expect(inspectCodexPureEvidence(publicRows, rolloutRows, SPARK_MODEL)).toMatchObject({
+      ok: true,
+      completedMcpCalls: 1,
+    });
+    const alternateIds = sparkCodeModeRows();
+    alternateIds[1]!.item!.id = "compatibility-warning-a";
+    alternateIds[2]!.item!.id = "compatibility-warning-b";
+    expect(inspectCodexPureEvents(alternateIds, SPARK_MODEL)).toMatchObject({ ok: true });
+    expect(
+      buildCodexPureEnvelope({
+        rows: publicRows,
+        rolloutRows,
+        report: "# Playthrough log\n\n# Verdict\n\n```json exit-interview\n{}\n```\n",
+        model: SPARK_MODEL,
+        durationMs: 1234,
+      }),
+    ).toMatchObject({ ok: true, envelope: { requested_model: SPARK_MODEL } });
+
+    const rejected = [
+      {
+        label: "an unspecified model",
+        rows: sparkCodeModeRows(),
+        model: undefined,
+      },
+      {
+        label: "another model",
+        rows: sparkCodeModeRows(),
+        model: "gpt-5.6-sol",
+      },
+      {
+        label: "one warning only",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows.splice(2, 1);
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "reversed warnings",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          [rows[1], rows[2]] = [rows[2]!, rows[1]!];
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a changed metadata warning",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[2]!.item!.message = `${SPARK_METADATA_WARNING} changed`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a changed unstable-warning prefix",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.message = `Changed: ${rows[1]!.item!.message}`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "an unstable-warning path outside the sterile home",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\config.toml.`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "text prefixed to the sterile-home config path",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}ALTERED EXTRA TEXT C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a dot-segment escape from the sterile home",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\..\\config.toml.`;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "duplicate warning item ids",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[2]!.item!.id = rows[1]!.item!.id;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "an invalid warning item id",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.item!.id = "";
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "an updated warning lifecycle",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows[1]!.type = "item.updated";
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "an extra warning field",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          (rows[1]!.item as TestItem & { extra?: boolean }).extra = true;
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a warning after turn start",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows.splice(1, 2);
+          rows.splice(2, 0, {
+            type: "item.completed",
+            item: { id: "item_1", type: "error", message: SPARK_METADATA_WARNING },
+          });
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a third warning",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows.splice(3, 0, {
+            type: "item.completed",
+            item: { id: "item_extra", type: "error", message: SPARK_METADATA_WARNING },
+          });
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+      {
+        label: "a reused prelude warning object later in the turn",
+        rows: (() => {
+          const rows = sparkCodeModeRows();
+          rows.splice(-1, 0, rows[1]!);
+          return rows;
+        })(),
+        model: SPARK_MODEL,
+      },
+    ];
+    for (const fixture of rejected) {
+      expect(inspectCodexPureEvents(fixture.rows, fixture.model), fixture.label).toMatchObject({
+        ok: false,
+      });
+    }
   });
 
   it.each([

@@ -31,6 +31,10 @@ const ALLOWED_ROLLOUT_METADATA_ROWS = new Set([
 ]);
 const LUNA_V1_MODEL = "gpt-5.6-luna";
 const SPARK_DISABLED_MODEL = "gpt-5.3-codex-spark";
+const SPARK_CODE_MODE_UNSTABLE_WARNING_PREFIX =
+  "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
+const SPARK_CODE_MODE_METADATA_WARNING =
+  "Code Mode is enabled in configuration, but model `gpt-5.3-codex-spark` does not advertise Code Mode support. This may degrade model performance. Disable `features.code_mode` and `features.code_mode_only`, or select a model whose metadata enables Code Mode.";
 const V2_MULTI_AGENT_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra"]);
 const SUPPORTED_CODEX_MODELS = new Set([
   ...V2_MULTI_AGENT_MODELS,
@@ -1014,19 +1018,60 @@ function publicGameplayLifecycle(item) {
   };
 }
 
+function validSparkCodeModeWarningRow(row, ordinal) {
+  if (
+    !isRecord(row) ||
+    !hasOnlyKeys(row, ["type", "item"]) ||
+    row.type !== "item.completed" ||
+    !isRecord(row.item) ||
+    !hasOnlyKeys(row.item, ["id", "type", "message"]) ||
+    !validItemId(row.item.id) ||
+    row.item.type !== "error" ||
+    typeof row.item.message !== "string"
+  ) {
+    return false;
+  }
+  if (ordinal === 0) {
+    if (!row.item.message.startsWith(SPARK_CODE_MODE_UNSTABLE_WARNING_PREFIX)) return false;
+    const configPath = row.item.message.slice(SPARK_CODE_MODE_UNSTABLE_WARNING_PREFIX.length);
+    return (
+      configPath.length > 0 &&
+      configPath.length <= 4096 &&
+      !/[\r\n]/u.test(configPath) &&
+      /^(?:[A-Za-z]:[\\/]|[\\/])(?:(?!\.{1,2}[\\/])[^\\/\r\n]+[\\/])*\.tmp[\\/]blind-codex-home[\\/]tmp\.[A-Za-z0-9]{10}[\\/]config\.toml\.$/u.test(
+        configPath,
+      )
+    );
+  }
+  return ordinal === 1 && row.item.message === SPARK_CODE_MODE_METADATA_WARNING;
+}
+
+function sparkCodeModePrelude(rows, expectedModel) {
+  if (
+    expectedModel !== SPARK_DISABLED_MODEL ||
+    !validSparkCodeModeWarningRow(rows[1], 0) ||
+    !validSparkCodeModeWarningRow(rows[2], 1) ||
+    rows[1].item.id === rows[2].item.id
+  ) {
+    return [];
+  }
+  return [rows[1], rows[2]];
+}
+
 /**
  * Authenticate the useful subset of `codex exec --json` and fail closed on any
  * tool surface outside the runner-owned AdventureForge MCP server.
  */
-export function inspectCodexPureEvents(rows) {
+export function inspectCodexPureEvents(rows, expectedModel = undefined) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return reject("Codex event stream is empty");
   }
 
-  if (rows[0]?.type !== "thread.started" || rows[1]?.type !== "turn.started") {
+  const allowedSparkPrelude = sparkCodeModePrelude(rows, expectedModel);
+  const turnStartedIndex = 1 + allowedSparkPrelude.length;
+  if (rows[0]?.type !== "thread.started" || rows[turnStartedIndex]?.type !== "turn.started") {
     return reject("Codex pure run must begin with thread.started then turn.started");
   }
-
   const threadRows = [];
   const turnStartedRows = [];
   const turnCompletedRows = [];
@@ -1037,13 +1082,16 @@ export function inspectCodexPureEvents(rows) {
   const completedGameplayCalls = [];
   const mcpCallIds = new Set();
 
-  for (const row of rows) {
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
     if (row === null || typeof row !== "object" || Array.isArray(row)) {
       return reject("Codex event stream contains a non-object row");
     }
     if (!ALLOWED_EVENT_TYPES.has(row.type)) {
       return reject(`Codex event stream contains forbidden event type ${String(row.type)}`);
     }
+
+    if (allowedSparkPrelude.length === 2 && (index === 1 || index === 2)) continue;
 
     if (row.type === "thread.started") threadRows.push(row);
     if (row.type === "turn.started") turnStartedRows.push(row);
@@ -1164,7 +1212,7 @@ export function inspectCodexPureEvents(rows) {
 
 /** Cross-bind the public Codex event stream to the private raw wrapper trace. */
 export function inspectCodexPureEvidence(publicRows, rolloutRows, expectedModel = undefined) {
-  const publicEvidence = inspectCodexPureEvents(publicRows);
+  const publicEvidence = inspectCodexPureEvents(publicRows, expectedModel);
   if (!publicEvidence.ok) return publicEvidence;
   const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel);
   if (!rolloutStructure.ok) return rolloutStructure;

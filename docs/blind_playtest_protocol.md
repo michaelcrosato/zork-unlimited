@@ -174,8 +174,11 @@ and rules are ignored, shell/web/apps/plugins/browser/computer/subagents and the
 unused shell snapshot are disabled, and only the exact pure AdventureForge MCP
 tools are enabled. The built-in launch also requires `--enable code_mode_only`,
 forcing every gameplay call through the audited code-mode wrapper; direct-mode
-calls are not current pure evidence. It audits the provider JSONL and rejects
-unknown events, non-game tools, another MCP server, incomplete/duplicate turns,
+calls are not current pure evidence. Spark's exact two pre-turn code-mode
+compatibility notices are accepted only for a requested and privately captured
+Spark run; altered, extra, or reordered errors fail closed. It audits the
+provider JSONL and rejects unknown events, non-game tools, another MCP server,
+incomplete/duplicate turns,
 or malformed final output. The audit accepts only reasoning, agent messages, and
 paired AdventureForge gameplay calls. Resource discovery, task planning, another
 MCP server, a non-game tool, and every unexpected lifecycle event reject the run.

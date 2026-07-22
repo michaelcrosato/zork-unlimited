@@ -82,7 +82,10 @@ the unused shell snapshot, and subagent capabilities. It also passes
 `--enable code_mode_only`, forcing gameplay through the audited `functions.exec`
 wrapper instead of direct MCP dispatch. The runner injects only the pure
 AdventureForge MCP server and pair-audits every normal game call. The audit
-accepts no discovery, resource, planning, task, or other non-game event; another
+accepts Spark's two exact, ordered pre-turn code-mode compatibility notices only
+when Spark is the requested and captured model; any changed, additional, or
+out-of-order error remains invalid. The notices stay visible in raw evidence.
+It accepts no discovery, resource, planning, task, or other non-game event; another
 server, malformed lifecycle, or unbounded payload rejects the run. Codex never
 uses a report-recovery model turn. On attempt zero only, an otherwise-valid
 report whose sole verifier defect is its existing `journey_exit_receipt` value
