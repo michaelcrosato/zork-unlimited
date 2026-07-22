@@ -133,7 +133,7 @@ function lureRoute(opening: "clean" | "fouled" | "fouled_braced" | "hybrid"): Ro
   expect(yard.blocked_exits).toContainEqual({
     direction: "north",
     message:
-      "LURE: commit with Cade; feed then waits west—take it, return east, cross north. After first cast: west, then up. Otherwise speak at gate or carry committed rig/shutters/seals.",
+      "North waits for its live precondition: June's gate terms resolved; pre-cast feed, drive rig, shutters, or seals carried; or the first-lure west-up loft beat completed.",
   });
   act("go_west");
   act("go_up");
