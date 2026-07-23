@@ -19,6 +19,7 @@ import {
   renderJourneyStatus,
   renderQuestLaunch,
   matchJourneyGateOption,
+  resolveQuestLaunchChoice,
 } from "../../bin/overworld_play.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
@@ -259,6 +260,8 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
 
     const text = renderQuestLaunch(quest);
     expect(text).toContain("Which last-mile road do you commit to?");
+    expect(text).toContain("choose <number|name>");
+    expect(text).toContain("choose 1 — Take the ridge");
     expect(text).toContain("Actual cost: 30 min, 1 supply, fatigue +25.");
     expect(text).toContain(
       "Projected arrival: Day 1, 08:30; 5 supplies remaining; fatigue 25; condition tired.",
@@ -267,6 +270,40 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(text).toContain("Requires 2 supplies; you have 1.");
     expect(text).toContain("Projected time: Day 1, 09:15.");
     expect(text).not.toMatch(/knowledge_|memory_|return_summary|import:/i);
+
+    const options = quest.launch.options;
+    expect(resolveQuestLaunchChoice(options, "choose 2")).toMatchObject({
+      kind: "resolved",
+      option: { id: "test:stockway" },
+    });
+    expect(resolveQuestLaunchChoice(options, "2")).toMatchObject({
+      kind: "resolved",
+      option: { id: "test:stockway" },
+    });
+    expect(resolveQuestLaunchChoice(options, "Take the ridge")).toMatchObject({
+      kind: "resolved",
+      option: { id: "test:ridge" },
+    });
+    expect(resolveQuestLaunchChoice(options, "choose test:ridge")).toMatchObject({
+      kind: "resolved",
+      option: { id: "test:ridge" },
+    });
+    expect(
+      resolveQuestLaunchChoice(
+        [{ ...options[0]!, title: "  Take   the high road  " }],
+        "choose take the high road",
+      ),
+    ).toMatchObject({ kind: "resolved", option: { id: "test:ridge" } });
+    expect(resolveQuestLaunchChoice(options, "2 garbage")).toMatchObject({
+      kind: "unmatched",
+    });
+    expect(resolveQuestLaunchChoice(options, "Take the")).toMatchObject({ kind: "unmatched" });
+    expect(
+      resolveQuestLaunchChoice(
+        [options[0]!, { ...options[1]!, title: "  Take   the ridge  " }],
+        "take the ridge",
+      ),
+    ).toMatchObject({ kind: "ambiguous" });
   });
 
   it("renders every authoritative story option with its summary terms and consequence", () => {
@@ -390,6 +427,15 @@ describe("overworld_play CLI (scripted mode)", () => {
     expect(run.output).toContain("Choose the active journey prompt first");
     expect(run.output).toContain("choose <number|label>");
     expect(run.output).not.toContain("Goal passage stop:");
+  });
+
+  it("accepts actions as the same read-only help command in free roam and at a story gate", () => {
+    const run = runCli(["--commands", "actions; talk rowan; actions"]);
+
+    expect(run.status, run.output).toBe(0);
+    expect(run.output.match(/Commands:/g)?.length ?? 0).toBe(2);
+    expect(run.output).toContain("actions · help · quit");
+    expect(run.output).not.toContain("A scripted command was rejected.");
   });
 
   it("keeps journal and travel-log inspection read-only while repeating the story gate", () => {
