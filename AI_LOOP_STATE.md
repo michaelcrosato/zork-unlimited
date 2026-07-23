@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 619 -->
+<!-- historical_cycle_count: 620 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - cli_journey_gate_authority
+
+- Evidence choice: the human overworld CLI could hide mandatory story/retention decisions, omit the current goal and passage, and misdescribe discovered work after restore; blind players then guessed commands instead of deciding from game-presented consequences.
+- Surface: story and Continue/End gates now preempt ordinary actions, accept numbered/full-label/exact-id choices, render consequences, preserve safe inspection/save/load, expose goal guidance and forecast, execute `follow goal`, and restore ended journeys as read-only receipts.
+- Counterfactual: partial gate guesses fail closed; local future, completed, remote, and duplicate-title jobs receive distinct truthful messages with exact ids for ambiguity; real save/restore histories prove each branch without synthetic state.
+- Pure evidence: exact tracked-clean `6eed4748` passes strict capture-v2 Terra 4592 across 65 turns and 55 accepted decisions, completes Wolf-Winter and Gallowmere, continues at goal 30/checkpoint 40, and ends voluntarily at goal 55.
+- Measured result: the player recovers from a failed first feed cast, diverts every wolf alive with the herd whole, recovers from a failed spoor read, rates clarity/enjoyment 4/4, remains unstuck, and chooses replay-yes with no rejected action, loop, or broken state.
+- Feedback/follow-through: serial permanent setup density and compact-state load remain the strongest friction; command projection and progressive disclosure stay queued as separate increments rather than expanding this CLI authority change.
+- Guard: fresh post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 23 focused CLI regressions, clean independent re-review, and full health pass 408 files/3,242 tests plus UI typecheck and all packs.
 
 ### Cycle result - codex_only_outer_loop
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: DEP0190, deprecation, classifier, and banner wording are absent from the report, evidence, rollout, capture, and binding artifacts; this proves the repo-owned trigger is removed, not that the server-owned classifier can never produce another false positive.
 - Feedback/follow-through: the long run reported only implicit resource-boundary recovery, one recoverable stale hash, and an abrupt active-goal checkpoint exit; no gameplay feedback compile is attributed to this tooling-only increment, while the authored Albany Works event proceeds separately.
 - Guard: unchanged pre/post crawl passes 247/247 nodes, 344/344 edges, and 12/12 boards/quests; exact warning code passes health at 404 files/3,098 tests plus UI/all packs, independent final review found no P0-P2, and merged main contributes only separately green PR #130 before final CI.
-
-### Cycle result - wolf_paling_stage_identities
-
-- Evidence choice: repeated current-build players understood the Broken Paling fiction but saw one `use_paling_rail` id mean set, wedge, splice, scent-pen turn, and split-guard bind, so this cycle fixes executable identity without changing the five authored mechanics.
-- Surface: one structural rule gives target-only USE hubs verb-based ids only when every authored row has a unique verb and no self-use shadows the legacy id; MCP/UI expose `set/wedge/splice/turn/bind_paling_rail`, accept unambiguous `use_paling_rail` input, and record only the canonical id.
-- Counterfactual: public wedge failure exposes bind and a split guard, Works set failure exposes splice and +1 cattle alarm, and a braced fouled lure exposes turn and a living scent-pen redirect; all other packs, Wolf's repeated-hold target, and Tide's duplicate-clear target retain their old ids.
-- Pure evidence: exact final gameplay `fb098bb1` passed Terra 4343, Luna 4344, and Sol 4345 at first goals 29/27/29; all continued, were unstuck/replay-yes, and rated clarity/enjoyment 4/4, 4/5, and 4/4. Four zero-publication Spark/path/operator failures are excluded without retry.
-- Measured result: Terra organically used `set_paling_rail` then `turn_paling_rail`, redirected the yearling, and called the recovery its best moment with no rail confusion; Sol's clean lure and Luna's frost-report route did not expose a recovery id, so one direct witness is a targeted PASS rather than cohort-scale resolution proof.
-- Feedback/follow-through: compile `20260721T153042Z` has 954 verified/58 rejected reports, 203 eligible pure exits, and 179 continuing; the ledger is 953/59. Dense/truncated setup and checkpoint interruption persist, while the rebuilt Works event remains the next systemic starting-slice increment.
-- Guard: exact pre/post crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; health passes 404 files/3,096 tests plus UI/all packs, the independent 630k-state relabel oracle and review are green, and Wolf/world hashes stay `e1a7d6ac…`/`9238b5f2…` with save/trace replay unchanged.
