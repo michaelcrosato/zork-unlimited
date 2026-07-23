@@ -43,7 +43,8 @@ export type RpgActionOption = {
   id: string;
   command: string;
   action: RpgAction;
-  /** Input-only legacy spellings. Player surfaces expose only `id`. */
+  /** Input-only spellings. Structured UI/MCP surfaces expose only `id`; the
+   * terminal projection may advertise unambiguous human-readable aliases. */
   inputAliases?: readonly string[];
   skill_check?: { skill: string; difficulty: number; die: string };
   combat?: {
@@ -562,13 +563,13 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   const active = activeDialogue(index, state);
   if (active) {
     for (const t of active.node.topics) {
-      push(
-        option(index, state, `ask_${t.id}`, `ask: ${t.prompt}`, {
-          type: "ASK",
-          npc: active.npc.id,
-          topic: t.id,
-        }),
-      );
+      const projected = option(index, state, `ask_${t.id}`, `ask: ${t.prompt}`, {
+        type: "ASK",
+        npc: active.npc.id,
+        topic: t.id,
+      });
+      if (projected && t.aliases?.length) projected.inputAliases = [...t.aliases];
+      push(projected);
     }
   }
 

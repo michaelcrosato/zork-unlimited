@@ -30,6 +30,12 @@ import {
 import type { RpgActionOption } from "../src/rpg/legal_actions.js";
 import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation.js";
 import { parseCommand } from "../src/rpg/command_map.js";
+import {
+  projectRpgPlayerCommands,
+  renderRpgPlayerActionHelp,
+  renderRpgPlayerCommand,
+  resolveRpgPlayerCommand,
+} from "../src/rpg/player_command_projection.js";
 import { recordTrace } from "../src/trace/record.js";
 import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 
@@ -42,6 +48,8 @@ export function render(obs: RpgObservation): string {
   lines.push(`[HP ${obs.stats.hp}  ATK ${obs.stats.attack}  DEF ${obs.stats.defense}]`);
   if (obs.enemies_present.length)
     lines.push(`Foes: ${obs.enemies_present.map((e) => `${e.name} (HP ${e.hp})`).join(", ")}.`);
+  const people = [...new Set(obs.npcs_present.map((npc) => npc.name.trim()).filter(Boolean))];
+  if (!obs.ended && people.length) lines.push(`People here: ${people.join(", ")}.`);
   if (obs.visible_objects.length)
     lines.push(`You see: ${obs.visible_objects.map((o) => o.name).join(", ")}.`);
   if (obs.exits.length) lines.push(`Exits: ${obs.exits.map((e) => e.direction).join(", ")}.`);
@@ -86,13 +94,16 @@ export function resolve(
   raw: string,
 ): { ok: true; action: RpgAction } | { ok: false; reason: string } {
   const text = raw.trim().toLowerCase();
+  const legal = enumerateRpgActions(index, state);
+  const projected = resolveRpgPlayerCommand(legal, raw, { index, state });
+  if (projected.kind === "resolved") return { ok: true, action: projected.option.action };
+  if (projected.kind === "ambiguous") return { ok: false, reason: projected.reason };
   // Authored commands are controlled vocabulary too. Match every exact legal
-  // label before unavailable affordances or the generic command grammar. In
+  // legacy label before unavailable affordances or the generic command grammar.
+  // Current terminal labels were already handled by the shared projection. In
   // particular, a blocked USE may deliberately share ordinary vocabulary such
   // as "read" with a different legal action; the legal menu remains ground truth.
-  const exactLegal = enumerateRpgActions(index, state).find(
-    (option) => option.command.trim().toLowerCase() === text,
-  );
+  const exactLegal = legal.find((option) => option.command.trim().toLowerCase() === text);
   if (exactLegal) return { ok: true, action: exactLegal.action };
   const blocked = enumerateRpgBlockedActions(index, state).find(
     (option) => option.command.trim().toLowerCase() === text,
@@ -110,20 +121,9 @@ export function resolve(
   return parseCommand(index, state, raw);
 }
 
-function signed(value: number): string {
-  return value >= 0 ? `+${value}` : String(value);
-}
-
 /** Player-facing terminal label for one legal action, including tactical math. */
 export function renderActionOption(option: RpgActionOption): string {
-  if (!option.combat) return option.command;
-  const phase =
-    option.combat.phase === "opening"
-      ? "opening"
-      : option.combat.phase === "follow_through"
-        ? "follow-through"
-        : "one-shot";
-  return `${option.command} [${phase}; ATK ${signed(option.combat.attack_bonus)}, DEF ${signed(option.combat.defense_bonus)} this round]`;
+  return renderRpgPlayerCommand(projectRpgPlayerCommands([option])[0]!);
 }
 
 /** Render the complete human action menu, including authored unavailable choices. */
@@ -131,13 +131,11 @@ export function renderActionHelp(
   index: ReturnType<typeof indexRpgPack>,
   state: import("../src/core/state.js").GameState,
 ): string {
-  const available = enumerateRpgActions(index, state).map(
-    (option) => `  ${renderActionOption(option)}`,
+  return renderRpgPlayerActionHelp(
+    enumerateRpgActions(index, state),
+    enumerateRpgBlockedActions(index, state),
+    { index, state },
   );
-  const unavailable = enumerateRpgBlockedActions(index, state).map(
-    (option) => `  Unavailable: ${option.command} — ${option.reason}`,
-  );
-  return ["You can:", ...available, ...unavailable].join("\n");
 }
 
 async function main(): Promise<void> {

@@ -161,6 +161,38 @@ describe("bug_0512 — interruptible, auto-resuming RPG dialogue", () => {
     ).toEqual({ countsTowardJourney: true, reason: "movement" });
   });
 
+  it("fails closed when a qualified ask names an ambiguous, absent, or different speaker", () => {
+    const pack = structuredClone(BASE_PACK);
+    const hedrick = pack.npcs.find((npc) => npc.id === "hedrick");
+    if (!hedrick) throw new Error("expected Hedrick");
+    pack.npcs.push({
+      ...structuredClone(hedrick),
+      id: "hedrick_witness",
+      name: "Hedrick witness",
+    });
+
+    const game = fresh(pack);
+    let state = drive(game.index, game.rules, game.state, "go_west").state;
+    state = drive(game.index, game.rules, state, "talk_hedrick").state;
+
+    expect(resolveCli(game.index, state, "ask Hedrick about sow")).toEqual({
+      ok: true,
+      action: { type: "ASK", npc: "hedrick", topic: "ask_sow" },
+    });
+    expect(resolveCli(game.index, state, "ask Hed about sow")).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/more than one person here/i),
+    });
+    expect(resolveCli(game.index, state, "ask Hedrick witness about sow")).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/speaking with Hedrick, not Hedrick witness/i),
+    });
+    expect(resolveCli(game.index, state, "ask Rowan about sow")).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/no visible person called "rowan" here/i),
+    });
+  });
+
   it("keeps a genuine child-only branch instead of folding it out of sight", () => {
     const pack = structuredClone(BASE_PACK);
     const hedrick = pack.npcs.find((npc) => npc.id === "hedrick");

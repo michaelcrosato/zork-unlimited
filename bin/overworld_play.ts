@@ -28,7 +28,12 @@ import { makeStep, actionEquals } from "../src/core/engine.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../src/rpg/runner.js";
 import { buildRpgObservation } from "../src/rpg/observation.js";
 import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
-import { render as renderQuest, illegalReason, resolve as resolveRpgCommand } from "./rpg_play.js";
+import {
+  render as renderQuest,
+  renderActionHelp as renderQuestActionHelp,
+  illegalReason,
+  resolve as resolveRpgCommand,
+} from "./rpg_play.js";
 import { loadOverworldManifest } from "../src/world/source.js";
 import { timeLabel } from "../src/world/session_journal_codec.js";
 import type {
@@ -124,12 +129,17 @@ function questLine(view: OverworldView, quest: OverworldQuestView): string {
 /** Player-facing quest-launch terms shared by interactive and scripted CLI play. */
 export function renderQuestLaunch(quest: OverworldQuestView): string {
   if (!quest.launch) return "";
-  const lines = [`\n${quest.launch.prompt}`];
+  const lines = [
+    `\n${quest.launch.prompt}`,
+    "Choose with `choose <number|name>`; a legacy bare number also works.",
+  ];
   quest.launch.options.forEach((option, index) => {
     const projection = option.projection;
     const availability =
       projection?.available === false ? ` [blocked: ${projection.blockedReason}]` : "";
-    lines.push(`  ${String(index + 1)}. ${option.title} — ${option.summary}${availability}`);
+    lines.push(
+      `  choose ${String(index + 1)} — ${option.title} — ${option.summary}${availability}`,
+    );
     lines.push(`     What you expect: ${option.preview}`);
     if (option.tradeoffSummary) {
       lines.push(`     Route tradeoff: ${option.tradeoffSummary}`);
@@ -147,6 +157,64 @@ export function renderQuestLaunch(quest: OverworldQuestView): string {
     }
   });
   return lines.join("\n");
+}
+
+type QuestLaunchOption = NonNullable<OverworldQuestView["launch"]>["options"][number];
+
+export type QuestLaunchChoiceResolution =
+  | { kind: "resolved"; option: QuestLaunchOption }
+  | { kind: "ambiguous"; reason: string }
+  | { kind: "unmatched"; reason: string };
+
+function normalizeQuestLaunchSelector(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** Resolve a quest approach without permissive prefix/substring guessing.
+ * `choose 2` is canonical, bare `2` remains compatible, and names/ids must be
+ * exact. A mixed value such as `2 garbage` is never parsed as option two. */
+export function resolveQuestLaunchChoice(
+  options: readonly QuestLaunchOption[],
+  raw: string,
+): QuestLaunchChoiceResolution {
+  const normalized = normalizeQuestLaunchSelector(raw);
+  const selector = normalized.startsWith("choose ")
+    ? normalized.slice("choose ".length).trim()
+    : normalized;
+  if (!selector) {
+    return {
+      kind: "unmatched",
+      reason: "Choose an approach with `choose <number|name>`, or type `cancel`.",
+    };
+  }
+
+  if (/^\d+$/.test(selector)) {
+    const number = Number(selector);
+    const option = Number.isSafeInteger(number) && number >= 1 ? options[number - 1] : undefined;
+    return option
+      ? { kind: "resolved", option }
+      : {
+          kind: "unmatched",
+          reason: `There is no approach ${selector}. Use an exact command from the launch card.`,
+        };
+  }
+
+  const matches = options.filter(
+    (option) =>
+      normalizeQuestLaunchSelector(option.id) === selector ||
+      normalizeQuestLaunchSelector(option.title) === selector,
+  );
+  if (matches.length === 1) return { kind: "resolved", option: matches[0]! };
+  if (matches.length > 1) {
+    return {
+      kind: "ambiguous",
+      reason: `"${selector}" names more than one approach. Use \`choose <number>\` or an exact id.`,
+    };
+  }
+  return {
+    kind: "unmatched",
+    reason: `No approach exactly matches "${selector}". Use \`choose <number|name>\`.`,
+  };
 }
 
 /** The pending road-encounter prompt (pure; exported for tests). */
@@ -302,7 +370,7 @@ const HELP = `Commands:
   journal · log            recent journal entries · travel log
   save [name] · load [name]  snapshot to saves/<name>.json
   hash                     deterministic snapshot hash
-  help · quit`;
+  actions · help · quit`;
 
 function matchingEntities<T extends { id: string }>(
   items: readonly T[],
@@ -385,7 +453,10 @@ function printTravelLog(view: OverworldView): void {
   if (!view.log.length) console.log("No roads travelled yet.");
 }
 
-type Reader = { read(prompt: string): Promise<string | null>; scripted: boolean };
+export type QuestCommandReader = {
+  read(prompt: string): Promise<string | null>;
+  scripted: boolean;
+};
 
 async function main(): Promise<void> {
   rejectPositionals();
@@ -422,7 +493,7 @@ async function main(): Promise<void> {
   const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
   const scripted = commands ?? [];
   let scriptedFailure = false;
-  const reader: Reader = {
+  const reader: QuestCommandReader = {
     scripted: !interactive,
     read: async (prompt: string) => {
       if (interactive) return rl!.question(prompt);
@@ -453,7 +524,7 @@ async function main(): Promise<void> {
       if (!line) continue;
       const low = line.toLowerCase();
       if (["quit", "q", "exit"].includes(low)) break;
-      if (["help", "?"].includes(low)) {
+      if (["actions", "help", "?"].includes(low)) {
         console.log(HELP);
         continue;
       }
@@ -795,12 +866,12 @@ function travelToward(session: OverworldSession, target: string): TravelLogEntry
  * quest → commit the start → play to an ending → completeQuest (never on death; abandoning
  * leaves the lead started-but-open, as the engine dictates).
  */
-async function runQuestSession(
+export async function runQuestSession(
   session: OverworldSession,
   runtime: RpgSourceRuntime,
   questId: string,
   seed: number,
-  reader: Reader,
+  reader: QuestCommandReader,
 ): Promise<"done" | "quit"> {
   const quest = session.previewQuestStart(questId);
   let approachId: string | undefined;
@@ -812,15 +883,16 @@ async function runQuestSession(
       const low = raw.trim().toLowerCase();
       if (["quit", "q", "exit"].includes(low)) return "quit";
       if (["abandon", "leave", "cancel"].includes(low)) return "done";
-      const numeric = Number.parseInt(low, 10);
-      const option =
-        Number.isInteger(numeric) && numeric >= 1 && numeric <= quest.launch.options.length
-          ? quest.launch.options[numeric - 1]!
-          : matchEntity(quest.launch.options, raw, (candidate) => candidate.title);
-      if (!option) {
-        console.log("Choose a numbered or named approach, or type `cancel`.");
+      if (["actions", "help", "?"].includes(low)) {
+        console.log(renderQuestLaunch(quest));
         continue;
       }
+      const selection = resolveQuestLaunchChoice(quest.launch.options, raw);
+      if (selection.kind !== "resolved") {
+        console.log(selection.reason);
+        continue;
+      }
+      const option = selection.option;
       if (option.projection?.available === false) {
         console.log(option.projection.blockedReason ?? "That approach is unavailable.");
         continue;
@@ -867,17 +939,23 @@ async function runQuestSession(
       quitting = true;
       break;
     }
-    if (["abandon", "leave"].includes(low)) break;
+    // `leave` is a common authored dialogue topic (including Cade's). Only the
+    // explicitly documented `abandon` command escapes before legal-command
+    // resolution gets a chance to act; an unmatched legacy `leave` falls back
+    // to abandoning below.
+    if (low === "abandon") break;
     if (["actions", "help", "?"].includes(low)) {
-      console.log("You can:\n" + obs.available_actions.map((a) => `  ${a.command}`).join("\n"));
+      console.log(renderQuestActionHelp(index, state));
       continue;
     }
     const parsed = resolveRpgCommand(index, state, raw);
     if (!parsed.ok) {
+      if (low === "leave") break;
       console.log(parsed.reason);
       continue;
     }
     if (!rules.legalActions(state).some((a) => actionEquals(a, parsed.action))) {
+      if (low === "leave") break;
       console.log(illegalReason(index, state, parsed.action));
       continue;
     }

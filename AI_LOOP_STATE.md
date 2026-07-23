@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 620 -->
+<!-- historical_cycle_count: 621 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - rpg_terminal_command_projection
+
+- Evidence choice: terminal RPG menus exposed descriptive ASK prose as if executable, hid visible speakers, parsed launch numbers permissively, and made authored `leave` collide with quest abandonment; blind seed 4621 also found `actions` worked only inside the quest loop.
+- Surface: standalone and embedded play now share context-aware executable commands, concise dialogue topics, exact/unique visible-speaker asks, legal contextual `wear`, truthful people lists, exact quest-launch choices, and overworld-wide `actions` help.
+- Counterfactual: colliding topics, object aliases, and loop-control words fail closed to stable `choose <action-id>` commands; absent/ambiguous/wrong speakers reject without state change, while legal Cade `leave` executes before unmatched legacy `leave` abandons.
+- Pure evidence: exact clean `c9d16419` passes strict capture-v2 Terra 4629 across 62 turns and 52 accepted decisions, diverts Wolf-Winter bloodlessly, wins Gallowmere, continues at goal 27/checkpoint 40, then ends voluntarily at goal 52.
+- Measured result: every wolf and cow survives the lure, a failed Gallowmere tracking check has a clear recovery, and the player reports no rejection, loop, broken state, or soft-lock; clarity/enjoyment 4/4, unstuck, replay-yes.
+- Feedback/follow-through: Queensbury route revelation and dense Albany setup remain the current friction; verified progressive-disclosure and June-guidance follow-ups stay separate, while Frost-Heave's hash-safe landing must precede conditional preview truth.
+- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 48 focused regressions, independent clean re-review, and supported CI two-worker health pass 410 files/3,259 tests plus UI typecheck and all packs.
 
 ### Cycle result - cli_journey_gate_authority
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: no cohort organically selected the new Works charter or its matching return method; Sol's warm-room allocation, Relief Protocol, and Cade wagon were pre-existing systems and are not counted as uptake. The authored reversal therefore PASSes deterministically while discoverability remains UNPROVEN.
 - Feedback/follow-through: compile `20260721T181636Z` has 957 verified/58 rejected reports, 206 eligible pure exits, and 181 continuing; Sol 4350 is one later verified report. Its fresh S3 embedded-action bridge discovery and S2 stale Cade paling job outrank another content addition for the next cycle.
 - Guard: exact pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; the final combined branch passes health at 406 files/3,112 tests plus UI/all packs with stable four-worker scheduling, world/Wolf hashes are `53afa583…`/`e1a7d6ac…`, and two independent reviews found no P0-P2.
-
-### Cycle result - shell_free_node_launchers
-
-- Evidence choice: recurring Windows Node DEP0190 output from child processes using `shell: true` coincided with the Codex UI false-classification banner, so this cycle removes the emitting launch mode instead of suppressing deprecations or weakening tests.
-- Surface: one shell-free npm helper preserves structured argv, nested `--`, cwd, timeout, and output behavior across author/validate/trace/blind regressions and the assertion wrapper; fleet's npm probe and acceptance TSX compiler now use direct JavaScript entrypoints too.
-- Counterfactual: a seven-launcher guard rejects any restored `shell:` option, deprecations promoted to errors pass 50/50 changed tests plus the real assertion wrapper, missing Windows npm fails closed, and a repository-wide executable scan finds no remaining raw npm/npx shell launcher.
-- Pure evidence: exact clean `1b322cb5` Luna seed 4346 completed Wolf-Winter via `ending_pack_diverted`, continued through goals/checkpoints to its voluntary checkpoint-160 exit, rated clarity/enjoyment 4/5, was unstuck/replay-yes, and verified after deterministic receipt binding.
-- Measured result: DEP0190, deprecation, classifier, and banner wording are absent from the report, evidence, rollout, capture, and binding artifacts; this proves the repo-owned trigger is removed, not that the server-owned classifier can never produce another false positive.
-- Feedback/follow-through: the long run reported only implicit resource-boundary recovery, one recoverable stale hash, and an abrupt active-goal checkpoint exit; no gameplay feedback compile is attributed to this tooling-only increment, while the authored Albany Works event proceeds separately.
-- Guard: unchanged pre/post crawl passes 247/247 nodes, 344/344 edges, and 12/12 boards/quests; exact warning code passes health at 404 files/3,098 tests plus UI/all packs, independent final review found no P0-P2, and merged main contributes only separately green PR #130 before final CI.

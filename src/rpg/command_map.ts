@@ -9,9 +9,11 @@
  * illegal command yields a friendly message, never a state change.
  */
 import type { RpgAction } from "../api/types.js";
+import { evalConditions } from "../core/conditions.js";
 import type { GameState } from "../core/state.js";
+import { normalizeRpgTopicCommand, parseQualifiedRpgAskCommand } from "./command_normalization.js";
 import { type RpgModelIndex, activeDialogue } from "./model.js";
-import { useInteraction } from "./legal_actions.js";
+import { enumerateRpgBaseActions, useInteraction } from "./legal_actions.js";
 
 export type ParseResult = { ok: true; action: RpgAction } | { ok: false; reason: string };
 
@@ -152,15 +154,63 @@ function resolveNpc(index: RpgModelIndex, phrase: string): string | null {
   return null;
 }
 
-const notUnderstood = (raw: string): ParseResult => ({
-  ok: false,
-  reason: `I don't understand "${raw}". Try: look, go <dir>, take/drop <obj>, open/unlock <obj>, use <obj> on <obj>, talk to <npc>, ask about <topic>, inventory.`,
-});
+type VisibleNpcResolution =
+  | { kind: "resolved"; id: string; name: string }
+  | { kind: "ambiguous" }
+  | { kind: "unmatched" };
+
+/** Resolve a dialogue qualifier only against people the player can currently see.
+ * Exact ids/names win; partial names are accepted only when exactly one visible
+ * person matches. */
+function resolveVisibleNpc(
+  index: RpgModelIndex,
+  state: GameState,
+  phrase: string,
+): VisibleNpcResolution {
+  const norm = stripArticle(phrase).toLowerCase().trim();
+  if (!norm) return { kind: "unmatched" };
+  const visible = (index.npcByRoom.get(state.current) ?? []).filter((npc) =>
+    evalConditions(npc.conditions ?? [], state),
+  );
+  const exact = visible.filter(
+    (npc) => npc.id.toLowerCase() === norm || npc.name.toLowerCase() === norm,
+  );
+  if (exact.length === 1) {
+    return { kind: "resolved", id: exact[0]!.id, name: exact[0]!.name };
+  }
+  if (exact.length > 1) return { kind: "ambiguous" };
+  const partial = visible.filter(
+    (npc) => npc.id.toLowerCase().includes(norm) || npc.name.toLowerCase().includes(norm),
+  );
+  if (partial.length === 1) {
+    return { kind: "resolved", id: partial[0]!.id, name: partial[0]!.name };
+  }
+  return partial.length > 1 ? { kind: "ambiguous" } : { kind: "unmatched" };
+}
+
+function currentCustomUseVerbs(index: RpgModelIndex, state: GameState): string[] {
+  const verbs = enumerateRpgBaseActions(index, state)
+    .filter((option) => option.action.type === "USE")
+    .map((option) => option.command.trim().toLowerCase().split(/\s+/, 1)[0]!)
+    .filter((verb) => verb !== "use");
+  return [...new Set(verbs)].sort();
+}
+
+const notUnderstood = (index: RpgModelIndex, state: GameState, raw: string): ParseResult => {
+  const customUseVerbs = currentCustomUseVerbs(index, state);
+  const useHint = customUseVerbs.length
+    ? `current action ${customUseVerbs.length === 1 ? "verb" : "verbs"}: ${customUseVerbs.join(", ")}`
+    : "use <obj> on <obj>";
+  return {
+    ok: false,
+    reason: `I don't understand "${raw}". Try: look, go <dir>, take/drop <obj>, open/unlock <obj>, ${useHint}, talk to <npc>, ask about <topic>, inventory.`,
+  };
+};
 
 /** Parse one command line into a structured Action (or a reason it can't be). */
 export function parseCommand(index: RpgModelIndex, state: GameState, raw: string): ParseResult {
   const text = raw.trim().toLowerCase();
-  if (!text) return notUnderstood(raw);
+  if (!text) return notUnderstood(index, state, raw);
   const words = text.split(/\s+/);
   const verb = words[0]!;
   const rest = words.slice(1).join(" ").trim();
@@ -170,14 +220,41 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
   // while leaving the scene closes it atomically before the move.
   const active = activeDialogue(index, state);
   if (active && (verb === "ask" || verb === "say" || verb === "topic")) {
-    const arg = rest.replace(/^about\s+/, "").trim();
+    let arg = rest.replace(/^about\s+/, "").trim();
+    const qualified = verb === "ask" ? parseQualifiedRpgAskCommand(text) : null;
+    if (qualified) {
+      const qualifier = qualified.speaker;
+      const resolvedNpc = resolveVisibleNpc(index, state, qualifier);
+      if (resolvedNpc.kind === "ambiguous") {
+        return {
+          ok: false,
+          reason: `"${qualifier}" matches more than one person here. Name the active speaker exactly.`,
+        };
+      }
+      if (resolvedNpc.kind === "unmatched") {
+        return { ok: false, reason: `There's no visible person called "${qualifier}" here.` };
+      }
+      if (resolvedNpc.id !== active.npc.id) {
+        return {
+          ok: false,
+          reason: `You are speaking with ${active.npc.name}, not ${resolvedNpc.name}.`,
+        };
+      }
+      arg = qualified.topic;
+    }
+    const normalizedArg = normalizeRpgTopicCommand(arg);
     const topic =
-      active.node.topics.find((t) => t.id.toLowerCase() === arg) ??
-      active.node.topics.find((t) =>
-        (t.aliases ?? []).some((alias) => alias.toLowerCase() === arg),
+      active.node.topics.find(
+        (candidate) => normalizeRpgTopicCommand(candidate.id) === normalizedArg,
       ) ??
-      active.node.topics.find((t) => t.prompt.toLowerCase().includes(arg) && arg.length > 0) ??
-      (arg === "" ? undefined : undefined);
+      active.node.topics.find((t) =>
+        (t.aliases ?? []).some((alias) => normalizeRpgTopicCommand(alias) === normalizedArg),
+      ) ??
+      active.node.topics.find(
+        (candidate) =>
+          normalizedArg.length > 0 &&
+          normalizeRpgTopicCommand(candidate.prompt).includes(normalizedArg),
+      );
     if (!topic)
       return {
         ok: false,
@@ -295,7 +372,7 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
       // "lever slab with bar") — the prose's verb made legible to the command mapper.
       const use = customUseByVerb(index, verb, rest);
       if (use) return { ok: true, action: use };
-      return notUnderstood(raw);
+      return notUnderstood(index, state, raw);
     }
   }
 }
