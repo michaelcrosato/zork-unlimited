@@ -32,9 +32,12 @@ describe("fresh-game tutorial", () => {
     expect(copy).toMatch(/local area.*roads.*rest.*resupply/is);
     expect(copy).toMatch(/Goal Passage.*each road.*pauses/is);
     expect(copy).toMatch(/journal.*save.*export.*resume/is);
-    expect(copy).toMatch(/40.*80.*every 40/is);
-    expect(copy).toMatch(/active-goal completion.*offer.*sooner/is);
-    expect(copy).toMatch(/Continue.*goal completion.*next fixed checkpoint.*whichever is first/is);
+    expect(copy).toMatch(/40.*80.*each 40/is);
+    expect(copy).toMatch(/active goal completion.*pause.*sooner/is);
+    expect(copy).toContain(
+      "Continue to active-goal completion or the next fixed checkpoint, whichever is first.",
+    );
+    expect(copy).not.toMatch(/another goal completion/i);
     expect(copy).not.toMatch(/wolf_winter|world_quest_id|session_id|mcp__/i);
   });
 
