@@ -137,11 +137,13 @@ import {
   type OpeningAllyJournalProof,
 } from "./opening_ally_journal.js";
 import {
+  openingLeadSourceJournalId,
   openingLeadSourceOfferJournalId,
   proveOpeningLeadSourceJournal,
   type OpeningLeadSourceJournalProof,
 } from "./opening_lead_source_journal.js";
 import {
+  openingPreparationJournalId,
   openingPreparationLegacyJournalEntry,
   openingPreparationLegacySourceWorldHash,
   openingPreparationOfferJournalDraft,
@@ -149,6 +151,7 @@ import {
   proveOpeningPreparationJournal,
   type OpeningPreparationJournalProof,
 } from "./opening_preparation_journal.js";
+import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "./frost_jamb_signpost_legacy.js";
 import {
   openingReliefAllocationLegacyJournalEntry,
   openingReliefAllocationLegacySourceWorldHash,
@@ -384,8 +387,11 @@ export {
   OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
   OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
 } from "./local_scene_legacy_sources.js";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before the truthful frost-jamb signpost correction. */
+export const OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH =
   "282cf14228d10495a12632919a50567960d06325e9182aa77232fc1c333d0aa9";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "951c541f10fefa869449427ef15666a7546ced7172144c85866e465d6f3f9de0";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -615,6 +621,122 @@ type OpeningRegistrationLegacyJournalProof = Readonly<{
   journalIndex: number;
   sourceWorldHash: string;
 }>;
+
+function replaceFrostJambPredecessorCopy(args: {
+  entry: OverworldJournalEntry;
+  replacements: readonly (readonly [before: string, after: string])[];
+}): OverworldJournalEntry {
+  let text = args.entry.text;
+  for (const [before, after] of args.replacements) {
+    const firstMatch = text.indexOf(before);
+    if (firstMatch < 0 || text.indexOf(before, firstMatch + before.length) >= 0) {
+      throw new Error(
+        `Frost-jamb predecessor journal entry "${args.entry.id}" does not match its exact authored copy.`,
+      );
+    }
+    text = `${text.slice(0, firstMatch)}${after}${text.slice(firstMatch + before.length)}`;
+  }
+  return Object.freeze({ ...args.entry, text });
+}
+
+function normalizeFrostJambSignpostPredecessorJournal(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  const leadSource = args.indexes.openingLeadSource;
+  const preparation = args.indexes.openingPreparation;
+  const currentOffer = args.indexes.openingLeadSourceOfferDraft;
+  const haydenSource = leadSource?.options.find(
+    (option) => option.id === "albany:source_hayden_frost_report",
+  );
+  const worksPreparation = preparation?.profiles.find(
+    (profile) => profile.id === "albany:prep_works_fortification",
+  );
+  const frostContactJournalId = "talk:albany_city__transport_hub__contact@frost_report_certified";
+  const frostContactPresentation =
+    args.indexes.contactPresentationsByJournalId.get(frostContactJournalId);
+  if (
+    !leadSource ||
+    !preparation ||
+    !currentOffer ||
+    !haydenSource ||
+    !worksPreparation ||
+    !frostContactPresentation
+  ) {
+    throw new Error(
+      "Frost-jamb migration target must retain Hayden's source, contact, and Reese's preparation.",
+    );
+  }
+  const haydenSelectionId = openingLeadSourceJournalId(leadSource.id, haydenSource.id);
+  const worksSelectionId = openingPreparationJournalId(preparation.id, worksPreparation.id);
+  const currentFrostContact = describeOverworldContactAction(
+    frostContactPresentation.contact,
+    frostContactPresentation.presentationId,
+  );
+  const predecessorFrostContactText = `${frostContactPresentation.contact.summary} ${FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenAgenda}`;
+
+  return args.journalEntries.map((entry) => {
+    if (entry.id === currentOffer.id) {
+      if (
+        entry.kind !== currentOffer.kind ||
+        entry.title !== currentOffer.title ||
+        entry.text !== FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.leadMessage
+      ) {
+        throw new Error(
+          `Frost-jamb predecessor journal entry "${entry.id}" does not match its exact lead-source offer.`,
+        );
+      }
+      return Object.freeze({ ...entry, title: currentOffer.title, text: currentOffer.text });
+    }
+    if (entry.id === haydenSelectionId) {
+      if (entry.kind !== "lead_source") {
+        throw new Error(
+          `Frost-jamb predecessor journal entry "${entry.id}" is not a lead-source selection.`,
+        );
+      }
+      return replaceFrostJambPredecessorCopy({
+        entry,
+        replacements: [
+          [FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenPreview, haydenSource.preview],
+          [FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenConsequence, haydenSource.consequence],
+        ],
+      });
+    }
+    if (entry.id === worksSelectionId) {
+      if (entry.kind !== "preparation") {
+        throw new Error(
+          `Frost-jamb predecessor journal entry "${entry.id}" is not a preparation selection.`,
+        );
+      }
+      return replaceFrostJambPredecessorCopy({
+        entry,
+        replacements: [
+          [FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.worksPreview, worksPreparation.preview],
+        ],
+      });
+    }
+    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
+    const canonicalEntryId =
+      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
+        ? repeatedContact[1]!
+        : entry.id;
+    if (canonicalEntryId !== frostContactJournalId) return entry;
+    if (
+      entry.kind !== currentFrostContact.kind ||
+      entry.title !== currentFrostContact.title ||
+      entry.text !== predecessorFrostContactText
+    ) {
+      throw new Error(
+        `Frost-jamb predecessor journal entry "${entry.id}" does not match its exact Hayden contact copy.`,
+      );
+    }
+    return Object.freeze({
+      ...entry,
+      title: currentFrostContact.title,
+      text: currentFrostContact.text,
+    });
+  });
+}
 
 function normalizeJuneReturnCopyPredecessorJournal(args: {
   currentContact: Readonly<{ id: string; text: string; title: string }>;
@@ -2371,7 +2493,8 @@ export function planOverworldSessionSnapshotRestore(args: {
       : sourceSnapshot.worldHash === OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH
         ? "relief_oath"
         : sourceSnapshot.worldHash === AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH ||
-            sourceSnapshot.worldHash === AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH
+            sourceSnapshot.worldHash === AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH ||
+            sourceSnapshot.worldHash === OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH
           ? "field_timed_preparation"
           : sourceSnapshot.worldHash === OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH
             ? "field_timed_preparation"
@@ -2422,6 +2545,23 @@ export function planOverworldSessionSnapshotRestore(args: {
   ) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
+  const normalizesFrostJambCopy =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    (migrationEra !== null ||
+      migratesJuneReturnCopy ||
+      migratesCadeStoryPredicate ||
+      migratesAuthoredLocalJob ||
+      migratesAuthoredLocalEvent);
+  const snapshotWithFrostJambCopy = normalizesFrostJambCopy
+    ? Object.freeze({
+        ...sourceSnapshot,
+        journalEntries: normalizeFrostJambSignpostPredecessorJournal({
+          indexes,
+          journalEntries: sourceSnapshot.journalEntries,
+        }),
+      })
+    : sourceSnapshot;
   const normalizesJuneReturnCopy =
     migratesJuneReturnCopy ||
     migrationEra === "relief_oath" ||
@@ -2442,14 +2582,14 @@ export function planOverworldSessionSnapshotRestore(args: {
           presentation.presentationId,
         );
         return Object.freeze({
-          ...sourceSnapshot,
+          ...snapshotWithFrostJambCopy,
           journalEntries: normalizeJuneReturnCopyPredecessorJournal({
             currentContact,
-            journalEntries: sourceSnapshot.journalEntries,
+            journalEntries: snapshotWithFrostJambCopy.journalEntries,
           }),
         });
       })()
-    : sourceSnapshot;
+    : snapshotWithFrostJambCopy;
   const snapshotWithCampusContact =
     OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
       sourceSnapshot.worldHash,

@@ -232,7 +232,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
 
     expect(specialist.flags.breach_braced).toBe(true);
     expect(specialist.vars.cattle_alarm).toBe(0);
-    expect(generalist.flags.rail_split).toBe(true);
+    expect(generalist.flags.rail_split).not.toBe(true);
     expect(generalist.flags.works_fortification_splice_needed).toBe(true);
     expect(actionIds(generalist)).toContain("splice_paling_rail");
     generalist = act(generalist, "splice_paling_rail");
@@ -265,10 +265,8 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       state = act(state, "set_paling_rail", firstRoll);
 
       if (firstRoll === 1) {
-        expect(state.flags).toMatchObject({
-          rail_split: true,
-          works_fortification_splice_needed: true,
-        });
+        expect(state.flags.rail_split).not.toBe(true);
+        expect(state.flags.works_fortification_splice_needed).toBe(true);
         state = act(state, "splice_paling_rail");
         expect(state.vars.cattle_alarm).toBe(alarmAfterFoul + 1);
       } else {
@@ -290,6 +288,43 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       expect(state.flags.june_blood_condition_broken).not.toBe(true);
       expect(actionIds(state)).not.toContain("attack_yearling_wolf");
     }
+  });
+
+  it("keeps a failed Works set traversable after a fouled lure commits to hybrid combat", () => {
+    let state = foulFirstCast(profileState(WORKS, IRONHANDS));
+    state.flags.hayden_frost_report_certified = true;
+    state = act(state, "set_paling_rail", 1);
+    expect(state.flags.works_fortification_splice_needed).toBe(true);
+    expect(state.flags.rail_split).not.toBe(true);
+    expect(actionIds(state)).toContain("splice_paling_rail");
+
+    state = act(state, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
+    expect(state.flags.lure_hybrid_combat_entered).toBe(true);
+    expect(actionIds(state)).not.toContain("splice_paling_rail");
+    for (let guard = 0; guard < 5 && !state.flags.yearling_down; guard += 1) {
+      state = act(state, "attack_yearling_wolf", 6, 1);
+    }
+    expect(state.flags.yearling_down).toBe(true);
+
+    for (const actionId of [
+      "go_south",
+      "go_west",
+      "go_up",
+      "use_winter_feed_sack_on_loft_hatch",
+      "go_east",
+    ]) {
+      state = act(state, actionId);
+    }
+    expect(state.flags.flank_redirected).toBe(true);
+    expect(actionIds(state)).not.toContain("maneuver_flank_wolf_frost_brace_trip");
+
+    state = act(state, "go_south");
+    expect(state.current).toBe("paling_gap");
+    expect(state.flags.works_fortification_splice_needed).toBe(true);
+    expect(actionIds(state)).toContain("go_north");
+    state = act(state, "go_north");
+    expect(state.current).toBe("byre_door");
+    expect(actionIds(state)).not.toContain("maneuver_flank_wolf_frost_brace_trip");
   });
 
   it("makes the one-shot Drover route cleanly recover or worsen the same failed cast", () => {

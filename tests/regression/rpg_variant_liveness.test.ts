@@ -197,6 +197,36 @@ function firstMatch(
   return -1;
 }
 
+/**
+ * Resolve a concrete-witness expectation by the prose it is intended to expose, not by
+ * its current array position. These hand-authored import routes span the high-churn
+ * Wolf-Winter paling sequence; inserting an earlier variant must not silently retarget an
+ * expectation to different prose that happens to inherit the old index.
+ */
+function semanticVariantKeyByText(
+  index: RpgIndex,
+  kind: "room" | "object",
+  id: string,
+  semantic: string,
+  textFragment: string,
+): string {
+  const variants =
+    kind === "room" ? index.rooms.get(id)?.variants : index.objects.get(id)?.variants;
+  if (!variants) {
+    throw new Error(`Concrete witness cannot resolve ${kind} "${id}" (${semantic}).`);
+  }
+  const matches: number[] = [];
+  variants.forEach((variant, variantIndex) => {
+    if (variant.text.includes(textFragment)) matches.push(variantIndex);
+  });
+  if (matches.length !== 1) {
+    throw new Error(
+      `Concrete witness expected exactly one ${kind} "${id}" variant for ${semantic}; found ${matches.length}.`,
+    );
+  }
+  return `${kind}:${id}#${matches[0]}`;
+}
+
 type Liveness = {
   /** "room:<id>#<i>" / "object:<id>#<i>" / "ending:<id>#<i>" keys first-matched in some state. */
   displayed: Set<string>;
@@ -572,6 +602,16 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     ["use_drive_signal_rope_kit_on_drive_breach_signal", "best"],
   ]);
 
+  // These dispatch comparisons exist only before strategy commitment and combine campaign
+  // imports. Credit the exact one-step player view instead of inventing a broad multi-import
+  // crawl that could mask which comparison is actually live.
+  run(["hayden_frost_report_certified", "works_fortification_prepared"], ["go_north"]);
+  run(
+    ["june_pike_present", "hayden_frost_report_certified", "works_fortification_prepared"],
+    ["go_north"],
+  );
+  run(["june_pike_present", "hayden_frost_report_certified"], ["go_north"]);
+
   run("jamie_market_testimony_certified", [
     "go_north",
     "go_north",
@@ -679,23 +719,116 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "room:fodder_loft#1",
     "room:byre_door#8",
     "room:byre_door#23",
-    "room:paling_gap#9",
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "byre_yard",
+      "Hayden and Reese Works dispatch comparison",
+      "Hayden's report is conditional, not a general advantage",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "byre_yard",
+      "June, Hayden, and Reese Works dispatch comparison",
+      "Hayden's frost line would require that ordinary hunt's failed public wedge",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "byre_yard",
+      "June and Hayden ordinary-wedge dispatch comparison",
+      "On that ordinary hunt, Hayden's frost line requires",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "prepared drover-route recovery",
+      "Run that one-use route now",
+    ),
     "object:drover_route_marks@present",
-    "room:paling_gap#19",
-    "room:paling_gap#25",
-    "room:paling_gap#30",
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "Hayden frost report after the yearling falls",
+      "matching frost-jammed brace at the byre door",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "Hayden frost report after the spear is set",
+      "same frost-load at the byre jamb",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "Hayden frost report before the spear is set",
+      "frost-jammed brace north",
+    ),
     "room:byre_door#25",
-    "object:paling_rail#6",
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "paling_rail",
+      "Hayden-compatible unbound split rail",
+      "only a bare spear can trip that line",
+    ),
     "room:byre_door#21",
     "room:byre_door#7",
     "room:byre_door#6",
-    "object:paling_rail#3",
-    "room:paling_gap#4",
-    "room:paling_gap#5",
-    "room:paling_gap#10",
-    "room:paling_gap#11",
-    "object:paling_rail#2",
-    "object:paling_rail#4",
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "paling_rail",
+      "Reese Works marked-splice recovery",
+      "Reese's first measured set split",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "unfouled committed lure",
+      "Cast Cade's feed first",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "completed braced-rail living recovery",
+      "braced rail narrowed the fouled scent line",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "committed lure-hybrid fight",
+      "still holds the gap; finish this fight",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "available braced scent-pen recovery",
+      "braced rail half-shuts the breach",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "paling_rail",
+      "rail closed by lure-hybrid combat",
+      "first spear stroke closed every living scent turn",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "paling_rail",
+      "braced scent-pen recovery",
+      "one living exit",
+    ),
     "room:byre_yard#1",
     "object:relief_protocol_docket@present",
     "room:steading_yard#2",

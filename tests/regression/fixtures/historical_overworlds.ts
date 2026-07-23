@@ -1,5 +1,7 @@
 import type { OverworldManifest } from "../../../src/world/overworld.js";
+import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "../../../src/world/frost_jamb_signpost_legacy.js";
 import { AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE } from "../../../src/world/local_job_scene_legacy.js";
+import type { OverworldSessionSnapshot } from "../../../src/world/session_snapshot.js";
 
 const RELIEF_OATH_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:full_oath_authority_return_resupply",
@@ -62,9 +64,153 @@ const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:cade_pasture_search_unaffiliated_greenway_resupply",
 ]);
 
+/** Reconstruct the exact manifest before Hayden's frost-jamb route was truthfully signposted. */
+export function exactFrostJambSignpostPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const leadSource = predecessor.opening_lead_source;
+  const preparation = predecessor.opening_preparation;
+  const haydenSource = leadSource?.options.find(
+    (option) => option.id === "albany:source_hayden_frost_report",
+  );
+  const worksPreparation = preparation?.profiles.find(
+    (profile) => profile.id === "albany:prep_works_fortification",
+  );
+  const hayden = predecessor.characters.find(
+    (character) => character.campaign_npc_id === "albany:hayden_hale",
+  );
+  const frostReportVariant = hayden?.variants?.find(
+    (variant) => variant.id === "frost_report_certified",
+  );
+  if (!leadSource || !haydenSource || !worksPreparation || !frostReportVariant) {
+    throw new Error("Albany must retain Hayden's frost report and Reese's Works preparation");
+  }
+  leadSource.message = FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.leadMessage;
+  haydenSource.preview = FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenPreview;
+  haydenSource.consequence = FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenConsequence;
+  worksPreparation.preview = FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.worksPreview;
+  frostReportVariant.agenda = FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenAgenda;
+  return predecessor;
+}
+
+/**
+ * Reverse the current frost signpost journal copy when a regression fixture
+ * intentionally reconstructs an older exact-world snapshot from a newer run.
+ */
+export function exactFrostJambSignpostPredecessorSnapshot(
+  current: OverworldManifest,
+  currentSnapshot: OverworldSessionSnapshot,
+): OverworldSessionSnapshot {
+  const predecessor = structuredClone(currentSnapshot);
+  const leadSource = current.opening_lead_source;
+  const preparation = current.opening_preparation;
+  const haydenSource = leadSource?.options.find(
+    (option) => option.id === "albany:source_hayden_frost_report",
+  );
+  const worksPreparation = preparation?.profiles.find(
+    (profile) => profile.id === "albany:prep_works_fortification",
+  );
+  const hayden = current.characters.find(
+    (character) => character.campaign_npc_id === "albany:hayden_hale",
+  );
+  const frostReportVariant = hayden?.variants?.find(
+    (variant) => variant.id === "frost_report_certified",
+  );
+  if (
+    !leadSource ||
+    !preparation ||
+    !haydenSource ||
+    !worksPreparation ||
+    !hayden ||
+    !frostReportVariant
+  ) {
+    throw new Error("Albany must retain the current frost-jamb authored copy");
+  }
+  const offerId = `lead_source_offer:${leadSource.id}`;
+  const haydenSelectionId = `lead_source:${leadSource.id}:${haydenSource.id}`;
+  const worksSelectionId = `preparation:${preparation.id}:${worksPreparation.id}`;
+  const frostContactId = `talk:${hayden.id}@${frostReportVariant.id}`;
+  const currentFrostContactText = `${frostReportVariant.summary ?? hayden.summary} ${frostReportVariant.agenda ?? hayden.agenda}`;
+  const predecessorFrostContactText = `${frostReportVariant.summary ?? hayden.summary} ${FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenAgenda}`;
+
+  const replaceExact = (entryId: string, text: string, before: string, after: string): string => {
+    const firstMatch = text.indexOf(before);
+    if (firstMatch < 0 || text.indexOf(before, firstMatch + before.length) >= 0) {
+      throw new Error(
+        `Current frost-jamb fixture entry "${entryId}" does not match its exact authored copy.`,
+      );
+    }
+    return `${text.slice(0, firstMatch)}${after}${text.slice(firstMatch + before.length)}`;
+  };
+
+  predecessor.journalEntries = predecessor.journalEntries.map((entry) => {
+    if (entry.id === offerId) {
+      if (
+        entry.kind === "lead_source_offer" &&
+        entry.text === FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.leadMessage
+      ) {
+        return entry;
+      }
+      if (entry.kind !== "lead_source_offer" || entry.text !== leadSource.message) {
+        throw new Error(`Current frost-jamb fixture entry "${entry.id}" is not its exact offer.`);
+      }
+      return { ...entry, text: FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.leadMessage };
+    }
+    if (entry.id === haydenSelectionId) {
+      if (
+        entry.text.includes(FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenPreview) &&
+        entry.text.includes(FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenConsequence)
+      ) {
+        return entry;
+      }
+      const withOldPreview = replaceExact(
+        entry.id,
+        entry.text,
+        haydenSource.preview,
+        FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenPreview,
+      );
+      return {
+        ...entry,
+        text: replaceExact(
+          entry.id,
+          withOldPreview,
+          haydenSource.consequence,
+          FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenConsequence,
+        ),
+      };
+    }
+    if (entry.id === worksSelectionId) {
+      if (entry.text.includes(FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.worksPreview)) {
+        return entry;
+      }
+      return {
+        ...entry,
+        text: replaceExact(
+          entry.id,
+          entry.text,
+          worksPreparation.preview,
+          FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.worksPreview,
+        ),
+      };
+    }
+    if (entry.id === frostContactId || entry.id.startsWith(`${frostContactId}:`)) {
+      if (entry.kind === "contact" && entry.text === predecessorFrostContactText) {
+        return entry;
+      }
+      if (entry.kind !== "contact" || entry.text !== currentFrostContactText) {
+        throw new Error(
+          `Current frost-jamb fixture entry "${entry.id}" is not its exact Hayden contact.`,
+        );
+      }
+      return { ...entry, text: predecessorFrostContactText };
+    }
+    return entry;
+  });
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before Cade's structural packet honored dawn dispatch. */
 export function exactCadeStoryPredicatePredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactFrostJambSignpostPredecessor(current);
   const scene = predecessor.local_jobs.find(
     (candidate) => candidate.id === "albany_city__transport_hub__job",
   )?.authored_scene;

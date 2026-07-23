@@ -469,7 +469,7 @@
     "home": "albany_city",
     "area": "albany_city__civic_core",
     "title": "Certify the Wolf-Winter Source Packet",
-    "message": "Rowan can attach one account before the hill dispatch closes. The civic docket leaves immediately with only the public facts. Jamie Tanner's market testimony costs time and money to verify but maps a feed-hauler's crawlboard into Cade's loft. Hayden Hale's frost report costs time but identifies a failed paling line that can be exploited only while the split rail remains unbound. Albany will pack this run against the one source you certify now; the other packets cannot be added after departure.",
+    "message": "Rowan can attach one account before the hill dispatch closes. The civic docket leaves immediately with only the public facts. Jamie Tanner's market testimony costs time and money to verify but maps a feed-hauler's crawlboard into Cade's loft. Hayden Hale's frost report costs time but marks a frost brace only after an ordinary hunt attempts the public wedge, frozen ground splits the rail, and the lengths remain unbound. Albany will pack this run against the one source you certify now; the other packets cannot be added after departure.",
     "options": [
       {
         "id": "albany:source_rowan_civic_docket",
@@ -520,8 +520,8 @@
         "title": "Take Hayden's Frost-Heave Report",
         "source_npc_id": "albany:hayden_hale",
         "summary": "Review Hayden Hale's boundary sketch and overnight frost-heave readings.",
-        "preview": "If the paling rail splits in Wolf-Winter and you leave it unbound, the report unlocks a fast, exposed frost-jamb line against the flank-wolf. Binding the familiar splinter guard commits away from that line.",
-        "consequence": "Rowan stamps Hayden's route report as the controlling field account. Hayden remembers that his boundary reading carried the dispatch; at Cade's byre, an unbound failed rail can become the exposed frost-jamb maneuver.",
+        "preview": "On the ordinary hunt, attempt the public wedge at the paling. Only if frozen ground splits that attempted rail may you leave its lengths unbound; after the yearling falls, go north with the bare spear for a fast, exposed frost-jamb line against the flank-wolf. Skipping the wedge creates no split, and binding the familiar splinter guard commits away. Reese's Works preparation replaces that wedge and forgoes the frost brace.",
+        "consequence": "Rowan stamps Hayden's route report as the controlling field account. Hayden remembers that his boundary reading carried the dispatch: on the ordinary hunt, attempt the public wedge; only its frozen split may stay unbound through the yearling's fall and north to become the exposed frost-jamb maneuver. Works preparation replaces that wedge and forgoes the frost brace.",
         "terms": {
           "minutes": 20,
           "money": 0
@@ -563,7 +563,7 @@
         "title": "Reese's Works Fortification",
         "provider_npc_id": "albany:reese_pryce",
         "summary": "Carry Reese Pryce's measured wedge, splice, and cold-set sequence for Cade's failing paling.",
-        "preview": "At the first loose paling rail, this replaces the ordinary wedge with one Repair check (DC 12). Success braces the breach immediately. Failure still splits the frozen rail, but the marked splice can then cold-set it without another roll; the breach is restored while the extra hammering raises cattle alarm by 1. Repair training improves the check, but every background retains the deterministic recovery.",
+        "preview": "At the first loose paling rail, this replaces the ordinary wedge with one Repair check (DC 12), so it forgoes Hayden's frost-brace line. Success braces the breach immediately. Failure still splits the frozen rail, but the marked splice can then cold-set it without another roll; the breach is restored while the extra hammering raises cattle alarm by 1. Repair training improves the check, but every background retains the deterministic recovery.",
         "consequence": "Reese inks three measured cuts and a cold-set order onto Cade's boundary sketch. Only this fortification sequence enters the packet; Reese records who accepted the works allocation and reserves one Albany Works resupply claim if the byre is truthfully returned held.",
         "terms": { "minutes": 25, "money": 4 },
         "sponsor": {
@@ -24827,7 +24827,7 @@
             "albany:memory_hayden_frost_report_certified"
           ],
           "summary": "Hayden recognizes his frost-heave sketch under Rowan's certification stamp and remembers that you made his boundary reading the controlling field account.",
-          "agenda": "The report exposes one dangerous line only if the paling fails and remains unbound. Hayden keeps that condition exact rather than treating the report as a general field advantage."
+          "agenda": "Only if the paling fails and remains unbound can its frozen split reach the dangerous line: on the ordinary hunt, attempt the public wedge, then kill the yearling and go north. Skipping it or binding the rail forgoes that brace, and Reese's Works packet replaces the wedge and forgoes it too."
         },
         {
           "id": "sponsored_road_warden",
