@@ -4,6 +4,11 @@ import {
   compactJourneyPresentation,
   compactJourneyStoryChoicePrompt,
 } from "../../src/mcp/journey_projection.js";
+import {
+  createInitialJourneyContractSnapshot,
+  journeyPresentation,
+  recordJourneyAcceptedDecision,
+} from "../../src/world/journey_contract.js";
 import type {
   JourneyPresentation,
   JourneyStoryChoiceOption,
@@ -162,5 +167,26 @@ describe("compact journey projection", () => {
 
     const withoutStory = Object.freeze({ ...journey, storyChoice: null });
     expect(compactJourneyPresentation(withoutStory)).toBe(withoutStory);
+  });
+
+  it("preserves truthful checkpoint continuation copy in the compact MCP projection", () => {
+    let state = createInitialJourneyContractSnapshot();
+    while (state.acceptedDecisions < 40) {
+      state = recordJourneyAcceptedDecision(state, {
+        surface: "overworld",
+        actionId: `action:${String(state.acceptedDecisions + 1)}`,
+        reason: "situation_changed",
+      });
+    }
+    const full = journeyPresentation(state);
+    const compact = compactJourneyPresentation(full);
+
+    expect(compact).toBe(full);
+    expect(compact.pendingChoice?.options[0]).toEqual({
+      id: "continue",
+      label: "Continue until an active goal completes or decision 80",
+      consequence:
+        "Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 80, whichever comes first.",
+    });
   });
 });

@@ -884,6 +884,20 @@ function freezeRetentionEvent(event: JourneyRetentionEvent): JourneyRetentionEve
   return Object.freeze({ ...event, reasons: Object.freeze(cloneReasons(event.reasons)) });
 }
 
+function continuationCheckpoint(
+  state: JourneyContractSnapshot,
+  pending: JourneyPendingChoiceSnapshot,
+): number {
+  const checkpoint =
+    pending.checkpoint === null
+      ? state.nextCheckpoint
+      : pending.checkpoint + JOURNEY_BASELINE_DECISIONS;
+  if (checkpoint === null) {
+    throw new Error("A continuing journey choice requires a next fixed checkpoint.");
+  }
+  return checkpoint;
+}
+
 function pendingChoiceMessage(state: JourneyContractSnapshot): string {
   const pending = state.pendingChoice;
   if (!pending) throw new Error("Journey has no pending choice.");
@@ -892,13 +906,14 @@ function pendingChoiceMessage(state: JourneyContractSnapshot): string {
   if (hasReason(pending, "character_died")) {
     return `Your character died before completing the current goal after ${pending.atDecision} meaningful decisions. This run cannot continue; end the journey to preserve its truthful unfinished-goal receipt.`;
   }
+  const continueTo = continuationCheckpoint(state, pending);
   if (checkpoint && goal) {
-    return `You completed your current goal at the ${String(pending.checkpoint)}-decision checkpoint. Continue for ${JOURNEY_BASELINE_DECISIONS} more decisions, or end this journey?`;
+    return `You completed your current goal at the ${String(pending.checkpoint)}-decision checkpoint. Continue until another goal is completed or the fixed checkpoint at decision ${String(continueTo)}, whichever comes first, or end this journey?`;
   }
   if (checkpoint) {
-    return `You have reached the ${String(pending.checkpoint)}-decision checkpoint. Continue for ${JOURNEY_BASELINE_DECISIONS} more decisions, or end this journey?`;
+    return `You have reached the ${String(pending.checkpoint)}-decision checkpoint. Continue until the current goal is completed or the fixed checkpoint at decision ${String(continueTo)}, whichever comes first, or end this journey?`;
   }
-  return `You completed your current goal after ${pending.atDecision} meaningful decisions. Continue to the fixed checkpoint at ${String(state.nextCheckpoint)}, or end this journey?`;
+  return `You completed your current goal after ${pending.atDecision} meaningful decisions. Continue until another goal is completed or the fixed checkpoint at decision ${String(continueTo)}, whichever comes first, or end this journey?`;
 }
 
 function affix(base: string, prefix: string | undefined, suffix: string | undefined): string {
@@ -927,15 +942,36 @@ function pendingChoicePresentation(
 ): JourneyChoicePrompt | null {
   const pending = state.pendingChoice;
   if (!pending) return null;
-  const checkpoint = hasReason(pending, "checkpoint");
   const characterDied = hasReason(pending, "character_died");
   const goalContext = matchingGoalCompletionContext(pending, context);
-  const continueTo = checkpoint
-    ? (state.nextCheckpoint ?? 0) + JOURNEY_BASELINE_DECISIONS
-    : state.nextCheckpoint;
-  const continueLabel = checkpoint
-    ? `Continue for ${JOURNEY_BASELINE_DECISIONS} more decisions`
-    : `Continue to decision ${String(state.nextCheckpoint)}`;
+  const options = characterDied
+    ? Object.freeze([
+        Object.freeze({
+          id: "end" as const,
+          label: "End this journey",
+          consequence:
+            "The journey becomes read-only; its receipt preserves the unfinished goal and completed history.",
+        }),
+      ])
+    : (() => {
+        const continueTo = continuationCheckpoint(state, pending);
+        return Object.freeze([
+          Object.freeze({
+            id: "continue" as const,
+            label: `Continue until an active goal completes or decision ${String(continueTo)}`,
+            consequence: affix(
+              `Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision ${String(continueTo)}, whichever comes first.`,
+              goalContext?.continueConsequencePrefix,
+              goalContext?.continueConsequenceSuffix,
+            ),
+          }),
+          Object.freeze({
+            id: "end" as const,
+            label: "End this journey",
+            consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+          }),
+        ]);
+      })();
   return Object.freeze({
     id: `journey:${pending.atDecision}:${pending.reasons.join("+")}:${String(pending.goalVersion ?? "none")}:${pending.goalId ?? "none"}`,
     atDecision: pending.atDecision,
@@ -948,34 +984,7 @@ function pendingChoicePresentation(
       goalContext?.messagePrefix,
       goalContext?.messageSuffix,
     ),
-    options: Object.freeze(
-      characterDied
-        ? [
-            Object.freeze({
-              id: "end" as const,
-              label: "End this journey",
-              consequence:
-                "The journey becomes read-only; its receipt preserves the unfinished goal and completed history.",
-            }),
-          ]
-        : [
-            Object.freeze({
-              id: "continue" as const,
-              label: continueLabel,
-              consequence: affix(
-                `Play remains open; the next fixed checkpoint is decision ${String(continueTo)}.`,
-                goalContext?.continueConsequencePrefix,
-                goalContext?.continueConsequenceSuffix,
-              ),
-            }),
-            Object.freeze({
-              id: "end" as const,
-              label: "End this journey",
-              consequence:
-                "This journey becomes read-only and its exit receipt is ready for review.",
-            }),
-          ],
-    ) as readonly [JourneyChoiceOption, ...JourneyChoiceOption[]],
+    options: options as readonly [JourneyChoiceOption, ...JourneyChoiceOption[]],
   });
 }
 

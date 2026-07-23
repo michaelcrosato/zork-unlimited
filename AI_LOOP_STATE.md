@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 624 -->
+<!-- historical_cycle_count: 625 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - truthful_journey_continuation_horizon
+
+- Evidence choice: journey prompts promised exactly 40 more decisions from every pause even though an active goal can complete sooner, while death is end-only and merged goal/checkpoint pauses have both causes.
+- Surface: the shared contract and fresh-game tutorial now name the truthful earliest boundary—active-goal completion or the next fixed checkpoint—and project the same distinct goal, checkpoint, merged, and death copy through compact/full MCP and UI surfaces.
+- Counterfactual: goal-only, checkpoint-only, merged, and death snapshots produce exact cause-specific choices; Continue preserves the next fixed horizon, End remains terminal, restored snapshots project byte-identically, and death never advertises Continue.
+- Pure evidence: exact clean `a7884d54` passes fresh strict-v2 Terra 4665 across 63 turns and 51 accepted decisions, diverts Wolf-Winter's pack, wins Gallowmere, ends voluntarily at the second completed goal, rates clarity/enjoyment 4/5 and 5/5, remains unstuck, and chooses replay-yes.
+- Feedback/follow-through: the player still experiences checkpoint 40 inside an active investigation and repeats Albany setup density plus Rowan Quill continuity confusion; safe-boundary checkpoint scheduling, progressive setup disclosure, and compact NPC display names remain separate queued increments.
+- Guard: final crawl `20260723T133121Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; focused projection coverage passes 81/81, independent review is clean, and supported two-worker full health passes 411 files/3,271 tests plus UI typecheck and all packs.
 
 ### Cycle result - literal_codex_blind_forwarding
 
@@ -154,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Luna 4401 verifies `ok: true` across 133 error-free MCP calls and 103 accepted decisions: pack-diverted Wolf-Winter, hunt-won Gallowmere, recovered Tanner's Fever, five honest continues, then a truthful death exit in Breaking Weir; clarity/enjoyment 4/4, unstuck, replay-yes.
 - Measured result: real Sol 4351/4354/4386, Terra 4397, and Luna 4401 pass; Spark 4368 reaches its pre-existing forbidden-resource rejection, all three earlier Luna diagnostics reach independent fail-closed rejections, and 160 profile plus 119 prompt-focused tests pass with independent re-reviews finding no P0-P2.
 - Guard: tooling/docs only; pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, while full health passes 406 files/3,167 tests plus both typechecks/all packs with no engine, world, save, or gameplay-content change.
-
-### Cycle result - strict_codex_result_authority
-
-- Evidence choice: retained provider traces showed that a report could verify without proving every AdventureForge result reached the blind player, so this cycle closes the delivery-authority gap instead of trusting artifact presence or a self-reported exit.
-- Surface: each public gameplay call now cross-binds to one adjacent private `exec → MCP completion → visible output` lifecycle with an exact literal wrapper, exact result bytes, finite input/turn/compaction topology, and no auxiliary tools; fleet certification, feedback compilation, and the ledger reuse the full report/envelope/session/model/capture authority chain.
-- Counterfactual: retained 4351/4354/4386 and schema-v2 Claude 2802 remain valid; 4352, 4353, 4385, artifactless Spark 2825/2850, transplants, wrong turns, duplicate keys, reformats, truncation, injection, and orphan or duplicate lifecycle rows fail closed.
-- Pure evidence: exact-clean `8a60050e` Sol 4387 completed Wolf-Winter (`ending_fortified_albany_authority`) at decision 22, continued at 22/40, won The Gallowmere at 46, then ended; clarity/enjoyment 4/4, unstuck/replay-yes, with no rejection, loop, death, repair, auth, or warning.
-- Measured result: the full authority audit returned `ok: true` across 62 MCP calls, exact visible bytes, private lifecycle, clean commit/world/model/capture binding, and 46 accepted decisions; focused coverage passes 130/130 plus 107/107 reviewer checks, and independent final review found no P0-P2.
-- Feedback/follow-through: strict compile `20260722T025001Z` retains 806 verified/217 rejected reports and 55 eligible pure exits with 53 continuing; seed 4387 independently repeats stale LURE guidance, compact prose clipping, and generic June acknowledgement, so fresh cohorts—not rejected history—will arbitrate the next gameplay fix.
-- Guard: pre/post crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; full exact-source health passes 406 files/3,135 tests plus both typechecks/all packs, and the fresh clean landing journey is independently revalidated under the combined gate.
