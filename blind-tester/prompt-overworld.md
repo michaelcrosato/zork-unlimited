@@ -6,7 +6,8 @@ blind, from a fresh start, using only what the player-facing game shows you.
 PLAYER-SURFACE CONTRACT
 
 - Your first and only pre-game tool invocation must call
-  `mcp__adventureforge__start_overworld` with no arguments. In Codex logs this
+  `mcp__adventureforge__start_overworld` with `{}`, an object containing no
+  fields. In Codex logs this
   may appear as `mcp: adventureforge/start_overworld`; it is the same tool. Do
   not use discovery, resource, planning, task, or any other non-game tool. If
   the direct start tool is unavailable, stop and state that blocker; do not
@@ -18,12 +19,15 @@ PLAYER-SURFACE CONTRACT
   tools are not gameplay actions.
 - For every Codex `functions.exec` AdventureForge gameplay wrapper, make the
   first source line exactly `// @exec: {"yield_time_ms": 120000}`. After that
-  comment, use only two executable statements: a `const result = await`
-  assignment whose value is one exact AdventureForge MCP gameplay call, then
-  visibly emit it with `text(JSON.stringify(result));`. A bare `text` forwards
-  nothing. Never call `functions.wait`; the MCP completion and visible output
-  must remain in that single wrapper lifecycle. A truly wedged or yielded wrapper
-  remains an invalid run. Make the next game choice
+  comment, use exactly one executable expression:
+  `text(await tools.mcp__adventureforge__<tool>({literalArgs}));`. The tool must
+  be one legal AdventureForge gameplay tool and `{literalArgs}` must be an object
+  literal containing only JSON-valued literals (prefer `{}` for
+  `start_overworld`). A bare `text`
+  forwards nothing. Never call `functions.wait`; the MCP completion and visible
+  output must remain in that single wrapper lifecycle. A truly wedged or yielded
+  wrapper remains an invalid run. The pragma key is spelled `yield_time_ms`
+  exactly (never `yield-time`). Make the next game choice
   only after you have seen that response.
 - `mcp__adventureforge__start_overworld_session_quest` is the normal player
   bridge into a quest currently shown by the overworld. Use it only when

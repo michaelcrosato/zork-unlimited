@@ -633,7 +633,7 @@ function sha256Text(text: string): string {
 }
 
 describe("closed fleet filesystem integrity", () => {
-  it("accepts strict v5 and receipt-bound v5 Codex pilots, then rejects lifecycle tamper", () => {
+  it("accepts strict v6 and receipt-bound v6 Codex pilots, then rejects lifecycle tamper", () => {
     const base = mkdtempSync(join(tmpdir(), "af-codex-slice-certifier-"));
     tempDirs.push(base);
     const fleetDir = join(base, "fleet", "codex-pilot");
@@ -811,8 +811,7 @@ describe("closed fleet filesystem integrity", () => {
             name: "exec",
             input:
               '// @exec: {"yield_time_ms": 120000}\n' +
-              "const result = await tools.mcp__adventureforge__start_overworld();\n" +
-              "text(JSON.stringify(result));\n",
+              "text(await tools.mcp__adventureforge__start_overworld({}));\n",
             internal_chat_message_metadata_passthrough: { turn_id: providerTurnId },
           },
         },
@@ -868,9 +867,9 @@ describe("closed fleet filesystem integrity", () => {
         .join("\n")}\n`;
       const providerCaptureBody = `${JSON.stringify(
         {
-          schema_version: 2,
+          schema_version: 3,
           binding: "runner_work_player",
-          code_mode_contract: "strict-code-mode-v1",
+          code_mode_contract: "strict-code-mode-v2",
           recorded_session_cwd: providerCwd,
           recorded_turn_cwd: providerCwd,
           canonical_expected_cwd: providerCwd,
@@ -897,9 +896,9 @@ describe("closed fleet filesystem integrity", () => {
         modelUsage: { [model]: {} },
       })}\n`;
       const modelAttestation = {
-        schema_version: 5,
+        schema_version: 6,
         provider: "codex",
-        code_mode_contract: "strict-code-mode-v1",
+        code_mode_contract: "strict-code-mode-v2",
         run_seed: seed,
         model,
         persona: "default",
@@ -1008,7 +1007,7 @@ describe("closed fleet filesystem integrity", () => {
       target: "overworld",
       resume_enabled: false,
       evidence_schema_version: 2,
-      model_attestation_schema_version: 5,
+      model_attestation_schema_version: 6,
       build,
     };
     const manifestPath = join(fleetDir, "manifest.jsonl");
@@ -1021,6 +1020,20 @@ describe("closed fleet filesystem integrity", () => {
     expect(accepted.authenticated_actual_model).toBe(model);
 
     const summaryPath = join(fleetDir, "summary.json");
+    writeFileSync(
+      summaryPath,
+      `${JSON.stringify({ ...summary, model_attestation_schema_version: 5 }, null, 2)}\n`,
+    );
+    const rejectedHistoricalPilot = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    });
+    expect(rejectedHistoricalPilot.validity_errors.join("\n")).toMatch(
+      /current Codex pilot certification requires attestation v6/i,
+    );
+    writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
+
     writeFileSync(
       summaryPath,
       `${JSON.stringify({ ...summary, receipt_bound_runs: 1 }, null, 2)}\n`,
@@ -1117,7 +1130,7 @@ describe("closed fleet filesystem integrity", () => {
       const receiptBound = index === 0;
       const modelAttestation = {
         ...row.model_attestation,
-        schema_version: 5,
+        schema_version: 6,
         report_receipt_bound: receiptBound,
         report_sha256: receiptBound
           ? sha256Text(boundReportBody)
@@ -1153,7 +1166,7 @@ describe("closed fleet filesystem integrity", () => {
     const boundSummary = {
       ...summary,
       receipt_bound_runs: 1,
-      model_attestation_schema_version: 5,
+      model_attestation_schema_version: 6,
     };
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
     writeFileSync(manifestPath, `${boundRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
@@ -1174,7 +1187,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedCurrentAuthority.validity_errors.join("\n")).toMatch(
-      /current Codex authority certification requires attestation v5/i,
+      /current Codex authority certification requires attestation v6/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
 

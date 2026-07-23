@@ -43,8 +43,10 @@ export const PURE_FLEET_EVIDENCE_SCHEMA_VERSION = 2;
 export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
 export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
 export const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
-export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
-export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1";
+export const HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
+export const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1";
+export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v2";
 export const CERTIFIED_CODEX_MODELS = [
   "gpt-5.6-sol",
   "gpt-5.6-terra",
@@ -511,6 +513,8 @@ const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS =
     (key) => key !== "receipt_binding_sha256" && key !== "report_receipt_bound",
   );
 
+const HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS = PURE_FLEET_CODEX_ATTESTATION_KEYS;
+
 function isFleetModel(model) {
   return model === "haiku" || model === "sonnet" || model === "opus";
 }
@@ -585,8 +589,12 @@ function isExactPureFleetAttestation(attestation) {
     attestation.schema_version === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
     keys.length === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS.length &&
     keys.every((key, index) => key === HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS[index]);
+  const historicalStrictCodex =
+    attestation.schema_version === HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    keys.length === HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS[index]);
   return (
-    (currentCodex || historicalReceiptBoundCodex || historicalCodex) &&
+    (currentCodex || historicalStrictCodex || historicalReceiptBoundCodex || historicalCodex) &&
     attestation.provider === "codex" &&
     isCodexFleetModel(attestation.model) &&
     attestation.actual_provider === "openai" &&
@@ -608,7 +616,11 @@ function isExactPureFleetAttestation(attestation) {
     /^[0-9a-f]{64}$/.test(attestation.provider_capture_sha256) &&
     attestation.recovery_metadata_sha256 === null &&
     attestation.recovery_envelope_sha256 === null &&
-    (currentCodex ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT : true) &&
+    (currentCodex
+      ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
+      : historicalStrictCodex
+        ? attestation.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT
+        : true) &&
     (historicalCodex
       ? attestation.initial_report_sha256 === null
       : typeof attestation.report_receipt_bound === "boolean" &&
@@ -719,6 +731,7 @@ function isExactPureFleetRunArtifactFacts(facts) {
     typeof facts.report_recovered === "boolean" &&
     typeof facts.report_receipt_bound === "boolean" &&
     (facts.code_mode_contract === null ||
+      facts.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT ||
       facts.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT) &&
     isExactFleetArtifactHashes(facts.hashes)
   );
@@ -926,6 +939,7 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
   }
   const attestedReceiptBound =
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION ||
+    attestation.schema_version === HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION
       ? attestation.report_receipt_bound
       : false;
@@ -943,6 +957,7 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     attestation.primary_envelope_sha256 !== artifactFacts.hashes.primary_envelope_sha256 ||
     attestation.initial_report_sha256 !== artifactFacts.hashes.initial_report_sha256 ||
     (attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION ||
+    attestation.schema_version === HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION
       ? attestation.receipt_binding_sha256 !== artifactFacts.hashes.receipt_binding_sha256
       : artifactFacts.hashes.receipt_binding_sha256 !== null) ||

@@ -34,13 +34,17 @@ describe("pure blind prompt + runner contract", () => {
       "- For every Codex `functions.exec` AdventureForge gameplay wrapper",
     );
     expect(transport).toBe(
-      '- For every Codex `functions.exec` AdventureForge gameplay wrapper, make the first source line exactly `// @exec: {"yield_time_ms": 120000}`. After that comment, use only two executable statements: a `const result = await` assignment whose value is one exact AdventureForge MCP gameplay call, then visibly emit it with `text(JSON.stringify(result));`. A bare `text` forwards nothing. Never call `functions.wait`; the MCP completion and visible output must remain in that single wrapper lifecycle. A truly wedged or yielded wrapper remains an invalid run. Make the next game choice only after you have seen that response.',
+      '- For every Codex `functions.exec` AdventureForge gameplay wrapper, make the first source line exactly `// @exec: {"yield_time_ms": 120000}`. After that comment, use exactly one executable expression: `text(await tools.mcp__adventureforge__<tool>({literalArgs}));`. The tool must be one legal AdventureForge gameplay tool and `{literalArgs}` must be an object literal containing only JSON-valued literals (prefer `{}` for `start_overworld`). A bare `text` forwards nothing. Never call `functions.wait`; the MCP completion and visible output must remain in that single wrapper lifecycle. A truly wedged or yielded wrapper remains an invalid run. The pragma key is spelled `yield_time_ms` exactly (never `yield-time`). Make the next game choice only after you have seen that response.',
     );
     for (const contract of [prompt, protocol, readme]) {
       expect(contract).toContain(CODEX_EXEC_YIELD_PRAGMA);
       expect(contract).toContain("functions.wait");
     }
     expect(protocol).toContain("does not retrofit a pragma requirement onto\nhistorical evidence");
+    expect(protocol).toContain(
+      "Only schema v1/null-contract evidence retains\n" +
+        "the legacy direct-result/content-block renderers; strict v1 requires the exact",
+    );
     expect(readme).toContain("Historical evidence is not retroactively required");
   });
 
@@ -48,12 +52,13 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("fictional, deterministic TTRPG player-experience study");
     expect(prompt).toContain("PLAYER-SURFACE CONTRACT");
     expect(prompt).toContain("Use only AdventureForge gameplay actions exposed for this pure run");
-    expect(prompt).toContain("`text(JSON.stringify(result));`");
-    expect(prompt).toContain("A bare `text` forwards\n  nothing");
+    expect(prompt).toContain("`text(await tools.mcp__adventureforge__<tool>({literalArgs}));`");
+    expect(prompt).toContain("`yield_time_ms`\n  exactly (never `yield-time`)");
+    expect(prompt).toContain("A bare `text`\n  forwards nothing");
     expect(prompt).toContain("only after you have seen that response");
     expect(prompt).toContain("mcp__adventureforge__start_overworld");
     expect(prompt).toContain("first and only pre-game tool invocation");
-    expect(prompt).toContain("with no arguments");
+    expect(prompt).toContain("with `{}`, an object containing no\n  fields");
     expect(prompt).toContain(
       "do not\n  probe, substitute another tool, or attempt to discover one",
     );

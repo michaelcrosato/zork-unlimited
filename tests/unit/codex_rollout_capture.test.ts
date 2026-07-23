@@ -126,9 +126,9 @@ describe("sterile Codex rollout capture", () => {
     expect(readFileSync(destination, "utf8")).not.toContain("access_token");
     const capture = JSON.parse(readFileSync(receipt, "utf8")) as Record<string, unknown>;
     expect(capture).toEqual({
-      schema_version: 2,
+      schema_version: 3,
       binding: "runner_work_player",
-      code_mode_contract: "strict-code-mode-v1",
+      code_mode_contract: "strict-code-mode-v2",
       recorded_session_cwd: player,
       recorded_turn_cwd: player,
       canonical_expected_cwd: expect.any(String),

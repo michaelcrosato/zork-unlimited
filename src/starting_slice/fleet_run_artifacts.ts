@@ -138,7 +138,10 @@ export interface PureFleetRunArtifactFacts {
   reasoning_effort: string | null;
   provider_turn_id: string | null;
   provider_cwd: string | null;
-  code_mode_contract: typeof CODEX_STRICT_CURRENT_CONTRACT | null;
+  code_mode_contract:
+    | typeof CODEX_HISTORICAL_STRICT_CONTRACT
+    | typeof CODEX_STRICT_CURRENT_CONTRACT
+    | null;
   report_recovered: boolean;
   report_receipt_bound: boolean;
   hashes: PureFleetRunArtifactHashes;
@@ -272,17 +275,28 @@ const CodexCaptureReceiptSchema = z
   })
   .strict();
 
-export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v1" as const;
+export const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1" as const;
+export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2" as const;
+
+const HistoricalStrictCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({
+  schema_version: true,
+})
+  .extend({
+    schema_version: z.literal(2),
+    code_mode_contract: z.literal(CODEX_HISTORICAL_STRICT_CONTRACT),
+  })
+  .strict();
 
 const CurrentCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({ schema_version: true })
   .extend({
-    schema_version: z.literal(2),
+    schema_version: z.literal(3),
     code_mode_contract: z.literal(CODEX_STRICT_CURRENT_CONTRACT),
   })
   .strict();
 
 const AnyCodexCaptureReceiptSchema = z.union([
   CodexCaptureReceiptSchema,
+  HistoricalStrictCodexCaptureReceiptSchema,
   CurrentCodexCaptureReceiptSchema,
 ]);
 
@@ -291,7 +305,10 @@ interface CodexAuthorityFacts {
   actualModel: CertifiedCodexModel;
   turnId: string;
   cwd: string;
-  codeModeContract: typeof CODEX_STRICT_CURRENT_CONTRACT | null;
+  codeModeContract:
+    | typeof CODEX_HISTORICAL_STRICT_CONTRACT
+    | typeof CODEX_STRICT_CURRENT_CONTRACT
+    | null;
 }
 
 function finalCodexPublicMessage(rows: unknown[]): string | null {
@@ -385,7 +402,10 @@ function parseCodexCaptureReceipt(
   | {
       ok: true;
       canonicalCwd: string;
-      codeModeContract: typeof CODEX_STRICT_CURRENT_CONTRACT | null;
+      codeModeContract:
+        | typeof CODEX_HISTORICAL_STRICT_CONTRACT
+        | typeof CODEX_STRICT_CURRENT_CONTRACT
+        | null;
     }
   | { ok: false; reason: string } {
   const raw = parseJsonRejectingDuplicateKeys(captureText, "Codex capture receipt");
@@ -420,7 +440,7 @@ function parseCodexCaptureReceipt(
   return {
     ok: true,
     canonicalCwd: receipt.canonical_expected_cwd,
-    codeModeContract: receipt.schema_version === 2 ? receipt.code_mode_contract : null,
+    codeModeContract: receipt.schema_version === 1 ? null : receipt.code_mode_contract,
   };
 }
 
@@ -537,7 +557,7 @@ function parseCodexAuthority(
   );
   if (!capture.ok) return capture;
   const inspected = inspectCodexPureEvidence(events.rows, rollout.rows, expectedModel, {
-    requireStrictCurrent: capture.codeModeContract === CODEX_STRICT_CURRENT_CONTRACT,
+    codeModeContract: capture.codeModeContract,
   }) as { ok: true; threadId: string } | { ok: false; reason: string };
   if (!inspected.ok)
     return { ok: false, reason: `Codex provider evidence rejected: ${inspected.reason}` };

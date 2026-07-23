@@ -35,7 +35,8 @@ const SPARK_CODE_MODE_UNSTABLE_WARNING_PREFIX =
   "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
 const SPARK_CODE_MODE_METADATA_WARNING =
   "Code Mode is enabled in configuration, but model `gpt-5.3-codex-spark` does not advertise Code Mode support. This may degrade model performance. Disable `features.code_mode` and `features.code_mode_only`, or select a model whose metadata enables Code Mode.";
-export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v1";
+export const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1";
+export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const V2_MULTI_AGENT_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra"]);
 const SUPPORTED_CODEX_MODELS = new Set([
@@ -222,6 +223,55 @@ function jsonLiteralValue(node) {
   return { ok: false };
 }
 
+function strictJsonLiteralValue(node) {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return { ok: true, value: node.text };
+  }
+  if (ts.isNumericLiteral(node)) {
+    const value = Number(node.text);
+    return Number.isFinite(value) ? { ok: true, value } : { ok: false };
+  }
+  if (node.kind === ts.SyntaxKind.TrueKeyword) return { ok: true, value: true };
+  if (node.kind === ts.SyntaxKind.FalseKeyword) return { ok: true, value: false };
+  if (node.kind === ts.SyntaxKind.NullKeyword) return { ok: true, value: null };
+  if (
+    ts.isPrefixUnaryExpression(node) &&
+    node.operator === ts.SyntaxKind.MinusToken &&
+    ts.isNumericLiteral(node.operand)
+  ) {
+    const value = -Number(node.operand.text);
+    return Number.isFinite(value) ? { ok: true, value } : { ok: false };
+  }
+  if (ts.isArrayLiteralExpression(node)) {
+    const value = [];
+    for (const element of node.elements) {
+      if (ts.isSpreadElement(element)) return { ok: false };
+      const parsed = strictJsonLiteralValue(element);
+      if (!parsed.ok) return parsed;
+      value.push(parsed.value);
+    }
+    return { ok: true, value };
+  }
+  if (ts.isObjectLiteralExpression(node)) {
+    const value = {};
+    for (const property of node.properties) {
+      if (!ts.isPropertyAssignment(property)) return { ok: false };
+      const key = objectPropertyName(property.name);
+      if (key === null || key === "__proto__" || Object.hasOwn(value, key)) return { ok: false };
+      const parsed = strictJsonLiteralValue(property.initializer);
+      if (!parsed.ok) return parsed;
+      Object.defineProperty(value, key, {
+        value: parsed.value,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+    return { ok: true, value };
+  }
+  return { ok: false };
+}
+
 function unwrapParentheses(node) {
   let current = node;
   while (ts.isParenthesizedExpression(current)) current = current.expression;
@@ -374,9 +424,11 @@ function hasOnlyExactLeadingYieldPragma(input) {
 function inspectExactGameplayWrapper(
   input,
   invocation,
-  { allowArgumentlessFreshStart = false, requireStrictCurrent = false } = {},
+  { allowArgumentlessFreshStart = false, codeModeContract = null } = {},
 ) {
-  if (requireStrictCurrent && !hasOnlyExactLeadingYieldPragma(input)) {
+  const requireStrict = codeModeContract !== null;
+  const requireV2 = codeModeContract === CODEX_STRICT_CURRENT_CONTRACT;
+  if (requireStrict && !hasOnlyExactLeadingYieldPragma(input)) {
     return null;
   }
   const source = ts.createSourceFile(
@@ -386,7 +438,55 @@ function inspectExactGameplayWrapper(
     true,
     ts.ScriptKind.JS,
   );
-  if (source.parseDiagnostics.length > 0 || source.statements.length !== 2) return null;
+  if (source.parseDiagnostics.length > 0) return null;
+  if (requireV2 || (codeModeContract === null && source.statements.length === 1)) {
+    if (source.statements.length !== 1) return null;
+    const statement = source.statements[0];
+    if (!ts.isExpressionStatement(statement) || !ts.isCallExpression(statement.expression))
+      return null;
+    const output = statement.expression;
+    if (
+      output.questionDotToken !== undefined ||
+      !ts.isIdentifier(output.expression) ||
+      output.expression.text !== "text" ||
+      output.arguments.length !== 1 ||
+      !ts.isAwaitExpression(output.arguments[0]) ||
+      !ts.isCallExpression(output.arguments[0].expression)
+    ) {
+      return null;
+    }
+    const call = output.arguments[0].expression;
+    if (
+      !ts.isPropertyAccessExpression(call.expression) ||
+      call.questionDotToken !== undefined ||
+      call.expression.questionDotToken !== undefined ||
+      !ts.isIdentifier(call.expression.expression) ||
+      call.expression.expression.text !== "tools" ||
+      !call.expression.name.text.startsWith("mcp__adventureforge__") ||
+      call.arguments.length > 1
+    ) {
+      return null;
+    }
+    const tool = call.expression.name.text.slice("mcp__adventureforge__".length);
+    const args =
+      call.arguments.length === 1
+        ? strictJsonLiteralValue(call.arguments[0])
+        : call.arguments.length === 0 && allowArgumentlessFreshStart && tool === "start_overworld"
+          ? { ok: true, value: {} }
+          : { ok: false };
+    if (
+      !CODEX_PURE_PLAYER_TOOLS.has(tool) ||
+      !args.ok ||
+      !isRecord(args.value) ||
+      invocation.server !== "adventureforge" ||
+      invocation.tool !== tool ||
+      !sameJsonValue(invocation.arguments, args.value)
+    ) {
+      return null;
+    }
+    return { tool, arguments: args.value, emitter: "await_text" };
+  }
+  if (source.statements.length !== 2) return null;
   const declarationStatement = source.statements[0];
   if (
     !ts.isVariableStatement(declarationStatement) ||
@@ -399,7 +499,7 @@ function inspectExactGameplayWrapper(
   const declaration = declarationStatement.declarationList.declarations[0];
   if (
     !ts.isIdentifier(declaration.name) ||
-    (requireStrictCurrent && declaration.name.text !== "result") ||
+    (requireStrict && declaration.name.text !== "result") ||
     !declaration.initializer ||
     !ts.isAwaitExpression(declaration.initializer) ||
     !ts.isCallExpression(declaration.initializer.expression)
@@ -435,7 +535,7 @@ function inspectExactGameplayWrapper(
     return null;
   }
   const emitter = exactResultEmitter(source.statements[1], declaration.name.text);
-  if (emitter === null || (requireStrictCurrent && emitter !== "json_stringify")) return null;
+  if (emitter === null || (requireStrict && emitter !== "json_stringify")) return null;
   return { tool, arguments: args.value, emitter };
 }
 
@@ -892,7 +992,7 @@ function inspectCodexRolloutStructure(rows, expectedModel) {
  * the two call-id namespaces differ, so adjacency is the binding. This audit
  * deliberately never include game-response bytes in a rejection reason.
  */
-export function inspectCodexGameplayResultForwarding(rows, { requireStrictCurrent = false } = {}) {
+export function inspectCodexGameplayResultForwarding(rows, { codeModeContract = null } = {}) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return rolloutReject("rollout is empty");
   }
@@ -940,6 +1040,7 @@ export function inspectCodexGameplayResultForwarding(rows, { requireStrictCurren
       typeof rowPayload.id !== "string" ||
       rowPayload.id.length === 0 ||
       wrapperCallIds.has(rowPayload.call_id) ||
+      gameplayCallIds.has(rowPayload.call_id) ||
       wrapperItemIds.has(rowPayload.id)
     ) {
       return rolloutReject(`gameplay call ${ordinal} has an invalid or duplicate wrapper start`);
@@ -956,7 +1057,7 @@ export function inspectCodexGameplayResultForwarding(rows, { requireStrictCurren
       typeof payload.call_id !== "string" ||
       payload.call_id.length === 0 ||
       gameplayCallIds.has(payload.call_id) ||
-      payload.call_id === rowPayload.call_id ||
+      wrapperCallIds.has(payload.call_id) ||
       !isRecord(payload.invocation) ||
       !isRecord(payload.invocation.arguments)
     ) {
@@ -965,7 +1066,7 @@ export function inspectCodexGameplayResultForwarding(rows, { requireStrictCurren
     gameplayCallIds.add(payload.call_id);
     const wrapper = inspectExactGameplayWrapper(rowPayload.input, payload.invocation, {
       allowArgumentlessFreshStart: gameplayCalls.length === 0,
-      requireStrictCurrent,
+      codeModeContract,
     });
     if (!wrapper) {
       return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`);
@@ -1104,7 +1205,7 @@ function codeModePrelude(rows, expectedModel) {
 export function inspectCodexPureEvents(
   rows,
   expectedModel = undefined,
-  { requireStrictCurrent = false } = {},
+  { codeModeContract = null } = {},
 ) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return reject("Codex event stream is empty");
@@ -1112,7 +1213,7 @@ export function inspectCodexPureEvents(
 
   const allowedCodeModePrelude = codeModePrelude(rows, expectedModel);
   const expectedPreludeLength = expectedModel === SPARK_DISABLED_MODEL ? 2 : 1;
-  if (requireStrictCurrent && allowedCodeModePrelude.length !== expectedPreludeLength) {
+  if (codeModeContract !== null && allowedCodeModePrelude.length !== expectedPreludeLength) {
     return reject("Codex strict-current run is missing its exact code-mode prelude");
   }
   const turnStartedIndex = 1 + allowedCodeModePrelude.length;
@@ -1262,17 +1363,13 @@ export function inspectCodexPureEvidence(
   publicRows,
   rolloutRows,
   expectedModel = undefined,
-  { requireStrictCurrent = false } = {},
+  { codeModeContract = null } = {},
 ) {
-  const publicEvidence = inspectCodexPureEvents(publicRows, expectedModel, {
-    requireStrictCurrent,
-  });
+  const publicEvidence = inspectCodexPureEvents(publicRows, expectedModel, { codeModeContract });
   if (!publicEvidence.ok) return publicEvidence;
   const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel);
   if (!rolloutStructure.ok) return rolloutStructure;
-  const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows, {
-    requireStrictCurrent,
-  });
+  const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows, { codeModeContract });
   if (!privateEvidence.ok) return privateEvidence;
   if (publicEvidence.gameplayCalls.length !== privateEvidence.gameplayCalls.length) {
     return reject("Codex public/private gameplay lifecycle count differs");
@@ -1302,11 +1399,15 @@ export function buildCodexPureEnvelope({
   if (!nonNegativeInteger(durationMs)) {
     return reject("Codex pure run is missing a valid duration");
   }
-  if (codeModeContract !== undefined && codeModeContract !== CODEX_STRICT_CURRENT_CONTRACT) {
+  if (
+    codeModeContract !== undefined &&
+    codeModeContract !== CODEX_HISTORICAL_STRICT_CONTRACT &&
+    codeModeContract !== CODEX_STRICT_CURRENT_CONTRACT
+  ) {
     return reject("Codex pure run has an unsupported code-mode contract");
   }
   const inspected = inspectCodexPureEvidence(rows, rolloutRows, model, {
-    requireStrictCurrent: codeModeContract === CODEX_STRICT_CURRENT_CONTRACT,
+    codeModeContract: codeModeContract ?? null,
   });
   if (!inspected.ok) return inspected;
 

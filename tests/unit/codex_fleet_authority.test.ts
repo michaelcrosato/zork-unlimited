@@ -23,7 +23,8 @@ const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
-const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v1";
+const HISTORICAL_STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v1";
+const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v2";
 const CODE_MODE_WARNING_PREFIX =
   "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
 
@@ -283,7 +284,21 @@ function strictTerraRollout(report = REPORT): unknown[] {
       (row as { type?: string; payload?: { type?: string } }).type === "response_item" &&
       (row as { payload?: { type?: string } }).payload?.type === "custom_tool_call",
   ) as { payload: Record<string, unknown> };
-  wrapper.payload.input = `${CODEX_EXEC_YIELD_PRAGMA}\n${String(wrapper.payload.input)}`;
+  wrapper.payload.input = `${CODEX_EXEC_YIELD_PRAGMA}\ntext(await tools.mcp__adventureforge__start_overworld({}));\n`;
+  return rows;
+}
+
+function historicalStrictTerraRollout(report = REPORT): unknown[] {
+  const rows = rollout(report);
+  const wrapper = rows.find(
+    (row) =>
+      (row as { type?: string; payload?: { type?: string } }).type === "response_item" &&
+      (row as { payload?: { type?: string } }).payload?.type === "custom_tool_call",
+  ) as { payload: Record<string, unknown> };
+  wrapper.payload.input =
+    `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+    "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+    "text(JSON.stringify(result));\n";
   return rows;
 }
 
@@ -310,7 +325,7 @@ function captureReceipt(rows: unknown[], current = false): string {
   };
   const cwd = session.payload.cwd;
   return `${JSON.stringify({
-    schema_version: current ? 2 : 1,
+    schema_version: current ? 3 : 1,
     binding: "runner_work_player",
     ...(current ? { code_mode_contract: STRICT_CODE_MODE_CONTRACT } : {}),
     recorded_session_cwd: cwd,
@@ -323,6 +338,13 @@ function captureReceipt(rows: unknown[], current = false): string {
     turn_directory_identity: { device_id: "1", file_id: "2" },
     copied_rollout_sha256: createHash("sha256").update(rolloutBody).digest("hex"),
   })}\n`;
+}
+
+function historicalStrictCaptureReceipt(rows: unknown[]): string {
+  const receipt = JSON.parse(captureReceipt(rows)) as Record<string, unknown>;
+  receipt.schema_version = 2;
+  receipt.code_mode_contract = HISTORICAL_STRICT_CODE_MODE_CONTRACT;
+  return `${JSON.stringify(receipt)}\n`;
 }
 
 const BUILD = {
@@ -498,6 +520,33 @@ describe("Codex certified fleet rollout authority", () => {
     });
   });
 
+  it("preserves historical strict-v1 schema-2 rollout authority", () => {
+    const rows = historicalStrictTerraRollout();
+    expect(payload(rows, 10).input).toBe(
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+        "const result = await tools.mcp__adventureforge__start_overworld({});\n" +
+        "text(JSON.stringify(result));\n",
+    );
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(strictPublicEvents()),
+        rollout: jsonl(rows),
+        capture: historicalStrictCaptureReceipt(rows),
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({
+      ok: true,
+      facts: {
+        sessionId: SESSION,
+        actualModel: "gpt-5.6-terra",
+        turnId: TURN,
+        cwd: "C:\\private\\player",
+        codeModeContract: HISTORICAL_STRICT_CODE_MODE_CONTRACT,
+      },
+    });
+  });
+
   it.each([
     [
       "a missing public code-mode notice",
@@ -594,8 +643,8 @@ describe("Codex certified fleet rollout authority", () => {
   it("rejects duplicate strict v2 capture markers before schema selection", () => {
     const rows = strictTerraRollout();
     const duplicate = captureReceipt(rows, true).replace(
-      '"code_mode_contract":"strict-code-mode-v1"',
-      '"code_mode_contract":"legacy","code_mode_contract":"strict-code-mode-v1"',
+      '"code_mode_contract":"strict-code-mode-v2"',
+      '"code_mode_contract":"legacy","code_mode_contract":"strict-code-mode-v2"',
     );
     expect(
       validateCodexFleetProviderAuthority({
