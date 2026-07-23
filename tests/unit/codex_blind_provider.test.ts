@@ -1029,6 +1029,47 @@ describe("Codex pure blind provider envelope", () => {
     ).toMatchObject({ ok: true });
   });
 
+  it("accepts only the exact empty-audio user event added by Codex 0.145", () => {
+    const publicRows = validRows();
+    const current = completeRollout(forwardingRollout(undefined, { content: [] })) as Array<{
+      payload?: Record<string, unknown>;
+    }>;
+    const currentUserEvent = current.find((row) => row.payload?.type === "user_message")?.payload;
+    if (!currentUserEvent) throw new Error("missing private user-message fixture");
+    currentUserEvent.audio = [];
+    currentUserEvent.local_audio = [];
+    expect(inspectCodexPureEvidence(publicRows, current, "gpt-5.6-sol")).toMatchObject({
+      ok: true,
+    });
+
+    for (const [label, mutate] of [
+      [
+        "a missing local-audio field",
+        (payload: Record<string, unknown>) => Reflect.deleteProperty(payload, "local_audio"),
+      ],
+      [
+        "nonempty audio",
+        (payload: Record<string, unknown>) => {
+          payload.audio = ["hidden audio hint"];
+        },
+      ],
+      [
+        "nonempty local audio",
+        (payload: Record<string, unknown>) => {
+          payload.local_audio = ["hidden local-audio hint"];
+        },
+      ],
+    ] as const) {
+      const rows = structuredClone(current);
+      const payload = rows.find((row) => row.payload?.type === "user_message")?.payload;
+      if (!payload) throw new Error("missing private user-message fixture");
+      mutate(payload);
+      expect(inspectCodexPureEvidence(publicRows, rows, "gpt-5.6-sol"), label).toMatchObject({
+        ok: false,
+      });
+    }
+  });
+
   it("accepts the optional global AGENTS prelude without dropping bare environment support", () => {
     const profiles = [
       ["sol_v2", "gpt-5.6-sol"],

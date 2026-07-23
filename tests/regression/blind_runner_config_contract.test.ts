@@ -639,10 +639,12 @@ exit 93
   it("rejects a reused output prefix before launching an agent", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-blind-prefix-"));
     const out = join(dir, "attempt");
+    const codexHome = join(dir, "codex-home");
     try {
+      mkdirSync(codexHome);
       writeFileSync(`${out}.md`, "prior accepted report\n", "utf8");
       writeFileSync(`${out}.run.json`, '{"prior":"sidecar"}\n', "utf8");
-      const env = { ...process.env };
+      const env: NodeJS.ProcessEnv = { ...process.env, CODEX_HOME: codexHome };
       delete env.BLIND_AGENT_CMD;
       delete env.BLIND_MOCK_AGENT_CMD;
       const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {

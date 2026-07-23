@@ -702,6 +702,22 @@ function validEnvironmentMessage(payload, turnId) {
   );
 }
 
+function validPrivateUserEvent(payload) {
+  if (!isRecord(payload)) return false;
+  const legacyKeys = ["type", "message", "images", "local_images", "text_elements"];
+  const currentKeys = [...legacyKeys, "audio", "local_audio"];
+  const hasLegacyShape = hasOnlyKeys(payload, legacyKeys);
+  const hasCurrentShape = hasOnlyKeys(payload, currentKeys);
+  if (!hasLegacyShape && !hasCurrentShape) return false;
+  const emptyCollections = [payload.images, payload.local_images, payload.text_elements];
+  if (hasCurrentShape) emptyCollections.push(payload.audio, payload.local_audio);
+  return (
+    payload.type === "user_message" &&
+    typeof payload.message === "string" &&
+    emptyCollections.every((value) => Array.isArray(value) && value.length === 0)
+  );
+}
+
 function validNativeCollaborationMode(turnContext, expectedModel) {
   if (
     turnContext.effort !== "xhigh" ||
@@ -963,14 +979,7 @@ function inspectCodexRolloutStructure(rows, expectedModel) {
     promptBlock.type !== "input_text" ||
     typeof promptBlock.text !== "string" ||
     promptBlock.text !== promptEvent?.message ||
-    !isRecord(promptEvent) ||
-    !hasOnlyKeys(promptEvent, ["type", "message", "images", "local_images", "text_elements"]) ||
-    !Array.isArray(promptEvent.images) ||
-    promptEvent.images.length !== 0 ||
-    !Array.isArray(promptEvent.local_images) ||
-    promptEvent.local_images.length !== 0 ||
-    !Array.isArray(promptEvent.text_elements) ||
-    promptEvent.text_elements.length !== 0
+    !validPrivateUserEvent(promptEvent)
   ) {
     return rolloutReject("rollout input and initial context lifecycle is out of order");
   }
