@@ -27,6 +27,7 @@ import {
   exactAlbanyWorksHazardPredecessor,
   exactCadeReturnPacketPredecessor,
   exactCadeStoryPredicatePredecessor,
+  exactFrostJambSignpostPredecessorSnapshot,
   exactWinterReturnDocketPredecessor,
 } from "../regression/fixtures/historical_overworlds.js";
 
@@ -729,7 +730,10 @@ describe("Cade Return Packet", () => {
     const prepared = preparedForWolf(PREDECESSOR);
     finishWolf(prepared.session, prepared.wolfId, "ending_pack_diverted_cattle_scattered");
     prepared.session.workLocalJob(JOB);
-    const carried = OverworldSession.restore(WORLD, prepared.session.snapshot()).snapshot();
+    const carried = exactFrostJambSignpostPredecessorSnapshot(
+      WORLD,
+      OverworldSession.restore(WORLD, prepared.session.snapshot()).snapshot(),
+    );
     carried.worldHash = AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH;
     const carriedProof = carried.journalEntries.find(
       (entry) => entry.id === `job:${JOB}`,

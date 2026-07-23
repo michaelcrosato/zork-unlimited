@@ -14,7 +14,11 @@ import {
   OVERWORLD_RELIEF_OATH_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactF06World, exactF12World } from "./fixtures/historical_overworlds.js";
+import {
+  exactF06World,
+  exactF12World,
+  exactFrostJambSignpostPredecessorSnapshot,
+} from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const QUEST_ID = "wolf_winter";
@@ -264,7 +268,7 @@ describe("F06 to F02 relief-oath migration integrity", () => {
     current.chooseJourneyStory("albany:ledger_advocate");
     current.chooseJourneyStory("albany:oath_full_compact_duty");
     const forged = {
-      ...current.snapshot(),
+      ...exactFrostJambSignpostPredecessorSnapshot(WORLD, current.snapshot()),
       worldHash: OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
     };
 

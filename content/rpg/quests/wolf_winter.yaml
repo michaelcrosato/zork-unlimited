@@ -285,6 +285,70 @@ rooms:
           the flank-wolf holds the byre door and the grey leader waits deeper in. The yard
           gate is south.
       - when:
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: june_pike_present }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_visited: paling_gap }
+        text: >
+          Cade's lantern marks the day-book. Cross north uncommitted: hunt-and-hold
+          permanently retires his feed lure, signal drive, and seal-and-outlast plan.
+          Hayden's report is conditional, not a general advantage: Reese's Works packet
+          replaces the ordinary public wedge with its Repair set and marked splice, so
+          this dispatch forgoes the frost-brace line. Young wolf at the broken paling
+          north; store west; gate south.
+      - when:
+          - { has_flag: hayden_frost_report_certified }
+          - { not_flag: works_fortification_prepared }
+          - { not_flag: june_pike_present }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_visited: paling_gap }
+        text: >
+          Cade's lantern marks the day-book. Cross north uncommitted: hunt-and-hold
+          permanently retires his feed lure, signal drive, and seal-and-outlast plan.
+          Hayden's report is conditional: on that ordinary hunt, attempt the public wedge.
+          Only if frozen ground splits that attempted rail, leave its lengths unbound;
+          kill the yearling, then go north with the bare spear for the frost brace. Skipping
+          the wedge makes no split, and binding the rail forgoes that line. Store west; gate south.
+      - when:
+          - { has_flag: june_pike_present }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: june_combat_line_acknowledged }
+          - { has_flag: hayden_frost_report_certified }
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_visited: paling_gap }
+        text: >
+          June holds the north gate. Rail now: spear funnel, not a living turn. If a committed
+          first feed cast fouls, a brace can pen the yearling alive. Cross without Cade's feed,
+          drive rig, or seals means hunt-and-hold; any wolf death ends her agreement. Hayden's
+          frost line would require that ordinary hunt's failed public wedge, but Reese's Works
+          packet replaces the wedge, so this dispatch forgoes the frost brace. Ask June/Cade
+          now. Store west.
+      - when:
+          - { has_flag: june_pike_present }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: june_combat_line_acknowledged }
+          - { has_flag: hayden_frost_report_certified }
+          - { not_flag: works_fortification_prepared }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_visited: paling_gap }
+        text: >
+          June holds the north gate. Rail now: spear funnel, not a living turn. If a committed
+          first feed cast fouls, a brace can pen the yearling alive. Cross without Cade's feed,
+          drive rig, or seals means hunt-and-hold; any wolf death ends her agreement. On that
+          ordinary hunt, Hayden's frost line requires you to attempt the public wedge; only if
+          frozen ground splits it, leave the lengths unbound, kill the yearling, then go north.
+          Ask June/Cade now. Store west.
+      - when:
           - { has_flag: june_pike_present }
           - { not_flag: june_blood_condition_broken }
           - { not_flag: june_combat_line_acknowledged }
@@ -657,8 +721,18 @@ rooms:
           rail bound into the guard in your hands. Spend it on the flank-wolf's turn, or
           take another opening and save it for the heavier wolf. The byre runs north.
       - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_hybrid_combat_entered }
+          - { has_flag: flank_redirected }
+          - { has_flag: rail_split }
+        text: >
+          The yearling lies dead beside the split rail you abandoned when the first spear
+          stroke committed the hybrid line. The remaining feed has already drawn the
+          flank-wolf from the threshold; rail recoveries stay closed. The byre runs north.
+      - when:
           - { has_flag: yearling_down }
           - { has_flag: hayden_frost_report_certified }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }
@@ -701,6 +775,7 @@ rooms:
       - when:
           - { has_flag: yearling_spear_set }
           - { has_flag: hayden_frost_report_certified }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }
@@ -734,6 +809,7 @@ rooms:
           guard for the byre door. The yearling's low rush still wants the spear set against it.
       - when:
           - { has_flag: hayden_frost_report_certified }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }
@@ -980,6 +1056,7 @@ rooms:
           rail stays unspent for the grey leader if this risk carries through.
       - when:
           - { has_flag: hayden_frost_report_certified }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }
@@ -3037,7 +3114,7 @@ objects:
   # guarded funnel sequence, while a committed fouled lure can consume that same brace as
   # a deterministic scent-pen before combat starts. The frozen timber gives ONE honest
   # wedge attempt. `rail_attempted` is
-  # set before the d20 branch; failure sets `rail_split` and exposes a second, deterministic
+  # set before the d20 branch; ordinary wedge failure sets `rail_split` and exposes a second, deterministic
   # target-only USE with the SAME stable `use_paling_rail` id. Binding the joined lengths
   # makes real, non-droppable `split_rail_guard` gear and a distinct recovered flank line;
   # leaving them unbound preserves Hayden's imported frost-jamb line. Neither choice
@@ -3078,8 +3155,18 @@ objects:
         name: "combat paling-rail"
         text: "The first spear stroke closed every living scent turn. Whatever its loose, split, or braced state, leave this timber; the committed fight is now the only way through."
       - when:
-          - { has_flag: works_fortification_splice_needed }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_hybrid_combat_entered }
+          - { has_flag: yearling_down }
           - { has_flag: rail_split }
+        name: "abandoned split paling-rail"
+        text: >
+          The failed rail remains split where the frozen ground threw it. Your first spear
+          stroke committed the fouled lure to hybrid combat, closing both binding and every
+          other rail recovery. Leave the lengths here and carry the remaining feed deeper.
+      - when:
+          - { has_flag: works_fortification_splice_needed }
+          - { not_flag: lure_hybrid_combat_entered }
         name: "marked split paling-rail"
         text: >
           Reese's first measured set split the frozen rail, but ink still joins the
@@ -3102,6 +3189,7 @@ objects:
         text: "The fallen paling-rail is wedged hard across the breach. Without an unbloodied fouled lure, it is a combat funnel: the half-shut gap makes each rush come singly and slow."
       - when:
           - { has_flag: hayden_frost_report_certified }
+          - { not_flag: strategy_lure_committed }
           - { has_flag: rail_split }
           - { not_flag: split_rail_guard_made }
           - { not_item: split_rail_guard }
@@ -3150,7 +3238,6 @@ objects:
                 then drive the rail in that order. The timber seats on the first set.
                 The breach stands half-shut before the herd can answer the hammer.
           on_failure:
-            - set_flag: rail_split
             - set_flag: works_fortification_splice_needed
             - add_journal: "The first works set splits the frozen rail. Reese's marked splice remains as a deterministic cold-set recovery."
             - narrate: >
@@ -3198,11 +3285,9 @@ objects:
           - { has_flag: works_fortification_prepared }
           - { not_flag: lure_hybrid_combat_entered }
           - { has_flag: works_fortification_splice_needed }
-          - { has_flag: rail_split }
           - { not_flag: breach_braced }
           - { not_flag: strategy_fortify_committed }
         effects:
-          - clear_flag: rail_split
           - clear_flag: works_fortification_splice_needed
           - set_flag: breach_braced
           - inc_var: { name: cattle_alarm, by: 1 }

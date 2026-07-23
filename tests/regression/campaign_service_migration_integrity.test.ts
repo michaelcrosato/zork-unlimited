@@ -12,7 +12,10 @@ import {
   OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactF12World } from "./fixtures/historical_overworlds.js";
+import {
+  exactF12World,
+  exactFrostJambSignpostPredecessorSnapshot,
+} from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const TIMBER_SERVICE_RULE_ID = "albany:wolf_saved_timber_quick_resupply";
@@ -103,7 +106,7 @@ function snapshotAsPredecessor(
 
       return entry;
     });
-  return predecessor;
+  return exactFrostJambSignpostPredecessorSnapshot(WORLD, predecessor);
 }
 
 function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSession {

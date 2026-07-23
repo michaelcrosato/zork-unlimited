@@ -20,7 +20,11 @@ import {
   OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactF06World, exactF12World } from "./fixtures/historical_overworlds.js";
+import {
+  exactF06World,
+  exactF12World,
+  exactFrostJambSignpostPredecessorSnapshot,
+} from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const SCENE = WORLD.opening_lead_source;
@@ -523,7 +527,7 @@ describe("opening lead-source snapshot integrity", () => {
       OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
       OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
     ]) {
-      const relabeled = structuredClone(current);
+      const relabeled = exactFrostJambSignpostPredecessorSnapshot(WORLD, current);
       relabeled.worldHash = predecessorHash;
       expect(() => OverworldSession.restore(WORLD, relabeled)).toThrow(
         /campaign service-rule evidence from a later manifest/i,

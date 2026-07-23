@@ -97,7 +97,10 @@ function reachMcpLeadSource(
   return { sessionId, pendingJourney: oathBound.journey };
 }
 
-function launchMcpWolf(sourceId: string): {
+function launchMcpWolf(
+  sourceId: string,
+  preparationId = COUNTERFACTUAL_PREPARATION,
+): {
   api: ToolApi;
   overworldSessionId: string;
   state: GameState;
@@ -126,7 +129,7 @@ function launchMcpWolf(sourceId: string): {
     ...FULL_OVERWORLD,
     session_id: pending.sessionId,
     story_choice_id: WORLD.opening_preparation!.id,
-    choice: COUNTERFACTUAL_PREPARATION,
+    choice: preparationId,
   });
   expect(prepared.observation.departureInteractions[0]?.kind).toBe("relief_allocation");
   const allocated = api.choose_overworld_session_story({
@@ -225,6 +228,19 @@ function act(state: GameState, actionId: string, ...rolls: number[]): GameState 
   );
   expect(result.ok, result.rejectionReason).toBe(true);
   return result.state;
+}
+
+function narrationForAction(state: GameState, actionId: string): string {
+  const option = enumerateRpgActions(wolfIndex, state).find(
+    (candidate) => candidate.id === actionId,
+  );
+  expect(option, `${actionId} must be legal in ${state.current}`).toBeDefined();
+  if (!option) throw new Error(`Missing action ${actionId}.`);
+  const result = makeStep(buildRpgRules(wolfIndex, () => fixedRolls()))(state, option.action);
+  expect(result.ok, result.rejectionReason).toBe(true);
+  return result.events
+    .flatMap((event) => (event.type === "narration" ? [event.text] : []))
+    .join(" ");
 }
 
 function defeatYearlingWithEqualRolls(state: GameState): GameState {
@@ -617,5 +633,130 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     boundHayden = act(boundHayden, "go_north");
     expect(actionIds(boundHayden)).not.toContain(frostRoot);
     expect(actionIds(boundHayden)).toContain("maneuver_flank_wolf_splinter_guard");
+  });
+
+  it("truthfully signposts Hayden's attempted-wedge frost route and its exclusions", () => {
+    const haydenSource = LEAD_SOURCE.options.find((option) => option.id === HAYDEN_SOURCE);
+    if (!haydenSource) throw new Error("Expected Hayden's source option.");
+    expect(haydenSource.preview).toMatch(
+      /ordinary hunt.*attempt.*wedge.*only if.*frozen.*splits.*leave.*unbound.*yearling.*go north/is,
+    );
+    expect(haydenSource.preview).toMatch(/skipping.*no split.*binding.*commits away/is);
+    expect(haydenSource.preview).toMatch(/Works.*replaces.*wedge.*forgoes.*frost brace/is);
+
+    const frostRoot = "maneuver_flank_wolf_frost_brace_trip";
+    let ordinary = launchMcpWolf(HAYDEN_SOURCE).state;
+    ordinary = act(ordinary, "use_sheltered_stockway_last_mile");
+    const ordinaryCue = buildRpgObservation(wolfIndex, ordinary).description;
+    expect(ordinaryCue).toMatch(
+      /Cross north uncommitted.*hunt-and-hold permanently retires.*feed lure.*signal drive.*seal-and-outlast/is,
+    );
+    expect(ordinaryCue).toMatch(
+      /ordinary hunt.*attempt.*public wedge.*only if frozen ground splits.*leave.*unbound.*kill the yearling.*go north.*Skipping.*no split.*binding.*forgoes/is,
+    );
+    ordinary = act(ordinary, "go_north");
+    expect(actionIds(ordinary)).toContain("wedge_paling_rail");
+
+    let skipped = act(ordinary, "maneuver_yearling_wolf_set_spear", 6, 1);
+    skipped = act(skipped, "go_north");
+    expect(skipped.flags.rail_split).not.toBe(true);
+    expect(actionIds(skipped)).not.toContain(frostRoot);
+
+    let failed = act(ordinary, "wedge_paling_rail", 1);
+    failed = act(failed, "maneuver_yearling_wolf_set_spear", 6, 1);
+    failed = act(failed, "go_north");
+    expect(failed.flags.rail_split).toBe(true);
+    expect(actionIds(failed)).toContain(frostRoot);
+
+    let bound = act(act(ordinary, "wedge_paling_rail", 1), "bind_paling_rail");
+    bound = act(bound, "maneuver_yearling_wolf_set_spear", 6, 1);
+    bound = act(bound, "go_north");
+    expect(actionIds(bound)).not.toContain(frostRoot);
+
+    let works = launchMcpWolf(HAYDEN_SOURCE, DEFAULT_PREPARATION).state;
+    works = act(works, "use_sheltered_stockway_last_mile");
+    const worksCue = buildRpgObservation(wolfIndex, works).description;
+    expect(worksCue).toMatch(
+      /Cross north uncommitted.*hunt-and-hold permanently retires.*feed lure.*signal drive.*seal-and-outlast/is,
+    );
+    expect(worksCue).toMatch(/Works packet replaces.*wedge.*forgoes the frost-brace line/is);
+    works = act(works, "go_north");
+    expect(actionIds(works)).toContain("set_paling_rail");
+    expect(actionIds(works)).not.toContain("wedge_paling_rail");
+    works = act(works, "set_paling_rail", 1);
+    expect(works.flags.rail_split).not.toBe(true);
+    works = act(works, "maneuver_yearling_wolf_set_spear", 6, 1);
+    expect(actionIds(works)).toContain("splice_paling_rail");
+    works = act(works, "splice_paling_rail");
+    works = act(works, "go_north");
+    expect(works.flags.rail_split).not.toBe(true);
+    expect(actionIds(works)).not.toContain(frostRoot);
+
+    let june = launchMcpWolf(HAYDEN_SOURCE).state;
+    june.flags.june_pike_present = true;
+    june = act(june, "use_sheltered_stockway_last_mile");
+    const juneCue = buildRpgObservation(wolfIndex, june).description;
+    expect(juneCue).toMatch(/June holds the north gate.*any wolf death ends her agreement/is);
+    expect(juneCue).toMatch(
+      /Hayden's frost line requires.*attempt the public wedge.*only if.*frozen ground splits.*leave.*unbound.*kill the yearling.*go north/is,
+    );
+    expect(actionIds(june)).not.toContain("go_north");
+
+    let juneWorks = launchMcpWolf(HAYDEN_SOURCE, DEFAULT_PREPARATION).state;
+    juneWorks.flags.june_pike_present = true;
+    juneWorks = act(juneWorks, "use_sheltered_stockway_last_mile");
+    const juneWorksCue = buildRpgObservation(wolfIndex, juneWorks).description;
+    expect(juneWorksCue).toMatch(/June holds the north gate.*any wolf death ends her agreement/is);
+    expect(juneWorksCue).toMatch(/Works packet replaces the wedge.*forgoes the frost brace/is);
+    expect(actionIds(juneWorks)).not.toContain("go_north");
+  });
+
+  it("keeps a lure's abandoned split rail from promising Hayden's hunt-only frost line", () => {
+    let lure = launchMcpWolf(HAYDEN_SOURCE).state;
+    lure = act(lure, "use_sheltered_stockway_last_mile");
+    for (const actionId of [
+      "talk_houndsman",
+      "ask_lure",
+      "ask_commit_lure",
+      "ask_leave",
+      "go_west",
+      "take_winter_feed_sack",
+      "go_east",
+      "go_north",
+    ]) {
+      lure = act(lure, actionId);
+    }
+    lure = act(lure, "use_winter_feed_sack_on_downwind_feed_line", 1);
+    lure = act(lure, "wedge_paling_rail", 1);
+    lure = act(lure, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
+    for (let guard = 0; guard < 5 && !lure.flags.yearling_down; guard += 1) {
+      lure = act(lure, "attack_yearling_wolf", 6, 1);
+    }
+    expect(lure.flags).toMatchObject({
+      strategy_lure_committed: true,
+      lure_hybrid_combat_entered: true,
+      rail_split: true,
+      yearling_down: true,
+    });
+    expect(buildRpgObservation(wolfIndex, lure).visible_objects).toContainEqual({
+      id: "paling_rail",
+      name: "abandoned split paling-rail",
+    });
+    const lureExamine = narrationForAction(lure, "examine_paling_rail");
+    expect(lureExamine).toMatch(
+      /committed the fouled lure to hybrid combat.*closing.*rail recovery/is,
+    );
+    expect(lureExamine).not.toMatch(/Hayden|frost-jammed|bare spear.*trip/is);
+    const frostManeuver = loadedWolf.compiled.pack.enemies
+      .find((enemy) => enemy.id === "flank_wolf")
+      ?.maneuvers?.find((maneuver) => maneuver.id === "frost_brace_trip");
+    expect(frostManeuver, "Hayden's frost maneuver must remain authored").toBeDefined();
+    expect(frostManeuver?.conditions).toContainEqual({
+      not_flag: "strategy_lure_committed",
+    });
+
+    const hunt = failRailWithEqualRolls(launchMcpWolf(HAYDEN_SOURCE).state);
+    const huntExamine = narrationForAction(hunt, "examine_paling_rail");
+    expect(huntExamine).toMatch(/Hayden's certified report.*frost-load.*bare spear.*trip/is);
   });
 });
