@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 622 -->
+<!-- historical_cycle_count: 623 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - certified_quest_anchor_route_truth
+
+- Evidence choice: a certified Wolf-Winter lead named Albany's Station Quarter while its route could remain hidden until an unrelated discovery, contradicting the player's accepted proof.
+- Surface: directly certifying any quest now reveals exactly that quest's authored anchor area, so CLI, MCP, and UI guidance can immediately route the player without a Wolf-specific rule.
+- Counterfactual: unselected quests and other areas remain hidden, ordinary discovery keeps its FIFO order, and arbitrary non-prefix route splices still fail replay authority; only the proof-certified anchor may appear outside the prior prefix.
+- Persistence: exact legacy saves missing only their derived certified anchor migrate on restore, while removal, reordering, unrelated insertion, and uncertified-anchor tampering fail closed.
+- Pure evidence: exact clean `04b8961a` passes four fresh Terra sessions (4651/4655/4656/4657); all complete Wolf-Winter in 26–28 decisions, divert every wolf alive with the herd whole, and choose to continue.
+- Measured result: four pure exits compile to 100% continuation and replay intent, clarity 3.75/5 and enjoyment 4/5, with no rejected action, loop, broken state, death, or soft-lock.
+- Feedback/follow-through: all four repeat Albany setup density; June briefing then progressive preparation/allocation disclosure remain separate queued increments, with comparison cues added only if a post-fix cohort still needs them.
+- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; independent review is clean, focused counterfactual coverage passes, and full health passes 411 files/3,266 tests plus UI typecheck and all packs.
 
 ### Cycle result - frost_jamb_route_truth
 
@@ -153,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: Terra and Luna organically sent the wagon after whole-herd `ending_pack_diverted` and saw no Cade packet; Sol sent it after `ending_pack_diverted_cattle_scattered`, saw only `dispatch_pasture_search`, completed that work, and retired the packet. Both sides of the intended branch are directly witnessed.
 - Feedback/follow-through: compile `20260721T211251Z` has 962 verified/58 rejected reports, 211 eligible pure exits, and 186 continuing; seed 4354's active Hayden-packet promise and June-still-companion reports are under independent causal review as the next current-build continuity debt.
 - Guard: final crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; full health, 204 historical migration tests, 22 focused counterfactuals, both typechecks, and two independent re-reviews are green, with current/predecessor hashes `282cf142…`/`53afa583…` exact.
-
-### Cycle result - pure_step_action_prompt_contract
-
-- Evidence choice: exact-build Sol 4350 invented a nonexistent embedded-quest bridge because the live pure-overworld prompt named legal-action reads but omitted the already-loaded `step_action` mutation tool, so this cycle repairs the tester contract rather than changing the healthy MCP engine.
-- Surface: the player now receives the exact `mcp__adventureforge__step_action` name and maps the current child session, exact visible action id, and latest state hash to `session_id`, `action_id`, and `expected_state_hash`; no route, hidden state, game mechanic, allowlist, or ToolSearch policy changes.
-- Counterfactual: one prompt-contract assertion binds all four identifiers together while existing pure-mode integration tests retain stale-hash rejection, current-menu authority, compact projection, and the no-leakage boundary; independent review found no P0-P2.
-- Pure evidence: exact clean `49c8fbd2` Sol seed 4351 completed Wolf-Winter (`ending_pack_diverted`) and The Gallowmere (`ending_hunt_won`) in 55 decisions, continued at 29 and 40, ended at 55, rated clarity/enjoyment 4/4, and was unstuck/replay-yes.
-- Measured result: all 50 embedded-quest mutations used the named bridge and all 50 carried a valid 24-hex `expected_state_hash`; there were zero discovery calls, MCP errors, retries, auth/login/security/DEP0190 warnings, or tracked changes.
-- Feedback/follow-through: verified seeds 4350 and 4351 are two reports since compile `20260721T181636Z`, below the next three-report threshold; fresh friction remains compact truncation, repeated Rowan identity, and Gallowmere strike narration, while the real Cade packet contradiction proceeds separately.
-- Guard: pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; the final combined branch passes health at 406 files/3,112 tests plus UI/all packs, prompt/tool-reference suites pass 58/58, and independent review found no P0-P2.
