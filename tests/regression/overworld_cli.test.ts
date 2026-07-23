@@ -161,6 +161,27 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(text).not.toMatch(/\.ya?ml/i); // public surface: no pack paths
   });
 
+  it("renders a certified lead's exact local anchor route without a scout detour", () => {
+    const session = new OverworldSession(WORLD);
+    const rowan = session.view().characters[0];
+    if (!rowan) throw new Error("Expected Rowan in Albany's opening area.");
+    session.talkToCharacter(rowan.id);
+    session.chooseJourneyStory("albany:ledger_advocate");
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+
+    const wolf = session.view().quests.find((quest) => quest.id === "wolf_winter");
+    if (!wolf) throw new Error("Expected the certified Wolf-Winter lead.");
+    const route = session.view().areaExits.find((exit) => exit.destination.id === wolf.area);
+    if (!route) throw new Error("Expected the certified lead's local anchor route.");
+
+    const terminal = render(session.view());
+    expect(terminal).toContain("Local routes:");
+    expect(terminal).toContain(route.destination.name);
+    expect(terminal).toContain("The Wolf-Winter");
+    expect(terminal).not.toMatch(/market.*scout/i);
+  });
+
   it("renders an authored pending road encounter with its strategy commands", () => {
     const manifest = loadOverworldManifest(ROOT);
     const session = new OverworldSession(manifest);

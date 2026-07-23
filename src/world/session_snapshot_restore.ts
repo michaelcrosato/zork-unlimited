@@ -2094,6 +2094,7 @@ function deriveCampaignStoryChoiceProofOrdinals(args: {
 export type OverworldSessionSnapshotRestorePlan = {
   characterAfter: CampaignCharacterState;
   currentAreaByTown: ReadonlyMap<string, string>;
+  discoveredAreaIdsAfter: readonly string[];
   discoveredQuestIdsAfter: readonly string[];
   journalEntriesAfter: readonly OverworldJournalEntry[];
   openingLeadSourceDecisionTrailAfter: OverworldOpeningLeadSourceDecisionTrail | null;
@@ -2169,7 +2170,7 @@ export function applyOverworldSessionSnapshotRestore(
     plan.journalEntriesAfter,
   );
   replaceStringSet(state.resolvedEventIds, snapshot.resolvedEventIds);
-  replaceStringSet(state.discoveredAreaIds, snapshot.discoveredAreaIds);
+  replaceStringSet(state.discoveredAreaIds, plan.discoveredAreaIdsAfter);
   replaceStringSet(state.visitedAreaIds, snapshot.visitedAreaIds);
   replaceStringSet(state.discoveredJobIds, snapshot.discoveredJobIds);
   replaceStringSet(state.completedJobIds, snapshot.completedJobIds);
@@ -3973,12 +3974,29 @@ export function planOverworldSessionSnapshotRestore(args: {
   const nonFifoQuestIds = new Set(
     indexes.openingLeadSource ? [indexes.openingLeadSource.target_quest] : [],
   );
+  const directQuestAnchorIds = new Set(
+    indexes.openingLeadSource !== null && leadSourceProof.option !== null
+      ? [indexes.openingLeadSource.target_quest]
+      : [],
+  );
+  const directAnchorAreaIds = new Set(
+    [...directQuestAnchorIds]
+      .filter((questId) => discoveredQuestIds.has(questId))
+      .map((questId) => indexes.questsById.get(questId)?.area)
+      .filter((areaId): areaId is string => areaId !== undefined),
+  );
+  // Older saves can carry a certified direct lead from before anchor routes
+  // were persisted with it. The source proof makes this one derived mapping
+  // safe to upgrade during restore; the updated snapshot then carries the
+  // same actionable anchor as a newly created save.
+  for (const areaId of directAnchorAreaIds) discoveredAreaIds.add(areaId);
   const localActionJournalSources = {
     ...indexes,
     discoveredAreaIds,
     discoveredJobIds,
     discoveredQuestIds,
     discoveredSiteIds,
+    directQuestAnchorIds,
     nonFifoQuestIds,
     townVisitMinutes,
     visitedTownIds,
@@ -3987,7 +4005,12 @@ export function planOverworldSessionSnapshotRestore(args: {
     localActionJournalSources,
     journalTimeline,
   );
-  assertSnapshotDiscoveredAreaPrefix(indexes.areasByTown, discoveredAreaIds, visitedTownIds);
+  assertSnapshotDiscoveredAreaPrefix(
+    indexes.areasByTown,
+    discoveredAreaIds,
+    visitedTownIds,
+    directAnchorAreaIds,
+  );
   assertSnapshotDiscoveredLocalSourcePrefixes(localActionJournalSources, visitedTownIds);
   assertSnapshotCurrentAreaMapExact(
     snapshot.currentId,
@@ -4315,11 +4338,13 @@ export function planOverworldSessionSnapshotRestore(args: {
     discoveredQuestIdsAfterSet.add(targetPreparationQuestId);
   }
   const discoveredQuestIdsAfter = Object.freeze([...discoveredQuestIdsAfterSet].sort());
+  const discoveredAreaIdsAfter = Object.freeze([...discoveredAreaIds].sort());
   const journalEntriesAfter = Object.freeze(migratedJournalEntries);
 
   return {
     characterAfter: consequenceReplay.characterAfter,
     currentAreaByTown,
+    discoveredAreaIdsAfter,
     discoveredQuestIdsAfter,
     journalEntriesAfter,
     openingLeadSourceDecisionTrailAfter,

@@ -50,6 +50,31 @@ export type MutableOverworldLocalDiscoveryIds = {
   discoveredQuestIds: Set<string>;
 };
 
+/**
+ * Reveal a quest lead together with the local district named by that lead.
+ *
+ * Normal notice-board discovery already has the district in its local
+ * discovery prefix. Campaign scenes may certify a lead before that prefix has
+ * advanced, though. In that case the named anchor is part of the lead's
+ * actionable information: without it the player can read the quest but cannot
+ * take its legal local route. Keep this rule data-driven from `quest.area` so
+ * every direct quest revelation observes the same contract.
+ */
+export function revealOverworldQuestAnchor(
+  state: Pick<MutableOverworldLocalDiscoveryIds, "discoveredAreaIds" | "discoveredQuestIds">,
+  questsById: ReadonlyMap<string, OverworldQuest>,
+  questId: string,
+): boolean {
+  const quest = questsById.get(questId);
+  if (!quest) throw new Error(`Cannot reveal unknown overworld quest "${questId}".`);
+
+  const questChanged = !state.discoveredQuestIds.has(quest.id);
+  state.discoveredQuestIds.add(quest.id);
+  const areaChanged = !state.discoveredAreaIds.has(quest.area);
+  state.discoveredAreaIds.add(quest.area);
+  return questChanged || areaChanged;
+}
+
 export function questView(
   quest: OverworldQuest,
   resources?: OverworldQuestLaunchResources,

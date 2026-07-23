@@ -146,7 +146,7 @@ function registrationEraSnapshot(): OverworldSessionSnapshot {
 }
 
 describe("opening lead-source snapshot integrity", () => {
-  it("round-trips a Rowan-first source lead before the Station Quarter is mapped", () => {
+  it("reveals the certified lead's Station Quarter anchor and round-trips its route", () => {
     const session = new OverworldSession(WORLD);
     const rowan = session.view().characters[0];
     if (!rowan) throw new Error("expected Rowan in Albany's opening area");
@@ -154,18 +154,47 @@ describe("opening lead-source snapshot integrity", () => {
     session.talkToCharacter(rowan.id);
     session.chooseJourneyStory(LEDGER_PROFILE);
     session.chooseJourneyStory(DEFAULT_OATH);
+    const beforeSource = session.snapshot();
     session.chooseJourneyStory(ROWAN_SOURCE);
     const snapshot = session.snapshot();
     const questArea = WORLD.quests.find((quest) => quest.id === TARGET_QUEST)?.area;
     if (!questArea) throw new Error("expected the source-bound quest area");
     expect(snapshot.discoveredQuestIds).toContain(TARGET_QUEST);
-    expect(snapshot.discoveredAreaIds).not.toContain(questArea);
+    expect(snapshot.discoveredAreaIds).toContain(questArea);
+    expect(
+      snapshot.discoveredAreaIds.filter(
+        (areaId) => !beforeSource.discoveredAreaIds.includes(areaId),
+      ),
+    ).toEqual([questArea]);
+    expect(session.view().areaExits.some((route) => route.destination.id === questArea)).toBe(true);
     expect(session.journey().storyChoice).toBeNull();
+
+    const preAnchorSave = structuredClone(snapshot);
+    preAnchorSave.discoveredAreaIds = preAnchorSave.discoveredAreaIds.filter(
+      (areaId) => areaId !== questArea,
+    );
+    const upgradedPreAnchorSave = OverworldSession.restore(WORLD, preAnchorSave);
+    expect(upgradedPreAnchorSave.snapshot().discoveredAreaIds).toContain(questArea);
+    expect(
+      upgradedPreAnchorSave.view().areaExits.some((route) => route.destination.id === questArea),
+    ).toBe(true);
 
     const restored = OverworldSession.restore(WORLD, snapshot);
     expect(restored.snapshot()).toEqual(snapshot);
     expect(restored.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
+    expect(restored.view().areaExits.some((route) => route.destination.id === questArea)).toBe(
+      true,
+    );
     expect(restored.journey().storyChoice).toBeNull();
+
+    const poi = restored.view().pois[0];
+    if (!poi) throw new Error("expected the next ordinary Albany scout");
+    restored.scoutPoi(poi.id);
+    const nextArea = WORLD.areas
+      .filter((area) => area.home === WORLD.start)
+      .find((area) => !snapshot.discoveredAreaIds.includes(area.id));
+    expect(nextArea).toBeDefined();
+    expect(restored.snapshot().discoveredAreaIds).toContain(nextArea!.id);
   });
 
   it("round-trips a pending offer and a sponsored selection without losing terms or effects", () => {

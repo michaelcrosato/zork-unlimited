@@ -337,6 +337,19 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       session_id: pending.sessionId,
     }).snapshot;
     expect(pendingSnapshot.discoveredQuestIds).not.toContain(WOLF_ID);
+    const wolfArea = WORLD.quests.find((quest) => quest.id === WOLF_ID)?.area;
+    if (!wolfArea) throw new Error("Expected Wolf-Winter's authored local anchor.");
+
+    // A source offer remains non-prescriptive: without a certified source, a
+    // fresh local session has neither the lead nor its named anchor route.
+    const beforeSource = new OverworldSession(WORLD);
+    beforeSource.talkToCharacter(ROWAN_ID);
+    beforeSource.chooseJourneyStory(COURIER);
+    beforeSource.chooseJourneyStory(DEFAULT_OATH);
+    expect(beforeSource.view().quests.map((quest) => quest.id)).not.toContain(WOLF_ID);
+    expect(beforeSource.view().areaExits.some((route) => route.destination.id === wolfArea)).toBe(
+      false,
+    );
 
     const uiPending = UiOverworldSession.restore(WORLD, pendingSnapshot);
     expect(uiPending.journey()).toEqual(pending.pendingJourney);
@@ -386,6 +399,10 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     const selectedSnapshot = api.export_overworld_session({
       session_id: restoredPending.session_id,
     }).snapshot;
+    expect(selectedSnapshot.discoveredAreaIds).toContain(wolfArea);
+    expect(selected.observation.areaExits.some((route) => route.destination.id === wolfArea)).toBe(
+      true,
+    );
     const restoredSelected = api.restore_overworld_session({
       snapshot: selectedSnapshot,
       compact_context: false,
@@ -399,6 +416,12 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       selectedWolf,
     );
     expect(uiSelected.view().quests.find((quest) => quest.id === WOLF_ID)).toEqual(selectedWolf);
+    expect(
+      restoredSelected.observation.areaExits.some((route) => route.destination.id === wolfArea),
+    ).toBe(true);
+    expect(uiSelected.view().areaExits.some((route) => route.destination.id === wolfArea)).toBe(
+      true,
+    );
     expect(() => uiSelected.chooseJourneyStory(HAYDEN_SOURCE)).toThrow(
       /unknown story choice|no story consequence/i,
     );
