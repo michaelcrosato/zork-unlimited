@@ -22,12 +22,29 @@ const {
   captureThreadBoundCodexRollout,
   publicCodexThreadId,
   validateOutputPrefix,
+  validateWindowsOutputPrefixShape,
 } = codexRollout;
 
 const THREAD_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_THREAD_ID = "22222222-2222-4222-8222-222222222222";
 const THIRD_THREAD_ID = "33333333-3333-4333-8333-333333333333";
 const temporaryRoots: string[] = [];
+
+it("rejects Windows output aliases that can bypass lexical containment", () => {
+  for (const unsafePrefix of [
+    "C:/Users/player/.codex:audit",
+    "//?/C:/Users/player/.codex/report",
+    "C:/Users/player/.codex./report",
+    "C:/safe/NUL.txt",
+  ]) {
+    expect(() => validateWindowsOutputPrefixShape(unsafePrefix, "win32"), unsafePrefix).toThrow(
+      /Windows/i,
+    );
+  }
+  expect(validateWindowsOutputPrefixShape("C:/safe/reports/attempt", "win32")).toBe(
+    "C:/safe/reports/attempt",
+  );
+});
 
 function temporaryRoot(prefix: string): string {
   const root = mkdtempSync(join(tmpdir(), prefix));
@@ -319,6 +336,17 @@ describe("thread-bound Codex rollout capture", () => {
     expect(() => validateOutputPrefix(home, join(linkedHome, "new", "attempt"), root)).toThrow(
       /outside the Codex home/i,
     );
+    const portableHome = home.replaceAll("\\", "/");
+    for (const unsafePrefix of [
+      home,
+      `${portableHome}/`,
+      `${portableHome}/.`,
+      `${portableHome}/scratch/../..`,
+    ]) {
+      expect(() => validateOutputPrefix(home, unsafePrefix, root), unsafePrefix).toThrow(
+        /outside the Codex home|must name a file prefix/i,
+      );
+    }
     expect(() =>
       capture(home, { ...paths, destination: join(home, "captured.jsonl") }, player),
     ).toThrow(/outside the Codex home/i);

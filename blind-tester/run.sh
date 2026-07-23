@@ -79,6 +79,24 @@ node_path_arg() {
   esac
 }
 
+shell_path_arg() {
+  local path="$1"
+  case "$NODE_CMD" in
+    *.exe|*/node.exe)
+      if [[ "$OSTYPE" == linux* ]] && command -v wslpath >/dev/null 2>&1; then
+        wslpath -u "$path"
+      elif command -v cygpath >/dev/null 2>&1; then
+        cygpath -u "$path"
+      else
+        printf '%s\n' "$path"
+      fi
+      ;;
+    *)
+      printf '%s\n' "$path"
+      ;;
+  esac
+}
+
 CODEX_ROLLOUT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-rollout.mjs")"
 
 is_absolute_output_prefix() {
@@ -223,16 +241,22 @@ esac
 
 ACTIVE_CODEX_HOME=""
 ACTIVE_CODEX_HOME_ARG=""
-if [[ "$PLAY_MODE" == "pure" ]]; then
-  RAW_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-  RAW_CODEX_HOME_ARG="$(node_path_arg "$RAW_CODEX_HOME")"
-  if ! ACTIVE_CODEX_HOME="$(
-    cd "$GAME_DIR" &&
-      "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" resolve-home --home "$RAW_CODEX_HOME_ARG"
-  )"; then
-    echo "Could not resolve the existing Codex home; pure run refused." >&2
-    exit 4
-  fi
+RAW_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+# Pure play requires an existing CLI-owned home. Structural runs need no login
+# home, but when one already exists they enforce the same report-output boundary.
+RAW_CODEX_HOME_ARG="$(node_path_arg "$RAW_CODEX_HOME")"
+if ! ACTIVE_CODEX_HOME="$(
+  cd "$GAME_DIR" &&
+    "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" resolve-home-if-present --home "$RAW_CODEX_HOME_ARG"
+)"; then
+  echo "Could not safely resolve the configured Codex home; run refused." >&2
+  exit 4
+fi
+if [[ "$PLAY_MODE" == "pure" && -z "$ACTIVE_CODEX_HOME" ]]; then
+  echo "Could not resolve the existing Codex home; pure run refused." >&2
+  exit 4
+fi
+if [[ -n "$ACTIVE_CODEX_HOME" ]]; then
   ACTIVE_CODEX_HOME_ARG="$(node_path_arg "$ACTIVE_CODEX_HOME")"
 fi
 
@@ -253,23 +277,24 @@ else
 fi
 
 # Resolve and validate the report prefix before creating any runner temp or
-# report artifact. The pure path rejects canonical destinations within the
-# existing Codex home, including paths reached through links.
+# report artifact. Any run with an existing Codex home rejects canonical
+# destinations within it, including paths reached through links.
 if [[ -z "$OUT" ]]; then
   STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
   OUT="$SCRIPT_DIR/reports/${STAMP}_${SOURCE_SLUG}_seed${SEED}"
 elif ! is_absolute_output_prefix "$OUT"; then
   OUT="$GAME_DIR/$OUT"
 fi
-if [[ "$PLAY_MODE" == "pure" ]]; then
+if [[ -n "$ACTIVE_CODEX_HOME" ]]; then
   OUT_VALIDATION_ARG="$(node_path_arg "$OUT")"
   GAME_DIR_VALIDATION_ARG="$(node_path_arg "$GAME_DIR")"
-  if ! "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" validate-output \
+  if ! CANONICAL_OUT="$("$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" validate-output \
     --home "$ACTIVE_CODEX_HOME_ARG" --out "$OUT_VALIDATION_ARG" \
-    --base "$GAME_DIR_VALIDATION_ARG"; then
+    --base "$GAME_DIR_VALIDATION_ARG")"; then
     echo "Report output prefix is unsafe; no run artifacts were created." >&2
     exit 4
   fi
+  OUT="$(shell_path_arg "$CANONICAL_OUT")"
 fi
 
 # A Windows-installed node_modules cannot run under WSL's Linux node: only the

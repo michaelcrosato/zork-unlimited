@@ -74,7 +74,9 @@ The report is written to `blind-tester/reports/<stamp>_<source>_seed<n>.md`
 The built-in Codex path starts from an isolated temporary player directory while
 leaving subscription state entirely owned by the Codex CLI in its existing
 `CODEX_HOME`. The runner never opens or copies the CLI's login store and never
-deletes or mutates that shared home. It passes `--ignore-user-config`,
+deletes or mutates that shared home. Standalone report prefixes and fleet report
+roots are canonicalized outside it before any directory, lock, or run artifact
+is created. It passes `--ignore-user-config`,
 `--ignore-rules`, `project_doc_max_bytes=0`, and the existing feature disables so
 user/project instructions, shell/web/apps/plugins/browser/computer, the unused
 shell snapshot, and subagent capabilities cannot enter the player turn. It also

@@ -26,9 +26,11 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import { validateOutputPrefix } from "./codex-rollout.mjs";
 import { parseJsonRejectingDuplicateKeys } from "./strict-json.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -95,6 +97,50 @@ export function validateFleetLabel(label) {
     );
   }
   return label;
+}
+
+export function validateFleetReportsDirectory(reportsDir, codexHome) {
+  return validateOutputPrefix(codexHome, reportsDir, GAME_DIR);
+}
+
+export function normalizeShellPathForNode(path, platform = process.platform) {
+  if (platform !== "win32") return path;
+  const match = path.match(/^\/(?:(?:mnt|cygdrive)\/)?([A-Za-z])(?:\/(.*))?$/u);
+  if (!match) return path;
+  const [, drive, remainder = ""] = match;
+  return `${drive.toUpperCase()}:/${remainder}`;
+}
+
+export function normalizeShellHomeForNode(path, platform = process.platform, translatePosixPath) {
+  const normalized = normalizeShellPathForNode(path, platform);
+  if (
+    platform !== "win32" ||
+    normalized !== path ||
+    !path.startsWith("/") ||
+    /^\/\/[^/]+\/[^/]+/u.test(path)
+  ) {
+    return normalized;
+  }
+  let translated;
+  try {
+    translated = (
+      translatePosixPath ??
+      ((value) =>
+        execFileSync("cygpath", ["-w", value], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+          windowsHide: true,
+        }))
+    )(path).trim();
+  } catch (error) {
+    throw new Error(`fleet: could not translate shell home path for Windows Node: ${path}`, {
+      cause: error,
+    });
+  }
+  if (!/^(?:[A-Za-z]:[\\/]|\\\\)/u.test(translated)) {
+    throw new Error(`fleet: shell home translation was not an absolute Windows path: ${path}`);
+  }
+  return translated;
 }
 
 /** Parse fleet CLI args into a plain options object (pure; exported for tests).
@@ -1737,6 +1783,20 @@ async function main() {
     process.exit(2);
     return;
   }
+  const requestedReportsDir = opts.out
+    ? resolve(normalizeShellPathForNode(opts.out))
+    : join(HERE, "reports");
+  const configuredCodexHome = normalizeShellHomeForNode(process.env.CODEX_HOME?.trim() ?? "");
+  const shellHome = normalizeShellHomeForNode(process.env.HOME?.trim() ?? "");
+  const codexHome = configuredCodexHome
+    ? isAbsolute(configuredCodexHome)
+      ? configuredCodexHome
+      : resolve(GAME_DIR, configuredCodexHome)
+    : join(shellHome || homedir(), ".codex");
+  const reportsDir =
+    !opts.mock || existsSync(codexHome)
+      ? validateFleetReportsDirectory(requestedReportsDir, codexHome)
+      : requestedReportsDir;
   const runs = planFleetRuns(opts);
 
   // Resolve every launcher prerequisite before reserving a report namespace or
@@ -1747,7 +1807,6 @@ async function main() {
   // spend tokens. Structural mocks retain their historical no-provenance path.
   const fleetBuild = opts.mock ? null : await captureExpectedPureFleetBuild();
 
-  const reportsDir = opts.out ? resolve(opts.out) : join(HERE, "reports");
   const stamp = utcStamp();
   const label = validateFleetLabel(opts.label ?? stamp);
 

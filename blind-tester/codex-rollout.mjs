@@ -138,6 +138,10 @@ export function canonicalCodexHome(path) {
   }).canonicalPath;
 }
 
+export function canonicalCodexHomeIfPresent(path) {
+  return existsSync(resolve(path)) ? canonicalCodexHome(path) : "";
+}
+
 function isWithinOrEqual(path, root) {
   const fromRoot = relative(root, path);
   return (
@@ -146,12 +150,48 @@ function isWithinOrEqual(path, root) {
   );
 }
 
+export function validateWindowsOutputPrefixShape(outputPrefix, platform = process.platform) {
+  if (platform !== "win32") return outputPrefix;
+  const portablePrefix = outputPrefix.replaceAll("\\", "/");
+  if (/^\/\/[?.]\//u.test(portablePrefix)) {
+    fail("Report output prefix must not use a Windows device namespace");
+  }
+  const withoutDrive = /^[A-Za-z]:/u.test(portablePrefix)
+    ? portablePrefix.slice(2)
+    : portablePrefix;
+  if (withoutDrive.includes(":")) {
+    fail("Report output prefix must not name a Windows alternate data stream");
+  }
+  for (const segment of withoutDrive.split("/")) {
+    if (!segment) continue;
+    if (/[. ]$/u.test(segment)) {
+      fail("Report output prefix must not contain Windows-trimmed path segments");
+    }
+    const deviceBase = segment.split(".", 1)[0]?.toUpperCase() ?? "";
+    if (/^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/u.test(deviceBase)) {
+      fail("Report output prefix must not contain a reserved Windows device name");
+    }
+  }
+  return outputPrefix;
+}
+
 export function validateOutputPrefix(codexHome, outputPrefix, baseDirectory = process.cwd()) {
+  const portablePrefix = outputPrefix.replaceAll("\\", "/");
+  const finalSegment = portablePrefix.slice(portablePrefix.lastIndexOf("/") + 1);
+  if (
+    portablePrefix.endsWith("/") ||
+    finalSegment === "." ||
+    finalSegment === ".." ||
+    finalSegment === ""
+  ) {
+    fail("Report output prefix must name a file prefix, not a directory or dot segment");
+  }
+  validateWindowsOutputPrefixShape(outputPrefix);
   const homeAuthority = canonicalExistingDirectory(codexHome, "Codex home", {
     allowLinkedPath: true,
   });
   const requestedDestination = resolve(baseDirectory, outputPrefix);
-  let existingParent = dirname(requestedDestination);
+  let existingParent = requestedDestination;
   const missingSegments = [];
   while (!existsSync(existingParent)) {
     const parent = dirname(existingParent);
@@ -166,11 +206,11 @@ export function validateOutputPrefix(codexHome, outputPrefix, baseDirectory = pr
     "Report output prefix parent",
     { allowLinkedPath: true },
   );
-  const canonicalParent = resolve(existingAuthority.canonicalPath, ...missingSegments);
-  if (isWithinOrEqual(canonicalParent, homeAuthority.canonicalPath)) {
+  const canonicalDestination = resolve(existingAuthority.canonicalPath, ...missingSegments);
+  if (isWithinOrEqual(canonicalDestination, homeAuthority.canonicalPath)) {
     fail("Report output prefix must remain outside the Codex home");
   }
-  return join(canonicalParent, basename(requestedDestination));
+  return canonicalDestination;
 }
 
 function sameDirectoryAuthority(left, right) {
@@ -429,6 +469,12 @@ function main() {
     process.stdout.write(canonicalCodexHome(home));
     return;
   }
+  if (command === "resolve-home-if-present") {
+    const home = option(argv, "--home");
+    if (!home) fail("resolve-home-if-present requires --home");
+    process.stdout.write(canonicalCodexHomeIfPresent(home));
+    return;
+  }
   if (command === "validate-output") {
     const home = option(argv, "--home");
     const out = option(argv, "--out");
@@ -436,7 +482,7 @@ function main() {
     if (!home || !out || !base) {
       fail("validate-output requires --home, --out, and --base");
     }
-    validateOutputPrefix(home, out, base);
+    process.stdout.write(validateOutputPrefix(home, out, base));
     return;
   }
   if (command === "capture") {
@@ -451,7 +497,7 @@ function main() {
     captureThreadBoundCodexRollout(home, events, out, receipt, expectedCwd);
     return;
   }
-  fail("Usage: codex-rollout.mjs resolve-home|validate-output|capture ...");
+  fail("Usage: codex-rollout.mjs resolve-home|resolve-home-if-present|validate-output|capture ...");
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

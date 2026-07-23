@@ -161,7 +161,9 @@ rejected report.
 The runner starts Codex in an isolated temporary player directory while leaving
 subscription state CLI-owned in the operator's existing `CODEX_HOME`; repository
 code never opens or copies the login store and never cleans or mutates that shared
-home. User/project config and rules are ignored, `project_doc_max_bytes=0` prevents
+home. Standalone report prefixes and fleet report roots are canonicalized outside
+it before any directory, lock, or run artifact is created. User/project config and
+rules are ignored, `project_doc_max_bytes=0` prevents
 project-document ingestion, shell/web/apps/plugins/browser/computer/subagents and
 the unused shell snapshot are disabled, and only the exact pure AdventureForge
 MCP tools are enabled. After the CLI exits, the runner parses the run-owned public

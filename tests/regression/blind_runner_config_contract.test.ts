@@ -111,7 +111,7 @@ exit 93
     }
   }, 30_000);
 
-  it("rejects an output prefix inside CODEX_HOME before creating any run artifact", () => {
+  it("rejects pure and structural output prefixes inside an existing CODEX_HOME", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-codex-output-boundary-"));
     const home = join(dir, "codex-home");
     const auth = join(home, CODEX_LOGIN_FILENAME);
@@ -119,9 +119,77 @@ exit 93
     mkdirSync(home);
     writeFileSync(auth, authBytes);
     try {
+      for (const modeArgs of [[], ["--mock"]]) {
+        const result = spawnSync(
+          process.execPath,
+          ["blind-tester/blind-launch.mjs", ...modeArgs, "--out", join(home, "reports", "attempt")],
+          {
+            cwd: process.cwd(),
+            encoding: "utf8",
+            env: { ...process.env, CODEX_HOME: home },
+            timeout: 30_000,
+          },
+        );
+        const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+        expect(result.status, `${modeArgs.join(" ")}: ${output}`).toBe(4);
+        expect(output).toContain("Report output prefix must remain outside the Codex home");
+        expect(output).toContain("no run artifacts were created");
+        expect(readdirSync(home), modeArgs.join(" ")).toEqual([CODEX_LOGIN_FILENAME]);
+        expect(readFileSync(auth, "utf8"), modeArgs.join(" ")).toBe(authBytes);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects directory and dot-segment output forms before suffixes can enter CODEX_HOME", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-output-lexical-boundary-"));
+    const home = join(dir, "codex-home");
+    const auth = join(home, CODEX_LOGIN_FILENAME);
+    const authBytes = '{"sentinel":"lexical-output-guard"}\n';
+    mkdirSync(home);
+    writeFileSync(auth, authBytes);
+    const portableHome = home.replaceAll("\\", "/");
+    try {
+      for (const unsafeOut of [
+        `${portableHome}/`,
+        `${portableHome}/.`,
+        `${portableHome}/scratch/../..`,
+      ]) {
+        const result = spawnSync(
+          process.execPath,
+          ["blind-tester/blind-launch.mjs", "--out", unsafeOut],
+          {
+            cwd: process.cwd(),
+            encoding: "utf8",
+            env: { ...process.env, CODEX_HOME: home },
+            timeout: 30_000,
+          },
+        );
+        const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+        expect(result.status, `${unsafeOut}: ${output}`).toBe(4);
+        expect(output).toContain("must name a file prefix");
+        expect(output).toContain("no run artifacts were created");
+        expect(readdirSync(home), unsafeOut).toEqual([CODEX_LOGIN_FILENAME]);
+        expect(readFileSync(auth, "utf8"), unsafeOut).toBe(authBytes);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects an NTFS alternate-stream-shaped prefix before creating artifacts", () => {
+    if (process.platform !== "win32") return;
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-output-ads-boundary-"));
+    const home = join(dir, "codex-home");
+    const auth = join(home, CODEX_LOGIN_FILENAME);
+    const authBytes = '{"sentinel":"ads-output-guard"}\n';
+    mkdirSync(home);
+    writeFileSync(auth, authBytes);
+    try {
       const result = spawnSync(
         process.execPath,
-        ["blind-tester/blind-launch.mjs", "--out", join(home, "reports", "attempt")],
+        ["blind-tester/blind-launch.mjs", "--mock", "--out", `${home}:audit`],
         {
           cwd: process.cwd(),
           encoding: "utf8",
@@ -131,10 +199,11 @@ exit 93
       );
       const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
       expect(result.status, output).toBe(4);
-      expect(output).toContain("Report output prefix must remain outside the Codex home");
+      expect(output).toContain("must not name a Windows alternate data stream");
       expect(output).toContain("no run artifacts were created");
       expect(readdirSync(home)).toEqual([CODEX_LOGIN_FILENAME]);
       expect(readFileSync(auth, "utf8")).toBe(authBytes);
+      expect(readdirSync(dir)).toEqual(["codex-home"]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -427,7 +496,7 @@ exit 93
     );
 
     expect(runner).toContain('RAW_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"');
-    expect(runner).toContain("resolve-home --home");
+    expect(runner).toContain("resolve-home-if-present --home");
     expect(runner).toContain('ACTIVE_CODEX_HOME_ARG="$(node_path_arg "$ACTIVE_CODEX_HOME")"');
     expect(runner).toContain("validate-output");
     expect(runner.indexOf("validate-output")).toBeLessThan(runner.indexOf('WORK="$(mktemp -d)"'));
