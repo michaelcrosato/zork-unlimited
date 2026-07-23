@@ -31,9 +31,15 @@ import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 import { render as renderQuest, illegalReason, resolve as resolveRpgCommand } from "./rpg_play.js";
 import { loadOverworldManifest } from "../src/world/source.js";
 import { timeLabel } from "../src/world/session_journal_codec.js";
+import type {
+  JourneyChoiceOption,
+  JourneyExitReceipt,
+  JourneyPresentation,
+} from "../src/world/journey_contract.js";
 import {
   OverworldSession,
   type OverworldActionResult,
+  type OverworldJourneyGoalPassageResult,
   type OverworldPendingRoadEncounter,
   type OverworldQuestView,
   type OverworldRoadEncounterStrategy,
@@ -158,6 +164,110 @@ export function renderEncounter(encounter: OverworldPendingRoadEncounter): strin
   return lines.join("\n");
 }
 
+/** The authoritative mandatory journey prompt, shared by fresh and restored CLI sessions. */
+export function renderJourneyGate(journey: JourneyPresentation): string {
+  const gate = journey.pendingChoice ?? journey.storyChoice;
+  if (!gate) return "";
+  const kind = journey.pendingChoice ? "Journey decision" : "Story choice";
+  const lines = [`\n! ${kind}`, `  ${gate.message}`, "  Choose with `choose <number|label>`:"];
+  gate.options.forEach((option, index) => {
+    lines.push(`    ${String(index + 1)}. ${option.label}`);
+    const summary = "summary" in option ? option.summary : undefined;
+    if (summary) {
+      lines.push(`       Commitment: ${summary.commitment}`);
+      lines.push(`       Field trigger: ${summary.fieldTrigger}`);
+      if (summary.immediateCost) lines.push(`       Immediate cost: ${summary.immediateCost}`);
+    }
+    lines.push(`       Consequence: ${option.consequence}`);
+  });
+  return lines.join("\n");
+}
+
+/** The current objective and its engine-owned movement forecast. */
+export function renderJourneyStatus(journey: JourneyPresentation): string {
+  const lines = ["\n--- Journey ---", `Goal [${journey.goal.status}]: ${journey.goal.text}`];
+  if (journey.goalGuidance) lines.push(`Guidance: ${journey.goalGuidance}`);
+  const passage = journey.goalPassage;
+  if (passage) {
+    lines.push(`Goal passage: ${passage.label}`);
+    lines.push(
+      `  Forecast: ${String(passage.roadCount)} ${passage.roadCount === 1 ? "road" : "roads"}; ${String(passage.baseMinutes)} road min; ${String(passage.estimatedMinutes)} min estimated.`,
+    );
+    lines.push(
+      `  Supplies: ${String(passage.suppliesNeeded)} needed; ${String(passage.supplyDeficit)} short; ${String(passage.suppliesAfter)} left.`,
+    );
+    lines.push(
+      `  Arrival: fatigue ${String(passage.fatigueAfter)}; condition ${passage.travelConditionAfter}.`,
+    );
+    lines.push(`  Consequence: ${passage.consequence}`);
+    lines.push(`  Stop rule: ${passage.stopRule}`);
+    lines.push("  Action: `follow goal`");
+  }
+  return lines.join("\n");
+}
+
+/** The truthful terminal surface for an ended, read-only journey. */
+export function renderEndedJourney(
+  journey: JourneyPresentation,
+  receipt: JourneyExitReceipt,
+): string {
+  if (journey.status !== "ended") {
+    throw new Error("Only an ended journey has a terminal receipt surface.");
+  }
+  return [
+    "\n! Journey ended — this journey is read-only.",
+    `  Goal: ${journey.goal.text} [${journey.goal.status}]`,
+    `  Accepted decisions: ${String(journey.acceptedDecisions)}.`,
+    `  Exit receipt: ${receipt.exitReason}; reasons: ${receipt.exitReasons.join(", ")}; receipt ${receipt.receiptHash}.`,
+    "  Its truthful exit receipt is preserved for review.",
+  ].join("\n");
+}
+
+export function matchJourneyGateOption<Option extends { id: string; label: string }>(
+  options: readonly Option[],
+  raw: string,
+): Option | null {
+  const trimmed = raw.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const index = Number.parseInt(trimmed, 10) - 1;
+    return options[index] ?? null;
+  }
+  const exact = trimmed.toLowerCase();
+  return (
+    options.find((option) => option.id.toLowerCase() === exact) ??
+    options.find((option) => option.label.toLowerCase() === exact) ??
+    null
+  );
+}
+
+function chooseJourneyGate(
+  session: OverworldSession,
+  raw: string,
+): {
+  label: string;
+  consequence: string;
+} {
+  const journey = session.journey();
+  const pending = journey.pendingChoice;
+  const story = pending ? null : journey.storyChoice;
+  const gate = pending ?? story;
+  if (!gate) throw new Error("There is no mandatory journey choice right now.");
+  const option = matchJourneyGateOption<{
+    id: string;
+    label: string;
+    consequence: string;
+  }>(gate.options, raw);
+  if (!option) {
+    throw new Error("Choose one of the numbered options or enter a full option label shown above.");
+  }
+  if (pending) {
+    session.chooseJourney(option.id as JourneyChoiceOption["id"]);
+  } else {
+    session.chooseJourneyStory(option.id, story!.id);
+  }
+  return { label: option.label, consequence: option.consequence };
+}
+
 function commandForStrategy(strategy: OverworldRoadEncounterStrategy): string {
   return strategy === "assist_travelers"
     ? "assist"
@@ -176,6 +286,8 @@ function strategyForCommand(raw: string): OverworldRoadEncounterStrategy | null 
 
 const HELP = `Commands:
   look                     full status of the current town and area
+  choose <number|label>    answer the active journey or story choice
+  follow goal              take a road passage, or restate local goal guidance
   go <town|road #>         travel one road leg (multi-leg journeys go leg by leg)
   routes                   estimates for every discovered destination
   assist | scout | press   resolve a pending road encounter
@@ -192,30 +304,45 @@ const HELP = `Commands:
   hash                     deterministic snapshot hash
   help · quit`;
 
+function matchingEntities<T extends { id: string }>(
+  items: readonly T[],
+  raw: string,
+  label: (item: T) => string,
+): T[] {
+  const q = raw.trim().toLowerCase();
+  if (!q) return [];
+  const exactIds = items.filter((item) => item.id.toLowerCase() === q);
+  if (exactIds.length) return exactIds;
+  const exactLabels = items.filter((item) => label(item).toLowerCase() === q);
+  if (exactLabels.length) return exactLabels;
+  const partialLabels = items.filter((item) => label(item).toLowerCase().includes(q));
+  if (partialLabels.length) return partialLabels;
+  return items.filter((item) => item.id.toLowerCase().includes(q));
+}
+
 function matchEntity<T extends { id: string }>(
   items: readonly T[],
   raw: string,
   label: (item: T) => string,
 ): T | null {
-  const q = raw.trim().toLowerCase();
-  if (!q) return null;
-  return (
-    items.find((t) => t.id.toLowerCase() === q) ??
-    items.find((t) => label(t).toLowerCase() === q) ??
-    items.find((t) => label(t).toLowerCase().includes(q)) ??
-    items.find((t) => t.id.toLowerCase().includes(q)) ??
-    null
-  );
+  return matchingEntities(items, raw, label)[0] ?? null;
 }
 
-function printActionResult(result: OverworldActionResult): void {
+function printActionResult(result: OverworldActionResult, view: OverworldView): void {
   if (result.alreadyKnown) {
     console.log(`Reviewed: ${result.entry.title}.`);
     return;
   }
   console.log(`[+${result.minutes} min] ${result.entry.text}`);
   for (const area of result.discoveredAreas ?? []) console.log(`  ↳ new area: ${area.name}`);
-  for (const job of result.discoveredJobs ?? []) console.log(`  ↳ new job: ${job.title}`);
+  const actionableJobIds = new Set([...view.jobs, ...view.rememberedJobs].map((job) => job.id));
+  for (const job of result.discoveredJobs ?? []) {
+    if (job.authored_scene && !actionableJobIds.has(job.id)) {
+      console.log(`  ↳ future job (currently unavailable): ${job.title}`);
+    } else {
+      console.log(`  ↳ new job: ${job.title}`);
+    }
+  }
   for (const site of result.discoveredSites ?? []) console.log(`  ↳ new site: ${site.title}`);
   for (const quest of result.discoveredQuests ?? [])
     console.log(`  ↳ new quest lead: ${quest.title}`);
@@ -234,6 +361,28 @@ function printTravelEntry(entry: TravelLogEntry): void {
     console.log(`${entry.roadEvent.title} (risk ${entry.roadEvent.risk})`);
     console.log(entry.roadEvent.summary);
   }
+}
+
+function printGoalPassageResult(result: OverworldJourneyGoalPassageResult): void {
+  console.log(`Followed the current goal toward ${result.destination}:`);
+  for (const leg of result.legs) printTravelEntry(leg);
+  console.log(`Goal passage stop: ${result.stopReason} at ${result.stoppedAt}.`);
+}
+
+function printJournal(view: OverworldView): void {
+  for (const entry of view.journal.slice(-10)) {
+    console.log(`[${entry.recordedAt}] ${entry.town}: ${entry.title} — ${entry.text}`);
+  }
+  if (!view.journal.length) console.log("The journal is empty.");
+}
+
+function printTravelLog(view: OverworldView): void {
+  for (const entry of view.log.slice(0, 10)) {
+    console.log(
+      `${entry.from} → ${entry.to} via ${entry.route} — ${entry.minutes} min, supplies ${entry.suppliesAfter}, fatigue ${entry.fatigueAfter}`,
+    );
+  }
+  if (!view.log.length) console.log("No roads travelled yet.");
 }
 
 type Reader = { read(prompt: string): Promise<string | null>; scripted: boolean };
@@ -255,14 +404,19 @@ async function main(): Promise<void> {
   let session: OverworldSession;
   if (restorePath !== undefined) {
     session = OverworldSession.restore(manifest, JSON.parse(readFileSync(restorePath, "utf8")));
-    console.log(`Resumed in ${session.view().current.name}.`);
+    if (session.journey().status !== "ended") {
+      console.log(`Resumed in ${session.view().current.name}.`);
+    }
   } else {
     session = new OverworldSession(manifest);
     console.log(
       `You begin in ${session.view().current.name}. Roads leave town, but the work is local until you find it.`,
     );
   }
-  console.log(render(session.view()));
+  if (session.journey().status !== "ended") {
+    console.log(render(session.view()));
+    console.log(renderJourneyStatus(session.journey()));
+  }
 
   const interactive = commands === null;
   const rl = interactive ? createInterface({ input: stdin, output: stdout }) : null;
@@ -283,7 +437,16 @@ async function main(): Promise<void> {
   try {
     running: while (true) {
       const view = session.view();
-      if (view.pendingRoadEncounter) console.log(renderEncounter(view.pendingRoadEncounter));
+      const journey = session.journey();
+      if (journey.status === "ended") {
+        const receipt = session.journeyExitReceipt();
+        if (!receipt) throw new Error("An ended journey is missing its truthful exit receipt.");
+        console.log(renderEndedJourney(journey, receipt));
+        break;
+      }
+      const journeyGate = renderJourneyGate(journey);
+      if (journeyGate) console.log(journeyGate);
+      else if (view.pendingRoadEncounter) console.log(renderEncounter(view.pendingRoadEncounter));
       const raw = await reader.read(`\n[${view.current.name}] > `);
       if (raw === null) break;
       const line = raw.trim();
@@ -301,6 +464,47 @@ async function main(): Promise<void> {
       };
 
       try {
+        if (journey.pendingChoice || journey.storyChoice) {
+          const [verb = "", ...restWords] = low.split(/\s+/);
+          const rest = restWords.join(" ");
+          if (["look", "status", "l"].includes(verb)) {
+            console.log(render(session.view()));
+            console.log(renderJourneyStatus(session.journey()));
+          } else if (verb === "hash") {
+            console.log(session.snapshotHash());
+          } else if (verb === "journal") {
+            printJournal(session.view());
+          } else if (verb === "log") {
+            printTravelLog(session.view());
+          } else if (verb === "save") {
+            saveSnapshot(session, line.slice(4).trim());
+          } else if (verb === "load") {
+            const path = savePath(rest);
+            session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
+            if (session.journey().status !== "ended") {
+              console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
+              console.log(renderJourneyStatus(session.journey()));
+            }
+          } else if (verb === "choose") {
+            const chosen = chooseJourneyGate(session, line.slice(verb.length).trim());
+            console.log(`Chosen: ${chosen.label}.`);
+            console.log(`Consequence: ${chosen.consequence}`);
+            if (session.journey().status === "ended") {
+              const receipt = session.journeyExitReceipt();
+              if (!receipt)
+                throw new Error("An ended journey is missing its truthful exit receipt.");
+              console.log(renderEndedJourney(session.journey(), receipt));
+              break running;
+            }
+            console.log(renderJourneyStatus(session.journey()));
+          } else {
+            fail(
+              "Choose the active journey prompt first with `choose <number|label>`; `look`, `help`, `journal`, `log`, `save`, `load`, `hash`, and `quit` remain available.",
+            );
+          }
+          continue;
+        }
+
         if (view.pendingRoadEncounter) {
           const strategy = strategyForCommand(low);
           if (strategy) {
@@ -308,6 +512,7 @@ async function main(): Promise<void> {
             console.log(result.entry.text);
           } else if (["look", "status", "l"].includes(low)) {
             console.log(render(session.view()));
+            console.log(renderJourneyStatus(session.journey()));
           } else if (low === "hash") {
             console.log(session.snapshotHash());
           } else if (low.startsWith("save")) {
@@ -325,6 +530,7 @@ async function main(): Promise<void> {
           case "status":
           case "l":
             console.log(render(session.view()));
+            console.log(renderJourneyStatus(session.journey()));
             break;
           case "roads":
             console.log(render(session.view()));
@@ -354,6 +560,22 @@ async function main(): Promise<void> {
             printTravelEntry(travelToward(session, rest));
             break;
           }
+          case "follow": {
+            if (rest !== "goal") {
+              fail("Follow what? Use `follow goal` for the visible current-goal passage.");
+              break;
+            }
+            const journey = session.journey();
+            if (!journey.goalPassage) {
+              console.log(renderJourneyStatus(journey));
+              console.log(
+                "No road passage is available from here. Follow the visible local guidance above.",
+              );
+              break;
+            }
+            printGoalPassageResult(session.followGoalPassage());
+            break;
+          }
           case "rest":
             printServiceResult(session.restAtTown());
             break;
@@ -381,17 +603,17 @@ async function main(): Promise<void> {
                 fail("There is no local area here to explore.");
                 break;
               }
-              printActionResult(session.exploreArea(v.currentArea.id));
+              printActionResult(session.exploreArea(v.currentArea.id), session.view());
               break;
             }
             const area = matchEntity(v.areas, rest, (a) => a.name);
             if (area) {
-              printActionResult(session.exploreArea(area.id));
+              printActionResult(session.exploreArea(area.id), session.view());
               break;
             }
             const site = matchEntity(v.sites, rest, (s) => s.title);
             if (site) {
-              printActionResult(session.exploreSite(site.id));
+              printActionResult(session.exploreSite(site.id), session.view());
               break;
             }
             fail(`Nothing discovered here matches "${rest}" to explore.`);
@@ -403,7 +625,7 @@ async function main(): Promise<void> {
               fail(`Nothing scoutable matches "${rest}".`);
               break;
             }
-            printActionResult(session.scoutPoi(poi.id));
+            printActionResult(session.scoutPoi(poi.id), session.view());
             break;
           }
           case "talk": {
@@ -413,7 +635,7 @@ async function main(): Promise<void> {
               fail(`No local contact matches "${target}".`);
               break;
             }
-            printActionResult(session.talkToCharacter(character.id));
+            printActionResult(session.talkToCharacter(character.id), session.view());
             break;
           }
           case "investigate": {
@@ -422,7 +644,7 @@ async function main(): Promise<void> {
               fail(`No local event matches "${rest}".`);
               break;
             }
-            printActionResult(session.investigateEvent(event.id));
+            printActionResult(session.investigateEvent(event.id), session.view());
             break;
           }
           case "resolve": {
@@ -431,16 +653,62 @@ async function main(): Promise<void> {
               fail(`No local event matches "${rest}".`);
               break;
             }
-            printActionResult(session.resolveEvent(event.id));
+            printActionResult(session.resolveEvent(event.id), session.view());
             break;
           }
           case "work": {
-            const job = matchEntity(session.view().jobs, rest, (j) => j.title);
+            const current = session.view();
+            const job = matchEntity(current.jobs, rest, (j) => j.title);
             if (!job) {
+              const elsewhere = matchEntity(current.rememberedJobs, rest, (j) => j.title);
+              if (elsewhere) {
+                const area = current.areas.find((candidate) => candidate.id === elsewhere.area);
+                fail(
+                  `${elsewhere.title} is discovered but not available in this area${area ? `; move to ${area.name}` : ""}.`,
+                );
+                break;
+              }
+              const unavailableMatches = matchingEntities(
+                manifest.local_jobs.filter((candidate) =>
+                  current.discoveredJobIds.includes(candidate.id),
+                ),
+                rest,
+                (candidate) => candidate.title,
+              );
+              if (unavailableMatches.length > 1) {
+                const choices = unavailableMatches.map((candidate) => {
+                  const town = manifest.nodes.find((node) => node.id === candidate.home);
+                  return `${candidate.id} (${town?.name ?? candidate.home})`;
+                });
+                fail(
+                  `More than one discovered job matches "${rest}": ${choices.join("; ")}. Use an exact job id.`,
+                );
+                break;
+              }
+              const unavailable = unavailableMatches[0];
+              if (unavailable) {
+                if (current.completedJobIds.includes(unavailable.id)) {
+                  fail(`${unavailable.title} is already complete.`);
+                  break;
+                }
+                if (unavailable.home !== current.current.id) {
+                  const town = manifest.nodes.find(
+                    (candidate) => candidate.id === unavailable.home,
+                  );
+                  fail(
+                    `${unavailable.title} is discovered in ${town?.name ?? unavailable.home}; travel there before working it.`,
+                  );
+                  break;
+                }
+                fail(
+                  `${unavailable.title} is discovered future work but currently unavailable; its remaining conditions are hidden or unmet. Continue the journey and check again later.`,
+                );
+                break;
+              }
               fail(`No discovered job matches "${rest}". Scouting and exploring reveal jobs.`);
               break;
             }
-            printActionResult(session.workLocalJob(job.id));
+            printActionResult(session.workLocalJob(job.id), session.view());
             break;
           }
           case "start": {
@@ -454,19 +722,11 @@ async function main(): Promise<void> {
             break;
           }
           case "journal": {
-            const journal = session.view().journal;
-            for (const entry of journal.slice(-10))
-              console.log(`[${entry.recordedAt}] ${entry.town}: ${entry.title} — ${entry.text}`);
-            if (!journal.length) console.log("The journal is empty.");
+            printJournal(session.view());
             break;
           }
           case "log": {
-            const log = session.view().log;
-            for (const entry of log.slice(0, 10))
-              console.log(
-                `${entry.from} → ${entry.to} via ${entry.route} — ${entry.minutes} min, supplies ${entry.suppliesAfter}, fatigue ${entry.fatigueAfter}`,
-              );
-            if (!log.length) console.log("No roads travelled yet.");
+            printTravelLog(session.view());
             break;
           }
           case "save":
@@ -475,7 +735,10 @@ async function main(): Promise<void> {
           case "load": {
             const path = savePath(rest);
             session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
-            console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
+            if (session.journey().status !== "ended") {
+              console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
+              console.log(renderJourneyStatus(session.journey()));
+            }
             break;
           }
           case "hash":
