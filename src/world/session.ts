@@ -46,6 +46,7 @@ import {
   type OverworldActionJournalState,
 } from "./session_action_recording.js";
 import {
+  revealOverworldQuestAnchor,
   type OverworldLocalDiscoveryResult,
   type OverworldQuestView,
 } from "./session_local_discovery.js";
@@ -1549,7 +1550,14 @@ export class OverworldSession {
       // Source certification is the point at which Wolf-Winter becomes a real,
       // inspectable mission. Its finite preparation remains available from the
       // departure board without blocking a player who chooses to leave at once.
-      this.discoveredQuestIds.add(scene.target_quest);
+      revealOverworldQuestAnchor(
+        {
+          discoveredAreaIds: this.discoveredAreaIds,
+          discoveredQuestIds: this.discoveredQuestIds,
+        },
+        this.questsById,
+        scene.target_quest,
+      );
       this.clearSessionCaches();
       return Object.freeze({
         storyChoiceId: storyChoice.id,
@@ -1596,7 +1604,14 @@ export class OverworldSession {
         },
       });
       this.characterState = application.characterAfter;
-      this.discoveredQuestIds.add(scene.target_quest);
+      revealOverworldQuestAnchor(
+        {
+          discoveredAreaIds: this.discoveredAreaIds,
+          discoveredQuestIds: this.discoveredQuestIds,
+        },
+        this.questsById,
+        scene.target_quest,
+      );
       addOverworldJournalEntry(this.journalEntries, this.journalEntriesById, entry);
       this.clearSessionCaches();
       return Object.freeze({

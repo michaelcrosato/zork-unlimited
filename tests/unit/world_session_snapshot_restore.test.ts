@@ -85,6 +85,7 @@ function restorePlan(
   return {
     characterAfter: createInitialCampaignCharacterState(),
     currentAreaByTown: new Map([["town_b", "area_b"]]),
+    discoveredAreaIdsAfter: ["area_b"],
     discoveredQuestIdsAfter: ["quest_b"],
     journalEntriesAfter: [],
     openingLeadSourceDecisionTrailAfter: null,

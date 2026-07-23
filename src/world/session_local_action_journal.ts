@@ -57,6 +57,7 @@ export type OverworldLocalActionJournalReachabilityIndex = {
   discoveredJobIds: ReadonlySet<string>;
   discoveredQuestIds: ReadonlySet<string>;
   discoveredSiteIds: ReadonlySet<string>;
+  directQuestAnchorIds?: ReadonlySet<string>;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   jobsByTown: ReadonlyMap<string, readonly OverworldLocalJob[]>;
@@ -607,7 +608,9 @@ export function assertSnapshotLocalActionDiscoveryChronology(
       const areaIndex = indexedList(sources.areasByTown, source.home).findIndex(
         (area) => area.id === source.area,
       );
-      if (areaIndex > 0 && priorLocalActionCount < areaIndex) {
+      const certifiedDirectAnchor =
+        entry.kind === "quest_done" && sources.directQuestAnchorIds?.has(source.sourceId) === true;
+      if (areaIndex > 0 && priorLocalActionCount < areaIndex && !certifiedDirectAnchor) {
         throw new Error(
           `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering area "${source.area}".`,
         );
@@ -660,18 +663,36 @@ export function assertSnapshotDiscoveredAreaCountReplay(
 ): void {
   for (const townId of sources.visitedTownIds) {
     const localAreas = indexedList(sources.areasByTown, townId);
-    const expectedDiscoveredCount =
-      localAreas.length === 0
-        ? 0
-        : Math.min(
-            localAreas.length,
-            1 + (localActionJournal.localActionCountByTown.get(townId) ?? 0),
-          );
-    let actualDiscoveredCount = 0;
-    for (const area of localAreas) {
-      if (sources.discoveredAreaIds.has(area.id)) actualDiscoveredCount += 1;
+    const expectedDiscoveredAreaIds = new Set(
+      localAreas
+        .slice(
+          0,
+          localAreas.length === 0
+            ? 0
+            : Math.min(
+                localAreas.length,
+                1 + (localActionJournal.localActionCountByTown.get(townId) ?? 0),
+              ),
+        )
+        .map((area) => area.id),
+    );
+    // A certified direct lead is allowed to name its own anchor district
+    // outside the ordinary scout prefix. It reveals only that exact district;
+    // no adjacent local discovery is spent or reordered.
+    for (const questId of sources.directQuestAnchorIds ?? []) {
+      const quest = sources.questsById.get(questId);
+      if (quest?.home === townId && sources.discoveredQuestIds.has(quest.id)) {
+        expectedDiscoveredAreaIds.add(quest.area);
+      }
     }
-    if (actualDiscoveredCount !== expectedDiscoveredCount) {
+    const actualDiscoveredAreaIds = new Set<string>();
+    for (const area of localAreas) {
+      if (sources.discoveredAreaIds.has(area.id)) actualDiscoveredAreaIds.add(area.id);
+    }
+    if (
+      actualDiscoveredAreaIds.size !== expectedDiscoveredAreaIds.size ||
+      [...actualDiscoveredAreaIds].some((areaId) => !expectedDiscoveredAreaIds.has(areaId))
+    ) {
       throw new Error(
         `Overworld session snapshot discovered area count in town "${townId}" does not match local action replay.`,
       );

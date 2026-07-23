@@ -185,6 +185,7 @@ export function assertSnapshotDiscoveredAreaPrefix(
   areasByTown: ReadonlyMap<string, readonly { id: string }[]>,
   discoveredAreaIds: ReadonlySet<string>,
   visitedTownIds: ReadonlySet<string>,
+  directAnchorAreaIds: ReadonlySet<string> = new Set(),
 ): void {
   for (const townId of visitedTownIds) {
     const areas = indexedList(areasByTown, townId);
@@ -193,14 +194,15 @@ export function assertSnapshotDiscoveredAreaPrefix(
     let hiddenAreaSeen = false;
     for (const area of areas) {
       const discovered = discoveredAreaIds.has(area.id);
+      const directAnchor = directAnchorAreaIds.has(area.id);
       if (discovered) {
         discoveredAny = true;
-        if (hiddenAreaSeen) {
+        if (hiddenAreaSeen && !directAnchor) {
           throw new Error(
             `Overworld session snapshot discovered area "${area.id}" skips an earlier area in "${townId}".`,
           );
         }
-      } else {
+      } else if (!directAnchor) {
         hiddenAreaSeen = true;
       }
     }
