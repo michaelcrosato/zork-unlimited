@@ -70,6 +70,17 @@ function enemiesHere(index: RpgIndex, state: GameState): Enemy[] {
   return (index.enemyByRoom.get(state.current) ?? []).filter((e) => enemyActive(state, e));
 }
 
+/**
+ * A journey checkpoint may interrupt an embedded RPG only between scenes.
+ * Terminal state is always a boundary; otherwise both combat and conversation
+ * must be clear in the player's current room.
+ */
+export function isRpgCheckpointSafeBoundary(index: RpgIndex, state: GameState): boolean {
+  return (
+    state.ended || (enemiesHere(index, state).length === 0 && activeDialogue(index, state) === null)
+  );
+}
+
 function maneuverAvailable(state: GameState, enemy: Enemy, maneuver: EnemyManeuver): boolean {
   const sequenceConditions = maneuverSequenceConditions(enemy, maneuver);
   return (

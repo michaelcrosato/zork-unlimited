@@ -1198,8 +1198,7 @@ describe("New York overworld graph", () => {
     expect(journeyStatus).toContain("journey.goalGuidance");
     expect(journeyStatus).toContain('aria-label="Objective guidance"');
     expect(journeyChoice).toContain("journey.goalGuidance");
-    expect(app).toContain(
-      "worldSession.recordQuestDecision(out.journeyActionId, out.journeyDecision)",
-    );
+    expect(app).toContain("worldSession.recordQuestDecision(");
+    expect(app).toContain("questSession.isCheckpointSafeBoundary()");
   });
 });

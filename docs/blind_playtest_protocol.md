@@ -47,12 +47,17 @@ The proof-hashed goal text stays exactly that short. Its shared UI/MCP
 quest satisfies the goal; jobs, events, and sites may reveal leads, but do not
 finish it themselves.
 
-The baseline is 40 meaningful accepted gameplay decisions. The game offers an
-actual continue/end choice at decision 40, then at 80, 120, 160, and every
-additional 40. If the current goal is completed earlier, the game offers the
+The baseline is 40 meaningful accepted gameplay decisions. Fixed checkpoint
+thresholds remain 40, 80, 120, 160, and every additional 40. The game offers
+the actual continue/end choice at the first safe accepted boundary at or after
+the due threshold: embedded combat and dialogue continue without interruption,
+with their accepted decisions and proof still accumulating. A terminal state is
+safe; otherwise the player's current room must have no active enemy and no
+active dialogue. If the current goal is completed earlier, the game offers the
 same choice immediately and binds that retention event to the completed goal's
-version and id. Continuing after an early goal choice preserves the next fixed
-checkpoint.
+version and id. An overdue checkpoint merges into a goal-completion or
+character-death choice. Continuing from a checkpoint advances to the first
+fixed multiple strictly after the accepted decision where it surfaced.
 
 A decision is one successfully accepted, consequential gameplay choice shared
 by the human and MCP surfaces. Movement, a stateful clue, substantive dialogue,

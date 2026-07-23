@@ -461,6 +461,21 @@ function hasReason(
   return value.reasons.includes(reason);
 }
 
+function fixedCheckpointAfter(atDecision: number): number | null {
+  const remainder = atDecision % JOURNEY_BASELINE_DECISIONS;
+  const delta =
+    remainder === 0 ? JOURNEY_BASELINE_DECISIONS : JOURNEY_BASELINE_DECISIONS - remainder;
+  return atDecision > Number.MAX_SAFE_INTEGER - delta ? null : atDecision + delta;
+}
+
+function nextFixedCheckpointAfter(atDecision: number): number {
+  const checkpoint = fixedCheckpointAfter(atDecision);
+  if (checkpoint === null) {
+    throw new Error("The next journey checkpoint exceeds JavaScript's safe integer range.");
+  }
+  return checkpoint;
+}
+
 function sameCompletedGoal(
   left: JourneyGoalSnapshot,
   right: JourneyCompletedGoalSnapshot,
@@ -625,7 +640,7 @@ export const JourneyContractSnapshotSchema = z
       completionBindings.set(completed.version, bindings);
     };
 
-    let expectedCheckpoint = JOURNEY_BASELINE_DECISIONS;
+    let expectedCheckpoint: number = JOURNEY_BASELINE_DECISIONS;
     let sawEnd = false;
     let previousRetentionDecision = -1;
     retentionHistory.forEach((event, index) => {
@@ -662,15 +677,37 @@ export const JourneyContractSnapshotSchema = z
         addIssue(ctx, [...path, "choice"], "Character death can only end the journey.");
       }
       const checkpointReason = hasReason(event, "checkpoint");
+      if (
+        !checkpointReason &&
+        event.atDecision >= expectedCheckpoint &&
+        (hasReason(event, "goal_completed") || hasReason(event, "character_died"))
+      ) {
+        addIssue(
+          ctx,
+          [...path, "reasons"],
+          `A mandatory choice at or after fixed checkpoint ${expectedCheckpoint} must merge that checkpoint.`,
+        );
+      }
       if (checkpointReason) {
-        if (event.checkpoint !== expectedCheckpoint || event.atDecision !== expectedCheckpoint) {
+        if (event.checkpoint !== expectedCheckpoint || event.atDecision < expectedCheckpoint) {
           addIssue(
             ctx,
             [...path, "checkpoint"],
-            `Expected fixed journey checkpoint ${expectedCheckpoint}.`,
+            `Expected fixed journey checkpoint ${expectedCheckpoint} at or after that decision.`,
           );
         }
-        if (event.choice === "continue") expectedCheckpoint += JOURNEY_BASELINE_DECISIONS;
+        if (event.choice === "continue") {
+          const nextCheckpoint = fixedCheckpointAfter(event.atDecision);
+          if (nextCheckpoint === null) {
+            addIssue(
+              ctx,
+              [...path, "atDecision"],
+              "A continued retention event requires another safe fixed checkpoint.",
+            );
+          } else {
+            expectedCheckpoint = nextCheckpoint;
+          }
+        }
       } else if (event.checkpoint !== null) {
         addIssue(
           ctx,
@@ -712,12 +749,12 @@ export const JourneyContractSnapshotSchema = z
       if (checkpointReason) {
         if (
           pendingChoice.checkpoint !== expectedCheckpoint ||
-          pendingChoice.atDecision !== expectedCheckpoint
+          pendingChoice.atDecision < expectedCheckpoint
         ) {
           addIssue(
             ctx,
             ["pendingChoice", "checkpoint"],
-            `Pending checkpoint must be the fixed journey checkpoint ${expectedCheckpoint}.`,
+            `Pending checkpoint must be fixed checkpoint ${expectedCheckpoint} at or after that decision.`,
           );
         }
       } else if (pendingChoice.checkpoint !== null) {
@@ -795,14 +832,18 @@ export const JourneyContractSnapshotSchema = z
       }
       const pendingCheckpoint = pendingChoice && hasReason(pendingChoice, "checkpoint");
       if (pendingCheckpoint) {
-        if (acceptedDecisions !== expectedCheckpoint) {
-          addIssue(ctx, ["acceptedDecisions"], "Checkpoint prompt must stop on its fixed count.");
+        if (acceptedDecisions < expectedCheckpoint) {
+          addIssue(
+            ctx,
+            ["acceptedDecisions"],
+            "Checkpoint prompt cannot precede its fixed threshold.",
+          );
         }
-      } else if (acceptedDecisions >= expectedCheckpoint) {
+      } else if (pendingChoice && acceptedDecisions >= expectedCheckpoint) {
         addIssue(
           ctx,
-          ["acceptedDecisions"],
-          "An active journey cannot pass its next fixed checkpoint.",
+          ["pendingChoice"],
+          "An overdue checkpoint must be merged into a mandatory goal or death prompt.",
         );
       }
     }
@@ -891,7 +932,7 @@ function continuationCheckpoint(
   const checkpoint =
     pending.checkpoint === null
       ? state.nextCheckpoint
-      : pending.checkpoint + JOURNEY_BASELINE_DECISIONS;
+      : nextFixedCheckpointAfter(pending.atDecision);
   if (checkpoint === null) {
     throw new Error("A continuing journey choice requires a next fixed checkpoint.");
   }
@@ -907,13 +948,20 @@ function pendingChoiceMessage(state: JourneyContractSnapshot): string {
     return `Your character died before completing the current goal after ${pending.atDecision} meaningful decisions. This run cannot continue; end the journey to preserve its truthful unfinished-goal receipt.`;
   }
   const continueTo = continuationCheckpoint(state, pending);
+  const continueBoundary = `the first safe break at or after checkpoint threshold ${String(continueTo)}`;
   if (checkpoint && goal) {
-    return `You completed your current goal at the ${String(pending.checkpoint)}-decision checkpoint. Continue until another goal is completed or the fixed checkpoint at decision ${String(continueTo)}, whichever comes first, or end this journey?`;
+    if (pending.atDecision !== pending.checkpoint) {
+      return `At the first safe break after checkpoint threshold ${String(pending.checkpoint)}, with ${pending.atDecision} meaningful decisions, you completed your current goal and the overdue checkpoint choice is ready. Continue until another goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
+    }
+    return `You completed your current goal at the first safe break for checkpoint threshold ${String(pending.checkpoint)}. Continue until another goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
   }
   if (checkpoint) {
-    return `You have reached the ${String(pending.checkpoint)}-decision checkpoint. Continue until the current goal is completed or the fixed checkpoint at decision ${String(continueTo)}, whichever comes first, or end this journey?`;
+    if (pending.atDecision !== pending.checkpoint) {
+      return `At the first safe break after checkpoint threshold ${String(pending.checkpoint)}, with ${pending.atDecision} meaningful decisions, the overdue checkpoint choice is ready. Continue until the current goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
+    }
+    return `You reached checkpoint threshold ${String(pending.checkpoint)} at a safe break. Continue until the current goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
   }
-  return `You completed your current goal after ${pending.atDecision} meaningful decisions. Continue until another goal is completed or the fixed checkpoint at decision ${String(continueTo)}, whichever comes first, or end this journey?`;
+  return `You completed your current goal after ${pending.atDecision} meaningful decisions. Continue until another goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
 }
 
 function affix(base: string, prefix: string | undefined, suffix: string | undefined): string {
@@ -958,9 +1006,9 @@ function pendingChoicePresentation(
         return Object.freeze([
           Object.freeze({
             id: "continue" as const,
-            label: `Continue until an active goal completes or decision ${String(continueTo)}`,
+            label: `Continue toward checkpoint ${String(continueTo)}`,
             consequence: affix(
-              `Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision ${String(continueTo)}, whichever comes first.`,
+              `Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold ${String(continueTo)}, whichever comes first.`,
               goalContext?.continueConsequencePrefix,
               goalContext?.continueConsequenceSuffix,
             ),
@@ -1226,9 +1274,36 @@ export function assertJourneyAcceptingDecision(state: JourneyContractSnapshot): 
   }
 }
 
+function materializeDueJourneyCheckpoint(
+  state: JourneyContractSnapshot,
+  checkpointSafeBoundary: boolean,
+): JourneyContractSnapshot {
+  if (
+    !checkpointSafeBoundary ||
+    state.status !== "active" ||
+    state.pendingChoice !== null ||
+    state.nextCheckpoint === null ||
+    state.acceptedDecisions < state.nextCheckpoint
+  ) {
+    return state;
+  }
+  return {
+    ...state,
+    status: "awaiting_choice",
+    pendingChoice: {
+      atDecision: state.acceptedDecisions,
+      reasons: ["checkpoint"],
+      checkpoint: state.nextCheckpoint,
+      goalVersion: null,
+      goalId: null,
+    },
+  };
+}
+
 export function recordJourneyAcceptedDecision(
   state: JourneyContractSnapshot,
   decision: JourneyAcceptedDecision,
+  checkpointSafeBoundary: boolean,
 ): JourneyContractSnapshot {
   assertJourneyAcceptingDecision(state);
   if (decision.actionId.length === 0) {
@@ -1245,22 +1320,16 @@ export function recordJourneyAcceptedDecision(
     hash: hashState({ previous: state.decisionProof.hash, ...last }),
     last,
   };
-  const reachedCheckpoint = acceptedDecisions === state.nextCheckpoint;
-  return {
-    ...state,
-    acceptedDecisions,
-    decisionProof,
-    status: reachedCheckpoint ? "awaiting_choice" : "active",
-    pendingChoice: reachedCheckpoint
-      ? {
-          atDecision: acceptedDecisions,
-          reasons: ["checkpoint"],
-          checkpoint: state.nextCheckpoint,
-          goalVersion: null,
-          goalId: null,
-        }
-      : null,
-  };
+  return materializeDueJourneyCheckpoint(
+    {
+      ...state,
+      acceptedDecisions,
+      decisionProof,
+      status: "active",
+      pendingChoice: null,
+    },
+    checkpointSafeBoundary,
+  );
 }
 
 /** Apply one accepted gameplay outcome to the versioned journey contract. */
@@ -1268,13 +1337,22 @@ export function recordJourneyDecision(
   state: JourneyContractSnapshot,
   decision: Omit<JourneyAcceptedDecision, "reason">,
   classification: JourneyDecisionClassification,
+  checkpointSafeBoundary: boolean,
 ): JourneyContractSnapshot {
   assertJourneyAcceptingDecision(state);
-  if (!classification.countsTowardJourney) return state;
-  return recordJourneyAcceptedDecision(state, {
-    ...decision,
-    reason: classification.reason,
-  });
+  if (!classification.countsTowardJourney) {
+    return classification.reason === "rejected"
+      ? state
+      : materializeDueJourneyCheckpoint(state, checkpointSafeBoundary);
+  }
+  return recordJourneyAcceptedDecision(
+    state,
+    {
+      ...decision,
+      reason: classification.reason,
+    },
+    checkpointSafeBoundary,
+  );
 }
 
 function canonicalReasons(reasons: readonly JourneyChoiceReason[]): JourneyChoiceReason[] {
@@ -1294,14 +1372,24 @@ export function recordJourneyGoalCompleted(
     completedAtDecision: state.acceptedDecisions,
   };
   const goalHistory = [...state.goalHistory, goal];
-  if (state.pendingChoice) {
+  const checkpoint = state.nextCheckpoint;
+  const checkpointDue = checkpoint !== null && state.acceptedDecisions >= checkpoint;
+  if (state.pendingChoice || checkpointDue) {
+    const pendingChoice = state.pendingChoice ?? {
+      atDecision: state.acceptedDecisions,
+      reasons: ["checkpoint"] as JourneyChoiceReason[],
+      checkpoint,
+      goalVersion: null,
+      goalId: null,
+    };
     return {
       ...state,
+      status: "awaiting_choice",
       goal,
       goalHistory,
       pendingChoice: {
-        ...state.pendingChoice,
-        reasons: canonicalReasons([...state.pendingChoice.reasons, "goal_completed"]),
+        ...pendingChoice,
+        reasons: canonicalReasons([...pendingChoice.reasons, "goal_completed"]),
         goalVersion: goal.version,
         goalId: goal.id,
       },
@@ -1333,13 +1421,22 @@ export function recordJourneyCharacterDied(
   if (state.goal.status === "completed") {
     throw new Error("A character-death pause cannot replace a completed-goal choice.");
   }
-  if (state.pendingChoice) {
+  const checkpoint = state.nextCheckpoint;
+  const checkpointDue = checkpoint !== null && state.acceptedDecisions >= checkpoint;
+  if (state.pendingChoice || checkpointDue) {
+    const pendingChoice = state.pendingChoice ?? {
+      atDecision: state.acceptedDecisions,
+      reasons: ["checkpoint"] as JourneyChoiceReason[],
+      checkpoint,
+      goalVersion: null,
+      goalId: null,
+    };
     return {
       ...state,
       status: "awaiting_choice",
       pendingChoice: {
-        ...state.pendingChoice,
-        reasons: canonicalReasons([...state.pendingChoice.reasons, "character_died"]),
+        ...pendingChoice,
+        reasons: canonicalReasons([...pendingChoice.reasons, "character_died"]),
         goalVersion: null,
         goalId: null,
       },
@@ -1470,7 +1567,7 @@ export function chooseJourney(
     choice === "end"
       ? null
       : answeredCheckpoint
-        ? state.nextCheckpoint! + JOURNEY_BASELINE_DECISIONS
+        ? nextFixedCheckpointAfter(pending.atDecision)
         : state.nextCheckpoint;
   if (nextCheckpoint !== null && nextCheckpoint > Number.MAX_SAFE_INTEGER) {
     throw new Error("The next journey checkpoint exceeds JavaScript's safe integer range.");

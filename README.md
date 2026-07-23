@@ -147,10 +147,12 @@ are now versioned and ordered: completing one appends it to goal history and
 offers a continue/end choice bound to that exact goal, at once if completion is
 before the next fixed checkpoint. If the player continues after Wolf-Winter,
 the game presents an ending-sensitive Albany story choice and installs the
-chosen authored objective; ending installs nothing. Fixed choices remain at 40,
-80, 120, and every additional 40 meaningful decisions. The exit receipt records
-the current goal, completed goals, goal-bound retention choices, decision proof,
-checkpoint history, and exit reason.
+chosen authored objective; ending installs nothing. Fixed checkpoint thresholds
+remain at 40, 80, 120, and every additional 40 meaningful decisions. Once a
+threshold is due, its choice materializes at the first safe break at or after
+that threshold, without interrupting active combat or dialogue. The exit receipt
+records the current goal, completed goals, goal-bound retention choices,
+decision proof, checkpoint history, and exit reason.
 
 When an active follow-up goal names another town, that same journey object and
 the UI journey card present one Goal Passage choice with the destination,

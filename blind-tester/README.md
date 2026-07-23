@@ -28,10 +28,12 @@ subscription allowance, which is the best value — exactly per the project goal
   completed-goal history, state, legal and authored story choices,
   meaningful-decision/checkpoint status, and consequences a human receives.
   Current journey contract v3 presents continue/end choices bound to the goal
-  just completed and at fixed decision checkpoints. After a goal continuation,
-  a game-authored story choice may install the next objective. The harness
-  interviews only after the player ends through a retention choice; it supplies
-  no route, coverage assignment, solution, or call-count stopping rule.
+  just completed. Its fixed checkpoint thresholds materialize choices only at
+  the first safe break at or after each threshold, without interrupting active
+  combat or dialogue. After a goal continuation, a game-authored story choice
+  may install the next objective. The harness interviews only after the player
+  ends through a retention choice; it supplies no route, coverage assignment,
+  solution, or call-count stopping rule.
   Follow-up navigation comes only from the game's shared Goal Passage choice,
   which yields at real road choices and resource boundaries, never from the
   harness.

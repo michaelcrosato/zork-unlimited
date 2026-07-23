@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 625 -->
+<!-- historical_cycle_count: 626 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - checkpoint_safe_scene_boundaries
+
+- Evidence choice: fixed journey thresholds could pause verified Gallowmere combat or active dialogue instead of waiting for the scene to resolve.
+- Surface: a due checkpoint now waits through unsafe accepted decisions, then materializes at terminal state or a room with neither a live enemy nor active dialogue; an overdue threshold merges into goal completion or death, and Continue schedules the first fixed multiple after the surfaced decision.
+- Counterfactual: an already-safe threshold still pauses immediately, combat/dialogue actions remain live while unsafe, non-counting scene closure can surface the checkpoint without changing decision proof, and save/restore plus compact/full MCP and UI projections preserve the deferred boundary.
+- Pure evidence: exact clean `85269681` passes fresh strict-v2 Terra 4666 and Luna 4667; both divert Wolf-Winter, win Gallowmere, complete two goals, choose replay-yes, and report no rejected action or loop.
+- Measured result: Terra rates clarity/enjoyment 4/4 with no checkpoint complaint; Luna rates 4/5 and says the safe point resumed correctly, while still disliking the room-transition pause during a broader investigation.
+- Feedback/follow-through: Albany setup density and the Rowan collision remain separate queued increments; Luna's broader transition-pacing critique is retained rather than treated as a regression in safe-boundary scheduling.
+- Guard: final crawl `ai-runs\crawl\20260723T151536Z` is zero-finding across 6,000 steps, 247/247 nodes, 344/344 edges, and 12/12 quests; combined focused coverage passes 17 files/218 tests.
 
 ### Cycle result - truthful_journey_continuation_horizon
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Sol 4402 verifies `ok: true` across 55 error-free calls/40 decisions, diverts every wolf with the herd whole, continues at goal 34, and ends at checkpoint 40; Terra 4403 verifies across 62 calls/47 decisions, fortifies under Cade's terms, wins Gallowmere, continues at 23/40, and ends at goal 47; both rate 4/4, unstuck, replay-yes.
 - Measured result: independent review finds no P0-P2 across 32 files/182 tests; strict compile `20260722T085747Z` reaches 810 verified/218 rejected reports and 59 current pure exits with 57 continuing, while the fresh cohort queues post-cast Loft/Byre prose and compact clipping for later cycles instead of expanding this increment.
 - Guard: the 6,000-step post-change crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 406 files/3,169 tests plus both typechecks/all packs with no schema, engine, save, world, combat, or ending-semantics change.
-
-### Cycle result - luna_v1_capture_authority
-
-- Evidence choice: Luna seed 4398 exposed a legitimate native v1 capture layout that the Sol/Terra-only topology rejected before reaching its independent gameplay and receipt failures, so this cycle models actual provider profiles without weakening common authority.
-- Surface: exact requested-model-bound profiles now admit Sol/Terra v2, Luna v1, and Spark-disabled preludes; collaboration identity is exact, only first-call `start_overworld()` may omit `{}`, and the pure prompt binds RPG-only action listing to an active exact child handle plus visible `follow_current_goal` to its exact route-neutral transport while forbidding reconstructed ids or invented goal-tool aliases.
-- Counterfactual: wrong model/version/mode/prelude/order/collaboration fields, relabeled Sol/Terra, argumentless later/other calls, failed results, bad rollout receipts, and auxiliary activity remain fail-closed through fleet, compile, ledger, and certification.
-- Diagnostic only: Luna 4398/4399/4400 pass native-v1 profile recognition but remain unpublished/excluded: the first two made failed domain/handle calls (4398 also copied a bad receipt), while 4400 preserved every real handle then invented nonexistent `advance_overworld_session_goal`; no candidate play is evidence.
-- Pure evidence: exact-clean Luna 4401 verifies `ok: true` across 133 error-free MCP calls and 103 accepted decisions: pack-diverted Wolf-Winter, hunt-won Gallowmere, recovered Tanner's Fever, five honest continues, then a truthful death exit in Breaking Weir; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Measured result: real Sol 4351/4354/4386, Terra 4397, and Luna 4401 pass; Spark 4368 reaches its pre-existing forbidden-resource rejection, all three earlier Luna diagnostics reach independent fail-closed rejections, and 160 profile plus 119 prompt-focused tests pass with independent re-reviews finding no P0-P2.
-- Guard: tooling/docs only; pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, while full health passes 406 files/3,167 tests plus both typechecks/all packs with no engine, world, save, or gameplay-content change.

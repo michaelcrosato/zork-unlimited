@@ -112,10 +112,14 @@ function snapshotAsPredecessor(
 function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSession {
   const session = startedNoPreparationPredecessor();
   if (withQuestDecision) {
-    session.recordQuestDecision("wolf_winter:migration_boundary:1", {
-      countsTowardJourney: true,
-      reason: "stateful_clue",
-    });
+    session.recordQuestDecision(
+      "wolf_winter:migration_boundary:1",
+      {
+        countsTowardJourney: true,
+        reason: "stateful_clue",
+      },
+      true,
+    );
   }
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",

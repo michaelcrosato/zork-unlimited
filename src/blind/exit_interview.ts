@@ -76,6 +76,7 @@ function validateRetentionEventShape(
   event: JourneyRetentionEventBase,
   ctx: z.RefinementCtx,
   allowCharacterDeath: boolean,
+  allowDeferredCheckpoint: boolean,
 ): void {
   if (
     event.reasons.length === 2 &&
@@ -92,11 +93,19 @@ function validateRetentionEventShape(
     });
   }
   const hasCheckpoint = event.reasons.includes("checkpoint");
-  if (hasCheckpoint && event.checkpoint !== event.atDecision) {
+  if (
+    hasCheckpoint &&
+    (event.checkpoint === null ||
+      (allowDeferredCheckpoint
+        ? event.checkpoint > event.atDecision
+        : event.checkpoint !== event.atDecision))
+  ) {
     ctx.addIssue({
       code: "custom",
       path: ["checkpoint"],
-      message: "checkpoint retention events must occur at that checkpoint",
+      message: allowDeferredCheckpoint
+        ? "checkpoint retention events cannot precede their fixed checkpoint"
+        : "historical checkpoint retention events must occur at that checkpoint",
     });
   }
   if (!hasCheckpoint && event.checkpoint !== null) {
@@ -114,7 +123,7 @@ export const HistoricalJourneyRetentionEventSchema = z
     reasons: z.array(HistoricalJourneyChoiceReasonSchema).min(1).max(2),
   })
   .strict()
-  .superRefine((event, ctx) => validateRetentionEventShape(event, ctx, false));
+  .superRefine((event, ctx) => validateRetentionEventShape(event, ctx, false, false));
 
 export const CurrentJourneyRetentionEventSchema = z
   .object({
@@ -125,7 +134,7 @@ export const CurrentJourneyRetentionEventSchema = z
   })
   .strict()
   .superRefine((event, ctx) => {
-    validateRetentionEventShape(event, ctx, true);
+    validateRetentionEventShape(event, ctx, true, true);
     if (event.reasons.includes("character_died") && event.choice !== "end") {
       ctx.addIssue({
         code: "custom",
@@ -160,9 +169,13 @@ type ReceiptTimeline = {
   retentionHistory: JourneyRetentionEventBase[];
 };
 
-function validateReceiptTimeline(receipt: ReceiptTimeline, ctx: z.RefinementCtx): boolean {
+function validateReceiptTimeline(
+  receipt: ReceiptTimeline,
+  ctx: z.RefinementCtx,
+  requireDeferredCheckpointMerge: boolean,
+): boolean {
   let previousDecision = -1;
-  let expectedCheckpoint = JOURNEY_BASELINE_DECISIONS;
+  let expectedCheckpoint: number = JOURNEY_BASELINE_DECISIONS;
   let sawGoalCompletionChoice = false;
   for (const [index, event] of receipt.retentionHistory.entries()) {
     if (event.sequence !== index + 1) {
@@ -196,7 +209,20 @@ function validateReceiptTimeline(receipt: ReceiptTimeline, ctx: z.RefinementCtx)
         message: "character death must be the final end-only retention event",
       });
     }
-    if (event.reasons.includes("checkpoint")) {
+    const hasCheckpoint = event.reasons.includes("checkpoint");
+    if (
+      requireDeferredCheckpointMerge &&
+      !hasCheckpoint &&
+      event.atDecision >= expectedCheckpoint &&
+      (event.reasons.includes("goal_completed") || event.reasons.includes("character_died"))
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["retentionHistory", index, "reasons"],
+        message: `a mandatory choice at or after fixed checkpoint ${expectedCheckpoint} must merge that checkpoint`,
+      });
+    }
+    if (hasCheckpoint) {
       if (event.checkpoint !== expectedCheckpoint) {
         ctx.addIssue({
           code: "custom",
@@ -204,7 +230,20 @@ function validateReceiptTimeline(receipt: ReceiptTimeline, ctx: z.RefinementCtx)
           message: `expected fixed journey checkpoint ${expectedCheckpoint}`,
         });
       }
-      if (event.choice === "continue") expectedCheckpoint += JOURNEY_BASELINE_DECISIONS;
+      if (event.choice === "continue") {
+        const nextCheckpoint =
+          Math.floor(event.atDecision / JOURNEY_BASELINE_DECISIONS + 1) *
+          JOURNEY_BASELINE_DECISIONS;
+        if (!Number.isSafeInteger(nextCheckpoint)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["retentionHistory", index, "atDecision"],
+            message: "continued checkpoint has no next safe fixed checkpoint",
+          });
+        } else {
+          expectedCheckpoint = nextCheckpoint;
+        }
+      }
     }
     if (event.reasons.includes("goal_completed")) sawGoalCompletionChoice = true;
     previousDecision = event.atDecision;
@@ -289,7 +328,7 @@ export const HistoricalJourneyExitReceiptSchema = z
   .strict()
   .superRefine((receipt, ctx) => {
     validateReceiptHash(receipt, ctx);
-    const sawGoalCompletionChoice = validateReceiptTimeline(receipt, ctx);
+    const sawGoalCompletionChoice = validateReceiptTimeline(receipt, ctx, false);
     if (sawGoalCompletionChoice && receipt.goalStatus !== "completed") {
       ctx.addIssue({
         code: "custom",
@@ -329,7 +368,7 @@ export const CurrentJourneyExitReceiptSchema = z
   .strict()
   .superRefine((receipt, ctx) => {
     validateReceiptHash(receipt, ctx);
-    validateReceiptTimeline(receipt, ctx);
+    validateReceiptTimeline(receipt, ctx, true);
 
     if (receipt.exitReasons.includes("character_died") && receipt.goalStatus !== "active") {
       ctx.addIssue({
