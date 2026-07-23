@@ -45,7 +45,7 @@ const VALID_ATTESTATION = {
 const VALID_CODEX_ATTESTATION = {
   schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
   provider: "codex",
-  code_mode_contract: "strict-code-mode-v1",
+  code_mode_contract: "strict-code-mode-v2",
   run_seed: 43,
   model: "gpt-5.3-codex-spark",
   persona: "default",
@@ -74,6 +74,12 @@ const VALID_CODEX_ATTESTATION = {
   receipt_binding_sha256: null,
   recovery_metadata_sha256: null,
   recovery_envelope_sha256: null,
+} as const;
+
+const VALID_HISTORICAL_STRICT_CODEX_ATTESTATION = {
+  ...VALID_CODEX_ATTESTATION,
+  schema_version: 5,
+  code_mode_contract: "strict-code-mode-v1",
 } as const;
 
 describe("PureFleetAttestationSchema", () => {
@@ -143,6 +149,15 @@ describe("PureFleetAttestationSchema", () => {
         actual_model: "gpt-5.6-luna",
       }).success,
     ).toBe(true);
+    expect(PureFleetAttestationSchema.parse(VALID_HISTORICAL_STRICT_CODEX_ATTESTATION)).toEqual(
+      VALID_HISTORICAL_STRICT_CODEX_ATTESTATION,
+    );
+    expect(
+      parseRunnerAttestation(JSON.stringify(VALID_HISTORICAL_STRICT_CODEX_ATTESTATION)),
+    ).toEqual({
+      ok: true,
+      attestation: VALID_HISTORICAL_STRICT_CODEX_ATTESTATION,
+    });
   });
 
   it("requires complete current provenance for receipt-bound Codex reports", () => {
@@ -244,12 +259,18 @@ describe("PureFleetAttestationSchema", () => {
         code_mode_contract: null,
       }),
     ).toMatch(/strict code-mode evidence/i);
+    expect(
+      pureFleetAttestationMismatch(VALID_HISTORICAL_STRICT_CODEX_ATTESTATION, run, expected, {
+        ...artifactFacts,
+        code_mode_contract: "strict-code-mode-v1",
+      }),
+    ).toMatch(/current Codex resume requires attestation v6/i);
     const { code_mode_contract: _strictContract, ...historicalFields } = VALID_CODEX_ATTESTATION;
     expect(
       pureFleetAttestationMismatch({ ...historicalFields, schema_version: 4 }, run, expected, {
         ...artifactFacts,
         code_mode_contract: null,
       }),
-    ).toMatch(/current Codex resume requires attestation v5/i);
+    ).toMatch(/current Codex resume requires attestation v6/i);
   });
 });

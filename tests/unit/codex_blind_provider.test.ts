@@ -36,7 +36,11 @@ const TOOL_ERROR_RESULT = {
 };
 
 function canonicalGameplayWrapper(call: string): string {
-  return `${CODEX_EXEC_YIELD_PRAGMA}\nconst result = await ${call};\ntext(JSON.stringify(result));\n`;
+  return `${CODEX_EXEC_YIELD_PRAGMA}\ntext(await ${call});\n`;
+}
+
+function legacyGameplayWrapper(call: string): string {
+  return `const result = await ${call};\ntext(JSON.stringify(result));\n`;
 }
 
 type TestItem = {
@@ -472,14 +476,19 @@ describe("Codex pure blind provider envelope", () => {
     expect(inspectCodexGameplayResultForwarding(historical)).toMatchObject({ ok: true });
   });
 
-  it("requires every canonical pragma and JSON.stringify emitter in strict-current evidence", () => {
-    const strict = { requireStrictCurrent: true };
+  it("requires the exact single awaited forwarding expression in strict-current evidence", () => {
+    const strict = { codeModeContract: "strict-code-mode-v2" };
     expect(inspectCodexGameplayResultForwarding(forwardingRollout(), strict)).toMatchObject({
       ok: true,
     });
     expect(
       inspectCodexGameplayResultForwarding(forwardingRollout(undefined, TOOL_ERROR_RESULT), strict),
     ).toMatchObject({ ok: true, gameplayCalls: [{ status: "failed" }] });
+    expect(
+      inspectCodexGameplayResultForwarding(forwardingRollout(), {
+        codeModeContract: "strict-code-mode-v1",
+      }),
+    ).toMatchObject({ ok: false });
 
     const missingPragma = forwardingRollout();
     rolloutPayload(missingPragma, 0).input =
@@ -495,6 +504,14 @@ describe("Codex pure blind provider envelope", () => {
       "120001",
     );
     expect(inspectCodexGameplayResultForwarding(alteredPragma, strict)).toMatchObject({
+      ok: false,
+    });
+
+    const hyphenatedPragma = forwardingRollout();
+    rolloutPayload(hyphenatedPragma, 0).input = String(
+      rolloutPayload(hyphenatedPragma, 0).input,
+    ).replace("yield_time_ms", "yield-time");
+    expect(inspectCodexGameplayResultForwarding(hyphenatedPragma, strict)).toMatchObject({
       ok: false,
     });
 
@@ -541,6 +558,82 @@ describe("Codex pure blind provider envelope", () => {
     ];
     expect(inspectCodexGameplayResultForwarding(contentLoop)).toMatchObject({ ok: true });
     expect(inspectCodexGameplayResultForwarding(contentLoop, strict)).toMatchObject({ ok: false });
+
+    for (const source of [
+      `${CODEX_EXEC_YIELD_PRAGMA}\ntext(await tools.mcp__adventureforge__start_overworld(({})));\n`,
+      `${CODEX_EXEC_YIELD_PRAGMA}\ntext(await tools.mcp__adventureforge__start_overworld({}));\ntext("extra");\n`,
+      `${CODEX_EXEC_YIELD_PRAGMA}\ntext(await alias.mcp__adventureforge__start_overworld({}));\n`,
+    ]) {
+      const malformed = forwardingRollout();
+      rolloutPayload(malformed, 0).input = source;
+      expect(inspectCodexGameplayResultForwarding(malformed, strict)).toMatchObject({ ok: false });
+    }
+
+    for (const { label, argumentsSource, canonicalArgumentsSource, claimedArguments } of [
+      {
+        label: "deterministic property access",
+        argumentsSource: '{ value: ({ known: "x" }).known }',
+        canonicalArgumentsSource: '{ value: "x" }',
+        claimedArguments: { value: "x" },
+      },
+      {
+        label: "invoked arrow",
+        argumentsSource: '{ value: (() => "x")() }',
+        canonicalArgumentsSource: '{ value: "x" }',
+        claimedArguments: { value: "x" },
+      },
+      {
+        label: "object spread",
+        argumentsSource: '{ ...{ session_id: "ow" } }',
+        canonicalArgumentsSource: '{ session_id: "ow" }',
+        claimedArguments: { session_id: "ow" },
+      },
+      {
+        label: "property shorthand",
+        argumentsSource: "{ session_id }",
+        canonicalArgumentsSource: '{ session_id: "ow" }',
+        claimedArguments: { session_id: "ow" },
+      },
+      {
+        label: "computed property",
+        argumentsSource: '{ ["session_id"]: "ow" }',
+        canonicalArgumentsSource: '{ session_id: "ow" }',
+        claimedArguments: { session_id: "ow" },
+      },
+      {
+        label: "nested executable value",
+        argumentsSource: '{ nested: [{ value: (() => "x")() }] }',
+        canonicalArgumentsSource: '{ nested: [{ value: "x" }] }',
+        claimedArguments: { nested: [{ value: "x" }] },
+      },
+    ]) {
+      const literalControl = forwardingRollout();
+      rolloutPayload(literalControl, 0).input =
+        `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+        `text(await tools.mcp__adventureforge__start_overworld(${canonicalArgumentsSource}));\n`;
+      const controlInvocation = rolloutPayload(literalControl, 1).invocation as Record<
+        string,
+        unknown
+      >;
+      controlInvocation.arguments = structuredClone(claimedArguments);
+      expect(inspectCodexGameplayResultForwarding(literalControl, strict), label).toMatchObject({
+        ok: true,
+      });
+
+      const executableLiteral = forwardingRollout();
+      rolloutPayload(executableLiteral, 0).input =
+        `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+        `text(await tools.mcp__adventureforge__start_overworld(${argumentsSource}));\n`;
+      const adversarialInvocation = rolloutPayload(executableLiteral, 1).invocation as Record<
+        string,
+        unknown
+      >;
+      adversarialInvocation.arguments = structuredClone(claimedArguments);
+      expect(inspectCodexGameplayResultForwarding(executableLiteral, strict), label).toEqual({
+        ok: false,
+        reason: expect.stringMatching(/forbidden wrapper program/i),
+      });
+    }
 
     const secondMissing = twoPrivateGameplayCalls();
     rolloutPayload(secondMissing, 3).input = String(rolloutPayload(secondMissing, 3).input).replace(
@@ -856,7 +949,7 @@ describe("Codex pure blind provider envelope", () => {
 
   it("accepts each exact native Codex capture profile", () => {
     const lunaGameplay = forwardingRollout(undefined, { content: [] });
-    rolloutPayload(lunaGameplay, 0).input = canonicalGameplayWrapper(
+    rolloutPayload(lunaGameplay, 0).input = legacyGameplayWrapper(
       "tools.mcp__adventureforge__start_overworld()",
     );
     const luna = completeRollout(lunaGameplay, "luna_v1");
@@ -1146,7 +1239,7 @@ describe("Codex pure blind provider envelope", () => {
 
   it("permits argumentless syntax only for the first start_overworld wrapper", () => {
     const argumentless = forwardingRollout();
-    rolloutPayload(argumentless, 0).input = canonicalGameplayWrapper(
+    rolloutPayload(argumentless, 0).input = legacyGameplayWrapper(
       "tools.mcp__adventureforge__start_overworld()",
     );
     expect(inspectCodexGameplayResultForwarding(argumentless)).toMatchObject({ ok: true });
@@ -1162,7 +1255,7 @@ describe("Codex pure blind provider envelope", () => {
     });
 
     const otherTool = forwardingRollout();
-    rolloutPayload(otherTool, 0).input = canonicalGameplayWrapper(
+    rolloutPayload(otherTool, 0).input = legacyGameplayWrapper(
       "tools.mcp__adventureforge__get_overworld_session_context()",
     );
     const otherInvocation = rolloutPayload(otherTool, 1).invocation as Record<string, unknown>;
@@ -1170,7 +1263,7 @@ describe("Codex pure blind provider envelope", () => {
     expect(inspectCodexGameplayResultForwarding(otherTool)).toMatchObject({ ok: false });
 
     const laterStart = twoPrivateGameplayCalls();
-    rolloutPayload(laterStart, 3).input = canonicalGameplayWrapper(
+    rolloutPayload(laterStart, 3).input = legacyGameplayWrapper(
       "tools.mcp__adventureforge__start_overworld()",
     );
     const laterInvocation = rolloutPayload(laterStart, 4).invocation as Record<string, unknown>;
@@ -1178,7 +1271,7 @@ describe("Codex pure blind provider envelope", () => {
     expect(inspectCodexGameplayResultForwarding(laterStart)).toMatchObject({ ok: false });
 
     const nonemptyFreshStart = forwardingRollout();
-    rolloutPayload(nonemptyFreshStart, 0).input = canonicalGameplayWrapper(
+    rolloutPayload(nonemptyFreshStart, 0).input = legacyGameplayWrapper(
       "tools.mcp__adventureforge__start_overworld({seed:7})",
     );
     const nonemptyInvocation = rolloutPayload(nonemptyFreshStart, 1).invocation as Record<
@@ -1196,6 +1289,50 @@ describe("Codex pure blind provider envelope", () => {
       ok: false,
       reason: expect.stringMatching(/must begin gameplay with start_overworld and no arguments/i),
     });
+  });
+
+  it("permits v2 zero-argument syntax only for the first fresh start", () => {
+    const strict = { codeModeContract: "strict-code-mode-v2" };
+    const freshStart = forwardingRollout();
+    rolloutPayload(freshStart, 0).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "text(await tools.mcp__adventureforge__start_overworld());\n";
+    expect(inspectCodexGameplayResultForwarding(freshStart, strict)).toMatchObject({ ok: true });
+
+    const otherTool = forwardingRollout();
+    rolloutPayload(otherTool, 0).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "text(await tools.mcp__adventureforge__get_overworld_session_context());\n";
+    const otherInvocation = rolloutPayload(otherTool, 1).invocation as Record<string, unknown>;
+    otherInvocation.tool = "get_overworld_session_context";
+    expect(inspectCodexGameplayResultForwarding(otherTool, strict)).toMatchObject({ ok: false });
+
+    const laterFreshStart = twoPrivateGameplayCalls();
+    rolloutPayload(laterFreshStart, 3).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      "text(await tools.mcp__adventureforge__start_overworld());\n";
+    const laterInvocation = rolloutPayload(laterFreshStart, 4).invocation as Record<
+      string,
+      unknown
+    >;
+    laterInvocation.tool = "start_overworld";
+    expect(inspectCodexGameplayResultForwarding(laterFreshStart, strict)).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("accepts harmless trailing commas in JSON-valued object literals", () => {
+    const rows = twoPrivateGameplayCalls();
+    rolloutPayload(rows, 3).input =
+      `${CODEX_EXEC_YIELD_PRAGMA}\n` +
+      'text(await tools.mcp__adventureforge__get_overworld_session_context({ session_id: "ow", fields: ["goal",], }));\n';
+    const invocation = rolloutPayload(rows, 4).invocation as Record<string, unknown>;
+    invocation.arguments = { session_id: "ow", fields: ["goal"] };
+    expect(
+      inspectCodexGameplayResultForwarding(rows, {
+        codeModeContract: "strict-code-mode-v2",
+      }),
+    ).toMatchObject({ ok: true });
   });
 
   it.each([
@@ -1377,6 +1514,21 @@ describe("Codex pure blind provider envelope", () => {
     expect(inspectCodexGameplayResultForwarding(duplicate)).toEqual({
       ok: false,
       reason: expect.stringMatching(/duplicate wrapper start/i),
+    });
+
+    const wrapperReusesMcpId = twoPrivateGameplayCalls();
+    rolloutPayload(wrapperReusesMcpId, 3).call_id = "exec-gameplay-1";
+    rolloutPayload(wrapperReusesMcpId, 5).call_id = "exec-gameplay-1";
+    expect(inspectCodexGameplayResultForwarding(wrapperReusesMcpId)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/invalid or duplicate wrapper start/i),
+    });
+
+    const mcpReusesWrapperId = twoPrivateGameplayCalls();
+    rolloutPayload(mcpReusesWrapperId, 4).call_id = "call-wrapper-1";
+    expect(inspectCodexGameplayResultForwarding(mcpReusesWrapperId)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/invalid or duplicate MCP call id/i),
     });
 
     const orphanStart = forwardingRollout();
@@ -1638,7 +1790,7 @@ describe("Codex pure blind provider envelope", () => {
     const rolloutRows = completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2");
     expect(
       inspectCodexPureEvidence(singleCodeModeWarningRows(), rolloutRows, "gpt-5.6-sol", {
-        requireStrictCurrent: true,
+        codeModeContract: "strict-code-mode-v2",
       }),
     ).toMatchObject({ ok: true });
     expect(
@@ -1648,12 +1800,12 @@ describe("Codex pure blind provider envelope", () => {
         report: "report",
         model: "gpt-5.6-sol",
         durationMs: 1,
-        codeModeContract: "strict-code-mode-v1",
+        codeModeContract: "strict-code-mode-v2",
       }),
     ).toMatchObject({ ok: true });
     expect(
       inspectCodexPureEvidence(validRows(), rolloutRows, "gpt-5.6-sol", {
-        requireStrictCurrent: true,
+        codeModeContract: "strict-code-mode-v2",
       }),
     ).toEqual({ ok: false, reason: expect.stringMatching(/exact code-mode prelude/i) });
 
@@ -1661,7 +1813,7 @@ describe("Codex pure blind provider envelope", () => {
     altered[1]!.item!.message = `${altered[1]!.item!.message} altered`;
     expect(
       inspectCodexPureEvidence(altered, rolloutRows, "gpt-5.6-sol", {
-        requireStrictCurrent: true,
+        codeModeContract: "strict-code-mode-v2",
       }),
     ).toMatchObject({ ok: false });
 
@@ -1670,9 +1822,35 @@ describe("Codex pure blind provider envelope", () => {
         sparkCodeModeRows(),
         completeRollout(forwardingRollout(undefined, { content: [] }), "spark_disabled"),
         SPARK_MODEL,
-        { requireStrictCurrent: true },
+        { codeModeContract: "strict-code-mode-v2" },
       ),
     ).toMatchObject({ ok: true });
+
+    const lunaRollout = completeRollout(forwardingRollout(undefined, { content: [] }), "luna_v1");
+    expect(
+      inspectCodexPureEvidence(singleCodeModeWarningRows(), lunaRollout, "gpt-5.6-luna", {
+        codeModeContract: "strict-code-mode-v2",
+      }),
+    ).toMatchObject({ ok: true });
+
+    const malformedLunaPragma = structuredClone(lunaRollout);
+    const lunaWrapper = malformedLunaPragma.find(
+      (row) => (row as { payload?: { type?: string } }).payload?.type === "custom_tool_call",
+    ) as { payload: { input: string } };
+    lunaWrapper.payload.input =
+      '// @exec: {"yield-time": 120000}\n' +
+      "text(await tools.mcp__adventureforge__start_overworld({}));\n";
+    expect(lunaWrapper.payload.input).not.toContain("yield-time_ms");
+    expect(
+      inspectCodexGameplayResultForwarding(malformedLunaPragma, {
+        codeModeContract: "strict-code-mode-v2",
+      }),
+    ).toMatchObject({ ok: false });
+    expect(
+      inspectCodexPureEvidence(singleCodeModeWarningRows(), malformedLunaPragma, "gpt-5.6-luna", {
+        codeModeContract: "strict-code-mode-v2",
+      }),
+    ).toMatchObject({ ok: false });
   });
 
   it.each([
@@ -1969,7 +2147,7 @@ describe("Codex pure blind provider envelope", () => {
           "--started-at-ms",
           "0",
           "--code-mode-contract",
-          "strict-code-mode-v1",
+          "strict-code-mode-v2",
         ],
         { cwd: process.cwd(), encoding: "utf8" },
       );

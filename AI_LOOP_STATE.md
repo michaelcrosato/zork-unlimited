@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 623 -->
+<!-- historical_cycle_count: 624 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - literal_codex_blind_forwarding
+
+- Evidence choice: current Codex evidence bound gameplay calls, completions, and visible bytes but still admitted broader executable wrapper shapes, leaving the player-forwarding proof larger than the one operation the game actually authorizes.
+- Surface: every current live wrapper now has the exact transport pragma and one `text(await tools.mcp__adventureforge__<tool>({literalArgs}));` expression; capture schema 3 and fleet attestation schema 6 bind `strict-code-mode-v2` end to end.
+- Counterfactual: aliases, variables, spreads, shorthand, computed keys, executable values, extra statements/comments, yields, truncation, wrong tools, and mismatched arguments/results fail closed; historical strict-v1 remains readable but cannot resume or certify current cohorts.
+- Pure evidence: exact clean `0890ee96` passes fresh strict-v2 Terra 4664 and Luna 4663; both complete Wolf-Winter, Terra completes two goals in 42 decisions, and Luna completes five goals before ending at checkpoint 120.
+- Measured result: Terra rates clarity/enjoyment 4/4 and Luna 4/5, both are unstuck and replay-yes; one malformed Luna handle is rejected without state change, and its copied receipt mismatch is replaced deterministically with the exact server receipt without another model turn.
+- Feedback/follow-through: Albany setup density repeats, Terra exposes a checkpoint interrupting live Gallowmere combat, and Sol 4662 exposed Cade's raw NPC id; progressive disclosure, safe-boundary checkpoint scheduling, and compact NPC display names remain separate queued increments.
+- Guard: final crawl `20260723T120716Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; focused transport coverage passes 189/189, independent review is clean, and full health passes 411 files/3,269 tests plus UI typecheck and all packs.
 
 ### Cycle result - certified_quest_anchor_route_truth
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: the full authority audit returned `ok: true` across 62 MCP calls, exact visible bytes, private lifecycle, clean commit/world/model/capture binding, and 46 accepted decisions; focused coverage passes 130/130 plus 107/107 reviewer checks, and independent final review found no P0-P2.
 - Feedback/follow-through: strict compile `20260722T025001Z` retains 806 verified/217 rejected reports and 55 eligible pure exits with 53 continuing; seed 4387 independently repeats stale LURE guidance, compact prose clipping, and generic June acknowledgement, so fresh cohorts—not rejected history—will arbitrate the next gameplay fix.
 - Guard: pre/post crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; full exact-source health passes 406 files/3,135 tests plus both typechecks/all packs, and the fresh clean landing journey is independently revalidated under the combined gate.
-
-### Cycle result - cade_packet_story_predicates
-
-- Evidence choice: exact-build seeds 4334 and 4350 both saw Hayden offer a second paling rebuild after `send_wagon_to_cade` said the wagon had already replaced it, so this cycle fixes the causal state instead of weakening the historical Wolf-Winter loss fact or changing only prose.
-- Surface: generic authored-job options can now require or forbid exact campaign story-choice refs across projection and execution; Cade's paling/evacuation options require wardens north and forbid the wagon, while pasture search remains available whenever cattle are still missing.
-- Counterfactual: all 11 nondeath endings × both dawn choices, direct invocation, opportunities, full/compact/UI/MCP, clone, save/restore, and replay agree; four exact post-Station predecessor eras preserve valid structural/pasture completions and services while altered copies, sources, chronology, and forged capability fail closed.
-- Pure evidence: exact clean `978d46ac` passed first-attempt Terra 4352, Luna 4353, and Sol 4354; all completed Wolf-Winter, continued, were unstuck/replay-yes, and rated clarity/enjoyment 4/4, 4/5, and 3/4, with Luna continuing through four goals to decision 120.
-- Measured result: Terra and Luna organically sent the wagon after whole-herd `ending_pack_diverted` and saw no Cade packet; Sol sent it after `ending_pack_diverted_cattle_scattered`, saw only `dispatch_pasture_search`, completed that work, and retired the packet. Both sides of the intended branch are directly witnessed.
-- Feedback/follow-through: compile `20260721T211251Z` has 962 verified/58 rejected reports, 211 eligible pure exits, and 186 continuing; seed 4354's active Hayden-packet promise and June-still-companion reports are under independent causal review as the next current-build continuity debt.
-- Guard: final crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; full health, 204 historical migration tests, 22 focused counterfactuals, both typechecks, and two independent re-reviews are green, with current/predecessor hashes `282cf142…`/`53afa583…` exact.

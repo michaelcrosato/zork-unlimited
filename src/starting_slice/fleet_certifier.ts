@@ -298,6 +298,7 @@ const FleetSummarySchema = z
       z.literal(3),
       z.literal(4),
       z.literal(5),
+      z.literal(6),
     ]),
     build: PureRunBuildSchema,
   })
@@ -317,22 +318,23 @@ const FleetSummarySchema = z
     if (
       provider === "codex" &&
       (!summary.model.startsWith("gpt-") ||
-        ![3, 4, 5].includes(summary.model_attestation_schema_version))
+        ![3, 4, 5, 6].includes(summary.model_attestation_schema_version))
     ) {
       context.addIssue({
         code: "custom",
         path: ["model"],
-        message: "Codex certification requires one exact Codex model and attestation v3, v4, or v5",
+        message:
+          "Codex certification requires one exact Codex model and attestation v3, v4, v5, or v6",
       });
     }
     if (
       (summary.receipt_bound_runs ?? 0) > 0 &&
-      ![4, 5].includes(summary.model_attestation_schema_version)
+      ![4, 5, 6].includes(summary.model_attestation_schema_version)
     ) {
       context.addIssue({
         code: "custom",
         path: ["model_attestation_schema_version"],
-        message: "receipt-bound runs require Codex attestation v4 or v5",
+        message: "receipt-bound runs require Codex attestation v4, v5, or v6",
       });
     }
   });
@@ -1170,12 +1172,11 @@ function validateAuthenticatedStartingSliceCohort(
   const expectedProvider = summary.provider ?? "claude";
   const errors = wolfStrategyMappingDrift(root);
   if (
-    options.cohortKind === "authority" &&
     expectedProvider === "codex" &&
     summary.model_attestation_schema_version !== PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
   ) {
     errors.push(
-      `current Codex authority certification requires attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`,
+      `current Codex ${options.cohortKind} certification requires attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`,
     );
   }
   const fleetBasename = basename(fleetDir);
@@ -1372,8 +1373,8 @@ function validateAuthenticatedStartingSliceCohort(
     }
     if (row.report_receipt_bound === true) {
       manifestReceiptBoundRuns += 1;
-      if (![4, 5].includes(summary.model_attestation_schema_version)) {
-        errors.push(`seed ${seed}: receipt-bound row requires summary attestation v4 or v5`);
+      if (![4, 5, 6].includes(summary.model_attestation_schema_version)) {
+        errors.push(`seed ${seed}: receipt-bound row requires summary attestation v4, v5, or v6`);
       }
     }
     if (row.attempts !== row.attempt_history.length) {
@@ -1800,7 +1801,9 @@ function validateAuthenticatedStartingSliceCohort(
       errors.push(`seed ${seed}: model attestation recovery status differs from run artifacts`);
     }
     const attestationReceiptBound =
-      attestation.schema_version === 4 || attestation.schema_version === 5
+      attestation.schema_version === 4 ||
+      attestation.schema_version === 5 ||
+      attestation.schema_version === 6
         ? attestation.report_receipt_bound
         : false;
     if (attestationReceiptBound !== artifactFacts.report_receipt_bound) {
