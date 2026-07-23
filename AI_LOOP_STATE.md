@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 621 -->
+<!-- historical_cycle_count: 622 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - frost_jamb_route_truth
+
+- Evidence choice: Hayden's source briefing named the Frost-Heave recovery without its real ordinary-hunt, public-wedge, failed-rail, unbound-leave, yearling-kill, and bare-spear gates; Works splicing and a lure hybrid could also leak the rail state.
+- Surface: the packet now states that exact causal chain, Works preparation owns a separate splice fact, and the lure hybrid cannot advertise or enter the Frost-jamb recovery.
+- Counterfactual: only Hayden plus a failed/split ordinary rail exposes the route; braced rail, Works splice, lure commitment, other packets, retained bindings, living yearling, or extra gear each suppress the matching step, while exact predecessor snapshots migrate to the new authored copy.
+- Pure evidence: exact clean gameplay candidate `ffa065df` passes strict capture-v2 Terra 4637 across 52 turns and 40 accepted decisions, chooses Hayden's report, recovers a failed lure cast, diverts all three wolves alive with the herd whole, continues at goal 29, and ends voluntarily at checkpoint 40.
+- Measured result: clarity/enjoyment 4/4, unstuck, replay-yes, with no rejected action, loop, broken state, or soft-lock; source-blind 4623 separately reaches the failed-split Frost route and a living held ending.
+- Feedback/follow-through: conditional setup density and the decision-40 interruption recur; a six-report compile confirms progressive disclosure, June briefing, and truthful continuation copy as separate queued increments rather than expanding this route fix.
+- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; semantic variant liveness passes 17/17, independent no-weakening review is clean, and solo full health passes 411 files/3,265 tests plus UI typecheck and all packs.
 
 ### Cycle result - rpg_terminal_command_projection
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: all 50 embedded-quest mutations used the named bridge and all 50 carried a valid 24-hex `expected_state_hash`; there were zero discovery calls, MCP errors, retries, auth/login/security/DEP0190 warnings, or tracked changes.
 - Feedback/follow-through: verified seeds 4350 and 4351 are two reports since compile `20260721T181636Z`, below the next three-report threshold; fresh friction remains compact truncation, repeated Rowan identity, and Gallowmere strike narration, while the real Cade packet contradiction proceeds separately.
 - Guard: pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; the final combined branch passes health at 406 files/3,112 tests plus UI/all packs, prompt/tool-reference suites pass 58/58, and independent review found no P0-P2.
-
-### Cycle result - albany_works_hazard_charter
-
-- Evidence choice: Albany Works still exposed a generic checklist event/job pair, so this cycle authors one optional pre-Wolf shift charter whose equal-cost policy changes the matching post-return work method without gating or lengthening the mandatory Wolf-Winter path.
-- Surface: Reese Pryce now licenses a witnessed shift count or a cold-set gate bypass for 20 minutes/+1 standing; the original 80-minute public rescue and 35-minute stock inventory remain, while exactly one policy-bound 45-minute/+3 or 60-minute/+4 method joins them after a truthful return.
-- Counterfactual: rested low-return state favors the witness method by 15 minutes, while fatigued low-return state lets the bypass reach standing 13 and unlock the Civic cot for a 150-minute total advantage; option gating, discovery, expiry, persistence, compact/full/UI/MCP parity, and cumulative neutral migration are deterministic.
-- Pure evidence: exact clean `f878c046` passed first-attempt Terra 4348, Luna 4349, and replacement Sol 4350; all completed Wolf-Winter, were unstuck/replay-yes, and rated clarity/enjoyment 4/4, 4/4, and 3/4. Contaminated duplicate-launch seed 4347 published nothing and is excluded.
-- Measured result: no cohort organically selected the new Works charter or its matching return method; Sol's warm-room allocation, Relief Protocol, and Cade wagon were pre-existing systems and are not counted as uptake. The authored reversal therefore PASSes deterministically while discoverability remains UNPROVEN.
-- Feedback/follow-through: compile `20260721T181636Z` has 957 verified/58 rejected reports, 206 eligible pure exits, and 181 continuing; Sol 4350 is one later verified report. Its fresh S3 embedded-action bridge discovery and S2 stale Cade paling job outrank another content addition for the next cycle.
-- Guard: exact pre/post crawl stays zero-finding at 247/247 nodes, 344/344 edges, and 12/12 boards/quests; the final combined branch passes health at 406 files/3,112 tests plus UI/all packs with stable four-worker scheduling, world/Wolf hashes are `53afa583…`/`e1a7d6ac…`, and two independent reviews found no P0-P2.
