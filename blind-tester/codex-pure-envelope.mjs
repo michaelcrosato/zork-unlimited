@@ -45,6 +45,24 @@ const SUPPORTED_CODEX_MODELS = new Set([
   SPARK_DISABLED_MODEL,
 ]);
 const MAX_ITEM_ID_LENGTH = 128;
+// Current Codex injects the operator-global AGENTS.md before environment_context.
+// Keep this reviewed byte-for-byte allowlist so project/game instructions still fail closed.
+const SAFE_GLOBAL_AGENT_INSTRUCTIONS_BLOCK = [
+  "# AGENTS.md instructions",
+  "",
+  "<INSTRUCTIONS>",
+  "# Global Codex Guidance",
+  "",
+  "- Read the repository's own instructions, scripts, and existing patterns before changing code.",
+  "- Prefer the repo-local toolchain and package manager over global installs.",
+  "- Use `rg`/`rg --files` for code search when available.",
+  "- Check the worktree before editing, and do not overwrite unrelated user changes.",
+  "- Keep changes scoped to the requested task unless a broader fix is necessary.",
+  "- Run the most relevant tests, type checks, linters, builds, or browser smoke checks before finishing when the repo provides them.",
+  "- Do not print, commit, or move secrets. Use local env files such as `.env.local` only when a task explicitly needs credentials.",
+  "- For web apps, start the dev server and verify the local page when the app needs a server to run.",
+  "</INSTRUCTIONS>",
+].join("\n");
 // Keep this transport audit synchronized with the server's authoritative
 // PURE_PLAYER_TOOLS set. A regression imports both sets and compares them.
 export const CODEX_PURE_PLAYER_TOOLS = new Set([
@@ -663,12 +681,24 @@ function validV2MultiAgentModeMessage(payload, turnId) {
   );
 }
 
+function validGlobalAgentInstructionsBlock(block) {
+  return (
+    isRecord(block) &&
+    hasOnlyKeys(block, ["type", "text"]) &&
+    block.type === "input_text" &&
+    block.text === SAFE_GLOBAL_AGENT_INSTRUCTIONS_BLOCK
+  );
+}
+
 function validEnvironmentMessage(payload, turnId) {
-  return validSingleInputMessage(
-    payload,
-    "user",
-    turnId,
-    (text) => text.startsWith("<environment_context>") && text.endsWith("</environment_context>"),
+  if (!validPrivateInputMessage(payload, "user", turnId)) return false;
+  if (payload.content.length === 1) {
+    return exactTaggedInputBlock(payload.content[0], "environment_context");
+  }
+  return (
+    payload.content.length === 2 &&
+    validGlobalAgentInstructionsBlock(payload.content[0]) &&
+    exactTaggedInputBlock(payload.content[1], "environment_context")
   );
 }
 

@@ -24,6 +24,19 @@ const V2_TEAM_BLOCK =
 const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
+const GLOBAL_AGENTS_BLOCK =
+  "# AGENTS.md instructions\n\n" +
+  "<INSTRUCTIONS>\n" +
+  "# Global Codex Guidance\n\n" +
+  "- Read the repository's own instructions, scripts, and existing patterns before changing code.\n" +
+  "- Prefer the repo-local toolchain and package manager over global installs.\n" +
+  "- Use `rg`/`rg --files` for code search when available.\n" +
+  "- Check the worktree before editing, and do not overwrite unrelated user changes.\n" +
+  "- Keep changes scoped to the requested task unless a broader fix is necessary.\n" +
+  "- Run the most relevant tests, type checks, linters, builds, or browser smoke checks before finishing when the repo provides them.\n" +
+  "- Do not print, commit, or move secrets. Use local env files such as `.env.local` only when a task explicitly needs credentials.\n" +
+  "- For web apps, start the dev server and verify the local page when the app needs a server to run.\n" +
+  "</INSTRUCTIONS>";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const SPARK_MODEL = "gpt-5.3-codex-spark";
 const SPARK_UNSTABLE_WARNING_PREFIX =
@@ -316,6 +329,33 @@ function completeRollout(
     },
     { type: "event_msg", payload: { type: "task_complete", turn_id: "turn-1" } },
   ];
+}
+
+function environmentInputContent(
+  rows: unknown[],
+): Array<{ type?: string; text?: string; [key: string]: unknown }> {
+  for (const row of rows) {
+    if (
+      typeof row !== "object" ||
+      row === null ||
+      (row as { type?: string }).type !== "response_item"
+    ) {
+      continue;
+    }
+    const payload = (row as { payload?: Record<string, unknown> }).payload;
+    if (payload?.type !== "message" || payload.role !== "user" || !Array.isArray(payload.content)) {
+      continue;
+    }
+    const content = payload.content as Array<{
+      type?: string;
+      text?: string;
+      [key: string]: unknown;
+    }>;
+    if (content.some((block) => block.type === "input_text" && block.text === ENVIRONMENT_BLOCK)) {
+      return content;
+    }
+  }
+  throw new Error("missing environment input fixture");
 }
 
 function insertBeforeGameplay(rows: ReturnType<typeof validRows>, entries: readonly object[]) {
@@ -987,6 +1027,82 @@ describe("Codex pure blind provider envelope", () => {
         "gpt-5.3-codex-spark",
       ),
     ).toMatchObject({ ok: true });
+  });
+
+  it("accepts the optional global AGENTS prelude without dropping bare environment support", () => {
+    const profiles = [
+      ["sol_v2", "gpt-5.6-sol"],
+      ["terra_v2", "gpt-5.6-terra"],
+      ["luna_v1", "gpt-5.6-luna"],
+    ] as const;
+
+    for (const [profile, model] of profiles) {
+      const gameplay = forwardingRollout(undefined, { content: [] });
+      if (profile === "luna_v1") {
+        rolloutPayload(gameplay, 0).input = legacyGameplayWrapper(
+          "tools.mcp__adventureforge__start_overworld()",
+        );
+      }
+      const bare = completeRollout(gameplay, profile);
+      expect(inspectCodexPureEvidence(validRows(), bare, model), `${profile} bare`).toMatchObject({
+        ok: true,
+      });
+
+      const withGlobalAgents = structuredClone(bare);
+      environmentInputContent(withGlobalAgents).unshift({
+        type: "input_text",
+        text: GLOBAL_AGENTS_BLOCK,
+      });
+      expect(
+        inspectCodexPureEvidence(validRows(), withGlobalAgents, model),
+        `${profile} global AGENTS`,
+      ).toMatchObject({ ok: true });
+    }
+  });
+
+  it.each([
+    [
+      "a project-scoped header",
+      "# AGENTS.md instructions for C:\\dev\\zork-unlimited\n\n" +
+        "<INSTRUCTIONS>\n- Follow the project charter.\n</INSTRUCTIONS>",
+    ],
+    [
+      "AdventureForge contamination",
+      GLOBAL_AGENTS_BLOCK.replace(
+        "- Keep changes scoped to the requested task unless a broader fix is necessary.",
+        "- Inspect AdventureForge before beginning.",
+      ),
+    ],
+    [
+      "game-specific contamination",
+      GLOBAL_AGENTS_BLOCK.replace(
+        "- Keep changes scoped to the requested task unless a broader fix is necessary.",
+        "- Complete wolf_winter and return to Albany.",
+      ),
+    ],
+    ["a missing closing wrapper", GLOBAL_AGENTS_BLOCK.replace("\n</INSTRUCTIONS>", "")],
+    [
+      "a malformed opening wrapper",
+      GLOBAL_AGENTS_BLOCK.replace("<INSTRUCTIONS>", '<INSTRUCTIONS source="global">'),
+    ],
+  ])("rejects an optional global AGENTS block with $0", (_label, agentsBlock) => {
+    const rows = completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2");
+    environmentInputContent(rows).unshift({ type: "input_text", text: agentsBlock });
+    expect(inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-sol")).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/input and initial context lifecycle is out of order/i),
+    });
+  });
+
+  it("rejects a third environment input block after a valid global AGENTS prelude", () => {
+    const rows = completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2");
+    const content = environmentInputContent(rows);
+    content.unshift({ type: "input_text", text: GLOBAL_AGENTS_BLOCK });
+    content.push({ type: "input_text", text: "unexpected third block" });
+    expect(inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-sol")).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/input and initial context lifecycle is out of order/i),
+    });
   });
 
   it.each([

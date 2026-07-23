@@ -22,6 +22,19 @@ const V2_TEAM_BLOCK =
 const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
+const GLOBAL_AGENTS_BLOCK =
+  "# AGENTS.md instructions\n\n" +
+  "<INSTRUCTIONS>\n" +
+  "# Global Codex Guidance\n\n" +
+  "- Read the repository's own instructions, scripts, and existing patterns before changing code.\n" +
+  "- Prefer the repo-local toolchain and package manager over global installs.\n" +
+  "- Use `rg`/`rg --files` for code search when available.\n" +
+  "- Check the worktree before editing, and do not overwrite unrelated user changes.\n" +
+  "- Keep changes scoped to the requested task unless a broader fix is necessary.\n" +
+  "- Run the most relevant tests, type checks, linters, builds, or browser smoke checks before finishing when the repo provides them.\n" +
+  "- Do not print, commit, or move secrets. Use local env files such as `.env.local` only when a task explicitly needs credentials.\n" +
+  "- For web apps, start the dev server and verify the local page when the app needs a server to run.\n" +
+  "</INSTRUCTIONS>";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const HISTORICAL_STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v1";
 const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v2";
@@ -46,6 +59,37 @@ function finalOutput(rows: unknown[]): Record<string, unknown> {
   ) as { payload: { content: Record<string, unknown>[] } };
   const content = message.payload.content;
   return content[0]!;
+}
+
+function environmentInputContent(
+  rows: unknown[],
+): Array<{ type?: string; text?: string; [key: string]: unknown }> {
+  for (const row of rows) {
+    if (
+      typeof row !== "object" ||
+      row === null ||
+      (row as { type?: string }).type !== "response_item"
+    ) {
+      continue;
+    }
+    const candidate = (row as { payload?: Record<string, unknown> }).payload;
+    if (
+      candidate?.type !== "message" ||
+      candidate.role !== "user" ||
+      !Array.isArray(candidate.content)
+    ) {
+      continue;
+    }
+    const content = candidate.content as Array<{
+      type?: string;
+      text?: string;
+      [key: string]: unknown;
+    }>;
+    if (content.some((block) => block.type === "input_text" && block.text === ENVIRONMENT_BLOCK)) {
+      return content;
+    }
+  }
+  throw new Error("missing environment input fixture");
 }
 
 function taskCompletePayload(rows: unknown[]): Record<string, unknown> {
@@ -500,6 +544,32 @@ ${JSON.stringify({
 describe("Codex certified fleet rollout authority", () => {
   it("binds one public thread to one rollout turn and exact final report", () => {
     const rows = strictTerraRollout();
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(strictPublicEvents()),
+        rollout: jsonl(rows),
+        capture: captureReceipt(rows, true),
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({
+      ok: true,
+      facts: {
+        sessionId: SESSION,
+        actualModel: "gpt-5.6-terra",
+        turnId: TURN,
+        cwd: "C:\\private\\player",
+        codeModeContract: STRICT_CODE_MODE_CONTRACT,
+      },
+    });
+  });
+
+  it("accepts the current optional global AGENTS prelude through fleet authority", () => {
+    const rows = strictTerraRollout();
+    environmentInputContent(rows).unshift({
+      type: "input_text",
+      text: GLOBAL_AGENTS_BLOCK,
+    });
     expect(
       validateCodexFleetProviderAuthority({
         events: jsonl(strictPublicEvents()),
