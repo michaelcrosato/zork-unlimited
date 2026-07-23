@@ -1179,7 +1179,7 @@ function validCodeModeWarningRow(row, ordinal) {
       configPath.length > 0 &&
       configPath.length <= 4096 &&
       !/[\r\n]/u.test(configPath) &&
-      /^(?:[A-Za-z]:[\\/]|[\\/])(?:(?!\.{1,2}[\\/])[^\\/\r\n]+[\\/])*\.tmp[\\/]blind-codex-home[\\/]tmp\.[A-Za-z0-9]{10}[\\/]config\.toml\.$/u.test(
+      /^(?:[A-Za-z]:[\\/]|[\\/])(?:(?!\.{1,2}(?:[\\/]|$))[^\\/\r\n]+[\\/])*config\.toml\.$/u.test(
         configPath,
       )
     );

@@ -5,9 +5,8 @@
  *
  * Each run is a `blind-tester/run.sh` spawn (same script a solo `npm run blind`
  * uses), given a distinct seed/persona/model/target combination. There is NO
- * temperature/top_p knob — those flags do not exist on the `claude` CLI
- * invocation inside run.sh (see run.sh's default path). Seed × model is the
- * live diversity mechanism here; pure live retention uses
+ * temperature/top_p knob — the built-in provider invocations do not expose
+ * those controls. Seed × model is the live diversity mechanism here; pure live retention uses
  * the neutral default persona so a test-directed role cannot bias continuation.
  *
  * `--mock` asks run.sh to use its bundled mock agent (zero tokens). Only this
@@ -57,14 +56,6 @@ export const CERTIFIED_CODEX_MODELS = [
 // Rotation order for explicit structural `--mock --personas mixed`; live pure
 // fleets reject mixed/non-default personas.
 const PERSONA_ROTATION = ["explorer", "speedrunner", "breaker", "casual", "lore-reader"];
-
-// Explicit Claude diagnostic `--model mix` weighting: 9 haiku : 1 sonnet.
-// Codex fleets require one exact model id and never permit aliases, mixing, or
-// fallback.
-const DEFAULT_MODEL_MIX = [
-  { model: "haiku", weight: 9 },
-  { model: "sonnet", weight: 1 },
-];
 
 /** Throw a usage error for an out-of-range/non-integer numeric flag. `min` is
  * the sensible floor per the brief (count/concurrency >= 1, maxRetries >= 0);
@@ -124,7 +115,6 @@ export function parseFleetArgs(argv) {
     maxRetries: 2,
     resume: true,
     out: null,
-    modelMix: DEFAULT_MODEL_MIX,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -176,18 +166,27 @@ export function parseFleetArgs(argv) {
   assertFleetInt(opts.seedBase, "seed-base", undefined);
   assertFleetInt(opts.maxRetries, "max-retries", 0);
   assertFleetSeedRange(opts);
-  if (opts.provider !== "claude" && opts.provider !== "codex") {
-    throw new Error("fleet: --provider must be exactly claude or codex");
+  if (opts.provider === "claude") {
+    throw new Error(
+      "fleet: the live Claude provider is retired; use --provider codex with an exact supported Codex model",
+    );
   }
-  if (opts.model === null)
-    opts.model = opts.provider === "codex" ? "gpt-5.3-codex-spark" : "sonnet";
+  if (opts.provider !== "codex") {
+    throw new Error("fleet: --provider must be exactly codex");
+  }
+  if (opts.model === null) opts.model = "gpt-5.3-codex-spark";
   if (opts.label !== null) validateFleetLabel(opts.label);
   assertFleetTargetPolicy(opts);
   return opts;
 }
 
 function assertFleetTargetPolicy(opts) {
-  const provider = opts.provider ?? "claude";
+  const provider = opts.provider ?? "codex";
+  if (provider !== "codex") {
+    throw new Error(
+      "fleet: the live Claude provider is retired; current plans require provider codex",
+    );
+  }
   if (
     opts.target !== "overworld" &&
     !/^quest:[a-z0-9]+(?:_[a-z0-9]+)*$/.test(String(opts.target ?? ""))
@@ -208,19 +207,9 @@ function assertFleetTargetPolicy(opts) {
   }
   if (!opts.mock && !isProviderModel(provider, opts.model, true)) {
     throw new Error(
-      provider === "codex"
-        ? "fleet: Codex pure fleets require exact model gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, or gpt-5.3-codex-spark; aliases, mix, and fallback are forbidden"
-        : "fleet: Claude pure fleets require haiku, sonnet, opus, or diagnostic mix",
+      "fleet: Codex pure fleets require exact model gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, or gpt-5.3-codex-spark; aliases, mix, and fallback are forbidden",
     );
   }
-}
-
-/** Deterministic (never random) model pick for `--model mix`, by run index. */
-function modelForMixIndex(modelMix, i) {
-  // i % 10 === 9 → the stronger slice (index 1, sonnet by default); otherwise
-  // the base slice (index 0, haiku by default). Fixed by index, not sampled —
-  // reproducible fleets are the point.
-  return i % 10 === 9 ? modelMix[1].model : modelMix[0].model;
 }
 
 /** Expand parsed fleet options into the concrete list of runs (pure; exported for tests). */
@@ -229,13 +218,13 @@ export function planFleetRuns(opts) {
   // the fresh-world live contract at the planning boundary as well.
   assertFleetTargetPolicy(opts);
   assertFleetSeedRange(opts);
-  const provider = opts.provider ?? "claude";
+  const provider = opts.provider ?? "codex";
   const runs = [];
   for (let i = 0; i < opts.count; i++) {
     const seed = opts.seedBase + i;
     const persona =
       opts.personas === "mixed" ? PERSONA_ROTATION[i % PERSONA_ROTATION.length] : opts.personas;
-    const model = opts.model === "mix" ? modelForMixIndex(opts.modelMix, i) : opts.model;
+    const model = opts.model;
     if (!opts.mock && !isProviderModel(provider, model, false)) {
       throw new Error("fleet: pure live plans require an exact provider/model allowlist match");
     }

@@ -711,7 +711,7 @@ describe("closed fleet filesystem integrity", () => {
             id: "item_0",
             type: "error",
             message:
-              "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.",
+              "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in C:\\Users\\operator\\.codex\\config.toml.",
           },
         },
         { type: "turn.started" },

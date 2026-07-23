@@ -94,6 +94,20 @@ describe("fleet planning", () => {
     ).toBe(true);
   });
 
+  it("keeps parser-bypassing programmatic plans on the Codex default", () => {
+    const programmatic = { ...parseFleetArgs(["--count", "1"]), provider: undefined };
+
+    expect(planFleetRuns(programmatic)).toEqual([
+      {
+        seed: 1000,
+        persona: "default",
+        provider: "codex",
+        model: "gpt-5.3-codex-spark",
+        target: "overworld",
+      },
+    ]);
+  });
+
   it("makes authoritative no-resume behavior explicit without changing diagnostic defaults", () => {
     expect(parseFleetArgs([]).resume).toBe(true);
     expect(parseFleetArgs(["--no-resume"]).resume).toBe(false);
@@ -114,33 +128,11 @@ describe("fleet planning", () => {
     expect(() => parseFleetArgs(["--personas", "breaker"])).toThrow(/structural mode/i);
     expect(parseFleetArgs(["--mock", "--personas", "breaker"]).personas).toBe("breaker");
   });
-  it("pins live model plans to supported aliases", () => {
-    for (const model of ["haiku", "sonnet", "opus"] as const) {
-      const opts = parseFleetArgs(["--provider", "claude", "--count", "3", "--model", model]);
-      expect(opts.model).toBe(model);
-      expect(planFleetRuns(opts).map((run: { model: string }) => run.model)).toEqual([
-        model,
-        model,
-        model,
-      ]);
-    }
-    const mixed = parseFleetArgs(["--provider", "claude", "--count", "10", "--model", "mix"]);
-    expect(mixed.model).toBe("mix");
-    expect(planFleetRuns(mixed).map((run: { model: string }) => run.model)).toEqual([
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "sonnet",
-    ]);
-    expect(() => parseFleetArgs(["--provider", "claude", "--model", "claude-custom"])).toThrow(
-      /haiku, sonnet, opus/i,
-    );
+  it("retires current Claude plans while retaining structural Codex mocks", () => {
+    expect(() => parseFleetArgs(["--provider", "claude"])).toThrow(/retired/i);
+    expect(() =>
+      planFleetRuns({ ...parseFleetArgs(["--count", "1"]), provider: "claude" }),
+    ).toThrow(/retired/i);
     expect(parseFleetArgs(["--mock", "--model", "synthetic"]).model).toBe("synthetic");
   });
   it("pins Codex fleets to exact provider/model pairs without mix, aliases, or fallback", () => {
@@ -157,12 +149,8 @@ describe("fleet planning", () => {
       ]);
     }
     expect(parseFleetArgs([]).model).toBe("gpt-5.3-codex-spark");
-    expect(parseFleetArgs(["--provider", "claude"]).model).toBe("sonnet");
     expect(() => parseFleetArgs(["--provider", "codex", "--model", "sol"])).toThrow(/aliases/i);
     expect(() => parseFleetArgs(["--provider", "codex", "--model", "mix"])).toThrow(/mix/i);
-    expect(() => parseFleetArgs(["--provider", "claude", "--model", "gpt-5.6-sol"])).toThrow(
-      /Claude pure fleets/i,
-    );
   });
   it("explicit mock quest targets parse and reach the structural plan", () => {
     const runs = planFleetRuns(
@@ -170,10 +158,6 @@ describe("fleet planning", () => {
     );
     expect(runs.every((r: { target: string }) => r.target === "quest:sunken_barrow")).toBe(true);
     expect(runs.every((r: { provider: string }) => r.provider === "codex")).toBe(true);
-    const claudeMock = planFleetRuns(
-      parseFleetArgs(["--mock", "--provider", "claude", "--count", "1", "--model", "synthetic"]),
-    );
-    expect(claudeMock[0]?.provider).toBe("claude");
   });
 
   it("rejects quest targets for live fleets regardless of flag order", () => {

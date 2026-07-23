@@ -132,7 +132,7 @@ function sparkCodeModeRows(): TestRow[] {
       item: {
         id: "item_0",
         type: "error",
-        message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+        message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\Users\\operator\\.codex\\config.toml.`,
       },
     },
     {
@@ -154,7 +154,7 @@ function singleCodeModeWarningRows(): TestRow[] {
     item: {
       id: "item_0",
       type: "error",
-      message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+      message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\Users\\operator\\.codex\\config.toml.`,
     },
   });
   return rows;
@@ -1660,28 +1660,28 @@ describe("Codex pure blind provider envelope", () => {
         model: SPARK_MODEL,
       },
       {
-        label: "an unstable-warning path outside the sterile home",
+        label: "a relative unstable-warning config path",
         rows: (() => {
           const rows = sparkCodeModeRows();
-          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\config.toml.`;
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}config.toml.`;
           return rows;
         })(),
         model: SPARK_MODEL,
       },
       {
-        label: "text prefixed to the sterile-home config path",
+        label: "text prefixed to the config path",
         rows: (() => {
           const rows = sparkCodeModeRows();
-          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}ALTERED EXTRA TEXT C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`;
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}ALTERED EXTRA TEXT C:\\Users\\operator\\.codex\\config.toml.`;
           return rows;
         })(),
         model: SPARK_MODEL,
       },
       {
-        label: "a dot-segment escape from the sterile home",
+        label: "a dot-segment config path",
         rows: (() => {
           const rows = sparkCodeModeRows();
-          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\..\\config.toml.`;
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\Users\\operator\\.codex\\..\\config.toml.`;
           return rows;
         })(),
         model: SPARK_MODEL,

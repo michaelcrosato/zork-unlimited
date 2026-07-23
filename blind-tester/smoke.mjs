@@ -6,7 +6,7 @@
  * surfaces: the overworld CORE GAME (the default blind mode — start_overworld +
  * a context re-read) and a targeted quest drop-in (start_world_quest + a few
  * stepped actions; a dev/QA entry point — players reach quests in-world via the
- * overworld). Run it before (or instead of) a real `claude -p` blind run to
+ * overworld). Run it before (or instead of) a live Codex blind run to
  * confirm the harness is wired correctly without spending any subscription/token
  * budget.
  *

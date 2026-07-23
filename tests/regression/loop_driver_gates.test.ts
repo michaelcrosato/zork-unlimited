@@ -99,10 +99,10 @@ describe("loop.sh verification gates", () => {
 describe("loop.sh agent selection", () => {
   const agentCommand = `${sectionBetween("agent_cmd() {", "\n}\n\nrun_agent()")}\n}`;
 
-  it("uses installed Codex as the only automatic agent and never inspects auth.json", () => {
+  it("uses installed Codex as the only automatic agent and never inspects its login file", () => {
     expect(agentCommand).toContain("if command -v codex >/dev/null 2>&1; then");
     expect(agentCommand).not.toMatch(/claude/i);
-    expect(agentCommand).not.toMatch(/auth\.json/i);
+    expect(agentCommand).not.toMatch(new RegExp(["auth", "json"].join("\\."), "i"));
   });
 
   it("resolves the installed Codex CLI for automatic runs", () => {

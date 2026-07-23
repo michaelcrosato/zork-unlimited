@@ -104,10 +104,8 @@ exit reason.
 
 1. Run the deterministic pre-crawl gate: `npm run crawl:smoke`.
 2. Start `npm run blind --seed=<fresh>` with a fresh seed. The default is the
-   built-in hardened Codex Spark path;
-   `npm run blind --provider=claude --model=sonnet --seed=<fresh>` selects the
-   explicit Claude compatibility provider. Both launch MCP in `pure` mode and supply a
-   private JSONL evidence path. Neither path permits an arbitrary
+   built-in hardened Codex Spark path. It launches MCP in `pure` mode and supplies
+   a private JSONL evidence path. The runner does not permit an arbitrary
    `BLIND_AGENT_CMD` to claim pure evidence.
 3. The player calls `start_overworld` once and plays independently. It follows
    only game-presented goals and choices, including any quest reached naturally
@@ -142,16 +140,6 @@ Likewise, a discoverable `.md` or durable `.evidence.jsonl` without the adjacent
 legacy report. Normal unsuccessful exits remove those unfinished artifacts;
 the missing marker keeps hard-kill remnants out of feedback and attendance.
 
-One Claude-provider fail-closed report-only exception exists: after a normal CLI exit, current
-v2 private evidence must independently prove exactly one fresh start followed
-by exactly one journey exit, and the unchanged verifier must reject only a
-missing exit-interview block. The runner may then resume the same Claude
-session/model once with no tools or MCP to extract strict subjective fields.
-Original prose and ratings remain byte-bound, while the runner injects the
-authenticated receipt and reverifies the promoted report and sidecar. This is
-never a gameplay continuation and cannot recover a timeout, missing exit,
-mechanical/MCP failure, or any other report defect.
-
 Codex runs reuse the same unchanged evidence verifier and sidecar-last
 publication transaction and never start a second model turn. If the attempt-zero
 provider report has exactly one final, otherwise-valid pure V2 interview and its
@@ -170,16 +158,20 @@ It is available only while the private attempt-zero evidence exists inside the
 live publication transaction and never retroactively accepts a historically
 rejected report.
 
-The runner starts Codex in an isolated temporary player directory. Its fresh
-per-run `CODEX_HOME` lives under the repo's ignored `.tmp/blind-codex-home/`
-runtime tree (outside the operating-system temp directory, so Codex can create
-its normal PATH aliases without a warning) and contains only a private copy of
-`auth.json`; both isolated directories are removed on exit. User/project config
-and rules are ignored, shell/web/apps/plugins/browser/computer/subagents and the
-unused shell snapshot are disabled, and only the exact pure AdventureForge MCP
-tools are enabled. The built-in launch also requires `--enable code_mode_only`,
-forcing every gameplay call through the audited code-mode wrapper; direct-mode
-calls are not current pure evidence. One exact generic pre-turn code-mode notice
+The runner starts Codex in an isolated temporary player directory while leaving
+subscription state CLI-owned in the operator's existing `CODEX_HOME`; repository
+code never opens or copies the login store and never cleans or mutates that shared
+home. User/project config and rules are ignored, `project_doc_max_bytes=0` prevents
+project-document ingestion, shell/web/apps/plugins/browser/computer/subagents and
+the unused shell snapshot are disabled, and only the exact pure AdventureForge
+MCP tools are enabled. After the CLI exits, the runner parses the run-owned public
+`thread.started` UUID and copies only the filename-matched rollout under
+`CODEX_HOME/sessions`. Its private session identity and cwd must match that public
+thread and the isolated player directory, so unrelated concurrent Codex sessions
+cannot be substituted. The built-in launch also requires
+`--enable code_mode_only`, forcing every gameplay call through the audited
+code-mode wrapper; direct-mode calls are not current pure evidence. One exact
+generic pre-turn code-mode notice
 is accepted only for a requested and privately captured supported model; Spark
 must then carry its second exact model-metadata notice. Altered, extra, or
 reordered errors fail closed. It audits the provider JSONL and rejects unknown
@@ -246,9 +238,10 @@ validator for current evidence, binding report, envelope, run evidence, provider
 session/model, copied rollout, and capture hash. Failure text exposes no hidden
 response.
 A Codex report outside that single receipt-only case remains rejected and must
-use a fresh seed. For a fleet member, the runner also
-captures exactly one non-linked rollout JSONL from that sterile home and verifies
-its recorded cwd resolves to the still-live isolated `player` directory by exact
+use a fresh seed. For a fleet member, the runner also captures the one non-linked
+rollout JSONL whose filename and session id match the public `thread.started`
+UUID in the CLI-owned home. It verifies that rollout's recorded cwd resolves to
+the still-live isolated `player` directory by exact
 canonical path and native filesystem identity before publication. It writes an
 exclusive `.codex-capture.json` receipt binding the canonical expected/session/turn
 cwd values, directory identities, and copied rollout SHA-256. Certification
@@ -404,10 +397,10 @@ resume a current-contract fleet slot.
 
 ## Fleet mode
 
-Fleet attestation supports historical Claude/Sonnet cohorts and homogeneous
-Codex cohorts using exactly `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, or
-`gpt-5.3-codex-spark`. Codex aliases, fallback, and mixed-model plans are
-forbidden.
+Fleet attestation retains read-only support for historical Claude/Sonnet cohorts.
+Current homogeneous Codex cohorts use exactly `gpt-5.6-sol`, `gpt-5.6-terra`,
+`gpt-5.6-luna`, or `gpt-5.3-codex-spark`. Codex aliases, fallback, and
+mixed-model plans are forbidden.
 
 ```bash
 npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
@@ -420,10 +413,8 @@ Every live member is the same canonical pure contract with a different seed
 use the neutral default persona; persona mixtures are structural experiments
 only. The fleet command defaults to Codex with homogeneous
 `gpt-5.3-codex-spark` for ordinary feedback harvests; canonical certification
-commands pin Terra for both pilot and authority;
-Claude/Sonnet requires explicit `--provider claude --model sonnet` and keeps
-`mix`, Haiku, and Opus for diagnostics. All four exact Codex model ids listed
-above are eligible when their CLI rollout provenance verifies.
+commands pin Terra for both pilot and authority. All four exact Codex model ids
+listed above are eligible when their CLI rollout provenance verifies.
 
 Before any live member launches, preflight freezes one full tracked Git commit,
 the canonical fresh-overworld world id/hash, the contiguous planned seeds, and
@@ -443,7 +434,8 @@ label closes nonzero and is ineligible for certification. Resume remains the
 default for diagnostic fleets, but every resume-enabled bundle and every
 skipped slot is non-certifying. A fresh authoritative label must run all slots
 with `--no-resume --max-retries 0`; historical successes cannot be relabeled
-into it. Successful report-only recovery requires the complete adjacent
+into it. The current Codex launcher has no model-recovery turn. Historical
+report-only recovery remains readable only when it has the complete adjacent
 `.initial-report.txt`, `.repair.meta.json`, and `.repair.json` set, and must
 deterministically reproduce the accepted report bytes. The text suffix keeps
 the rejected response out of feedback `*.md` discovery. It remains diagnostic

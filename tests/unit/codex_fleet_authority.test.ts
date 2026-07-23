@@ -97,7 +97,7 @@ function strictPublicEvents(report = REPORT): unknown[] {
     item: {
       id: "code-mode-notice",
       type: "error",
-      message: `${CODE_MODE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+      message: `${CODE_MODE_WARNING_PREFIX}C:\\Users\\operator\\.codex\\config.toml.`,
     },
   });
   return rows;

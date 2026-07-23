@@ -402,7 +402,7 @@ describe("pure Codex receipt binding", () => {
   it("uses a zero-model attempt-zero launcher path", () => {
     const runner = readFileSync(new URL("../../blind-tester/run.sh", import.meta.url), "utf8");
     const start = runner.indexOf("# Codex has no resumed report turn.");
-    const end = runner.indexOf("# The sole repairable case", start);
+    const end = runner.indexOf("\nif ! assert_launch_provenance_unchanged", start);
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     const bindingBranch = runner.slice(start, end);

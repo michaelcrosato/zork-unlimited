@@ -3,20 +3,20 @@
  * blind-tester/telemetry — lightweight token/cost telemetry for blind runs
  * (the ROADMAP lever: "measure loop efficiency instead of guessing").
  *
- * `claude -p --output-format json` already returns everything worth measuring
- * (duration, turns, token usage, nominal cost) in the envelope run.sh saves as
- * <out>.json. This records one compact JSONL row per run under the gitignored
- * ai-runs/ evidence root, and summarizes what has accumulated:
+ * run.sh saves a normalized Codex envelope with duration, turns, and token
+ * usage as <out>.json. Historical envelopes may also carry nominal cost. This
+ * records one compact JSONL row per run under the gitignored ai-runs/ evidence
+ * root, and summarizes what has accumulated:
  *
- *   node blind-tester/telemetry.mjs record <out.json> --source overworld --seed 7 --model sonnet
+ *   node blind-tester/telemetry.mjs record <out.json> --source overworld --seed 7 --model gpt-5.3-codex-spark
  *   node blind-tester/telemetry.mjs summary            # or: npm run blind:telemetry
  *
- * run.sh records one terminal gameplay outcome after verification/recovery and
- * records any report-only repair as a separately phased row. A telemetry
+ * run.sh records one terminal gameplay outcome after verification. Historical
+ * report-only repair rows remain readable as a separate phase. A telemetry
  * failure never fails the run (measurement must not gate the thing it measures).
- * The BLIND_AGENT_CMD override path produces no claude envelope, so it is not
- * recorded here. total_cost_usd is the NOMINAL API price of the run — the
- * subscription covers it; it is tracked as an efficiency signal, not a bill.
+ * The structural override path produces no provider envelope, so it is not
+ * recorded here. When present, total_cost_usd is a nominal efficiency signal,
+ * not a bill.
  */
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -35,7 +35,7 @@ const PLAYTHROUGH_SUCCESS_OUTCOMES = new Set([
 const RECOVERY_SUCCESS_OUTCOMES = new Set(["passed", "success"]);
 
 /**
- * Reduce a claude CLI JSON envelope + run metadata to one flat telemetry row
+ * Reduce a normalized provider envelope + run metadata to one flat telemetry row
  * (pure; exported for tests). Missing/foreign envelope fields become nulls —
  * a row is always produced so a weird envelope still leaves a trace.
  */
