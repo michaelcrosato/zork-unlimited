@@ -1297,6 +1297,7 @@ export class OverworldSession {
   recordQuestDecision(
     actionId: string,
     classification: JourneyDecisionClassification,
+    checkpointSafeBoundary: boolean,
   ): JourneyPresentation {
     this.assertJourneyAcceptingDecision();
     const before = this.journeyState;
@@ -1307,6 +1308,7 @@ export class OverworldSession {
         actionId,
       },
       classification,
+      checkpointSafeBoundary,
     );
     this.appendOpeningLeadSourceDecisionTrail(before, next);
     if (next !== this.journeyState) {
@@ -1919,7 +1921,12 @@ export class OverworldSession {
   ): JourneyDecisionClassification {
     const classification = classifyOverworldJourneyDecision(kind, stateChanged);
     const before = this.journeyState;
-    const after = recordJourneyDecision(before, { surface: "overworld", actionId }, classification);
+    const after = recordJourneyDecision(
+      before,
+      { surface: "overworld", actionId },
+      classification,
+      true,
+    );
     this.appendOpeningLeadSourceDecisionTrail(before, after);
     this.journeyState = after;
     return classification;

@@ -17,7 +17,7 @@ import { hashState } from "../core/hash.js";
 
 import type { CompiledRpgSource } from "../rpg/source.js";
 import { assertRpgStateReferences } from "../rpg/state_integrity.js";
-import { initStateForRpgPack } from "../rpg/runner.js";
+import { initStateForRpgPack, isRpgCheckpointSafeBoundary } from "../rpg/runner.js";
 import { buildEmbeddedQuestCharacterContinuity } from "../rpg/embedded_quest_character_continuity.js";
 
 import type { ValidationReport } from "../validate/report.js";
@@ -654,6 +654,7 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
           const journey = overworldSession.recordQuestDecision(
             response.journeyActionId,
             response.journeyDecision,
+            isRpgCheckpointSafeBoundary(rpgSession.index, rpgSession.state),
           );
           if (rpgSession.state.ended) {
             const completion = overworldQuestCompletionFromRpgSession(

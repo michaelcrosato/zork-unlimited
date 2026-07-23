@@ -470,8 +470,10 @@ describe("OverworldSession", () => {
         expect(markup).toContain("leave these leads for later");
         expect(markup).not.toContain("keep your objective");
       }
-      expect(markups[0]).toContain("Continue until an active goal completes or decision 40");
-      expect(markups[0]).toContain("next fixed checkpoint, decision 40, whichever comes first");
+      expect(markups[0]).toContain("Continue toward checkpoint 40");
+      expect(markups[0]).toContain(
+        "first safe break at or after checkpoint threshold 40, whichever comes first",
+      );
     } finally {
       await server.close();
     }

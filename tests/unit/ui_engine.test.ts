@@ -77,14 +77,28 @@ describe("GameSession — RPG-only structured play", () => {
     expect(mcpOutcome.journeyDecision).toEqual(uiOutcome.journeyDecision);
     expect(mcpOutcome.journeyActionId).toBe(uiOutcome.journeyActionId);
 
-    const apply = (actionId: string, classification: typeof uiOutcome.journeyDecision) =>
+    const apply = (
+      actionId: string,
+      classification: typeof uiOutcome.journeyDecision,
+      checkpointSafeBoundary: boolean,
+    ) =>
       recordJourneyDecision(
         createInitialJourneyContractSnapshot(),
         { surface: "quest", actionId },
         classification,
+        checkpointSafeBoundary,
       );
-    const uiJourney = apply(uiOutcome.journeyActionId!, uiOutcome.journeyDecision);
-    const mcpJourney = apply(mcpOutcome.journeyActionId!, mcpOutcome.journeyDecision);
+    const checkpointSafeBoundary = ui.isCheckpointSafeBoundary();
+    const uiJourney = apply(
+      uiOutcome.journeyActionId!,
+      uiOutcome.journeyDecision,
+      checkpointSafeBoundary,
+    );
+    const mcpJourney = apply(
+      mcpOutcome.journeyActionId!,
+      mcpOutcome.journeyDecision,
+      checkpointSafeBoundary,
+    );
     expect(mcpJourney.acceptedDecisions).toBe(1);
     expect(mcpJourney.decisionProof).toEqual(uiJourney.decisionProof);
   });
@@ -188,11 +202,13 @@ describe("GameSession — RPG-only structured play", () => {
         uiJourney,
         { surface: "quest", actionId: uiOutcome.journeyActionId! },
         uiOutcome.journeyDecision,
+        ui.isCheckpointSafeBoundary(),
       );
       mcpJourney = recordJourneyDecision(
         mcpJourney,
         { surface: "quest", actionId: mcpOutcome.journeyActionId! },
         mcpOutcome.journeyDecision,
+        ui.isCheckpointSafeBoundary(),
       );
       expect(mcpJourney.acceptedDecisions, actionId).toBe(uiJourney.acceptedDecisions);
       expect(mcpJourney.decisionProof, actionId).toEqual(uiJourney.decisionProof);

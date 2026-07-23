@@ -373,27 +373,84 @@ function mcpWolfWinterCheckpointInsideQuest() {
     expect.arrayContaining(["go_north", "go_west", "read_day_book", "talk_houndsman"]),
   );
 
-  const checkpoint = a.step_action({
+  const unsafeAtThreshold = a.step_action({
     session_id: launched.rpg_session_id,
     action_id: "go_north",
     expected_state_hash: enteredYard.state_hash,
     compact_observation: false,
     compact_events: false,
   });
-  if (checkpoint.ok !== true) throw new Error("expected the checkpoint quest move to succeed");
+  if (unsafeAtThreshold.ok !== true) {
+    throw new Error("expected the threshold-crossing quest move to succeed");
+  }
+  expect(unsafeAtThreshold).toMatchObject({
+    ok: true,
+    journey: {
+      status: "active",
+      acceptedDecisions: 40,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+      decisionProof: {
+        last: { number: 40, surface: "quest", actionId: "go_north", reason: "movement" },
+      },
+    },
+    observation: { room: "paling_gap" },
+  });
+  expect(unsafeAtThreshold.observation.available_actions.map((action) => action.id)).toContain(
+    "maneuver_yearling_wolf_set_spear",
+  );
+
+  // Decision 40 enters a live fight, so it is not a safe checkpoint boundary.
+  // Both returned combat beats remain playable; the overdue fixed checkpoint
+  // materializes only when the second beat defeats the yearling.
+  const setSpear = a.step_action({
+    session_id: launched.rpg_session_id,
+    action_id: "maneuver_yearling_wolf_set_spear",
+    expected_state_hash: unsafeAtThreshold.state_hash,
+    compact_observation: false,
+    compact_events: false,
+  });
+  if (setSpear.ok !== true) throw new Error("expected the set-spear combat beat to succeed");
+  expect(setSpear).toMatchObject({
+    journey: {
+      status: "active",
+      acceptedDecisions: 41,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+    },
+    observation: { room: "paling_gap" },
+  });
+  expect(setSpear.observation.available_actions.map((action) => action.id)).toContain(
+    "maneuver_yearling_wolf_drive_set_spear",
+  );
+
+  const checkpoint = a.step_action({
+    session_id: launched.rpg_session_id,
+    action_id: "maneuver_yearling_wolf_drive_set_spear",
+    expected_state_hash: setSpear.state_hash,
+    compact_observation: false,
+    compact_events: false,
+  });
+  if (checkpoint.ok !== true) throw new Error("expected the drive-spear combat beat to succeed");
   const checkpointJourney = checkpoint.journey;
   if (!checkpointJourney) throw new Error("expected the embedded parent journey");
   expect(checkpoint).toMatchObject({
     ok: true,
     journey: {
       status: "awaiting_choice",
-      acceptedDecisions: 40,
       nextCheckpoint: 40,
-      decisionProof: {
-        last: { number: 40, surface: "quest", actionId: "go_north", reason: "movement" },
-      },
     },
     observation: { room: "paling_gap", available_actions: [] },
+  });
+  expect(checkpointJourney.acceptedDecisions).toBeGreaterThan(40);
+  expect(checkpointJourney.pendingChoice).toMatchObject({
+    atDecision: checkpointJourney.acceptedDecisions,
+    checkpoint: 40,
+    reasons: ["checkpoint"],
+  });
+  expect(checkpointJourney.decisionProof.last).toMatchObject({
+    number: checkpointJourney.acceptedDecisions,
+    surface: "quest",
   });
   expect(checkpointJourney.pendingChoice?.options.map((option) => option.id)).toEqual([
     "continue",
@@ -836,6 +893,8 @@ describe("MCP journey surface", () => {
     const { a, overworldSessionId, rpgSessionId, checkpoint, checkpointJourney, fullRpgStateHash } =
       mcpWolfWinterCheckpointInsideQuest();
     const checkpointProof = checkpointJourney.decisionProof;
+    const checkpointDecision = checkpointJourney.acceptedDecisions;
+    const resumedCheckpoint = (Math.floor(checkpointDecision / 40) + 1) * 40;
     const checkpointRpgHash = checkpoint.state_hash;
 
     const observed = a.get_observation({
@@ -857,7 +916,7 @@ describe("MCP journey surface", () => {
     });
     expect(blocked).toMatchObject({
       ok: false,
-      journey: { status: "awaiting_choice", acceptedDecisions: 40 },
+      journey: { status: "awaiting_choice", acceptedDecisions: checkpointDecision },
       overworld_snapshot_hash: checkpoint.overworld_snapshot_hash,
     });
     expect(blocked.observation.available_actions).toEqual([]);
@@ -871,13 +930,13 @@ describe("MCP journey surface", () => {
     expect(continued.result.exitReceipt).toBeNull();
     expect(continued.journey).toMatchObject({
       status: "active",
-      acceptedDecisions: 40,
-      nextCheckpoint: 80,
+      acceptedDecisions: checkpointDecision,
+      nextCheckpoint: resumedCheckpoint,
       pendingChoice: null,
     });
     expect(continued.journey.decisionProof).toEqual(checkpointProof);
     expect(continued.result.retentionEvent).toMatchObject({
-      atDecision: 40,
+      atDecision: checkpointDecision,
       checkpoint: 40,
       choice: "continue",
       decisionProofHash: checkpointProof.hash,
@@ -893,29 +952,14 @@ describe("MCP journey surface", () => {
       journey: continued.journey,
       overworld_snapshot_hash: continued.snapshot_hash,
     });
-    expect(resumed.character_continuity).toEqual(
-      a.sessions.get(rpgSessionId).embeddedCharacterContinuity,
-    );
+    expect(resumed.character_continuity).toEqual(checkpoint.character_continuity);
 
     const resumedIds = resumed.observation.available_actions.map((action) => action.id);
     const listed = a.list_legal_actions({ session_id: rpgSessionId, compact_actions: true });
     expect(resumedIds).toEqual(listed.actions);
-    expect(resumedIds).toEqual([
-      "go_south",
-      "examine_paling_rail",
-      "examine_relief_spear",
-      "set_paling_rail",
-      "look_around",
-      "inventory",
-      "maneuver_yearling_wolf_set_spear",
-    ]);
-    for (const staleId of [
-      "go_north",
-      "go_west",
-      "examine_day_book",
-      "read_day_book",
-      "talk_houndsman",
-    ]) {
+    expect(resumedIds).toEqual(expect.arrayContaining(["go_north", "go_south"]));
+    expect(resumedIds.some((id) => id.includes("yearling_wolf"))).toBe(false);
+    for (const staleId of ["go_west", "examine_day_book", "read_day_book", "talk_houndsman"]) {
       expect(resumedIds).not.toContain(staleId);
     }
 
@@ -937,7 +981,10 @@ describe("MCP journey surface", () => {
       compact_events: true,
     });
     expect(stepped.ok).toBe(true);
-    expect(stepped.journey).toMatchObject({ status: "active", acceptedDecisions: 41 });
+    expect(stepped.journey).toMatchObject({
+      status: "active",
+      acceptedDecisions: checkpointDecision + 1,
+    });
     expect(stepped.overworld_snapshot_hash).not.toBe(continued.snapshot_hash);
   });
 
@@ -952,13 +999,13 @@ describe("MCP journey surface", () => {
     if (!resumed) throw new Error("expected compact Continue to resume the embedded quest");
     expect(resumed.state_hash).toBe(continuedRun.checkpoint.state_hash);
     expect(resumed.context.actions).toEqual([
+      "go_north",
       "go_south",
       "examine_paling_rail",
       "examine_relief_spear",
       "set_paling_rail",
       "look_around",
       "inventory",
-      "maneuver_yearling_wolf_set_spear",
     ]);
     const compactReread = continuedRun.a.get_observation({
       session_id: continuedRun.rpgSessionId,

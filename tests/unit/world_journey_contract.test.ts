@@ -47,12 +47,17 @@ function decide(
   state: JourneyContractSnapshot,
   actionId: string,
   surface: "overworld" | "quest" = "overworld",
+  checkpointSafeBoundary = true,
 ): JourneyContractSnapshot {
-  return recordJourneyAcceptedDecision(state, {
-    surface,
-    actionId,
-    reason: "situation_changed",
-  });
+  return recordJourneyAcceptedDecision(
+    state,
+    {
+      surface,
+      actionId,
+      reason: "situation_changed",
+    },
+    checkpointSafeBoundary,
+  );
 }
 
 function decideUntil(state: JourneyContractSnapshot, target: number): JourneyContractSnapshot {
@@ -140,12 +145,12 @@ describe("journey contract v3 goals", () => {
           checkpoint,
           goalVersion: null,
           goalId: null,
-          message: `You have reached the ${String(checkpoint)}-decision checkpoint. Continue until the current goal is completed or the fixed checkpoint at decision ${String(checkpoint + 40)}, whichever comes first, or end this journey?`,
+          message: `You reached checkpoint threshold ${String(checkpoint)} at a safe break. Continue until the current goal is completed or the first safe break at or after checkpoint threshold ${String(checkpoint + 40)}, whichever comes first, or end this journey?`,
           options: [
             {
               id: "continue",
-              label: `Continue until an active goal completes or decision ${String(checkpoint + 40)}`,
-              consequence: `Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision ${String(checkpoint + 40)}, whichever comes first.`,
+              label: `Continue toward checkpoint ${String(checkpoint + 40)}`,
+              consequence: `Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold ${String(checkpoint + 40)}, whichever comes first.`,
             },
             { id: "end" },
           ],
@@ -187,9 +192,9 @@ describe("journey contract v3 goals", () => {
       options: [
         {
           id: "continue",
-          label: "Continue until an active goal completes or decision 40",
+          label: "Continue toward checkpoint 40",
           consequence:
-            "Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 40, whichever comes first.",
+            "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
         },
         { id: "end" },
       ],
@@ -248,13 +253,13 @@ describe("journey contract v3 goals", () => {
     });
     expect(journeyPresentation(completed).pendingChoice).toMatchObject({
       message:
-        "You completed your current goal after 41 meaningful decisions. Continue until another goal is completed or the fixed checkpoint at decision 80, whichever comes first, or end this journey?",
+        "You completed your current goal after 41 meaningful decisions. Continue until another goal is completed or the first safe break at or after checkpoint threshold 80, whichever comes first, or end this journey?",
       options: [
         {
           id: "continue",
-          label: "Continue until an active goal completes or decision 80",
+          label: "Continue toward checkpoint 80",
           consequence:
-            "Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 80, whichever comes first.",
+            "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 80, whichever comes first.",
         },
         { id: "end" },
       ],
@@ -389,13 +394,13 @@ describe("journey contract v3 goals", () => {
     });
     expect(journeyPresentation(state).pendingChoice).toMatchObject({
       message:
-        "You completed your current goal at the 80-decision checkpoint. Continue until another goal is completed or the fixed checkpoint at decision 120, whichever comes first, or end this journey?",
+        "You completed your current goal at the first safe break for checkpoint threshold 80. Continue until another goal is completed or the first safe break at or after checkpoint threshold 120, whichever comes first, or end this journey?",
       options: [
         {
           id: "continue",
-          label: "Continue until an active goal completes or decision 120",
+          label: "Continue toward checkpoint 120",
           consequence:
-            "Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 120, whichever comes first.",
+            "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 120, whichever comes first.",
         },
         { id: "end" },
       ],
@@ -486,6 +491,270 @@ describe("journey contract v3 goals", () => {
     );
     expect(() => recordJourneyCharacterDied(completed)).toThrow(/completed-goal choice/i);
   });
+
+  it("defers an overdue checkpoint through an unsafe scene and surfaces it on a non-counting safe action", () => {
+    let state = createInitialJourneyContractSnapshot();
+    while (state.acceptedDecisions < 45) {
+      state = decide(state, `quest:unsafe:${String(state.acceptedDecisions + 1)}`, "quest", false);
+    }
+    expect(state).toMatchObject({
+      status: "active",
+      acceptedDecisions: 45,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+    });
+    expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
+
+    const proof = structuredClone(state.decisionProof);
+    const surfaced = recordJourneyDecision(
+      state,
+      { surface: "quest", actionId: "ask:leave" },
+      excludedJourneyDecision("dialogue_closure"),
+      true,
+    );
+    expect(surfaced).toMatchObject({
+      status: "awaiting_choice",
+      acceptedDecisions: 45,
+      nextCheckpoint: 40,
+      decisionProof: proof,
+      pendingChoice: {
+        atDecision: 45,
+        reasons: ["checkpoint"],
+        checkpoint: 40,
+      },
+    });
+    const presented = journeyPresentation(surfaced).pendingChoice;
+    expect(presented?.message).toBe(
+      "At the first safe break after checkpoint threshold 40, with 45 meaningful decisions, the overdue checkpoint choice is ready. Continue until the current goal is completed or the first safe break at or after checkpoint threshold 80, whichever comes first, or end this journey?",
+    );
+    expect(presented?.options[0]).toMatchObject({
+      id: "continue",
+      label: "Continue toward checkpoint 80",
+    });
+    expect(JourneyContractSnapshotSchema.parse(surfaced)).toEqual(surfaced);
+    expect(chooseJourney(surfaced, "continue").state).toMatchObject({
+      status: "active",
+      acceptedDecisions: 45,
+      nextCheckpoint: 80,
+      pendingChoice: null,
+      retentionHistory: [{ atDecision: 45, checkpoint: 40, choice: "continue" }],
+    });
+  });
+
+  it("skips elapsed fixed multiples only after an overdue checkpoint is answered", () => {
+    let state = createInitialJourneyContractSnapshot();
+    while (state.acceptedDecisions < 85) {
+      state = decide(
+        state,
+        `quest:long-conflict:${String(state.acceptedDecisions + 1)}`,
+        "quest",
+        false,
+      );
+    }
+    const surfaced = recordJourneyDecision(
+      state,
+      { surface: "quest", actionId: "inventory" },
+      excludedJourneyDecision("context_only"),
+      true,
+    );
+    expect(surfaced.pendingChoice).toMatchObject({
+      atDecision: 85,
+      checkpoint: 40,
+    });
+
+    const continued = chooseJourney(surfaced, "continue").state;
+    expect(continued.nextCheckpoint).toBe(120);
+    expect(JourneyContractSnapshotSchema.parse(continued)).toEqual(continued);
+    expect(journeyPresentation(surfaced).pendingChoice?.options[0]?.label).toBe(
+      "Continue toward checkpoint 120",
+    );
+  });
+
+  it("merges an overdue checkpoint into goal completion and end-only death prompts", () => {
+    let unsafe = createInitialJourneyContractSnapshot();
+    while (unsafe.acceptedDecisions < 43) {
+      unsafe = decide(
+        unsafe,
+        `quest:unsafe-terminal:${String(unsafe.acceptedDecisions + 1)}`,
+        "quest",
+        false,
+      );
+    }
+
+    const completed = recordJourneyGoalCompleted(unsafe);
+    expect(completed.pendingChoice).toEqual({
+      atDecision: 43,
+      reasons: ["checkpoint", "goal_completed"],
+      checkpoint: 40,
+      goalVersion: INITIAL_JOURNEY_GOAL.version,
+      goalId: INITIAL_JOURNEY_GOAL.id,
+    });
+    expect(JourneyContractSnapshotSchema.parse(completed)).toEqual(completed);
+    expect(chooseJourney(completed, "continue").state.nextCheckpoint).toBe(80);
+
+    const died = recordJourneyCharacterDied(unsafe);
+    expect(died.pendingChoice).toEqual({
+      atDecision: 43,
+      reasons: ["checkpoint", "character_died"],
+      checkpoint: 40,
+      goalVersion: null,
+      goalId: null,
+    });
+    expect(journeyPresentation(died).pendingChoice?.options).toEqual([
+      {
+        id: "end",
+        label: "End this journey",
+        consequence:
+          "The journey becomes read-only; its receipt preserves the unfinished goal and completed history.",
+      },
+    ]);
+    expect(() => chooseJourney(died, "continue")).toThrow(/character died/i);
+    expect(chooseJourney(died, "end").result.exitReceipt).toMatchObject({
+      acceptedDecisions: 43,
+      exitReasons: ["checkpoint", "character_died"],
+      checkpoint: 40,
+    });
+  });
+
+  it("rejects forged deferred-checkpoint ordering and mandatory-prompt bindings", () => {
+    let deferred = createInitialJourneyContractSnapshot();
+    while (deferred.acceptedDecisions < 45) {
+      deferred = decide(
+        deferred,
+        `quest:unsafe:${String(deferred.acceptedDecisions + 1)}`,
+        "quest",
+        false,
+      );
+    }
+
+    const premature = cloneJourneyContractSnapshot(
+      recordJourneyDecision(
+        deferred,
+        { surface: "quest", actionId: "ask:leave" },
+        excludedJourneyDecision("dialogue_closure"),
+        true,
+      ),
+    );
+    premature.pendingChoice!.atDecision = 39;
+    expect(JourneyContractSnapshotSchema.safeParse(premature).success).toBe(false);
+
+    const wrongThreshold = cloneJourneyContractSnapshot(
+      recordJourneyDecision(
+        deferred,
+        { surface: "quest", actionId: "ask:leave" },
+        excludedJourneyDecision("dialogue_closure"),
+        true,
+      ),
+    );
+    wrongThreshold.pendingChoice!.checkpoint = 45;
+    expect(JourneyContractSnapshotSchema.safeParse(wrongThreshold).success).toBe(false);
+
+    const unmerged = cloneJourneyContractSnapshot(recordJourneyGoalCompleted(deferred));
+    unmerged.pendingChoice!.reasons = ["goal_completed"];
+    unmerged.pendingChoice!.checkpoint = null;
+    expect(JourneyContractSnapshotSchema.safeParse(unmerged).success).toBe(false);
+
+    const surfaced = recordJourneyDecision(
+      deferred,
+      { surface: "quest", actionId: "ask:leave" },
+      excludedJourneyDecision("dialogue_closure"),
+      true,
+    );
+    const wrongContinuation = cloneJourneyContractSnapshot(
+      chooseJourney(surfaced, "continue").state,
+    );
+    wrongContinuation.nextCheckpoint = 120;
+    expect(JourneyContractSnapshotSchema.safeParse(wrongContinuation).success).toBe(false);
+  });
+
+  it("requires ended goal and death evidence at decision 43 to retain overdue checkpoint 40", () => {
+    let deferred = createInitialJourneyContractSnapshot();
+    while (deferred.acceptedDecisions < 43) {
+      deferred = decide(
+        deferred,
+        `quest:unsafe-ended:${String(deferred.acceptedDecisions + 1)}`,
+        "quest",
+        false,
+      );
+    }
+
+    const mergedGoal = chooseJourney(recordJourneyGoalCompleted(deferred), "end").state;
+    expect(mergedGoal.retentionHistory[0]).toMatchObject({
+      atDecision: 43,
+      reasons: ["checkpoint", "goal_completed"],
+      checkpoint: 40,
+    });
+    expect(JourneyContractSnapshotSchema.parse(mergedGoal)).toEqual(mergedGoal);
+
+    const forgedGoal = cloneJourneyContractSnapshot(mergedGoal);
+    forgedGoal.retentionHistory[0]!.reasons = ["goal_completed"];
+    forgedGoal.retentionHistory[0]!.checkpoint = null;
+    expect(() => JourneyContractSnapshotSchema.parse(forgedGoal)).toThrow(
+      /must merge that checkpoint/i,
+    );
+
+    const mergedDeath = chooseJourney(recordJourneyCharacterDied(deferred), "end").state;
+    expect(mergedDeath.retentionHistory[0]).toMatchObject({
+      atDecision: 43,
+      reasons: ["checkpoint", "character_died"],
+      checkpoint: 40,
+    });
+    expect(JourneyContractSnapshotSchema.parse(mergedDeath)).toEqual(mergedDeath);
+
+    const forgedDeath = cloneJourneyContractSnapshot(mergedDeath);
+    forgedDeath.retentionHistory[0]!.reasons = ["character_died"];
+    forgedDeath.retentionHistory[0]!.checkpoint = null;
+    expect(() => JourneyContractSnapshotSchema.parse(forgedDeath)).toThrow(
+      /must merge that checkpoint/i,
+    );
+  });
+
+  it("requires the next overdue checkpoint after a prior delayed Continue to merge too", () => {
+    let deferred = createInitialJourneyContractSnapshot();
+    while (deferred.acceptedDecisions < 85) {
+      deferred = decide(
+        deferred,
+        `quest:first-unsafe-scene:${String(deferred.acceptedDecisions + 1)}`,
+        "quest",
+        false,
+      );
+    }
+    const firstPrompt = recordJourneyDecision(
+      deferred,
+      { surface: "quest", actionId: "ask:first-safe-close" },
+      excludedJourneyDecision("dialogue_closure"),
+      true,
+    );
+    let continued = chooseJourney(firstPrompt, "continue").state;
+    expect(continued.nextCheckpoint).toBe(120);
+    while (continued.acceptedDecisions < 123) {
+      continued = decide(
+        continued,
+        `quest:second-unsafe-scene:${String(continued.acceptedDecisions + 1)}`,
+        "quest",
+        false,
+      );
+    }
+
+    const merged = chooseJourney(recordJourneyGoalCompleted(continued), "end").state;
+    expect(merged.retentionHistory).toMatchObject([
+      { atDecision: 85, reasons: ["checkpoint"], checkpoint: 40, choice: "continue" },
+      {
+        atDecision: 123,
+        reasons: ["checkpoint", "goal_completed"],
+        checkpoint: 120,
+        choice: "end",
+      },
+    ]);
+    expect(JourneyContractSnapshotSchema.parse(merged)).toEqual(merged);
+
+    const forged = cloneJourneyContractSnapshot(merged);
+    forged.retentionHistory[1]!.reasons = ["goal_completed"];
+    forged.retentionHistory[1]!.checkpoint = null;
+    expect(() => JourneyContractSnapshotSchema.parse(forged)).toThrow(
+      /fixed checkpoint 120 must merge/i,
+    );
+  });
 });
 
 describe("journey contract presentation context", () => {
@@ -527,7 +796,7 @@ describe("journey contract presentation context", () => {
       `Cade's cattle survived. ${baseMessage} Hayden has another live packet.`,
     );
     expect(view.pendingChoice?.options[0].consequence).toBe(
-      "Continue to allocate the wagon. Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 40, whichever comes first. Your choice will shape the next lead.",
+      "Continue to allocate the wagon. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first. Your choice will shape the next lead.",
     );
     expect(view.storyChoice).toEqual(storyChoice);
     expect(Object.keys(view.storyChoice!).sort()).toEqual(["id", "message", "options"]);
@@ -820,11 +1089,13 @@ describe("journey contract persistence and validation", () => {
       initial,
       { surface: "overworld", actionId: "view:refresh" },
       excludedJourneyDecision("context_only"),
+      true,
     );
     const rejected = recordJourneyDecision(
       contextOnly,
       { surface: "overworld", actionId: "travel:not-a-road" },
       excludedJourneyDecision("rejected"),
+      true,
     );
 
     expect(contextOnly).toBe(initial);
@@ -835,6 +1106,7 @@ describe("journey contract persistence and validation", () => {
       rejected,
       { surface: "quest", actionId: "ask:live-lead" },
       countedJourneyDecision("substantive_dialogue"),
+      true,
     );
     expect(counted).toMatchObject({
       acceptedDecisions: 1,

@@ -72,10 +72,14 @@ function buildDeathSnapshots(): {
 
   while (session.journey().acceptedDecisions < 40) {
     const next = session.journey().acceptedDecisions + 1;
-    session.recordQuestDecision(`test:quest_action:${String(next)}`, {
-      countsTowardJourney: true,
-      reason: "combat",
-    });
+    session.recordQuestDecision(
+      `test:quest_action:${String(next)}`,
+      {
+        countsTowardJourney: true,
+        reason: "combat",
+      },
+      true,
+    );
   }
   expect(session.journey()).toMatchObject({
     status: "awaiting_choice",

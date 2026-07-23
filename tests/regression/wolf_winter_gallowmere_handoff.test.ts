@@ -113,10 +113,14 @@ function completeWolfWithBaseHaydenAtDecision22(session: OverworldSession): stri
   session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
   while (session.journey().acceptedDecisions < 22) {
     const next = session.journey().acceptedDecisions + 1;
-    session.recordQuestDecision(`wolf_winter:hayden_lifecycle:${String(next)}`, {
-      countsTowardJourney: true,
-      reason: "preparation",
-    });
+    session.recordQuestDecision(
+      `wolf_winter:hayden_lifecycle:${String(next)}`,
+      {
+        countsTowardJourney: true,
+        reason: "preparation",
+      },
+      true,
+    );
   }
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",
@@ -155,10 +159,14 @@ function completeWolfAtDecision22(session: OverworldSession): void {
   startAlbanyWolf(session);
   while (session.journey().acceptedDecisions < 22) {
     const next = session.journey().acceptedDecisions + 1;
-    session.recordQuestDecision(`wolf_winter:regression_setup:${String(next)}`, {
-      countsTowardJourney: true,
-      reason: "preparation",
-    });
+    session.recordQuestDecision(
+      `wolf_winter:regression_setup:${String(next)}`,
+      {
+        countsTowardJourney: true,
+        reason: "preparation",
+      },
+      true,
+    );
   }
   session.completeQuest("wolf_winter", {
     endingId: "ending_held_timber_saved",

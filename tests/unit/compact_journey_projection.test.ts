@@ -172,11 +172,15 @@ describe("compact journey projection", () => {
   it("preserves truthful checkpoint continuation copy in the compact MCP projection", () => {
     let state = createInitialJourneyContractSnapshot();
     while (state.acceptedDecisions < 40) {
-      state = recordJourneyAcceptedDecision(state, {
-        surface: "overworld",
-        actionId: `action:${String(state.acceptedDecisions + 1)}`,
-        reason: "situation_changed",
-      });
+      state = recordJourneyAcceptedDecision(
+        state,
+        {
+          surface: "overworld",
+          actionId: `action:${String(state.acceptedDecisions + 1)}`,
+          reason: "situation_changed",
+        },
+        true,
+      );
     }
     const full = journeyPresentation(state);
     const compact = compactJourneyPresentation(full);
@@ -184,9 +188,9 @@ describe("compact journey projection", () => {
     expect(compact).toBe(full);
     expect(compact.pendingChoice?.options[0]).toEqual({
       id: "continue",
-      label: "Continue until an active goal completes or decision 80",
+      label: "Continue toward checkpoint 80",
       consequence:
-        "Play remains open; you may end again when an active goal completes or at the next fixed checkpoint, decision 80, whichever comes first.",
+        "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 80, whichever comes first.",
     });
   });
 });

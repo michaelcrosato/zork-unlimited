@@ -26,6 +26,7 @@ import {
   buildRpgRules,
   initStateForRpgPack,
   enumerateRpgActions,
+  isRpgCheckpointSafeBoundary,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
 import { rpgActionOptionForInputId } from "../../src/rpg/legal_actions.js";
@@ -232,6 +233,11 @@ export class GameSession {
           }
         : {}),
     };
+  }
+
+  /** Whether the embedded journey may pause without interrupting combat or dialogue. */
+  isCheckpointSafeBoundary(): boolean {
+    return isRpgCheckpointSafeBoundary(this.index, this.state);
   }
 
   /** Apply a chosen action by id. The legal-action set is ground truth (§9). */

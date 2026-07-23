@@ -126,6 +126,178 @@ function characterDeathReceipt(atDecision = 23) {
   return { ...payload, receiptHash: hashState(payload) };
 }
 
+function overdueMandatoryReceipt(reason: "goal_completed" | "character_died") {
+  const atDecision = 43;
+  const completed =
+    reason === "goal_completed"
+      ? [
+          {
+            version: INITIAL_JOURNEY_GOAL.version,
+            id: INITIAL_JOURNEY_GOAL.id,
+            text: INITIAL_JOURNEY_GOAL.text,
+            status: "completed" as const,
+            completedAtDecision: atDecision,
+          },
+        ]
+      : [];
+  const payload = {
+    contractVersion: JOURNEY_CONTRACT_VERSION,
+    exitReason: "player_ended_at_choice",
+    goalVersion: INITIAL_JOURNEY_GOAL.version,
+    goalId: INITIAL_JOURNEY_GOAL.id,
+    goalText: INITIAL_JOURNEY_GOAL.text,
+    goalStatus: reason === "goal_completed" ? ("completed" as const) : ("active" as const),
+    goalCompletedAtDecision: reason === "goal_completed" ? atDecision : null,
+    completedGoals: completed,
+    acceptedDecisions: atDecision,
+    exitReasons: ["checkpoint", reason],
+    checkpoint: 40,
+    decisionProofHash: HASH_A,
+    retentionHistory: [
+      {
+        sequence: 1,
+        atDecision,
+        reasons: ["checkpoint", reason],
+        checkpoint: 40,
+        goalVersion: reason === "goal_completed" ? INITIAL_JOURNEY_GOAL.version : null,
+        goalId: reason === "goal_completed" ? INITIAL_JOURNEY_GOAL.id : null,
+        choice: "end",
+        decisionProofHash: HASH_A,
+      },
+    ],
+  };
+  return { ...payload, receiptHash: hashState(payload) };
+}
+
+function rehashReceipt<T extends { receiptHash: string }>(receiptValue: T): T {
+  const { receiptHash: _receiptHash, ...payload } = receiptValue;
+  return { ...payload, receiptHash: hashState(payload) } as T;
+}
+
+function continuedThenOverdueGoalReceipt(includeCheckpoint: boolean) {
+  const completedGoal = {
+    version: INITIAL_JOURNEY_GOAL.version,
+    id: INITIAL_JOURNEY_GOAL.id,
+    text: INITIAL_JOURNEY_GOAL.text,
+    status: "completed" as const,
+    completedAtDecision: 83,
+  };
+  const finalReasons = includeCheckpoint
+    ? (["checkpoint", "goal_completed"] as const)
+    : (["goal_completed"] as const);
+  const payload = {
+    contractVersion: JOURNEY_CONTRACT_VERSION,
+    exitReason: "player_ended_at_choice",
+    goalVersion: INITIAL_JOURNEY_GOAL.version,
+    goalId: INITIAL_JOURNEY_GOAL.id,
+    goalText: INITIAL_JOURNEY_GOAL.text,
+    goalStatus: "completed" as const,
+    goalCompletedAtDecision: 83,
+    completedGoals: [completedGoal],
+    acceptedDecisions: 83,
+    exitReasons: finalReasons,
+    checkpoint: includeCheckpoint ? 80 : null,
+    decisionProofHash: HASH_A,
+    retentionHistory: [
+      {
+        sequence: 1,
+        atDecision: 45,
+        reasons: ["checkpoint"] as const,
+        checkpoint: 40,
+        goalVersion: null,
+        goalId: null,
+        choice: "continue" as const,
+        decisionProofHash: HASH_A,
+      },
+      {
+        sequence: 2,
+        atDecision: 83,
+        reasons: finalReasons,
+        checkpoint: includeCheckpoint ? 80 : null,
+        goalVersion: INITIAL_JOURNEY_GOAL.version,
+        goalId: INITIAL_JOURNEY_GOAL.id,
+        choice: "end" as const,
+        decisionProofHash: HASH_A,
+      },
+    ],
+  };
+  return { ...payload, receiptHash: hashState(payload) };
+}
+
+function deferredCheckpointReceipt(contractVersion: 2 | 3 = JOURNEY_CONTRACT_VERSION) {
+  const event = {
+    sequence: 1,
+    atDecision: 45,
+    reasons: ["checkpoint"],
+    checkpoint: 40,
+    ...(contractVersion === JOURNEY_CONTRACT_VERSION ? { goalVersion: null, goalId: null } : {}),
+    choice: "end",
+    decisionProofHash: HASH_A,
+  };
+  const commonPayload = {
+    contractVersion,
+    exitReason: "player_ended_at_choice",
+    goalVersion: INITIAL_JOURNEY_GOAL.version,
+    goalId: INITIAL_JOURNEY_GOAL.id,
+    goalStatus: "active",
+    acceptedDecisions: 45,
+    exitReasons: ["checkpoint"],
+    checkpoint: 40,
+    decisionProofHash: HASH_A,
+    retentionHistory: [event],
+  };
+  const payload =
+    contractVersion === JOURNEY_CONTRACT_VERSION
+      ? {
+          ...commonPayload,
+          goalText: INITIAL_JOURNEY_GOAL.text,
+          goalCompletedAtDecision: null,
+          completedGoals: [],
+        }
+      : commonPayload;
+  return { ...payload, receiptHash: hashState(payload) };
+}
+
+function deferredContinuationReceipt(secondCheckpoint = 120) {
+  const payload = {
+    contractVersion: JOURNEY_CONTRACT_VERSION,
+    exitReason: "player_ended_at_choice",
+    goalVersion: INITIAL_JOURNEY_GOAL.version,
+    goalId: INITIAL_JOURNEY_GOAL.id,
+    goalText: INITIAL_JOURNEY_GOAL.text,
+    goalStatus: "active",
+    goalCompletedAtDecision: null,
+    completedGoals: [],
+    acceptedDecisions: 121,
+    exitReasons: ["checkpoint"],
+    checkpoint: secondCheckpoint,
+    decisionProofHash: HASH_A,
+    retentionHistory: [
+      {
+        sequence: 1,
+        atDecision: 85,
+        reasons: ["checkpoint"],
+        checkpoint: 40,
+        goalVersion: null,
+        goalId: null,
+        choice: "continue",
+        decisionProofHash: HASH_A,
+      },
+      {
+        sequence: 2,
+        atDecision: 121,
+        reasons: ["checkpoint"],
+        checkpoint: secondCheckpoint,
+        goalVersion: null,
+        goalId: null,
+        choice: "end",
+        decisionProofHash: HASH_A,
+      },
+    ],
+  };
+  return { ...payload, receiptHash: hashState(payload) };
+}
+
 function historicalCharacterDeathReceipt() {
   const payload = {
     contractVersion: 2,
@@ -340,6 +512,108 @@ describe("blind V2 pure/structural report contract", () => {
     expect(result.ok).toBe(true);
     if (result.ok && result.run?.play_mode === "pure") {
       expect(result.run.receipt.contractVersion).toBe(1);
+    }
+  });
+
+  it("accepts a deferred checkpoint only for current contract-v3 evidence", () => {
+    const current = deferredCheckpointReceipt();
+    expect(CurrentJourneyExitReceiptSchema.safeParse(current).success).toBe(true);
+    const verified = verifyBlindReportText(
+      report(pureInterview({ journey_exit_receipt: current })),
+      { requiredPlayMode: "pure", runEvidenceText: evidence(current) },
+    );
+    expect(verified.ok).toBe(true);
+    if (verified.ok && verified.run?.play_mode === "pure") {
+      expect(verified.run.receipt).toMatchObject({
+        acceptedDecisions: 45,
+        checkpoint: 40,
+        retentionHistory: [{ atDecision: 45, checkpoint: 40 }],
+      });
+    }
+
+    const historical = deferredCheckpointReceipt(2);
+    const parsed = HistoricalJourneyExitReceiptSchema.safeParse(historical);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.map((issue) => issue.message).join("\n")).toMatch(
+        /historical checkpoint retention events must occur at that checkpoint/i,
+      );
+    }
+  });
+
+  it.each(["goal_completed", "character_died"] as const)(
+    "requires a decision-43 %s receipt to retain overdue checkpoint 40",
+    (reason) => {
+      const merged = overdueMandatoryReceipt(reason);
+      expect(CurrentJourneyExitReceiptSchema.safeParse(merged).success).toBe(true);
+
+      const forgedEvent = {
+        ...merged.retentionHistory[0]!,
+        reasons: [reason],
+        checkpoint: null,
+      };
+      const forged = rehashReceipt({
+        ...merged,
+        exitReasons: [reason],
+        checkpoint: null,
+        retentionHistory: [forgedEvent],
+      });
+      const parsed = CurrentJourneyExitReceiptSchema.safeParse(forged);
+      expect(parsed.success).toBe(false);
+      if (!parsed.success) {
+        expect(parsed.error.issues.map((issue) => issue.message)).toContain(
+          "a mandatory choice at or after fixed checkpoint 40 must merge that checkpoint",
+        );
+      }
+    },
+  );
+
+  it("rejects a current checkpoint event before its threshold", () => {
+    const parsed = CurrentJourneyRetentionEventSchema.safeParse({
+      sequence: 1,
+      atDecision: 39,
+      reasons: ["checkpoint"],
+      checkpoint: 40,
+      goalVersion: null,
+      goalId: null,
+      choice: "end",
+      decisionProofHash: HASH_A,
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.map((issue) => issue.message)).toContain(
+        "checkpoint retention events cannot precede their fixed checkpoint",
+      );
+    }
+  });
+
+  it("advances current receipt ordering past every fixed multiple elapsed before the safe break", () => {
+    expect(CurrentJourneyExitReceiptSchema.safeParse(deferredContinuationReceipt()).success).toBe(
+      true,
+    );
+
+    const forged = CurrentJourneyExitReceiptSchema.safeParse(deferredContinuationReceipt(80));
+    expect(forged.success).toBe(false);
+    if (!forged.success) {
+      expect(forged.error.issues.map((issue) => issue.message)).toContain(
+        "expected fixed journey checkpoint 120",
+      );
+    }
+  });
+
+  it("enforces the next fixed checkpoint after an earlier delayed checkpoint Continue", () => {
+    expect(
+      CurrentJourneyExitReceiptSchema.safeParse(continuedThenOverdueGoalReceipt(true)).success,
+    ).toBe(true);
+
+    const parsed = CurrentJourneyExitReceiptSchema.safeParse(
+      continuedThenOverdueGoalReceipt(false),
+    );
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.map((issue) => issue.message)).toContain(
+        "a mandatory choice at or after fixed checkpoint 80 must merge that checkpoint",
+      );
     }
   });
 

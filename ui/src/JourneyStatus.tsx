@@ -1,4 +1,5 @@
 import type { JourneyPresentation } from "../../src/world/journey_contract.js";
+import { journeyNextPauseText } from "./journeyCheckpointStatus.js";
 import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 
 type JourneyStatusProps = {
@@ -11,10 +12,7 @@ export function JourneyStatus({ journey, onFollowGoalPassage }: JourneyStatusPro
     journey.goal.status === "completed"
       ? `Completed at decision ${journey.goal.completedAtDecision}.`
       : "In progress.";
-  const nextChoice =
-    journey.nextCheckpoint === null
-      ? "No further checkpoint"
-      : `Next choice at ${journey.nextCheckpoint}`;
+  const nextChoice = journeyNextPauseText(journey);
 
   return (
     <section className="journey-status" aria-labelledby="journey-goal-title">

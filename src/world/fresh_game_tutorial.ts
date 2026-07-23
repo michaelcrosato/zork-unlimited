@@ -43,7 +43,7 @@ export const FRESH_GAME_TUTORIAL = Object.freeze({
     Object.freeze({
       id: "remember",
       title: "Choose your horizon",
-      text: "Journal: save, export, resume. Changes count; reads and unchanged repeats do not. At 40, 80, then each 40: continue/end. Active goal completion may pause sooner. Continue to active-goal completion or the next fixed checkpoint, whichever is first.",
+      text: "Journal: save, export, resume. Changes count; reads/repeats do not. Thresholds 40, 80, then each 40 pause at the first safe break — never mid-combat or dialogue. Goals may pause sooner. Continue to goal completion or the next checkpoint.",
     }),
   ]),
   start_label: "Explore Albany",
