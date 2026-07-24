@@ -413,7 +413,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   service_actions:
     "[[action, source, offer_id|null, available, changed, minutes, [supplies_before, supplies_after], [fatigue_before, fatigue_after], message, blocked_reason|null], ...] current town service choices; use resupply_overworld_session for resupply and rest_overworld_session for rest. campaign_override with a non-null offer_id means matching service_offers terms replace ordinary timing for this action, unavailable choices are still listed, and the field is omitted while gameplay actions are paused",
   departure_interactions:
-    "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id), then choose one id from story.options[*].id with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
+    "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id) for a versioned short comparison, optionally re-inspect one story.options[*].id as option_id for only its complete terms, then choose with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
   opportunity_guidance:
     "player-facing pursuit guidance for opportunity_leads; shown beside those leads on every compact response where they exist",
   opportunity_leads:

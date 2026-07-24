@@ -163,6 +163,8 @@ export type JourneyChoicePrompt = Readonly<{
 export type JourneyStoryChoiceSummary = Readonly<{
   commitment: string;
   fieldTrigger: string;
+  /** Present only when fieldTrigger is a broad comparison category, not exact terms. */
+  fieldTriggerScope?: "category";
   immediateCost?: string;
 }>;
 
@@ -1106,6 +1108,14 @@ function freezeStoryChoice(
     }
     if (option.summary?.immediateCost !== undefined && option.summary.immediateCost.length === 0) {
       throw new Error("Journey story choice immediate cost cannot be empty when provided.");
+    }
+    if (
+      option.summary?.fieldTriggerScope !== undefined &&
+      option.summary.fieldTriggerScope !== "category"
+    ) {
+      throw new Error(
+        `Journey story choice field-trigger scope "${String(option.summary.fieldTriggerScope)}" is invalid.`,
+      );
     }
     if (optionIds.has(option.id)) {
       throw new Error("Journey story choice option ids must be unique.");

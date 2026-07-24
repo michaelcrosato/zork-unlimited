@@ -1470,10 +1470,16 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect one available optional departure story without changing the journey or snapshot.",
+  "Inspect one optional story listed in departure_interactions without changing the journey or snapshot. The default compact result is a short comparison; pass option_id to add only that option's complete terms. Developer compact_result:false intentionally returns the canonical full story.",
   {
     ...OVERWORLD_SESSION,
     story_choice_id: z.string().describe("Story choice id from departure_interactions."),
+    option_id: z
+      .string()
+      .optional()
+      .describe(
+        "Exact option id from story.options. Default compact output adds only its complete terms; compact_result:false validates the id but returns the canonical full story.",
+      ),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.inspect_overworld_session_story(defaultCompactOverworld(a)),

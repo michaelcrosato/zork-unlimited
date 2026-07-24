@@ -24,15 +24,20 @@ export function presentOpeningPreparation(
       parsed.profiles.map((profile) => {
         const terms = openingPreparationTerms(profile, character);
         const sponsorship = terms.sponsorNote ? ` ${terms.sponsorNote}` : "";
+        const triggerCategory = profile.trigger_category;
+        const cost = formatOpeningPreparationCost(terms);
         return Object.freeze({
           id: profile.id,
           label: profile.title,
           summary: Object.freeze({
             commitment: profile.summary,
-            fieldTrigger: profile.preview,
-            immediateCost: formatOpeningPreparationCost(terms),
+            fieldTrigger: triggerCategory ?? profile.preview,
+            ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
+            immediateCost: cost,
           }),
-          consequence: `${profile.summary} ${profile.preview} Actual cost: ${formatOpeningPreparationCost(terms)}.${sponsorship} ${profile.consequence}`,
+          consequence: triggerCategory
+            ? `${profile.summary} ${triggerCategory} Full field terms: ${profile.preview} Actual cost: ${cost}.${sponsorship} ${profile.consequence}`
+            : `${profile.summary} ${profile.preview} Actual cost: ${cost}.${sponsorship} ${profile.consequence}`,
         });
       }),
     ) as JourneyPreparationStoryChoiceOptions,

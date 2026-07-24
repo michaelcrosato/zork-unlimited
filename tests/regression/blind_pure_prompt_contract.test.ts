@@ -110,6 +110,11 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("context.job_choices");
     expect(prompt).toContain("exact `[job_id, option_id]` tuple");
     expect(prompt).toMatch(/passing\s+both values unchanged/);
+    expect(prompt).toContain("versioned comparison contains short option summaries");
+    expect(prompt).toContain("exact option `id` as");
+    expect(prompt).toContain("`option_id`");
+    expect(prompt).toContain("reveals only that option");
+    expect(prompt).toContain("need not expand every option");
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");
     expect(prompt).toContain("forbidden structural tool");
     expect(prompt).toContain("Only then conduct the exit interview");

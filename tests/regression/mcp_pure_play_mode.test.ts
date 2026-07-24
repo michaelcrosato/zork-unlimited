@@ -1972,15 +1972,44 @@ describe("MCP pure play mode", () => {
           }),
         );
         const preparationChoice = inspected.story as {
+          comparisonVersion?: number;
           kind?: string;
-          options?: { id: string }[];
+          options?: { id: string; consequence?: string }[];
+          inspectedOption?: { id: string; consequence: string } | null;
         };
+        expect(preparationChoice?.comparisonVersion).toBe(1);
         expect(preparationChoice?.kind).toBe("preparation");
+        expect(preparationChoice?.inspectedOption).toBeNull();
+        expect(
+          preparationChoice?.options?.every((option) => option.consequence === undefined),
+        ).toBe(true);
         const worksFortification = preparationChoice?.options?.find(
           (option) => option.id === "albany:prep_works_fortification",
         );
         if (!worksFortification)
           throw new Error("expected visible works-fortification preparation");
+        const detailed = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: "albany:wolf_preparation",
+              option_id: worksFortification.id,
+            },
+          }),
+        );
+        expect(detailed.snapshot_hash).toBe(inspected.snapshot_hash);
+        const detailedPreparation = detailed.story as {
+          options?: { id: string; consequence?: string }[];
+          inspectedOption?: { id: string; consequence: string } | null;
+        };
+        expect(detailedPreparation.inspectedOption).toMatchObject({
+          id: worksFortification.id,
+          consequence: expect.stringContaining("Full field terms:"),
+        });
+        expect(
+          detailedPreparation.options?.every((option) => option.consequence === undefined),
+        ).toBe(true);
         const prepared = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",

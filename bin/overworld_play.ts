@@ -242,8 +242,11 @@ export function renderJourneyGate(journey: JourneyPresentation): string {
     lines.push(`    ${String(index + 1)}. ${option.label}`);
     const summary = "summary" in option ? option.summary : undefined;
     if (summary) {
-      lines.push(`       Commitment: ${summary.commitment}`);
-      lines.push(`       Field trigger: ${summary.fieldTrigger}`);
+      const usesTriggerCategory = summary.fieldTriggerScope === "category";
+      lines.push(`       ${usesTriggerCategory ? "Purpose" : "Commitment"}: ${summary.commitment}`);
+      lines.push(
+        `       ${usesTriggerCategory ? "Trigger category" : "Field trigger"}: ${summary.fieldTrigger}`,
+      );
       if (summary.immediateCost) lines.push(`       Immediate cost: ${summary.immediateCost}`);
     }
     lines.push(`       Consequence: ${option.consequence}`);

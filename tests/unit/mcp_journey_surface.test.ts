@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
+  compactJourneyStoryChoiceComparison,
   compactJourneyPresentation,
   compactJourneyStoryChoicePrompt,
+  JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
 } from "../../src/mcp/journey_projection.js";
 import {
   INITIAL_JOURNEY_GOAL,
@@ -854,11 +856,27 @@ describe("MCP journey surface", () => {
       compact_context: false,
       compact_result: true,
     }).story;
-    expect(compactPreparationStory).toEqual(compactJourneyStoryChoicePrompt(fullPreparationStory));
+    expect(compactPreparationStory).toEqual(
+      compactJourneyStoryChoiceComparison(fullPreparationStory),
+    );
     expect(compactPreparationStory).not.toEqual(fullPreparationStory);
     expect(compactContextFullStory).toEqual(fullPreparationStory);
     expect(fullContextCompactStory).toEqual(compactPreparationStory);
-    expect(compactPreparationStory).toMatchObject({ kind: "preparation" });
+    expect(compactPreparationStory).toMatchObject({
+      comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+      kind: "preparation",
+      inspectedOption: null,
+    });
+    expect(
+      compactPreparationStory.options.every(
+        (option) => option.summary?.fieldTriggerScope === "category",
+      ),
+    ).toBe(true);
+    expect(
+      fullPreparationStory.options.every(
+        (option) => option.summary?.fieldTriggerScope === "category",
+      ),
+    ).toBe(true);
 
     a.choose_overworld_session_story({
       session_id: compact.session_id,
@@ -884,9 +902,219 @@ describe("MCP journey surface", () => {
       story_choice_id: RELIEF_ALLOCATION_STORY_ID,
       ...FULL_OVERWORLD,
     }).story;
-    expect(compactAllocation).toEqual(compactJourneyStoryChoicePrompt(fullAllocation));
+    expect(compactAllocation).toEqual(compactJourneyStoryChoiceComparison(fullAllocation));
     expect(compactAllocation).not.toEqual(fullAllocation);
-    expect(compactAllocation).toMatchObject({ kind: "relief_allocation" });
+    expect(compactAllocation).toMatchObject({
+      comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+      kind: "relief_allocation",
+      inspectedOption: null,
+    });
+  });
+
+  it("reserves story inspection for optional departures without leaking a presented choice", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const registration = WORLD.opening_registration;
+    if (!registration) throw new Error("expected Albany's opening registration");
+    a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: "albany_city__civic_core__poi",
+    });
+    const presented = a.talk_overworld_session_contact({
+      session_id: started.session_id,
+      character_id: registration.contact,
+    }).journey.storyChoice;
+    if (!presented) throw new Error("expected a currently presented registration");
+    expect(presented).toMatchObject({ id: registration.id, kind: "registration" });
+
+    const before = a.export_overworld_session({ session_id: started.session_id });
+    if (!before.ok) throw new Error("expected an exportable presented-choice session");
+    const expectedError = `Story choice "${registration.id}" is already presented in journey.storyChoice; inspect_overworld_session_story is only for optional departure_interactions.`;
+    const inspectError = (full: boolean): string => {
+      try {
+        if (full) {
+          a.inspect_overworld_session_story({
+            session_id: started.session_id,
+            story_choice_id: registration.id,
+            ...FULL_OVERWORLD,
+          });
+        } else {
+          a.inspect_overworld_session_story({
+            session_id: started.session_id,
+            story_choice_id: registration.id,
+          });
+        }
+      } catch (error) {
+        return (error as Error).message;
+      }
+      throw new Error("presented story inspection unexpectedly succeeded");
+    };
+    const compactError = inspectError(false);
+    const fullError = inspectError(true);
+    expect(compactError).toBe(expectedError);
+    expect(fullError).toBe(expectedError);
+    for (const option of presented.options) {
+      expect(compactError).not.toContain(option.label);
+      expect(compactError).not.toContain(option.consequence);
+      expect(fullError).not.toContain(option.label);
+      expect(fullError).not.toContain(option.consequence);
+    }
+    expect(a.export_overworld_session({ session_id: started.session_id })).toEqual(before);
+  });
+
+  it("stages compact departure terms without mutating zero-, one-, or multi-inspection play", () => {
+    const a = api();
+    const registrationContact = WORLD.opening_registration?.contact;
+    const preparation = WORLD.opening_preparation;
+    if (!registrationContact || !preparation) {
+      throw new Error("expected Albany's registration and preparation");
+    }
+
+    const reachPreparation = (): string => {
+      const started = a.start_overworld();
+      a.scout_overworld_session_poi({
+        session_id: started.session_id,
+        poi_id: "albany_city__civic_core__poi",
+      });
+      a.talk_overworld_session_contact({
+        session_id: started.session_id,
+        character_id: registrationContact,
+      });
+      a.choose_overworld_session_story({
+        session_id: started.session_id,
+        choice: "albany:ledger_advocate",
+      });
+      a.choose_overworld_session_story({
+        session_id: started.session_id,
+        choice: LIMITED_RELIEF_OATH_ID,
+      });
+      a.choose_overworld_session_story({
+        session_id: started.session_id,
+        choice: "albany:source_rowan_civic_docket",
+      });
+      const beforeMove = a.get_overworld_session({
+        session_id: started.session_id,
+        include_observation: true,
+      });
+      const route = beforeMove.observation.areaExits.find(
+        (candidate) => candidate.destination.id === preparation.area,
+      );
+      if (!route) throw new Error("expected a route to the preparation board");
+      a.move_overworld_session_area({
+        session_id: started.session_id,
+        area_route_id: route.id,
+      });
+      return started.session_id;
+    };
+
+    const [zeroInspectionId, oneInspectionId, multipleInspectionId] = [
+      reachPreparation(),
+      reachPreparation(),
+      reachPreparation(),
+    ];
+    const optionId = preparation.profiles[0]!.id;
+    const otherOptionId = preparation.profiles[1]!.id;
+
+    const beforeOne = a.export_overworld_session({ session_id: oneInspectionId });
+    if (!beforeOne.ok) throw new Error("expected an exportable comparison session");
+    const comparisonResponse = a.inspect_overworld_session_story({
+      session_id: oneInspectionId,
+      story_choice_id: preparation.id,
+    });
+    const afterOne = a.export_overworld_session({ session_id: oneInspectionId });
+    expect(afterOne).toEqual(beforeOne);
+    expect(comparisonResponse).toMatchObject({
+      snapshot_hash: beforeOne.snapshot_hash,
+      journey: beforeOne.journey,
+      story: {
+        comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+        id: preparation.id,
+        kind: "preparation",
+        inspectedOption: null,
+      },
+    });
+    expect(comparisonResponse.story.options).toHaveLength(preparation.profiles.length);
+    for (const option of comparisonResponse.story.options) {
+      expect(option).not.toHaveProperty("consequence");
+    }
+    const comparisonJson = JSON.stringify(comparisonResponse.story);
+    for (const profile of preparation.profiles) {
+      expect(comparisonJson).not.toContain(profile.preview);
+      expect(comparisonJson).not.toContain(profile.consequence);
+    }
+
+    const beforeMultiple = a.export_overworld_session({ session_id: multipleInspectionId });
+    if (!beforeMultiple.ok) throw new Error("expected an exportable detail session");
+    const firstDetail = a.inspect_overworld_session_story({
+      session_id: multipleInspectionId,
+      story_choice_id: preparation.id,
+      option_id: optionId,
+    });
+    const secondDetail = a.inspect_overworld_session_story({
+      session_id: multipleInspectionId,
+      story_choice_id: preparation.id,
+      option_id: otherOptionId,
+    });
+    const afterMultiple = a.export_overworld_session({ session_id: multipleInspectionId });
+    expect(afterMultiple).toEqual(beforeMultiple);
+    expect(firstDetail.story.inspectedOption).toMatchObject({
+      id: optionId,
+      consequence: expect.stringContaining(preparation.profiles[0]!.preview),
+    });
+    expect(secondDetail.story.inspectedOption).toMatchObject({
+      id: otherOptionId,
+      consequence: expect.stringContaining(preparation.profiles[1]!.preview),
+    });
+    const firstDetailJson = JSON.stringify(firstDetail.story);
+    expect(firstDetailJson).toContain(preparation.profiles[0]!.preview);
+    expect(firstDetailJson).toContain(preparation.profiles[0]!.consequence);
+    for (const profile of preparation.profiles.slice(1)) {
+      expect(firstDetailJson).not.toContain(profile.preview);
+      expect(firstDetailJson).not.toContain(profile.consequence);
+    }
+
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: multipleInspectionId,
+        story_choice_id: preparation.id,
+        option_id: "albany:not_a_preparation",
+      }),
+    ).toThrow(`Story choice "${preparation.id}" does not offer option "albany:not_a_preparation".`);
+    expect(a.export_overworld_session({ session_id: multipleInspectionId })).toEqual(
+      beforeMultiple,
+    );
+    expect(afterMultiple.snapshot.minutes).toBe(beforeMultiple.snapshot.minutes);
+    expect(afterMultiple.snapshot.character.money).toBe(beforeMultiple.snapshot.character.money);
+    expect(afterMultiple.journey.acceptedDecisions).toBe(beforeMultiple.journey.acceptedDecisions);
+
+    const choose = (sessionId: string) =>
+      a.choose_overworld_session_story({
+        session_id: sessionId,
+        story_choice_id: preparation.id,
+        choice: optionId,
+      });
+    const zeroChoice = choose(zeroInspectionId);
+    const oneChoice = choose(oneInspectionId);
+    const multipleChoice = choose(multipleInspectionId);
+    expect(oneChoice.result).toEqual(zeroChoice.result);
+    expect(multipleChoice.result).toEqual(zeroChoice.result);
+    expect(oneChoice.snapshot_hash).toBe(zeroChoice.snapshot_hash);
+    expect(multipleChoice.snapshot_hash).toBe(zeroChoice.snapshot_hash);
+
+    const fullSessionId = reachPreparation();
+    const fullStory = a.inspect_overworld_session_story({
+      session_id: fullSessionId,
+      story_choice_id: preparation.id,
+      ...FULL_OVERWORLD,
+    });
+    const fullStoryWithOption = a.inspect_overworld_session_story({
+      session_id: fullSessionId,
+      story_choice_id: preparation.id,
+      option_id: optionId,
+      ...FULL_OVERWORLD,
+    });
+    expect(fullStoryWithOption).toEqual(fullStory);
+    expect(fullStory.story.options.every((option) => "consequence" in option)).toBe(true);
   });
 
   it("makes a pending parent choice the only legal move inside an embedded quest", () => {

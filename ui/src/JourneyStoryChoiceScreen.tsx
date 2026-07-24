@@ -112,20 +112,27 @@ export function JourneyStoryChoiceScreen({
         >
           {storyChoice.options.map((option) => {
             const conciseSummary = option.summary;
+            const usesTriggerCategory = conciseSummary?.fieldTriggerScope === "category";
             return (
               <div key={option.id} className="journey-choice-card">
                 <button type="button" onClick={() => onChoose(option.id)}>
                   <strong>{option.label}</strong>
                   {conciseSummary ? (
                     <span className="journey-choice-summary">
-                      <b>Commitment:</b> {conciseSummary.commitment}
+                      <b>{usesTriggerCategory ? "Purpose:" : "Commitment:"}</b>{" "}
+                      {conciseSummary.commitment}
                     </span>
                   ) : (
                     <span>{option.consequence}</span>
                   )}
                   {conciseSummary && (
                     <small className="journey-choice-trigger">
-                      <b>First field trigger / tradeoff:</b> {conciseSummary.fieldTrigger}
+                      <b>
+                        {usesTriggerCategory
+                          ? "Trigger category:"
+                          : "First field trigger / tradeoff:"}
+                      </b>{" "}
+                      {conciseSummary.fieldTrigger}
                     </small>
                   )}
                   {conciseSummary?.immediateCost && (
@@ -136,7 +143,7 @@ export function JourneyStoryChoiceScreen({
                 </button>
                 {conciseSummary && (
                   <details className="journey-choice-details">
-                    <summary>Full terms and consequence</summary>
+                    <summary>{`Full terms and consequence for ${option.label}`}</summary>
                     <p>{option.consequence}</p>
                   </details>
                 )}

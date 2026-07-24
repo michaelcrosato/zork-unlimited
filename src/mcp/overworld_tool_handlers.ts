@@ -74,11 +74,13 @@ import { runRpgGetObservation } from "./rpg_session_tools.js";
 import type { RpgViewOptions } from "./rpg_view_projection.js";
 import type { SessionStore } from "./sessions.js";
 import {
+  compactJourneyStoryChoiceComparison,
   compactJourneyPresentation,
-  compactJourneyStoryChoicePrompt,
+  journeyStoryChoiceOptionById,
   journeyBlocksGameplay,
   suppressRpgGameplayActions,
   type EmbeddedJourneyField,
+  type JourneyStoryChoiceComparison,
 } from "./journey_projection.js";
 import type {
   JourneyDecisionClassification,
@@ -758,21 +760,35 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       Args extends {
         session_id: string;
         story_choice_id: string;
+        option_id?: string;
       } & OverworldResponseOptions,
     >(
       args: Args,
     ): OverworldSessionResponse<
       "story",
       JourneyStoryChoicePrompt,
-      DefaultCompactOverworldResponse<Args>
+      DefaultCompactOverworldResponse<Args>,
+      JourneyStoryChoiceComparison
     > {
       const responseOptions = defaultCompactOverworldResponse(args);
       return overworldSessions.run(
         responseOptions,
         args.session_id,
         "story",
-        (session) => session.inspectJourneyStory(args.story_choice_id),
-        compactJourneyStoryChoicePrompt,
+        (session) => {
+          const presentedStory = session.journey().storyChoice;
+          if (presentedStory?.id === args.story_choice_id) {
+            throw new Error(
+              `Story choice "${args.story_choice_id}" is already presented in journey.storyChoice; inspect_overworld_session_story is only for optional departure_interactions.`,
+            );
+          }
+          const story = session.inspectJourneyStory(args.story_choice_id);
+          if (args.option_id !== undefined) {
+            journeyStoryChoiceOptionById(story, args.option_id);
+          }
+          return story;
+        },
+        (story) => compactJourneyStoryChoiceComparison(story, args.option_id),
       );
     },
 

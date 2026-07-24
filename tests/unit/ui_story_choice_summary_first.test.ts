@@ -37,6 +37,29 @@ function registrationJourney(): ReturnType<OverworldSession["journey"]> {
   return session.journey();
 }
 
+function preparationJourney(): ReturnType<OverworldSession["journey"]> {
+  const session = new OverworldSession(WORLD);
+  const registration = WORLD.opening_registration;
+  const oath = WORLD.opening_relief_oath;
+  const source = WORLD.opening_lead_source;
+  const preparation = WORLD.opening_preparation;
+  if (!registration || !oath || !source || !preparation) {
+    throw new Error("Albany must retain its opening dispatch.");
+  }
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(registration.contact);
+  session.chooseJourneyStory(registration.profiles[0]!.id);
+  session.chooseJourneyStory(oath.options[0]!.id);
+  session.chooseJourneyStory(source.options[0]!.id);
+  const route = session
+    .view()
+    .areaExits.find((candidate) => candidate.destination.id === preparation.area);
+  if (!route) throw new Error("Expected a route to Albany's Station preparation board.");
+  session.moveArea(route.id);
+  const storyChoice = session.inspectJourneyStory(preparation.id);
+  return Object.freeze({ ...session.journey(), storyChoice });
+}
+
 describe("JourneyStoryChoiceScreen summary-first cards", () => {
   it("keeps native disclosures separate from choice buttons and routes only choices to onChoose", async () => {
     const uiRoot = resolve(process.cwd(), "ui");
@@ -121,6 +144,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
 
       const rootElement = container as {
         querySelector: (selector: string) => unknown;
+        querySelectorAll: (selector: string) => ArrayLike<unknown>;
       };
       const card = rootElement.querySelector(".journey-choice-card") as {
         querySelector: (selector: string) => unknown;
@@ -175,6 +199,51 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         choiceButton.click();
       });
       expect(selected).toEqual([registration.options[0]!.id]);
+
+      const stationJourney = preparationJourney();
+      const stationPreparation = WORLD.opening_preparation!;
+      await act(async () => {
+        root!.render(
+          react.createElement(module.JourneyStoryChoiceScreen, {
+            journey: stationJourney,
+            onChoose: (choiceId: string) => selected.push(choiceId),
+          }),
+        );
+      });
+      const stationCard = rootElement.querySelector(".journey-choice-card") as {
+        querySelector: (selector: string) => { textContent: string | null } | null;
+      } | null;
+      const stationButton = stationCard?.querySelector("button");
+      const stationDetails = stationCard?.querySelector("details p");
+      if (!stationButton || !stationDetails) {
+        throw new Error("Expected the Station preparation comparison and full-terms disclosure.");
+      }
+      expect(stationButton.textContent).toContain("Purpose:");
+      expect(stationButton.textContent).toContain("Trigger category:");
+      expect(stationButton.textContent).toContain("Immediate cost:");
+      expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.summary);
+      expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.trigger_category);
+      expect(stationButton.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
+      expect(stationDetails.textContent).toContain(stationPreparation.profiles[0]!.preview);
+      expect(stationDetails.textContent).toContain(stationPreparation.profiles[0]!.consequence);
+      const stationDisclosures = Array.from(
+        rootElement.querySelectorAll(".journey-choice-details > summary"),
+      ) as Array<{
+        textContent: string | null;
+        dispatchEvent: (event: unknown) => boolean;
+      }>;
+      const disclosureNames = stationDisclosures.map((summary) => summary.textContent);
+      expect(disclosureNames).toEqual(
+        stationPreparation.profiles.map(
+          (profile) => `Full terms and consequence for ${profile.title}`,
+        ),
+      );
+      expect(new Set(disclosureNames).size).toBe(stationPreparation.profiles.length);
+      const selectedBeforeDisclosure = [...selected];
+      await act(async () => {
+        stationDisclosures[0]!.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+      });
+      expect(selected).toEqual(selectedBeforeDisclosure);
     } finally {
       if (root && act) {
         await act(async () => root!.unmount());

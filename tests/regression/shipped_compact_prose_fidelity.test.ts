@@ -183,6 +183,7 @@ type OpeningSourceOption = Readonly<{
   id: string;
   title: string;
   summary: string;
+  trigger_category?: string | undefined;
   preview: string;
   consequence: string;
 }>;
@@ -218,11 +219,20 @@ function expectOpeningPromptExact(
         sourceOption.summary,
         projectedOption!.summary!.commitment,
       );
-      expectExact(
-        `opening:${source.id}.${sourceOption.id}.preview`,
-        sourceOption.preview,
-        projectedOption!.summary!.fieldTrigger,
-      );
+      if (projectedOption!.summary!.fieldTriggerScope === "category") {
+        expectExact(
+          `opening:${source.id}.${sourceOption.id}.trigger_category`,
+          sourceOption.trigger_category!,
+          projectedOption!.summary!.fieldTrigger,
+        );
+        expect(projectedOption!.consequence).toContain(`Full field terms: ${sourceOption.preview}`);
+      } else {
+        expectExact(
+          `opening:${source.id}.${sourceOption.id}.preview`,
+          sourceOption.preview,
+          projectedOption!.summary!.fieldTrigger,
+        );
+      }
     } else {
       expect(projectedOption!.consequence).toContain(sourceOption.summary);
       expect(projectedOption!.consequence).toContain(sourceOption.preview);

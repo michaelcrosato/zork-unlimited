@@ -117,9 +117,13 @@ WHEN TO CONTINUE OR END
 - The context may also list optional `departure_interactions` at the Station.
   You may leave without choosing one. To consider one, first call
   `mcp__adventureforge__inspect_overworld_session_story` with its visible
-  `story_choice_id`; inspection does not change the game. If you choose an
-  inspected option, call `mcp__adventureforge__choose_overworld_session_story`
-  with both that `story_choice_id` and the option's visible `id` as `choice`.
+  `story_choice_id`; the versioned comparison contains short option summaries
+  and inspection does not change the game. To read one option's complete terms,
+  call the same inspection tool again with that exact option `id` as
+  `option_id`. It reveals only that option and still does not change the game.
+  You need not expand every option. If you choose an option, call
+  `mcp__adventureforge__choose_overworld_session_story` with both that
+  `story_choice_id` and the option's visible `id` as `choice`.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, normally
