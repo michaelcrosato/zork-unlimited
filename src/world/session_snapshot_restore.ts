@@ -397,8 +397,11 @@ export const OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before the progressive Station preparation comparison. */
 export const OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH =
   "951c541f10fefa869449427ef15666a7546ced7172144c85866e465d6f3f9de0";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before the Relief Allocation comparison gained trigger categories. */
+export const OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH =
   "42357dc467518106d3a4753a246ea672de03638a2d8f0aca240f5818a579ed3d";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -2533,6 +2536,10 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesReliefProtocolTriggerCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH;
+  const migratesReliefAllocationTriggerCategory =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash ===
+      OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH;
   const migratesCadeStoryPredicate =
     migrationTargetsCurrentManifest &&
     AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash);
@@ -2588,6 +2595,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     sourceSnapshot.worldHash !== worldHash &&
     migrationEra === null &&
     !migratesReliefProtocolTriggerCopy &&
+    !migratesReliefAllocationTriggerCategory &&
     !migratesJuneReturnCopy &&
     !migratesCadeStoryPredicate &&
     !migratesAuthoredLocalJob &&

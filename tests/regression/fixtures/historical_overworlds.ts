@@ -80,11 +80,29 @@ export function exactReliefProtocolTriggerCopyPredecessor(
   if (!preparation || !relief) {
     throw new Error("Albany must retain Jamie's Relief Protocol preparation");
   }
+  for (const option of predecessor.opening_relief_allocation?.options ?? []) {
+    Reflect.deleteProperty(option, "trigger_category");
+  }
   for (const profile of preparation.profiles) {
     Reflect.deleteProperty(profile, "trigger_category");
   }
   relief.summary = RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY;
   relief.preview = RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW;
+  return predecessor;
+}
+
+/** Reconstruct the exact manifest before Relief Allocation comparison categories. */
+export function exactReliefAllocationTriggerCategoryPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const allocation = predecessor.opening_relief_allocation;
+  if (!allocation) {
+    throw new Error("Albany must retain the Wolf-Winter Relief Allocation");
+  }
+  for (const option of allocation.options) {
+    Reflect.deleteProperty(option, "trigger_category");
+  }
   return predecessor;
 }
 

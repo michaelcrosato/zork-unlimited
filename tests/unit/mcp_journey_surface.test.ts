@@ -1101,6 +1101,58 @@ describe("MCP journey surface", () => {
     expect(oneChoice.snapshot_hash).toBe(zeroChoice.snapshot_hash);
     expect(multipleChoice.snapshot_hash).toBe(zeroChoice.snapshot_hash);
 
+    const allocation = WORLD.opening_relief_allocation;
+    if (!allocation) throw new Error("expected Albany's Relief Allocation");
+    const allocationOptionId = allocation.options[0]!.id;
+    const beforeAllocation = a.export_overworld_session({ session_id: oneInspectionId });
+    if (!beforeAllocation.ok) throw new Error("expected an exportable allocation session");
+    const allocationComparison = a.inspect_overworld_session_story({
+      session_id: oneInspectionId,
+      story_choice_id: allocation.id,
+    });
+    expect(a.export_overworld_session({ session_id: oneInspectionId })).toEqual(beforeAllocation);
+    expect(allocationComparison).toMatchObject({
+      snapshot_hash: beforeAllocation.snapshot_hash,
+      journey: beforeAllocation.journey,
+      story: {
+        comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+        id: allocation.id,
+        kind: "relief_allocation",
+        inspectedOption: null,
+      },
+    });
+    const allocationComparisonJson = JSON.stringify(allocationComparison.story);
+    for (const allocationOption of allocation.options) {
+      expect(allocationComparisonJson).not.toContain(allocationOption.preview);
+      expect(allocationComparisonJson).not.toContain(allocationOption.consequence);
+      expect(
+        allocationComparison.story.options.find((option) => option.id === allocationOption.id),
+      ).toMatchObject({
+        summary: {
+          commitment: allocationOption.summary,
+          fieldTrigger: allocationOption.trigger_category,
+          fieldTriggerScope: "category",
+        },
+      });
+    }
+
+    const allocationDetail = a.inspect_overworld_session_story({
+      session_id: oneInspectionId,
+      story_choice_id: allocation.id,
+      option_id: allocationOptionId,
+    });
+    expect(a.export_overworld_session({ session_id: oneInspectionId })).toEqual(beforeAllocation);
+    expect(allocationDetail.story.inspectedOption).toMatchObject({
+      id: allocationOptionId,
+      consequence: expect.stringContaining(allocation.options[0]!.preview),
+    });
+    const allocationDetailJson = JSON.stringify(allocationDetail.story);
+    expect(allocationDetailJson).toContain(allocation.options[0]!.consequence);
+    for (const otherOption of allocation.options.slice(1)) {
+      expect(allocationDetailJson).not.toContain(otherOption.preview);
+      expect(allocationDetailJson).not.toContain(otherOption.consequence);
+    }
+
     const fullSessionId = reachPreparation();
     const fullStory = a.inspect_overworld_session_story({
       session_id: fullSessionId,
@@ -1115,6 +1167,31 @@ describe("MCP journey surface", () => {
     });
     expect(fullStoryWithOption).toEqual(fullStory);
     expect(fullStory.story.options.every((option) => "consequence" in option)).toBe(true);
+
+    a.choose_overworld_session_story({
+      session_id: fullSessionId,
+      story_choice_id: preparation.id,
+      choice: optionId,
+      ...FULL_OVERWORLD,
+    });
+    const fullAllocation = a.inspect_overworld_session_story({
+      session_id: fullSessionId,
+      story_choice_id: allocation.id,
+      ...FULL_OVERWORLD,
+    });
+    const fullAllocationWithOption = a.inspect_overworld_session_story({
+      session_id: fullSessionId,
+      story_choice_id: allocation.id,
+      option_id: allocationOptionId,
+      ...FULL_OVERWORLD,
+    });
+    expect(fullAllocationWithOption).toEqual(fullAllocation);
+    expect(fullAllocation.story.options).toHaveLength(allocation.options.length);
+    for (const allocationOption of allocation.options) {
+      expect(
+        fullAllocation.story.options.find((option) => option.id === allocationOption.id),
+      ).toMatchObject({ consequence: expect.stringContaining(allocationOption.preview) });
+    }
   });
 
   it("makes a pending parent choice the only legal move inside an embedded quest", () => {

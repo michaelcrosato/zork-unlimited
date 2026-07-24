@@ -20,20 +20,25 @@ export function presentOpeningReliefAllocation(
     kind: "relief_allocation" as const,
     message: `${parsed.title}. ${parsed.message}`,
     options: Object.freeze(
-      parsed.options.map((option) =>
-        Object.freeze({
+      parsed.options.map((option) => {
+        const triggerCategory = option.trigger_category;
+        const cost = formatOpeningReliefAllocationCost(option.terms);
+        return Object.freeze({
           id: option.id,
           label: option.title,
           summary: Object.freeze({
             commitment: option.summary,
-            fieldTrigger: option.preview,
-            immediateCost: formatOpeningReliefAllocationCost(option.terms),
+            fieldTrigger: triggerCategory ?? option.preview,
+            ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
+            immediateCost: cost,
           }),
-          consequence:
-            `${option.summary} ${option.preview} Protects: ${option.protects} ` +
-            `Leaves exposed: ${option.leaves_exposed} Actual cost: ${formatOpeningReliefAllocationCost(option.terms)}. ${option.consequence}`,
-        }),
-      ),
+          consequence: triggerCategory
+            ? `${option.summary} ${triggerCategory} Full field terms: ${option.preview} Protects: ${option.protects} ` +
+              `Leaves exposed: ${option.leaves_exposed} Actual cost: ${cost}. ${option.consequence}`
+            : `${option.summary} ${option.preview} Protects: ${option.protects} ` +
+              `Leaves exposed: ${option.leaves_exposed} Actual cost: ${cost}. ${option.consequence}`,
+        });
+      }),
     ) as JourneyReliefAllocationStoryChoiceOptions,
   });
 }
