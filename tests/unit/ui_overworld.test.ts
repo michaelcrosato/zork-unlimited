@@ -544,7 +544,13 @@ describe("OverworldSession", () => {
     expect(screen).toContain('className="journey-choice-summary"');
     expect(screen).toContain('className="journey-choice-trigger"');
     expect(screen).toContain('className="journey-choice-cost"');
-    expect(screen).toContain("<summary>Full terms and consequence</summary>");
+    expect(screen).toContain(
+      'const usesTriggerCategory = conciseSummary?.fieldTriggerScope === "category";',
+    );
+    expect(screen).toContain('usesTriggerCategory ? "Purpose:" : "Commitment:"');
+    expect(screen).toContain(
+      "<summary>{`Full terms and consequence for ${option.label}`}</summary>",
+    );
     expect(styles).toContain(".journey-choice-actions .journey-choice-card > button");
     expect(styles).toContain(
       ".journey-choice-actions:not(.journey-choice-actions-registration)\n  .journey-choice-card:first-child\n  > button",

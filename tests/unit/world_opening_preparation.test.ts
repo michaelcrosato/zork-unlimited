@@ -393,6 +393,9 @@ describe("opening preparation application and presentation", () => {
       consequence:
         "Reese walks you through the damaged waterworks ledger. You will enter knowing which frozen valves matter. Actual cost: 25 minutes and $4. Reese remembers that you trusted the civic plan.",
     });
+    expect(publicPrompt.options[0]!.summary).not.toHaveProperty("fieldTriggerScope");
+    expect(publicPrompt.options[0]!.consequence).not.toContain("Full field terms:");
+    expect(publicPrompt.options[0]!.consequence.match(/frozen valves matter/g)).toHaveLength(1);
     expect(Object.isFrozen(publicPrompt)).toBe(true);
     expect(Object.isFrozen(publicPrompt.options)).toBe(true);
     expect(Object.isFrozen(publicPrompt.options[0])).toBe(true);

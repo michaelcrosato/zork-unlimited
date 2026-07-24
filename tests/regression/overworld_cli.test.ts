@@ -345,6 +345,33 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     }
   });
 
+  it("labels categorized Station preparation summaries without changing legacy trigger labels", () => {
+    const registration = WORLD.opening_registration;
+    const oath = WORLD.opening_relief_oath;
+    const source = WORLD.opening_lead_source;
+    const preparation = WORLD.opening_preparation;
+    if (!registration || !oath || !source || !preparation) {
+      throw new Error("Albany must retain its opening preparation flow.");
+    }
+    const session = new OverworldSession(WORLD);
+    session.scoutPoi(session.view().pois[0]!.id);
+    session.talkToCharacter(registration.contact);
+    session.chooseJourneyStory(registration.profiles[0]!.id);
+    session.chooseJourneyStory(oath.options[0]!.id);
+    session.chooseJourneyStory(source.options[0]!.id);
+    moveToArea(session, preparation.area);
+    const storyChoice = session.inspectJourneyStory(preparation.id);
+    const text = renderJourneyGate({ ...session.journey(), storyChoice });
+
+    for (const option of storyChoice.options) {
+      expect(option.summary?.fieldTriggerScope).toBe("category");
+      expect(text).toContain(`Purpose: ${option.summary!.commitment}`);
+      expect(text).toContain(`Trigger category: ${option.summary!.fieldTrigger}`);
+      expect(text).not.toContain(`Commitment: ${option.summary!.commitment}`);
+      expect(text).not.toContain(`Field trigger: ${option.summary!.fieldTrigger}`);
+    }
+  });
+
   it("rejects an ambiguous shared-prefix journey label instead of silently taking the first", () => {
     const options = [
       { id: "send_cade", label: "Send the wagon to Cade" },

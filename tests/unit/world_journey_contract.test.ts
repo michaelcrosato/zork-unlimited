@@ -22,6 +22,7 @@ import {
   type JourneyContractSnapshot,
   type JourneyGoalDefinition,
   type JourneyAllyStoryChoiceOptions,
+  type JourneyPreparationStoryChoiceOptions,
   type JourneyReliefOathStoryChoiceOptions,
   type JourneyRegistrationStoryChoiceOptions,
   type JourneyStoryChoicePrompt,
@@ -923,6 +924,44 @@ describe("journey contract presentation context", () => {
     expect(() => journeyPresentation(state, { storyChoice: summaryLessSetup })).toThrow(
       /setup choice options require a concise summary/i,
     );
+  });
+
+  it("preserves and validates the optional field-trigger category discriminator", () => {
+    const state = createInitialJourneyContractSnapshot();
+    const preparation = {
+      id: "albany_preparation",
+      kind: "preparation",
+      message: "Compare the three preparation purposes.",
+      options: Array.from({ length: 3 }, (_, index) => ({
+        id: `preparation_${String(index)}`,
+        label: `Preparation ${String(index)}`,
+        summary: {
+          commitment: `Purpose ${String(index)}.`,
+          fieldTrigger: `Trigger category ${String(index)}.`,
+          fieldTriggerScope: "category" as const,
+          immediateCost: `${String(index + 5)} minutes`,
+        },
+        consequence: `Full terms ${String(index)}.`,
+      })) as unknown as JourneyPreparationStoryChoiceOptions,
+    } satisfies JourneyStoryChoicePrompt;
+
+    const view = journeyPresentation(state, { storyChoice: preparation });
+    expect(
+      view.storyChoice?.options.every((option) => option.summary?.fieldTriggerScope === "category"),
+    ).toBe(true);
+    expect(view.storyChoice?.options.every((option) => Object.isFrozen(option.summary))).toBe(true);
+
+    const invalid = structuredClone(preparation);
+    (
+      invalid.options[0]!.summary as unknown as {
+        fieldTriggerScope: string;
+      }
+    ).fieldTriggerScope = "exact";
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: invalid as unknown as JourneyStoryChoicePrompt,
+      }),
+    ).toThrow(/field-trigger scope "exact" is invalid/i);
   });
 
   it("deep-freezes a typed ally commitment with three or four unique options", () => {

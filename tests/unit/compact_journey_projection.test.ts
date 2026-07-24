@@ -15,6 +15,10 @@ import type {
   JourneyStoryChoiceOptions,
   JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
+import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
+
+const WORLD = loadOverworldManifest(process.cwd());
 
 function twoOptionPrompt(option: JourneyStoryChoiceOption): JourneyStoryChoicePrompt {
   return Object.freeze({
@@ -91,6 +95,32 @@ describe("compact journey projection", () => {
     }) as JourneyStoryChoicePrompt;
 
     expect(compactJourneyStoryChoicePrompt(ally)).toBe(ally);
+  });
+
+  it("keeps exact Station preparation terms behind the concise compact comparison", () => {
+    const preparation = WORLD.opening_preparation;
+    const character = WORLD.opening_registration?.profiles[0]?.character;
+    if (!preparation || !character) {
+      throw new Error("Albany must retain registration and opening preparation.");
+    }
+    const full = presentOpeningPreparation(preparation, character);
+    const compact = compactJourneyStoryChoicePrompt(full);
+
+    for (const profile of preparation.profiles) {
+      const triggerCategory = profile.trigger_category;
+      if (!triggerCategory) throw new Error(`Preparation ${profile.id} needs a trigger category.`);
+      const option = compact.options.find((candidate) => candidate.id === profile.id);
+      expect(option?.summary).toEqual({
+        commitment: profile.summary,
+        fieldTrigger: triggerCategory,
+        fieldTriggerScope: "category",
+        immediateCost: expect.any(String),
+      });
+      expect(option?.consequence).toContain(`Full field terms: ${profile.preview}`);
+      expect(option?.consequence).toContain(profile.consequence);
+      expect(option?.consequence).not.toContain(profile.summary);
+      expect(option?.consequence).not.toContain(triggerCategory);
+    }
   });
 
   it.each([

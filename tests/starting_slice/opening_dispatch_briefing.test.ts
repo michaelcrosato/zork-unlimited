@@ -82,6 +82,32 @@ function expectCompactSummaryOptions(storyChoice: JourneyStoryChoicePrompt): voi
   }
 }
 
+function expectProgressivePreparationOptions(
+  storyChoice: JourneyStoryChoicePrompt,
+  compact = false,
+): void {
+  for (const profile of PREPARATION.profiles) {
+    const triggerCategory = profile.trigger_category;
+    if (!triggerCategory) throw new Error(`Preparation ${profile.id} needs a trigger category.`);
+    const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
+    expect(option?.summary).toEqual({
+      commitment: profile.summary,
+      fieldTrigger: triggerCategory,
+      fieldTriggerScope: "category",
+      immediateCost: expect.any(String),
+    });
+    expect(option?.summary?.commitment.split(/\s+/).length).toBeLessThanOrEqual(16);
+    expect(option?.summary?.fieldTrigger.split(/\s+/).length).toBeLessThanOrEqual(10);
+    expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|success|failure)\b/i);
+    expect(option?.consequence).toContain(`Full field terms: ${profile.preview}`);
+    expect(option?.consequence).toContain(profile.consequence);
+    if (compact) {
+      expect(option?.consequence).not.toContain(profile.summary);
+      expect(option?.consequence).not.toContain(triggerCategory);
+    }
+  }
+}
+
 describe("Albany Wolf-Winter dispatch briefing", () => {
   it("makes the mission concrete before choice one and separates Civic from departure decisions", () => {
     const session = new OverworldSession(WORLD);
@@ -174,6 +200,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(preparation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(preparation);
     expectSummaryFirstOptions(preparation);
+    expectProgressivePreparationOptions(preparation);
     expect(preparation.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(
       OverworldSession.restore(WORLD, session.snapshot()).inspectJourneyStory(PREPARATION.id),
@@ -278,6 +305,8 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(mcpPreparation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(mcpPreparation);
     expectCompactSummaryOptions(mcpPreparation);
+    expectProgressivePreparationOptions(mcpPreparation, true);
     expectSummaryFirstOptions(uiPreparation);
+    expectProgressivePreparationOptions(uiPreparation);
   });
 });

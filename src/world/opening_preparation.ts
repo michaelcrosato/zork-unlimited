@@ -23,6 +23,14 @@ const AUTHORED_TEXT = z
     message: "Authored text cannot be blank.",
   });
 
+const PREPARATION_TRIGGER_CATEGORY = z
+  .string()
+  .min(1)
+  .max(80)
+  .refine((value) => value.trim().length > 0, {
+    message: "Preparation trigger category cannot be blank.",
+  });
+
 export const OpeningPreparationTermsSchema = z
   .object({
     minutes: z
@@ -58,6 +66,7 @@ export const OpeningPreparationProfileSchema = z
     title: AUTHORED_TEXT,
     provider_npc_id: CampaignCharacterIdSchema,
     summary: AUTHORED_TEXT,
+    trigger_category: PREPARATION_TRIGGER_CATEGORY.optional(),
     preview: AUTHORED_TEXT,
     consequence: AUTHORED_TEXT,
     terms: OpeningPreparationTermsSchema,
@@ -149,6 +158,17 @@ export const OpeningPreparationSchema = z
   .superRefine((scene, ctx) => {
     const profileIds = new Set<string>();
     const knowledgeIds = new Set<string>();
+    const categorizedProfiles = scene.profiles.filter(
+      (profile) => profile.trigger_category !== undefined,
+    );
+    if (categorizedProfiles.length !== 0 && categorizedProfiles.length !== scene.profiles.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["profiles"],
+        message:
+          "Opening preparation trigger categories must cover every profile or remain absent on an exact legacy manifest.",
+      });
+    }
     scene.profiles.forEach((profile, profileIndex) => {
       if (profileIds.has(profile.id)) {
         ctx.addIssue({

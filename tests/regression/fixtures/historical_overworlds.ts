@@ -1,6 +1,10 @@
 import type { OverworldManifest } from "../../../src/world/overworld.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "../../../src/world/frost_jamb_signpost_legacy.js";
 import { AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE } from "../../../src/world/local_job_scene_legacy.js";
+import {
+  RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW,
+  RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY,
+} from "../../../src/world/relief_protocol_trigger_copy_legacy.js";
 import type { OverworldSessionSnapshot } from "../../../src/world/session_snapshot.js";
 
 const RELIEF_OATH_SERVICE_IDS: ReadonlySet<string> = new Set([
@@ -64,9 +68,75 @@ const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:cade_pasture_search_unaffiliated_greenway_resupply",
 ]);
 
+/** Reconstruct the exact manifest before the Station preparation comparison changed. */
+export function exactReliefProtocolTriggerCopyPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const preparation = predecessor.opening_preparation;
+  const relief = preparation?.profiles.find(
+    (profile) => profile.id === "albany:prep_relief_protocol",
+  );
+  if (!preparation || !relief) {
+    throw new Error("Albany must retain Jamie's Relief Protocol preparation");
+  }
+  for (const profile of preparation.profiles) {
+    Reflect.deleteProperty(profile, "trigger_category");
+  }
+  relief.summary = RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY;
+  relief.preview = RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW;
+  return predecessor;
+}
+
+/** Reverse only the persisted Relief Protocol copy for historical fixtures. */
+export function exactReliefProtocolTriggerCopyPredecessorSnapshot(
+  current: OverworldManifest,
+  currentSnapshot: OverworldSessionSnapshot,
+): OverworldSessionSnapshot {
+  const predecessor = structuredClone(currentSnapshot);
+  const preparation = current.opening_preparation;
+  const relief = preparation?.profiles.find(
+    (profile) => profile.id === "albany:prep_relief_protocol",
+  );
+  if (!preparation || !relief) {
+    throw new Error("Albany must retain Jamie's current Relief Protocol preparation");
+  }
+  const selectionId = `preparation:${preparation.id}:${relief.id}`;
+  predecessor.journalEntries = predecessor.journalEntries.map((entry) => {
+    if (entry.id !== selectionId) return entry;
+    if (
+      entry.kind === "preparation" &&
+      entry.text.includes(RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY) &&
+      entry.text.includes(RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW)
+    ) {
+      return entry;
+    }
+    if (entry.kind !== "preparation") {
+      throw new Error(
+        `Current Relief Protocol fixture entry "${entry.id}" does not match its exact authored copy.`,
+      );
+    }
+    let text = entry.text;
+    for (const [before, after] of [
+      [relief.summary, RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY],
+      [relief.preview, RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW],
+    ] as const) {
+      const firstMatch = text.indexOf(before);
+      if (firstMatch < 0 || text.indexOf(before, firstMatch + before.length) >= 0) {
+        throw new Error(
+          `Current Relief Protocol fixture entry "${entry.id}" does not match its exact authored copy.`,
+        );
+      }
+      text = `${text.slice(0, firstMatch)}${after}${text.slice(firstMatch + before.length)}`;
+    }
+    return { ...entry, text };
+  });
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before Hayden's frost-jamb route was truthfully signposted. */
 export function exactFrostJambSignpostPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactReliefProtocolTriggerCopyPredecessor(current);
   const leadSource = predecessor.opening_lead_source;
   const preparation = predecessor.opening_preparation;
   const haydenSource = leadSource?.options.find(
@@ -100,7 +170,7 @@ export function exactFrostJambSignpostPredecessorSnapshot(
   current: OverworldManifest,
   currentSnapshot: OverworldSessionSnapshot,
 ): OverworldSessionSnapshot {
-  const predecessor = structuredClone(currentSnapshot);
+  const predecessor = exactReliefProtocolTriggerCopyPredecessorSnapshot(current, currentSnapshot);
   const leadSource = current.opening_lead_source;
   const preparation = current.opening_preparation;
   const haydenSource = leadSource?.options.find(

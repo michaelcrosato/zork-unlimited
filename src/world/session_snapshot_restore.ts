@@ -153,6 +153,10 @@ import {
 } from "./opening_preparation_journal.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "./frost_jamb_signpost_legacy.js";
 import {
+  RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW,
+  RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY,
+} from "./relief_protocol_trigger_copy_legacy.js";
+import {
   openingReliefAllocationLegacyJournalEntry,
   openingReliefAllocationLegacySourceWorldHash,
   proveOpeningReliefAllocationJournal,
@@ -390,8 +394,11 @@ export {
 /** Exact manifest immediately before the truthful frost-jamb signpost correction. */
 export const OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH =
   "282cf14228d10495a12632919a50567960d06325e9182aa77232fc1c333d0aa9";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before the progressive Station preparation comparison. */
+export const OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH =
   "951c541f10fefa869449427ef15666a7546ced7172144c85866e465d6f3f9de0";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "42357dc467518106d3a4753a246ea672de03638a2d8f0aca240f5818a579ed3d";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -621,6 +628,44 @@ type OpeningRegistrationLegacyJournalProof = Readonly<{
   journalIndex: number;
   sourceWorldHash: string;
 }>;
+
+function normalizeReliefProtocolTriggerCopyPredecessorJournal(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  const preparation = args.indexes.openingPreparation;
+  const relief = preparation?.profiles.find(
+    (profile) => profile.id === "albany:prep_relief_protocol",
+  );
+  if (!preparation || !relief) {
+    throw new Error(
+      "Relief Protocol trigger-copy migration target must retain Jamie's preparation profile.",
+    );
+  }
+  const selectionId = openingPreparationJournalId(preparation.id, relief.id);
+  return args.journalEntries.map((entry) => {
+    if (entry.id !== selectionId) return entry;
+    if (entry.kind !== "preparation") {
+      throw new Error(
+        `Relief Protocol predecessor journal entry "${entry.id}" is not a preparation selection.`,
+      );
+    }
+    let text = entry.text;
+    for (const [before, after] of [
+      [RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY, relief.summary],
+      [RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW, relief.preview],
+    ] as const) {
+      const firstMatch = text.indexOf(before);
+      if (firstMatch < 0 || text.indexOf(before, firstMatch + before.length) >= 0) {
+        throw new Error(
+          `Relief Protocol predecessor journal entry "${entry.id}" does not match its exact authored copy.`,
+        );
+      }
+      text = `${text.slice(0, firstMatch)}${after}${text.slice(firstMatch + before.length)}`;
+    }
+    return Object.freeze({ ...entry, text });
+  });
+}
 
 function replaceFrostJambPredecessorCopy(args: {
   entry: OverworldJournalEntry;
@@ -2485,6 +2530,9 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesJuneReturnCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH;
+  const migratesReliefProtocolTriggerCopy =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH;
   const migratesCadeStoryPredicate =
     migrationTargetsCurrentManifest &&
     AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash);
@@ -2539,6 +2587,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   if (
     sourceSnapshot.worldHash !== worldHash &&
     migrationEra === null &&
+    !migratesReliefProtocolTriggerCopy &&
     !migratesJuneReturnCopy &&
     !migratesCadeStoryPredicate &&
     !migratesAuthoredLocalJob &&
@@ -2546,6 +2595,24 @@ export function planOverworldSessionSnapshotRestore(args: {
   ) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
+  const normalizesReliefProtocolTriggerCopy =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    (migratesReliefProtocolTriggerCopy ||
+      migrationEra !== null ||
+      migratesJuneReturnCopy ||
+      migratesCadeStoryPredicate ||
+      migratesAuthoredLocalJob ||
+      migratesAuthoredLocalEvent);
+  const snapshotWithReliefProtocolTriggerCopy = normalizesReliefProtocolTriggerCopy
+    ? Object.freeze({
+        ...sourceSnapshot,
+        journalEntries: normalizeReliefProtocolTriggerCopyPredecessorJournal({
+          indexes,
+          journalEntries: sourceSnapshot.journalEntries,
+        }),
+      })
+    : sourceSnapshot;
   const normalizesFrostJambCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
@@ -2556,13 +2623,13 @@ export function planOverworldSessionSnapshotRestore(args: {
       migratesAuthoredLocalEvent);
   const snapshotWithFrostJambCopy = normalizesFrostJambCopy
     ? Object.freeze({
-        ...sourceSnapshot,
+        ...snapshotWithReliefProtocolTriggerCopy,
         journalEntries: normalizeFrostJambSignpostPredecessorJournal({
           indexes,
-          journalEntries: sourceSnapshot.journalEntries,
+          journalEntries: snapshotWithReliefProtocolTriggerCopy.journalEntries,
         }),
       })
-    : sourceSnapshot;
+    : snapshotWithReliefProtocolTriggerCopy;
   const normalizesJuneReturnCopy =
     migratesJuneReturnCopy ||
     migrationEra === "relief_oath" ||

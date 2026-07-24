@@ -859,6 +859,16 @@ describe("MCP journey surface", () => {
     expect(compactContextFullStory).toEqual(fullPreparationStory);
     expect(fullContextCompactStory).toEqual(compactPreparationStory);
     expect(compactPreparationStory).toMatchObject({ kind: "preparation" });
+    expect(
+      compactPreparationStory.options.every(
+        (option) => option.summary?.fieldTriggerScope === "category",
+      ),
+    ).toBe(true);
+    expect(
+      fullPreparationStory.options.every(
+        (option) => option.summary?.fieldTriggerScope === "category",
+      ),
+    ).toBe(true);
 
     a.choose_overworld_session_story({
       session_id: compact.session_id,

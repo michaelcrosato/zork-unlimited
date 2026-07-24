@@ -16,7 +16,11 @@ import {
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
-import { applyOpeningPreparationProfile } from "../../src/world/opening_preparation.js";
+import {
+  applyOpeningPreparationProfile,
+  parseOpeningPreparation,
+} from "../../src/world/opening_preparation.js";
+import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const world = loadOverworldManifest(process.cwd());
@@ -48,6 +52,9 @@ const index = indexRpgPack(pack);
 const WORKS = "albany:prep_works_fortification";
 const DROVER = "albany:prep_drover_route";
 const RELIEF = "albany:prep_relief_protocol";
+const RELIEF_TRIGGER_CATEGORY = "Herd calming after the public-rail lure recovery.";
+const RELIEF_PREVIEW =
+  "Commit to the lure, foul its first feed cast, fail the public wedge, then bind and spend the split-rail guard to redirect the yearling alive. Return to Cade before the loft cast to open one Mediation check (DC 12). A clean cast, braced rail, or any other recovery does not qualify. Success lowers cattle alarm by 1; failure raises it by 1. The protocol retires either way without blocking the lure, and Mediation training improves the check.";
 const IRONHANDS = "albany:ironhands_repairer";
 const COURIER = "albany:unaffiliated_courier";
 const LEDGER = "albany:ledger_advocate";
@@ -101,8 +108,12 @@ function reachPaling(state: GameState): GameState {
   return act(state, "go_north");
 }
 
+function reachFirstLureCast(state: GameState): GameState {
+  return act(state, "go_north");
+}
+
 function foulFirstCast(state: GameState): GameState {
-  state = act(state, "go_north");
+  state = reachFirstLureCast(state);
   state = act(state, "talk_houndsman");
   state = act(state, "ask_lure");
   state = act(state, "ask_commit_lure");
@@ -150,6 +161,11 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       ],
     });
     expect(preparation.profiles.every((profile) => profile.terms.money <= 4)).toBe(true);
+    const partiallyCategorized = structuredClone(preparation);
+    Reflect.deleteProperty(partiallyCategorized.profiles[0]!, "trigger_category");
+    expect(() => parseOpeningPreparation(partiallyCategorized)).toThrow(
+      /trigger categories must cover every profile/i,
+    );
     expect(
       preparation.profiles.map((profile) =>
         profile.effects.find((effect) => effect.type === "learn_knowledge"),
@@ -368,6 +384,22 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
   });
 
   it("makes Relief Mediation change pressure once after the exact public rail recovery", () => {
+    const reliefProfile = preparation.profiles.find((profile) => profile.id === RELIEF);
+    expect(reliefProfile).toMatchObject({
+      trigger_category: RELIEF_TRIGGER_CATEGORY,
+      preview: RELIEF_PREVIEW,
+    });
+    const presented = presentOpeningPreparation(
+      preparation,
+      registration.profiles[0]!.character,
+    ).options.find((option) => option.id === RELIEF);
+    expect(presented?.summary).toEqual({
+      commitment: reliefProfile?.summary,
+      fieldTrigger: RELIEF_TRIGGER_CATEGORY,
+      fieldTriggerScope: "category",
+      immediateCost: "30 minutes and $4",
+    });
+    expect(presented?.consequence).toContain(`Full field terms: ${RELIEF_PREVIEW}`);
     let specialist = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, LEDGER)));
     let generalist = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, COURIER)));
     specialist = act(specialist, "go_south");
@@ -396,6 +428,35 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       endingId: "ending_pack_diverted_cattle_scattered",
       vars: { cattle_alarm: 5 },
     });
+  });
+
+  it("opens Relief only at Cade after the spent split guard, never after a braced rail", () => {
+    const beforeFirstCast = reachFirstLureCast(profileState(RELIEF, LEDGER));
+    expect(actionIds(beforeFirstCast)).not.toContain("wedge_paling_rail");
+    expect(actionIds(beforeFirstCast)).not.toContain("use_relief_protocol_docket");
+
+    let splitGuard = foulFirstCast(profileState(RELIEF, LEDGER));
+    expect(actionIds(splitGuard)).toContain("wedge_paling_rail");
+    expect(actionIds(splitGuard)).not.toContain("use_relief_protocol_docket");
+    splitGuard = recoverWithSplitRail(splitGuard);
+    expect(splitGuard.current).toBe("paling_gap");
+    expect(actionIds(splitGuard)).not.toContain("use_relief_protocol_docket");
+    splitGuard = act(splitGuard, "go_south");
+    expect(splitGuard.current).toBe("byre_yard");
+    expect(actionIds(splitGuard)).toContain("use_relief_protocol_docket");
+
+    let braced = foulFirstCast(profileState(RELIEF, LEDGER));
+    braced = act(braced, "wedge_paling_rail", 20);
+    expect(braced.flags.breach_braced).toBe(true);
+    expect(braced.flags.rail_split).not.toBe(true);
+    braced = act(braced, "turn_paling_rail");
+    expect(braced.flags).toMatchObject({
+      yearling_redirected: true,
+      yearling_redirected_with_braced_rail: true,
+    });
+    braced = act(braced, "go_south");
+    expect(braced.current).toBe("byre_yard");
+    expect(actionIds(braced)).not.toContain("use_relief_protocol_docket");
   });
 
   it("adds two fortify outcomes while preserving every prior nondeath and death identity", () => {
