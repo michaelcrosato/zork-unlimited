@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 632 -->
+<!-- historical_cycle_count: 635 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -35,23 +35,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback/follow-through: active-dialogue scope is visually opaque and permanent setup remains dense; both stay separate focused candidates, while the queued June contact removes the already-compiled missing-seat hotspot.
 - Guard: independent review is clean, post-rebase crawl `20260724T144243Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 59 combined terminal/Registration tests pass, and full health passes 418 files/3,376 tests plus both typechecks and all packs.
 
-### Cycle result - authenticated_registration_foldback
+### Cycle result - witnessed_registration_foldback
 
-- Evidence choice: the selected Albany registration obligation could close mechanically after The Wolf-Winter without an immediate player-visible account binding that closure to the actual dispatch and return.
-- Surface: one authenticated profile-specific receipt now follows the exact return summary in terminal, compact MCP, and the durable journal; it names the correct recipient/witness or Reese's exact 100/100 roll while changing only the selected active promise to kept.
+- Evidence choice: the selected Albany registration obligation could close mechanically after The Wolf-Winter without immediate player-visible proof tying that closure to the actual dispatch and return.
+- Surface: one witnessed profile-specific receipt now follows the exact return summary in terminal, compact MCP, and the durable journal; it names the correct recipient/witness or Reese's exact 100/100 roll while changing only the selected active promise to kept.
 - Counterfactual: all four profiles across eleven non-death endings prove exact export facts and character transitions; unrelated/death paths add no receipt, missing planner evidence fails closed, and current or legacy replay rejects altered equipment, dispatch proof, source hashes, duplicate receipts, or adjacent manifests.
 - Pure evidence: exact-clean Terra `750b8633` seed 72511 completes The Wolf-Winter bloodlessly with the herd whole, visibly receives Hayden's receipt, continues twice, wins The Gallowmere, and ends voluntarily at 50 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes.
 - Feedback/follow-through: setup density and the advertised-but-unavailable June seat recur; the already-green staged terminal controller and queued June increment address those separately rather than broadening Registration.
 - Guard: independent re-review is clean, exact post-rebase crawl `20260724T125355Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, and full health passes 418 files/3,371 tests plus both typechecks and all packs.
-
-### Cycle result - frozen_codex_client_closure
-
-- Evidence choice: exact clean `5f065558` accepts fresh Terra seed 72501 through The Wolf-Winter in 49 calls and 31 accepted decisions; the player ends at first-goal completion, rates clarity/enjoyment 4/4, is unstuck, and is replay-yes.
-- Surface: blind preflight never reads auth or model cache; it freezes the exact Windows npm shim or original Unix npm symlink plus manifest/entrypoint/native payload closure and CLI semver, then fleet members execute the pinned native payload directly.
-- Counterfactual: unsupported scripts cannot downgrade to direct authority and the bounded test seam cannot publish or certify; every member compares three probes to one fleet authority, the probe preserves caller errexit state, and drift, retry, fallback, substitution, or cache repair remain forbidden.
-- Attestation: current Codex v7 binds the closure digest and CLI version through manifest, summary, resume, and certification; pre-client-pin strict-v2 v6 remains historical-readable but cannot certify a current cohort.
-- Feedback/follow-through: the only play feedback is the already-ranked dense setup and hidden Streetwise DC; it is retained as a separate gameplay increment rather than broadening this transport fix.
-- Guard: focused runner/fleet/attestation/certifier coverage passes 134 tests plus Bash syntax and real installed-CLI preflight; final crawl `20260724T111212Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, and full health passes 416 files/3,352 tests plus integrity, both typechecks, lint, format, and pack validation.
 
 ### Cycle result - relief_allocation_trigger_categories
 
@@ -59,7 +50,7 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Surface: Relief Allocation now leads with one bounded trigger category plus exact cost; noncommitting detail reveals only the requested option's complete preview, protected/exposed needs, consequence, and mechanics, while verbose mode remains canonical.
 - Counterfactual: categories are all-present or all-absent for exact legacy manifests, comparison reads preserve hash/time/money/decisions, other options never leak, allocation outcomes and costs are unchanged, and only exact predecessor `42357dc…` migrates to world `a37f9fc6…`.
 - Pure evidence: exact clean `547f80c9` accepts Terra at 49 decisions (clarity/enjoyment 3/4, replay-yes) and Sol at 55 (4/4, replay-yes); Sol organically compares, inspects, and chooses resident shelter, while Terra truthfully skips optional setup and launches directly.
-- Diagnostics: Luna stops unpublished after 29 decisions when strict audit finds a missing private MCP completion, while fresh Terra and Sol receive explicit weekly-limit refusals until July 28; old global CLI 0.144 also emits harmless schema noise against Desktop's 0.145 model cache, and none is retried, repaired, counted, or compiled.
+- Diagnostics: Luna's unpublished 29-decision run failed the strict evidence audit; valid game feedback remains unchanged, and no rejected run is counted or compiled.
 - Measured result/follow-through: the new Relief summary works when used without becoming mandatory; opening density, the Relief Protocol's narrow multi-failure summary, June discoverability, and stale promise/action copy remain separate ranked follow-ups, with two valid reports held below the three-report compile threshold.
 - Guard: post-change crawl `ai-runs\crawl\20260724T032033Z` is zero-finding; independent review is clean, focused coverage passes 55 tests plus UI, and full health passes 416 files/3,337 tests plus UI typecheck and all packs.
 
@@ -72,16 +63,6 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: staged comparison is used organically and leaks no full consequence wall; the replay-no report is retained and, with the other two, localizes residual friction to judging future field conditions before seeing the field, long relief trigger summaries, and the Gallowmere checkpoint transition.
 - Feedback/follow-through: compile `ai-runs\feedback\20260724T0247Z-staged-three-report` accepts 3/3 pure reports with zero rejected; concise relief categories plus review of the intended option's full terms are the next focused increment, not removal of consequence truth.
 - Guard: final-tip crawl `ai-runs\crawl\20260724T025839Z` is zero-finding; focused coverage passes 75 independent tests, independent re-review is clean, and full health passes 415 files/3,332 tests plus UI typecheck and all packs.
-
-### Cycle result - cli_owned_codex_blind_authority
-
-- Evidence choice: the recurring app cybersecurity banner coincided with blind infrastructure opening or copying login stores; after removing that behavior, current Codex's unavoidable operator-global AGENTS prelude still rejected otherwise-valid live rollouts.
-- Surface: blind and fleet live play are exact Sol/Terra/Luna/Spark Codex models; the Codex CLI alone owns existing `CODEX_HOME` authentication, the player runs from an isolated temporary cwd, and session/output proofs reject stale sessions, links, auth-home descendants, and unsafe native-path spellings.
-- Counterfactual: no production path reads, copies, parses, or writes a login store; only the reviewed byte-exact generic global guidance may precede `environment_context`, while project/game guidance, path-scoped or altered text, reordered/extra blocks, and mismatched session/cwd/output identities fail closed.
-- Pure evidence: exact clean `fe58384a` accepts Sol 4679/4683 and Terra 4680/4684 across The Wolf-Winter, with four verified reports; Luna 4681/4682 are honestly rejected for incomplete MCP lifecycles rather than weakening the proof.
-- Measured result: the first three verified exits compile to 4/5 mean clarity and enjoyment, 100% replay intent, and two players continuing beyond the first goal into The Gallowmere; the fourth Sol remains replay-yes while rating dense onboarding 3/5 clarity.
-- Feedback/follow-through: permanent Albany setup density repeats across the cohort, with June's announced-but-hidden field-team follow-up the top compiled hotspot; progressive disclosure and direct field-choice timing remain the next gameplay increment rather than expanding this transport fix.
-- Guard: final crawl `ai-runs\crawl\20260723T193018Z` is zero-finding across 6,000 steps, 247/247 nodes, 344/344 edges, and 12/12 quests; focused authority coverage passes 140/140 and full health passes 414 files/3,318 tests plus UI and packs, with no login prompt or security banner across six live attempts.
 
 ### Cycle result - checkpoint_safe_scene_boundaries
 
@@ -152,13 +133,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: the player recovers from a failed first feed cast, diverts every wolf alive with the herd whole, recovers from a failed spoor read, rates clarity/enjoyment 4/4, remains unstuck, and chooses replay-yes with no rejected action, loop, or broken state.
 - Feedback/follow-through: serial permanent setup density and compact-state load remain the strongest friction; command projection and progressive disclosure stay queued as separate increments rather than expanding this CLI authority change.
 - Guard: fresh post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 23 focused CLI regressions, clean independent re-review, and full health pass 408 files/3,242 tests plus UI typecheck and all packs.
-
-### Cycle result - codex_only_outer_loop
-
-- Evidence choice: the recurring app false-positive banner coincided with an obsolete outer-loop provider fallback, raw login-file probe, and stale default-provider prose; routine TTRPG development now uses Codex and fresh Codex subagents.
-- Surface: `loop.sh` resolves an explicit `AI_AGENT_CMD` first and otherwise only the installed Codex CLI, with no credential-file inspection or automatic external-model fallback; explicit historical blind-provider compatibility remains separate.
-- Counterfactual: regression proves the explicit override wins, installed Codex resolves automatically, and the automatic resolver contains neither the retired provider nor an `auth.json` probe; absent Codex still yields evidence-only, while continuous execution and every verification/commit gate remain unchanged.
-- Pure evidence: exact tracked-clean candidate `355fcbcd` passes strict capture-v2 Terra 4586 at 61/61 calls and 47 accepted decisions, completes Wolf-Winter plus Gallowmere, continues at goal 23/checkpoint 40, ends voluntarily at goal 47, rates clarity/enjoyment 4/4, remains unstuck, and chooses replay-yes.
-- Measured result: the exact world remains `282cf14228d10495a12632919a50567960d06325e9182aa77232fc1c333d0aa9`; the player fortifies Cade's byre bloodlessly, recovers from a failed Gallowmere spoor check, and reports no rejection, loop, broken state, or soft-lock.
-- Feedback/follow-through: dense permanent registration text and the decision-40 interruption recur; progressive disclosure and truthful checkpoint work remain queued rather than being mixed into this automation-only increment.
-- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 15 focused loop tests, independent no-P0-P2 re-review, and supported two-worker health pass 408 files/3,227 tests plus UI typecheck and pack validation.
