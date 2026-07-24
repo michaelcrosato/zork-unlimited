@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 631 -->
+<!-- historical_cycle_count: 632 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - june_departure_contact_lead
+
+- Evidence choice: repeated pure players were told June Pike could join the Wolf-Winter field team but received no visible action for finding her, so the advertised ally branch was functionally hidden.
+- Surface: one derived read-only Station lead names June and the preparation prerequisite, becomes the exact talk action after preparation, and keeps immediate solo launch explicit; full, compact-v29, MCP/pure, UI, and terminal consume the same tuple.
+- Counterfactual: deriving, cloning, rendering, and restoring the lead preserve snapshot hash and decision count; no ally offer exists before contact, and the lead disappears after contact, quest start, departure, a gameplay pause, or any resolved opening state.
+- Pure evidence: exact-clean Sol `4302e726` seed 72514 organically finds June, grants cattle-first authority, receives her failed-lure intervention, completes The Wolf-Winter and The Gallowmere, continues twice, and ends voluntarily; clarity/enjoyment 3/4, unstuck, replay-yes.
+- Rebased check: exact-clean native Terra human-terminal seed 72517 on `90f1d93f` organically finds June, chooses cattle-first, recovers a failed first cast, diverts every wolf alive with the herd whole, and ends voluntarily at first-goal completion in 10 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
+- Feedback/follow-through: two native terminal sessions now cluster opaque active-dialogue scope/help discovery; the false first-cast whole-sack claim observed on this pre-fix content is separately corrected and locked in prepared commit `0866db3d`.
+- Guard: independent review is clean, post-integration crawl `20260724T151511Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 187 focused tests pass, and full health passes 418 files/3,380 tests plus both typechecks and all packs.
 
 ### Cycle result - staged_terminal_story_choices
 
@@ -152,13 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: the exact world remains `282cf14228d10495a12632919a50567960d06325e9182aa77232fc1c333d0aa9`; the player fortifies Cade's byre bloodlessly, recovers from a failed Gallowmere spoor check, and reports no rejection, loop, broken state, or soft-lock.
 - Feedback/follow-through: dense permanent registration text and the decision-40 interruption recur; progressive disclosure and truthful checkpoint work remain queued rather than being mixed into this automation-only increment.
 - Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 15 focused loop tests, independent no-P0-P2 re-review, and supported two-worker health pass 408 files/3,227 tests plus UI typecheck and pack validation.
-
-### Cycle result - audited_codex_code_mode
-
-- Evidence choice: ten Spark 4420-4429 runs published nothing after direct-mode tool drift, while later code-mode cohorts exposed unauthenticated prelude notices, malformed wrappers, and exact MCP tool errors that the successful-result-only audit could not represent.
-- Surface: live Codex runs force `code_mode_only`; capture v2 authenticates the exact model prelude, sole leading 120s pragma, `result` declaration, JSON emitter, and byte-identical success/error lifecycle, while fleet attestation v5 carries the same contract.
-- Counterfactual: capture v1 and attestations v3/v4 remain historical-readable but cannot resume or certify a current authority cohort; altered notices/pragma/identifier/emitter, extra comments or keys, wrong ids/cwd, missing completions, and public/private status or byte mismatches fail closed.
-- Pure evidence: exact candidate `9abbbd4d` passes first-attempt strict capture-v2 Sol 4582 at 72/72 calls and 54 decisions and Terra 4583 at 61/61 calls and 51 decisions; both divert Wolf-Winter, win Gallowmere, end voluntarily, rate 4/4, remain unstuck, and choose replay-yes.
-- Measured result: 67 deduplicated completed Spark streams used 283,771,470 input-plus-output tokens; the combined 4500-4509 pilot removes the original preview-option defect in 10/10 and raises strict validity from 1/20 to 3/10, while wrapper generation remains the seven-run residual and the final 100 quota-closed preplay launches are excluded.
-- Feedback/follow-through: strict compile `20260722T175728Z` has five eligible pure exits, all clarity/enjoyment 4/4 and replay-yes; event-choice authority proceeds separately, and Spark resumes only after its provider reset rather than being mistaken for an authentication failure.
-- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; focused passes cover 231 tests plus a 153-test correction pass, independent adversarial re-review finds no P0-P2, and supported CI two-worker health passes 408 files/3,224 tests plus UI typecheck and pack validation.
