@@ -45,6 +45,9 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
   const quest = world.quests.find((candidate) => candidate.id === targetQuestId);
   if (!quest) return null;
   const ally = world.opening_ally;
+  const allyContact = ally
+    ? world.characters.find((candidate) => candidate.id === ally.contact)
+    : null;
   return {
     questTitle: quest.title,
     questDiscovery: quest.discovery,
@@ -59,10 +62,12 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
           .join(" Or: ")
       : null,
     optionalFollowup:
-      ally?.target_quest === targetQuestId && ally.after_preparation === preparation.id
-        ? `Optional field-team choice follows: ${listLabels(
+      ally?.target_quest === targetQuestId &&
+      ally.after_preparation === preparation.id &&
+      allyContact
+        ? `After resolving it, return to the Station actions. ${allyContact.name}'s field-team choice is a separate optional conversation before launch. Talk to ${allyContact.name} (terminal: \`talk ${allyContact.name}\`) to review ${listLabels(
             ally.options.map((option) => option.title),
-          )}.`
+          )}. You may instead launch ${quest.title} now as a solo rider.`
         : null,
     civicStages: Object.freeze([
       Object.freeze({
@@ -126,7 +131,11 @@ export function withOpeningDispatchBriefing(
       ? stageIndex === 0
         ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; two docket decisions stay open. Each changes field conditions or consequences; none locks your solution.`
         : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Still ahead here: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station departure board for field preparation and relief capacity."}`
-      : `Chosen for departure: ${listLabels(completed)}. Now choose: ${stage.label}. Still ahead: ${listLabels(remaining)}.${remaining.length === 0 && plan.optionalFollowup ? ` ${plan.optionalFollowup}` : ""}`;
+      : `Chosen for departure: ${listLabels(completed)}. Now choose: ${stage.label}.${
+          remaining.length > 0
+            ? ` Still ahead: ${listLabels(remaining)}.`
+            : ` This is the final required departure-board choice.${plan.optionalFollowup ? ` ${plan.optionalFollowup}` : ""}`
+        }`;
   const missionCard =
     departureStageIndex >= 0
       ? `Mission — ${plan.questDiscovery}${plan.launchBriefing ? ` Route preview — ${plan.launchBriefing}` : ""}`

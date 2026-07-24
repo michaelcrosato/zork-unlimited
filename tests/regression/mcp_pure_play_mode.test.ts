@@ -20,6 +20,7 @@ import {
   resolveVisibleAreaRouteId,
   toolAvailableInPlayMode,
 } from "../../src/mcp/server.js";
+import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
@@ -1762,10 +1763,23 @@ describe("MCP pure play mode", () => {
       quests: { id: string; area: string }[];
     };
     type CompactAreaContext = {
+      character?: OverworldCompactCampaignCharacter;
       poi?: [string, string][];
       contacts?: [string, string][];
       area_routes?: [string, string, number][];
       quests?: [string, string, string, unknown?][];
+      quest_starts?: [string, string][];
+      departure_contact_leads?: [
+        string,
+        "ally",
+        string,
+        "requires_preparation" | "ready",
+        string,
+        string,
+        string,
+        string,
+        string,
+      ][];
     };
     type RpgObservation = {
       exits: { direction: string; to?: string }[];
@@ -1783,6 +1797,17 @@ describe("MCP pure play mode", () => {
         })),
         quests: (context.quests ?? []).map(([id, _title, area]) => ({ id, area })),
       };
+    };
+    const expectJuneCattleFirst = (payload: Record<string, unknown>): void => {
+      const character = (payload.context as CompactAreaContext).character;
+      if (!character) throw new Error("expected compact campaign character state");
+      const [, , , , , , , , , promises, companions] = character;
+      expect(companions).toEqual(["albany:june_pike"]);
+      expect(promises).toContainEqual([
+        "albany:promise_june_cattle_first",
+        "albany:june_pike",
+        "active",
+      ]);
     };
     try {
       await withPureServer(evidence, async (client) => {
@@ -1824,6 +1849,9 @@ describe("MCP pure play mode", () => {
         );
         const sessionId = String(started.session_id);
         expect(started.overworld_session_id).toBe(sessionId);
+        expect((started.legend as Record<string, string>).departure_contact_leads).toMatch(
+          /requires_preparation.*ready.*talk_overworld_session_contact.*solo default/i,
+        );
         let view = areaView(started);
         const openingPoi = view.pois[0]?.id;
         if (!openingPoi) throw new Error("expected opening Albany point of interest");
@@ -1960,6 +1988,23 @@ describe("MCP pure play mode", () => {
             }
           ).departure_interactions,
         ).toEqual([["albany:wolf_preparation", "preparation", expect.any(String)]]);
+        expect((stationed.context as CompactAreaContext).departure_contact_leads).toEqual([
+          [
+            "albany:wolf_ally_commitment",
+            "ally",
+            "Choose the Wolf-Winter Field Team",
+            "requires_preparation",
+            "albany_city__transport_hub__june_pike",
+            "June Pike",
+            "wolf_winter",
+            "The Wolf-Winter",
+            expect.stringMatching(/choose a Station preparation.*solo rider/i),
+          ],
+        ]);
+        expect((stationed.context as CompactAreaContext).quest_starts).toContainEqual([
+          "wolf_winter",
+          expect.any(String),
+        ]);
         const inspected = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2022,6 +2067,82 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        const readyDepartureLead = (prepared.context as CompactAreaContext)
+          .departure_contact_leads?.[0];
+        expect(readyDepartureLead).toEqual([
+          "albany:wolf_ally_commitment",
+          "ally",
+          "Choose the Wolf-Winter Field Team",
+          "ready",
+          "albany_city__transport_hub__june_pike",
+          "June Pike",
+          "wolf_winter",
+          "The Wolf-Winter",
+          expect.stringMatching(/talk to June Pike.*solo rider/i),
+        ]);
+        if (!readyDepartureLead) throw new Error("expected June's ready departure contact lead");
+        const juneContactId = readyDepartureLead[4];
+        const juneConversation = textPayload(
+          await client.callTool({
+            name: "talk_overworld_session_contact",
+            arguments: {
+              session_id: sessionId,
+              character_id: juneContactId,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        expect(
+          (juneConversation.context as CompactAreaContext).departure_contact_leads,
+        ).toBeUndefined();
+        const allyChoice = (
+          juneConversation.journey as {
+            storyChoice?: {
+              id?: string;
+              kind?: string;
+              options?: { id: string }[];
+            };
+          }
+        ).storyChoice;
+        expect(allyChoice).toMatchObject({
+          id: "albany:wolf_ally_commitment",
+          kind: "ally",
+        });
+        if (!allyChoice?.id) throw new Error("expected June's active field-team choice");
+        const cattleFirst = allyChoice.options?.find(
+          (option) => option.id === "albany:ally_june_cattle_first",
+        );
+        if (!cattleFirst) throw new Error("expected June's visible cattle-first option");
+        const allied = textPayload(
+          await client.callTool({
+            name: "choose_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: allyChoice.id,
+              choice: cattleFirst.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        expect((allied.context as CompactAreaContext).departure_contact_leads).toBeUndefined();
+        expectJuneCattleFirst(allied);
+        expect((allied.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
+        const persistedAlly = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(
+          (persistedAlly.context as CompactAreaContext).departure_contact_leads,
+        ).toBeUndefined();
+        expectJuneCattleFirst(persistedAlly);
+        expect((prepared.context as CompactAreaContext).quest_starts).toContainEqual([
+          "wolf_winter",
+          expect.any(String),
+        ]);
         const wolfWinter = areaView(prepared).quests.find((quest) => quest.id === "wolf_winter");
         if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
         const allocated = textPayload(
@@ -2036,6 +2157,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        expectJuneCattleFirst(allocated);
         view = areaView(allocated);
         const marketRoute = view.areaExits.find(
           (route) => route.destination.id === "albany_city__market",

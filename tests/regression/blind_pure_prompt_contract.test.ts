@@ -106,6 +106,15 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("normal player");
     expect(prompt).toContain("context.quest_starts");
     expect(prompt).toContain("pass those values unchanged");
+    expect(prompt).toContain("read-only `departure_contact_leads`");
+    expect(prompt).toContain("A `requires_preparation` lead has no available");
+    expect(prompt).toContain("For a `ready` lead you may call");
+    expect(prompt).toContain("mcp__adventureforge__talk_overworld_session_contact");
+    expect(prompt).toContain("`contact_id` as `character_id`");
+    expect(prompt).toContain("only that conversation can present the actual");
+    expect(prompt).toContain("disclosed solo default");
+    expect(prompt).toContain("changes no game state");
+    expect(prompt).toContain("or decision count");
     expect(prompt).toContain("context.job_scenes");
     expect(prompt).toContain("context.job_choices");
     expect(prompt).toContain("exact `[job_id, option_id]` tuple");

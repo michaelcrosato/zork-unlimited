@@ -60,7 +60,9 @@ import type {
 import { timeLabel } from "./session_journal_codec.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
 import {
+  compactOverworldDepartureContactLeads,
   compactOverworldDepartureInteractions,
+  type OverworldDepartureContactLead,
   type OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
 import type { JourneyOpportunityPresentation } from "./journey_contract.js";
@@ -79,6 +81,7 @@ export type OverworldSessionCompactViewState = {
   serviceOffers: readonly CampaignServiceOffer[];
   serviceActions: readonly OverworldServiceActionPresentation[];
   departureInteractions?: readonly OverworldDepartureInteraction[];
+  departureContactLeads?: readonly OverworldDepartureContactLead[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -149,6 +152,9 @@ export function buildOverworldSessionCompactView(
   const departureInteractions = compactOverworldDepartureInteractions(
     state.departureInteractions ?? [],
   );
+  const departureContactLeads = compactOverworldDepartureContactLeads(
+    state.departureContactLeads ?? [],
+  );
   const opportunityLeads = compactJourneyOpportunityLeads(state.opportunities);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: state.areas.length,
@@ -182,6 +188,7 @@ export function buildOverworldSessionCompactView(
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
     ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
+    ...(departureContactLeads.length > 0 ? { departure_contact_leads: departureContactLeads } : {}),
     ...(opportunityLeads.length > 0 && state.opportunities
       ? {
           opportunity_guidance: state.opportunities.guidance,

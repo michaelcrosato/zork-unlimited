@@ -866,6 +866,80 @@ describe("OverworldSession", () => {
     }
   });
 
+  it("renders June's optional departure lead as focusable guidance and then an exact talk action", async () => {
+    const session = new OverworldSession(world);
+    session.scoutPoi(session.view().pois[0]!.id);
+    session.talkToCharacter(world.opening_registration!.contact);
+    session.chooseJourneyStory(world.opening_registration!.profiles[0]!.id);
+    session.chooseJourneyStory(world.opening_relief_oath!.options[0]!.id);
+    session.chooseJourneyStory(world.opening_lead_source!.options[0]!.id);
+    moveToOpeningPreparation(session);
+    const requiresPreparation = session.view().departureContactLeads[0];
+    if (!requiresPreparation) throw new Error("expected June's departure contact lead");
+    session.chooseJourneyStory(
+      world.opening_preparation!.profiles[0]!.id,
+      world.opening_preparation!.id,
+    );
+    const ready = session.view().departureContactLeads[0];
+    if (!ready?.action) throw new Error("expected June's ready departure contact action");
+
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    expect(app).toContain("worldView.departureContactLeads.map");
+    expect(app).toContain("worldView.departureContactLeads.length > 0");
+    expect(app).toContain("aria-disabled={!ready}");
+    expect(app).toContain("onClick={ready ? onTalk : undefined}");
+    expect(app).toContain("worldSession.talkToCharacter(lead.action.arguments.character_id)");
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/App.tsx")) as {
+        DepartureContactLead: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const unavailableMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.DepartureContactLead, {
+          lead: requiresPreparation,
+          onTalk: () => undefined,
+        }),
+      );
+      expect(unavailableMarkup).toContain('aria-disabled="true"');
+      expect(unavailableMarkup).not.toContain('disabled=""');
+      expect(unavailableMarkup).toContain(
+        `aria-describedby="departure-contact-lead-${world.opening_ally!.id.replaceAll(":", "-")}"`,
+      );
+      expect(unavailableMarkup).toContain("choose a Station preparation first");
+      expect(unavailableMarkup).toContain("may start The Wolf-Winter now as a solo rider");
+      expect(unavailableMarkup).toContain("Talk to June Pike after choosing preparation");
+
+      const readyMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.DepartureContactLead, {
+          lead: ready,
+          onTalk: () => undefined,
+        }),
+      );
+      expect(readyMarkup).toContain('aria-disabled="false"');
+      expect(readyMarkup).toContain("Optional field team: talk to June Pike");
+      expect(readyMarkup).toContain("Talk to June Pike about the field team");
+      expect(readyMarkup).not.toContain("choose a Station preparation first");
+    } finally {
+      await server.close();
+    }
+  });
+
   it("renders launch approaches inline with truthful projections and no extra start button", async () => {
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({

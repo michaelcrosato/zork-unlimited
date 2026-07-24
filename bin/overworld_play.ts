@@ -106,6 +106,17 @@ export function render(view: OverworldView): string {
       lines.push(`    Compare: \`inspect ${interaction.id}\``);
     }
   }
+  if (view.departureContactLeads.length) {
+    lines.push("Optional before departure:");
+    for (const lead of view.departureContactLeads) {
+      lines.push(`  ${lead.title} — ${lead.guidance}`);
+      if (lead.action) {
+        lines.push(`    Command: talk ${lead.contactName}`);
+      } else {
+        lines.push("    Available after choosing a Station preparation.");
+      }
+    }
+  }
   if (view.events.length)
     lines.push(
       `Events: ${view.events

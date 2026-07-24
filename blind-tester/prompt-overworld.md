@@ -124,6 +124,15 @@ WHEN TO CONTINUE OR END
   You need not expand every option. If you choose an option, call
   `mcp__adventureforge__choose_overworld_session_story` with both that
   `story_choice_id` and the option's visible `id` as `choice`.
+- The context may separately list read-only `departure_contact_leads`. These
+  make an optional departure conversation discoverable without creating its
+  offer or blocking launch. A `requires_preparation` lead has no available
+  action yet. For a `ready` lead you may call
+  `mcp__adventureforge__talk_overworld_session_contact` with its exact
+  `contact_id` as `character_id`; only that conversation can present the actual
+  field-team choice. You may instead start its listed quest immediately as the
+  disclosed solo default. Merely seeing either lead state changes no game state
+  or decision count.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, normally

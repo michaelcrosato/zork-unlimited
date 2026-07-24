@@ -154,6 +154,10 @@ describe("MCP server registration", () => {
     expect(block).toContain(
       "compact_result:false validates the id but returns the canonical full story",
     );
+    expect(
+      TOOL_REGISTRATIONS.find((candidate) => candidate.name === "talk_overworld_session_contact")
+        ?.description,
+    ).toContain("ready departure_contact_leads entry");
   });
 
   it("advertises world-bound and generated starts, not the retired Charter-Marches quest menu", () => {

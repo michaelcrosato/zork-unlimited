@@ -158,6 +158,34 @@ export function ServiceAction({
   );
 }
 
+export function DepartureContactLead({
+  lead,
+  onTalk,
+}: {
+  lead: OverworldView["departureContactLeads"][number];
+  onTalk: () => void;
+}): JSX.Element {
+  const guidanceId = `departure-contact-lead-${lead.id.replaceAll(":", "-")}`;
+  const ready = lead.action !== null;
+  return (
+    <div className="departure-contact-lead">
+      <strong>{lead.title}</strong>
+      <p id={guidanceId}>{lead.guidance}</p>
+      <button
+        aria-describedby={guidanceId}
+        aria-disabled={!ready}
+        className="mini-command"
+        onClick={ready ? onTalk : undefined}
+        type="button"
+      >
+        {ready
+          ? `Talk to ${lead.contactName} about the field team`
+          : `Talk to ${lead.contactName} after choosing preparation`}
+      </button>
+    </div>
+  );
+}
+
 function suppliesLabel(value: number): string {
   return `${String(value)} ${value === 1 ? "supply" : "supplies"}`;
 }
@@ -710,10 +738,14 @@ export default function App(): JSX.Element {
               New Journey
             </button>
           </div>
-          {worldView.departureInteractions.length > 0 && (
+          {(worldView.departureInteractions.length > 0 ||
+            worldView.departureContactLeads.length > 0) && (
             <div className="departure-interactions">
               <h3>Before you depart</h3>
-              <p>Optional Station decisions; you may inspect one or leave without choosing.</p>
+              <p>
+                Optional Station decisions; you may inspect one or leave without choosing.
+                Optional contacts are listed alongside them.
+              </p>
               {worldView.departureInteractions.map((interaction) => (
                 <button
                   className="mini-command"
@@ -723,6 +755,18 @@ export default function App(): JSX.Element {
                 >
                   Inspect {interaction.title}
                 </button>
+              ))}
+              {worldView.departureContactLeads.map((lead) => (
+                <DepartureContactLead
+                  key={lead.id}
+                  lead={lead}
+                  onTalk={() => {
+                    if (!lead.action) return;
+                    runWorldAction(() =>
+                      worldSession.talkToCharacter(lead.action.arguments.character_id),
+                    );
+                  }}
+                />
               ))}
             </div>
           )}
