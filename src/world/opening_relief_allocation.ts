@@ -20,6 +20,14 @@ const AUTHORED_TEXT = z
     message: "Authored text cannot be blank.",
   });
 
+const RELIEF_ALLOCATION_TRIGGER_CATEGORY = z
+  .string()
+  .min(1)
+  .max(80)
+  .refine((value) => value.trim().length > 0, {
+    message: "Relief allocation trigger category cannot be blank.",
+  });
+
 export const OpeningReliefAllocationTermsSchema = z
   .object({
     minutes: z
@@ -41,6 +49,7 @@ export const OpeningReliefAllocationOptionSchema = z
     title: AUTHORED_TEXT,
     provider_npc_id: CampaignCharacterIdSchema,
     summary: AUTHORED_TEXT,
+    trigger_category: RELIEF_ALLOCATION_TRIGGER_CATEGORY.optional(),
     preview: AUTHORED_TEXT,
     consequence: AUTHORED_TEXT,
     protects: AUTHORED_TEXT,
@@ -110,6 +119,17 @@ export const OpeningReliefAllocationSchema = z
   .superRefine((scene, ctx) => {
     const optionIds = new Set<string>();
     const knowledgeIds = new Set<string>();
+    const categorizedOptions = scene.options.filter(
+      (option) => option.trigger_category !== undefined,
+    );
+    if (categorizedOptions.length !== 0 && categorizedOptions.length !== scene.options.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["options"],
+        message:
+          "Opening relief allocation trigger categories must cover every option or remain absent on an exact legacy manifest.",
+      });
+    }
     scene.options.forEach((option, optionIndex) => {
       if (optionIds.has(option.id)) {
         ctx.addIssue({

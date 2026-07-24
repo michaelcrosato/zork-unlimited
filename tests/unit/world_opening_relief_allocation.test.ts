@@ -33,6 +33,7 @@ export function reliefAllocationScene(): OpeningReliefAllocation {
         title: "Cover Cade's Steading",
         provider_npc_id: "albany:hayden_hale",
         summary: "Send the packet's barriers and drover hands north with the field team.",
+        trigger_category: "Opening relief line at Cade's steading.",
         preview: "The steading begins with a staffed relief line.",
         protects: "Cade's byre and its first failed cattle recovery.",
         leaves_exposed: "Albany's resident counter and the roaming reserve.",
@@ -56,6 +57,7 @@ export function reliefAllocationScene(): OpeningReliefAllocation {
         title: "Cover Vulnerable Residents",
         provider_npc_id: "albany:jamie_tanner",
         summary: "Keep the packet at Albany's public counter for exposed households.",
+        trigger_category: "Byre-held return: a short Albany recovery.",
         preview: "The hill dispatch leaves without those public stores.",
         protects: "Albany's heat, medicine, and food claims.",
         leaves_exposed: "Cade's first field recovery and the roaming reserve.",
@@ -79,6 +81,7 @@ export function reliefAllocationScene(): OpeningReliefAllocation {
         title: "Keep a Mobile Reserve",
         provider_npc_id: "albany:rowan_quill",
         summary: "Keep the packet sealed on the relief wagon for one later emergency.",
+        trigger_category: "A later break in the winter line.",
         preview: "Neither fixed site receives its protection at departure.",
         protects: "One mobile response where the winter line breaks next.",
         leaves_exposed: "Cade's opening line and Albany's fixed resident counter.",
@@ -138,6 +141,18 @@ describe("opening relief allocation authoring", () => {
     second.knowledge_id = first.knowledge_id;
     expect(() => parseOpeningReliefAllocation(repeatedKnowledge)).toThrow(
       /knowledge.*repeated across options/i,
+    );
+
+    const exactLegacy = cloneOpeningReliefAllocation(scene);
+    for (const option of exactLegacy.options) {
+      Reflect.deleteProperty(option, "trigger_category");
+    }
+    expect(parseOpeningReliefAllocation(exactLegacy)).toEqual(exactLegacy);
+
+    const partiallyCategorized = cloneOpeningReliefAllocation(scene);
+    Reflect.deleteProperty(partiallyCategorized.options[0]!, "trigger_category");
+    expect(() => parseOpeningReliefAllocation(partiallyCategorized)).toThrow(
+      /trigger categories must cover every option/i,
     );
   });
 
@@ -249,8 +264,14 @@ describe("opening relief allocation application and presentation", () => {
     });
     expect(prompt.options).toHaveLength(3);
     expect(prompt.options[0]!.consequence).toMatch(
-      /protects: Cade's byre.*leaves exposed: Albany's resident counter.*actual cost: 10 minutes/i,
+      /full field terms: The steading begins.*protects: Cade's byre.*leaves exposed: Albany's resident counter.*actual cost: 10 minutes/i,
     );
+    expect(prompt.options[0]!.summary).toEqual({
+      commitment: scene.options[0]!.summary,
+      fieldTrigger: scene.options[0]!.trigger_category,
+      fieldTriggerScope: "category",
+      immediateCost: "10 minutes",
+    });
     expect(prompt.options[1]!.consequence).toMatch(/actual cost: no added time/i);
     expect(formatOpeningReliefAllocationCost({ minutes: 5 })).toBe("5 minutes");
     expect(formatOpeningReliefAllocationCost({ minutes: 0 })).toBe("no added time");

@@ -16,6 +16,7 @@ import type {
   JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
 import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
+import { presentOpeningReliefAllocation } from "../../src/world/opening_relief_allocation_presentation.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -119,6 +120,34 @@ describe("compact journey projection", () => {
       expect(option?.consequence).toContain(`Full field terms: ${profile.preview}`);
       expect(option?.consequence).toContain(profile.consequence);
       expect(option?.consequence).not.toContain(profile.summary);
+      expect(option?.consequence).not.toContain(triggerCategory);
+    }
+  });
+
+  it("keeps exact Relief Allocation terms behind the concise compact comparison", () => {
+    const allocation = WORLD.opening_relief_allocation;
+    const character = WORLD.opening_registration?.profiles[0]?.character;
+    if (!allocation || !character) {
+      throw new Error("Albany must retain registration and Relief Allocation.");
+    }
+    const full = presentOpeningReliefAllocation(allocation, character);
+    const compact = compactJourneyStoryChoicePrompt(full);
+
+    for (const allocationOption of allocation.options) {
+      const triggerCategory = allocationOption.trigger_category;
+      if (!triggerCategory) {
+        throw new Error(`Relief allocation ${allocationOption.id} needs a trigger category.`);
+      }
+      const option = compact.options.find((candidate) => candidate.id === allocationOption.id);
+      expect(option?.summary).toEqual({
+        commitment: allocationOption.summary,
+        fieldTrigger: triggerCategory,
+        fieldTriggerScope: "category",
+        immediateCost: expect.any(String),
+      });
+      expect(option?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
+      expect(option?.consequence).toContain(allocationOption.consequence);
+      expect(option?.consequence).not.toContain(allocationOption.summary);
       expect(option?.consequence).not.toContain(triggerCategory);
     }
   });

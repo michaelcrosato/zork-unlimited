@@ -90,7 +90,7 @@ describe("Relief Protocol trigger-copy snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "42357dc467518106d3a4753a246ea672de03638a2d8f0aca240f5818a579ed3d",
+      "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f",
     );
     expect(WORLD.opening_preparation?.profiles.map((profile) => profile.trigger_category)).toEqual([
       "Opening repair at Cade's first loose paling rail.",

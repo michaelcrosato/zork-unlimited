@@ -60,6 +60,31 @@ function preparationJourney(): ReturnType<OverworldSession["journey"]> {
   return Object.freeze({ ...session.journey(), storyChoice });
 }
 
+function reliefAllocationJourney(): ReturnType<OverworldSession["journey"]> {
+  const session = new OverworldSession(WORLD);
+  const registration = WORLD.opening_registration;
+  const oath = WORLD.opening_relief_oath;
+  const source = WORLD.opening_lead_source;
+  const preparation = WORLD.opening_preparation;
+  const allocation = WORLD.opening_relief_allocation;
+  if (!registration || !oath || !source || !preparation || !allocation) {
+    throw new Error("Albany must retain its opening dispatch and Relief Allocation.");
+  }
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(registration.contact);
+  session.chooseJourneyStory(registration.profiles[0]!.id);
+  session.chooseJourneyStory(oath.options[0]!.id);
+  session.chooseJourneyStory(source.options[0]!.id);
+  const route = session
+    .view()
+    .areaExits.find((candidate) => candidate.destination.id === preparation.area);
+  if (!route) throw new Error("Expected a route to Albany's Station preparation board.");
+  session.moveArea(route.id);
+  session.chooseJourneyStory(preparation.profiles[0]!.id);
+  const storyChoice = session.inspectJourneyStory(allocation.id);
+  return Object.freeze({ ...session.journey(), storyChoice });
+}
+
 describe("JourneyStoryChoiceScreen summary-first cards", () => {
   it("keeps native disclosures separate from choice buttons and routes only choices to onChoose", async () => {
     const uiRoot = resolve(process.cwd(), "ui");
@@ -244,6 +269,31 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         stationDisclosures[0]!.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
       });
       expect(selected).toEqual(selectedBeforeDisclosure);
+
+      const allocationJourney = reliefAllocationJourney();
+      const allocation = WORLD.opening_relief_allocation!;
+      await act(async () => {
+        root!.render(
+          react.createElement(module.JourneyStoryChoiceScreen, {
+            journey: allocationJourney,
+            onChoose: (choiceId: string) => selected.push(choiceId),
+          }),
+        );
+      });
+      const allocationCard = rootElement.querySelector(".journey-choice-card") as {
+        querySelector: (selector: string) => { textContent: string | null } | null;
+      } | null;
+      const allocationButton = allocationCard?.querySelector("button");
+      const allocationDetails = allocationCard?.querySelector("details p");
+      if (!allocationButton || !allocationDetails) {
+        throw new Error("Expected the Relief Allocation comparison and full-terms disclosure.");
+      }
+      expect(allocationButton.textContent).toContain("Purpose:");
+      expect(allocationButton.textContent).toContain("Trigger category:");
+      expect(allocationButton.textContent).toContain(allocation.options[0]!.trigger_category);
+      expect(allocationButton.textContent).not.toContain(allocation.options[0]!.preview);
+      expect(allocationDetails.textContent).toContain(allocation.options[0]!.preview);
+      expect(allocationDetails.textContent).toContain(allocation.options[0]!.consequence);
     } finally {
       if (root && act) {
         await act(async () => root!.unmount());

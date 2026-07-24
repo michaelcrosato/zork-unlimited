@@ -117,6 +117,43 @@ function expectProgressivePreparationComparison(storyChoice: JourneyStoryChoiceC
   }
 }
 
+function expectProgressiveReliefAllocationOptions(storyChoice: JourneyStoryChoicePrompt): void {
+  for (const allocationOption of RELIEF_ALLOCATION.options) {
+    const triggerCategory = allocationOption.trigger_category;
+    if (!triggerCategory) {
+      throw new Error(`Relief allocation ${allocationOption.id} needs a trigger category.`);
+    }
+    const option = storyChoice.options.find((candidate) => candidate.id === allocationOption.id);
+    expect(option?.summary).toEqual({
+      commitment: allocationOption.summary,
+      fieldTrigger: triggerCategory,
+      fieldTriggerScope: "category",
+      immediateCost: expect.any(String),
+    });
+    expect(option?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
+    expect(option?.consequence).toContain(allocationOption.consequence);
+  }
+}
+
+function expectProgressiveReliefAllocationComparison(
+  storyChoice: JourneyStoryChoiceComparison,
+): void {
+  for (const allocationOption of RELIEF_ALLOCATION.options) {
+    const triggerCategory = allocationOption.trigger_category;
+    if (!triggerCategory) {
+      throw new Error(`Relief allocation ${allocationOption.id} needs a trigger category.`);
+    }
+    const option = storyChoice.options.find((candidate) => candidate.id === allocationOption.id);
+    expect(option?.summary).toEqual({
+      commitment: allocationOption.summary,
+      fieldTrigger: triggerCategory,
+      fieldTriggerScope: "category",
+      immediateCost: expect.any(String),
+    });
+    expect(option).not.toHaveProperty("consequence");
+  }
+}
+
 describe("Albany Wolf-Winter dispatch briefing", () => {
   it("makes the mission concrete before choice one and separates Civic from departure decisions", () => {
     const session = new OverworldSession(WORLD);
@@ -240,6 +277,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(allocation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(allocation);
     expectSummaryFirstOptions(allocation);
+    expectProgressiveReliefAllocationOptions(allocation);
     expect(allocation.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(
       OverworldSession.restore(WORLD, session.snapshot()).inspectJourneyStory(RELIEF_ALLOCATION.id),
@@ -317,5 +355,22 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expectProgressivePreparationComparison(mcpPreparation);
     expectSummaryFirstOptions(uiPreparation);
     expectProgressivePreparationOptions(uiPreparation);
+
+    ui.chooseJourneyStory(PREPARATION.profiles[0]!.id);
+    api.choose_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: PREPARATION.id,
+      choice: PREPARATION.profiles[0]!.id,
+      compact_context: true,
+    });
+    const uiAllocation = ui.inspectJourneyStory(RELIEF_ALLOCATION.id);
+    const mcpAllocation = api.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: RELIEF_ALLOCATION.id,
+      compact_context: true,
+    }).story;
+    expect(mcpAllocation).toEqual(compactJourneyStoryChoiceComparison(uiAllocation));
+    expectProgressiveReliefAllocationComparison(mcpAllocation);
+    expectProgressiveReliefAllocationOptions(uiAllocation);
   });
 });
