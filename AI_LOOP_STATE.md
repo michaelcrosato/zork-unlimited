@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 630 -->
+<!-- historical_cycle_count: 631 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - staged_terminal_story_choices
+
+- Evidence choice: the human terminal flattened structured Station decisions into a dense commitment screen even though compact MCP and UI already supported noncommitting comparison and one-option detail.
+- Surface: one shared controller now renders purpose/trigger/cost comparisons, inspects exactly one option, returns hash-neutrally, and commits by exact id; direct and inspected choices reach identical state, while departure interactions reuse the same grammar.
+- Counterfactual: Continue/End and unstructured authored choices remain direct, malformed or unavailable detail fails without mutation or stack output, cancel/back preserves the hash, and the CLI's final hash matches direct session execution.
+- Pure evidence: exact-clean canonical Terra `887f7b20` seed 72513 completes The Wolf-Winter under Cade's terms and The Gallowmere, continues twice, then ends voluntarily at 45 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes.
+- Rebased check: exact-clean native Sol human-terminal seed 72516 on `206be452` completes The Wolf-Winter (`ending_fortified_cade_terms`), continues into The Gallowmere (`ending_hunt_won`), and ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
+- Feedback/follow-through: active-dialogue scope is visually opaque and permanent setup remains dense; both stay separate focused candidates, while the queued June contact removes the already-compiled missing-seat hotspot.
+- Guard: independent review is clean, post-rebase crawl `20260724T144243Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 59 combined terminal/Registration tests pass, and full health passes 418 files/3,376 tests plus both typechecks and all packs.
 
 ### Cycle result - authenticated_registration_foldback
 
@@ -152,13 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: 67 deduplicated completed Spark streams used 283,771,470 input-plus-output tokens; the combined 4500-4509 pilot removes the original preview-option defect in 10/10 and raises strict validity from 1/20 to 3/10, while wrapper generation remains the seven-run residual and the final 100 quota-closed preplay launches are excluded.
 - Feedback/follow-through: strict compile `20260722T175728Z` has five eligible pure exits, all clarity/enjoyment 4/4 and replay-yes; event-choice authority proceeds separately, and Spark resumes only after its provider reset rather than being mistaken for an authentication failure.
 - Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; focused passes cover 231 tests plus a 153-test correction pass, independent adversarial re-review finds no P0-P2, and supported CI two-worker health passes 408 files/3,224 tests plus UI typecheck and pack validation.
-
-### Cycle result - wolf_actor_neutral_gate_guidance
-
-- Evidence choice: exact-clean Terra 4411 had no June flag or companion, yet the full untruncated Wolf-Winter north block named "June's gate terms" at decisions 13 and 21 while mechanics correctly waited only for pre-cast feed and then the lure's second cast.
-- Surface: the single static block is now a 171-character actor-neutral list of explicitly alternative live steps—hunt-and-hold warning, committed route resources, or the lure's second loft cast—with no predicate, state, mechanic, balance, or action change.
-- Counterfactual: no-June LURE/DRIVE/Cade-FORTIFY/Albany-FORTIFY states name relevant work without inventing June; accepted-June keep-terms remains effect-free and blocked, acknowledging combat opens HUNT, and relay/solo/ignored-choice launches remain June-free and open.
-- Pure evidence: exact-clean Terra 4431 publishes strict `ok: true` across 61/61 pragma-bound calls and 50 decisions, sees the corrected no-June block twice, diverts all three wolves with the herd whole, wins Gallowmere, continues at goal 27/checkpoint 40, and ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Diagnostic only: Sol 4414 and Terra 4415 yielded under the retired foreground budget, Luna 4416 timed out, and fresh Luna 4430 invokes unavailable `move_overworld_session` at call 135 after an earlier stream retry; the unchanged immediate-completion audit rejects it, so every route, retention choice, rating, and finding from all four remains excluded.
-- Measured result: two independent exact-diff reviews find no P0-P2 after correcting "first-lure" to the authored "second cast" term; four route-matrix suites pass 15 tests, while valid 4431 independently repeats opening density and June-seat briefing debt for separate cycles.
-- Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full combined health passes 408 files/3,204 tests plus integrity, both typechecks, lint, format, validation, and Wolf hash `999f3882c25ba9777b0597afb6ee1ba70616987a9725ed590639476b1a8b4fa5`.
