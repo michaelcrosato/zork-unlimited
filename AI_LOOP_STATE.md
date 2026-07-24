@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 627 -->
+<!-- historical_cycle_count: 628 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - staged_station_choice_disclosure
+
+- Evidence choice: five earlier pure exits repeatedly found Albany's all-at-once preparation comparison dense, while the first progressive-copy cohort proved compact UI prose alone did not change the pure MCP surface.
+- Surface: Station preparation now leads with purpose, trigger category, and cost; optional-departure story inspection returns short consequence-free comparisons by default and reveals the complete truthful terms for exactly one requested option, without committing or changing state.
+- Counterfactual: invalid or already-presented story ids fail closed, full verbose inspection remains canonical, reads preserve snapshot hash/time/money/decision count, legacy manifests remain byte-compatible, and the content hash change has an explicit predecessor migration.
+- Pure evidence: exact clean `aea2e896` accepts fresh Terra, Sol, and independent Terra sessions across The Wolf-Winter at 40–56 decisions; all three continue at least once, two are replay-yes, clarity averages 3.33/5, enjoyment 4/5, and one malformed Luna wrapper is excluded without recovery or substitution.
+- Measured result: staged comparison is used organically and leaks no full consequence wall; the replay-no report is retained and, with the other two, localizes residual friction to judging future field conditions before seeing the field, long relief trigger summaries, and the Gallowmere checkpoint transition.
+- Feedback/follow-through: compile `ai-runs\feedback\20260724T0247Z-staged-three-report` accepts 3/3 pure reports with zero rejected; concise relief categories plus review of the intended option's full terms are the next focused increment, not removal of consequence truth.
+- Guard: final-tip crawl `ai-runs\crawl\20260724T025839Z` is zero-finding; focused coverage passes 75 independent tests, independent re-review is clean, and full health passes 415 files/3,332 tests plus UI typecheck and all packs.
 
 ### Cycle result - cli_owned_codex_blind_authority
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Diagnostic only: Sol 4408 and Luna 4410 failed the unchanged immediate-completion forwarding audit, while Terra 4409 failed report publication at an explicit output prefix; all three runs, ratings, findings, and token counts remain unpublished and excluded.
 - Measured result: two parallel exact-commit reviews find no P0-P2 across the planner trust boundary and UI/compact accessibility; seven focused files pass 144 tests after rebasing onto merged post-cast truth.
 - Guard: post-change crawl remains zero-finding across 6,000 steps, 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 407 files/3,177 tests plus integrity, both typechecks, lint, format, validation, and clean diff.
-
-### Cycle result - wolf_postcast_state_truth
-
-- Evidence choice: exact-clean strict Sol 4402 exposed three mutually corroborating Wolf-Winter state/prose faults after successful LURE casts, and a full route audit found the same contradictions in clean, recovered, and hybrid paths rather than treating one transcript as sufficient.
-- Surface: Fodder-Loft and its hatch now switch to completed-cast prose, Deep Byre gives pending-final-LURE text before every guard/combat variant, and the post-final pack account distinguishes a dead yearling from two living younger wolves.
-- Counterfactual: June-unresolved retains first precedence; clean, split, braced, hybrid retained-guard, Jamie, ordinary hunt, DRIVE, FORTIFY, full/compact, and post-final states are disjoint and truthful; production changes add no effects, gates, resources, scores, actions, or ending semantics.
-- Pure evidence: exact-clean Sol 4404 verifies `ok: true` across 70 error-free calls/48 decisions, fortifies Wolf-Winter under Albany authority and wins Gallowmere; Luna 4407 verifies across 125 decisions, diverts the pack, wins Gallowmere, recovers Tanner, and holds Breaking Weir; both rate 4/4, unstuck, replay-yes, without repeating the corrected post-cast contradictions.
-- Diagnostic only: Terra 4405/4406 remain unpublished and excluded after truncated/malformed forwarding wrappers correctly failed the exact-program audit; neither candidate play, rating, finding, or token count is evidence.
-- Measured result: independent exact-commit review finds no P0-P2 across 8 files/50 tests, every declared Wolf variant remains first-match reachable, and the fresh valid cohort moves remaining work to broader truncation, opening density, continuity, stale-menu recovery, and late-journey resupply rather than expanding this increment.
-- Guard: the 6,000-step post-change crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full repaired-environment health passes 407 files/3,175 tests plus integrity, lint, format, compact limits, both typechecks, and all 12 packs with Wolf hash `48085079f5e6247f54caf9f0064f7dc60dc488511e1e351a526f72f87aa8e24d`.
