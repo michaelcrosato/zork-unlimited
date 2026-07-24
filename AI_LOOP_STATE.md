@@ -15,6 +15,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+### Cycle result - frozen_codex_client_closure
+
+- Evidence choice: exact clean `5f065558` accepts fresh Terra seed 72501 through The Wolf-Winter in 49 calls and 31 accepted decisions; the player ends at first-goal completion, rates clarity/enjoyment 4/4, is unstuck, and is replay-yes.
+- Surface: blind preflight never reads auth or model cache; it freezes the exact Windows npm shim or original Unix npm symlink plus manifest/entrypoint/native payload closure and CLI semver, then fleet members execute the pinned native payload directly.
+- Counterfactual: unsupported scripts cannot downgrade to direct authority and the bounded test seam cannot publish or certify; every member compares three probes to one fleet authority, the probe preserves caller errexit state, and drift, retry, fallback, substitution, or cache repair remain forbidden.
+- Attestation: current Codex v7 binds the closure digest and CLI version through manifest, summary, resume, and certification; pre-client-pin strict-v2 v6 remains historical-readable but cannot certify a current cohort.
+- Feedback/follow-through: the only play feedback is the already-ranked dense setup and hidden Streetwise DC; it is retained as a separate gameplay increment rather than broadening this transport fix.
+- Guard: focused runner/fleet/attestation/certifier coverage passes 134 tests plus Bash syntax and real installed-CLI preflight; final crawl `20260724T111212Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, and full health passes 416 files/3,352 tests plus integrity, both typechecks, lint, format, and pack validation.
+
 ### Cycle result - relief_allocation_trigger_categories
 
 - Evidence choice: the staged Station cohort still received all three Relief Allocation preview paragraphs in its first comparison, recreating the consequence wall that preparation had removed.
@@ -154,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: both canaries continue at the first goal and checkpoint, rate clarity/enjoyment 4/4, remain unstuck/replay-yes, and independently retain opening-choice density as the next design signal; two no-weaken reviews find no P0-P2, while six focused suites pass 161 tests across exactly five documentation/test files.
 - Diagnostic only: Spark 4420-4429 consume 13,841,258 input/117,730 output tokens but publish 0/10 after direct-mode calls hit forbidden servers, resources, or item types; 196 raw gameplay calls remain excluded, and a separate forced-code-mode runner cycle is required before more Spark evidence.
 - Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 408 files/3,204 tests plus integrity, both typechecks, lint, format, validation, and clean diff.
-
-### Cycle result - compact_player_prose_fidelity
-
-- Evidence choice: five recent exact-clean cohorts carried truncation chrome in 187/481 compact MCP responses; restoring the observed repeated prose would add only ~45,358 characters, 1.55% of their existing payload, while journal memory also leaked collision hashes intended for identifiers.
-- Surface: compact event/observation/state/overworld contracts advance to v7/v18/v2/v28, every shipped player-facing body now fits its bounded transport, and one 320-character visible journal compactor replaces identity hashing across event, state, observation, transcript, and session-summary routes.
-- Counterfactual: ids retain hashed collision safety; list caps, omission counts, legality, state, mechanics, balance, and pure prompts are unchanged; scalar-safe clipping preserves Unicode boundaries and exact code-unit omission counts for future oversized prose.
-- Pure evidence: exact-clean Terra 4413 verifies `ok: true` across 47 completed calls/40 decisions, diverts every Wolf-Winter wolf alive with Cade's herd whole, continues at goal 29, and exits voluntarily at checkpoint 40; no literal prose truncation or hash mismatch appears, clarity/enjoyment are 3/4, unstuck, replay-no.
-- Diagnostic only: Sol 4412 remains unpublished and excluded after its first wrapper yielded before the MCP completion, correctly failing the unchanged immediate-completion audit; its play, ratings, findings, and token count are not evidence.
-- Measured result: the unique shipped corpus restores 39,009 characters across all 12 quests and every real overworld/opening/service/road route; two independent re-reviews find no P0-P2, and 15 focused suites pass 242 tests under fixed 9k RPG/12k overworld response ceilings.
-- Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 408 files/3,201 tests plus integrity, both typechecks, lint, format, validation, and clean diff.

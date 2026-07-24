@@ -162,7 +162,38 @@ The runner starts Codex in an isolated temporary player directory while leaving
 subscription state CLI-owned in the operator's existing `CODEX_HOME`; repository
 code never opens or copies the login store and never cleans or mutates that shared
 home. Standalone report prefixes and fleet report roots are canonicalized outside
-it before any directory, lock, or run artifact is created. User/project config and
+it before any directory, lock, or run artifact is created.
+
+Live runs also have a read-only effective-client preflight. The literal default
+external command `codex`, or one absolute executable path supplied as
+`BLIND_CODEX_BIN`, is resolved once to canonical regular targets and identities.
+For the official npm launcher, the frozen closure contains its shim, package
+manifest, JavaScript entrypoint, and platform-native payload. Canonical Unix npm
+symlinks additionally bind their original path, exact target text, and symlink
+identity before realpath resolution. Gameplay executes the pinned native
+payload directly instead of traversing that delegation chain. The override is
+never parsed as arguments or evaluated by a shell, and there is no alternate
+executable/provider fallback. Only a self-contained PE, ELF, or Mach-O override
+is supported; unsupported, oversized, foreign, or changed scripts and
+JavaScript launchers fail closed. The effective target must return one
+`codex-cli <semver>` line for `--version`; the probe has a fixed five-second
+timeout, one-second forced-kill grace, and 1,024-byte capture ceiling.
+
+The preflight does not read or interpret `CODEX_HOME/models_cache.json`. Cache
+version eligibility, remote refresh, and persistence are selected-client
+behavior; a cache written by a different Codex version is an ordinary cache miss,
+not a runner compatibility or authentication failure. Repository code never
+repairs or deletes that client-owned cache and never inspects login data.
+`--preflight-only`, used by the shared fleet gate, does not resolve, read, or
+enumerate `CODEX_HOME` and creates no report or player artifacts. Fleets perform
+that shared 15-second and output-bounded check before directory or lock creation,
+then freeze its canonical selected/effective paths, closure token/digest, and
+exact semantic version into every member. Each player compares initial,
+immediately-pre-launch, and final post-provider bounded probes to that same
+authority. Failure is nonretryable, and there is no CLI update, fallback, or
+model/provider substitution.
+
+User/project config and
 rules are ignored, `project_doc_max_bytes=0` prevents
 project-document ingestion, shell/web/apps/plugins/browser/computer/subagents and
 the unused shell snapshot are disabled, and only the exact pure AdventureForge
@@ -261,9 +292,11 @@ provenance bound to the artifact, not a provider-signed snapshot proving which
 remote backend served the turn. The primary envelope's requested model and
 synthesized `modelUsage` are never model authority.
 Current fleet publication records the same exact contract discriminator in
-Codex attestation schema v6. Fresh runs and current resume/certification require
-v6 plus a strict v3 capture; attestation v3, receipt-binding v4, and strict-v1
-v5 remain historical-readable but cannot be mixed into a new current cohort.
+Codex attestation schema v7, together with the frozen effective-client authority
+digest and exact CLI semantic version. Fresh runs and current
+resume/certification require v7 plus a strict v3 capture; attestation v3,
+receipt-binding v4, strict-v1 v5, and pre-client-pin strict-v2 v6 remain
+historical-readable but cannot be mixed into a new current cohort.
 The receipt is a trusted local runner assertion made while the isolated directory
 still exists. Once cleanup deletes that directory, resume and certification can
 reparse the receipt and reject inconsistent hashes or fields but cannot re-stat
@@ -453,12 +486,13 @@ provider/model, exact singleton model provenance, unique provider session,
 completed clean primary envelope, game session, and artifact hashes. Historical
 Claude members retain v2 compatibility, and ordinary Codex v3 remains readable.
 Historical Codex v4 additionally binds deterministic receipt-binding provenance
-when present, and strict-v1 Codex v5 remains readable. Current Codex v6 binds the actual provider, reasoning effort, turn
-id, working directory, public provider events, copied rollout JSONL, cwd capture
-receipt, strict code-mode contract, and receipt-binding provenance. Diagnostic
-resume reparses historical facts from the bytes; current resume and
-certification require v6 and also reject reuse, links, path escape, and any
-model-recovered member.
+when present; strict-v1 Codex v5 and pre-client-pin strict-v2 v6 remain readable.
+Current Codex v7 binds the actual provider, reasoning effort, turn id, working
+directory, public provider events, copied rollout JSONL, cwd capture receipt,
+strict code-mode contract, receipt-binding provenance, exact CLI version, and
+fleet-wide effective-client authority. Diagnostic resume reparses historical
+facts from the bytes; current resume and certification require v7 and also
+reject reuse, links, path escape, and any model-recovered member.
 
 ### Starting-slice certification
 

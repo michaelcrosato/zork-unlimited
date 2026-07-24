@@ -39,6 +39,7 @@ describe("blind runner MCP config contract", () => {
     const home = join(dir, "codex-home");
     const linkedHome = join(dir, "linked-codex-home");
     const capture = join(dir, "codex-invocation.txt");
+    const fallbackCapture = join(dir, "fallback-invocation.txt");
     const relativeDirectory = `.tmp/blind-relative-out-${process.pid}-${Date.now()}`;
     const relativeOut = `${relativeDirectory}/attempt`;
     const auth = join(home, CODEX_LOGIN_FILENAME);
@@ -58,19 +59,36 @@ describe("blind runner MCP config contract", () => {
       mkdirSync(home);
       symlinkSync(home, linkedHome, "junction");
       writeFileSync(auth, authBytes);
-      const fakeCodex = join(bin, "codex");
+      const fakeCodex = join(dir, "selected codex");
       writeFileSync(
         fakeCodex,
         `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  printf 'phase=version\\nhome=%s\\n' "\${CODEX_HOME:-}" >> "\${FAKE_CODEX_CAPTURE}"
+  printf 'codex-cli 0.144.1\\n'
+  exit 0
+fi
 {
+  printf 'phase=exec\\n'
   printf 'home=%s\\n' "\${CODEX_HOME:-}"
   printf 'arg=%s\\n' "$@"
-} > "\${FAKE_CODEX_CAPTURE}"
+} >> "\${FAKE_CODEX_CAPTURE}"
 exit 93
 `,
         "utf8",
       );
       chmodSync(fakeCodex, 0o755);
+      const fallbackCodex = join(bin, "codex");
+      writeFileSync(
+        fallbackCodex,
+        `#!/usr/bin/env bash
+printf 'fallback-used\\n' > "\${FAKE_FALLBACK_CAPTURE}"
+printf 'codex-cli 9.9.9\\n'
+exit 0
+`,
+        "utf8",
+      );
+      chmodSync(fallbackCodex, 0o755);
 
       const result = spawnSync(
         process.execPath,
@@ -82,7 +100,10 @@ exit 93
             ...process.env,
             PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
             CODEX_HOME: relative(process.cwd(), linkedHome).replaceAll("\\", "/"),
+            BLIND_CODEX_BIN: bashPath(fakeCodex),
+            BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
             FAKE_CODEX_CAPTURE: bashPath(capture),
+            FAKE_FALLBACK_CAPTURE: bashPath(fallbackCapture),
           },
           timeout: 30_000,
         },
@@ -91,23 +112,363 @@ exit 93
       expect(result.status, output).toBe(93);
 
       const invocation = readFileSync(capture, "utf8").trim().split(/\r?\n/u);
-      const activeHome = invocation.find((line) => line.startsWith("home="))?.slice(5);
+      const activeHomes = invocation
+        .filter((line) => line.startsWith("home="))
+        .map((line) => line.slice(5));
       const args = invocation
         .filter((line) => line.startsWith("arg="))
         .map((line) => line.slice(4));
       const reportIndex = args.indexOf("--output-last-message");
       const reportPath = args[reportIndex + 1] ?? "";
-      expect(comparablePath(activeHome ?? "")).toBe(comparablePath(realpathSync.native(home)));
+      expect(invocation.filter((line) => line === "phase=version")).toHaveLength(3);
+      expect(invocation.filter((line) => line === "phase=exec")).toHaveLength(1);
+      expect(activeHomes).toHaveLength(4);
+      expect(activeHomes.map(comparablePath)).toEqual([
+        comparablePath(realpathSync.native(home)),
+        comparablePath(realpathSync.native(home)),
+        comparablePath(realpathSync.native(home)),
+        comparablePath(realpathSync.native(home)),
+      ]);
       expect(reportIndex).toBeGreaterThan(0);
       expect(reportPath).toMatch(/^(?:\/|[A-Za-z]:[\\/])/u);
       expect(reportPath.replaceAll("\\", "/")).toContain(`/${relativeOut}.md`);
       expect(args).toContain("--ignore-user-config");
       expect(args).toContain("--ignore-rules");
       expect(args).toContain("project_doc_max_bytes=0");
+      expect(existsSync(fallbackCapture)).toBe(false);
       expect(readFileSync(auth, "utf8")).toBe(authBytes);
     } finally {
       rmSync(join(process.cwd(), relativeDirectory), { recursive: true, force: true });
       rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("fails closed when the bounded final client probe differs from launch", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-final-version-drift-"));
+    const home = join(dir, "home");
+    const selected = join(dir, "selected-codex");
+    const probeCount = join(dir, "probe-count.txt");
+    const out = join(dir, "reports", "attempt");
+    const bashPath = (path: string): string =>
+      path
+        .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
+        .replaceAll("\\", "/");
+    try {
+      mkdirSync(home);
+      writeFileSync(
+        selected,
+        `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  count=0
+  [[ -f "\${PROBE_COUNT}" ]] && count="$(cat "\${PROBE_COUNT}")"
+  count=$((count + 1))
+  printf '%s' "$count" > "\${PROBE_COUNT}"
+  if [[ "$count" -lt 3 ]]; then
+    printf 'codex-cli 0.144.1\\n'
+  else
+    printf 'codex-cli 0.145.0\\n'
+  fi
+  exit 0
+fi
+exit 93
+`,
+      );
+      chmodSync(selected, 0o755);
+      const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CODEX_HOME: home,
+          BLIND_CODEX_BIN: bashPath(selected),
+          BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+          PROBE_COUNT: bashPath(probeCount),
+        },
+        timeout: 30_000,
+      });
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(42);
+      expect(output).toContain("expected cli=0.144.1");
+      expect(output).toContain("observed cli=0.145.0");
+      expect(readFileSync(probeCount, "utf8")).toBe("3");
+      expect(existsSync(`${out}.md`)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("preserves caller errexit state so a post-probe capture failure reaches mapped diagnostics", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-final-probe-errexit-"));
+    const home = join(dir, "home");
+    const selected = join(dir, "selected-codex");
+    const probeCount = join(dir, "probe-count.txt");
+    const out = join(dir, "reports", "attempt");
+    const bashPath = (path: string): string =>
+      path
+        .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
+        .replaceAll("\\", "/");
+    try {
+      mkdirSync(home);
+      writeFileSync(
+        selected,
+        `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  count=0
+  [[ -f "\${PROBE_COUNT}" ]] && count="$(cat "\${PROBE_COUNT}")"
+  printf '%s' "$((count + 1))" > "\${PROBE_COUNT}"
+  printf 'codex-cli 0.144.1\\n'
+  exit 0
+fi
+printf '{"type":"not-a-valid-codex-thread"}\\n'
+exit 0
+`,
+      );
+      chmodSync(selected, 0o755);
+      const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CODEX_HOME: home,
+          BLIND_CODEX_BIN: bashPath(selected),
+          BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+          PROBE_COUNT: bashPath(probeCount),
+        },
+        timeout: 30_000,
+      });
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(4);
+      expect(readFileSync(probeCount, "utf8")).toBe("3");
+      expect(output).toContain("blind run failed (exit 4)");
+      expect(output).toContain("telemetry:");
+      expect(existsSync(`${out}.md`)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("preflight-only validates the selected CLI without resolving or inspecting CODEX_HOME", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-client-preflight-"));
+    const bin = join(dir, "bin");
+    const homeTripwire = join(dir, "codex-home-is-a-file");
+    const selected = join(dir, "selected-codex");
+    const selectedCapture = join(dir, "selected-capture.txt");
+    const fallbackCapture = join(dir, "fallback-capture.txt");
+    const out = join(dir, "reports", "attempt");
+    const homeTripwireBytes = "preflight-only must not require this path to be a directory\n";
+    const bashPath = (path: string): string =>
+      path
+        .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
+        .replaceAll("\\", "/");
+
+    try {
+      mkdirSync(bin);
+      writeFileSync(homeTripwire, homeTripwireBytes);
+      writeFileSync(
+        selected,
+        `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  printf 'version home=%s\\n' "\${CODEX_HOME:-}" >> "\${SELECTED_CAPTURE}"
+  printf 'codex-cli 0.144.1\\n'
+  exit 0
+fi
+printf 'gameplay reached\\n' >> "\${SELECTED_CAPTURE}"
+exit 0
+`,
+      );
+      chmodSync(selected, 0o755);
+      const fallback = join(bin, "codex");
+      writeFileSync(
+        fallback,
+        `#!/usr/bin/env bash
+printf 'fallback reached\\n' > "\${FALLBACK_CAPTURE}"
+printf 'codex-cli 0.145.0\\n'
+exit 0
+`,
+      );
+      chmodSync(fallback, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          "blind-tester/blind-launch.mjs",
+          "--preflight-only",
+          "--client-authority-json",
+          "--out",
+          out,
+        ],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+            CODEX_HOME: homeTripwire,
+            BLIND_CODEX_BIN: bashPath(selected),
+            BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+            SELECTED_CAPTURE: bashPath(selectedCapture),
+            FALLBACK_CAPTURE: bashPath(fallbackCapture),
+          },
+          timeout: 30_000,
+        },
+      );
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(0);
+      expect(output).toContain('"cli_version":"0.144.1"');
+      expect(output).toContain("selected-codex");
+      expect(JSON.parse(result.stdout ?? "")).toMatchObject({
+        schema_version: 2,
+        launcher_kind: "direct",
+        cli_version: "0.144.1",
+        test_script: true,
+      });
+      expect(output).not.toContain("models_cache");
+      expect(readFileSync(selectedCapture, "utf8")).toMatch(/^version home=/u);
+      expect(readFileSync(selectedCapture, "utf8")).not.toContain("gameplay reached");
+      expect(existsSync(fallbackCapture)).toBe(false);
+      expect(existsSync(`${out}.md`)).toBe(false);
+      expect(existsSync(`${out}.log`)).toBe(false);
+      expect(readFileSync(homeTripwire, "utf8")).toBe(homeTripwireBytes);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("treats BLIND_CODEX_BIN as one executable path, never a command plus arguments", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-bin-one-argv-"));
+    const bin = join(dir, "bin");
+    const home = join(dir, "home");
+    const selected = join(dir, "selected-codex");
+    const selectedCapture = join(dir, "selected-used");
+    const fallbackCapture = join(dir, "fallback-used");
+    const bashPath = (path: string): string =>
+      path
+        .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
+        .replaceAll("\\", "/");
+    try {
+      mkdirSync(bin);
+      mkdirSync(home);
+      writeFileSync(
+        selected,
+        `#!/usr/bin/env bash
+printf used > "\${SELECTED_CAPTURE}"
+printf 'codex-cli 0.144.1\\n'
+`,
+      );
+      chmodSync(selected, 0o755);
+      const fallback = join(bin, "codex");
+      writeFileSync(
+        fallback,
+        `#!/usr/bin/env bash
+printf used > "\${FALLBACK_CAPTURE}"
+printf 'codex-cli 0.144.1\\n'
+`,
+      );
+      chmodSync(fallback, 0o755);
+
+      const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs"], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+          CODEX_HOME: home,
+          BLIND_CODEX_BIN: `${bashPath(selected)} --version`,
+          SELECTED_CAPTURE: bashPath(selectedCapture),
+          FALLBACK_CAPTURE: bashPath(fallbackCapture),
+        },
+        timeout: 30_000,
+      });
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(42);
+      expect(output).toContain("selected executable");
+      expect(output).toContain("BLIND_CODEX_BIN");
+      expect(existsSync(selectedCapture)).toBe(false);
+      expect(existsSync(fallbackCapture)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("bounds a hung or noisy selected CLI version probe before gameplay", () => {
+    for (const scenario of ["hung", "noisy"] as const) {
+      const dir = mkdtempSync(join(tmpdir(), `af-codex-version-${scenario}-`));
+      const bin = join(dir, "bin");
+      const home = join(dir, "home");
+      const selected = join(dir, "selected-codex");
+      const selectedCapture = join(dir, "selected-capture");
+      const fallbackCapture = join(dir, "fallback-capture");
+      const out = join(dir, "reports", "attempt");
+      const loginPath = join(home, CODEX_LOGIN_FILENAME);
+      const loginBytes = `{"sentinel":"${scenario}-probe-bound"}\n`;
+      const bashPath = (path: string): string =>
+        path
+          .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
+          .replaceAll("\\", "/");
+      try {
+        mkdirSync(bin);
+        mkdirSync(home);
+        writeFileSync(loginPath, loginBytes);
+        writeFileSync(
+          selected,
+          `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  printf 'version\\n' >> "\${SELECTED_CAPTURE}"
+  if [[ "\${VERSION_SCENARIO}" == "hung" ]]; then
+    trap '' TERM
+    while :; do sleep 1; done
+  fi
+  head -c 4096 /dev/zero | tr '\\0' x
+  exit 0
+fi
+printf 'gameplay\\n' >> "\${SELECTED_CAPTURE}"
+exit 0
+`,
+        );
+        chmodSync(selected, 0o755);
+        const fallback = join(bin, "codex");
+        writeFileSync(
+          fallback,
+          `#!/usr/bin/env bash
+printf used > "\${FALLBACK_CAPTURE}"
+printf 'codex-cli 0.144.1\\n'
+`,
+        );
+        chmodSync(fallback, 0o755);
+
+        const startedAt = Date.now();
+        const result = spawnSync(
+          process.execPath,
+          ["blind-tester/blind-launch.mjs", "--out", out],
+          {
+            cwd: process.cwd(),
+            encoding: "utf8",
+            env: {
+              ...process.env,
+              PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+              CODEX_HOME: home,
+              BLIND_CODEX_BIN: bashPath(selected),
+              BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+              SELECTED_CAPTURE: bashPath(selectedCapture),
+              FALLBACK_CAPTURE: bashPath(fallbackCapture),
+              VERSION_SCENARIO: scenario,
+            },
+            timeout: 15_000,
+          },
+        );
+        const elapsed = Date.now() - startedAt;
+        const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+        expect(result.status, `${scenario}: ${output}`).toBe(42);
+        expect(elapsed, scenario).toBeLessThan(12_000);
+        expect(output.length, scenario).toBeLessThan(5_000);
+        expect(readFileSync(selectedCapture, "utf8"), scenario).toBe("version\n");
+        expect(existsSync(fallbackCapture), scenario).toBe(false);
+        expect(existsSync(`${out}.log`), scenario).toBe(false);
+        expect(output, scenario).not.toContain("Blind playtest");
+        expect(readFileSync(loginPath, "utf8"), scenario).toBe(loginBytes);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     }
   }, 30_000);
 
@@ -437,7 +798,7 @@ exit 93
     expect(launchAt).toBeGreaterThan(0);
     expect(launchEnd).toBeGreaterThan(launchAt);
     const codexLaunch = runner.slice(launchAt, launchEnd);
-    expect(codexLaunch).toContain("codex exec");
+    expect(codexLaunch).toContain('"$SELECTED_CODEX_BIN" exec');
     expect(codexLaunch).toContain("--sandbox read-only");
     expect(codexLaunch).not.toContain("--ephemeral");
     expect(codexLaunch).toContain('cd "$CODEX_PLAYER_CWD"');
@@ -512,6 +873,7 @@ exit 93
     expect(rolloutCapture).not.toContain(RETIRED_HOME_COMMAND);
     expect(rolloutCapture).not.toContain(RETIRED_SOURCE_OPTION);
     expect(rolloutCapture).not.toContain(CODEX_LOGIN_FILENAME);
+    expect(rolloutCapture).not.toContain("models_cache.json");
     expect(rolloutCapture).toContain("publicCodexThreadId(eventsPath)");
     expect(rolloutCapture).toContain("walkMatchingRollouts(");
     expect(rolloutCapture).toContain("recorded.threadId !== threadId");
@@ -694,7 +1056,13 @@ exit 93
       '"$PRIVATE_RUN_SIDECAR_ARG" "$RUN_SIDECAR_ARG"',
     );
     const publicationComplete = runner.indexOf("PURE_PUBLICATION_COMPLETE=1");
+    const testScriptPublicationGuard = runner.indexOf(
+      "Codex test-script client reached a synthetic success",
+    );
 
+    expect(testScriptPublicationGuard).toBeGreaterThan(0);
+    expect(testScriptPublicationGuard).toBeLessThan(privateVerification);
+    expect(runner.slice(testScriptPublicationGuard, privateVerification)).toContain("STATUS=4");
     expect(privateVerification).toBeGreaterThan(0);
     expect(evidencePublication).toBeGreaterThan(privateVerification);
     expect(finalProvenanceGate).toBeGreaterThan(evidencePublication);

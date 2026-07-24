@@ -172,10 +172,15 @@ deterministic receipt binding: the provider's original report and strict
 replacing only the existing receipt value from raw server evidence, and the
 unchanged report verifier must pass. This zero-model transformation preserves
 all subjective evidence, so it is certifiable; model-assisted report recovery
-remains forbidden. Codex v6 is the current contract: it additionally
-authenticates strict capture v3, the model-specific code-mode prelude, and every
-canonical pragma/awaited-forward wrapper. Current resume and certification require
-v6; v3/v5 (including strict v1) and v4 are historical-readable only. Codex
+remains forbidden. Codex v7 is the current contract: it additionally
+authenticates strict capture v3, the model-specific code-mode prelude, every
+canonical pragma/awaited-forward wrapper, and the fleet-wide frozen effective
+client authority plus exact CLI version. That authority binds the original
+canonical Unix npm symlink when present, the exact package/entrypoint/native
+closure, and a native-only final execution target; unsupported script launchers
+cannot downgrade to one-file authority. Current resume and certification require
+v7; v3/v5 (including strict v1), v4, and pre-client-pin strict-v2 v6 are
+historical-readable only. Codex
 `turn_context.model` is a CLI-recorded selected-model value, not a provider-signed
 remote-backend identity. Resume and certification reparse these retained facts.
 The cwd receipt is a trusted capture-time runner assertion: after cleanup they
@@ -203,7 +208,7 @@ before the 100-player spend.
 Certification fixes the count to 100 and is the only authority result. Report
 basenames must carry the cohort's current stamp, preventing historical reports
 from being relabeled as fresh. Receipt-bound Codex members remain eligible only
-when current v6 attestation, original provider bytes, binding metadata, raw evidence,
+when current v7 attestation, original provider bytes, binding metadata, raw evidence,
 and the reproduced final report all agree; manifests and summaries count them
 separately from report recovery.
 Malformed evidence exits 2, a threshold miss exits 1, and a pass exits 0. Exact

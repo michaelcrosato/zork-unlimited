@@ -76,7 +76,47 @@ leaving subscription state entirely owned by the Codex CLI in its existing
 `CODEX_HOME`. The runner never opens or copies the CLI's login store and never
 deletes or mutates that shared home. Standalone report prefixes and fleet report
 roots are canonicalized outside it before any directory, lock, or run artifact
-is created. It passes `--ignore-user-config`,
+is created.
+
+Before live gameplay, the runner resolves one effective client closure and pins
+its canonical regular-file identities. The default is the literal external
+command `codex`. When that is the official npm launcher, the closure includes
+the exact Windows npm shim or canonical Unix npm symlink/entrypoint, package
+manifest, JavaScript entrypoint, and platform-native payload. A Unix symlink's
+original path, target text, and file identity are bound before resolution and
+rechecked with the closure. Gameplay bypasses the mutable delegation chain and
+executes the pinned native payload directly. `BLIND_CODEX_BIN` may instead name
+exactly one absolute, self-contained PE, ELF, or Mach-O executable path. Its
+value is always one quoted argv element: scripts, JavaScript launchers,
+delegating wrappers, arguments, aliases, shell evaluation, fallback
+executables, and provider substitution are not supported. The pinned native
+target must emit exactly one
+`codex-cli <semver>` line for `--version`.
+That probe has a fixed five-second timeout, one-second forced-kill grace, and
+1,024-byte capture ceiling. The preflight deliberately does not read or
+interpret `CODEX_HOME/models_cache.json`: model-catalog cache compatibility,
+refresh, and persistence belong to the selected Codex client, which treats a
+different client version as an ordinary cache miss. Repository code does not
+repair or delete that cache and does not inspect login data.
+
+`--preflight-only`, used by a live fleet's shared gate, does not resolve, read,
+or enumerate `CODEX_HOME` and creates no report or player artifacts. It returns
+one bounded machine-readable authority containing the canonical selected
+launcher, effective executable, closure-identity token, digest, and exact
+semantic version. The fleet freezes that authority into every member. Each
+member compares the initial, immediately-pre-launch, and final post-provider
+bounded probes to it, outside the retry path. There is no CLI update, retry,
+fallback, or provider substitution. The shared fleet process also has a fixed
+15-second runtime and bounded diagnostic capture.
+
+For example, when two installed clients exist, select the intended one without
+adding flags:
+
+```bash
+BLIND_CODEX_BIN=/absolute/path/to/codex npm run blind
+```
+
+After this read-only gate, the runner passes `--ignore-user-config`,
 `--ignore-rules`, `project_doc_max_bytes=0`, and the existing feature disables so
 user/project instructions, shell/web/apps/plugins/browser/computer, the unused
 shell snapshot, and subagent capabilities cannot enter the player turn. It also
@@ -175,7 +215,9 @@ npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-i
   per-seed/per-attempt archive with byte counts and SHA-256 digests.
 - **Runner attestation**: historical Claude members retain the adjacent v2
   attestation. Ordinary historical Codex members remain readable as v3, and
-  receipt-bound historical members as v4, and strict-v1 members as v5. Current Codex members use v6, binding
+  receipt-bound historical members as v4, strict-v1 members as v5, and
+  strict-v2 members without a frozen client as v6. Current Codex members use
+  v7, binding the fleet-wide client authority digest and exact CLI version plus
   the strict code-mode contract plus the exact CLI-recorded selected
   model, provider `openai`, effort `xhigh`, provider session/turn, verified
   isolated working directory, completed one-turn lifecycle, public events,
@@ -220,7 +262,7 @@ output` lifecycle. For current live runs, every Codex `functions.exec` wrapper
   synthesized usage fields are not authority; missing or ambiguous rollout proof
   fails closed. Certification independently reparses the retained chain and
   rejects recovery, reuse, links, and path escape. For a receipt-bound member,
-  v4/v5/v6 also hash `.initial-report.txt` and `.receipt-bind.json`, reproduce the
+  v4/v5/v6/v7 also hash `.initial-report.txt` and `.receipt-bind.json`, reproduce the
   one-value edit from raw evidence, and records `report_receipt_bound`; it does not re-stat the
   already-deleted temporary cwd or provide a provider signature.
 - **Output**: reports plus verified `.run.json` evidence sidecars in `reports/`
@@ -239,7 +281,7 @@ output` lifecycle. For current live runs, every Codex `functions.exec` wrapper
   `.repair.meta.json`, and `.repair.json` form a complete, deterministically
   reproducible byte-bound set; rejected originals stay outside feedback
   compiler `*.md` discovery. Deterministic Codex receipt binding is recorded
-  separately in each attempt, manifest row, current v6 attestation, and the summary's
+  separately in each attempt, manifest row, current v7 attestation, and the summary's
   `receipt_bound_runs`; it does not change subjective fields and remains
   certification-eligible. Historical Claude recovery is diagnostic only: subjective fields
   such as confusion, bugs, stuck state, and replay intent were generated after

@@ -257,6 +257,170 @@ export interface StartingSlicePilotResult extends StartingSliceCertificationResu
   pilot_gates: StartingSlicePilotGates;
 }
 
+const CodexClientStableIdentitySchema = z
+  .object({
+    device_id: z.string().regex(/^[0-9]+$/),
+    file_id: z.string().regex(/^[0-9]+$/),
+    size: z.string().regex(/^[0-9]+$/),
+    mtime_ns: z.string().regex(/^[0-9]+$/),
+    ctime_ns: z.string().regex(/^[0-9]+$/),
+  })
+  .strict();
+
+const CodexClientFileIdentitySchema = z
+  .object({
+    canonical_path: z
+      .string()
+      .min(1)
+      .refine((path) => !/[\r\n]/u.test(path), "canonical path must occupy one line"),
+    identity: CodexClientStableIdentitySchema,
+  })
+  .strict();
+
+const CodexClientSymlinkIdentitySchema = z
+  .object({
+    path: z
+      .string()
+      .min(1)
+      .refine((path) => !/[\r\n]/u.test(path), "symlink path must occupy one line"),
+    link_target: z
+      .string()
+      .min(1)
+      .refine((target) => !/[\r\n]/u.test(target), "symlink target must occupy one line"),
+    identity: CodexClientStableIdentitySchema,
+  })
+  .strict();
+
+const CodexClientAuthorityTokenSchema = z
+  .object({
+    schema_version: z.literal(2),
+    launcher_kind: z.enum(["direct", "official_npm_shim"]),
+    selected: CodexClientFileIdentitySchema,
+    selected_symlink: CodexClientSymlinkIdentitySchema.nullable(),
+    package_manifest: CodexClientFileIdentitySchema.nullable(),
+    javascript_entrypoint: CodexClientFileIdentitySchema.nullable(),
+    executable: CodexClientFileIdentitySchema,
+    declared_cli_version: z
+      .string()
+      .regex(
+        /^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/,
+      )
+      .nullable(),
+    test_script: z.literal(false),
+  })
+  .strict();
+
+const CodexClientAuthoritySchema = z
+  .object({
+    schema_version: z.literal(2),
+    launcher_kind: z.enum(["direct", "official_npm_shim"]),
+    selected_binary: z.string().min(1),
+    executable_binary: z.string().min(1),
+    authority_token: z.string().regex(/^[0-9A-Za-z_-]{1,65536}$/),
+    authority_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    cli_version: z
+      .string()
+      .regex(
+        /^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/,
+      ),
+    test_script: z.literal(false),
+  })
+  .strict()
+  .superRefine((client, context) => {
+    const digest = createHash("sha256").update(client.authority_token, "utf8").digest("hex");
+    if (digest !== client.authority_sha256) {
+      context.addIssue({
+        code: "custom",
+        path: ["authority_sha256"],
+        message: "Codex client authority digest must bind the exact authority token",
+      });
+    }
+    let decoded: unknown;
+    try {
+      const bytes = Buffer.from(client.authority_token, "base64url");
+      if (bytes.toString("base64url") !== client.authority_token) throw new Error("non-canonical");
+      const parsed = parseJsonRejectingDuplicateKeys(
+        bytes.toString("utf8"),
+        "Codex client authority token",
+      );
+      if (!parsed.ok) throw new Error(parsed.reason);
+      decoded = parsed.value;
+    } catch {
+      context.addIssue({
+        code: "custom",
+        path: ["authority_token"],
+        message: "Codex client authority token must be canonical base64url JSON",
+      });
+      return;
+    }
+    const authority = CodexClientAuthorityTokenSchema.safeParse(decoded);
+    if (!authority.success) {
+      context.addIssue({
+        code: "custom",
+        path: ["authority_token"],
+        message: "Codex client authority token does not match its strict schema",
+      });
+      return;
+    }
+    const value = authority.data;
+    const selectedBinary = value.selected_symlink?.path ?? value.selected.canonical_path;
+    const portablePath = (path: string): string => path.replaceAll("\\", "/").replace(/\/+$/u, "");
+    const selected = portablePath(value.selected.canonical_path);
+    const manifest =
+      value.package_manifest === null ? "" : portablePath(value.package_manifest.canonical_path);
+    const entrypoint =
+      value.javascript_entrypoint === null
+        ? ""
+        : portablePath(value.javascript_entrypoint.canonical_path);
+    const manifestSuffix = "/package.json";
+    const packageRoot = manifest.endsWith(manifestSuffix)
+      ? manifest.slice(0, -manifestSuffix.length)
+      : "";
+    const linkPath =
+      value.selected_symlink === null ? "" : portablePath(value.selected_symlink.path);
+    const linkTarget =
+      value.selected_symlink === null ? "" : portablePath(value.selected_symlink.link_target);
+    const globalSuffix = "/bin/codex";
+    const localSuffix = "/.bin/codex";
+    const shellSuffix = "/codex";
+    const officialLayout =
+      packageRoot.endsWith("/node_modules/@openai/codex") &&
+      entrypoint === `${packageRoot}/bin/codex.js` &&
+      (value.selected_symlink === null
+        ? selected === entrypoint ||
+          (selected.endsWith(shellSuffix) &&
+            packageRoot === `${selected.slice(0, -shellSuffix.length)}/node_modules/@openai/codex`)
+        : selected === entrypoint &&
+          linkTarget.endsWith("/@openai/codex/bin/codex.js") &&
+          ((linkPath.endsWith(globalSuffix) &&
+            packageRoot ===
+              `${linkPath.slice(0, -globalSuffix.length)}/lib/node_modules/@openai/codex`) ||
+            (linkPath.endsWith(localSuffix) &&
+              packageRoot === `${linkPath.slice(0, -localSuffix.length)}/@openai/codex`)));
+    if (
+      selectedBinary !== client.selected_binary ||
+      value.executable.canonical_path !== client.executable_binary ||
+      value.launcher_kind !== client.launcher_kind ||
+      (value.declared_cli_version !== null && value.declared_cli_version !== client.cli_version) ||
+      (value.launcher_kind === "direct" &&
+        (value.package_manifest !== null ||
+          value.javascript_entrypoint !== null ||
+          value.declared_cli_version !== null ||
+          !isDeepStrictEqual(value.selected, value.executable))) ||
+      (value.launcher_kind === "official_npm_shim" &&
+        (value.package_manifest === null ||
+          value.javascript_entrypoint === null ||
+          value.declared_cli_version === null ||
+          !officialLayout))
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["authority_token"],
+        message: "Codex client authority token differs from its fleet summary",
+      });
+    }
+  });
+
 const FleetSummarySchema = z
   .object({
     label: z.string().refine(isSafeFleetLabel, "unsafe or reserved fleet label"),
@@ -299,8 +463,10 @@ const FleetSummarySchema = z
       z.literal(4),
       z.literal(5),
       z.literal(6),
+      z.literal(7),
     ]),
     build: PureRunBuildSchema,
+    codex_client: CodexClientAuthoritySchema.optional(),
   })
   .strict()
   .superRefine((summary, context) => {
@@ -318,23 +484,33 @@ const FleetSummarySchema = z
     if (
       provider === "codex" &&
       (!summary.model.startsWith("gpt-") ||
-        ![3, 4, 5, 6].includes(summary.model_attestation_schema_version))
+        ![3, 4, 5, 6, 7].includes(summary.model_attestation_schema_version))
     ) {
       context.addIssue({
         code: "custom",
         path: ["model"],
         message:
-          "Codex certification requires one exact Codex model and attestation v3, v4, v5, or v6",
+          "Codex certification requires one exact Codex model and attestation v3, v4, v5, v6, or v7",
+      });
+    }
+    if (
+      (summary.model_attestation_schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION) !==
+      (summary.codex_client !== undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["codex_client"],
+        message: "current Codex attestation v7 requires exactly one fleet-wide client authority",
       });
     }
     if (
       (summary.receipt_bound_runs ?? 0) > 0 &&
-      ![4, 5, 6].includes(summary.model_attestation_schema_version)
+      ![4, 5, 6, 7].includes(summary.model_attestation_schema_version)
     ) {
       context.addIssue({
         code: "custom",
         path: ["model_attestation_schema_version"],
-        message: "receipt-bound runs require Codex attestation v4, v5, or v6",
+        message: "receipt-bound runs require Codex attestation v4, v5, v6, or v7",
       });
     }
   });
@@ -1373,8 +1549,10 @@ function validateAuthenticatedStartingSliceCohort(
     }
     if (row.report_receipt_bound === true) {
       manifestReceiptBoundRuns += 1;
-      if (![4, 5, 6].includes(summary.model_attestation_schema_version)) {
-        errors.push(`seed ${seed}: receipt-bound row requires summary attestation v4, v5, or v6`);
+      if (![4, 5, 6, 7].includes(summary.model_attestation_schema_version)) {
+        errors.push(
+          `seed ${seed}: receipt-bound row requires summary attestation v4, v5, v6, or v7`,
+        );
       }
     }
     if (row.attempts !== row.attempt_history.length) {
@@ -1797,13 +1975,22 @@ function validateAuthenticatedStartingSliceCohort(
     ) {
       errors.push(`seed ${seed}: model attestation Codex rollout facts differ`);
     }
+    if (
+      attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
+      (summary.codex_client === undefined ||
+        attestation.codex_cli_version !== summary.codex_client.cli_version ||
+        attestation.codex_client_authority_sha256 !== summary.codex_client.authority_sha256)
+    ) {
+      errors.push(`seed ${seed}: model attestation Codex client authority differs`);
+    }
     if (attestation.report_recovered !== artifactFacts.report_recovered) {
       errors.push(`seed ${seed}: model attestation recovery status differs from run artifacts`);
     }
     const attestationReceiptBound =
       attestation.schema_version === 4 ||
       attestation.schema_version === 5 ||
-      attestation.schema_version === 6
+      attestation.schema_version === 6 ||
+      attestation.schema_version === 7
         ? attestation.report_receipt_bound
         : false;
     if (attestationReceiptBound !== artifactFacts.report_receipt_bound) {

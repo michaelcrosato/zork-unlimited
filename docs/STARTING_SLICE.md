@@ -808,6 +808,13 @@ notes do not dirty this check. It also freezes the contiguous planned seed range
 current journey contract, default pure fresh-overworld player contract, and the
 repository-standard homogeneous Codex `gpt-5.6-terra` model plan.
 
+The same shared preflight freezes one Codex client authority and exact semantic
+version for every member. Official Windows npm shims and canonical Unix npm
+symlinks bind the selected launcher (including symlink identity when present),
+manifest, JavaScript entrypoint, and native payload; members execute only that
+pinned native payload. Unsupported scripts cannot silently become direct
+one-file authority, and the runner never inspects login or model-cache state.
+
 Spark is the ordinary live fleet launcher's default so routine blind feedback
 uses the dedicated Spark allowance. The canonical certification workflow pins
 Terra explicitly for both pilot and authority. Exact homogeneous Sol, Terra,
@@ -865,9 +872,10 @@ its confusion, bug, stuck, and replay-intent fields were generated after the
 primary prose and cannot participate in authoritative certification.
 
 Each live member has an adjacent runner-owned provider-discriminated attestation.
-Historical Claude v2 remains compatible, as do ordinary historical Codex v3 and
-receipt-bound v4 and strict-v1 v5. Current Codex v6 binds the strict-v2 code-mode contract and its
-exact CLI-recorded selected model,
+Historical Claude v2 remains compatible, as do ordinary historical Codex v3,
+receipt-bound v4, strict-v1 v5, and pre-client-pin strict-v2 v6. Current Codex
+v7 binds the strict-v2 code-mode contract, fleet-wide frozen effective-client
+authority and exact CLI version, and its exact CLI-recorded selected model,
 provider/session/turn, effort, isolated cwd, completed lifecycle, unique game
 session, and all artifact hashes. It may also declare deterministic
 `report_receipt_bound` provenance: `.initial-report.txt` remains the exact
@@ -875,7 +883,7 @@ provider message, `.receipt-bind.json` hashes the envelope/report/raw evidence
 and one replaced field, and certification must reproduce the final report from
 those bytes. Because this starts no model turn and preserves every subjective
 field and all prose outside the receipt value, it is not report recovery and is
-eligible when every v6 check passes. An exclusive strict capture v3 receipt
+eligible when every v7 check passes. An exclusive strict capture v3 receipt
 binds the copied rollout hash to the exact canonical expected/session/turn cwd and
 native filesystem identity; later validation reparses it and rejects
 abort/error history or any row after terminal `task_complete`.

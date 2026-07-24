@@ -633,7 +633,7 @@ function sha256Text(text: string): string {
 }
 
 describe("closed fleet filesystem integrity", () => {
-  it("accepts strict v6 and receipt-bound v6 Codex pilots, then rejects lifecycle tamper", () => {
+  it("accepts client-pinned v7 Codex pilots, then rejects lifecycle tamper", () => {
     const base = mkdtempSync(join(tmpdir(), "af-codex-slice-certifier-"));
     tempDirs.push(base);
     const fleetDir = join(base, "fleet", "codex-pilot");
@@ -643,6 +643,37 @@ describe("closed fleet filesystem integrity", () => {
     const build = fixtureBuild;
     const receipt = currentReceipt();
     const model = "gpt-5.6-luna" as const;
+    const authorityIdentity = {
+      device_id: "1",
+      file_id: "2",
+      size: "3",
+      mtime_ns: "4",
+      ctime_ns: "5",
+    };
+    const authorityToken = Buffer.from(
+      JSON.stringify({
+        schema_version: 2,
+        launcher_kind: "direct",
+        selected: { canonical_path: "/opt/codex", identity: authorityIdentity },
+        selected_symlink: null,
+        package_manifest: null,
+        javascript_entrypoint: null,
+        executable: { canonical_path: "/opt/codex", identity: authorityIdentity },
+        declared_cli_version: null,
+        test_script: false,
+      }),
+      "utf8",
+    ).toString("base64url");
+    const codexClient = {
+      schema_version: 2,
+      launcher_kind: "direct",
+      selected_binary: "/opt/codex",
+      executable_binary: "/opt/codex",
+      authority_token: authorityToken,
+      authority_sha256: sha256Text(authorityToken),
+      cli_version: "0.144.1",
+      test_script: false,
+    } as const;
     const outcomes = [
       "ending_held",
       "ending_pack_diverted",
@@ -896,8 +927,10 @@ describe("closed fleet filesystem integrity", () => {
         modelUsage: { [model]: {} },
       })}\n`;
       const modelAttestation = {
-        schema_version: 6,
+        schema_version: 7,
         provider: "codex",
+        codex_cli_version: codexClient.cli_version,
+        codex_client_authority_sha256: codexClient.authority_sha256,
         code_mode_contract: "strict-code-mode-v2",
         run_seed: seed,
         model,
@@ -1007,8 +1040,9 @@ describe("closed fleet filesystem integrity", () => {
       target: "overworld",
       resume_enabled: false,
       evidence_schema_version: 2,
-      model_attestation_schema_version: 6,
+      model_attestation_schema_version: 7,
       build,
+      codex_client: codexClient,
     };
     const manifestPath = join(fleetDir, "manifest.jsonl");
     writeFileSync(join(fleetDir, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
@@ -1020,9 +1054,110 @@ describe("closed fleet filesystem integrity", () => {
     expect(accepted.authenticated_actual_model).toBe(model);
 
     const summaryPath = join(fleetDir, "summary.json");
+    const testScriptAuthority = {
+      ...(JSON.parse(Buffer.from(authorityToken, "base64url").toString("utf8")) as Record<
+        string,
+        unknown
+      >),
+      test_script: true,
+    };
+    const testScriptToken = Buffer.from(JSON.stringify(testScriptAuthority), "utf8").toString(
+      "base64url",
+    );
     writeFileSync(
       summaryPath,
-      `${JSON.stringify({ ...summary, model_attestation_schema_version: 5 }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          ...summary,
+          codex_client: {
+            ...codexClient,
+            authority_token: testScriptToken,
+            authority_sha256: sha256Text(testScriptToken),
+            test_script: true,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toMatch(/summary/i);
+
+    const fabricatedShellAuthority = {
+      schema_version: 2,
+      launcher_kind: "official_npm_shim",
+      selected: { canonical_path: "/opt/bin/codex", identity: authorityIdentity },
+      selected_symlink: null,
+      package_manifest: {
+        canonical_path: "/foreign/node_modules/@openai/codex/package.json",
+        identity: authorityIdentity,
+      },
+      javascript_entrypoint: {
+        canonical_path: "/foreign/node_modules/@openai/codex/bin/codex.js",
+        identity: authorityIdentity,
+      },
+      executable: { canonical_path: "/foreign/codex", identity: authorityIdentity },
+      declared_cli_version: "0.144.1",
+      test_script: false,
+    } as const;
+    const fabricatedShellToken = Buffer.from(
+      JSON.stringify(fabricatedShellAuthority),
+      "utf8",
+    ).toString("base64url");
+    writeFileSync(
+      summaryPath,
+      `${JSON.stringify(
+        {
+          ...summary,
+          codex_client: {
+            schema_version: 2,
+            launcher_kind: "official_npm_shim",
+            selected_binary: "/opt/bin/codex",
+            executable_binary: "/foreign/codex",
+            authority_token: fabricatedShellToken,
+            authority_sha256: sha256Text(fabricatedShellToken),
+            cli_version: "0.144.1",
+            test_script: false,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toMatch(/summary/i);
+
+    writeFileSync(
+      summaryPath,
+      `${JSON.stringify(
+        { ...summary, codex_client: { ...codexClient, cli_version: "0.145.0" } },
+        null,
+        2,
+      )}\n`,
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toMatch(/model attestation Codex client authority differs/i);
+    writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
+
+    const { codex_client: _clientAuthority, ...historicalSummary } = summary;
+    writeFileSync(
+      summaryPath,
+      `${JSON.stringify({ ...historicalSummary, model_attestation_schema_version: 5 }, null, 2)}\n`,
     );
     const rejectedHistoricalPilot = validateStartingSlicePilot({
       root: ROOT,
@@ -1030,7 +1165,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedHistoricalPilot.validity_errors.join("\n")).toMatch(
-      /current Codex pilot certification requires attestation v6/i,
+      /current Codex pilot certification requires attestation v7/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
 
@@ -1130,7 +1265,7 @@ describe("closed fleet filesystem integrity", () => {
       const receiptBound = index === 0;
       const modelAttestation = {
         ...row.model_attestation,
-        schema_version: 6,
+        schema_version: 7,
         report_receipt_bound: receiptBound,
         report_sha256: receiptBound
           ? sha256Text(boundReportBody)
@@ -1166,7 +1301,7 @@ describe("closed fleet filesystem integrity", () => {
     const boundSummary = {
       ...summary,
       receipt_bound_runs: 1,
-      model_attestation_schema_version: 6,
+      model_attestation_schema_version: 7,
     };
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
     writeFileSync(manifestPath, `${boundRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
@@ -1179,7 +1314,15 @@ describe("closed fleet filesystem integrity", () => {
     expect(acceptedBoundV5.pilot_passed).toBe(true);
     writeFileSync(
       summaryPath,
-      `${JSON.stringify({ ...boundSummary, model_attestation_schema_version: 4 }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          ...historicalSummary,
+          receipt_bound_runs: 1,
+          model_attestation_schema_version: 4,
+        },
+        null,
+        2,
+      )}\n`,
     );
     const rejectedCurrentAuthority = certifyStartingSliceAuthority({
       root: ROOT,
@@ -1187,7 +1330,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedCurrentAuthority.validity_errors.join("\n")).toMatch(
-      /current Codex authority certification requires attestation v6/i,
+      /current Codex authority certification requires attestation v7/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
 
