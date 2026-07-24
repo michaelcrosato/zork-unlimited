@@ -15,6 +15,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+### Cycle result - proper_possessive_item_narration
+
+- Evidence choice: a real Wolf-Winter terminal run narrated `You take the Cade's winter-feed sack`, exposing a shared grammar defect rather than a Wolf-specific content error.
+- Surface: TAKE, DROP, OPEN, CLOSE, and default UNLOCK now add `the` to ordinary object names while leaving capitalized proper-owner possessives such as Cade's, Fen's, and Old Cade's intact; authored custom narration remains authoritative.
+- Counterfactual: straight/curly apostrophes, hyphenated and multiword proper owners suppress the article, lowercase generic possessives and ordinary nouns retain it, and paired executions prove identical state and hashes.
+- Blind evidence: exact-build native Terra seed 72520 completes The Wolf-Winter via Cade's fortified terms in 9 decisions with every wolf and cow alive, ends voluntarily, rates clarity/enjoyment 4/4, and reports no duplicate-article narration.
+- Feedback/follow-through: the blocked north exit should name the exact shutter-take action, while "two household shutters" and June's "optional second field seat" remain separate copy debts rather than broadening this grammar fix.
+- Guard: independent review is clean, focused action coverage passes 30 tests, pre/post crawl are zero-finding, and full health passes 419 files/3,390 tests plus both typechecks and all packs.
+
 ### Cycle result - blind_direct_inline_flag_authority
 
 - Evidence choice: invoking the native blind launcher with an inline value such as `--seed=72525` treated that switch as a quest target and stopped before play, while recovered npm residue could outrank an explicit operator value.
