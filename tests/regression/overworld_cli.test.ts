@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import {
   render,
@@ -21,6 +21,8 @@ import {
   matchJourneyGateOption,
   resolveQuestLaunchChoice,
 } from "../../bin/overworld_play.js";
+import { renderTerminalStoryChoiceDetail } from "../../bin/terminal_story_choice.js";
+import { compactJourneyStoryChoiceComparison } from "../../src/mcp/journey_projection.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -38,6 +40,10 @@ function runCli(args: string[]): { status: number | null; output: string } {
     status: result.status,
     output: `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`,
   };
+}
+
+function outputSnapshotHashes(output: string): string[] {
+  return output.match(/^[0-9a-f]{64}$/gm) ?? [];
 }
 
 function sessionAtFixedCheckpoint(): OverworldSession {
@@ -140,6 +146,27 @@ function sessionAtCompletedWolfGoal(): OverworldSession {
     death: false,
   });
   expect(session.journey().pendingChoice?.reasons).toContain("goal_completed");
+  return session;
+}
+
+function sessionAtOpeningStation(): OverworldSession {
+  const registration = WORLD.opening_registration;
+  const oath = WORLD.opening_relief_oath;
+  const source = WORLD.opening_lead_source;
+  const preparation = WORLD.opening_preparation;
+  if (!registration || !oath || !source || !preparation) {
+    throw new Error("Albany must retain its opening Station flow.");
+  }
+  const session = new OverworldSession(WORLD);
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(registration.contact);
+  session.chooseJourneyStory(registration.profiles[0]!.id);
+  session.chooseJourneyStory(oath.options[0]!.id);
+  session.chooseJourneyStory(source.options[0]!.id);
+  moveToArea(session, preparation.area);
+  expect(session.view().departureInteractions.map((interaction) => interaction.id)).toContain(
+    preparation.id,
+  );
   return session;
 }
 
@@ -327,7 +354,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     ).toMatchObject({ kind: "ambiguous" });
   });
 
-  it("renders every authoritative story option with its summary terms and consequence", () => {
+  it("stages structured story choices as compact cards with exact inspect/choose commands", () => {
     const manifest = loadOverworldManifest(ROOT);
     const session = new OverworldSession(manifest);
     session.talkToCharacter(session.view().characters[0]!.id);
@@ -336,12 +363,28 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(story?.kind).toBe("registration");
 
     const text = renderJourneyGate(journey);
-    expect(text).toContain("choose <number|label>");
+    expect(text).toContain("! Story choice comparison");
     for (const option of story!.options) {
       expect(text).toContain(option.label);
-      expect(text).toContain(option.consequence);
       expect(text).toContain(`Commitment: ${option.summary!.commitment}`);
       expect(text).toContain(`Field trigger: ${option.summary!.fieldTrigger}`);
+      expect(text).toContain(
+        `Immediate cost: ${option.summary!.immediateCost ?? "No separate immediate cost stated."}`,
+      );
+      expect(text).toContain(`Inspect: \`inspect ${option.id}\``);
+      expect(text).toContain(`Choose: \`choose ${option.id}\``);
+      expect(text).not.toContain(option.consequence);
+    }
+
+    const inspected = story!.options[1]!;
+    const projected = compactJourneyStoryChoiceComparison(story!, inspected.id).inspectedOption;
+    if (!projected) throw new Error("Expected one projected story-choice detail.");
+    const detail = renderTerminalStoryChoiceDetail(story!, inspected);
+    expect(detail).toContain(projected.consequence);
+    expect(detail).toContain(`Choose: \`choose ${inspected.id}\``);
+    expect(detail).toContain("Back: `back`");
+    for (const sibling of story!.options.filter((option) => option.id !== inspected.id)) {
+      expect(detail).not.toContain(sibling.consequence);
     }
   });
 
@@ -370,6 +413,18 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       expect(text).not.toContain(`Commitment: ${option.summary!.commitment}`);
       expect(text).not.toContain(`Field trigger: ${option.summary!.fieldTrigger}`);
     }
+
+    const inspected = storyChoice.options[0]!;
+    const projected = compactJourneyStoryChoiceComparison(
+      storyChoice,
+      inspected.id,
+    ).inspectedOption;
+    if (!projected?.summary) throw new Error("Expected projected Station detail.");
+    const detail = renderTerminalStoryChoiceDetail(storyChoice, inspected);
+    expect(detail.split(projected.summary.commitment)).toHaveLength(2);
+    expect(detail.split(projected.summary.fieldTrigger)).toHaveLength(2);
+    expect(detail.split(projected.summary.immediateCost!)).toHaveLength(2);
+    expect(detail).toContain(projected.consequence);
   });
 
   it("rejects an ambiguous shared-prefix journey label instead of silently taking the first", () => {
@@ -473,7 +528,8 @@ describe("overworld_play CLI (scripted mode)", () => {
 
     expect(run.status).toBe(1);
     expect(run.output).toContain("Choose the active journey prompt first");
-    expect(run.output).toContain("choose <number|label>");
+    expect(run.output).toContain("inspect <id>");
+    expect(run.output).toContain("choose <id>");
     expect(run.output).not.toContain("Goal passage stop:");
   });
 
@@ -486,23 +542,164 @@ describe("overworld_play CLI (scripted mode)", () => {
     expect(run.output).not.toContain("A scripted command was rejected.");
   });
 
-  it("keeps journal and travel-log inspection read-only while repeating the story gate", () => {
+  it("keeps journal and travel-log inspection read-only inside one stable comparison", () => {
     const run = runCli(["--commands", "talk rowan; journal; log"]);
 
     expect(run.status, run.output).toBe(0);
     expect(run.output).toContain("The Wolf-Winter Civic docket");
     expect(run.output).toContain("No roads travelled yet.");
-    expect(run.output.match(/! Story choice/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+    expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
     expect(run.output).not.toContain("A scripted command was rejected.");
   });
 
-  it("renders an active gate exactly once per command boundary after look", () => {
+  it("keeps one active comparison while look restates only world and goal status", () => {
     const run = runCli(["--commands", "talk rowan; look; quit"]);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output.match(/! Story choice/g)?.length ?? 0).toBe(2);
+    expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
     expect(run.output).toContain("--- Journey ---");
     expect(run.output).not.toContain("A scripted command was rejected.");
+  });
+
+  it("keeps mandatory inspect, back, cancel, and malformed selectors state-neutral", () => {
+    const baseline = new OverworldSession(WORLD);
+    const contact = baseline.view().characters[0];
+    const registration = WORLD.opening_registration;
+    if (!contact || !registration) throw new Error("Expected Albany registration.");
+    baseline.talkToCharacter(contact.id);
+    const option = registration.profiles[0]!;
+    const baselineHash = baseline.snapshotHash();
+
+    const neutral = runCli([
+      "--commands",
+      `talk ${contact.name}; hash; inspect ${option.id}; back; hash; cancel; hash`,
+    ]);
+    expect(neutral.status, neutral.output).toBe(0);
+    expect(outputSnapshotHashes(neutral.output)).toEqual([
+      baselineHash,
+      baselineHash,
+      baselineHash,
+    ]);
+    expect(neutral.output).toContain(`! Story choice detail — ${option.title}`);
+    expect(neutral.output).toContain("This story choice is mandatory.");
+    expect(neutral.output).toContain("Back to the story choice comparison");
+    expect(neutral.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
+
+    const malformed = runCli([
+      "--commands",
+      `talk ${contact.name}; hash; inspect ${option.id} extra; hash`,
+    ]);
+    expect(malformed.status).toBe(1);
+    expect(outputSnapshotHashes(malformed.output)).toEqual([baselineHash, baselineHash]);
+    expect(malformed.output).toContain("Inspect an exact option id");
+  });
+
+  it("makes choosing after mandatory detail hash-identical to a direct API choice", () => {
+    const expected = new OverworldSession(WORLD);
+    const contact = expected.view().characters[0];
+    const registration = WORLD.opening_registration;
+    if (!contact || !registration) throw new Error("Expected Albany registration.");
+    expected.talkToCharacter(contact.id);
+    const option = registration.profiles[1]!;
+    expected.chooseJourneyStory(option.id, registration.id);
+
+    const inspected = runCli([
+      "--commands",
+      `talk ${contact.name}; inspect ${option.id}; choose ${option.id}; hash`,
+    ]);
+    expect(inspected.status, inspected.output).toBe(0);
+    expect(outputSnapshotHashes(inspected.output)).toEqual([expected.snapshotHash()]);
+    expect(inspected.output).toContain(`! Story choice detail — ${option.title}`);
+    expect(inspected.output).toContain(`Chosen: ${option.title}.`);
+  });
+
+  it("rejects missing and malformed loads inside a mandatory comparison without losing state", () => {
+    const baseline = new OverworldSession(WORLD);
+    const contact = baseline.view().characters[0];
+    if (!contact) throw new Error("Expected Albany registration contact.");
+    baseline.talkToCharacter(contact.id);
+    const baselineHash = baseline.snapshotHash();
+    const missingName = "terminal-choice-missing";
+    const malformedName = "terminal-choice-malformed";
+    const missingPath = join(ROOT, "saves", `${missingName}.json`);
+    const malformedPath = join(ROOT, "saves", `${malformedName}.json`);
+    mkdirSync(join(ROOT, "saves"), { recursive: true });
+    rmSync(missingPath, { force: true });
+    writeFileSync(malformedPath, "{ this is not a journey snapshot");
+
+    try {
+      for (const [name, expectedMessage] of [
+        [missingName, "ENOENT"],
+        [malformedName, "JSON"],
+      ] as const) {
+        const run = runCli(["--commands", `talk ${contact.name}; hash; load ${name}; hash`]);
+        expect(run.status).toBe(1);
+        expect(outputSnapshotHashes(run.output)).toEqual([baselineHash, baselineHash]);
+        expect(run.output).toContain("Could not continue:");
+        expect(run.output).toContain(expectedMessage);
+        expect(run.output).toContain("A scripted command was rejected.");
+        expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(2);
+        expect(run.output).not.toContain("Restored ");
+        expect(run.output).not.toMatch(/\n\s+at\s/);
+      }
+    } finally {
+      rmSync(missingPath, { force: true });
+      rmSync(malformedPath, { force: true });
+    }
+  });
+
+  it("stages optional Station comparison/detail and preserves direct-choice state parity", () => {
+    const stationed = sessionAtOpeningStation();
+    const preparation = WORLD.opening_preparation;
+    if (!preparation) throw new Error("Expected Station preparation.");
+    const option = preparation.profiles[0]!;
+    const expected = OverworldSession.restore(WORLD, stationed.snapshot());
+    expected.chooseJourneyStory(option.id, preparation.id);
+
+    const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-staged-optional-"));
+    const snapshotPath = join(temp, "station.json");
+    writeFileSync(snapshotPath, JSON.stringify(stationed.snapshot()));
+    try {
+      expect(render(stationed.view())).toContain("Optional departure decisions:");
+      const run = runCli([
+        "--restore",
+        snapshotPath,
+        "--commands",
+        `look; inspect ${preparation.id}; inspect ${option.id}; back; choose ${option.id}; hash`,
+      ]);
+      expect(run.status, run.output).toBe(0);
+      expect(run.output).toContain(`Compare: \`inspect ${preparation.id}\``);
+      expect(run.output).toContain(`Inspect: \`inspect ${option.id}\``);
+      expect(run.output).toContain(`! Story choice detail — ${option.title}`);
+      expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
+      expect(outputSnapshotHashes(run.output)).toEqual([expected.snapshotHash()]);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps cancelling an optional Station comparison hash-neutral", () => {
+    const stationed = sessionAtOpeningStation();
+    const preparation = WORLD.opening_preparation;
+    if (!preparation) throw new Error("Expected Station preparation.");
+    const baselineHash = stationed.snapshotHash();
+
+    const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-staged-cancel-"));
+    const snapshotPath = join(temp, "station.json");
+    writeFileSync(snapshotPath, JSON.stringify(stationed.snapshot()));
+    try {
+      const run = runCli([
+        "--restore",
+        snapshotPath,
+        "--commands",
+        `hash; inspect ${preparation.id}; cancel; hash`,
+      ]);
+      expect(run.status, run.output).toBe(0);
+      expect(outputSnapshotHashes(run.output)).toEqual([baselineHash, baselineHash]);
+      expect(run.output).toContain("Story comparison closed without changing the journey.");
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
   });
 
   it("labels the discovered Winter Return Docket as future work and explains failed work truthfully", () => {
