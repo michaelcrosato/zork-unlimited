@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import {
   render,
@@ -168,6 +168,28 @@ function sessionAtOpeningStation(): OverworldSession {
     preparation.id,
   );
   return session;
+}
+
+function sessionWithResolvedStationChoices(): OverworldSession {
+  const preparation = WORLD.opening_preparation;
+  const allocation = WORLD.opening_relief_allocation;
+  if (!preparation || !allocation) {
+    throw new Error("Albany must retain both optional Station decisions.");
+  }
+  const session = sessionAtOpeningStation();
+  session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
+  session.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
+  return session;
+}
+
+function migratedLegacyResolvedStationChoices(): OverworldSession {
+  const fixture = JSON.parse(
+    readFileSync(
+      join(ROOT, "tests", "regression", "fixtures", "campaign_service_742_started.json"),
+      "utf8",
+    ),
+  ) as { snapshot: unknown };
+  return OverworldSession.restore(WORLD, structuredClone(fixture.snapshot));
 }
 
 function chooseNorthGoal(session: OverworldSession): void {
@@ -813,6 +835,130 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.status, run.output).toBe(0);
       expect(outputSnapshotHashes(run.output)).toEqual([baselineHash, baselineHash]);
       expect(run.output).toContain("Story comparison closed without changing the journey.");
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  it("classifies only exact current and migrated legacy Station resolutions read-only", () => {
+    const preparation = WORLD.opening_preparation;
+    const allocation = WORLD.opening_relief_allocation;
+    const registration = WORLD.opening_registration;
+    if (!preparation || !allocation || !registration) {
+      throw new Error("Expected Albany's authored opening chain.");
+    }
+
+    const current = sessionAtOpeningStation();
+    const unresolvedHash = current.snapshotHash();
+    for (const id of [
+      preparation.id,
+      allocation.id,
+      registration.id,
+      preparation.profiles[0]!.id,
+      "albany:not_an_authored_story_choice",
+    ]) {
+      expect(current.isDepartureStoryChoiceResolved(id), id).toBe(false);
+    }
+    expect(current.snapshotHash()).toBe(unresolvedHash);
+
+    current.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
+    const preparedHash = current.snapshotHash();
+    expect(current.isDepartureStoryChoiceResolved(preparation.id)).toBe(true);
+    expect(current.isDepartureStoryChoiceResolved(allocation.id)).toBe(false);
+    expect(current.snapshotHash()).toBe(preparedHash);
+
+    current.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
+
+    for (const resolved of [current, migratedLegacyResolvedStationChoices()]) {
+      const beforeHash = resolved.snapshotHash();
+      expect(resolved.isDepartureStoryChoiceResolved(preparation.id)).toBe(true);
+      expect(resolved.isDepartureStoryChoiceResolved(allocation.id)).toBe(true);
+      expect(resolved.isDepartureStoryChoiceResolved(registration.id)).toBe(false);
+      expect(resolved.isDepartureStoryChoiceResolved(preparation.profiles[0]!.id)).toBe(false);
+      expect(resolved.isDepartureStoryChoiceResolved("albany:not_an_authored_story_choice")).toBe(
+        false,
+      );
+      expect(resolved.snapshotHash()).toBe(beforeHash);
+    }
+  });
+
+  it.each([
+    ["current", sessionWithResolvedStationChoices],
+    ["migrated legacy", migratedLegacyResolvedStationChoices],
+  ])(
+    "reports both %s optional Station resolutions without changing their snapshot",
+    (_label, createSession) => {
+      const preparation = WORLD.opening_preparation;
+      const allocation = WORLD.opening_relief_allocation;
+      if (!preparation || !allocation) {
+        throw new Error("Expected Albany's optional Station decisions.");
+      }
+      const session = createSession();
+      const baselineHash = session.snapshotHash();
+      const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-resolved-story-"));
+      const snapshotPath = join(temp, "resolved.json");
+      writeFileSync(snapshotPath, JSON.stringify(session.snapshot()));
+      try {
+        const run = runCli([
+          "--restore",
+          snapshotPath,
+          "--commands",
+          `hash; inspect ${preparation.id}; hash; inspect ${allocation.id}; hash`,
+        ]);
+
+        expect(run.status, run.output).toBe(1);
+        expect(outputSnapshotHashes(run.output)).toEqual([
+          baselineHash,
+          baselineHash,
+          baselineHash,
+        ]);
+        for (const id of [preparation.id, allocation.id]) {
+          expect(run.output).toContain(
+            `Optional story choice "${id}" has already been resolved. Use \`look\` to see what is available now.`,
+          );
+        }
+        expect(run.output).not.toContain("No optional story choice exactly matches");
+        expect(run.output.match(/A scripted command was rejected\./g) ?? []).toHaveLength(1);
+      } finally {
+        rmSync(temp, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("keeps unresolved-away, mandatory, option, and unknown inspect ids generic and neutral", () => {
+    const preparation = WORLD.opening_preparation;
+    const registration = WORLD.opening_registration;
+    if (!preparation || !registration) {
+      throw new Error("Expected Albany's authored preparation and registration.");
+    }
+    const session = sessionAtOpeningStation();
+    moveToArea(session, registration.area);
+    expect(session.view().departureInteractions).toEqual([]);
+    const baselineHash = session.snapshotHash();
+    const controls = [
+      preparation.id,
+      registration.id,
+      preparation.profiles[0]!.id,
+      "albany:not_an_authored_story_choice",
+    ];
+    const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-unresolved-story-"));
+    const snapshotPath = join(temp, "unresolved-away.json");
+    writeFileSync(snapshotPath, JSON.stringify(session.snapshot()));
+    try {
+      const commands = ["hash", ...controls.flatMap((id) => [`inspect ${id}`, "hash"])].join("; ");
+      const run = runCli(["--restore", snapshotPath, "--commands", commands]);
+
+      expect(run.status, run.output).toBe(1);
+      expect(outputSnapshotHashes(run.output)).toEqual(
+        Array(controls.length + 1).fill(baselineHash),
+      );
+      for (const id of controls) {
+        expect(run.output).toContain(
+          `No optional story choice exactly matches "${id}". Use the \`inspect <id>\` command shown by \`look\`.`,
+        );
+      }
+      expect(run.output).not.toContain("has already been resolved");
+      expect(run.output.match(/A scripted command was rejected\./g) ?? []).toHaveLength(1);
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }
