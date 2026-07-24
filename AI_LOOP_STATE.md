@@ -15,6 +15,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+### Cycle result - active_dialogue_terminal_prompt
+
+- Evidence choice: two independent native terminal players briefly lost the active NPC scope because normal room rendering hid both the speaker and exact dialogue verbs while the parser remained conversation-bound.
+- Surface: standalone and embedded RPG terminals now share one read-only prompt that names the active speaker and renders only that NPC's current legal ASK commands before input, using the same executable projection as full help.
+- Counterfactual: root topics refresh to commitment topics after selection, colliding aliases retain exact `choose <id>` fallbacks, every printed command resolves, rendering preserves the state hash, and non-dialogue or terminal observations add no prompt.
+- Exact-build evidence: native Sol human-terminal seed 72518 on `36bc6562` completes The Wolf-Winter nonlethally and The Gallowmere in 18 accepted decisions, continues once, then ends voluntarily; dialogue is understandable without help, clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
+- Feedback/follow-through: the same run reproduced proper-possessive TAKE grammar and resolved-choice error-copy defects; both are diagnosed P3, isolated from this prompt, and prepared as separate bounded fixes.
+- Guard: independent review is clean, post-change crawl `20260724T155155Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 62 focused tests pass, and full health passes 418 files/3,382 tests plus both typechecks and all packs.
+
 ### Cycle result - june_departure_contact_lead
 
 - Evidence choice: repeated pure players were told June Pike could join the Wolf-Winter field team but received no visible action for finding her, so the advertised ally branch was functionally hidden.
