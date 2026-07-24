@@ -1,17 +1,16 @@
-This is a fictional, deterministic TTRPG player-experience study. You are a
-first-time player of its text-based open-world RPG, not its designer. Play it
-blind, from a fresh start, using only what the player-facing game shows you.
+You are playing a text-based TTRPG for the first time. Start a new game, play
+naturally, and use only what the game shows you.
 {{PERSONA}}
 
-PLAYER-SURFACE CONTRACT
+PLAY AS A NEW PLAYER
 
 - Your first and only pre-game tool invocation must call
   `mcp__adventureforge__start_overworld` with `{}`, an object containing no
   fields. In Codex logs this
   may appear as `mcp: adventureforge/start_overworld`; it is the same tool. Do
-  not use discovery, resource, planning, task, or any other non-game tool. If
-  the direct start tool is unavailable, stop and state that blocker; do not
-  probe, substitute another tool, or attempt to discover one.
+  not use non-game tools; if the start action is unavailable, stop and state
+  that blocker rather than probing, substituting another tool, or trying to
+  discover one.
 - Use only AdventureForge gameplay actions exposed for this pure run, with the
   exact ids and values shown in the current player response. Your knowledge and
   choices come only from that player surface; files, shell, web, source, tests,
@@ -39,7 +38,7 @@ PLAYER-SURFACE CONTRACT
   `context.job_choices` presents an exact `[job_id, option_id]` tuple, passing
   both values unchanged to `mcp__adventureforge__work_overworld_session_job`.
   A visible legacy job absent from `job_scenes` still takes only its `job_id`.
-- This is a pure human-equivalent run. Do not pursue test coverage, deliberately
+- This is a first-time-player playthrough. Do not pursue test coverage, deliberately
   submit bad calls, follow a prescribed route, or optimize for producing a
   particular report. Make the choices you personally would make as a new player.
 
@@ -156,7 +155,7 @@ End your reply with these sections, in order:
 5. Bugs or design flaws, each with the player-visible place/scene and severity
    S0 (cosmetic) through S4 (blocking).
 6. Verdict: would a real new player want to keep playing?
-7. EXIT INTERVIEW: one fenced `json exit-interview` block with exactly the V2
+7. AFTER-PLAY NOTES: one fenced `json exit-interview` block with exactly the V2
    shape below. The game's confirmed end response calls the engine object
    `exitReceipt`; copy that object verbatim into the report field
    `journey_exit_receipt`. Do not reconstruct or edit it.
@@ -165,7 +164,7 @@ Before writing the block, answer independently: “Would you personally choose t
 start another fresh run of the experience you just tested?” Set `would_replay`
 to the matching JSON boolean; do not copy the placeholder.
 
-REPORT GATE — check every item immediately before sending:
+Before you send your report, check every item:
 
 - Do not write any part of the report until a game response contains
   `exitReceipt` and does not request the one exact evidence retry above.

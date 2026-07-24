@@ -727,7 +727,7 @@ printf 'codex-cli 0.144.1\\n'
     expect(owPrompt).toContain("forbidden structural tool");
     expect(owPrompt).toContain("game presents its actual journey choice");
     expect(owPrompt).toContain("After the game confirms the end");
-    expect(owPrompt).toContain("REPORT GATE — check every item immediately before sending");
+    expect(owPrompt).toContain("Before you send your report, check every item:");
     expect(owPrompt).toContain(
       "Do not write any part of the report until a game response contains",
     );
@@ -740,13 +740,13 @@ printf 'codex-cli 0.144.1\\n'
     expect(owPrompt).toContain("if you do not have it, continue playing instead of");
     expect(owPrompt).toContain("A plain `json` fence is invalid");
     expect(owPrompt).toContain("literal heading `Playthrough log`");
-    expect(owPrompt.indexOf("REPORT GATE")).toBeGreaterThan(
+    expect(owPrompt.indexOf("Before you send your report")).toBeGreaterThan(
       owPrompt.indexOf("After the game confirms the end"),
     );
     expect(owPrompt).toContain("json exit-interview");
     expect(owPrompt.match(/^```json exit-interview\r?$/gm)).toHaveLength(1);
     expect(owPrompt.indexOf("\n```json exit-interview")).toBeGreaterThan(
-      owPrompt.indexOf("REPORT GATE"),
+      owPrompt.indexOf("Before you send your report"),
     );
     expect(owPrompt).toContain('"play_mode": "pure"');
     expect(owPrompt).not.toContain("pack_path");
