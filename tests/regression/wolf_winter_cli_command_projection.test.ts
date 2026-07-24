@@ -1,6 +1,9 @@
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { actionEquals, makeStep } from "../../src/core/engine.js";
+import { hashState } from "../../src/core/hash.js";
 import type { GameState } from "../../src/core/state.js";
 import { runQuestSession, type QuestCommandReader } from "../../bin/overworld_play.js";
 import {
@@ -10,6 +13,11 @@ import {
 } from "../../bin/rpg_play.js";
 import { RpgSourceRuntime } from "../../src/mcp/rpg_source_runtime.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import {
+  projectRpgPlayerCommands,
+  renderRpgActiveDialoguePrompt,
+  renderRpgPlayerCommand,
+} from "../../src/rpg/player_command_projection.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -25,6 +33,7 @@ if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const rules = buildRpgRules(index);
 const world = loadOverworldManifest(process.cwd());
+const TSX = join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
 
 function act(state: GameState, raw: string): GameState {
   const parsed = resolveCli(index, state, raw);
@@ -184,6 +193,68 @@ describe("Wolf-Winter terminal dialogue commands", () => {
     expect(state.flags.strategy_lure_committed).toBe(true);
   });
 
+  it("surfaces Cade and every exact current dialogue command without mutating state", () => {
+    let state = atCade();
+    const rootHash = hashState(state);
+    const rootOptions = enumerateRpgActions(index, state);
+    const rootPrompt = renderRpgActiveDialoguePrompt(
+      buildRpgObservation(index, state),
+      rootOptions,
+      { index, state },
+    );
+    expect(rootPrompt).toContain("[Active speaker: old Cade the houndsman]");
+    expect(rootPrompt).toMatch(/\n {2}lure\b/i);
+    expect(rootPrompt).toMatch(/\n {2}drive\b/i);
+    expect(rootPrompt).toMatch(/\n {2}fortify\b/i);
+
+    const projected = projectRpgPlayerCommands(rootOptions, { index, state }).filter(
+      ({ option }) => option.action.type === "ASK",
+    );
+    for (const row of projected) {
+      expect(rootPrompt).toContain(`  ${renderRpgPlayerCommand(row)}`);
+      expect(resolveCli(index, state, row.command)).toEqual({
+        ok: true,
+        action: row.option.action,
+      });
+    }
+    expect(hashState(state)).toBe(rootHash);
+
+    state = act(state, "lure");
+    const commitmentHash = hashState(state);
+    const commitmentPrompt = renderRpgActiveDialoguePrompt(
+      buildRpgObservation(index, state),
+      enumerateRpgActions(index, state),
+      { index, state },
+    );
+    expect(commitmentPrompt).toMatch(/\n {2}commit lure\b/i);
+    expect(commitmentPrompt).not.toMatch(/\n {2}(?:drive|fortify)\b/i);
+    expect(hashState(state)).toBe(commitmentHash);
+  });
+
+  it("prints the active dialogue prompt in normal standalone play without a help command", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        TSX,
+        "bin/rpg_play.ts",
+        "wolf_winter",
+        "--seed",
+        "541",
+        "--commands",
+        "go north; talk to old Cade the houndsman; lure",
+      ],
+      { cwd: process.cwd(), encoding: "utf8", timeout: 60_000 },
+    );
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+    expect(result.status, output).toBe(1);
+    expect(output).toContain("[Active speaker: old Cade the houndsman]");
+    expect(output).toMatch(/\n {2}lure\b/i);
+    expect(output).toMatch(/\n {2}drive\b/i);
+    expect(output).toMatch(/\n {2}fortify\b/i);
+    expect(output).toMatch(/\n {2}commit lure\b/i);
+    expect(output).not.toContain("\n> help");
+  });
+
   it("maps wear only to the current legal don action and advertises that authored verb", () => {
     const beforeTake = atStore();
     expect(resolveCli(index, beforeTake, "wear jerkin").ok).toBe(false);
@@ -299,7 +370,12 @@ describe("Wolf-Winter terminal dialogue commands", () => {
     }
 
     expect(session.view().startedQuestIds).toContain("wolf_winter");
-    expect(output.join("\n")).toContain("(You end the conversation.)");
+    const rendered = output.join("\n");
+    expect(rendered).toContain("(You end the conversation.)");
+    expect(rendered).toContain("[Active speaker: old Cade the houndsman]");
+    expect(rendered).toMatch(/\n {2}lure\b/i);
+    expect(rendered).toMatch(/\n {2}drive\b/i);
+    expect(rendered).toMatch(/\n {2}fortify\b/i);
     expect(commands).toEqual([]);
   });
 

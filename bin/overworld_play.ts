@@ -25,8 +25,14 @@ import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
 import { makeStep, actionEquals } from "../src/core/engine.js";
-import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../src/rpg/runner.js";
+import {
+  indexRpgPack,
+  buildRpgRules,
+  initStateForRpgPack,
+  enumerateRpgActions,
+} from "../src/rpg/runner.js";
 import { buildRpgObservation } from "../src/rpg/observation.js";
+import { renderRpgActiveDialoguePrompt } from "../src/rpg/player_command_projection.js";
 import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 import {
   render as renderQuest,
@@ -1086,6 +1092,11 @@ export async function runQuestSession(
   while (true) {
     const obs = buildRpgObservation(index, state, { includeWorldIntro: true });
     console.log(renderQuest(obs));
+    const dialoguePrompt = renderRpgActiveDialoguePrompt(obs, enumerateRpgActions(index, state), {
+      index,
+      state,
+    });
+    if (dialoguePrompt) console.log(dialoguePrompt);
     if (obs.ended || obs.available_actions.length === 0) break;
 
     const raw = await reader.read(`\n[quest: ${plan.quest.title}] > `);

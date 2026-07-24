@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { RpgActionOption } from "../../src/rpg/legal_actions.js";
 import {
   projectRpgPlayerCommands,
+  renderRpgActiveDialoguePrompt,
   renderRpgPlayerActionHelp,
   resolveRpgPlayerCommand,
 } from "../../src/rpg/player_command_projection.js";
@@ -83,6 +84,18 @@ describe("terminal RPG command projection", () => {
       kind: "resolved",
       option: { id: "ask_second" },
     });
+
+    const prompt = renderRpgActiveDialoguePrompt(
+      {
+        dialogue: { npc: "guide" },
+        npcs_present: [{ id: "guide", name: "the guide" }],
+      },
+      options,
+    );
+    expect(prompt).toContain("[Active speaker: the guide]");
+    expect(prompt).toContain("choose ask_first");
+    expect(prompt).toContain("choose ask_second");
+    expect(prompt).not.toContain("\n  shared topic");
   });
 
   it("gives every action a choose-id fallback when dialogue collides with an ordinary command", () => {
