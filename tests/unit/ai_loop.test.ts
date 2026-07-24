@@ -164,8 +164,9 @@ describe("compact AFK handoff metadata", () => {
 
 describe("buildPrompt blind-playtest contract", () => {
   function expectFreshOverworldContract(prompt: string): void {
+    expect(prompt).toContain("Game context: this is a fictional, deterministic text-based TTRPG.");
     expect(prompt).toContain(
-      "Packaged harness context: this is a fictional, deterministic TTRPG player-experience study.",
+      "The playtester starts as a new player and uses only the game surface",
     );
     expect(prompt).toContain("the CORE GAME — the open-world overworld from a FRESH start");
     expect(prompt).toContain("`npm run blind`");

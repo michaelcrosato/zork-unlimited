@@ -49,8 +49,8 @@ describe("pure blind prompt + runner contract", () => {
   });
 
   it("contains transport and game-owned exit instructions without guided coverage", () => {
-    expect(prompt).toContain("fictional, deterministic TTRPG player-experience study");
-    expect(prompt).toContain("PLAYER-SURFACE CONTRACT");
+    expect(prompt).toContain("text-based TTRPG for the first time");
+    expect(prompt).toContain("PLAY AS A NEW PLAYER");
     expect(prompt).toContain("Use only AdventureForge gameplay actions exposed for this pure run");
     expect(prompt).toContain("`text(await tools.mcp__adventureforge__<tool>({literalArgs}));`");
     expect(prompt).toContain("`yield_time_ms`\n  exactly (never `yield-time`)");
@@ -59,8 +59,8 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("mcp__adventureforge__start_overworld");
     expect(prompt).toContain("first and only pre-game tool invocation");
     expect(prompt).toContain("with `{}`, an object containing no\n  fields");
-    expect(prompt).toContain(
-      "do not\n  probe, substitute another tool, or attempt to discover one",
+    expect(prompt).toMatch(
+      /Do\s+not use non-game tools; if the start action is unavailable, stop and state\s+that blocker rather than probing, substituting another tool, or trying to\s+discover one\./,
     );
     for (const forbidden of [
       "list_mcp_resources",
