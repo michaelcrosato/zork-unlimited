@@ -18,6 +18,7 @@ const PREPARATION = WORLD.opening_preparation!;
 const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
+const ALLY_CONTACT = WORLD.characters.find((character) => character.id === ALLY.contact)!;
 
 function currentStoryChoice(session: OverworldSession): JourneyStoryChoicePrompt {
   const storyChoice = session.journey().storyChoice;
@@ -267,12 +268,17 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(allocation.message).toContain(
       `${RELIEF_ALLOCATION.title}. ${RELIEF_ALLOCATION.message}`,
     );
-    expect(allocation.message).toContain("Still ahead: none.");
+    expect(allocation.message).not.toContain("Still ahead: none.");
+    expect(allocation.message).not.toContain("Optional field-team choice follows");
+    expect(allocation.message).toContain("This is the final required departure-board choice.");
     expect(allocation.message).toContain(
-      `Optional field-team choice follows: ${ALLY.options
+      `After resolving it, return to the Station actions. ${ALLY_CONTACT.name}'s field-team choice is a separate optional conversation before launch. Talk to ${ALLY_CONTACT.name} (terminal: \`talk ${ALLY_CONTACT.name}\`) to review ${ALLY.options
         .map((option) => option.title)
         .slice(0, -1)
         .join(", ")}, and ${ALLY.options.at(-1)!.title}.`,
+    );
+    expect(allocation.message).toContain(
+      `You may instead launch ${WOLF.title} now as a solo rider.`,
     );
     expect(allocation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(allocation);
