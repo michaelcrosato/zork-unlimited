@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   linkSync,
   mkdirSync,
@@ -26,6 +27,7 @@ import {
   acquireFleetReportLock,
   archiveFailedFleetAttemptArtifacts,
   classifyFleetAttempt,
+  codexFleetMemberEnv,
   fleetAttestationPathFor,
   fleetReportLockSpec,
   isTrustedFleetArtifactFile,
@@ -43,6 +45,7 @@ import {
   renderClosedFleetManifest,
   reportPathFor,
   resumeCandidatesFor,
+  runPool,
   runSidecarPathFor,
   summarizeFleetAttemptHistory,
   validateFleetLabel,
@@ -51,10 +54,51 @@ import {
   writeFreshPureFleetAttestation,
   // @ts-expect-error — plain .mjs module without type declarations
 } from "../../blind-tester/fleet.mjs";
+import {
+  codexClientAuthorityRecord,
+  resolveCodexClientBinary,
+  // @ts-expect-error — plain .mjs module without type declarations
+} from "../../blind-tester/codex-rollout.mjs";
 
 it("keeps the fleet resume contract pinned to the engine journey contract", () => {
   expect(PURE_SESSION_CONTRACT_VERSION).toBe(JOURNEY_CONTRACT_VERSION);
   expect(PURE_BASELINE_DECISIONS).toBe(JOURNEY_BASELINE_DECISIONS);
+});
+
+it("freezes one shared Codex authority and version into every live member environment", () => {
+  const resolved = resolveCodexClientBinary(process.execPath);
+  const client = codexClientAuthorityRecord(resolved.identity_token, "1.2.3");
+  const environment = codexFleetMemberEnv(
+    {
+      KEEP: "yes",
+      BLIND_CODEX_BIN: "substitute",
+      BLIND_CODEX_EXPECTED_AUTHORITY: "substitute",
+      BLIND_CODEX_EXPECTED_VERSION: "9.9.9",
+    },
+    client,
+  );
+  expect(environment).toMatchObject({
+    KEEP: "yes",
+    BLIND_CODEX_BIN: client.selected_binary,
+    BLIND_CODEX_EXPECTED_AUTHORITY: client.authority_token,
+    BLIND_CODEX_EXPECTED_VERSION: "1.2.3",
+  });
+  expect(() => codexFleetMemberEnv({}, { ...client, authority_sha256: "0".repeat(64) })).toThrow(
+    /exact Codex client authority/i,
+  );
+
+  const testRoot = mkdtempSync(join(tmpdir(), "af-fleet-test-script-client-"));
+  try {
+    const testScript = join(testRoot, "selected-codex");
+    writeFileSync(testScript, "#!/usr/bin/env bash\nexit 0\n");
+    chmodSync(testScript, 0o755);
+    const testResolved = resolveCodexClientBinary(testScript, { allowTestScript: true });
+    const testClient = codexClientAuthorityRecord(testResolved.identity_token, "1.2.3");
+    expect(testClient.test_script).toBe(true);
+    expect(() => codexFleetMemberEnv({}, testClient)).toThrow(/exact Codex client authority/i);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
 });
 
 it("normalizes Git Bash, Cygwin, and WSL drive paths for Windows Node", () => {
@@ -218,6 +262,163 @@ it("keeps structural mock fleets independent from an absent configured Codex hom
     rmSync(fleetDir, { recursive: true, force: true });
   }
 }, 90_000);
+
+it("runs one fleet-wide executable preflight before directories and never retries failure", () => {
+  const root = mkdtempSync(join(tmpdir(), "af-fleet-codex-preflight-"));
+  const home = join(root, "codex-home");
+  const reportsDir = join(root, "reports");
+  const selected = join(root, "selected-codex");
+  const capture = join(root, "version-probes.txt");
+  const loginFilename = ["auth", ".json"].join("");
+  const loginPath = join(home, loginFilename);
+  const loginBytes = '{"sentinel":"fleet-preflight-auth"}\n';
+  const label = `codex-preflight-${process.pid}-${Date.now()}`;
+  const fleetDir = join(process.cwd(), "ai-runs", "fleet", label);
+  const bashPath = (path: string): string =>
+    path
+      .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
+      .replaceAll("\\", "/");
+  try {
+    mkdirSync(home);
+    writeFileSync(loginPath, loginBytes);
+    writeFileSync(
+      selected,
+      `#!/usr/bin/env bash
+printf 'probe\\n' >> "\${PROBE_CAPTURE}"
+printf 'not-codex 0.144.1\\n'
+`,
+    );
+    chmodSync(selected, 0o755);
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        "blind-tester/fleet.mjs",
+        "--count",
+        "2",
+        "--concurrency",
+        "2",
+        "--max-retries",
+        "3",
+        "--out",
+        reportsDir,
+        "--label",
+        label,
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CODEX_HOME: home,
+          BLIND_CODEX_BIN: bashPath(selected),
+          BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+          BLIND_PROVIDER: "claude",
+          BLIND_MODEL: "ambient-alias",
+          BLIND_PERSONA: "breaker",
+          PROBE_CAPTURE: bashPath(capture),
+        },
+        timeout: 30_000,
+      },
+    );
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+    expect(result.status, output).toBe(1);
+    expect(output).toContain("before report directories, locks, or player launches");
+    expect(output).toContain("no fleet retry was attempted");
+    expect(output).toMatch(/exactly one.*codex-cli <semver>/is);
+    expect(output).not.toContain("live Claude blind provider is retired");
+    expect(output).not.toContain("models_cache");
+    expect(readFileSync(capture, "utf8")).toBe("probe\n");
+    expect(existsSync(reportsDir)).toBe(false);
+    expect(existsSync(fleetDir)).toBe(false);
+    expect(readFileSync(loginPath, "utf8")).toBe(loginBytes);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(fleetDir, { recursive: true, force: true });
+  }
+}, 30_000);
+
+it("does not classify a structural mock exit 42 as Codex preflight drift", () => {
+  const root = mkdtempSync(join(tmpdir(), "af-fleet-mock-exit-42-"));
+  const reportsDir = join(root, "reports");
+  const missingHome = join(root, "missing-codex-home");
+  const label = `mock-exit-42-${process.pid}-${Date.now()}`;
+  const fleetDir = join(process.cwd(), "ai-runs", "fleet", label);
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "blind-tester/fleet.mjs",
+        "--mock",
+        "--count",
+        "1",
+        "--max-retries",
+        "0",
+        "--out",
+        reportsDir,
+        "--label",
+        label,
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CODEX_HOME: missingHome,
+          BLIND_MOCK_AGENT_CMD: "exit 42",
+        },
+        timeout: 30_000,
+      },
+    );
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+    expect(result.status, output).toBe(1);
+    expect(output).not.toContain("Codex client preflight changed");
+    const manifest = readFileSync(join(fleetDir, "manifest.jsonl"), "utf8")
+      .trim()
+      .split(/\r?\n/u)
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(manifest).toHaveLength(1);
+    expect(manifest[0]).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      exit: 42,
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(fleetDir, { recursive: true, force: true });
+  }
+}, 30_000);
+
+it("drains active fleet lanes before propagating a nonretryable failure", async () => {
+  let releaseSibling = (): void => undefined;
+  const siblingGate = new Promise<void>((resolve) => {
+    releaseSibling = resolve;
+  });
+  let siblingStarted = false;
+  let siblingClosed = false;
+  const failure = new Error("nonretryable client preflight");
+
+  const pool = runPool([0, 1], 2, async (item: number) => {
+    if (item === 0) throw failure;
+    siblingStarted = true;
+    await siblingGate;
+    siblingClosed = true;
+  });
+  let poolRejected = false;
+  const observedPool = pool.catch((error: unknown) => {
+    poolRejected = true;
+    throw error;
+  });
+
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(siblingStarted).toBe(true);
+  expect(poolRejected).toBe(false);
+
+  releaseSibling();
+  await expect(observedPool).rejects.toBe(failure);
+  expect(siblingClosed).toBe(true);
+  expect(poolRejected).toBe(true);
+});
 
 describe("fill-prompt", () => {
   const template = "Intro.\n{{PERSONA}}\nRules __SEED__.\nGo: {{START_INSTRUCTION}}\n";

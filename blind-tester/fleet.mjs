@@ -28,14 +28,18 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { clearTimeout, setTimeout } from "node:timers";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
-import { validateOutputPrefix } from "./codex-rollout.mjs";
+import { codexClientAuthorityRecord, validateOutputPrefix } from "./codex-rollout.mjs";
 import { parseJsonRejectingDuplicateKeys } from "./strict-json.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GAME_DIR = resolve(HERE, "..");
 const RUN_SH = join(HERE, "run.sh");
+const CODEX_PREFLIGHT_EXIT = 42;
+const CODEX_PREFLIGHT_PROCESS_TIMEOUT_MS = 15_000;
+const CODEX_PREFLIGHT_PROCESS_MAX_OUTPUT_BYTES = 64 * 1024;
 // Standalone JS mirror of src/world/journey_contract.ts; pure reports are
 // independently schema-checked against these values before a row is verified.
 export const PURE_SESSION_CONTRACT_VERSION = 3;
@@ -45,7 +49,8 @@ export const PURE_FLEET_ATTESTATION_SCHEMA_VERSION = 2;
 export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
 export const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
 export const HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
-export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
+export const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
 export const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1";
 export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v2";
 export const CERTIFIED_CODEX_MODELS = [
@@ -393,6 +398,81 @@ function spawnAsync(cmd, args, opts) {
   });
 }
 
+function spawnBoundedAsync(cmd, args, opts, { timeoutMs, maxOutputBytes }) {
+  return new Promise((resolvePromise) => {
+    let child;
+    try {
+      child = spawn(cmd, args, opts);
+    } catch (error) {
+      resolvePromise({
+        status: CODEX_PREFLIGHT_EXIT,
+        stdout: "",
+        stderr: String(error),
+        timedOut: false,
+        outputExceeded: false,
+      });
+      return;
+    }
+    const stdoutChunks = [];
+    const stderrChunks = [];
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let settled = false;
+    let timer;
+    let killTimer;
+    let stopReason = null;
+    const captured = (chunks, currentBytes, chunk) => {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      const remaining = Math.max(0, maxOutputBytes - currentBytes);
+      if (remaining > 0) chunks.push(bytes.subarray(0, remaining));
+      return {
+        bytes: currentBytes + Math.min(bytes.byteLength, remaining),
+        exceeded: bytes.byteLength > remaining,
+      };
+    };
+    const finish = (status) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (killTimer) clearTimeout(killTimer);
+      resolvePromise({
+        status: stopReason === null ? status : CODEX_PREFLIGHT_EXIT,
+        stdout: Buffer.concat(stdoutChunks, stdoutBytes).toString("utf8"),
+        stderr: Buffer.concat(stderrChunks, stderrBytes).toString("utf8"),
+        timedOut: stopReason === "timeout",
+        outputExceeded: stopReason === "output",
+      });
+    };
+    const requestStop = (reason) => {
+      if (stopReason !== null) return;
+      stopReason = reason;
+      child.kill();
+      killTimer = setTimeout(() => {
+        child.kill("SIGKILL");
+      }, 1_000);
+    };
+    child.stdout?.on("data", (chunk) => {
+      const result = captured(stdoutChunks, stdoutBytes, chunk);
+      stdoutBytes = result.bytes;
+      if (result.exceeded) requestStop("output");
+    });
+    child.stderr?.on("data", (chunk) => {
+      const result = captured(stderrChunks, stderrBytes, chunk);
+      stderrBytes = result.bytes;
+      if (result.exceeded) requestStop("output");
+    });
+    child.on("close", (code) => finish(code ?? 1));
+    child.on("error", (error) => {
+      stderrChunks.push(Buffer.from(String(error)));
+      stderrBytes += Buffer.byteLength(String(error));
+      finish(1);
+    });
+    timer = setTimeout(() => {
+      requestStop("timeout");
+    }, timeoutMs);
+  });
+}
+
 /** Belt-and-braces re-verification: run.sh already ran the verifier as its own
  * last step, but this is a second, independent pass, per the brief. Returns
  * stdout/stderr too (not just ok) so failed-attempt diagnostics can surface
@@ -509,6 +589,8 @@ const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
   "actual_model",
   "actual_provider",
   "build",
+  "codex_cli_version",
+  "codex_client_authority_sha256",
   "code_mode_contract",
   "game_session_id",
   "initial_report_sha256",
@@ -539,16 +621,73 @@ const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
   "target",
 ].sort();
 
-const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_KEYS = PURE_FLEET_CODEX_ATTESTATION_KEYS.filter(
-  (key) => key !== "code_mode_contract",
+const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_KEYS = PURE_FLEET_CODEX_ATTESTATION_KEYS.filter(
+  (key) => key !== "codex_cli_version" && key !== "codex_client_authority_sha256",
 );
+
+const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_KEYS =
+  HISTORICAL_CODE_MODE_CODEX_ATTESTATION_KEYS.filter((key) => key !== "code_mode_contract");
+
+const HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS = HISTORICAL_CODE_MODE_CODEX_ATTESTATION_KEYS;
 
 const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_KEYS =
   HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_KEYS.filter(
     (key) => key !== "receipt_binding_sha256" && key !== "report_receipt_bound",
   );
 
-const HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS = PURE_FLEET_CODEX_ATTESTATION_KEYS;
+function isExactCodexClientAuthority(client) {
+  if (client === null || typeof client !== "object" || Array.isArray(client)) return false;
+  const keys = Object.keys(client).sort();
+  if (
+    !isDeepStrictEqual(keys, [
+      "authority_sha256",
+      "authority_token",
+      "cli_version",
+      "executable_binary",
+      "launcher_kind",
+      "schema_version",
+      "selected_binary",
+      "test_script",
+    ])
+  ) {
+    return false;
+  }
+  if (
+    client.schema_version !== 2 ||
+    client.test_script !== false ||
+    !["direct", "official_npm_shim"].includes(client.launcher_kind) ||
+    typeof client.selected_binary !== "string" ||
+    client.selected_binary.length === 0 ||
+    typeof client.executable_binary !== "string" ||
+    client.executable_binary.length === 0 ||
+    typeof client.authority_token !== "string" ||
+    !/^[0-9A-Za-z_-]+$/u.test(client.authority_token) ||
+    !/^[0-9a-f]{64}$/u.test(client.authority_sha256) ||
+    typeof client.cli_version !== "string"
+  ) {
+    return false;
+  }
+  try {
+    return isDeepStrictEqual(
+      codexClientAuthorityRecord(client.authority_token, client.cli_version),
+      client,
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function codexFleetMemberEnv(environment, client) {
+  if (!isExactCodexClientAuthority(client)) {
+    throw new Error("fleet: cannot launch a member without exact Codex client authority");
+  }
+  return {
+    ...environment,
+    BLIND_CODEX_BIN: client.selected_binary,
+    BLIND_CODEX_EXPECTED_AUTHORITY: client.authority_token,
+    BLIND_CODEX_EXPECTED_VERSION: client.cli_version,
+  };
+}
 
 function isFleetModel(model) {
   return model === "haiku" || model === "sonnet" || model === "opus";
@@ -616,6 +755,10 @@ function isExactPureFleetAttestation(attestation) {
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
     keys.length === PURE_FLEET_CODEX_ATTESTATION_KEYS.length &&
     keys.every((key, index) => key === PURE_FLEET_CODEX_ATTESTATION_KEYS[index]);
+  const historicalCodeModeCodex =
+    attestation.schema_version === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    keys.length === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_KEYS[index]);
   const historicalReceiptBoundCodex =
     attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION &&
     keys.length === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_KEYS.length &&
@@ -629,7 +772,11 @@ function isExactPureFleetAttestation(attestation) {
     keys.length === HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS.length &&
     keys.every((key, index) => key === HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS[index]);
   return (
-    (currentCodex || historicalStrictCodex || historicalReceiptBoundCodex || historicalCodex) &&
+    (currentCodex ||
+      historicalCodeModeCodex ||
+      historicalStrictCodex ||
+      historicalReceiptBoundCodex ||
+      historicalCodex) &&
     attestation.provider === "codex" &&
     isCodexFleetModel(attestation.model) &&
     attestation.actual_provider === "openai" &&
@@ -652,10 +799,19 @@ function isExactPureFleetAttestation(attestation) {
     attestation.recovery_metadata_sha256 === null &&
     attestation.recovery_envelope_sha256 === null &&
     (currentCodex
+      ? typeof attestation.codex_cli_version === "string" &&
+        /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(
+          attestation.codex_cli_version,
+        ) &&
+        /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
+      : true) &&
+    (currentCodex
       ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
-      : historicalStrictCodex
-        ? attestation.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT
-        : true) &&
+      : historicalCodeModeCodex
+        ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
+        : historicalStrictCodex
+          ? attestation.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT
+          : true) &&
     (historicalCodex
       ? attestation.initial_report_sha256 === null
       : typeof attestation.report_receipt_bound === "boolean" &&
@@ -905,9 +1061,10 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     typeof expected !== "object" ||
     !Number.isSafeInteger(expected.seed) ||
     !isProviderModel(expectedProvider, expected.model, false) ||
-    !isExactPureFleetBuild(expected.build)
+    !isExactPureFleetBuild(expected.build) ||
+    (expectedProvider === "codex" && !isExactCodexClientAuthority(expected.client))
   ) {
-    return "pure resume requires an exact expected seed, model, and clean fleet build";
+    return "pure resume requires an exact expected seed, model, clean fleet build, and Codex client authority";
   }
   if (attestation.run_seed !== expected.seed || attestation.run_seed !== run?.run_seed) {
     return "pure fleet attestation seed does not match the plan and run evidence";
@@ -924,6 +1081,13 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     attestation.schema_version !== PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
   ) {
     return `current Codex resume requires attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`;
+  }
+  if (
+    expectedProvider === "codex" &&
+    (attestation.codex_cli_version !== expected.client.cli_version ||
+      attestation.codex_client_authority_sha256 !== expected.client.authority_sha256)
+  ) {
+    return "pure fleet attestation Codex client authority differs from the fleet-wide gate";
   }
   if (
     !samePureFleetBuild(attestation.build, expected.build) ||
@@ -974,6 +1138,7 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
   }
   const attestedReceiptBound =
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION ||
+    attestation.schema_version === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION
       ? attestation.report_receipt_bound
@@ -992,6 +1157,7 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     attestation.primary_envelope_sha256 !== artifactFacts.hashes.primary_envelope_sha256 ||
     attestation.initial_report_sha256 !== artifactFacts.hashes.initial_report_sha256 ||
     (attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION ||
+    attestation.schema_version === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION
       ? attestation.receipt_binding_sha256 !== artifactFacts.hashes.receipt_binding_sha256
@@ -1036,6 +1202,8 @@ function buildPureFleetAttestation(run, expected, artifactFacts) {
           ...common,
           schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
           provider: "codex",
+          codex_cli_version: expected.client.cli_version,
+          codex_client_authority_sha256: expected.client.authority_sha256,
           code_mode_contract: artifactFacts.code_mode_contract,
           provider_session_id: artifactFacts.provider_session_id,
           actual_provider: artifactFacts.actual_provider,
@@ -1082,9 +1250,10 @@ function pureFleetEvidenceMismatch(run, expected) {
     typeof expected !== "object" ||
     !Number.isSafeInteger(expected.seed) ||
     !isProviderModel(expectedProvider, expected.model, false) ||
-    !isExactPureFleetBuild(expected.build)
+    !isExactPureFleetBuild(expected.build) ||
+    (expectedProvider === "codex" && !isExactCodexClientAuthority(expected.client))
   ) {
-    return "pure resume requires an exact expected seed, model, and clean fleet build";
+    return "pure resume requires an exact expected seed, model, clean fleet build, and Codex client authority";
   }
   if (run?.schema_version !== PURE_FLEET_EVIDENCE_SCHEMA_VERSION) {
     return `pure resume requires evidence schema v${PURE_FLEET_EVIDENCE_SCHEMA_VERSION}`;
@@ -1458,7 +1627,7 @@ export function summarizeFleetAttemptHistory(rows) {
 }
 
 /** A promise pool of bounded size — the fleet's concurrency knob. */
-async function runPool(items, size, worker) {
+export async function runPool(items, size, worker) {
   let next = 0;
   const laneCount = Math.max(1, Math.min(size, items.length || 1));
   const lanes = new Array(laneCount).fill(0).map(async () => {
@@ -1467,18 +1636,32 @@ async function runPool(items, size, worker) {
       await worker(items[i], i);
     }
   });
-  await Promise.all(lanes);
+  // A failed lane may set shared abort state while sibling provider children
+  // are already in flight. Keep the caller (and its fleet lock) alive until all
+  // lanes close, then rethrow the first rejection in deterministic lane order.
+  const settled = await Promise.allSettled(lanes);
+  const rejection = settled.find((result) => result.status === "rejected");
+  if (rejection?.status === "rejected") throw rejection.reason;
 }
 
 /** Run one fleet slot to completion: resume check, then launch (with pacing
  * retries up to opts.maxRetries), returning the manifest row for this run. */
-async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fleetBuild }) {
+async function executeRun(
+  run,
+  { reportsDir, stamp, opts, bashPath, fleetDir, fleetBuild, fleetClient, fleetControl },
+) {
   const target = run.target;
   const questId = questIdFor(target);
   const requiredMode = opts.mock ? "structural" : "pure";
   const expectedPure = opts.mock
     ? null
-    : { seed: run.seed, provider: run.provider, model: run.model, build: fleetBuild };
+    : {
+        seed: run.seed,
+        provider: run.provider,
+        model: run.model,
+        build: fleetBuild,
+        client: fleetClient,
+      };
 
   // Check ALL stamp-agnostic candidates, newest-stamp-first, stopping at the
   // first that re-verifies — a stale FAILED report must never shadow a later
@@ -1514,6 +1697,9 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
   let lastLogPath = null;
   const attemptHistory = [];
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (fleetControl.clientPreflightFailure) {
+      throw fleetControl.clientPreflightFailure;
+    }
     const args = [
       "--seed",
       String(run.seed),
@@ -1531,9 +1717,17 @@ async function executeRun(run, { reportsDir, stamp, opts, bashPath, fleetDir, fl
 
     const bashResult = await spawnAsync(bashPath, [RUN_SH, ...args], {
       cwd: GAME_DIR,
-      env: { ...process.env },
+      env: opts.mock ? { ...process.env } : codexFleetMemberEnv(process.env, fleetClient),
     });
     lastExit = bashResult.status ?? 1;
+    if (!opts.mock && bashResult.status === CODEX_PREFLIGHT_EXIT) {
+      const detail = firstErrorLine(bashResult.stderr || bashResult.stdout);
+      const error = new Error(
+        `fleet: Codex client preflight changed after the shared gate; seed ${run.seed} was not played and no retry will be attempted${detail ? `: ${detail}` : ""}`,
+      );
+      fleetControl.clientPreflightFailure = error;
+      throw error;
+    }
     let verifyResult = null;
 
     if (lastExit === 0) {
@@ -1772,6 +1966,55 @@ function resolveFleetBashPath() {
   return bashPath;
 }
 
+async function preflightPureCodexClient(bashPath, run) {
+  const result = await spawnBoundedAsync(
+    bashPath,
+    [
+      RUN_SH,
+      "--preflight-only",
+      "--client-authority-json",
+      "--provider",
+      run.provider,
+      "--model",
+      run.model,
+      "--persona",
+      run.persona,
+      "--overworld",
+    ],
+    {
+      cwd: GAME_DIR,
+      env: { ...process.env },
+    },
+    {
+      timeoutMs: CODEX_PREFLIGHT_PROCESS_TIMEOUT_MS,
+      maxOutputBytes: CODEX_PREFLIGHT_PROCESS_MAX_OUTPUT_BYTES,
+    },
+  );
+  if (result.status === 0) {
+    let parsed;
+    try {
+      parsed = JSON.parse(result.stdout);
+    } catch {
+      throw new Error("fleet: Codex client preflight returned malformed authority JSON");
+    }
+    if (!isExactCodexClientAuthority(parsed)) {
+      throw new Error("fleet: Codex client preflight returned invalid client authority");
+    }
+    return parsed;
+  }
+  const boundaryReason = result.timedOut
+    ? `shared preflight exceeded ${CODEX_PREFLIGHT_PROCESS_TIMEOUT_MS}ms`
+    : result.outputExceeded
+      ? `shared preflight exceeded ${CODEX_PREFLIGHT_PROCESS_MAX_OUTPUT_BYTES} captured bytes`
+      : "";
+  const detail = [result.stderr, result.stdout]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .find((value) => value.length > 0);
+  throw new Error(
+    `fleet: Codex client preflight failed before report directories, locks, or player launches; no fleet retry was attempted${boundaryReason ? `: ${boundaryReason}` : ""}${detail ? `: ${detail}` : ""}`,
+  );
+}
+
 async function main() {
   let opts;
   try {
@@ -1802,6 +2045,10 @@ async function main() {
   // Resolve every launcher prerequisite before reserving a report namespace or
   // label directory. A missing runtime must leave no misleading fleet shell.
   const bashPath = resolveFleetBashPath();
+
+  // One shared executable gate pins and validates the exact client outside the
+  // per-player retry pool. Structural mock fleets do not use Codex.
+  const fleetClient = opts.mock ? null : await preflightPureCodexClient(bashPath, runs[0]);
 
   // One fail-closed build identity is captured before any live launcher can
   // spend tokens. Structural mocks retain their historical no-provenance path.
@@ -1836,6 +2083,7 @@ async function main() {
     const summaryPath = join(fleetDir, "summary.json");
     const counts = { verified: 0, "skipped-resume": 0, failed: 0 };
     const rows = new Array(runs.length);
+    const fleetControl = { clientPreflightFailure: null };
 
     await runPool(runs, Math.max(1, opts.concurrency), async (run, plannedIndex) => {
       const result = await executeRun(run, {
@@ -1845,6 +2093,8 @@ async function main() {
         bashPath,
         fleetDir,
         fleetBuild,
+        fleetClient,
+        fleetControl,
       });
       counts[result.status] += 1;
       const runMeta = result.run;
@@ -1916,6 +2166,7 @@ async function main() {
           ? PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
           : PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
       build: fleetBuild,
+      ...(fleetClient === null ? {} : { codex_client: fleetClient }),
       report_schema_version: 2,
       play_mode: opts.mock ? "structural" : "pure",
       start_surface: opts.target === "overworld" ? "fresh_overworld" : "direct_quest",

@@ -40,6 +40,8 @@ SPECTATE_DELAY_MS="${BLIND_SPECTATE_DELAY_MS:-}"  # optional pacing delay per to
 OVERWORLD="${BLIND_OVERWORLD:-0}"                 # CORE-GAME open-world mode — the DEFAULT unless a quest is named
 PERSONA="${BLIND_PERSONA:-default}"               # play-style overlay; see blind-tester/personas/*.md
 QUEST_EXPLICIT=0
+PREFLIGHT_ONLY=0                                  # internal fleet-wide live-client gate
+CLIENT_AUTHORITY_JSON=0                           # fleet-only machine-readable preflight result
 POSITIONAL=()
 
 # `npm run blind` invokes this script with a non-login Bash, so per-user CLI install
@@ -122,6 +124,8 @@ while [[ $# -gt 0 ]]; do
     --delay-ms)         SPECTATE_DELAY_MS="$2"; SPECTATE=1; shift 2 ;;
     --overworld)        OVERWORLD=1; shift ;;
     --persona)          PERSONA="$2"; shift 2 ;;
+    --preflight-only)   PREFLIGHT_ONLY=1; shift ;;
+    --client-authority-json) CLIENT_AUTHORITY_JSON=1; shift ;;
     -h|--help)
       sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -215,6 +219,14 @@ if [[ "$SMOKE" == "1" || "$MOCK" == "1" ]]; then
 else
   PLAY_MODE="pure"
 fi
+if [[ "$PREFLIGHT_ONLY" == "1" && "$PLAY_MODE" != "pure" ]]; then
+  echo "--preflight-only is an internal live Codex gate and cannot be combined with structural mode." >&2
+  exit 2
+fi
+if [[ "$CLIENT_AUTHORITY_JSON" == "1" && "$PREFLIGHT_ONLY" != "1" ]]; then
+  echo "--client-authority-json is available only with the internal --preflight-only gate." >&2
+  exit 2
+fi
 START_SURFACE=$([[ "$OVERWORLD" == "1" ]] && printf 'fresh_overworld' || printf 'direct_quest')
 
 # Persona-directed coverage/breaking changes the thing retention is measuring.
@@ -244,20 +256,23 @@ ACTIVE_CODEX_HOME_ARG=""
 RAW_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 # Pure play requires an existing CLI-owned home. Structural runs need no login
 # home, but when one already exists they enforce the same report-output boundary.
-RAW_CODEX_HOME_ARG="$(node_path_arg "$RAW_CODEX_HOME")"
-if ! ACTIVE_CODEX_HOME="$(
-  cd "$GAME_DIR" &&
-    "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" resolve-home-if-present --home "$RAW_CODEX_HOME_ARG"
-)"; then
-  echo "Could not safely resolve the configured Codex home; run refused." >&2
-  exit 4
-fi
-if [[ "$PLAY_MODE" == "pure" && -z "$ACTIVE_CODEX_HOME" ]]; then
-  echo "Could not resolve the existing Codex home; pure run refused." >&2
-  exit 4
-fi
-if [[ -n "$ACTIVE_CODEX_HOME" ]]; then
-  ACTIVE_CODEX_HOME_ARG="$(node_path_arg "$ACTIVE_CODEX_HOME")"
+# The executable-only fleet gate does not need or inspect the home at all.
+if [[ "$PREFLIGHT_ONLY" != "1" ]]; then
+  RAW_CODEX_HOME_ARG="$(node_path_arg "$RAW_CODEX_HOME")"
+  if ! ACTIVE_CODEX_HOME="$(
+    cd "$GAME_DIR" &&
+      "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" resolve-home-if-present --home "$RAW_CODEX_HOME_ARG"
+  )"; then
+    echo "Could not safely resolve the configured Codex home; run refused." >&2
+    exit 4
+  fi
+  if [[ "$PLAY_MODE" == "pure" && -z "$ACTIVE_CODEX_HOME" ]]; then
+    echo "Could not resolve the existing Codex home; pure run refused." >&2
+    exit 4
+  fi
+  if [[ -n "$ACTIVE_CODEX_HOME" ]]; then
+    ACTIVE_CODEX_HOME_ARG="$(node_path_arg "$ACTIVE_CODEX_HOME")"
+  fi
 fi
 
 # The live mode is always the default CORE-GAME test (start the open world from
@@ -278,24 +293,204 @@ fi
 
 # Resolve and validate the report prefix before creating any runner temp or
 # report artifact. Any run with an existing Codex home rejects canonical
-# destinations within it, including paths reached through links.
-if [[ -z "$OUT" ]]; then
-  STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-  OUT="$SCRIPT_DIR/reports/${STAMP}_${SOURCE_SLUG}_seed${SEED}"
-elif ! is_absolute_output_prefix "$OUT"; then
-  OUT="$GAME_DIR/$OUT"
-fi
-if [[ -n "$ACTIVE_CODEX_HOME" ]]; then
-  OUT_VALIDATION_ARG="$(node_path_arg "$OUT")"
-  GAME_DIR_VALIDATION_ARG="$(node_path_arg "$GAME_DIR")"
-  if ! CANONICAL_OUT="$("$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" validate-output \
-    --home "$ACTIVE_CODEX_HOME_ARG" --out "$OUT_VALIDATION_ARG" \
-    --base "$GAME_DIR_VALIDATION_ARG")"; then
-    echo "Report output prefix is unsafe; no run artifacts were created." >&2
+# destinations within it, including paths reached through links. The shared
+# executable-only gate has no output and skips this unrelated filesystem work.
+if [[ "$PREFLIGHT_ONLY" != "1" ]]; then
+  if [[ -z "$OUT" ]]; then
+    STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+    OUT="$SCRIPT_DIR/reports/${STAMP}_${SOURCE_SLUG}_seed${SEED}"
+  elif ! is_absolute_output_prefix "$OUT"; then
+    OUT="$GAME_DIR/$OUT"
+  fi
+  if [[ -n "$ACTIVE_CODEX_HOME" ]]; then
+    OUT_VALIDATION_ARG="$(node_path_arg "$OUT")"
+    GAME_DIR_VALIDATION_ARG="$(node_path_arg "$GAME_DIR")"
+    if ! CANONICAL_OUT="$("$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" validate-output \
+      --home "$ACTIVE_CODEX_HOME_ARG" --out "$OUT_VALIDATION_ARG" \
+      --base "$GAME_DIR_VALIDATION_ARG")"; then
+      echo "Report output prefix is unsafe; no run artifacts were created." >&2
+      exit 4
+    fi
+    OUT="$(shell_path_arg "$CANONICAL_OUT")"
+  fi
+
+# Reject a known reused prefix before probing a live client. The authoritative
+# check is repeated after the output directory is created to close the race.
+  EARLY_OUT_PREFIX_ARG="$(node_path_arg "$OUT")"
+  if ! EARLY_PREEXISTING_OUT_ARTIFACTS="$("$NODE_CMD" -e '
+const fs = require("node:fs");
+const path = require("node:path");
+const prefix = process.argv[1];
+const directory = path.dirname(prefix);
+if (!fs.existsSync(directory)) process.exit(0);
+const ownedPrefix = `${path.basename(prefix)}.`;
+const matches = fs.readdirSync(directory)
+  .filter((name) => name.startsWith(ownedPrefix))
+  .sort()
+  .map((name) => path.join(directory, name));
+process.stdout.write(matches.join("\n"));
+' "$EARLY_OUT_PREFIX_ARG")"; then
+    echo "Cannot inspect the report prefix for pre-existing artifacts." >&2
     exit 4
   fi
-  OUT="$(shell_path_arg "$CANONICAL_OUT")"
+  if [[ -n "$EARLY_PREEXISTING_OUT_ARTIFACTS" ]]; then
+    echo "Refusing to reuse report prefix; pre-existing owned artifact(s):" >&2
+    printf '%s\n' "$EARLY_PREEXISTING_OUT_ARTIFACTS" | sed 's/^/  /' >&2
+    exit 4
+  fi
 fi
+
+CODEX_PREFLIGHT_EXIT=42
+CODEX_VERSION_TIMEOUT_SECONDS=5
+CODEX_VERSION_MAX_BYTES=1024
+SELECTED_CODEX_BIN=""
+SELECTED_CODEX_LAUNCHER=""
+CODEX_BIN_IDENTITY=""
+CODEX_CLI_VERSION=""
+EXPECTED_CODEX_BIN_IDENTITY="${BLIND_CODEX_EXPECTED_AUTHORITY:-}"
+EXPECTED_CODEX_CLI_VERSION="${BLIND_CODEX_EXPECTED_VERSION:-}"
+# Structural runner regressions need controllable fake `--version`/`exec`
+# behavior. The Node classifier additionally confines this explicit seam to a
+# shebang file under the operating-system temp directory; normal runs accept
+# only a native binary or one exact official npm launcher shape.
+CODEX_TEST_SCRIPT_ARGS=()
+if [[ "${BLIND_CODEX_TEST_SCRIPT_CLIENT:-0}" == "1" ]]; then
+  if [[ "${NODE_ENV:-}" != "test" ]]; then
+    echo "BLIND_CODEX_TEST_SCRIPT_CLIENT is a test-only seam and requires NODE_ENV=test." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  CODEX_TEST_SCRIPT_ARGS=(--allow-test-script)
+elif [[ "${BLIND_CODEX_TEST_SCRIPT_CLIENT:-0}" != "0" ]]; then
+  echo "BLIND_CODEX_TEST_SCRIPT_CLIENT must be unset, 0, or the explicit test value 1." >&2
+  exit "$CODEX_PREFLIGHT_EXIT"
+fi
+if [[ "$PLAY_MODE" == "pure" ]]; then
+  if [[ -n "$EXPECTED_CODEX_BIN_IDENTITY" && -z "$EXPECTED_CODEX_CLI_VERSION" ]] || \
+     [[ -z "$EXPECTED_CODEX_BIN_IDENTITY" && -n "$EXPECTED_CODEX_CLI_VERSION" ]]; then
+    echo "Codex client preflight requires expected authority and version together." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ -n "${BLIND_CODEX_BIN+x}" ]]; then
+    CODEX_BIN_REQUEST="$BLIND_CODEX_BIN"
+    if [[ -z "$CODEX_BIN_REQUEST" || "$CODEX_BIN_REQUEST" == *$'\n'* || \
+          "$CODEX_BIN_REQUEST" == *$'\r'* ]] || ! is_absolute_output_prefix "$CODEX_BIN_REQUEST"; then
+      echo "BLIND_CODEX_BIN must name exactly one absolute Codex executable path (no arguments or aliases)." >&2
+      echo "The runner will not evaluate it, search for a substitute, or fall back to another provider." >&2
+      exit "$CODEX_PREFLIGHT_EXIT"
+    fi
+  else
+    # Resolve the literal default once with Bash's external-file-only lookup.
+    # `type -P` ignores aliases/functions and preserves Git Bash's extensionless
+    # npm shim; Node's native spawn cannot reliably select that same file.
+    if ! CODEX_BIN_REQUEST="$(type -P codex)" || [[ -z "$CODEX_BIN_REQUEST" ]]; then
+      echo "Codex client preflight failed: the literal default executable \"codex\" was not found." >&2
+      echo "Set BLIND_CODEX_BIN to the one intended absolute Codex executable path; no fallback was attempted." >&2
+      exit "$CODEX_PREFLIGHT_EXIT"
+    fi
+  fi
+  CODEX_BIN_REQUEST_ARG="$(node_path_arg "$CODEX_BIN_REQUEST")"
+  if ! CODEX_BIN_RESOLUTION="$(
+    "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" resolve-client-binary \
+      --binary "$CODEX_BIN_REQUEST_ARG" "${CODEX_TEST_SCRIPT_ARGS[@]}"
+  )"; then
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ "$CODEX_BIN_RESOLUTION" != *$'\n'* ]]; then
+    echo "Codex client preflight failed: executable authority response was malformed." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  SELECTED_CODEX_LAUNCHER="${CODEX_BIN_RESOLUTION%%$'\n'*}"
+  CODEX_BIN_RESOLUTION="${CODEX_BIN_RESOLUTION#*$'\n'}"
+  if [[ "$CODEX_BIN_RESOLUTION" != *$'\n'* ]]; then
+    echo "Codex client preflight failed: executable authority response was malformed." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  SELECTED_CODEX_BIN="${CODEX_BIN_RESOLUTION%%$'\n'*}"
+  CODEX_BIN_IDENTITY="${CODEX_BIN_RESOLUTION#*$'\n'}"
+  if [[ -z "$SELECTED_CODEX_LAUNCHER" || -z "$SELECTED_CODEX_BIN" || \
+        -z "$CODEX_BIN_IDENTITY" || \
+        "$CODEX_BIN_IDENTITY" == *$'\n'* ]]; then
+    echo "Codex client preflight failed: executable authority response was malformed." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ -n "$EXPECTED_CODEX_BIN_IDENTITY" && \
+        "$CODEX_BIN_IDENTITY" != "$EXPECTED_CODEX_BIN_IDENTITY" ]]; then
+    echo "Codex client preflight failed: client authority differs from the fleet-wide gate." >&2
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+fi
+
+verify_pinned_codex_client() {
+  local verified
+  if ! verified="$(
+    "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" verify-client-binary \
+      --binary "$SELECTED_CODEX_LAUNCHER" --identity "$CODEX_BIN_IDENTITY" \
+      "${CODEX_TEST_SCRIPT_ARGS[@]}"
+  )" || [[ "$verified" != "$SELECTED_CODEX_BIN" ]]; then
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+}
+
+preflight_codex_client() {
+  local quiet="${1:-0}" probe status version_output version marker errexit_was_set=0
+  if ! verify_pinned_codex_client; then
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  marker=$'\036'
+  case "$-" in
+    *e*) errexit_was_set=1 ;;
+  esac
+  set +e
+  probe="$(
+    if [[ "$PREFLIGHT_ONLY" == "1" ]]; then
+      timeout -k 1 "$CODEX_VERSION_TIMEOUT_SECONDS" "$SELECTED_CODEX_BIN" --version 2>&1
+    else
+      CODEX_HOME="$ACTIVE_CODEX_HOME_ARG" \
+        timeout -k 1 "$CODEX_VERSION_TIMEOUT_SECONDS" "$SELECTED_CODEX_BIN" --version 2>&1
+    fi \
+      | head -c "$((CODEX_VERSION_MAX_BYTES + 1))"
+    status=$?
+    printf '%s%s' "$marker" "$status"
+  )"
+  if [[ "$errexit_was_set" == "1" ]]; then
+    set -e
+  else
+    set +e
+  fi
+  status="${probe##*"$marker"}"
+  version_output="${probe%"$marker"*}"
+  if [[ ! "$status" =~ ^[0-9]+$ || "$status" -ne 0 ]]; then
+    echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": --version exited ${status:-unknown}." >&2
+    if [[ -n "$version_output" ]]; then
+      printf '%s\n' "$version_output" >&2
+    fi
+    echo "Set BLIND_CODEX_BIN to the one intended Codex executable path; no retry, fallback, or provider substitution was attempted." >&2
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if ! version="$(
+    "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" preflight-client \
+      --binary "$SELECTED_CODEX_BIN" \
+      --identity "$CODEX_BIN_IDENTITY" \
+      --version-output "$version_output"
+  )"; then
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ -z "$version" || "$version" == *$'\n'* ]]; then
+    echo "Codex client preflight failed: semantic version response was malformed." >&2
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ -z "$EXPECTED_CODEX_CLI_VERSION" ]]; then
+    EXPECTED_CODEX_CLI_VERSION="$version"
+  elif [[ "$version" != "$EXPECTED_CODEX_CLI_VERSION" ]]; then
+    echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": expected cli=$EXPECTED_CODEX_CLI_VERSION but observed cli=$version." >&2
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  CODEX_CLI_VERSION="$version"
+  if [[ "$quiet" != "1" ]]; then
+    printf 'Codex client preflight: selected=%q executable=%q cli=%s\n' \
+      "$SELECTED_CODEX_LAUNCHER" "$SELECTED_CODEX_BIN" "$CODEX_CLI_VERSION"
+  fi
+}
 
 # A Windows-installed node_modules cannot run under WSL's Linux node: only the
 # @esbuild/win32-x64 native binary is present, so tsx (and with it the MCP
@@ -307,6 +502,22 @@ if [[ "$OSTYPE" == linux* && "$GAME_DIR" == /mnt/* \
   echo "This checkout's node_modules was installed on Windows; WSL's Linux node cannot run it." >&2
   echo "Run from Git Bash/PowerShell instead, or 'npm ci' inside WSL first." >&2
   exit 4
+fi
+
+# Pin and validate one exact client before gameplay or retry machinery exists.
+# `--preflight-only` reaches this point without resolving, reading, or listing
+# CODEX_HOME and creates no report or player artifacts.
+if [[ "$PLAY_MODE" == "pure" ]]; then
+  if ! preflight_codex_client "$CLIENT_AUTHORITY_JSON"; then
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ "$PREFLIGHT_ONLY" == "1" ]]; then
+    if [[ "$CLIENT_AUTHORITY_JSON" == "1" ]]; then
+      "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" render-client-authority \
+        --identity "$CODEX_BIN_IDENTITY" --cli-version "$CODEX_CLI_VERSION"
+    fi
+    exit 0
+  fi
 fi
 
 # Smoke mode: prove the MCP path with no LLM and no token spend. The smoke
@@ -641,11 +852,8 @@ fi
 
 # Codex leaves subscription state entirely CLI-owned in the operator's existing
 # home, disables config/rules at launch, and captures only the rollout whose UUID
-# matches this run's public thread.started event.
-if ! command -v codex >/dev/null 2>&1; then
-  echo "codex CLI not found. Install Codex to run a live blind playtest." >&2
-  exit 3
-fi
+# matches this run's public thread.started event. The exact executable already
+# passed the read-only preflight; this point never searches for a replacement.
 CODEX_PLAYER_CWD="$WORK/player"
 mkdir -p "$CODEX_PLAYER_CWD"
 CODEX_PLAYER_CWD_ARG="$(node_path_arg "$CODEX_PLAYER_CWD")"
@@ -682,7 +890,6 @@ record_playthrough_terminal() {
 # user/project config, rules, shell, web, apps, plugins, hooks, browser, computer,
 # image, or subagent capabilities; its JSONL is then audited against the exact
 # pure MCP tool set before verification.
-set +e
   CODEX_EVENTS="$OUT.codex.jsonl"
   CODEX_EVENTS_ARG="$(node_path_arg "$CODEX_EVENTS")"
   CODEX_REPORT_ARG="$(node_path_arg "$OUT.md")"
@@ -693,8 +900,14 @@ set +e
   CODEX_ENVELOPE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-pure-envelope.mjs")"
   CODEX_STARTED_AT_MS="$("$NODE_CMD" -e 'process.stdout.write(String(Date.now()))')"
   CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
+  # Re-probe the same pinned executable immediately before the gameplay process
+  # in case the selected file changed after the early gate.
+  if ! preflight_codex_client 1; then
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+set +e
   printf "%s" "$PROMPT" | ( cd "$CODEX_PLAYER_CWD" && CODEX_HOME="$ACTIVE_CODEX_HOME_ARG" \
-    timeout "$TIMEOUT" codex exec \
+    timeout "$TIMEOUT" "$SELECTED_CODEX_BIN" exec \
     --model "$MODEL" \
     --sandbox read-only \
     --skip-git-repo-check \
@@ -734,6 +947,19 @@ set +e
     - \
   ) > "$CODEX_EVENTS" 2> "$OUT.log"
   STATUS=$?
+  # Every member closes with the same bounded identity + semantic-version
+  # probe used at launch. This runs even after an ordinary provider failure so
+  # a long fleet can never accept or retry across a client replacement.
+  if ! preflight_codex_client 1; then
+    set -e
+    exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  # Exit 42 is reserved for runner-owned pre-game client rejection. A
+  # selected provider process returning that ordinary status is gameplay-time
+  # CLI failure, so remap it before fleet classification.
+  if [[ "$STATUS" -eq "$CODEX_PREFLIGHT_EXIT" ]]; then
+    STATUS=4
+  fi
   if [[ "$STATUS" -eq 0 ]]; then
     "$NODE_CMD" "$CODEX_ROLLOUT_SCRIPT" capture \
       --home "$ACTIVE_CODEX_HOME_ARG" --events "$CODEX_EVENTS_ARG" \
@@ -760,6 +986,11 @@ set +e
     fi
   fi
 set -e
+
+if [[ "${BLIND_CODEX_TEST_SCRIPT_CLIENT:-0}" == "1" && "$STATUS" -eq 0 ]]; then
+  echo "Codex test-script client reached a synthetic success; publication and retention are forbidden." >&2
+  STATUS=4
+fi
 
 if [[ $STATUS -ne 0 ]]; then
   if [[ $STATUS -eq 124 || $STATUS -eq 137 ]]; then
