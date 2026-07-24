@@ -77,6 +77,14 @@ const objName = (index: RpgModelIndex, state: GameState, id: string): string => 
   return o ? objectName(o, state) : id;
 };
 
+/** Add the ordinary definite article unless an authored name already begins
+ * with a capitalized proper owner's possessive noun phrase. */
+function definiteObjectNounPhrase(name: string): string {
+  const properOwner =
+    /^(?:\p{Lu}[\p{L}\p{M}]*(?:-\p{Lu}[\p{L}\p{M}]*)*)(?:\s+\p{Lu}[\p{L}\p{M}]*(?:-\p{Lu}[\p{L}\p{M}]*)*)*['’]s(?:\s|$)/u;
+  return properOwner.test(name) ? name : `the ${name}`;
+}
+
 /** True if `id` is reachable for the player right now (held or visible in the room). */
 export function present(index: RpgModelIndex, state: GameState, id: string): boolean {
   if (state.inventory.includes(id)) return true;
@@ -201,7 +209,7 @@ function resolveRpgActionCore(
         conditions: [],
         effects: [
           { add_item: action.item },
-          { narrate: `You take the ${o.name}.` },
+          { narrate: `You take ${definiteObjectNounPhrase(o.name)}.` },
           ...takeEffects,
         ],
       };
@@ -218,7 +226,7 @@ function resolveRpgActionCore(
         effects: [
           { remove_item: action.item },
           { place_object: { id: action.item, room: here, takenBy: "player" } },
-          { narrate: `You drop the ${o.name}.` },
+          { narrate: `You drop ${definiteObjectNounPhrase(o.name)}.` },
         ],
       };
     }
@@ -261,7 +269,7 @@ function resolveRpgActionCore(
           : "";
         effects.push(
           { open_object: action.target },
-          { narrate: `You open the ${o.name}.${reveal}` },
+          { narrate: `You open ${definiteObjectNounPhrase(o.name)}.${reveal}` },
         );
       }
       for (const it of opens) effects.push(...it.effects);
@@ -283,7 +291,10 @@ function resolveRpgActionCore(
       if (!builtin && closes.length === 0) return null;
       const effects: Effect[] = [];
       if (builtin) {
-        effects.push({ close_object: action.target }, { narrate: `You close the ${o.name}.` });
+        effects.push(
+          { close_object: action.target },
+          { narrate: `You close ${definiteObjectNounPhrase(o.name)}.` },
+        );
       }
       for (const it of closes) effects.push(...it.effects);
       return { conditions: [], effects };
@@ -303,7 +314,7 @@ function resolveRpgActionCore(
         conditions: [{ has_item: o.key_id }],
         effects: [
           { set_object_locked: { id: action.target, locked: false } },
-          { narrate: o.unlock_narrate ?? `You unlock the ${o.name}.` },
+          { narrate: o.unlock_narrate ?? `You unlock ${definiteObjectNounPhrase(o.name)}.` },
           ...(o.unlock_effects ?? []),
         ],
       };
