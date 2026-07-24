@@ -10,6 +10,7 @@ import {
   compactOverworldServiceResult,
   compactOverworldTravelResult,
   OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
+  OVERWORLD_COMPACT_QUEST_COMPLETION_TEXT_CHAR_LIMIT,
   OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
   OVERWORLD_COMPACT_SERVICE_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
@@ -207,7 +208,42 @@ describe("compactOverworldActionResult", () => {
     expect(compact.ending[1]).not.toBe(longEndingTitle);
     expect(compact.ending[1]).toHaveLength(OVERWORLD_COMPACT_TITLE_CHAR_LIMIT);
     expect(compact.renown).toEqual(["Capital Region", 8, 15]);
+    expect(compact.text).toBe(result.entry.text);
     expect(JSON.stringify(compact)).not.toContain(longEndingTitle);
+  });
+
+  it("keeps one bounded quest-foldback receipt in the immediate MCP result", () => {
+    const receipt = `Registration receipt — ${"authenticated return ".repeat(100)}`;
+    const result: OverworldQuestCompletionResult = {
+      minutes: 45,
+      alreadyKnown: false,
+      quest: {
+        id: "wolf_winter",
+        title: "The Wolf-Winter",
+        home: "albany_city",
+        area: "albany_city__transport_hub",
+        discovery: "lead",
+        visibility: "local_notice_board",
+      },
+      endingId: "ending_held",
+      endingTitle: "The Byre Held",
+      renownRegion: "Capital / Mohawk",
+      renownGained: 8,
+      renownAfter: 8,
+      entry: {
+        id: "quest_done:wolf_winter",
+        kind: "quest_done",
+        town: "Albany city",
+        title: "Completed The Wolf-Winter",
+        text: receipt,
+        recordedAt: "Day 1, 08:45",
+      },
+    };
+
+    const compact = compactOverworldQuestCompletionResult(result);
+
+    expect(compact.text).toContain("Registration receipt —");
+    expect(compact.text).toHaveLength(OVERWORLD_COMPACT_QUEST_COMPLETION_TEXT_CHAR_LIMIT);
   });
 
   it("caps compact local area travel route labels", () => {

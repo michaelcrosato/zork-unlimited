@@ -491,6 +491,61 @@ describe("New York overworld graph", () => {
     }
   });
 
+  it("requires every Wolf-Winter return to close each selected registration obligation", () => {
+    const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
+    const obligations = [
+      ["albany:close_road_warden_return_packet", "albany:promise_return_hayden_packet"],
+      ["albany:close_ledger_advocate_relief_account", "albany:promise_truthful_relief_account"],
+      ["albany:close_ironhands_repairer_tools", "albany:promise_return_reese_tools"],
+      ["albany:close_unaffiliated_courier_emergency_tag", "albany:promise_close_emergency_tag"],
+    ] as const;
+
+    for (const campaignExport of wolfWinter.campaign_exports ?? []) {
+      for (const [groupId, promiseId] of obligations) {
+        expect(
+          campaignExport.conditional_effects?.find((group) => group.id === groupId),
+          `${campaignExport.ending_id} / ${promiseId}`,
+        ).toEqual({
+          id: groupId,
+          when: {
+            requires_all_promises: [{ promise_id: promiseId, status: "active" }],
+          },
+          effects: [{ type: "resolve_promise", promise_id: promiseId, status: "kept" }],
+        });
+      }
+    }
+
+    const malformed = structuredClone(world);
+    const malformedWolf = malformed.quests.find((quest) => quest.id === "wolf_winter")!;
+    malformedWolf.campaign_exports![0]!.conditional_effects =
+      malformedWolf.campaign_exports![0]!.conditional_effects?.filter(
+        (group) => group.id !== "albany:close_ledger_advocate_relief_account",
+      );
+    expect(() => assertOverworldIntegrity(malformed)).toThrow(
+      /does not keep background obligation "albany:promise_truthful_relief_account"/i,
+    );
+
+    for (const status of ["broken", "released"] as const) {
+      const wrongResolution = structuredClone(world);
+      const wrongWolf = wrongResolution.quests.find((quest) => quest.id === "wolf_winter")!;
+      const group = wrongWolf.campaign_exports![0]!.conditional_effects?.find(
+        (candidate) => candidate.id === "albany:close_ledger_advocate_relief_account",
+      );
+      const effect = group?.effects.find(
+        (candidate) =>
+          candidate.type === "resolve_promise" &&
+          candidate.promise_id === "albany:promise_truthful_relief_account",
+      );
+      if (!effect || effect.type !== "resolve_promise") {
+        throw new Error("Expected the Ledger obligation closure effect.");
+      }
+      effect.status = status;
+      expect(() => assertOverworldIntegrity(wrongResolution)).toThrow(
+        /does not keep background obligation "albany:promise_truthful_relief_account"/i,
+      );
+    }
+  });
+
   it("authors Wolf-Winter's trusted campaign imports without opting legacy quests in", () => {
     const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
     const legacyQuests = world.quests.filter((quest) => quest.id !== wolfWinter.id);

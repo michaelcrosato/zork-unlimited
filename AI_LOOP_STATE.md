@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 629 -->
+<!-- historical_cycle_count: 630 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - authenticated_registration_foldback
+
+- Evidence choice: the selected Albany registration obligation could close mechanically after The Wolf-Winter without an immediate player-visible account binding that closure to the actual dispatch and return.
+- Surface: one authenticated profile-specific receipt now follows the exact return summary in terminal, compact MCP, and the durable journal; it names the correct recipient/witness or Reese's exact 100/100 roll while changing only the selected active promise to kept.
+- Counterfactual: all four profiles across eleven non-death endings prove exact export facts and character transitions; unrelated/death paths add no receipt, missing planner evidence fails closed, and current or legacy replay rejects altered equipment, dispatch proof, source hashes, duplicate receipts, or adjacent manifests.
+- Pure evidence: exact-clean Terra `750b8633` seed 72511 completes The Wolf-Winter bloodlessly with the herd whole, visibly receives Hayden's receipt, continues twice, wins The Gallowmere, and ends voluntarily at 50 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes.
+- Feedback/follow-through: setup density and the advertised-but-unavailable June seat recur; the already-green staged terminal controller and queued June increment address those separately rather than broadening Registration.
+- Guard: independent re-review is clean, exact post-rebase crawl `20260724T125355Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, and full health passes 418 files/3,371 tests plus both typechecks and all packs.
 
 ### Cycle result - frozen_codex_client_closure
 
@@ -153,13 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Diagnostic only: Sol 4414 and Terra 4415 yielded under the retired foreground budget, Luna 4416 timed out, and fresh Luna 4430 invokes unavailable `move_overworld_session` at call 135 after an earlier stream retry; the unchanged immediate-completion audit rejects it, so every route, retention choice, rating, and finding from all four remains excluded.
 - Measured result: two independent exact-diff reviews find no P0-P2 after correcting "first-lure" to the authored "second cast" term; four route-matrix suites pass 15 tests, while valid 4431 independently repeats opening density and June-seat briefing debt for separate cycles.
 - Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full combined health passes 408 files/3,204 tests plus integrity, both typechecks, lint, format, validation, and Wolf hash `999f3882c25ba9777b0597afb6ee1ba70616987a9725ed590639476b1a8b4fa5`.
-
-### Cycle result - codex_blind_exec_foreground_window
-
-- Evidence choice: strict candidates 4412, 4414, and 4415 crossed the default foreground-yield boundary at 11.364s, 10.591s, and 11.961s; their late MCP completions correctly failed authority, while valid 4413 landed only 0.191s beyond the same race boundary.
-- Surface: every live Codex gameplay wrapper now starts with the exact `// @exec: {"yield_time_ms": 120000}` pragma, followed by the unchanged two executable statements; `functions.wait` is explicitly forbidden and a yielded or wedged wrapper remains invalid.
-- Counterfactual: parser, capture, validator, runner, authentication, game surfaces, 60s MCP timeout, and 1,200s outer run timeout are unchanged; historical pragma-free evidence remains readable, while a realistic yield -> late completion -> reasoning -> wait fixture rejects with the unchanged immediate-completion diagnostic.
-- Pure evidence: exact-clean Sol 4417 and Terra 4418 both publish strict `ok: true`; all 136/136 gameplay wrappers carry the pragma with zero waits, running-cell outputs, incomplete calls, failures, retries, or recovery, and both players complete Wolf-Winter plus Gallowmere before ending voluntarily at 55/51 decisions.
-- Measured result: both canaries continue at the first goal and checkpoint, rate clarity/enjoyment 4/4, remain unstuck/replay-yes, and independently retain opening-choice density as the next design signal; two no-weaken reviews find no P0-P2, while six focused suites pass 161 tests across exactly five documentation/test files.
-- Diagnostic only: Spark 4420-4429 consume 13,841,258 input/117,730 output tokens but publish 0/10 after direct-mode calls hit forbidden servers, resources, or item types; 196 raw gameplay calls remain excluded, and a separate forced-code-mode runner cycle is required before more Spark evidence.
-- Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 408 files/3,204 tests plus integrity, both typechecks, lint, format, validation, and clean diff.

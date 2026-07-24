@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice_id": "albany_winter_relief_v1",
   "status": "active_unproven",
-  "updated_local_date": "2026-07-21",
+  "updated_local_date": "2026-07-23",
   "contract": {
     "minimum_material_forks": 12,
     "minimum_delayed": 8,
@@ -35,31 +35,36 @@
       "delayed_consumers": [
         "Rowan and the selected sponsor resolve memory-conditioned contact responses from the persistent relationship state.",
         "Wolf-Winter's generic campaign import catalog raises the Road-Warden's starting defense floor from 3 to 4 while a Ledger Advocate remains at the pack default of 3.",
-        "At the broken paling, an identical d20 roll of 7 braces the rail for DEF 4 but splits it for DEF 3, exposing different next legal actions and the authored bind-the-split-rail recovery."
+        "At the broken paling, an identical d20 roll of 7 braces the rail for DEF 4 but splits it for DEF 3, exposing different next legal actions and the authored bind-the-split-rail recovery.",
+        "Every supported non-death Wolf-Winter return closes exactly the selected background's active obligation as kept: Hayden's honest packet, Rowan's truthful account, Reese's borrowed tools, or the existing emergency-tag closure. Unrelated quest outcomes leave it active, and no other background promise is invented."
       ],
       "visible_feedback": [
         "The registration screen names each contact, skill rank, value rank, kit, obligation, persistence consequence, and the current Wolf import limitation before confirmation.",
         "The persistent-character panel shows the exact canonical package after confirmation; the registration journal records the authored concept, previewed resources, and permanent consequence.",
-        "Rowan and Hayden identify the remembered registration in authored later contact copy; Wolf-Winter's visible starting DEF and rail-check outcome expose the mechanical consumer."
+        "Rowan and Hayden identify the remembered registration in authored later contact copy; Wolf-Winter's visible starting DEF and rail-check outcome expose the mechanical consumer.",
+        "At truthful foldback, full, compact, and UI character views change only the selected registration obligation from active to kept; the ordinary terminal completion and bounded compact MCP result immediately show one authenticated profile-specific receipt naming the correct recipient, Courier witness, or exact 100/100 repair roll. Replay preserves current receipts; historical completions with grandfathered dispatch evidence upgrade to a clearly legacy-qualified receipt bound to the exact source hash already persisted by their oath or quest-start proof, and both paths remain idempotent on a second restore."
       ],
       "systems": [
         "identity",
         "skills",
         "equipment",
+        "promises",
         "relationships",
         "dialogue",
         "quest_imports",
         "risk",
         "failure_recovery"
       ],
-      "persistence_boundaries": ["save_restore", "overworld_to_quest"],
+      "persistence_boundaries": ["save_restore", "overworld_to_quest", "quest_to_overworld"],
       "contract_tags": ["delayed", "cross_system", "cross_phase", "character_concept"],
       "baseline_evidence": [
         "tests/unit/world_opening_registration.test.ts",
         "tests/unit/world_opening_registration_helpers.test.ts",
-        "tests/unit/world_session_contact_presentation.test.ts"
+        "tests/unit/world_session_contact_presentation.test.ts",
+        "tests/starting_slice/character_background_counterfactual.test.ts",
+        "tests/regression/registration_promise_return_snapshot_integrity.test.ts"
       ],
-      "counterfactual_test": "tests/starting_slice/character_background_counterfactual.test.ts"
+      "counterfactual_test": "tests/starting_slice/registration_promise_return_counterfactual.test.ts"
     },
     {
       "id": "SS-F02-relief-oath",

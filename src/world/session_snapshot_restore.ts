@@ -7,12 +7,13 @@ import type {
   TravelLogEntry,
   TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
-import type { OverworldQuest } from "./overworld.js";
+import { overworldQuestCampaignEffectsForCharacter, type OverworldQuest } from "./overworld.js";
 import { cloneOpeningLeadSourceDecisionTrail } from "./session_snapshot.js";
 import { hashState } from "../core/hash.js";
 import {
   cloneCampaignCharacterState,
   createInitialCampaignCharacterState,
+  evolveCampaignCharacterState,
   serializeCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
@@ -130,6 +131,7 @@ import {
   questCompletionMinutes,
   replayQuestCampaignConsequences,
 } from "./session_quests.js";
+import { deriveRegistrationPromiseFoldbackReceipt } from "./registration_promise_receipt.js";
 import {
   openingAllyJournalDraft,
   openingAllyOfferJournalDraft,
@@ -400,8 +402,11 @@ export const OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before the Relief Allocation comparison gained trigger categories. */
 export const OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH =
   "42357dc467518106d3a4753a246ea672de03638a2d8f0aca240f5818a579ed3d";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest before Wolf-Winter closed every selected registration obligation. */
+export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
   "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "1d8ed584e39c462a7eb5132c23796ea39b8f76a545add86a88080ecf926b9f9c";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -2150,6 +2155,7 @@ export type OverworldSessionSnapshotRestorePlan = {
   questOutcomeIds: ReadonlyMap<string, string>;
   regionRenown: ReadonlyMap<string, number>;
   resolvedEventHomeIds: ReadonlySet<string>;
+  trustedLegacyRegistrationReceiptSourceWorldHashAfter: string | null;
   travelLog: readonly TravelLogEntry[];
 };
 
@@ -2185,6 +2191,7 @@ export type OverworldAppliedSessionSnapshotRestore = {
   fatigueAfter: number;
   openingLeadSourceDecisionTrailAfter: OverworldOpeningLeadSourceDecisionTrail | null;
   pendingRoadEncounterAfter: OverworldPendingRoadEncounter | null;
+  trustedLegacyRegistrationReceiptSourceWorldHashAfter: string | null;
   journeyAfter: JourneyContractSnapshot;
 };
 
@@ -2243,6 +2250,8 @@ export function applyOverworldSessionSnapshotRestore(
       ? cloneOpeningLeadSourceDecisionTrail(plan.openingLeadSourceDecisionTrailAfter)
       : null,
     pendingRoadEncounterAfter: plan.pendingRoadEncounter,
+    trustedLegacyRegistrationReceiptSourceWorldHashAfter:
+      plan.trustedLegacyRegistrationReceiptSourceWorldHashAfter,
     journeyAfter: cloneJourneyContractSnapshot(snapshot.journey),
   };
 }
@@ -2510,6 +2519,40 @@ function migrateCadeStoryPredicatePredecessorJournal(args: {
   );
 }
 
+const REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_BY_BACKGROUND: ReadonlyMap<string, string> = new Map(
+  [
+    ["albany:road_warden", "albany:promise_return_hayden_packet"],
+    ["albany:ledger_advocate", "albany:promise_truthful_relief_account"],
+    ["albany:ironhands_repairer", "albany:promise_return_reese_tools"],
+  ],
+);
+
+/**
+ * The exact predecessor had the same selected obligation and Wolf outcome, but
+ * left three background promises active. Reconstruct that one historical
+ * difference so migration still rejects every unrelated character forgery
+ * before returning the current, truthfully closed replay.
+ */
+function registrationPromiseClosurePredecessorCharacter(
+  current: CampaignCharacterState,
+  questOutcomeIds: ReadonlyMap<string, string>,
+): CampaignCharacterState {
+  if (!questOutcomeIds.has("wolf_winter") || current.background === null) {
+    return cloneCampaignCharacterState(current);
+  }
+  const promiseId = REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_BY_BACKGROUND.get(current.background);
+  if (!promiseId) return cloneCampaignCharacterState(current);
+  return evolveCampaignCharacterState(current, (draft) => {
+    const promise = draft.promises.find((candidate) => candidate.promiseId === promiseId);
+    if (promise?.status !== "kept") {
+      throw new Error(
+        `Registration-promise migration target does not close selected obligation "${promiseId}".`,
+      );
+    }
+    promise.status = "active";
+  });
+}
+
 export function planOverworldSessionSnapshotRestore(args: {
   indexes: OverworldSnapshotManifestIndex;
   snapshot: OverworldSessionSnapshot;
@@ -2583,6 +2626,17 @@ export function planOverworldSessionSnapshotRestore(args: {
     migrationEra === null || migrationEra === "field_timed_preparation";
   const needsLegacyCampaignScaffolding =
     migrationEra !== null && migrationEra !== "field_timed_preparation";
+  const migratesRegistrationPromiseClosure =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    (sourceSnapshot.worldHash === OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH ||
+      migrationEra !== null ||
+      migratesReliefProtocolTriggerCopy ||
+      migratesReliefAllocationTriggerCategory ||
+      migratesJuneReturnCopy ||
+      migratesCadeStoryPredicate ||
+      migratesAuthoredLocalJob ||
+      migratesAuthoredLocalEvent);
   const migratesLegacyLocalJobSemantics =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
@@ -2596,6 +2650,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     migrationEra === null &&
     !migratesReliefProtocolTriggerCopy &&
     !migratesReliefAllocationTriggerCategory &&
+    !migratesRegistrationPromiseClosure &&
     !migratesJuneReturnCopy &&
     !migratesCadeStoryPredicate &&
     !migratesAuthoredLocalJob &&
@@ -3887,12 +3942,6 @@ export function planOverworldSessionSnapshotRestore(args: {
       start.returnSummary === null ? [] : [[start.questId, start.returnSummary] as const],
     ),
   );
-  assertSnapshotQuestCompletionOutcomeJournalProof({
-    indexes,
-    journalEntries: questStartReplay.journalEntries,
-    questOutcomeIds,
-    questStartReturnSummaryByQuestId,
-  });
   const journalQuestOutcomeOrder = questStartReplay.journalEntries
     .filter((entry) => entry.kind === "quest_done")
     .map((entry) => entry.id.slice("quest_done:".length))
@@ -3902,6 +3951,48 @@ export function planOverworldSessionSnapshotRestore(args: {
     ...journalQuestOutcomeOrder,
     ...[...questOutcomeIds.keys()].filter((questId) => !journalQuestOutcomeIds.has(questId)).sort(),
   ];
+  const legacyQuestStartSourceWorldHash = (() => {
+    const proof = questStartReplay.journalEntries.find(
+      (entry) => entry.id === "quest:wolf_winter",
+    )?.questStartProof;
+    return proof?.kind === "legacy" ? proof.sourceWorldHash : null;
+  })();
+  if (
+    reliefOathProof.legacySourceWorldHash !== null &&
+    legacyQuestStartSourceWorldHash !== null &&
+    reliefOathProof.legacySourceWorldHash !== legacyQuestStartSourceWorldHash
+  ) {
+    throw new Error(
+      "Overworld session snapshot registration receipt has mismatched legacy oath and quest-start sources.",
+    );
+  }
+  const durableLegacyRegistrationReceiptSourceWorldHash =
+    reliefOathProof.legacySourceWorldHash ?? legacyQuestStartSourceWorldHash;
+  if (
+    durableLegacyRegistrationReceiptSourceWorldHash !== null &&
+    sourceSnapshot.worldHash !== worldHash &&
+    durableLegacyRegistrationReceiptSourceWorldHash !== sourceSnapshot.worldHash
+  ) {
+    throw new Error(
+      "Overworld session snapshot registration receipt legacy proof does not match its source manifest.",
+    );
+  }
+  const migratingRegistrationReceiptSourceWorldHash =
+    migratesRegistrationPromiseClosure && sourceSnapshot.worldHash !== worldHash
+      ? sourceSnapshot.worldHash
+      : null;
+  const trustedLegacyRegistrationReceiptSourceWorldHash =
+    durableLegacyRegistrationReceiptSourceWorldHash ?? migratingRegistrationReceiptSourceWorldHash;
+  const canonicalQuestCompletionDrafts = assertSnapshotQuestCompletionOutcomeJournalProof({
+    indexes,
+    journalEntries: questStartReplay.journalEntries,
+    questOutcomeIds,
+    questOutcomeOrder,
+    characterBeforeQuestOutcomes: questStartReplay.characterAfter,
+    questStartReturnSummaryByQuestId,
+    allowMissingRegistrationReceipt: migratesRegistrationPromiseClosure,
+    trustedLegacyRegistrationReceiptSourceWorldHash,
+  });
   const consequenceReplay = replayQuestCampaignConsequences({
     character: questStartReplay.characterAfter,
     questsById: indexes.questsById,
@@ -3986,6 +4077,16 @@ export function planOverworldSessionSnapshotRestore(args: {
     if (storedCharacter !== serializeCampaignCharacterState(neutralCharacter)) {
       throw new Error(
         "Legacy overworld session snapshot has campaign character state without replayable consequence proof.",
+      );
+    }
+  } else if (migratesRegistrationPromiseClosure) {
+    const predecessorExpected = registrationPromiseClosurePredecessorCharacter(
+      consequenceReplay.characterAfter,
+      questOutcomeIds,
+    );
+    if (storedCharacter !== serializeCampaignCharacterState(predecessorExpected)) {
+      throw new Error(
+        "Registration-promise predecessor campaign character does not match replayed quest consequences.",
       );
     }
   } else if (storedCharacter !== expectedCharacter) {
@@ -4162,6 +4263,14 @@ export function planOverworldSessionSnapshotRestore(args: {
           journey: snapshot.journey,
         })
       : [...questStartReplay.journalEntries];
+  if (migratesRegistrationPromiseClosure) {
+    migratedJournalEntries = migratedJournalEntries.map((entry) => {
+      if (entry.kind !== "quest_done") return entry;
+      const questId = entry.id.slice("quest_done:".length);
+      const canonical = canonicalQuestCompletionDrafts.get(questId);
+      return canonical ? { ...entry, text: canonical.text } : entry;
+    });
+  }
   if (
     normalizesCivicPreparationEvidence &&
     preparationProof.offered &&
@@ -4427,6 +4536,8 @@ export function planOverworldSessionSnapshotRestore(args: {
     questOutcomeIds,
     regionRenown,
     resolvedEventHomeIds,
+    trustedLegacyRegistrationReceiptSourceWorldHashAfter:
+      durableLegacyRegistrationReceiptSourceWorldHash,
     travelLog: restoreOverworldTravelLogEntries(snapshot.travelLog, {
       edgesById: indexes.edgesById,
       nodesById: indexes.nodesById,
@@ -4766,14 +4877,41 @@ function assertSnapshotQuestCompletionOutcomeJournalProof(args: {
   indexes: OverworldSnapshotManifestIndex;
   journalEntries: readonly OverworldJournalEntry[];
   questOutcomeIds: ReadonlyMap<string, string>;
+  questOutcomeOrder: readonly string[];
+  characterBeforeQuestOutcomes: CampaignCharacterState;
   questStartReturnSummaryByQuestId: ReadonlyMap<string, string>;
-}): void {
+  allowMissingRegistrationReceipt: boolean;
+  trustedLegacyRegistrationReceiptSourceWorldHash: string | null;
+}): ReadonlyMap<string, Omit<OverworldJournalEntry, "recordedAt">> {
   const journalEntriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
-  for (const [questId, endingId] of args.questOutcomeIds) {
+  const canonicalDrafts = new Map<string, Omit<OverworldJournalEntry, "recordedAt">>();
+  let characterBefore = cloneCampaignCharacterState(args.characterBeforeQuestOutcomes);
+  for (const questId of args.questOutcomeOrder) {
+    const endingId = args.questOutcomeIds.get(questId);
+    if (endingId === undefined) {
+      throw new Error(`Quest outcome order names unknown quest "${questId}".`);
+    }
     const quest = args.indexes.questsById.get(questId);
     if (!quest) continue;
     const campaignExport = questCampaignExportForEnding(quest, endingId);
     if (!campaignExport) continue;
+    const effects = overworldQuestCampaignEffectsForCharacter(campaignExport, characterBefore);
+    const consequence = applyCampaignConsequences({
+      character: characterBefore,
+      effects,
+    });
+    const registrationReceipt = deriveRegistrationPromiseFoldbackReceipt({
+      quest,
+      campaignExport,
+      characterBefore,
+      characterAfter: consequence.characterAfter,
+      worldFactIds: consequence.worldFactIds,
+      journalEntries: args.journalEntries,
+      openingRegistration: args.indexes.openingRegistration,
+      openingReliefOath: args.indexes.openingReliefOath,
+      openingLeadSource: args.indexes.openingLeadSource,
+      trustedLegacySourceWorldHash: args.trustedLegacyRegistrationReceiptSourceWorldHash,
+    });
     const minutes = questCompletionMinutes(quest, args.indexes.areasById);
     const expected = questCompletionJournalEntryDraft({
       quest,
@@ -4783,20 +4921,39 @@ function assertSnapshotQuestCompletionOutcomeJournalProof(args: {
       ...(args.questStartReturnSummaryByQuestId.has(questId)
         ? { returnSummary: args.questStartReturnSummaryByQuestId.get(questId)! }
         : {}),
+      ...(registrationReceipt ? { registrationReceipt } : {}),
+    });
+    const predecessorExpected = questCompletionJournalEntryDraft({
+      quest,
+      endingTitle: campaignExport.ending_title,
+      minutes,
+      townName: args.indexes.questTownNames.get(questId) ?? quest.home,
+      ...(args.questStartReturnSummaryByQuestId.has(questId)
+        ? { returnSummary: args.questStartReturnSummaryByQuestId.get(questId)! }
+        : {}),
     });
     const stored = journalEntriesById.get(expected.id);
-    if (
-      !stored ||
-      stored.kind !== expected.kind ||
-      stored.town !== expected.town ||
-      stored.title !== expected.title ||
-      stored.text !== expected.text
-    ) {
+    const exactCurrent =
+      stored?.kind === expected.kind &&
+      stored.town === expected.town &&
+      stored.title === expected.title &&
+      stored.text === expected.text;
+    const exactPredecessor =
+      args.allowMissingRegistrationReceipt &&
+      registrationReceipt !== undefined &&
+      stored?.kind === predecessorExpected.kind &&
+      stored.town === predecessorExpected.town &&
+      stored.title === predecessorExpected.title &&
+      stored.text === predecessorExpected.text;
+    if (!stored || (!exactCurrent && !exactPredecessor)) {
       throw new Error(
         `Overworld session snapshot quest outcome "${questId}" is not bound to its canonical completion journal.`,
       );
     }
+    canonicalDrafts.set(questId, expected);
+    characterBefore = consequence.characterAfter;
   }
+  return canonicalDrafts;
 }
 
 function questCompletionBoundaryOrdinal(

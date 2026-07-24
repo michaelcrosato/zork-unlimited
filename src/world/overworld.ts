@@ -1515,6 +1515,13 @@ function assertOpeningRegistrationIntegrity(
         : ([[character.campaign_npc_id, character]] as const),
     ),
   );
+  const leadSource =
+    world.opening_lead_source?.after_registration === registration.id
+      ? world.opening_lead_source
+      : null;
+  const targetQuest = leadSource
+    ? world.quests.find((quest) => quest.id === leadSource.target_quest)
+    : null;
   for (const profile of registration.profiles) {
     if (
       profile.character.skills.length === 0 ||
@@ -1574,6 +1581,20 @@ function assertOpeningRegistrationIntegrity(
         throw new Error(
           `Opening registration profile "${profile.id}" promises an unbound campaign npc "${promise.recipientId}".`,
         );
+      }
+      for (const campaignExport of targetQuest?.campaign_exports ?? []) {
+        const applied = applyCampaignConsequences({
+          character: profile.character,
+          effects: overworldQuestCampaignEffectsForCharacter(campaignExport, profile.character),
+        });
+        const after = applied.characterAfter.promises.find(
+          (candidate) => candidate.promiseId === promise.promiseId,
+        );
+        if (after?.status !== "kept") {
+          throw new Error(
+            `Opening registration target quest campaign export "${campaignExport.ending_id}" does not keep background obligation "${promise.promiseId}".`,
+          );
+        }
       }
     }
   }

@@ -10,7 +10,11 @@ import {
   OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactF11World, exactF12World } from "./fixtures/historical_overworlds.js";
+import {
+  exactF11World,
+  exactF12World,
+  registrationPromiseClosureCurrentCharacter,
+} from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -237,7 +241,9 @@ describe("crisis-priority predecessor migration integrity", () => {
       fatigue: current.fatigue,
       questOutcomes: current.questOutcomes,
     });
-    expect(restored.character).toEqual(current.character);
+    expect(restored.character).toEqual(
+      registrationPromiseClosureCurrentCharacter(current.character),
+    );
     expect(
       restored.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`)?.questStartProof,
     ).toMatchObject({
@@ -275,7 +281,9 @@ describe("crisis-priority predecessor migration integrity", () => {
       fatigue: current.fatigue,
       questOutcomes: current.questOutcomes,
     });
-    expect(restored.character).toEqual(current.character);
+    expect(restored.character).toEqual(
+      registrationPromiseClosureCurrentCharacter(current.character),
+    );
     expect(
       restored.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`)?.questStartProof,
     ).toMatchObject({

@@ -18,6 +18,7 @@ import {
   exactF06World,
   exactF12World,
   exactFrostJambSignpostPredecessorSnapshot,
+  registrationPromiseClosureCurrentCharacter,
 } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -250,7 +251,9 @@ describe("F06 to F02 relief-oath migration integrity", () => {
       restored.journalEntries.filter((entry) => entry.kind === "relief_oath_legacy"),
     ).toHaveLength(1);
     expect(serializeCampaignCharacterState(restored.character)).toBe(
-      serializeCampaignCharacterState(predecessor.character),
+      serializeCampaignCharacterState(
+        registrationPromiseClosureCurrentCharacter(predecessor.character),
+      ),
     );
     expect(restored.minutes).toBe(predecessor.minutes);
     expect(restored.supplies).toBe(predecessor.supplies);
@@ -258,6 +261,11 @@ describe("F06 to F02 relief-oath migration integrity", () => {
     expect(restoredSession.view().serviceOffers).toEqual(predecessorServiceOffers);
     expect(restoredServices).toEqual(predecessorServices);
     expect(restoredServices.some((id) => RELIEF_OATH_SERVICE_IDS.has(id))).toBe(false);
+    const completion = restored.journalEntries.find(
+      (entry) => entry.id === "quest_done:wolf_winter",
+    );
+    expect(completion?.text).toContain("Legacy registration receipt —");
+    expect(completion?.text).toContain(OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH);
     expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 

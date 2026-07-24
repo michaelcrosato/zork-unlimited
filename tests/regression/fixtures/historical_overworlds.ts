@@ -1,3 +1,4 @@
+import type { CampaignCharacterState } from "../../../src/world/campaign_character_state.js";
 import type { OverworldManifest } from "../../../src/world/overworld.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "../../../src/world/frost_jamb_signpost_legacy.js";
 import { AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE } from "../../../src/world/local_job_scene_legacy.js";
@@ -72,7 +73,7 @@ const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
 export function exactReliefProtocolTriggerCopyPredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactRegistrationPromiseClosurePredecessor(current);
   const preparation = predecessor.opening_preparation;
   const relief = preparation?.profiles.find(
     (profile) => profile.id === "albany:prep_relief_protocol",
@@ -95,7 +96,7 @@ export function exactReliefProtocolTriggerCopyPredecessor(
 export function exactReliefAllocationTriggerCategoryPredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactRegistrationPromiseClosurePredecessor(current);
   const allocation = predecessor.opening_relief_allocation;
   if (!allocation) {
     throw new Error("Albany must retain the Wolf-Winter Relief Allocation");
@@ -103,6 +104,81 @@ export function exactReliefAllocationTriggerCategoryPredecessor(
   for (const option of allocation.options) {
     Reflect.deleteProperty(option, "trigger_category");
   }
+  return predecessor;
+}
+
+const REGISTRATION_PROMISE_CLOSURE_GROUP_IDS: ReadonlySet<string> = new Set([
+  "albany:close_road_warden_return_packet",
+  "albany:close_ledger_advocate_relief_account",
+  "albany:close_ironhands_repairer_tools",
+]);
+const REGISTRATION_PROMISE_CLOSURE_BY_BACKGROUND: ReadonlyMap<string, string> = new Map([
+  ["albany:road_warden", "albany:promise_return_hayden_packet"],
+  ["albany:ledger_advocate", "albany:promise_truthful_relief_account"],
+  ["albany:ironhands_repairer", "albany:promise_return_reese_tools"],
+]);
+
+/** Reconstruct the exact manifest before three background obligations closed on return. */
+export function exactRegistrationPromiseClosurePredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const wolf = predecessor.quests.find((quest) => quest.id === "wolf_winter");
+  if (!wolf?.campaign_exports) {
+    throw new Error("Albany must retain Wolf-Winter's campaign exports");
+  }
+  for (const campaignExport of wolf.campaign_exports) {
+    campaignExport.conditional_effects = campaignExport.conditional_effects?.filter(
+      (group) => !REGISTRATION_PROMISE_CLOSURE_GROUP_IDS.has(group.id),
+    );
+  }
+  return predecessor;
+}
+
+/** Expected current character after migrating an older completed Wolf return. */
+export function registrationPromiseClosureCurrentCharacter(
+  historical: CampaignCharacterState,
+): CampaignCharacterState {
+  const current = structuredClone(historical);
+  if (current.background === null) return current;
+  const promiseId = REGISTRATION_PROMISE_CLOSURE_BY_BACKGROUND.get(current.background);
+  const promise = current.promises.find((candidate) => candidate.promiseId === promiseId);
+  if (promise?.status === "active") promise.status = "kept";
+  return current;
+}
+
+/** Reverse only the new registration-promise closure in an exact historical snapshot fixture. */
+export function exactRegistrationPromiseClosurePredecessorSnapshot(
+  current: OverworldSessionSnapshot,
+): OverworldSessionSnapshot {
+  const predecessor = structuredClone(current);
+  const completion = predecessor.journalEntries.find(
+    (entry) => entry.id === "quest_done:wolf_winter",
+  );
+  if (completion) {
+    completion.text = completion.text.replace(
+      /\s(?:Legacy registration|Registration) receipt —.*$/u,
+      "",
+    );
+  }
+  if (
+    predecessor.character.background === null ||
+    !predecessor.completedQuestIds.includes("wolf_winter")
+  ) {
+    return predecessor;
+  }
+  const promiseId = REGISTRATION_PROMISE_CLOSURE_BY_BACKGROUND.get(
+    predecessor.character.background,
+  );
+  if (!promiseId) return predecessor;
+  const promise = predecessor.character.promises.find(
+    (candidate) => candidate.promiseId === promiseId,
+  );
+  if (promise?.status === "active") return predecessor;
+  if (promise?.status !== "kept") {
+    throw new Error(`Expected current registration promise "${promiseId}" to be kept.`);
+  }
+  promise.status = "active";
   return predecessor;
 }
 

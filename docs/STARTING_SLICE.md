@@ -252,6 +252,33 @@ authored bind-the-rail recovery action. Direct quest starts remain exact pack
 defaults. Paired proof lives in
 [`character_background_counterfactual.test.ts`](../tests/starting_slice/character_background_counterfactual.test.ts).
 
+The return now closes the selected background's opening obligation as carefully
+as it closes the later relief oath. Every supported non-death Wolf-Winter
+outcome marks the Road-Warden's honest Hayden packet, Ledger Advocate's truthful
+account, Ironhands Repairer's borrowed tools, or Unaffiliated Courier's emergency
+tag `kept` only when that exact active promise exists. The other backgrounds'
+promises are never invented, unrelated quest completions leave the obligation
+active, and the foldback adds no action or decision. Full, compact, and UI
+character views expose the closed promise; replay and save/restore remain
+idempotent. The ordinary terminal completion and bounded compact MCP result also
+return one immediate authenticated receipt. It binds the selected profile,
+relief term, lead source, quest-start approach, canonical ending, exact world
+facts, and—when Reese's loan is involved—the authored 100/100 repair-roll
+snapshot. Rowan accepts the Courier's returned tag under Emery's witness, while
+lawful authority makes Rowan publicly void it. Historical completions with
+grandfathered dispatch evidence receive a clearly marked legacy receipt bound
+to the exact source hash already persisted by their legacy oath or quest-start
+proof; histories retaining the full current dispatch chain rederive the normal
+current receipt. Both survive an idempotent second restore. The exact
+predecessor is accepted only when its complete character state matches the old
+active-promise semantics, then the proven Wolf outcome upgrades that selected
+promise without accepting adjacent hashes, legacy-proof source swapping, or
+unrelated forgeries. Exhaustive four-background by eleven-ending proof, planner
+fail-closed checks, terminal/MCP bounds, and historical replay coverage live in
+[`registration_promise_return_counterfactual.test.ts`](../tests/starting_slice/registration_promise_return_counterfactual.test.ts)
+and
+[`registration_promise_return_snapshot_integrity.test.ts`](../tests/regression/registration_promise_return_snapshot_integrity.test.ts).
+
 The second authored Albany increment replaces Wolf-Winter's FIFO reveal with a
 blocking, irreversible source certification. Rowan's public docket costs no
 time or money and preserves the established routes. Jamie Tanner's testimony
