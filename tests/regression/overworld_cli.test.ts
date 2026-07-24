@@ -713,6 +713,87 @@ describe("overworld_play CLI (scripted mode)", () => {
     }
   });
 
+  it("drives structured Station decisions into June's cattle-first commitment", () => {
+    const stationed = sessionAtOpeningStation();
+    const preparation = WORLD.opening_preparation;
+    const allocation = WORLD.opening_relief_allocation;
+    const ally = WORLD.opening_ally;
+    if (!preparation || !allocation || !ally) {
+      throw new Error("Expected Albany's complete Station departure flow.");
+    }
+    const preparationOption = preparation.profiles.find(
+      (option) => option.id === "albany:prep_works_fortification",
+    );
+    const allocationOption = allocation.options.find(
+      (option) => option.id === "albany:relief_resident_shelter",
+    );
+    const allyOption = ally.options.find((option) => option.id === "albany:ally_june_cattle_first");
+    if (!preparationOption || !allocationOption || !allyOption) {
+      throw new Error("Expected the authored Station and June comparison options.");
+    }
+
+    const expected = OverworldSession.restore(WORLD, stationed.snapshot());
+    expected.chooseJourneyStory(preparationOption.id, preparation.id);
+    expected.chooseJourneyStory(allocationOption.id, allocation.id);
+    expected.talkToCharacter(ally.contact);
+    const presentedAllyOption = expected
+      .journey()
+      .storyChoice?.options.find((option) => option.id === allyOption.id);
+    if (!presentedAllyOption) throw new Error("Expected June's presented cattle-first option.");
+    expected.chooseJourneyStory(allyOption.id, ally.id);
+    const expectedSnapshot = expected.snapshot();
+    expect(expectedSnapshot.character.companions).toContain(ally.ally_npc_id);
+    expect(expectedSnapshot.character.promises).toContainEqual({
+      promiseId: "albany:promise_june_cattle_first",
+      recipientId: ally.ally_npc_id,
+      status: "active",
+    });
+
+    const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-june-departure-"));
+    const snapshotPath = join(temp, "station.json");
+    writeFileSync(snapshotPath, JSON.stringify(stationed.snapshot()));
+    try {
+      const commands = [
+        "look",
+        `inspect ${preparation.id}`,
+        `inspect ${preparationOption.id}`,
+        "back",
+        `choose ${preparationOption.id}`,
+        `inspect ${allocation.id}`,
+        `inspect ${allocationOption.id}`,
+        "back",
+        `choose ${allocationOption.id}`,
+        "look",
+        "talk June Pike",
+        `choose ${allyOption.id}`,
+        "hash",
+      ].join("; ");
+      const run = runCli(["--restore", snapshotPath, "--commands", commands]);
+
+      expect(run.status, run.output).toBe(0);
+      expect(run.output).not.toContain("A scripted command was rejected.");
+      expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(2);
+      for (const option of [preparationOption, allocationOption]) {
+        expect(run.output).toContain(`! Story choice detail — ${option.title}`);
+      }
+      expect(run.output.match(/Back to the story choice comparison/g)?.length ?? 0).toBe(2);
+      expect(run.output).toContain("This is the final required departure-board choice.");
+      expect(run.output).toContain("After resolving it, return to the Station actions.");
+      expect(run.output).toContain("Optional before departure:");
+      expect(run.output.match(/Command: talk June Pike/g) ?? []).toHaveLength(1);
+      const junePromptStart = run.output.lastIndexOf("\n! Story choice\n");
+      expect(junePromptStart).toBeGreaterThan(-1);
+      const juneFlowOutput = run.output.slice(junePromptStart);
+      expect(juneFlowOutput).not.toContain("Inspect:");
+      expect(run.output).toContain("Choose the Wolf-Winter Field Team");
+      expect(run.output).toContain(`Chosen: ${allyOption.title}.`);
+      expect(run.output).toContain(`Consequence: ${presentedAllyOption.consequence}`);
+      expect(outputSnapshotHashes(run.output)).toEqual([expected.snapshotHash()]);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
   it("keeps cancelling an optional Station comparison hash-neutral", () => {
     const stationed = sessionAtOpeningStation();
     const preparation = WORLD.opening_preparation;
