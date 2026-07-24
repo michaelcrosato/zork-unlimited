@@ -34,6 +34,13 @@ import {
   illegalReason,
   resolve as resolveRpgCommand,
 } from "./rpg_play.js";
+import {
+  isStructuredTerminalStoryChoice,
+  matchTerminalStoryChoiceOption,
+  renderTerminalStoryChoiceComparison,
+  runTerminalStoryChoiceController,
+  type TerminalStoryChoiceAuxiliaryResult,
+} from "./terminal_story_choice.js";
 import { loadOverworldManifest } from "../src/world/source.js";
 import { timeLabel } from "../src/world/session_journal_codec.js";
 import type {
@@ -53,6 +60,7 @@ import {
   type OverworldView,
   type TravelLogEntry,
 } from "../src/world/session.js";
+import type { OverworldDepartureInteraction } from "../src/world/session_departure_interactions.js";
 
 const VALUE_FLAGS = new Set(["--commands", "--seed", "--restore"]);
 const SAVE_DIR = "saves";
@@ -91,6 +99,13 @@ export function render(view: OverworldView): string {
   if (view.pois.length) lines.push(`Scoutable: ${view.pois.map((p) => p.title).join(" · ")}`);
   if (view.characters.length)
     lines.push(`Contacts: ${view.characters.map((c) => `${c.name} (${c.role})`).join(" · ")}`);
+  if (view.departureInteractions.length) {
+    lines.push("Optional departure decisions:");
+    for (const interaction of view.departureInteractions) {
+      lines.push(`  ${interaction.title}`);
+      lines.push(`    Compare: \`inspect ${interaction.id}\``);
+    }
+  }
   if (view.events.length)
     lines.push(
       `Events: ${view.events
@@ -242,6 +257,13 @@ export function renderEncounter(encounter: OverworldPendingRoadEncounter): strin
 export function renderJourneyGate(journey: JourneyPresentation): string {
   const gate = journey.pendingChoice ?? journey.storyChoice;
   if (!gate) return "";
+  if (
+    journey.storyChoice &&
+    gate === journey.storyChoice &&
+    isStructuredTerminalStoryChoice(gate)
+  ) {
+    return renderTerminalStoryChoiceComparison(gate);
+  }
   const kind = journey.pendingChoice ? "Journey decision" : "Story choice";
   const lines = [`\n! ${kind}`, `  ${gate.message}`, "  Choose with `choose <number|label>`:"];
   gate.options.forEach((option, index) => {
@@ -304,17 +326,7 @@ export function matchJourneyGateOption<Option extends { id: string; label: strin
   options: readonly Option[],
   raw: string,
 ): Option | null {
-  const trimmed = raw.trim();
-  if (/^\d+$/.test(trimmed)) {
-    const index = Number.parseInt(trimmed, 10) - 1;
-    return options[index] ?? null;
-  }
-  const exact = trimmed.toLowerCase();
-  return (
-    options.find((option) => option.id.toLowerCase() === exact) ??
-    options.find((option) => option.label.toLowerCase() === exact) ??
-    null
-  );
+  return matchTerminalStoryChoiceOption(options, raw);
 }
 
 function chooseJourneyGate(
@@ -363,7 +375,8 @@ function strategyForCommand(raw: string): OverworldRoadEncounterStrategy | null 
 
 const HELP = `Commands:
   look                     full status of the current town and area
-  choose <number|label>    answer the active journey or story choice
+  choose <number|label|id> answer the active journey or story choice
+  inspect <id>             compare an optional story choice or expand one structured card
   follow goal              take a road passage, or restate local goal guidance
   go <town|road #>         travel one road leg (multi-leg journeys go leg by leg)
   routes                   estimates for every discovered destination
@@ -467,6 +480,45 @@ export type QuestCommandReader = {
   scripted: boolean;
 };
 
+type TerminalStoryChoiceRunResult = "chosen" | "cancelled" | "closed" | "quit" | "refresh";
+
+async function controlTerminalStoryChoice(args: {
+  session: OverworldSession;
+  prompt: NonNullable<JourneyPresentation["storyChoice"]>;
+  allowComparisonExit: boolean;
+  reader: QuestCommandReader;
+  reject: (message: string) => void;
+  onAuxiliary: (line: string) => Promise<TerminalStoryChoiceAuxiliaryResult>;
+}): Promise<TerminalStoryChoiceRunResult> {
+  const result = await runTerminalStoryChoiceController({
+    prompt: args.prompt,
+    reader: args.reader,
+    write: (text) => console.log(text),
+    reject: args.reject,
+    choose: (option) => {
+      args.session.chooseJourneyStory(option.id, args.prompt.id);
+    },
+    allowComparisonExit: args.allowComparisonExit,
+    onAuxiliary: args.onAuxiliary,
+  });
+  if (result.kind === "chosen") {
+    console.log(`Chosen: ${result.option.label}.`);
+    console.log(`Consequence: ${result.option.consequence}`);
+    console.log(renderJourneyStatus(args.session.journey()));
+  } else if (result.kind === "cancelled") {
+    console.log("Story comparison closed without changing the journey.");
+  }
+  return result.kind;
+}
+
+function departureInteractionByExactId(
+  interactions: readonly OverworldDepartureInteraction[],
+  raw: string,
+): OverworldDepartureInteraction | null {
+  const exact = raw.trim().toLowerCase();
+  return interactions.find((interaction) => interaction.id.toLowerCase() === exact) ?? null;
+}
+
 async function main(): Promise<void> {
   rejectPositionals();
   const seed = Number(arg("--seed") ?? 1);
@@ -524,6 +576,68 @@ async function main(): Promise<void> {
         console.log(renderEndedJourney(journey, receipt));
         break;
       }
+      const fail = (message: string): void => {
+        console.log(message);
+        scriptedFailure = true;
+      };
+      const handleStoryChoiceAuxiliary = async (
+        line: string,
+      ): Promise<TerminalStoryChoiceAuxiliaryResult> => {
+        const [rawVerb = ""] = line.trim().split(/\s+/, 1);
+        const verb = rawVerb.toLowerCase();
+        const rest = line.trim().slice(rawVerb.length).trim();
+        if (["actions", "help", "?"].includes(verb) && rest.length === 0) {
+          console.log(HELP);
+          return "handled";
+        }
+        if (["look", "status", "l"].includes(verb) && rest.length === 0) {
+          console.log(render(session.view()));
+          console.log(renderJourneyStatus(session.journey()));
+          return "handled";
+        }
+        if (verb === "hash" && rest.length === 0) {
+          console.log(session.snapshotHash());
+          return "handled";
+        }
+        if (verb === "journal" && rest.length === 0) {
+          printJournal(session.view());
+          return "handled";
+        }
+        if (verb === "log" && rest.length === 0) {
+          printTravelLog(session.view());
+          return "handled";
+        }
+        if (verb === "save") {
+          saveSnapshot(session, rest);
+          return "handled";
+        }
+        if (verb === "load") {
+          const path = savePath(rest);
+          session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
+          if (session.journey().status !== "ended") {
+            console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
+            console.log(renderJourneyStatus(session.journey()));
+          }
+          return "refresh";
+        }
+        return "unhandled";
+      };
+      if (journey.storyChoice && isStructuredTerminalStoryChoice(journey.storyChoice)) {
+        try {
+          const outcome = await controlTerminalStoryChoice({
+            session,
+            prompt: journey.storyChoice,
+            reader,
+            reject: fail,
+            allowComparisonExit: false,
+            onAuxiliary: handleStoryChoiceAuxiliary,
+          });
+          if (outcome === "quit" || outcome === "closed") break;
+        } catch (error) {
+          fail(`Could not continue: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        continue;
+      }
       const journeyGate = renderJourneyGate(journey);
       if (journeyGate) console.log(journeyGate);
       else if (view.pendingRoadEncounter) console.log(renderEncounter(view.pendingRoadEncounter));
@@ -537,11 +651,6 @@ async function main(): Promise<void> {
         console.log(HELP);
         continue;
       }
-
-      const fail = (message: string): void => {
-        console.log(message);
-        scriptedFailure = true;
-      };
 
       try {
         if (journey.pendingChoice || journey.storyChoice) {
@@ -716,6 +825,33 @@ async function main(): Promise<void> {
               break;
             }
             printActionResult(session.talkToCharacter(character.id), session.view());
+            break;
+          }
+          case "inspect": {
+            const interaction = departureInteractionByExactId(
+              session.view().departureInteractions,
+              rest,
+            );
+            if (!interaction) {
+              fail(
+                `No optional story choice exactly matches "${rest}". Use the \`inspect <id>\` command shown by \`look\`.`,
+              );
+              break;
+            }
+            const prompt = session.inspectJourneyStory(interaction.id);
+            if (!isStructuredTerminalStoryChoice(prompt)) {
+              fail(`Optional story choice "${interaction.id}" has no structured comparison.`);
+              break;
+            }
+            const outcome = await controlTerminalStoryChoice({
+              session,
+              prompt,
+              reader,
+              reject: fail,
+              allowComparisonExit: true,
+              onAuxiliary: handleStoryChoiceAuxiliary,
+            });
+            if (outcome === "quit") break running;
             break;
           }
           case "investigate": {
