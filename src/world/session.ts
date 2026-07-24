@@ -273,7 +273,9 @@ import {
   type CampaignStoryChoiceRef,
 } from "./campaign_story_choices.js";
 import {
+  overworldDepartureContactLead,
   overworldDepartureInteraction,
+  type OverworldDepartureContactLead,
   type OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
 
@@ -307,7 +309,10 @@ export type {
   OverworldGoalPassageStopReason,
 } from "./session_goal_passage.js";
 export type { OverworldView } from "./session_view.js";
-export type { OverworldDepartureInteraction } from "./session_departure_interactions.js";
+export type {
+  OverworldDepartureContactLead,
+  OverworldDepartureInteraction,
+} from "./session_departure_interactions.js";
 export type {
   JourneyChoice,
   JourneyChoiceResult,
@@ -860,6 +865,43 @@ export class OverworldSession {
           }),
         ]
       : [];
+  }
+
+  private departureContactLeads(): OverworldDepartureContactLead[] {
+    const scene = this.world.opening_ally;
+    const preparation = this.world.opening_preparation;
+    if (
+      !scene ||
+      !preparation ||
+      scene.after_preparation !== preparation.id ||
+      !this.openingLeadSourceResolved() ||
+      this.openingAllyResolved() ||
+      this.openingAllyAvailable() !== null ||
+      this.openingPreparationAvailable() !== null ||
+      this.journeyState.status !== "active" ||
+      this.journeyState.pendingChoice !== null ||
+      this.pendingRoadEncounter !== null ||
+      this.currentId !== scene.home ||
+      this.currentAreaId !== scene.area ||
+      this.startedQuestIds.size > 0 ||
+      this.completedQuestIds.size > 0
+    ) {
+      return [];
+    }
+    const contact = this.charactersById.get(scene.contact);
+    const quest = this.questsById.get(scene.target_quest);
+    if (!contact || !quest) return [];
+    return [
+      overworldDepartureContactLead({
+        id: scene.id,
+        title: scene.title,
+        contactId: contact.id,
+        contactName: contact.name,
+        questId: quest.id,
+        questTitle: quest.title,
+        status: this.openingPreparationResolved() ? "ready" : "requires_preparation",
+      }),
+    ];
   }
 
   inspectJourneyStory(storyChoiceId: string): JourneyStoryChoicePrompt {
@@ -2119,6 +2161,7 @@ export class OverworldSession {
       serviceOffers,
       serviceActions: this.currentServiceActions(currentAreaId),
       departureInteractions: this.departureInteractions(),
+      departureContactLeads: this.departureContactLeads(),
       roads: this.roadsFrom(this.currentId),
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
       localState,

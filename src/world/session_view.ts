@@ -40,7 +40,9 @@ import {
   type OverworldRoadEncounterNextAction,
 } from "./session_road_next_action.js";
 import {
+  cloneOverworldDepartureContactLead,
   cloneOverworldDepartureInteraction,
+  type OverworldDepartureContactLead,
   type OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
 
@@ -81,6 +83,7 @@ export type OverworldView = {
   serviceOffers: CampaignServiceOffer[];
   serviceActions: OverworldServiceActionPresentation[];
   departureInteractions: OverworldDepartureInteraction[];
+  departureContactLeads: OverworldDepartureContactLead[];
   journal: OverworldJournalEntry[];
   discoveredSiteIds: string[];
   discoveredAreaIds: string[];
@@ -112,6 +115,7 @@ export type OverworldSessionViewState = {
   serviceOffers: readonly CampaignServiceOffer[];
   serviceActions: readonly OverworldServiceActionPresentation[];
   departureInteractions: readonly OverworldDepartureInteraction[];
+  departureContactLeads: readonly OverworldDepartureContactLead[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   areas: readonly OverworldArea[];
@@ -223,6 +227,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     })),
     serviceActions: state.serviceActions.map(cloneOverworldServiceActionPresentation),
     departureInteractions: state.departureInteractions.map(cloneOverworldDepartureInteraction),
+    departureContactLeads: state.departureContactLeads.map(cloneOverworldDepartureContactLead),
     journal: state.journalEntries.map(redactOverworldJournalEntryForPresentation),
     discoveredAreaIds: [...state.discoveredAreaIds].sort(),
     discoveredJobIds: [...state.discoveredJobIds].sort(),

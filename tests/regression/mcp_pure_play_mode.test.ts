@@ -1766,6 +1766,18 @@ describe("MCP pure play mode", () => {
       contacts?: [string, string][];
       area_routes?: [string, string, number][];
       quests?: [string, string, string, unknown?][];
+      quest_starts?: [string, string][];
+      departure_contact_leads?: [
+        string,
+        "ally",
+        string,
+        "requires_preparation" | "ready",
+        string,
+        string,
+        string,
+        string,
+        string,
+      ][];
     };
     type RpgObservation = {
       exits: { direction: string; to?: string }[];
@@ -1824,6 +1836,9 @@ describe("MCP pure play mode", () => {
         );
         const sessionId = String(started.session_id);
         expect(started.overworld_session_id).toBe(sessionId);
+        expect((started.legend as Record<string, string>).departure_contact_leads).toMatch(
+          /requires_preparation.*ready.*talk_overworld_session_contact.*solo default/i,
+        );
         let view = areaView(started);
         const openingPoi = view.pois[0]?.id;
         if (!openingPoi) throw new Error("expected opening Albany point of interest");
@@ -1960,6 +1975,23 @@ describe("MCP pure play mode", () => {
             }
           ).departure_interactions,
         ).toEqual([["albany:wolf_preparation", "preparation", expect.any(String)]]);
+        expect((stationed.context as CompactAreaContext).departure_contact_leads).toEqual([
+          [
+            "albany:wolf_ally_commitment",
+            "ally",
+            "Choose the Wolf-Winter Field Team",
+            "requires_preparation",
+            "albany_city__transport_hub__june_pike",
+            "June Pike",
+            "wolf_winter",
+            "The Wolf-Winter",
+            expect.stringMatching(/choose a Station preparation.*solo rider/i),
+          ],
+        ]);
+        expect((stationed.context as CompactAreaContext).quest_starts).toContainEqual([
+          "wolf_winter",
+          expect.any(String),
+        ]);
         const inspected = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2022,6 +2054,23 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        expect((prepared.context as CompactAreaContext).departure_contact_leads).toEqual([
+          [
+            "albany:wolf_ally_commitment",
+            "ally",
+            "Choose the Wolf-Winter Field Team",
+            "ready",
+            "albany_city__transport_hub__june_pike",
+            "June Pike",
+            "wolf_winter",
+            "The Wolf-Winter",
+            expect.stringMatching(/talk to June Pike.*solo rider/i),
+          ],
+        ]);
+        expect((prepared.context as CompactAreaContext).quest_starts).toContainEqual([
+          "wolf_winter",
+          expect.any(String),
+        ]);
         const wolfWinter = areaView(prepared).quests.find((quest) => quest.id === "wolf_winter");
         if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
         const allocated = textPayload(

@@ -1357,7 +1357,7 @@ tool(
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk to a local contact by character_id or contact_id; can reveal leads, jobs, quests, or renown.",
+  "Talk to a local contact; a ready departure_contact_leads entry names its character_id.",
   CONTACT_INPUT({
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,

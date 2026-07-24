@@ -52,7 +52,10 @@ import {
   type OverworldServiceActionPresentation,
 } from "./session_service_presentation.js";
 import { projectOverworldQuestView } from "./session_local_discovery.js";
-import type { OverworldDepartureInteraction } from "./session_departure_interactions.js";
+import type {
+  OverworldDepartureContactLead,
+  OverworldDepartureInteraction,
+} from "./session_departure_interactions.js";
 import type { JourneyOpportunityPresentation } from "./journey_contract.js";
 
 type OverworldSessionViewLocalContentState = Pick<
@@ -73,6 +76,7 @@ export type OverworldSessionViewModelState = {
   serviceOffers: readonly CampaignServiceOffer[];
   serviceActions: readonly OverworldServiceActionPresentation[];
   departureInteractions: readonly OverworldDepartureInteraction[];
+  departureContactLeads: readonly OverworldDepartureContactLead[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -111,6 +115,7 @@ export type OverworldSessionViewModelSourceState = {
   serviceOffers: readonly CampaignServiceOffer[];
   serviceActions: readonly OverworldServiceActionPresentation[];
   departureInteractions: readonly OverworldDepartureInteraction[];
+  departureContactLeads: readonly OverworldDepartureContactLead[];
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   localState: OverworldSessionViewLocalContentState;
@@ -198,6 +203,7 @@ export function buildOverworldSessionViewModelState(
       serviceOffers: [],
       serviceActions: [],
       departureInteractions: [],
+      departureContactLeads: [],
       roads: [],
       areaExits: [],
       routeOptions: [],
@@ -282,6 +288,7 @@ export function buildOverworldSessionViewModelState(
     })),
     serviceActions: source.serviceActions.map(cloneOverworldServiceActionPresentation),
     departureInteractions: source.departureInteractions,
+    departureContactLeads: source.departureContactLeads,
     roads: source.roads,
     areaExits: source.areaExits,
     routeOptions,
@@ -333,6 +340,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     serviceOffers: state.serviceOffers,
     serviceActions: state.serviceActions,
     departureInteractions: state.departureInteractions,
+    departureContactLeads: state.departureContactLeads,
     roads: state.roads,
     areaExits: state.areaExits,
     routeOptions: state.routeOptions,
@@ -388,6 +396,7 @@ export function buildOverworldSessionViewFromState(
     serviceOffers: state.serviceOffers,
     serviceActions: state.serviceActions,
     departureInteractions: state.departureInteractions,
+    departureContactLeads: state.departureContactLeads,
     roads: state.roads,
     areaExits: state.areaExits,
     areas: state.localView.areas,

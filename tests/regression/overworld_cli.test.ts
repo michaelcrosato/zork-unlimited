@@ -209,6 +209,41 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(terminal).not.toMatch(/market.*scout/i);
   });
 
+  it("renders June's optional departure guidance without changing launch state", () => {
+    const preparation = WORLD.opening_preparation;
+    const ally = WORLD.opening_ally;
+    if (!preparation || !ally) throw new Error("Albany must retain its Station ally flow.");
+    const session = sessionAtOpeningStation();
+    const beforeSnapshot = session.snapshot();
+    const beforeDecisions = session.journey().acceptedDecisions;
+    const lead = session.view().departureContactLeads[0];
+    if (!lead) throw new Error("Expected June's optional departure lead.");
+
+    const unavailable = render(session.view());
+    expect(unavailable).toContain("Optional before departure:");
+    expect(unavailable).toContain(ally.title);
+    expect(unavailable).toContain(lead.guidance);
+    expect(unavailable).toContain("Available after choosing a Station preparation.");
+    expect(unavailable).not.toContain(`Command: talk ${lead.contactName}`);
+    expect(session.snapshot()).toEqual(beforeSnapshot);
+    expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
+    expect(session.view().questStarts).toContainEqual([
+      ally.target_quest,
+      WORLD.quests.find((quest) => quest.id === ally.target_quest)!.launch!.options[0]!.id,
+    ]);
+
+    session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
+    const readySnapshot = session.snapshot();
+    const readyDecisions = session.journey().acceptedDecisions;
+    const readyLead = session.view().departureContactLeads[0];
+    if (!readyLead) throw new Error("Expected June's ready departure lead.");
+    const ready = render(session.view());
+    expect(ready).toContain(`Command: talk ${readyLead.contactName}`);
+    expect(ready).not.toContain("Available after choosing a Station preparation.");
+    expect(session.snapshot()).toEqual(readySnapshot);
+    expect(session.journey().acceptedDecisions).toBe(readyDecisions);
+  });
+
   it("renders an authored pending road encounter with its strategy commands", () => {
     const manifest = loadOverworldManifest(ROOT);
     const session = new OverworldSession(manifest);

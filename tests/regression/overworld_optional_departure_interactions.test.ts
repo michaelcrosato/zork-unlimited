@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
-import { OVERWORLD_COMPACT_LEGEND } from "../../src/world/compact_view.js";
+import { compactOverworldView, OVERWORLD_COMPACT_LEGEND } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -137,6 +137,85 @@ describe("optional Station departure interactions", () => {
     expect(session.compactView().departure_interactions).toBeUndefined();
   });
 
+  it("surfaces June as a read-only contact lead before and after preparation", () => {
+    const session = sessionAtStation();
+    const june = WORLD.characters.find((character) => character.id === ALLY.contact);
+    if (!june) throw new Error("Expected June at the Station.");
+    const beforePresentation = session.snapshot();
+    const decisionsBeforePresentation = session.journey().acceptedDecisions;
+
+    const beforePreparation = session.view().departureContactLeads;
+    expect(beforePreparation).toEqual([
+      {
+        id: ALLY.id,
+        kind: "ally",
+        title: ALLY.title,
+        contactId: june.id,
+        contactName: june.name,
+        questId: WOLF.id,
+        questTitle: WOLF.title,
+        status: "requires_preparation",
+        guidance: `Optional field team: choose a Station preparation first, then talk to ${june.name} to review the terms. You may start ${WOLF.title} now as a solo rider without this choice.`,
+        action: null,
+      },
+    ]);
+    expect(session.compactView().departure_contact_leads).toEqual([
+      [
+        ALLY.id,
+        "ally",
+        ALLY.title,
+        "requires_preparation",
+        june.id,
+        june.name,
+        WOLF.id,
+        WOLF.title,
+        beforePreparation[0]!.guidance,
+      ],
+    ]);
+    expect(compactOverworldView(session.view()).departure_contact_leads).toEqual(
+      session.compactView().departure_contact_leads,
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.departure_contact_leads).toContain(
+      "talk_overworld_session_contact(character_id: contact_id)",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.departure_contact_leads).toContain(
+      "leaves quest_id launch legal",
+    );
+    expect(session.snapshot()).toEqual(beforePresentation);
+    expect(session.journey().acceptedDecisions).toBe(decisionsBeforePresentation);
+    expect(() => session.prepareQuestStart(WOLF.id, APPROACH)).not.toThrow();
+
+    session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    const afterPreparationSnapshot = session.snapshot();
+    const ready = session.view().departureContactLeads[0];
+    expect(ready).toEqual({
+      ...beforePreparation[0],
+      status: "ready",
+      guidance: `Optional field team: talk to ${june.name} to review the terms. You may start ${WOLF.title} now as a solo rider without this choice.`,
+      action: {
+        tool: "talk_overworld_session_contact",
+        characterId: june.id,
+        arguments: { character_id: june.id },
+      },
+    });
+    expect(session.compactView().departure_contact_leads?.[0]?.[3]).toBe("ready");
+    expect(compactOverworldView(session.view()).departure_contact_leads).toEqual(
+      session.compactView().departure_contact_leads,
+    );
+    expect(session.snapshot()).toEqual(afterPreparationSnapshot);
+
+    if (!ready?.action) throw new Error("Expected June's ready talk action.");
+    (ready.action.arguments as { character_id: string }).character_id = "forged";
+    const canonicalReady = session.view().departureContactLeads[0];
+    expect(canonicalReady?.action?.arguments).toEqual({ character_id: june.id });
+    if (!canonicalReady?.action) throw new Error("Expected detached canonical June action.");
+    session.talkToCharacter(canonicalReady.action.arguments.character_id);
+    expect(session.view().departureContactLeads).toEqual([]);
+    expect(session.compactView().departure_contact_leads).toBeUndefined();
+    expect(session.journey().storyChoice).toMatchObject({ id: ALLY.id, kind: "ally" });
+    expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/field-team commitment/i);
+  });
+
   it("inspects without mutation and atomically records a replayable offer plus selection", () => {
     const { api, sessionId } = startMcpAtStation();
     const station = api.get_overworld_session({
@@ -250,11 +329,26 @@ describe("optional Station departure interactions", () => {
       session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
     }
 
+    expect(session.view().departureContactLeads).toMatchObject([
+      { id: ALLY.id, status: prepare ? "ready" : "requires_preparation" },
+    ]);
     expect(session.view().questStarts).toContainEqual([WOLF.id, APPROACH]);
     expect(() => session.prepareQuestStart(WOLF.id, APPROACH)).not.toThrow();
     session.startQuest(WOLF.id, APPROACH);
     expect(session.snapshot().startedQuestIds).toContain(WOLF.id);
+    expect(session.snapshot().character.companions).not.toContain(ALLY.ally_npc_id);
+    expect(
+      session
+        .snapshot()
+        .character.relationships.some((relationship) => relationship.npcId === ALLY.ally_npc_id),
+    ).toBe(false);
+    expect(
+      session
+        .snapshot()
+        .character.promises.some((promise) => promise.recipientId === ALLY.ally_npc_id),
+    ).toBe(false);
     expect(session.view().departureInteractions).toEqual([]);
+    expect(session.view().departureContactLeads).toEqual([]);
     const snapshot = session.snapshot();
     expect(OverworldSession.restore(WORLD, snapshot).snapshot()).toEqual(snapshot);
   });
@@ -265,10 +359,12 @@ describe("optional Station departure interactions", () => {
     if (!routeAway) throw new Error("Expected a route away from the Station.");
     session.moveArea(routeAway.id);
     expect(session.view().departureInteractions).toEqual([]);
+    expect(session.view().departureContactLeads).toEqual([]);
     expect(() => session.inspectJourneyStory(PREPARATION.id)).toThrow(/not available/i);
 
     moveToStation(session);
     session.startQuest(WOLF.id, APPROACH);
     expect(session.view().departureInteractions).toEqual([]);
+    expect(session.view().departureContactLeads).toEqual([]);
   });
 });
