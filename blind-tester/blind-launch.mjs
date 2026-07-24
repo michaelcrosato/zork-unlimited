@@ -53,9 +53,15 @@ const NPM_EATEN_FLAGS = [
  */
 export function recoverNpmEatenFlags(argv, env) {
   const args = [...argv];
+  const hasExplicitFlag = (flag) => {
+    const aliases = flag === "--quest" ? ["--quest", "--quest-id"] : [flag];
+    return args.some((arg) =>
+      aliases.some((alias) => arg === alias || arg.startsWith(`${alias}=`)),
+    );
+  };
   const unresolvedValueFlags = NPM_EATEN_FLAGS.filter(
     ([key, flag, takesValue]) =>
-      takesValue && env[`npm_config_${key}`] === "true" && !args.includes(flag),
+      takesValue && env[`npm_config_${key}`] === "true" && !hasExplicitFlag(flag),
   );
   const numericOrphans = args.filter((value) => /^-?\d+$/.test(value));
   if (
@@ -70,7 +76,7 @@ export function recoverNpmEatenFlags(argv, env) {
   for (const [key, flag, takesValue] of NPM_EATEN_FLAGS) {
     const value = env[`npm_config_${key}`];
     if (value === undefined || value === "" || value === "false") continue;
-    if (args.includes(flag)) continue;
+    if (hasExplicitFlag(flag)) continue;
     if (!takesValue) {
       args.push(flag);
       recovered = true;

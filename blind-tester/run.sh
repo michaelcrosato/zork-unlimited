@@ -111,24 +111,34 @@ is_absolute_output_prefix() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --quest|--quest-id) QUEST_ID="$2"; QUEST_EXPLICIT=1; shift 2 ;;
-    --pack)
+    --quest=*|--quest-id=*) QUEST_ID="${1#*=}"; QUEST_EXPLICIT=1; shift ;;
+    --pack|--pack=*)
       echo "Blind runs start shipped quests by quest id only; use --quest <id>, not --pack." >&2
       exit 2 ;;
     --seed)             SEED="$2"; shift 2 ;;
+    --seed=*)           SEED="${1#*=}"; shift ;;
     --provider)         PROVIDER="$2"; shift 2 ;;
+    --provider=*)       PROVIDER="${1#*=}"; shift ;;
     --model)            MODEL="$2"; shift 2 ;;
+    --model=*)          MODEL="${1#*=}"; shift ;;
     --out)              OUT="$2"; shift 2 ;;
+    --out=*)            OUT="${1#*=}"; shift ;;
     --smoke)            SMOKE=1; shift ;;
     --mock)             MOCK=1; shift ;;
     --spectate)         SPECTATE=1; shift ;;
     --delay-ms)         SPECTATE_DELAY_MS="$2"; SPECTATE=1; shift 2 ;;
+    --delay-ms=*)       SPECTATE_DELAY_MS="${1#*=}"; SPECTATE=1; shift ;;
     --overworld)        OVERWORLD=1; shift ;;
     --persona)          PERSONA="$2"; shift 2 ;;
+    --persona=*)        PERSONA="${1#*=}"; shift ;;
     --preflight-only)   PREFLIGHT_ONLY=1; shift ;;
     --client-authority-json) CLIENT_AUTHORITY_JSON=1; shift ;;
     -h|--help)
       sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
+    --*)
+      echo "Unknown blind-run option \"$1\"; use --help for supported syntax." >&2
+      exit 2 ;;
     *) POSITIONAL+=("$1"); shift ;;
   esac
 done

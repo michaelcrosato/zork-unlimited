@@ -912,6 +912,69 @@ printf 'codex-cli 0.144.1\\n'
     }
   }, 30_000);
 
+  it("parses direct equals-form values and never reclassifies unknown options as quests", () => {
+    const baseEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      BLIND_AGENT_CMD: "exit 93",
+      BLIND_OVERWORLD: "0",
+      BLIND_QUEST_ID: "",
+      BLIND_PROVIDER: "codex",
+    };
+    for (const key of [
+      "npm_config_quest",
+      "npm_config_quest_id",
+      "npm_config_seed",
+      "npm_config_provider",
+      "npm_config_model",
+      "npm_config_out",
+      "npm_config_delay_ms",
+      "npm_config_persona",
+    ]) {
+      delete baseEnv[key];
+    }
+
+    const inline = spawnSync(
+      process.execPath,
+      [
+        "blind-tester/blind-launch.mjs",
+        "--seed=72525",
+        "--provider=not-a-provider",
+        "--model=gpt-5.6-terra",
+        "--persona=default",
+        "--delay-ms=0",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: baseEnv,
+        timeout: 30_000,
+      },
+    );
+    const inlineOutput = `${inline.stdout ?? ""}\n${inline.stderr ?? ""}\n${inline.error?.message ?? ""}`;
+    expect(inline.status, inlineOutput).toBe(2);
+    expect(inlineOutput).toContain("--provider must be exactly codex");
+    expect(inlineOutput).not.toContain("Live blind LLM runs must start");
+    expect(inlineOutput).not.toContain("Ambiguous:");
+
+    const unknown = spawnSync(
+      process.execPath,
+      ["blind-tester/blind-launch.mjs", "--seed=72525", "--bogus=value"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: baseEnv,
+        timeout: 30_000,
+      },
+    );
+    const unknownOutput = `${unknown.stdout ?? ""}\n${unknown.stderr ?? ""}\n${unknown.error?.message ?? ""}`;
+    expect(unknown.status, unknownOutput).toBe(2);
+    expect(unknownOutput).toContain(
+      'Unknown blind-run option "--bogus=value"; use --help for supported syntax.',
+    );
+    expect(unknownOutput).not.toContain("Live blind LLM runs must start");
+    expect(unknownOutput).not.toContain("Ambiguous:");
+  }, 30_000);
+
   it("rejects every live quest source before launching an override agent", () => {
     const baseEnv: NodeJS.ProcessEnv = {
       ...process.env,

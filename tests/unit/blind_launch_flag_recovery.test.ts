@@ -85,6 +85,30 @@ describe("recoverNpmEatenFlags", () => {
     expect(recovered).toBe(false);
   });
 
+  it("never lets inherited npm config override explicit inline values or quest aliases", () => {
+    const explicit = [
+      "--quest-id=breaking_weir",
+      "--seed=72525",
+      "--provider=not-a-provider",
+      "--model=gpt-5.6-terra",
+      "--out=C:\\reports\\seed=72525",
+      "--delay-ms=0",
+      "--persona=default",
+    ];
+    const { args, recovered } = recoverNpmEatenFlags(explicit, {
+      npm_config_quest: "gallowmere",
+      npm_config_quest_id: "cold_forge",
+      npm_config_seed: "999",
+      npm_config_provider: "codex",
+      npm_config_model: "gpt-5.3-codex-spark",
+      npm_config_out: "ambient-report",
+      npm_config_delay_ms: "1500",
+      npm_config_persona: "breaker",
+    });
+    expect(args).toEqual(explicit);
+    expect(recovered).toBe(false);
+  });
+
   it("is a no-op without npm_config markers (Git Bash / Linux path)", () => {
     const { args, recovered } = recoverNpmEatenFlags(
       ["--quest", "breaking_weir", "--seed", "7"],
