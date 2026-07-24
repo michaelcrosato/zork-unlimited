@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 628 -->
+<!-- historical_cycle_count: 629 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - relief_allocation_trigger_categories
+
+- Evidence choice: the staged Station cohort still received all three Relief Allocation preview paragraphs in its first comparison, recreating the consequence wall that preparation had removed.
+- Surface: Relief Allocation now leads with one bounded trigger category plus exact cost; noncommitting detail reveals only the requested option's complete preview, protected/exposed needs, consequence, and mechanics, while verbose mode remains canonical.
+- Counterfactual: categories are all-present or all-absent for exact legacy manifests, comparison reads preserve hash/time/money/decisions, other options never leak, allocation outcomes and costs are unchanged, and only exact predecessor `42357dc…` migrates to world `a37f9fc6…`.
+- Pure evidence: exact clean `547f80c9` accepts Terra at 49 decisions (clarity/enjoyment 3/4, replay-yes) and Sol at 55 (4/4, replay-yes); Sol organically compares, inspects, and chooses resident shelter, while Terra truthfully skips optional setup and launches directly.
+- Diagnostics: Luna stops unpublished after 29 decisions when strict audit finds a missing private MCP completion, while fresh Terra and Sol receive explicit weekly-limit refusals until July 28; old global CLI 0.144 also emits harmless schema noise against Desktop's 0.145 model cache, and none is retried, repaired, counted, or compiled.
+- Measured result/follow-through: the new Relief summary works when used without becoming mandatory; opening density, the Relief Protocol's narrow multi-failure summary, June discoverability, and stale promise/action copy remain separate ranked follow-ups, with two valid reports held below the three-report compile threshold.
+- Guard: post-change crawl `ai-runs\crawl\20260724T032033Z` is zero-finding; independent review is clean, focused coverage passes 55 tests plus UI, and full health passes 416 files/3,337 tests plus UI typecheck and all packs.
 
 ### Cycle result - staged_station_choice_disclosure
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Diagnostic only: Sol 4412 remains unpublished and excluded after its first wrapper yielded before the MCP completion, correctly failing the unchanged immediate-completion audit; its play, ratings, findings, and token count are not evidence.
 - Measured result: the unique shipped corpus restores 39,009 characters across all 12 quests and every real overworld/opening/service/road route; two independent re-reviews find no P0-P2, and 15 focused suites pass 242 tests under fixed 9k RPG/12k overworld response ceilings.
 - Guard: pre/post 6,000-step crawls remain zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 408 files/3,201 tests plus integrity, both typechecks, lint, format, validation, and clean diff.
-
-### Cycle result - overworld_service_action_surface
-
-- Evidence choice: exact-clean Luna 4401 and 4407 independently crossed multiple service towns at zero supplies/rising fatigue without using recovery, while the latter explicitly refused to invent an action omitted from the current compact response; retained 4346/4349 corroborate the same discoverability split.
-- Surface: one canonical planner-backed `serviceActions` projection now drives full view, compact v27 `service_actions`, MCP, and focusable UI controls with exact availability, time, before/after resources, consequence, and unavailable reason; authored `service_offers` remain distinct informational terms.
-- Counterfactual: pending road/journey/story states suppress calls truthfully, one-time campaign overrides and zero-cost no-ops reuse the same lifecycle identity as execution, consumed overrides fall back to ordinary town services, and clone/save/restore/direct-compact parity preserve every preview without changing balance.
-- Pure evidence: exact-clean Terra 4411 verifies `ok: true` across 52 error-free calls/40 decisions, uses the newly surfaced resupply action, diverts every Wolf-Winter wolf alive with Cade's herd whole, and exits voluntarily at checkpoint 40; clarity/enjoyment are 4/4, unstuck, replay-yes.
-- Diagnostic only: Sol 4408 and Luna 4410 failed the unchanged immediate-completion forwarding audit, while Terra 4409 failed report publication at an explicit output prefix; all three runs, ratings, findings, and token counts remain unpublished and excluded.
-- Measured result: two parallel exact-commit reviews find no P0-P2 across the planner trust boundary and UI/compact accessibility; seven focused files pass 144 tests after rebasing onto merged post-cast truth.
-- Guard: post-change crawl remains zero-finding across 6,000 steps, 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 407 files/3,177 tests plus integrity, both typechecks, lint, format, validation, and clean diff.
