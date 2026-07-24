@@ -48610,6 +48610,60 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
                 "requires_all_promises": [
@@ -48769,6 +48823,60 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
                 "requires_all_promises": [
@@ -48923,6 +49031,60 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
             {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
@@ -49094,6 +49256,60 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
                 "requires_all_promises": [
@@ -49257,6 +49473,60 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
                 "requires_all_promises": [
@@ -49415,6 +49685,60 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
             {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
@@ -49578,6 +49902,60 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
             {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
@@ -49746,6 +50124,60 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
                 "requires_all_promises": [
@@ -49888,6 +50320,60 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
             {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
@@ -50032,6 +50518,60 @@
           ],
           "conditional_effects": [
             {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {
                 "requires_all_promises": [
@@ -50174,6 +50714,60 @@
             }
           ],
           "conditional_effects": [
+            {
+              "id": "albany:close_road_warden_return_packet",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_hayden_packet",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_hayden_packet",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ledger_advocate_relief_account",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_truthful_relief_account",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_truthful_relief_account",
+                  "status": "kept"
+                }
+              ]
+            },
+            {
+              "id": "albany:close_ironhands_repairer_tools",
+              "when": {
+                "requires_all_promises": [
+                  {
+                    "promise_id": "albany:promise_return_reese_tools",
+                    "status": "active"
+                  }
+                ]
+              },
+              "effects": [
+                {
+                  "type": "resolve_promise",
+                  "promise_id": "albany:promise_return_reese_tools",
+                  "status": "kept"
+                }
+              ]
+            },
             {
               "id": "albany:close_unaffiliated_courier_emergency_tag",
               "when": {

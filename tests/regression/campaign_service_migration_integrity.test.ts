@@ -15,6 +15,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import {
   exactF12World,
   exactFrostJambSignpostPredecessorSnapshot,
+  exactRegistrationPromiseClosurePredecessorSnapshot,
 } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -106,7 +107,9 @@ function snapshotAsPredecessor(
 
       return entry;
     });
-  return exactFrostJambSignpostPredecessorSnapshot(WORLD, predecessor);
+  return exactRegistrationPromiseClosurePredecessorSnapshot(
+    exactFrostJambSignpostPredecessorSnapshot(WORLD, predecessor),
+  );
 }
 
 function savedTimberReturnBeforeService(withQuestDecision = false): OverworldSession {
@@ -202,10 +205,18 @@ describe("campaign service predecessor migration integrity", () => {
     ).not.toContain("one-time 15-minute resupply");
 
     const migrated = OverworldSession.restore(WORLD, predecessor);
+    const migratedSnapshot = migrated.snapshot();
     expect(
-      migrated
-        .snapshot()
-        .journalEntries.find((entry) => entry.serviceRuleId === TIMBER_SERVICE_RULE_ID),
+      migratedSnapshot.journalEntries.find((entry) => entry.id === "quest_done:wolf_winter")?.text,
+    ).toContain(`Legacy registration receipt —`);
+    expect(
+      migratedSnapshot.journalEntries.find((entry) => entry.id === "quest_done:wolf_winter")?.text,
+    ).toContain(OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH);
+    expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(migratedSnapshot);
+    expect(
+      migratedSnapshot.journalEntries.find(
+        (entry) => entry.serviceRuleId === TIMBER_SERVICE_RULE_ID,
+      ),
     ).toBeDefined();
     moveToArea(migrated, "albany_city__market");
     expect(migrated.view().serviceOffers).toContainEqual(
@@ -254,6 +265,19 @@ describe("campaign service predecessor migration integrity", () => {
 
     expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
       /Wolf-Winter quest outcome introduced by a later manifest/i,
+    );
+  });
+
+  it("rejects swapping one durable legacy receipt proof to another trusted source", () => {
+    const forged = savedTimberReturnBeforeService().snapshot();
+    const questStart = forged.journalEntries.find((entry) => entry.id === "quest:wolf_winter");
+    if (questStart?.questStartProof?.kind !== "legacy") {
+      throw new Error("expected a durable legacy Wolf-Winter start proof");
+    }
+    questStart.questStartProof.sourceWorldHash = OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH;
+
+    expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
+      /mismatched legacy oath and quest-start sources/i,
     );
   });
 

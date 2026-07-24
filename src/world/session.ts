@@ -424,6 +424,7 @@ export class OverworldSession {
   private journeyState: JourneyContractSnapshot = createInitialJourneyContractSnapshot();
   private openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null = null;
   private questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundary | null = null;
+  private trustedLegacyRegistrationReceiptSourceWorldHash: string | null = null;
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
   private readonly caches: OverworldSessionCaches = {};
@@ -1804,6 +1805,8 @@ export class OverworldSession {
     this.openingLeadSourceDecisionTrail = applied.openingLeadSourceDecisionTrailAfter
       ? cloneOpeningLeadSourceDecisionTrail(applied.openingLeadSourceDecisionTrailAfter)
       : null;
+    this.trustedLegacyRegistrationReceiptSourceWorldHash =
+      applied.trustedLegacyRegistrationReceiptSourceWorldHashAfter;
     this.clearSessionCaches();
   }
 
@@ -2409,6 +2412,11 @@ export class OverworldSession {
       areasById: this.areasById,
       nodesById: this.nodes,
       startedQuestIds: this.startedQuestIds,
+      openingRegistration: this.world.opening_registration ?? null,
+      openingReliefOath: this.world.opening_relief_oath ?? null,
+      openingLeadSource: this.world.opening_lead_source ?? null,
+      trustedLegacyRegistrationReceiptSourceWorldHash:
+        this.trustedLegacyRegistrationReceiptSourceWorldHash,
     };
     const completionPlan = planOverworldSessionQuestCompletion(completionState);
     if (this.questsById.get(questId)?.campaign_exports === undefined) {

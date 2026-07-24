@@ -22,6 +22,10 @@ import {
   applyOverworldQuestLaunchOption,
   overworldQuestStartPreconditionFingerprint,
 } from "./quest_launch.js";
+import type { OpeningLeadSource } from "./opening_lead_source.js";
+import type { OpeningRegistration } from "./opening_registration.js";
+import type { OpeningReliefOath } from "./opening_relief_oath.js";
+import { deriveRegistrationPromiseFoldbackReceipt } from "./registration_promise_receipt.js";
 
 export type OverworldQuestCompletionOutcome = {
   endingId: string;
@@ -58,7 +62,12 @@ export type OverworldQuestCompletionState = {
   nodesById: ReadonlyMap<string, OverworldNode>;
   questOutcomeIds: ReadonlyMap<string, string>;
   startedQuestIds: ReadonlySet<string>;
+  journalEntries?: readonly OverworldJournalEntry[];
   journalEntriesById?: ReadonlyMap<string, OverworldJournalEntry>;
+  openingRegistration?: OpeningRegistration | null;
+  openingReliefOath?: OpeningReliefOath | null;
+  openingLeadSource?: OpeningLeadSource | null;
+  trustedLegacyRegistrationReceiptSourceWorldHash?: string | null;
 };
 
 export type OverworldQuestStartPlan = {
@@ -212,16 +221,18 @@ export function questCompletionJournalEntryDraft(args: {
   minutes: number;
   townName: string;
   returnSummary?: string;
+  registrationReceipt?: string;
 }): Omit<OverworldJournalEntry, "recordedAt"> {
   const baseText =
     `The quest closed at ${args.endingTitle} after ` +
     `${String(args.minutes)} minutes of local work.`;
+  const returnText = args.returnSummary ? `${baseText} ${args.returnSummary}` : baseText;
   return {
     id: `quest_done:${args.quest.id}`,
     kind: "quest_done",
     town: args.townName,
     title: `Completed ${args.quest.title}`,
-    text: args.returnSummary ? `${baseText} ${args.returnSummary}` : baseText,
+    text: args.registrationReceipt ? `${returnText} ${args.registrationReceipt}` : returnText,
   };
 }
 
@@ -416,6 +427,24 @@ export function planOverworldQuestCompletion(
       : [],
   });
   const returnSummary = questLaunchReturnSummary(state, quest);
+  const registrationReceipt = campaignExport
+    ? deriveRegistrationPromiseFoldbackReceipt({
+        quest,
+        campaignExport,
+        characterBefore: state.character,
+        characterAfter: consequence.characterAfter,
+        worldFactIds: consequence.worldFactIds,
+        journalEntries: state.journalEntries ?? [],
+        openingRegistration: state.openingRegistration,
+        openingReliefOath: state.openingReliefOath,
+        openingLeadSource: state.openingLeadSource,
+        ...(state.trustedLegacyRegistrationReceiptSourceWorldHash !== undefined
+          ? {
+              trustedLegacySourceWorldHash: state.trustedLegacyRegistrationReceiptSourceWorldHash,
+            }
+          : {}),
+      })
+    : undefined;
   return {
     minutes,
     quest: questView(quest),
@@ -431,6 +460,7 @@ export function planOverworldQuestCompletion(
       minutes,
       townName: state.nodesById.get(quest.home)?.name ?? quest.home,
       ...(returnSummary ? { returnSummary } : {}),
+      ...(registrationReceipt ? { registrationReceipt } : {}),
     }),
   };
 }

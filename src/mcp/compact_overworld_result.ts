@@ -40,6 +40,10 @@ export const OVERWORLD_COMPACT_SERVICE_TEXT_CHAR_LIMIT = 512;
 // Road outcomes include the scene, chosen response, and arrival consequence.
 // Every shipped composition fits; future growth remains transparently bounded.
 export const OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT = 600;
+// Quest completion prose is the durable foldback receipt. It includes the
+// chosen launch return plus profile-specific campaign closure, so the compact
+// MCP response must expose it immediately instead of leaving only a title tuple.
+export const OVERWORLD_COMPACT_QUEST_COMPLETION_TEXT_CHAR_LIMIT = 1_200;
 
 export type OverworldCompactActionResult = {
   m: number;
@@ -70,6 +74,7 @@ export type OverworldCompactQuestCompletionResult = {
   ending: readonly [id: string, title: string];
   renown: readonly [region: string, gained: number, after: number];
   entry: OverworldCompactJournalEntry;
+  text: string;
 };
 
 export type OverworldCompactServiceResult = {
@@ -235,6 +240,7 @@ export function compactOverworldQuestCompletionResult(
     ending: [result.endingId, compactOverworldTitle(result.endingTitle)],
     renown: [result.renownRegion, result.renownGained, result.renownAfter],
     entry: compactOverworldJournalEntry(result.entry),
+    text: compactText(result.entry.text, OVERWORLD_COMPACT_QUEST_COMPLETION_TEXT_CHAR_LIMIT),
   };
 }
 

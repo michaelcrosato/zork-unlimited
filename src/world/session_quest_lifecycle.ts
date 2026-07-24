@@ -1,5 +1,8 @@
 import type { OverworldArea, OverworldNode, OverworldQuest } from "./overworld.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
+import type { OpeningLeadSource } from "./opening_lead_source.js";
+import type { OpeningRegistration } from "./opening_registration.js";
+import type { OpeningReliefOath } from "./opening_relief_oath.js";
 import {
   recordOverworldSessionAction,
   type OverworldSessionActionApplication,
@@ -45,7 +48,12 @@ export type OverworldSessionQuestCompletionPlanState = {
   nodesById: ReadonlyMap<string, OverworldNode>;
   questOutcomeIds: ReadonlyMap<string, string>;
   startedQuestIds: ReadonlySet<string>;
+  journalEntries?: readonly OverworldJournalEntry[];
   journalEntriesById?: ReadonlyMap<string, OverworldJournalEntry>;
+  openingRegistration?: OpeningRegistration | null;
+  openingReliefOath?: OpeningReliefOath | null;
+  openingLeadSource?: OpeningLeadSource | null;
+  trustedLegacyRegistrationReceiptSourceWorldHash?: string | null;
 };
 
 export type MutableOverworldSessionQuestStartState = OverworldActionJournalState & {

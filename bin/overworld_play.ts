@@ -46,6 +46,7 @@ import {
   type OverworldActionResult,
   type OverworldJourneyGoalPassageResult,
   type OverworldPendingRoadEncounter,
+  type OverworldQuestCompletionResult,
   type OverworldQuestView,
   type OverworldRoadEncounterStrategy,
   type OverworldServiceResult,
@@ -56,6 +57,11 @@ import {
 const VALUE_FLAGS = new Set(["--commands", "--seed", "--restore"]);
 const SAVE_DIR = "saves";
 const DEFAULT_SAVE_NAME = "journey";
+
+/** Exact quest foldback copy printed by the terminal after an embedded victory. */
+export function renderQuestCompletion(result: OverworldQuestCompletionResult): string {
+  return result.entry.text;
+}
 
 /** The full status screen (pure; exported for tests). */
 export function render(view: OverworldView): string {
@@ -979,7 +985,7 @@ export async function runQuestSession(
         endingTitle: ending.title,
         death: ending.death,
       });
-      console.log(result.entry.text);
+      console.log(renderQuestCompletion(result));
     } else {
       console.log(
         `That ending does not complete the quest — the lead stays open in your journal, and this journey cannot restart it.`,

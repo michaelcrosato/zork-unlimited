@@ -19,6 +19,7 @@ import {
 
 const WORLD = loadOverworldManifest(process.cwd());
 const JUNE_CONTACT_ID = "albany_city__transport_hub__june_pike";
+const ROAD_WARDEN_PROMISE_ID = "albany:promise_return_hayden_packet";
 const JUNE_LEFT_PRESENTATION_ID = "left_after_blood";
 const JUNE_LEFT_JOURNAL_ID = `talk:${JUNE_CONTACT_ID}@${JUNE_LEFT_PRESENTATION_ID}`;
 const PREDECESSOR_SUMMARY =
@@ -152,13 +153,19 @@ describe("June return-copy migration integrity", () => {
     const restoredSession = OverworldSession.restore(WORLD, predecessor);
     const restored = restoredSession.snapshot();
     const restoredEntries = juneLeftJournalEntries(restored);
+    const expectedCharacter = structuredClone(predecessor.character);
+    const registrationPromise = expectedCharacter.promises.find(
+      (promise) => promise.promiseId === ROAD_WARDEN_PROMISE_ID,
+    );
+    if (!registrationPromise) throw new Error("Expected Road-Warden's return promise.");
+    registrationPromise.status = "kept";
     expect(restored).toMatchObject({
       worldHash: OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH,
       minutes: predecessor.minutes,
       supplies: predecessor.supplies,
       fatigue: predecessor.fatigue,
       questOutcomes: predecessor.questOutcomes,
-      character: predecessor.character,
+      character: expectedCharacter,
     });
     expect(restoredEntries).toHaveLength(predecessorEntries.length);
     expect(restoredEntries.every((entry) => entry.text === CURRENT_CONTACT_TEXT)).toBe(true);
@@ -166,6 +173,12 @@ describe("June return-copy migration integrity", () => {
       restoredSession.view().characters.find((character) => character.id === JUNE_CONTACT_ID)
         ?.summary,
     ).toBe(CURRENT_SUMMARY);
+    expect(
+      restored.journalEntries.find((entry) => entry.id === "quest_done:wolf_winter")?.text,
+    ).toContain("Registration receipt —");
+    expect(
+      restored.journalEntries.find((entry) => entry.id === "quest_done:wolf_winter")?.text,
+    ).not.toContain("Legacy registration receipt —");
     expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 
@@ -181,6 +194,12 @@ describe("June return-copy migration integrity", () => {
     expect(restored.worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(restoredEntries).toHaveLength(predecessorEntries.length);
     expect(restoredEntries.every((entry) => entry.text === CURRENT_CONTACT_TEXT)).toBe(true);
+    expect(
+      restored.journalEntries.find((entry) => entry.id === "quest_done:wolf_winter")?.text,
+    ).toContain("Legacy registration receipt —");
+    expect(
+      restored.journalEntries.find((entry) => entry.id === "quest_done:wolf_winter")?.text,
+    ).toContain(OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH);
     expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 
