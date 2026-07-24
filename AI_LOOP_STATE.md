@@ -15,6 +15,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+### Cycle result - blind_direct_inline_flag_authority
+
+- Evidence choice: invoking the native blind launcher with an inline value such as `--seed=72525` treated that switch as a quest target and stopped before play, while recovered npm residue could outrank an explicit operator value.
+- Surface: the shell entrypoint now accepts both spaced and inline forms for every supported value flag, rejects unknown switches, and the JavaScript recovery layer recognizes the same forms and quest aliases so explicit arguments retain authority.
+- Counterfactual: hostile npm residue cannot replace explicit model/seed/turn/report settings; empty or repeated inline values, quest aliases, extra positionals, and unknown flags stop before any model call, while legitimate npm forwarding and the live-quest prohibition remain intact.
+- Blind evidence: exact-build native Terra human-terminal seed 72526 completes The Wolf-Winter after a failed first lure cast, continues, completes The Gallowmere, then ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes.
+- Feedback/follow-through: `npm run play` remains a direct random-quest surface rather than the fresh-overworld journey; Queensbury route revelation and Cade lure-topic discoverability are separate game-surface findings already assigned to focused work.
+- Guard: independent final review is clean, post-change crawl `20260724T191532Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 38 focused tests pass, and exact integrated full health passes 418 files/3,384 tests plus both typechecks and all packs.
+
 ### Cycle result - active_dialogue_terminal_prompt
 
 - Evidence choice: two independent native terminal players briefly lost the active NPC scope because normal room rendering hid both the speaker and exact dialogue verbs while the parser remained conversation-bound.
