@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 626 -->
+<!-- historical_cycle_count: 627 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - cli_owned_codex_blind_authority
+
+- Evidence choice: the recurring app cybersecurity banner coincided with blind infrastructure opening or copying login stores; after removing that behavior, current Codex's unavoidable operator-global AGENTS prelude still rejected otherwise-valid live rollouts.
+- Surface: blind and fleet live play are exact Sol/Terra/Luna/Spark Codex models; the Codex CLI alone owns existing `CODEX_HOME` authentication, the player runs from an isolated temporary cwd, and session/output proofs reject stale sessions, links, auth-home descendants, and unsafe native-path spellings.
+- Counterfactual: no production path reads, copies, parses, or writes a login store; only the reviewed byte-exact generic global guidance may precede `environment_context`, while project/game guidance, path-scoped or altered text, reordered/extra blocks, and mismatched session/cwd/output identities fail closed.
+- Pure evidence: exact clean `fe58384a` accepts Sol 4679/4683 and Terra 4680/4684 across The Wolf-Winter, with four verified reports; Luna 4681/4682 are honestly rejected for incomplete MCP lifecycles rather than weakening the proof.
+- Measured result: the first three verified exits compile to 4/5 mean clarity and enjoyment, 100% replay intent, and two players continuing beyond the first goal into The Gallowmere; the fourth Sol remains replay-yes while rating dense onboarding 3/5 clarity.
+- Feedback/follow-through: permanent Albany setup density repeats across the cohort, with June's announced-but-hidden field-team follow-up the top compiled hotspot; progressive disclosure and direct field-choice timing remain the next gameplay increment rather than expanding this transport fix.
+- Guard: final crawl `ai-runs\crawl\20260723T193018Z` is zero-finding across 6,000 steps, 247/247 nodes, 344/344 edges, and 12/12 quests; focused authority coverage passes 140/140 and full health passes 414 files/3,318 tests plus UI and packs, with no login prompt or security banner across six live attempts.
 
 ### Cycle result - checkpoint_safe_scene_boundaries
 
@@ -154,12 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Diagnostic only: Terra 4405/4406 remain unpublished and excluded after truncated/malformed forwarding wrappers correctly failed the exact-program audit; neither candidate play, rating, finding, or token count is evidence.
 - Measured result: independent exact-commit review finds no P0-P2 across 8 files/50 tests, every declared Wolf variant remains first-match reachable, and the fresh valid cohort moves remaining work to broader truncation, opening density, continuity, stale-menu recovery, and late-journey resupply rather than expanding this increment.
 - Guard: the 6,000-step post-change crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full repaired-environment health passes 407 files/3,175 tests plus integrity, lint, format, compact limits, both typechecks, and all 12 packs with Wolf hash `48085079f5e6247f54caf9f0064f7dc60dc488511e1e351a526f72f87aa8e24d`.
-
-### Cycle result - wolf_live_gate_and_june_closure
-
-- Evidence choice: independent strict Sol runs 4334 and 4387 found the same Wolf-Winter presentation fault—north repeated a stale LURE route outside its live state, while June accepted cattle-first terms with a generic close that did not explain what remained open.
-- Surface: north now states only its exhaustive live preconditions, and asking June to keep cattle-first terms reaches an authored confirmation that says no strategy was committed, names Cade's three living plans, and truthfully keeps north closed.
-- Counterfactual: the confirmation has no effects, flags, journal write, or journey count; LURE, DRIVE, and FORTIFY remain available, every genuine gate-opening state still opens north exactly once, and failed lure recovery remains intact.
-- Pure evidence: exact-clean Sol 4402 verifies `ok: true` across 55 error-free calls/40 decisions, diverts every wolf with the herd whole, continues at goal 34, and ends at checkpoint 40; Terra 4403 verifies across 62 calls/47 decisions, fortifies under Cade's terms, wins Gallowmere, continues at 23/40, and ends at goal 47; both rate 4/4, unstuck, replay-yes.
-- Measured result: independent review finds no P0-P2 across 32 files/182 tests; strict compile `20260722T085747Z` reaches 810 verified/218 rejected reports and 59 current pure exits with 57 continuing, while the fresh cohort queues post-cast Loft/Byre prose and compact clipping for later cycles instead of expanding this increment.
-- Guard: the 6,000-step post-change crawl remains zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; full health passes 406 files/3,169 tests plus both typechecks/all packs with no schema, engine, save, world, combat, or ending-semantics change.

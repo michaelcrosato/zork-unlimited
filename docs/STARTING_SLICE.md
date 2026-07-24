@@ -811,10 +811,9 @@ repository-standard homogeneous Codex `gpt-5.6-terra` model plan.
 Spark is the ordinary live fleet launcher's default so routine blind feedback
 uses the dedicated Spark allowance. The canonical certification workflow pins
 Terra explicitly for both pilot and authority. Exact homogeneous Sol, Terra,
-Luna, and Spark plans can certify; Codex aliases, fallback, and mixing are forbidden.
-Claude/Sonnet must be selected explicitly, while Claude `mix`, Haiku, and Opus
-remain diagnostic. Before the 100-player spend, a fresh ten-player homogeneous
-pilot must pass this go/no-go pair:
+Luna, and Spark plans can certify; Codex aliases, fallback, and mixing are
+forbidden. Before the 100-player spend, a fresh ten-player homogeneous pilot
+must pass this go/no-go pair:
 
 ```bash
 npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
@@ -857,7 +856,8 @@ timeout counts are recomputed from all histories. An eventual success therefore
 leaves that label non-certifying. Resume-enabled bundles and skipped slots are
 also non-certifying; a new authoritative label must use
 `--no-resume --max-retries 0` and run every slot exactly once. A recovered final
-report is declared only when the runner's adjacent `.initial-report.txt`,
+report is historical compatibility data only and is declared only when the
+adjacent `.initial-report.txt`,
 `.repair.meta.json`, and `.repair.json` bytes form a complete set that
 deterministically reproduces it; the rejected original is not another
 feedback-discoverable Markdown report. Such a model-recovered report remains diagnostic-only:

@@ -24,6 +24,19 @@ const V2_TEAM_BLOCK =
 const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
+const GLOBAL_AGENTS_BLOCK =
+  "# AGENTS.md instructions\n\n" +
+  "<INSTRUCTIONS>\n" +
+  "# Global Codex Guidance\n\n" +
+  "- Read the repository's own instructions, scripts, and existing patterns before changing code.\n" +
+  "- Prefer the repo-local toolchain and package manager over global installs.\n" +
+  "- Use `rg`/`rg --files` for code search when available.\n" +
+  "- Check the worktree before editing, and do not overwrite unrelated user changes.\n" +
+  "- Keep changes scoped to the requested task unless a broader fix is necessary.\n" +
+  "- Run the most relevant tests, type checks, linters, builds, or browser smoke checks before finishing when the repo provides them.\n" +
+  "- Do not print, commit, or move secrets. Use local env files such as `.env.local` only when a task explicitly needs credentials.\n" +
+  "- For web apps, start the dev server and verify the local page when the app needs a server to run.\n" +
+  "</INSTRUCTIONS>";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const SPARK_MODEL = "gpt-5.3-codex-spark";
 const SPARK_UNSTABLE_WARNING_PREFIX =
@@ -132,7 +145,7 @@ function sparkCodeModeRows(): TestRow[] {
       item: {
         id: "item_0",
         type: "error",
-        message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+        message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\Users\\operator\\.codex\\config.toml.`,
       },
     },
     {
@@ -154,7 +167,7 @@ function singleCodeModeWarningRows(): TestRow[] {
     item: {
       id: "item_0",
       type: "error",
-      message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`,
+      message: `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\Users\\operator\\.codex\\config.toml.`,
     },
   });
   return rows;
@@ -316,6 +329,33 @@ function completeRollout(
     },
     { type: "event_msg", payload: { type: "task_complete", turn_id: "turn-1" } },
   ];
+}
+
+function environmentInputContent(
+  rows: unknown[],
+): Array<{ type?: string; text?: string; [key: string]: unknown }> {
+  for (const row of rows) {
+    if (
+      typeof row !== "object" ||
+      row === null ||
+      (row as { type?: string }).type !== "response_item"
+    ) {
+      continue;
+    }
+    const payload = (row as { payload?: Record<string, unknown> }).payload;
+    if (payload?.type !== "message" || payload.role !== "user" || !Array.isArray(payload.content)) {
+      continue;
+    }
+    const content = payload.content as Array<{
+      type?: string;
+      text?: string;
+      [key: string]: unknown;
+    }>;
+    if (content.some((block) => block.type === "input_text" && block.text === ENVIRONMENT_BLOCK)) {
+      return content;
+    }
+  }
+  throw new Error("missing environment input fixture");
 }
 
 function insertBeforeGameplay(rows: ReturnType<typeof validRows>, entries: readonly object[]) {
@@ -989,6 +1029,123 @@ describe("Codex pure blind provider envelope", () => {
     ).toMatchObject({ ok: true });
   });
 
+  it("accepts only the exact empty-audio user event added by Codex 0.145", () => {
+    const publicRows = validRows();
+    const current = completeRollout(forwardingRollout(undefined, { content: [] })) as Array<{
+      payload?: Record<string, unknown>;
+    }>;
+    const currentUserEvent = current.find((row) => row.payload?.type === "user_message")?.payload;
+    if (!currentUserEvent) throw new Error("missing private user-message fixture");
+    currentUserEvent.audio = [];
+    currentUserEvent.local_audio = [];
+    expect(inspectCodexPureEvidence(publicRows, current, "gpt-5.6-sol")).toMatchObject({
+      ok: true,
+    });
+
+    for (const [label, mutate] of [
+      [
+        "a missing local-audio field",
+        (payload: Record<string, unknown>) => Reflect.deleteProperty(payload, "local_audio"),
+      ],
+      [
+        "nonempty audio",
+        (payload: Record<string, unknown>) => {
+          payload.audio = ["hidden audio hint"];
+        },
+      ],
+      [
+        "nonempty local audio",
+        (payload: Record<string, unknown>) => {
+          payload.local_audio = ["hidden local-audio hint"];
+        },
+      ],
+    ] as const) {
+      const rows = structuredClone(current);
+      const payload = rows.find((row) => row.payload?.type === "user_message")?.payload;
+      if (!payload) throw new Error("missing private user-message fixture");
+      mutate(payload);
+      expect(inspectCodexPureEvidence(publicRows, rows, "gpt-5.6-sol"), label).toMatchObject({
+        ok: false,
+      });
+    }
+  });
+
+  it("accepts the optional global AGENTS prelude without dropping bare environment support", () => {
+    const profiles = [
+      ["sol_v2", "gpt-5.6-sol"],
+      ["terra_v2", "gpt-5.6-terra"],
+      ["luna_v1", "gpt-5.6-luna"],
+    ] as const;
+
+    for (const [profile, model] of profiles) {
+      const gameplay = forwardingRollout(undefined, { content: [] });
+      if (profile === "luna_v1") {
+        rolloutPayload(gameplay, 0).input = legacyGameplayWrapper(
+          "tools.mcp__adventureforge__start_overworld()",
+        );
+      }
+      const bare = completeRollout(gameplay, profile);
+      expect(inspectCodexPureEvidence(validRows(), bare, model), `${profile} bare`).toMatchObject({
+        ok: true,
+      });
+
+      const withGlobalAgents = structuredClone(bare);
+      environmentInputContent(withGlobalAgents).unshift({
+        type: "input_text",
+        text: GLOBAL_AGENTS_BLOCK,
+      });
+      expect(
+        inspectCodexPureEvidence(validRows(), withGlobalAgents, model),
+        `${profile} global AGENTS`,
+      ).toMatchObject({ ok: true });
+    }
+  });
+
+  it.each([
+    [
+      "a project-scoped header",
+      "# AGENTS.md instructions for C:\\dev\\zork-unlimited\n\n" +
+        "<INSTRUCTIONS>\n- Follow the project charter.\n</INSTRUCTIONS>",
+    ],
+    [
+      "AdventureForge contamination",
+      GLOBAL_AGENTS_BLOCK.replace(
+        "- Keep changes scoped to the requested task unless a broader fix is necessary.",
+        "- Inspect AdventureForge before beginning.",
+      ),
+    ],
+    [
+      "game-specific contamination",
+      GLOBAL_AGENTS_BLOCK.replace(
+        "- Keep changes scoped to the requested task unless a broader fix is necessary.",
+        "- Complete wolf_winter and return to Albany.",
+      ),
+    ],
+    ["a missing closing wrapper", GLOBAL_AGENTS_BLOCK.replace("\n</INSTRUCTIONS>", "")],
+    [
+      "a malformed opening wrapper",
+      GLOBAL_AGENTS_BLOCK.replace("<INSTRUCTIONS>", '<INSTRUCTIONS source="global">'),
+    ],
+  ])("rejects an optional global AGENTS block with $0", (_label, agentsBlock) => {
+    const rows = completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2");
+    environmentInputContent(rows).unshift({ type: "input_text", text: agentsBlock });
+    expect(inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-sol")).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/input and initial context lifecycle is out of order/i),
+    });
+  });
+
+  it("rejects a third environment input block after a valid global AGENTS prelude", () => {
+    const rows = completeRollout(forwardingRollout(undefined, { content: [] }), "sol_v2");
+    const content = environmentInputContent(rows);
+    content.unshift({ type: "input_text", text: GLOBAL_AGENTS_BLOCK });
+    content.push({ type: "input_text", text: "unexpected third block" });
+    expect(inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-sol")).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/input and initial context lifecycle is out of order/i),
+    });
+  });
+
   it.each([
     [
       "an inner Terra model under outer Sol",
@@ -1660,28 +1817,28 @@ describe("Codex pure blind provider envelope", () => {
         model: SPARK_MODEL,
       },
       {
-        label: "an unstable-warning path outside the sterile home",
+        label: "a relative unstable-warning config path",
         rows: (() => {
           const rows = sparkCodeModeRows();
-          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\config.toml.`;
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}config.toml.`;
           return rows;
         })(),
         model: SPARK_MODEL,
       },
       {
-        label: "text prefixed to the sterile-home config path",
+        label: "text prefixed to the config path",
         rows: (() => {
           const rows = sparkCodeModeRows();
-          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}ALTERED EXTRA TEXT C:\\repo\\.tmp\\blind-codex-home\\tmp.A1b2C3d4E5\\config.toml.`;
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}ALTERED EXTRA TEXT C:\\Users\\operator\\.codex\\config.toml.`;
           return rows;
         })(),
         model: SPARK_MODEL,
       },
       {
-        label: "a dot-segment escape from the sterile home",
+        label: "a dot-segment config path",
         rows: (() => {
           const rows = sparkCodeModeRows();
-          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\repo\\.tmp\\blind-codex-home\\..\\config.toml.`;
+          rows[1]!.item!.message = `${SPARK_UNSTABLE_WARNING_PREFIX}C:\\Users\\operator\\.codex\\..\\config.toml.`;
           return rows;
         })(),
         model: SPARK_MODEL,

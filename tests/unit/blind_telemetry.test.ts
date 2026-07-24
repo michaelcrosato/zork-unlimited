@@ -1,8 +1,8 @@
 /**
  * Blind-run token/cost telemetry (blind-tester/telemetry.mjs) — the ROADMAP
  * lever "measure loop efficiency instead of guessing". The extraction is pinned
- * against the REAL claude CLI --output-format json envelope shape; the summary
- * must tolerate partial rows (nulls skipped per metric, never dropped rows).
+ * against the normalized provider-envelope fields; the summary must tolerate
+ * partial and historical rows (nulls skipped per metric, never dropped rows).
  */
 import { describe, expect, it } from "vitest";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -12,7 +12,7 @@ import * as blindTelemetry from "../../blind-tester/telemetry.mjs";
 const { extractBlindTelemetry, parseBlindTelemetryEnvelope, summarizeBlindTelemetry } =
   blindTelemetry;
 
-// Trimmed from a real overworld blind run's saved envelope.
+// Representative normalized envelope, including historical nominal-cost fields.
 const ENVELOPE = {
   type: "result",
   is_error: false,
@@ -28,12 +28,12 @@ const ENVELOPE = {
 };
 
 describe("extractBlindTelemetry", () => {
-  it("flattens the claude envelope + run metadata into one row", () => {
+  it("flattens the normalized envelope + run metadata into one row", () => {
     const row = extractBlindTelemetry(ENVELOPE, {
       ts: "2026-07-07T00:00:00.000Z",
       source: "overworld",
       seed: "7",
-      model: "sonnet",
+      model: "gpt-5.3-codex-spark",
     });
 
     expect(row).toEqual({
@@ -42,7 +42,7 @@ describe("extractBlindTelemetry", () => {
       phase: "playthrough",
       report_outcome: null,
       seed: 7,
-      model: "sonnet",
+      model: "gpt-5.3-codex-spark",
       ok: true,
       duration_ms: 445398,
       num_turns: 55,
@@ -70,7 +70,7 @@ describe("extractBlindTelemetry", () => {
     expect(row.ok).toBe(false);
   });
 
-  it("records report-recovery outcome without relabeling it as a playthrough", () => {
+  it("retains historical report-recovery outcomes without relabeling them as playthroughs", () => {
     const row = extractBlindTelemetry(ENVELOPE, {
       source: "overworld",
       phase: "report_recovery",

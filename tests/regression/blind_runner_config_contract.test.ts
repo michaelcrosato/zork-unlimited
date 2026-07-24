@@ -1,10 +1,214 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
+const CODEX_LOGIN_FILENAME = ["auth", ".json"].join("");
+const RETIRED_CLAUDE_LOGIN_FILENAME = [".credentials", ".json"].join("");
+const RETIRED_CLAUDE_OAUTH_FIELD = ["claude", "AiOauth"].join("");
+const RETIRED_HOME_COMMAND = ["prepare", "-home"].join("");
+const RETIRED_SOURCE_OPTION = ["--source", "-auth"].join("");
+const RETIRED_PERMISSION_MODE = ["bypass", "Permissions"].join("");
+
 describe("blind runner MCP config contract", () => {
+  it("resolves caller-relative report prefixes before entering the isolated provider cwd", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+
+    const normalization = runner.indexOf('OUT="$GAME_DIR/$OUT"');
+    const providerReportArg = runner.indexOf('CODEX_REPORT_ARG="$(node_path_arg "$OUT.md")"');
+    expect(runner).toContain('elif ! is_absolute_output_prefix "$OUT"; then');
+    expect(normalization).toBeGreaterThan(0);
+    expect(providerReportArg).toBeGreaterThan(normalization);
+  });
+
+  it("canonicalizes one relative linked Codex home before the provider cwd switch", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-cli-owned-home-"));
+    const bin = join(dir, "bin");
+    const home = join(dir, "codex-home");
+    const linkedHome = join(dir, "linked-codex-home");
+    const capture = join(dir, "codex-invocation.txt");
+    const relativeDirectory = `.tmp/blind-relative-out-${process.pid}-${Date.now()}`;
+    const relativeOut = `${relativeDirectory}/attempt`;
+    const auth = join(home, CODEX_LOGIN_FILENAME);
+    const authBytes = '{"sentinel":"runner-must-not-copy-or-rewrite"}\n';
+    const bashPath = (path: string): string =>
+      path
+        .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
+        .replaceAll("\\", "/");
+    const comparablePath = (path: string): string =>
+      path
+        .replace(/^\/([A-Za-z])\//u, "$1:/")
+        .replaceAll("\\", "/")
+        .toLowerCase();
+
+    try {
+      mkdirSync(bin);
+      mkdirSync(home);
+      symlinkSync(home, linkedHome, "junction");
+      writeFileSync(auth, authBytes);
+      const fakeCodex = join(bin, "codex");
+      writeFileSync(
+        fakeCodex,
+        `#!/usr/bin/env bash
+{
+  printf 'home=%s\\n' "\${CODEX_HOME:-}"
+  printf 'arg=%s\\n' "$@"
+} > "\${FAKE_CODEX_CAPTURE}"
+exit 93
+`,
+        "utf8",
+      );
+      chmodSync(fakeCodex, 0o755);
+
+      const result = spawnSync(
+        process.execPath,
+        ["blind-tester/blind-launch.mjs", "--out", relativeOut],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
+            CODEX_HOME: relative(process.cwd(), linkedHome).replaceAll("\\", "/"),
+            FAKE_CODEX_CAPTURE: bashPath(capture),
+          },
+          timeout: 30_000,
+        },
+      );
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(93);
+
+      const invocation = readFileSync(capture, "utf8").trim().split(/\r?\n/u);
+      const activeHome = invocation.find((line) => line.startsWith("home="))?.slice(5);
+      const args = invocation
+        .filter((line) => line.startsWith("arg="))
+        .map((line) => line.slice(4));
+      const reportIndex = args.indexOf("--output-last-message");
+      const reportPath = args[reportIndex + 1] ?? "";
+      expect(comparablePath(activeHome ?? "")).toBe(comparablePath(realpathSync.native(home)));
+      expect(reportIndex).toBeGreaterThan(0);
+      expect(reportPath).toMatch(/^(?:\/|[A-Za-z]:[\\/])/u);
+      expect(reportPath.replaceAll("\\", "/")).toContain(`/${relativeOut}.md`);
+      expect(args).toContain("--ignore-user-config");
+      expect(args).toContain("--ignore-rules");
+      expect(args).toContain("project_doc_max_bytes=0");
+      expect(readFileSync(auth, "utf8")).toBe(authBytes);
+    } finally {
+      rmSync(join(process.cwd(), relativeDirectory), { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects pure and structural output prefixes inside an existing CODEX_HOME", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-output-boundary-"));
+    const home = join(dir, "codex-home");
+    const auth = join(home, CODEX_LOGIN_FILENAME);
+    const authBytes = '{"sentinel":"output-guard"}\n';
+    mkdirSync(home);
+    writeFileSync(auth, authBytes);
+    try {
+      for (const modeArgs of [[], ["--mock"]]) {
+        const result = spawnSync(
+          process.execPath,
+          ["blind-tester/blind-launch.mjs", ...modeArgs, "--out", join(home, "reports", "attempt")],
+          {
+            cwd: process.cwd(),
+            encoding: "utf8",
+            env: { ...process.env, CODEX_HOME: home },
+            timeout: 30_000,
+          },
+        );
+        const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+        expect(result.status, `${modeArgs.join(" ")}: ${output}`).toBe(4);
+        expect(output).toContain("Report output prefix must remain outside the Codex home");
+        expect(output).toContain("no run artifacts were created");
+        expect(readdirSync(home), modeArgs.join(" ")).toEqual([CODEX_LOGIN_FILENAME]);
+        expect(readFileSync(auth, "utf8"), modeArgs.join(" ")).toBe(authBytes);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects directory and dot-segment output forms before suffixes can enter CODEX_HOME", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-output-lexical-boundary-"));
+    const home = join(dir, "codex-home");
+    const auth = join(home, CODEX_LOGIN_FILENAME);
+    const authBytes = '{"sentinel":"lexical-output-guard"}\n';
+    mkdirSync(home);
+    writeFileSync(auth, authBytes);
+    const portableHome = home.replaceAll("\\", "/");
+    try {
+      for (const unsafeOut of [
+        `${portableHome}/`,
+        `${portableHome}/.`,
+        `${portableHome}/scratch/../..`,
+      ]) {
+        const result = spawnSync(
+          process.execPath,
+          ["blind-tester/blind-launch.mjs", "--out", unsafeOut],
+          {
+            cwd: process.cwd(),
+            encoding: "utf8",
+            env: { ...process.env, CODEX_HOME: home },
+            timeout: 30_000,
+          },
+        );
+        const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+        expect(result.status, `${unsafeOut}: ${output}`).toBe(4);
+        expect(output).toContain("must name a file prefix");
+        expect(output).toContain("no run artifacts were created");
+        expect(readdirSync(home), unsafeOut).toEqual([CODEX_LOGIN_FILENAME]);
+        expect(readFileSync(auth, "utf8"), unsafeOut).toBe(authBytes);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects an NTFS alternate-stream-shaped prefix before creating artifacts", () => {
+    if (process.platform !== "win32") return;
+    const dir = mkdtempSync(join(tmpdir(), "af-codex-output-ads-boundary-"));
+    const home = join(dir, "codex-home");
+    const auth = join(home, CODEX_LOGIN_FILENAME);
+    const authBytes = '{"sentinel":"ads-output-guard"}\n';
+    mkdirSync(home);
+    writeFileSync(auth, authBytes);
+    try {
+      const result = spawnSync(
+        process.execPath,
+        ["blind-tester/blind-launch.mjs", "--mock", "--out", `${home}:audit`],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: { ...process.env, CODEX_HOME: home },
+          timeout: 30_000,
+        },
+      );
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(4);
+      expect(output).toContain("must not name a Windows alternate data stream");
+      expect(output).toContain("no run artifacts were created");
+      expect(readdirSync(home)).toEqual([CODEX_LOGIN_FILENAME]);
+      expect(readFileSync(auth, "utf8")).toBe(authBytes);
+      expect(readdirSync(dir)).toEqual(["codex-home"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   it("launches the MCP server cwd-independently on every platform", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
 
@@ -12,12 +216,12 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain("cd /d");
     expect(runner).toContain('"command": "npm"');
     // npm --prefix makes npm itself cd to the game dir. The config must NOT rely
-    // on a `cwd` field: the Claude CLI on Windows silently ignores stdio-server
+    // on a `cwd` field: native Windows CLIs can ignore stdio-server
     // cwd, so the server would inherit the agent's isolated temp cwd and die
     // ("Missing script: mcp") — tools never load and the report is rejected.
     expect(runner).toContain('"args": ["--silent", "--prefix", "$GAME_DIR_MCP", "run", "mcp"');
     expect(runner).not.toContain('"cwd":');
-    // Native Windows (Git Bash) must hand the native path form to claude.exe.
+    // Native Windows (Git Bash) must hand the native path form to the provider.
     expect(runner).toContain("cygpath -m");
     expect(runner).not.toContain('"command": "bash"');
     expect(runner).not.toContain('"command": "wsl.exe"');
@@ -188,23 +392,7 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain("--play-mode");
     expect(runner).toContain("--run-evidence");
     expect(runner).toContain("--require-mode pure");
-    expect(runner).toContain("--tools ToolSearch");
-    expect(runner).toContain('--allowedTools ToolSearch "mcp__adventureforge__*"');
-    expect(runner).toContain("--permission-mode dontAsk");
-    expect(runner).not.toContain("--permission-mode bypassPermissions");
-    const primaryLaunch = runner.slice(
-      runner.indexOf("printf '%s' \"$PROMPT\""),
-      runner.indexOf(') > "$OUT.json"'),
-    );
-    expect(primaryLaunch).toContain("--no-chrome");
-    expect(primaryLaunch).toContain("--disable-slash-commands");
-    expect(primaryLaunch).toContain("--prompt-suggestions false");
-    expect(primaryLaunch).toContain('--name "adventureforge-blind-seed-$SEED"');
-    expect(primaryLaunch).toContain("--setting-sources ''");
-    expect(primaryLaunch).toContain('CLAUDE_CONFIG_DIR="$STERILE_CLAUDE_CONFIG_DIR"');
-    expect(primaryLaunch).toContain("CLAUDE_CODE_DISABLE_AUTO_MEMORY=1");
-    expect(primaryLaunch).not.toContain("--safe-mode");
-    expect(primaryLaunch).not.toContain("--bare");
+    expect(runner).not.toContain(`--permission-mode ${RETIRED_PERMISSION_MODE}`);
     // Structural flags survive PowerShell's `--` stripping via launcher recovery.
     expect(launcher).toContain('"--overworld"');
     expect(launcher).toContain('"--mock"');
@@ -239,12 +427,13 @@ describe("blind runner MCP config contract", () => {
 
     expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-codex}"');
     expect(runner).toContain("--provider)");
-    expect(runner).toContain("--provider must be exactly claude or codex");
+    expect(runner).toContain("--provider must be exactly codex");
+    expect(runner).toContain("The live Claude blind provider is retired");
     expect(runner).toContain('MODEL="gpt-5.3-codex-spark"');
     expect(launcher).toContain('["provider", "--provider", true]');
 
     const launchAt = runner.indexOf('CODEX_EVENTS="$OUT.codex.jsonl"');
-    const launchEnd = runner.indexOf("else\nprintf '%s'", launchAt);
+    const launchEnd = runner.indexOf("if [[ $STATUS -ne 0 ]]", launchAt);
     expect(launchAt).toBeGreaterThan(0);
     expect(launchEnd).toBeGreaterThan(launchAt);
     const codexLaunch = runner.slice(launchAt, launchEnd);
@@ -252,8 +441,10 @@ describe("blind runner MCP config contract", () => {
     expect(codexLaunch).toContain("--sandbox read-only");
     expect(codexLaunch).not.toContain("--ephemeral");
     expect(codexLaunch).toContain('cd "$CODEX_PLAYER_CWD"');
-    expect(codexLaunch).toContain('CODEX_HOME="$STERILE_CODEX_HOME_ARG"');
+    expect(codexLaunch).toContain('CODEX_HOME="$ACTIVE_CODEX_HOME_ARG"');
     expect(codexLaunch).toContain('CODEX_ROLLOUT="$OUT.codex-rollout.jsonl"');
+    expect(codexLaunch).toContain('--home "$ACTIVE_CODEX_HOME_ARG"');
+    expect(codexLaunch).toContain('--events "$CODEX_EVENTS_ARG"');
     expect(codexLaunch).toContain('--rollout "$CODEX_ROLLOUT_ARG"');
     expect(codexLaunch).toContain('CODEX_CAPTURE="$OUT.codex-capture.json"');
     expect(codexLaunch).toContain('--receipt "$CODEX_CAPTURE_ARG"');
@@ -263,6 +454,7 @@ describe("blind runner MCP config contract", () => {
     expect(codexLaunch).toContain("--ignore-user-config");
     expect(codexLaunch).toContain("--ignore-rules");
     expect(codexLaunch).toContain("--strict-config");
+    expect(codexLaunch).toContain("-c 'project_doc_max_bytes=0'");
     expect(codexLaunch).toContain("--enable code_mode_only");
     expect(codexLaunch).toContain("--disable apps");
     expect(codexLaunch).toContain("--disable browser_use");
@@ -282,7 +474,6 @@ describe("blind runner MCP config contract", () => {
     expect(envelope).toContain('item.server !== "adventureforge"');
     expect(envelope).toContain("CODEX_PURE_PLAYER_TOOLS.has(item.tool)");
     expect(envelope).toContain('rows.at(-1)?.type !== "turn.completed"');
-    expect(runner).toContain('if [[ "$PROVIDER" == "codex" ]]; then');
     expect(runner).toContain("Codex has no resumed report turn");
     expect(runner).toContain("scripts/blind-receipt-binding.ts bind");
     expect(runner).toContain('--verifier-status "$VERIFY_STATUS" --attempt 0');
@@ -297,27 +488,36 @@ describe("blind runner MCP config contract", () => {
     expect(runner.indexOf("PURE_PUBLICATION_COMPLETE=1")).toBeGreaterThan(launchEnd);
   });
 
-  it("keeps the sterile Codex home out of the operating-system temp directory", () => {
+  it("leaves Codex login state CLI-owned and captures only the public thread", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    const rolloutCapture = readFileSync(
+      join(process.cwd(), "blind-tester", "codex-rollout.mjs"),
+      "utf8",
+    );
 
-    expect(runner).toContain('CODEX_HOME_RUNTIME_ROOT="$GAME_DIR/.tmp/blind-codex-home"');
-    expect(runner).toContain('STERILE_CODEX_HOME="$CODEX_HOME_RUNTIME_ROOT/$(basename "$WORK")"');
-    expect(runner).not.toContain('STERILE_CODEX_HOME="$WORK/codex-home"');
-    expect(runner).toContain('"${STERILE_CODEX_HOME_OWNED:-0}" == "1"');
-    expect(runner).toContain('if ! mkdir "$STERILE_CODEX_HOME"; then');
-    expect(runner.indexOf("STERILE_CODEX_HOME_OWNED=1")).toBeGreaterThan(
-      runner.indexOf('if ! mkdir "$STERILE_CODEX_HOME"; then'),
+    expect(runner).toContain('RAW_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"');
+    expect(runner).toContain("resolve-home-if-present --home");
+    expect(runner).toContain('ACTIVE_CODEX_HOME_ARG="$(node_path_arg "$ACTIVE_CODEX_HOME")"');
+    expect(runner).toContain("validate-output");
+    expect(runner.indexOf("validate-output")).toBeLessThan(runner.indexOf('WORK="$(mktemp -d)"'));
+    expect(runner.indexOf("validate-output")).toBeLessThan(
+      runner.indexOf('mkdir -p "$(dirname "$OUT")"'),
     );
-    expect(runner.indexOf('chmod 700 "$STERILE_CODEX_HOME"')).toBeGreaterThan(
-      runner.indexOf("STERILE_CODEX_HOME_OWNED=1"),
-    );
-    expect(runner).toContain("--precreated-home");
-    expect(runner).toContain('"$CODEX_HOME_RUNTIME_ROOT"/*) rm -rf -- "$STERILE_CODEX_HOME"');
-    expect(runner).toContain("Refusing to remove unexpected sterile Codex home");
-    expect(runner).toContain("Could not exclusively create sterile Codex home");
+    expect(runner).not.toContain("SOURCE_CODEX_AUTH");
+    expect(runner).not.toContain("STERILE_CODEX_HOME");
+    expect(runner).not.toContain("CODEX_HOME_RUNTIME_ROOT");
+    expect(runner).not.toContain(RETIRED_HOME_COMMAND);
+    expect(runner).not.toContain(RETIRED_SOURCE_OPTION);
+    expect(runner).not.toContain(CODEX_LOGIN_FILENAME);
+    expect(rolloutCapture).not.toContain(RETIRED_HOME_COMMAND);
+    expect(rolloutCapture).not.toContain(RETIRED_SOURCE_OPTION);
+    expect(rolloutCapture).not.toContain(CODEX_LOGIN_FILENAME);
+    expect(rolloutCapture).toContain("publicCodexThreadId(eventsPath)");
+    expect(rolloutCapture).toContain("walkMatchingRollouts(");
+    expect(rolloutCapture).toContain("recorded.threadId !== threadId");
   });
 
-  it("rejects an unknown pure provider before launching anything", () => {
+  it("rejects unknown, explicit Claude, and ambient Claude providers before launch", () => {
     const result = spawnSync(
       process.execPath,
       ["blind-tester/blind-launch.mjs", "--provider", "not-a-provider"],
@@ -330,8 +530,24 @@ describe("blind runner MCP config contract", () => {
     );
     const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
     expect(result.status, output).toBe(2);
-    expect(output).toContain("--provider must be exactly claude or codex");
+    expect(output).toContain("--provider must be exactly codex");
     expect(output).not.toContain("Blind playtest →");
+
+    for (const [args, env] of [
+      [["--provider", "claude"], { ...process.env }],
+      [[], { ...process.env, BLIND_PROVIDER: "claude" }],
+    ] as const) {
+      const retired = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", ...args], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env,
+        timeout: 30_000,
+      });
+      const retiredOutput = `${retired.stdout ?? ""}\n${retired.stderr ?? ""}\n${retired.error?.message ?? ""}`;
+      expect(retired.status, retiredOutput).toBe(2);
+      expect(retiredOutput).toContain("live Claude blind provider is retired");
+      expect(retiredOutput).not.toContain("Blind playtest →");
+    }
   }, 30_000);
 
   it("rejects every live quest source before launching an override agent", () => {
@@ -423,10 +639,12 @@ describe("blind runner MCP config contract", () => {
   it("rejects a reused output prefix before launching an agent", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-blind-prefix-"));
     const out = join(dir, "attempt");
+    const codexHome = join(dir, "codex-home");
     try {
+      mkdirSync(codexHome);
       writeFileSync(`${out}.md`, "prior accepted report\n", "utf8");
       writeFileSync(`${out}.run.json`, '{"prior":"sidecar"}\n', "utf8");
-      const env = { ...process.env };
+      const env: NodeJS.ProcessEnv = { ...process.env, CODEX_HOME: codexHome };
       delete env.BLIND_AGENT_CMD;
       delete env.BLIND_MOCK_AGENT_CMD;
       const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
@@ -446,53 +664,16 @@ describe("blind runner MCP config contract", () => {
     }
   }, 30_000);
 
-  it("allows only one authenticated, same-session, tool-free missing-interview repair", () => {
+  it("contains no current Claude runtime or direct credential handling", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
 
-    expect(runner).toContain("scripts/blind-report-recovery.ts prepare");
-    expect(runner).toContain("--attempt 0");
-    expect(runner).toContain('--resume "$CLAUDE_SESSION_ID"');
-    expect(runner).toContain('--model "$MODEL"');
-    expect(runner).not.toContain("--fork-session");
-    expect(runner).toContain("--safe-mode");
-    expect(runner).toContain("--no-chrome");
-    expect(runner.match(/--setting-sources ''/g)).toHaveLength(2);
-    expect(runner.match(/CLAUDE_CONFIG_DIR="\$STERILE_CLAUDE_CONFIG_DIR"/g)).toHaveLength(2);
-    expect(runner.match(/CLAUDE_CODE_DISABLE_AUTO_MEMORY=1/g)).toHaveLength(2);
-    expect(runner).toContain('--tools ""');
-    expect(runner).toContain("printf '{\"mcpServers\":{}}\\n'");
-    expect(runner).toContain('ToolSearch "mcp__adventureforge__*"');
-    expect(runner).toContain("MAX_STRUCTURED_OUTPUT_RETRIES=0");
-    expect(runner).toContain('--json-schema "$RECOVERY_JSON_SCHEMA"');
-    expect(runner).toContain("--max-turns 1");
-    expect(runner).toContain("scripts/blind-report-recovery.ts assert-evidence");
-    expect(runner.match(/scripts\/blind-report-recovery\.ts assert-evidence/g)).toHaveLength(3);
-    expect(runner).toContain('--initial-report "$INITIAL_REPORT_MARKER_ARG"');
-    expect(runner).toContain("$OUT.initial-report.txt");
-    expect(runner).toContain("$OUT.repair-report.txt");
-    expect(runner).not.toContain("$OUT.initial.md");
-    expect(runner).not.toContain("$OUT.repair.md");
-
-    const canonicalCopy = runner.indexOf('cp -- "$REPAIR_REPORT" "$OUT.md"');
-    const canonicalVerify = runner.indexOf(
-      'scripts/verify-blind-report.ts "$REPORT_MD"',
-      canonicalCopy,
-    );
-    expect(canonicalCopy).toBeGreaterThan(0);
-    expect(canonicalVerify).toBeGreaterThan(canonicalCopy);
-  });
-
-  it("imports only subscription OAuth into an exclusive sterile Claude config", () => {
-    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
-
-    expect(runner).toContain('SOURCE_CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"');
-    expect(runner).toContain('STERILE_CLAUDE_CONFIG_DIR="$WORK/claude-config"');
-    expect(runner).toContain("parsed?.claudeAiOauth");
-    expect(runner).toContain("JSON.stringify({ claudeAiOauth: oauth })");
-    expect(runner).toContain('flag: "wx"');
-    expect(runner).toContain("mode: 0o600");
-    expect(runner).toContain("fs.chmodSync(destination, 0o600)");
-    expect(runner).not.toMatch(/JSON\.stringify\(parsed\)/);
+    expect(existsSync(join(process.cwd(), "blind-tester", "loadtest.sh"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "blind-tester", "loadtest-fleet.sh"))).toBe(false);
+    expect(runner).not.toContain("CLAUDE_CONFIG_DIR");
+    expect(runner).not.toContain(RETIRED_CLAUDE_LOGIN_FILENAME);
+    expect(runner).not.toContain(RETIRED_CLAUDE_OAUTH_FIELD);
+    expect(runner).not.toMatch(/\btimeout\b[^\n]*\bclaude\b/u);
+    expect(runner).not.toContain("scripts/blind-report-recovery.ts");
   });
 
   it("commits pure publication with an exclusive canonical sidecar only after every gate", () => {
@@ -502,15 +683,11 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain("fs.constants.COPYFILE_EXCL");
     expect(runner).toContain("assert_launch_provenance_unchanged");
     expect(runner).not.toContain('--write-run-sidecar "$RUN_SIDECAR_ARG"');
-    expect(runner.match(/--write-run-sidecar "\$PRIVATE_RUN_SIDECAR_ARG"/g)).toHaveLength(3);
-    expect(runner).toContain('--require-mode pure --run-sidecar "$PRIVATE_RUN_SIDECAR_ARG"');
+    expect(runner.match(/--write-run-sidecar "\$PRIVATE_RUN_SIDECAR_ARG"/g)).toHaveLength(2);
 
     const privateVerification = runner.indexOf('--write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG"');
     const evidencePublication = runner.indexOf(
       "published evidence bytes differ from private evidence",
-    );
-    const recoveryEvidenceGate = runner.indexOf(
-      '--run-evidence "$DURABLE_RUN_EVIDENCE_ARG" --metadata "$RECOVERY_METADATA_ARG"',
     );
     const finalProvenanceGate = runner.lastIndexOf("if ! assert_launch_provenance_unchanged");
     const canonicalSidecarPublication = runner.indexOf(
@@ -520,8 +697,7 @@ describe("blind runner MCP config contract", () => {
 
     expect(privateVerification).toBeGreaterThan(0);
     expect(evidencePublication).toBeGreaterThan(privateVerification);
-    expect(recoveryEvidenceGate).toBeGreaterThan(evidencePublication);
-    expect(finalProvenanceGate).toBeGreaterThan(recoveryEvidenceGate);
+    expect(finalProvenanceGate).toBeGreaterThan(evidencePublication);
     expect(canonicalSidecarPublication).toBeGreaterThan(finalProvenanceGate);
     expect(publicationComplete).toBeGreaterThan(canonicalSidecarPublication);
     expect(runner.slice(publicationComplete)).not.toContain("assert_launch_provenance_unchanged");
@@ -536,7 +712,6 @@ describe("blind runner MCP config contract", () => {
     expect(runner).toContain('rm -f -- "$RECEIPT_BINDING_METADATA"');
 
     expect(runner).toContain("record_playthrough_terminal verified");
-    expect(runner).toContain("record_playthrough_terminal verified_recovered");
     expect(runner).toContain("record_playthrough_terminal verified_receipt_bound");
     expect(runner).toContain("record_playthrough_terminal verification_failed");
     expect(runner).not.toContain("transport_completed");

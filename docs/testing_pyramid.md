@@ -104,9 +104,9 @@ neutral default persona. The live fleet defaults to Codex
 `gpt-5.3-codex-spark` for ordinary feedback harvests and
 accepts only exact homogeneous `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`,
 or `gpt-5.3-codex-spark` plans. The canonical pilot and authority commands pin
-Terra explicitly so both cohorts use the same model. Claude/Sonnet must be selected explicitly;
-Claude `mix`, Haiku, and Opus plans remain diagnostic. Before the 100-player spend, `starting-slice:pilot`
-must pass one fresh ten-member homogeneous cohort with 10/10 primary
+Terra explicitly so both cohorts use the same model. Before the 100-player
+spend, `starting-slice:pilot` must pass one fresh ten-member homogeneous cohort
+with 10/10 primary
 unrecovered members, unique game and provider sessions, one exact actual
 model id, at least three recognized Wolf-Winter strategies, and no strategy
 above 7/10. The pilot has a distinct result kind and cannot certify the slice.
@@ -122,12 +122,13 @@ success cannot erase a prior timeout or verification/launcher failure. Any such
 label exits nonzero and cannot certify. A resume-enabled fleet or skipped slot
 is also non-certifying: an authoritative fresh label must use
 `--no-resume --max-retries 0` and launch exactly one successful attempt for each
-of its 100 slots. A recovered report requires a complete, byte-bound
+of its 100 slots. The current Codex launcher has no model-recovery turn. A
+historical recovered report remains readable only with a complete, byte-bound
 `.initial-report.txt` / `.repair.meta.json` / `.repair.json` set, never another
 discoverable Markdown report, and remains diagnostic-only because its
-subjective interview was generated after the primary report. Launch live fleets from a plain shell, not from inside a Claude
-Code session (nested CLI auth returns 401). Targeted quest starts remain available
-only to non-LLM smoke/mock lanes and the mechanical crawler.
+subjective interview was generated after the primary report. Targeted quest
+starts remain available only to non-LLM smoke/mock lanes and the mechanical
+crawler.
 
 ## 4. Schemas
 

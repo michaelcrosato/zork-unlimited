@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * blind-tester/mock-agent.mjs — a deterministic, zero-token stand-in for the
- * `claude` CLI blind player, wired into run.sh via BLIND_AGENT_CMD (see
+ * live Codex blind player, wired into run.sh via BLIND_AGENT_CMD (see
  * fleet.mjs's `--mock` flag). This is what makes the fleet → compiler
  * pipeline testable in CI: no LLM, no API key, no network, byte-for-byte
  * reproducible from BLIND_SEED alone.

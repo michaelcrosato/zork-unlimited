@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   linkSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -27,6 +29,8 @@ import {
   fleetAttestationPathFor,
   fleetReportLockSpec,
   isTrustedFleetArtifactFile,
+  normalizeShellHomeForNode,
+  normalizeShellPathForNode,
   parseFleetArgs,
   planFleetRuns,
   pureFleetReportWasRecovered,
@@ -42,6 +46,7 @@ import {
   runSidecarPathFor,
   summarizeFleetAttemptHistory,
   validateFleetLabel,
+  validateFleetReportsDirectory,
   verifyReportForResume,
   writeFreshPureFleetAttestation,
   // @ts-expect-error — plain .mjs module without type declarations
@@ -51,6 +56,168 @@ it("keeps the fleet resume contract pinned to the engine journey contract", () =
   expect(PURE_SESSION_CONTRACT_VERSION).toBe(JOURNEY_CONTRACT_VERSION);
   expect(PURE_BASELINE_DECISIONS).toBe(JOURNEY_BASELINE_DECISIONS);
 });
+
+it("normalizes Git Bash, Cygwin, and WSL drive paths for Windows Node", () => {
+  expect(normalizeShellPathForNode("/c/Users/player/.codex", "win32")).toBe(
+    "C:/Users/player/.codex",
+  );
+  expect(normalizeShellPathForNode("/cygdrive/d/home/player/.codex", "win32")).toBe(
+    "D:/home/player/.codex",
+  );
+  expect(normalizeShellPathForNode("/mnt/e/home/player/.codex", "win32")).toBe(
+    "E:/home/player/.codex",
+  );
+  expect(normalizeShellPathForNode("/mnt/e/home/player/.codex", "linux")).toBe(
+    "/mnt/e/home/player/.codex",
+  );
+  expect(
+    normalizeShellHomeForNode("/home/player", "win32", (path: string) =>
+      path === "/home/player" ? "D:/cygwin64/home/player" : "",
+    ),
+  ).toBe("D:/cygwin64/home/player");
+});
+
+it("rejects direct and linked fleet report roots inside CODEX_HOME before writing", () => {
+  const root = mkdtempSync(join(tmpdir(), "af-fleet-codex-output-boundary-"));
+  const home = join(root, "codex-home");
+  const linkedHome = join(root, "linked-codex-home");
+  const loginFilename = ["auth", ".json"].join("");
+  const loginPath = join(home, loginFilename);
+  const loginBytes = '{"sentinel":"fleet-output-guard"}\n';
+  mkdirSync(home);
+  writeFileSync(loginPath, loginBytes);
+  const candidates = [home];
+  const windowsHomeForms = [home];
+  if (process.platform === "win32") {
+    const match = home.replaceAll("\\", "/").match(/^([A-Za-z]):\/(.*)$/u);
+    if (match) {
+      const drive = match[1]!;
+      const remainder = match[2]!;
+      windowsHomeForms.push(`/${drive.toLowerCase()}/${remainder}`);
+      windowsHomeForms.push(`/mnt/${drive.toLowerCase()}/${remainder}`);
+    }
+  }
+  try {
+    try {
+      symlinkSync(home, linkedHome, "junction");
+      candidates.push(linkedHome);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "EPERM" && code !== "EACCES" && code !== "ENOSYS") throw error;
+    }
+
+    for (const [index, reportsDir] of candidates.entries()) {
+      expect(() => validateFleetReportsDirectory(reportsDir, home), reportsDir).toThrow(
+        /outside the Codex home/i,
+      );
+      const homeForms = index === 0 ? windowsHomeForms : [home];
+      for (const [homeIndex, configuredHome] of homeForms.entries()) {
+        const label = `codex-output-guard-${process.pid}-${Date.now()}-${index}-${homeIndex}`;
+        const fleetDir = join(process.cwd(), "ai-runs", "fleet", label);
+        const result = spawnSync(
+          process.execPath,
+          [
+            "blind-tester/fleet.mjs",
+            "--mock",
+            "--count",
+            "1",
+            "--out",
+            reportsDir,
+            "--label",
+            label,
+          ],
+          {
+            cwd: process.cwd(),
+            encoding: "utf8",
+            env: { ...process.env, CODEX_HOME: configuredHome },
+            timeout: 30_000,
+          },
+        );
+        const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+        expect(result.status, `${configuredHome} -> ${reportsDir}: ${output}`).toBe(1);
+        expect(output).toContain("must remain outside the Codex home");
+        expect(existsSync(fleetDir), reportsDir).toBe(false);
+        expect(readdirSync(home), reportsDir).toEqual([loginFilename]);
+        expect(readFileSync(loginPath, "utf8"), reportsDir).toBe(loginBytes);
+      }
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("uses a normalized custom HOME for the default fleet Codex-home boundary", () => {
+  const root = mkdtempSync(join(tmpdir(), "af-fleet-custom-shell-home-"));
+  const customHome = join(root, "custom-home");
+  const codexHome = join(customHome, ".codex");
+  const loginFilename = ["auth", ".json"].join("");
+  const loginPath = join(codexHome, loginFilename);
+  const loginBytes = '{"sentinel":"custom-shell-home-guard"}\n';
+  const label = `custom-shell-home-${process.pid}-${Date.now()}`;
+  const fleetDir = join(process.cwd(), "ai-runs", "fleet", label);
+  mkdirSync(codexHome, { recursive: true });
+  writeFileSync(loginPath, loginBytes);
+  let shellHome = customHome;
+  if (process.platform === "win32") {
+    const match = customHome.replaceAll("\\", "/").match(/^([A-Za-z]):\/(.*)$/u);
+    if (match) shellHome = `/${match[1]!.toLowerCase()}/${match[2]!}`;
+  }
+  const env: NodeJS.ProcessEnv = { ...process.env, HOME: shellHome };
+  delete env.CODEX_HOME;
+  try {
+    const result = spawnSync(
+      process.execPath,
+      ["blind-tester/fleet.mjs", "--mock", "--count", "1", "--out", codexHome, "--label", label],
+      { cwd: process.cwd(), encoding: "utf8", env, timeout: 30_000 },
+    );
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+    expect(result.status, output).toBe(1);
+    expect(output).toContain("must remain outside the Codex home");
+    expect(existsSync(fleetDir)).toBe(false);
+    expect(readdirSync(codexHome)).toEqual([loginFilename]);
+    expect(readFileSync(loginPath, "utf8")).toBe(loginBytes);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("keeps structural mock fleets independent from an absent configured Codex home", () => {
+  const root = mkdtempSync(join(tmpdir(), "af-fleet-missing-codex-home-"));
+  const missingHome = join(root, "not-created-codex-home");
+  const reportsDir = join(root, "reports");
+  const label = `missing-codex-home-${process.pid}-${Date.now()}`;
+  const fleetDir = join(process.cwd(), "ai-runs", "fleet", label);
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "blind-tester/fleet.mjs",
+        "--mock",
+        "--count",
+        "1",
+        "--max-retries",
+        "0",
+        "--out",
+        reportsDir,
+        "--label",
+        label,
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: { ...process.env, CODEX_HOME: missingHome },
+        timeout: 60_000,
+      },
+    );
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+    expect(result.status, output).toBe(0);
+    expect(existsSync(missingHome)).toBe(false);
+    expect(readdirSync(reportsDir).some((name) => name.endsWith(".md"))).toBe(true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(fleetDir, { recursive: true, force: true });
+  }
+}, 90_000);
 
 describe("fill-prompt", () => {
   const template = "Intro.\n{{PERSONA}}\nRules __SEED__.\nGo: {{START_INSTRUCTION}}\n";
@@ -94,6 +261,20 @@ describe("fleet planning", () => {
     ).toBe(true);
   });
 
+  it("keeps parser-bypassing programmatic plans on the Codex default", () => {
+    const programmatic = { ...parseFleetArgs(["--count", "1"]), provider: undefined };
+
+    expect(planFleetRuns(programmatic)).toEqual([
+      {
+        seed: 1000,
+        persona: "default",
+        provider: "codex",
+        model: "gpt-5.3-codex-spark",
+        target: "overworld",
+      },
+    ]);
+  });
+
   it("makes authoritative no-resume behavior explicit without changing diagnostic defaults", () => {
     expect(parseFleetArgs([]).resume).toBe(true);
     expect(parseFleetArgs(["--no-resume"]).resume).toBe(false);
@@ -114,33 +295,11 @@ describe("fleet planning", () => {
     expect(() => parseFleetArgs(["--personas", "breaker"])).toThrow(/structural mode/i);
     expect(parseFleetArgs(["--mock", "--personas", "breaker"]).personas).toBe("breaker");
   });
-  it("pins live model plans to supported aliases", () => {
-    for (const model of ["haiku", "sonnet", "opus"] as const) {
-      const opts = parseFleetArgs(["--provider", "claude", "--count", "3", "--model", model]);
-      expect(opts.model).toBe(model);
-      expect(planFleetRuns(opts).map((run: { model: string }) => run.model)).toEqual([
-        model,
-        model,
-        model,
-      ]);
-    }
-    const mixed = parseFleetArgs(["--provider", "claude", "--count", "10", "--model", "mix"]);
-    expect(mixed.model).toBe("mix");
-    expect(planFleetRuns(mixed).map((run: { model: string }) => run.model)).toEqual([
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "haiku",
-      "sonnet",
-    ]);
-    expect(() => parseFleetArgs(["--provider", "claude", "--model", "claude-custom"])).toThrow(
-      /haiku, sonnet, opus/i,
-    );
+  it("retires current Claude plans while retaining structural Codex mocks", () => {
+    expect(() => parseFleetArgs(["--provider", "claude"])).toThrow(/retired/i);
+    expect(() =>
+      planFleetRuns({ ...parseFleetArgs(["--count", "1"]), provider: "claude" }),
+    ).toThrow(/retired/i);
     expect(parseFleetArgs(["--mock", "--model", "synthetic"]).model).toBe("synthetic");
   });
   it("pins Codex fleets to exact provider/model pairs without mix, aliases, or fallback", () => {
@@ -157,12 +316,8 @@ describe("fleet planning", () => {
       ]);
     }
     expect(parseFleetArgs([]).model).toBe("gpt-5.3-codex-spark");
-    expect(parseFleetArgs(["--provider", "claude"]).model).toBe("sonnet");
     expect(() => parseFleetArgs(["--provider", "codex", "--model", "sol"])).toThrow(/aliases/i);
     expect(() => parseFleetArgs(["--provider", "codex", "--model", "mix"])).toThrow(/mix/i);
-    expect(() => parseFleetArgs(["--provider", "claude", "--model", "gpt-5.6-sol"])).toThrow(
-      /Claude pure fleets/i,
-    );
   });
   it("explicit mock quest targets parse and reach the structural plan", () => {
     const runs = planFleetRuns(
@@ -170,10 +325,6 @@ describe("fleet planning", () => {
     );
     expect(runs.every((r: { target: string }) => r.target === "quest:sunken_barrow")).toBe(true);
     expect(runs.every((r: { provider: string }) => r.provider === "codex")).toBe(true);
-    const claudeMock = planFleetRuns(
-      parseFleetArgs(["--mock", "--provider", "claude", "--count", "1", "--model", "synthetic"]),
-    );
-    expect(claudeMock[0]?.provider).toBe("claude");
   });
 
   it("rejects quest targets for live fleets regardless of flag order", () => {

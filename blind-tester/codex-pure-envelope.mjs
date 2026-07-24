@@ -45,6 +45,24 @@ const SUPPORTED_CODEX_MODELS = new Set([
   SPARK_DISABLED_MODEL,
 ]);
 const MAX_ITEM_ID_LENGTH = 128;
+// Current Codex injects the operator-global AGENTS.md before environment_context.
+// Keep this reviewed byte-for-byte allowlist so project/game instructions still fail closed.
+const SAFE_GLOBAL_AGENT_INSTRUCTIONS_BLOCK = [
+  "# AGENTS.md instructions",
+  "",
+  "<INSTRUCTIONS>",
+  "# Global Codex Guidance",
+  "",
+  "- Read the repository's own instructions, scripts, and existing patterns before changing code.",
+  "- Prefer the repo-local toolchain and package manager over global installs.",
+  "- Use `rg`/`rg --files` for code search when available.",
+  "- Check the worktree before editing, and do not overwrite unrelated user changes.",
+  "- Keep changes scoped to the requested task unless a broader fix is necessary.",
+  "- Run the most relevant tests, type checks, linters, builds, or browser smoke checks before finishing when the repo provides them.",
+  "- Do not print, commit, or move secrets. Use local env files such as `.env.local` only when a task explicitly needs credentials.",
+  "- For web apps, start the dev server and verify the local page when the app needs a server to run.",
+  "</INSTRUCTIONS>",
+].join("\n");
 // Keep this transport audit synchronized with the server's authoritative
 // PURE_PLAYER_TOOLS set. A regression imports both sets and compares them.
 export const CODEX_PURE_PLAYER_TOOLS = new Set([
@@ -663,12 +681,40 @@ function validV2MultiAgentModeMessage(payload, turnId) {
   );
 }
 
+function validGlobalAgentInstructionsBlock(block) {
+  return (
+    isRecord(block) &&
+    hasOnlyKeys(block, ["type", "text"]) &&
+    block.type === "input_text" &&
+    block.text === SAFE_GLOBAL_AGENT_INSTRUCTIONS_BLOCK
+  );
+}
+
 function validEnvironmentMessage(payload, turnId) {
-  return validSingleInputMessage(
-    payload,
-    "user",
-    turnId,
-    (text) => text.startsWith("<environment_context>") && text.endsWith("</environment_context>"),
+  if (!validPrivateInputMessage(payload, "user", turnId)) return false;
+  if (payload.content.length === 1) {
+    return exactTaggedInputBlock(payload.content[0], "environment_context");
+  }
+  return (
+    payload.content.length === 2 &&
+    validGlobalAgentInstructionsBlock(payload.content[0]) &&
+    exactTaggedInputBlock(payload.content[1], "environment_context")
+  );
+}
+
+function validPrivateUserEvent(payload) {
+  if (!isRecord(payload)) return false;
+  const legacyKeys = ["type", "message", "images", "local_images", "text_elements"];
+  const currentKeys = [...legacyKeys, "audio", "local_audio"];
+  const hasLegacyShape = hasOnlyKeys(payload, legacyKeys);
+  const hasCurrentShape = hasOnlyKeys(payload, currentKeys);
+  if (!hasLegacyShape && !hasCurrentShape) return false;
+  const emptyCollections = [payload.images, payload.local_images, payload.text_elements];
+  if (hasCurrentShape) emptyCollections.push(payload.audio, payload.local_audio);
+  return (
+    payload.type === "user_message" &&
+    typeof payload.message === "string" &&
+    emptyCollections.every((value) => Array.isArray(value) && value.length === 0)
   );
 }
 
@@ -933,14 +979,7 @@ function inspectCodexRolloutStructure(rows, expectedModel) {
     promptBlock.type !== "input_text" ||
     typeof promptBlock.text !== "string" ||
     promptBlock.text !== promptEvent?.message ||
-    !isRecord(promptEvent) ||
-    !hasOnlyKeys(promptEvent, ["type", "message", "images", "local_images", "text_elements"]) ||
-    !Array.isArray(promptEvent.images) ||
-    promptEvent.images.length !== 0 ||
-    !Array.isArray(promptEvent.local_images) ||
-    promptEvent.local_images.length !== 0 ||
-    !Array.isArray(promptEvent.text_elements) ||
-    promptEvent.text_elements.length !== 0
+    !validPrivateUserEvent(promptEvent)
   ) {
     return rolloutReject("rollout input and initial context lifecycle is out of order");
   }
@@ -1179,7 +1218,7 @@ function validCodeModeWarningRow(row, ordinal) {
       configPath.length > 0 &&
       configPath.length <= 4096 &&
       !/[\r\n]/u.test(configPath) &&
-      /^(?:[A-Za-z]:[\\/]|[\\/])(?:(?!\.{1,2}[\\/])[^\\/\r\n]+[\\/])*\.tmp[\\/]blind-codex-home[\\/]tmp\.[A-Za-z0-9]{10}[\\/]config\.toml\.$/u.test(
+      /^(?:[A-Za-z]:[\\/]|[\\/])(?:(?!\.{1,2}(?:[\\/]|$))[^\\/\r\n]+[\\/])*config\.toml\.$/u.test(
         configPath,
       )
     );

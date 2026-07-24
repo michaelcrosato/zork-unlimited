@@ -44,7 +44,9 @@ jobs:
       - name: Install UI deps
         run: npm --prefix ui ci
       - name: Tests (unit + property + determinism)
-        run: npm test
+        # Keep hosted failures attributable: the dot reporter can end with only
+        # an exit code when a worker dies late in this hour-long suite.
+        run: npm exec -- vitest run --reporter=verbose
       # The granular steps above are exactly `npm run health` minus pack
       # validation, so only the validate step remains — running health here
       # would double-execute the entire pipeline (~2x CI time, doubled flake
