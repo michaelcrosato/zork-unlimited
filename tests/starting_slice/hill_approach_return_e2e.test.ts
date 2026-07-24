@@ -438,7 +438,10 @@ function playCleanLure(
     (entry) => entry.id === `quest_done:${WOLF.id}`,
   );
   expect(completion?.kind).toBe("quest_done");
-  expect(completion?.text.endsWith(spec.returnSummary)).toBe(true);
+  expect(completion?.text).toContain(
+    `${spec.returnSummary} Registration receipt — Rowan Quill reconciles`,
+  );
+  expect(completion?.text).toMatch(/The truthful-account promise changed active → kept\.$/u);
   expect(completion?.questCompletionBoundary?.acceptedDecisions).toBe(
     finalStep.journey.acceptedDecisions,
   );
