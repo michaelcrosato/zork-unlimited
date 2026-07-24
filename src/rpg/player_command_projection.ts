@@ -26,6 +26,11 @@ export type RpgPlayerCommandContext = {
   state: GameState;
 };
 
+export type RpgActiveDialoguePromptView = {
+  dialogue: { npc: string } | null;
+  npcs_present: readonly { id: string; name: string }[];
+};
+
 // The interactive RPG loops consume these before command resolution. Never
 // advertise one as an authored action: a stable choose-id fallback remains
 // executable in both standalone and embedded play.
@@ -177,6 +182,28 @@ export function renderRpgPlayerCommand(projection: RpgPlayerCommand): string {
         ? "follow-through"
         : "one-shot";
   return `${projection.command}${aliases} [${phase}; ATK ${signed(option.combat.attack_bonus)}, DEF ${signed(option.combat.defense_bonus)} this round]${description}`;
+}
+
+/** Render the active speaker and only their current dialogue commands. Projection
+ * still receives the complete legal menu so aliases that collide with room
+ * actions retain the same fail-closed `choose ...` fallback as full help. */
+export function renderRpgActiveDialoguePrompt(
+  view: RpgActiveDialoguePromptView,
+  options: readonly RpgActionOption[],
+  context?: RpgPlayerCommandContext,
+): string | null {
+  const activeNpc = view.dialogue?.npc;
+  if (!activeNpc) return null;
+
+  const speaker = view.npcs_present.find((npc) => npc.id === activeNpc)?.name.trim() || activeNpc;
+  const commands = projectRpgPlayerCommands(options, context).filter(
+    ({ option }) => option.action.type === "ASK" && option.action.npc === activeNpc,
+  );
+  return [
+    `[Active speaker: ${speaker}]`,
+    "Dialogue commands:",
+    ...commands.map((projection) => `  ${renderRpgPlayerCommand(projection)}`),
+  ].join("\n");
 }
 
 /** Render the complete terminal action menu. Both standalone RPG play and the

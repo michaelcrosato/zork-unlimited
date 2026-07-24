@@ -32,6 +32,7 @@ import { buildRpgObservation, type RpgObservation } from "../src/rpg/observation
 import { parseCommand } from "../src/rpg/command_map.js";
 import {
   projectRpgPlayerCommands,
+  renderRpgActiveDialoguePrompt,
   renderRpgPlayerActionHelp,
   renderRpgPlayerCommand,
   resolveRpgPlayerCommand,
@@ -165,6 +166,11 @@ async function main(): Promise<void> {
     while (true) {
       const obs = buildRpgObservation(index, state, { includeWorldIntro: true });
       console.log(render(obs));
+      const dialoguePrompt = renderRpgActiveDialoguePrompt(obs, enumerateRpgActions(index, state), {
+        index,
+        state,
+      });
+      if (dialoguePrompt) console.log(dialoguePrompt);
       if (obs.ended || obs.available_actions.length === 0) break;
 
       let raw: string;
