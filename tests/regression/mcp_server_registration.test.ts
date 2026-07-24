@@ -137,6 +137,25 @@ describe("MCP server registration", () => {
     );
   });
 
+  it("qualifies compact story isolation against canonical full inspection", () => {
+    const registration = TOOL_REGISTRATIONS.find(
+      (candidate) => candidate.name === "inspect_overworld_session_story",
+    );
+    expect(registration?.description).toContain("listed in departure_interactions");
+    expect(registration?.description).toContain("default compact result");
+    expect(registration?.description).toContain("only that option's complete terms");
+    expect(registration?.description).toContain(
+      "compact_result:false intentionally returns the canonical full story",
+    );
+
+    const block = registeredToolBlock("inspect_overworld_session_story");
+    expect(block).toContain("option_id: z");
+    expect(block).toContain("Default compact output adds only its complete terms");
+    expect(block).toContain(
+      "compact_result:false validates the id but returns the canonical full story",
+    );
+  });
+
   it("advertises world-bound and generated starts, not the retired Charter-Marches quest menu", () => {
     const newGame = registeredToolBlock("new_game");
     const startWorldQuest = registeredToolBlock("start_world_quest");

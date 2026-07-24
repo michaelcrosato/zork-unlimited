@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
-import { compactJourneyStoryChoicePrompt } from "../../src/mcp/journey_projection.js";
+import {
+  compactJourneyStoryChoiceComparison,
+  type JourneyStoryChoiceComparison,
+} from "../../src/mcp/journey_projection.js";
 import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -44,7 +47,7 @@ function expectStage(
   return storyChoice;
 }
 
-function expectCompactRoutePreview(storyChoice: JourneyStoryChoicePrompt): void {
+function expectCompactRoutePreview(storyChoice: { message: string }): void {
   for (const option of WOLF.launch?.options ?? []) {
     const supplies = `${option.terms.supplies} ${
       option.terms.supplies === 1 ? "supply" : "supplies"
@@ -69,23 +72,18 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
   }
 }
 
-function expectCompactSummaryOptions(storyChoice: JourneyStoryChoicePrompt): void {
+function expectCompactSummaryOptions(storyChoice: JourneyStoryChoiceComparison): void {
   for (const option of storyChoice.options) {
     expect(option.summary).toMatchObject({
       commitment: expect.any(String),
       fieldTrigger: expect.any(String),
     });
-    expect(option.consequence.startsWith(`${option.summary!.commitment} `)).toBe(false);
-    if (option.summary?.immediateCost) {
-      expect(option.consequence).not.toContain(`Actual cost: ${option.summary.immediateCost}.`);
-    }
+    expect(option).not.toHaveProperty("consequence");
   }
+  expect(storyChoice.inspectedOption).toBeNull();
 }
 
-function expectProgressivePreparationOptions(
-  storyChoice: JourneyStoryChoicePrompt,
-  compact = false,
-): void {
+function expectProgressivePreparationOptions(storyChoice: JourneyStoryChoicePrompt): void {
   for (const profile of PREPARATION.profiles) {
     const triggerCategory = profile.trigger_category;
     if (!triggerCategory) throw new Error(`Preparation ${profile.id} needs a trigger category.`);
@@ -101,10 +99,21 @@ function expectProgressivePreparationOptions(
     expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|success|failure)\b/i);
     expect(option?.consequence).toContain(`Full field terms: ${profile.preview}`);
     expect(option?.consequence).toContain(profile.consequence);
-    if (compact) {
-      expect(option?.consequence).not.toContain(profile.summary);
-      expect(option?.consequence).not.toContain(triggerCategory);
-    }
+  }
+}
+
+function expectProgressivePreparationComparison(storyChoice: JourneyStoryChoiceComparison): void {
+  for (const profile of PREPARATION.profiles) {
+    const triggerCategory = profile.trigger_category;
+    if (!triggerCategory) throw new Error(`Preparation ${profile.id} needs a trigger category.`);
+    const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
+    expect(option?.summary).toEqual({
+      commitment: profile.summary,
+      fieldTrigger: triggerCategory,
+      fieldTriggerScope: "category",
+      immediateCost: expect.any(String),
+    });
+    expect(option).not.toHaveProperty("consequence");
   }
 }
 
@@ -300,12 +309,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       compact_context: true,
       compact_result: true,
     }).story;
-    expect(mcpPreparation).toEqual(compactJourneyStoryChoicePrompt(uiPreparation));
+    expect(mcpPreparation).toEqual(compactJourneyStoryChoiceComparison(uiPreparation));
     expect(mcpPreparation).not.toEqual(uiPreparation);
     expect(mcpPreparation.message).toContain(`Mission — ${WOLF.discovery}`);
     expectCompactRoutePreview(mcpPreparation);
     expectCompactSummaryOptions(mcpPreparation);
-    expectProgressivePreparationOptions(mcpPreparation, true);
+    expectProgressivePreparationComparison(mcpPreparation);
     expectSummaryFirstOptions(uiPreparation);
     expectProgressivePreparationOptions(uiPreparation);
   });

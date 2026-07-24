@@ -2,6 +2,8 @@ import type {
   JourneyPresentation,
   JourneyStoryChoiceOption,
   JourneyStoryChoicePrompt,
+  JourneyStoryChoicePresentationKind,
+  JourneyStoryChoiceSummary,
 } from "../world/journey_contract.js";
 import type { RpgCompactMore, RpgCompactObservation } from "./compact_rpg_observation.js";
 import { compactTrailingOmissionCounts } from "./compact_truncation.js";
@@ -9,6 +11,27 @@ import type { McpObservation } from "./types.js";
 
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 1 as const;
+
+export type JourneyStoryChoiceComparisonOption = Readonly<{
+  id: string;
+  label: string;
+  summary?: JourneyStoryChoiceSummary;
+}>;
+
+/**
+ * Compact, read-only story inspection. The first response is deliberately only
+ * a comparison surface; one exact option can be expanded without exposing the
+ * other options' full terms.
+ */
+export type JourneyStoryChoiceComparison = Readonly<{
+  comparisonVersion: typeof JOURNEY_STORY_CHOICE_COMPARISON_VERSION;
+  id: string;
+  kind?: JourneyStoryChoicePresentationKind;
+  message: string;
+  options: readonly JourneyStoryChoiceComparisonOption[];
+  inspectedOption: JourneyStoryChoiceOption | null;
+}>;
 
 export type EmbeddedJourneyField = {
   journey: JourneyPresentation;
@@ -58,6 +81,17 @@ function compactJourneyStoryChoiceOption(
   return Object.freeze({ ...option, consequence });
 }
 
+export function journeyStoryChoiceOptionById(
+  prompt: JourneyStoryChoicePrompt,
+  optionId: string,
+): JourneyStoryChoiceOption {
+  const option = prompt.options.find((candidate) => candidate.id === optionId);
+  if (!option) {
+    throw new Error(`Story choice "${prompt.id}" does not offer option "${optionId}".`);
+  }
+  return option;
+}
+
 /**
  * Remove only setup-card prose already represented by the structured summary.
  * Authored text that does not match the exact expected shape is returned intact.
@@ -71,6 +105,39 @@ export function compactJourneyStoryChoicePrompt(
     ...prompt,
     options: Object.freeze(options),
   }) as JourneyStoryChoicePrompt;
+}
+
+/** Build the staged compact inspection without changing the canonical prompt. */
+export function compactJourneyStoryChoiceComparison(
+  prompt: JourneyStoryChoicePrompt,
+  optionId?: string,
+): JourneyStoryChoiceComparison {
+  const compactPrompt = compactJourneyStoryChoicePrompt(prompt);
+  const inspectedSource =
+    optionId === undefined ? null : journeyStoryChoiceOptionById(compactPrompt, optionId);
+  const inspectedOption = inspectedSource
+    ? Object.freeze({
+        ...inspectedSource,
+        ...(inspectedSource.summary
+          ? { summary: Object.freeze({ ...inspectedSource.summary }) }
+          : {}),
+      })
+    : null;
+  const options = compactPrompt.options.map((option) =>
+    Object.freeze({
+      id: option.id,
+      label: option.label,
+      ...(option.summary ? { summary: Object.freeze({ ...option.summary }) } : {}),
+    }),
+  );
+  return Object.freeze({
+    comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+    id: compactPrompt.id,
+    ...(compactPrompt.kind === undefined ? {} : { kind: compactPrompt.kind }),
+    message: compactPrompt.message,
+    options: Object.freeze(options),
+    inspectedOption,
+  });
 }
 
 /** Compact MCP projection; the canonical journey and all non-story fields remain shared. */
