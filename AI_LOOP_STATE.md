@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 640 -->
+<!-- historical_cycle_count: 641 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - plain_game_task_handoffs
+
+- Evidence choice: a recurring Codex task notice coincided with broad blind-runner wording, and Sol seed 72624 chose `tool_search` before the game; neither represented AdventureForge play.
+- Surface: contributor guidance and the pure-player prompt now use direct game-development language, route every game call through `functions.exec` with exactly one AdventureForge action, and state that `tool_search` is not gameplay.
+- Counterfactual: fresh pure starts, visible-only information, one legal action at a time, fail-closed receipts, report verification, no-report/no-commit, and the health bar remain unchanged.
+- Pure evidence: exact clean consolidated `8f17a561` Terra seed 72628 completed The Wolf-Winter bloodlessly with the herd whole and all three wolves alive in 29 accepted decisions, ended voluntarily, remained unstuck, chose replay-yes, and rated clarity/enjoyment 3/4 without a rejected action or player-visible bug.
+- Diagnostics/follow-through: Sol 72624 was rejected before report and is not counted; Albany's dense consecutive planning remains a repeated S1 queued for progressive disclosure.
+- Guard: independent review is clean, 59 rebased focused tests pass, pre/post crawls `20260725T063818Z` / `20260725T080733Z` are zero-finding, and consolidated full health passes 420 files/3,401 tests plus both typechecks and all packs.
 
 ### Cycle result - wolf_route_aid_only_forecast_truth
 
@@ -145,12 +154,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: Terra rates clarity/enjoyment 4/4 with no checkpoint complaint; Luna rates 4/5 and says the safe point resumed correctly, while still disliking the room-transition pause during a broader investigation.
 - Feedback/follow-through: Albany setup density and the Rowan collision remain separate queued increments; Luna's broader transition-pacing critique is retained rather than treated as a regression in safe-boundary scheduling.
 - Guard: final crawl `ai-runs\crawl\20260723T151536Z` is zero-finding across 6,000 steps, 247/247 nodes, 344/344 edges, and 12/12 quests; combined focused coverage passes 17 files/218 tests.
-
-### Cycle result - truthful_journey_continuation_horizon
-
-- Evidence choice: journey prompts promised exactly 40 more decisions from every pause even though an active goal can complete sooner, while death is end-only and merged goal/checkpoint pauses have both causes.
-- Surface: the shared contract and fresh-game tutorial now name the truthful earliest boundary—active-goal completion or the next fixed checkpoint—and project the same distinct goal, checkpoint, merged, and death copy through compact/full MCP and UI surfaces.
-- Counterfactual: goal-only, checkpoint-only, merged, and death snapshots produce exact cause-specific choices; Continue preserves the next fixed horizon, End remains terminal, restored snapshots project byte-identically, and death never advertises Continue.
-- Pure evidence: exact clean `a7884d54` passes fresh strict-v2 Terra 4665 across 63 turns and 51 accepted decisions, diverts Wolf-Winter's pack, wins Gallowmere, ends voluntarily at the second completed goal, rates clarity/enjoyment 4/5 and 5/5, remains unstuck, and chooses replay-yes.
-- Feedback/follow-through: the player still experiences checkpoint 40 inside an active investigation and repeats Albany setup density plus Rowan Quill continuity confusion; safe-boundary checkpoint scheduling, progressive setup disclosure, and compact NPC display names remain separate queued increments.
-- Guard: final crawl `20260723T133121Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; focused projection coverage passes 81/81, independent review is clean, and supported two-worker full health passes 411 files/3,271 tests plus UI typecheck and all packs.

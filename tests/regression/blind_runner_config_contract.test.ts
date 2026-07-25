@@ -713,7 +713,8 @@ printf 'codex-cli 0.144.1\\n'
     // The pure prompt carries only transport syntax. Gameplay objectives,
     // routes, coverage targets, and stopping are owned by the game itself.
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld");
-    expect(owPrompt).toContain("first and only pre-game tool invocation");
+    expect(owPrompt).toContain("Begin with one pre-game tool invocation");
+    expect(owPrompt).toMatch(/`tool_search` is not a gameplay\s+action/);
     expect(owPrompt).toContain("one-time tutorial");
     expect(owPrompt).not.toMatch(/30.?45|tool calls|take at least one road/i);
     expect(owPrompt).not.toMatch(
@@ -724,7 +725,7 @@ printf 'codex-cli 0.144.1\\n'
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld_session_quest");
     expect(owPrompt).toContain("context.quest_starts");
     expect(owPrompt).toContain("mcp__adventureforge__start_world_quest");
-    expect(owPrompt).toContain("forbidden structural tool");
+    expect(owPrompt).toContain("not part of this playthrough");
     expect(owPrompt).toContain("game presents its actual journey choice");
     expect(owPrompt).toContain("After the game confirms the end");
     expect(owPrompt).toContain("Before you send your report, check every item:");

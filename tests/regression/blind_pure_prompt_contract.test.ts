@@ -57,11 +57,13 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("A bare `text`\n  forwards nothing");
     expect(prompt).toContain("only after you have seen that response");
     expect(prompt).toContain("mcp__adventureforge__start_overworld");
-    expect(prompt).toContain("first and only pre-game tool invocation");
+    expect(prompt).toContain("Begin with one pre-game tool invocation");
     expect(prompt).toContain("with `{}`, an object containing no\n  fields");
-    expect(prompt).toMatch(
-      /Do\s+not use non-game tools; if the start action is unavailable, stop and state\s+that blocker rather than probing, substituting another tool, or trying to\s+discover one\./,
-    );
+    expect(prompt).toContain("This\n  is the only pre-game action");
+    expect(prompt).toContain("the game could not start");
+    expect(prompt).toContain("Use the `functions.exec` gameplay wrapper below for every call");
+    expect(prompt).toContain("contains exactly one `mcp__adventureforge__...` action");
+    expect(prompt).toMatch(/`tool_search` is not a gameplay\s+action/);
     for (const forbidden of [
       "list_mcp_resources",
       "list_mcp_resource_templates",
@@ -101,7 +103,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("truthful unfinished-goal");
     expect(prompt).toContain("Never invent a resurrection");
     expect(prompt).toContain("or request a separate technical foldback");
-    expect(prompt).toContain("MCP resources, and other external\n  tools are not gameplay actions");
+    expect(prompt).toContain("complete source for rules, choices, and state");
     expect(prompt).toContain("mcp__adventureforge__start_overworld_session_quest");
     expect(prompt).toContain("normal player");
     expect(prompt).toContain("context.quest_starts");
@@ -125,7 +127,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("reveals only that option");
     expect(prompt).toContain("need not expand every option");
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");
-    expect(prompt).toContain("forbidden structural tool");
+    expect(prompt).toContain("not part of this playthrough");
     expect(prompt).toContain("Only then conduct the exit interview");
     expect(prompt).toContain("`exitReceipt`");
     expect(prompt).toContain("`run_evidence.recorded: false`");

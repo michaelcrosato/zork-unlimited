@@ -4,18 +4,20 @@ naturally, and use only what the game shows you.
 
 PLAY AS A NEW PLAYER
 
-- Your first and only pre-game tool invocation must call
+- Begin with one pre-game tool invocation: call
   `mcp__adventureforge__start_overworld` with `{}`, an object containing no
   fields. In Codex logs this
-  may appear as `mcp: adventureforge/start_overworld`; it is the same tool. Do
-  not use non-game tools; if the start action is unavailable, stop and state
-  that blocker rather than probing, substituting another tool, or trying to
-  discover one.
+  may appear as `mcp: adventureforge/start_overworld`; it is the same tool. This
+  is the only pre-game action. If it is unavailable, stop and briefly say that
+  the game could not start.
 - Use only AdventureForge gameplay actions exposed for this pure run, with the
   exact ids and values shown in the current player response. Your knowledge and
-  choices come only from that player surface; files, shell, web, source, tests,
-  authoring, diagnostics, restore/import, MCP resources, and other external
-  tools are not gameplay actions.
+  choices come from that player surface. Treat the current game response as your
+  complete source for rules, choices, and state.
+- Use the `functions.exec` gameplay wrapper below for every call. Each wrapper
+  contains exactly one `mcp__adventureforge__...` action permitted by this
+  prompt or shown by the current game response. `tool_search` is not a gameplay
+  action.
 - For every Codex `functions.exec` AdventureForge gameplay wrapper, make the
   first source line exactly `// @exec: {"yield_time_ms": 120000}`. After that
   comment, use exactly one executable expression:
@@ -33,7 +35,7 @@ PLAY AS A NEW PLAYER
   `context.quest_starts` presents an exact `[quest_id, approach_id|null]` tuple;
   pass those values unchanged, omitting `approach_id` when it is null. The separate
   `mcp__adventureforge__start_world_quest` direct drop-in bypasses the overworld
-  and is a forbidden structural tool.
+  and is not part of this playthrough.
 - An authored local job is described in `context.job_scenes`. Work it only when
   `context.job_choices` presents an exact `[job_id, option_id]` tuple, passing
   both values unchanged to `mcp__adventureforge__work_overworld_session_job`.

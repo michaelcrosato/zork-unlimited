@@ -164,10 +164,10 @@ describe("compact AFK handoff metadata", () => {
 
 describe("buildPrompt blind-playtest contract", () => {
   function expectFreshOverworldContract(prompt: string): void {
-    expect(prompt).toContain("Game context: this is a fictional, deterministic text-based TTRPG.");
     expect(prompt).toContain(
-      "The playtester starts as a new player and uses only the game surface",
+      "Game context: AdventureForge is a fictional, deterministic text-based TTRPG.",
     );
+    expect(prompt).toContain("Start as a new player and use only the game surface");
     expect(prompt).toContain("the CORE GAME — the open-world overworld from a FRESH start");
     expect(prompt).toContain("`npm run blind`");
     expect(prompt).toContain("`play_mode: pure`");
@@ -182,8 +182,10 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(prompt).not.toContain("QUEST_ID");
     expect(prompt).not.toContain("playtest by world_quest_id");
     expect(prompt).toContain(`to: ${playtestRecord}`);
-    expect(prompt).toContain("This file is REQUIRED");
-    expect(prompt).toContain("loop.sh refuses to commit");
+    expect(prompt).toContain("loop.sh checks for this report before it commits");
+    expect(prompt).not.toContain("player-experience harness");
+    expect(prompt).not.toContain("packaged DEFAULT harness");
+    expect(prompt).not.toContain("WRITE/COPY the verified");
   }
 
   it.each([
@@ -198,7 +200,7 @@ describe("buildPrompt blind-playtest contract", () => {
       playtestRecord,
     });
 
-    expect(prompt).toContain("## STEP 1 — MANDATORY fresh-overworld LLM playtest");
+    expect(prompt).toContain("## STEP 1 — Play from a fresh overworld");
     expect(prompt).toContain(
       "one focused, high-impact AdventureForge maintenance improvement within this repo",
     );
@@ -243,12 +245,12 @@ describe("buildPrompt blind-playtest contract", () => {
     });
 
     expect(prompt).toContain(
-      "## STEP 1 — Add the new world quest, THEN blind-playtest from a FRESH overworld",
+      "## STEP 1 — Add the new world quest, THEN play from a FRESH overworld",
     );
     expect(prompt).toContain(
       "Author the RPG quest and register it in the overworld quest registry",
     );
-    expect(prompt).toContain("do not tell the blind player which quest was added or where it is");
+    expect(prompt).toContain("do not say which quest was added or where it is");
     expect(prompt).toContain("test whether the new content is naturally discoverable");
     expectFreshOverworldContract(prompt);
   });
@@ -259,7 +261,7 @@ describe("buildUltraplanPrompt blind-playtest contract", () => {
     const prompt = buildUltraplanPrompt({ playtestRecord });
 
     expect(prompt).toContain("overworld from a FRESH start");
-    expect(prompt).toContain("default `npm run blind`");
+    expect(prompt).toMatch(/default\s+`npm run blind`/);
     expect(prompt).toContain("one focused AdventureForge maintenance improvement");
     expect(prompt).not.toContain("FULL authority");
     expect(prompt).toContain(
@@ -268,6 +270,6 @@ describe("buildUltraplanPrompt blind-playtest contract", () => {
     expect(prompt).toContain("only through normal overworld play");
     expect(prompt).not.toContain("world_quest_id=");
     expect(prompt).toContain(playtestRecord);
-    expect(prompt).toContain("loop.sh refuses to commit");
+    expect(prompt).toContain("loop.sh checks for it before commit");
   });
 });

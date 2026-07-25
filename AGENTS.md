@@ -10,6 +10,13 @@ AI-coded and AI-playtested**. The engine and content are the product; the web UI
 (`ui/`) is only a human-facing layer. Quality compounds through an autonomous
 improvement loop, and this charter orients the agent driving it.
 
+## Communication
+
+- Use ordinary game-development language in status updates: name the game behavior,
+  code change, and check result directly.
+- If a required service is unavailable, note it briefly and stop or continue with
+  repo-local work as appropriate. Do not inspect personal application state.
+
 ## The loop (one cycle)
 
 `loop.sh` runs it; `docs/afk_loop.md` is the full protocol; the three-tier
