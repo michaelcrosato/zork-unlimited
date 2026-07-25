@@ -738,6 +738,21 @@ export class OverworldSession {
     );
   }
 
+  /**
+   * Read-only terminal affordance truth for the two authored optional Station
+   * decisions. Exact scene ids alone may inherit the current-or-legacy journal
+   * authority above; mandatory story ids, option ids, and unknown ids do not.
+   */
+  isDepartureStoryChoiceResolved(storyChoiceId: string): boolean {
+    if (this.world.opening_preparation?.id === storyChoiceId) {
+      return this.openingPreparationResolved();
+    }
+    if (this.world.opening_relief_allocation?.id === storyChoiceId) {
+      return this.openingReliefAllocationResolved();
+    }
+    return false;
+  }
+
   private openingAllyResolved(): boolean {
     return this.journalEntries.some(
       (entry) => entry.kind === "ally" || entry.kind === "ally_legacy",

@@ -850,6 +850,12 @@ async function main(): Promise<void> {
               rest,
             );
             if (!interaction) {
+              if (session.isDepartureStoryChoiceResolved(rest)) {
+                fail(
+                  `Optional story choice "${rest}" has already been resolved. Use \`look\` to see what is available now.`,
+                );
+                break;
+              }
               fail(
                 `No optional story choice exactly matches "${rest}". Use the \`inspect <id>\` command shown by \`look\`.`,
               );

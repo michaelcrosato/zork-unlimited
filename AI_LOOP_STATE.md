@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 636 -->
+<!-- historical_cycle_count: 637 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - resolved_story_choice_inspection_truth
+
+- Evidence choice: re-inspecting a consumed Station preparation or Relief Allocation id produced a generic "no exact match" rejection even though the game could prove that specific optional choice had already been resolved.
+- Surface: the terminal now identifies only exact current/legacy resolved optional-choice ids and directs the player to `look`; unknown ids, unresolved-away choices, mandatory gates, and ordinary unavailable options retain the generic rejection.
+- Counterfactual: classification is read-only and exact, legacy-aware without fuzzy matching, preserves snapshot hashes, and changes no parser, story state, choice legality, or direct/inspected commitment parity.
+- Blind evidence: exact-build native Sol seed 72521 completes The Wolf-Winter bloodlessly under Albany authority with the herd, property, and all wolves alive, ends voluntarily, rates clarity/enjoyment 4/4, remains unstuck, and chooses replay-yes; targeted regression remains the direct proof because the player did not organically retry a consumed id.
+- Feedback/follow-through: terminal comparison density and irrelevant alternatives in some blocked messages remain broader copy work; the corrected resolved-id message stays one bounded truthfulness fix.
+- Guard: independent review is clean, 44 rebased CLI/departure tests pass, pre/post crawl are zero-finding, and full health passes 419 files/3,394 tests plus both typechecks and all packs.
 
 ### Cycle result - plain_game_blind_prompt
 
@@ -149,13 +158,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: clarity/enjoyment 4/4, unstuck, replay-yes, with no rejected action, loop, broken state, or soft-lock; source-blind 4623 separately reaches the failed-split Frost route and a living held ending.
 - Feedback/follow-through: conditional setup density and the decision-40 interruption recur; a six-report compile confirms progressive disclosure, June briefing, and truthful continuation copy as separate queued increments rather than expanding this route fix.
 - Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; semantic variant liveness passes 17/17, independent no-weakening review is clean, and solo full health passes 411 files/3,265 tests plus UI typecheck and all packs.
-
-### Cycle result - rpg_terminal_command_projection
-
-- Evidence choice: terminal RPG menus exposed descriptive ASK prose as if executable, hid visible speakers, parsed launch numbers permissively, and made authored `leave` collide with quest abandonment; blind seed 4621 also found `actions` worked only inside the quest loop.
-- Surface: standalone and embedded play now share context-aware executable commands, concise dialogue topics, exact/unique visible-speaker asks, legal contextual `wear`, truthful people lists, exact quest-launch choices, and overworld-wide `actions` help.
-- Counterfactual: colliding topics, object aliases, and loop-control words fail closed to stable `choose <action-id>` commands; absent/ambiguous/wrong speakers reject without state change, while legal Cade `leave` executes before unmatched legacy `leave` abandons.
-- Pure evidence: exact clean `c9d16419` passes strict capture-v2 Terra 4629 across 62 turns and 52 accepted decisions, diverts Wolf-Winter bloodlessly, wins Gallowmere, continues at goal 27/checkpoint 40, then ends voluntarily at goal 52.
-- Measured result: every wolf and cow survives the lure, a failed Gallowmere tracking check has a clear recovery, and the player reports no rejection, loop, broken state, or soft-lock; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Feedback/follow-through: Queensbury route revelation and dense Albany setup remain the current friction; verified progressive-disclosure and June-guidance follow-ups stay separate, while Frost-Heave's hash-safe landing must precede conditional preview truth.
-- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 48 focused regressions, independent clean re-review, and supported CI two-worker health pass 410 files/3,259 tests plus UI typecheck and all packs.
