@@ -10,6 +10,7 @@ import {
   parseOverworldManifest,
   type OverworldManifest,
 } from "./overworld.js";
+import { assertOpeningPreparationCheckDisclosureSourceIntegrity } from "./opening_preparation_source_integrity.js";
 import {
   compactSourceRefLegacyConsistency,
   compactSourceRefValidationError,
@@ -186,6 +187,7 @@ export function loadOverworldManifest(root: string): OverworldManifest {
   const overworld = parseOverworldManifest(raw);
   assertOverworldIntegrity(overworld);
   assertOverworldQuestSourceCoverage(overworld, discoverShippedRpgSourcePaths(root));
+  assertOpeningPreparationCheckDisclosureSourceIntegrity(root, overworld);
   deepFreeze(overworld);
   overworldManifestCache.set(root, overworld);
   return overworld;

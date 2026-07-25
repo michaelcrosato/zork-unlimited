@@ -370,10 +370,13 @@ restore, and service consumption live in
 
 The sixth authored increment makes Albany preparation a durable, finite choice
 instead of a promise in the matrix. After source certification, every one of the
-four backgrounds can select any of three affordable specialist packets. Reese's
-Works sequence replaces the public paling wedge with a Repair check and turns a
-miss into a noisy deterministic cold-set. Emery's drover route creates a
-one-shot Streetwise recovery after a failed first lure cast. Jamie's relief
+four backgrounds can select any of three affordable specialist packets. The
+expanded terms derive each character's current matching skill modifier and d20
+success range from generic profile data without crowding the initial comparison.
+Reese's Works sequence replaces the public paling wedge with a Repair check and
+turns a miss into a noisy deterministic cold-set. Emery's drover route creates
+a one-shot Streetwise recovery after a failed first lure cast; a miss spends
+the route but preserves the public recovery's pressure. Jamie's relief
 protocol creates a one-shot Mediation pressure adjustment only after the public
 split-rail recovery. The three plans import as knowledge plus their actual
 background skill, remember their providers, retain direct-start defaults, and

@@ -1,5 +1,9 @@
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import type { Interaction, RpgPack } from "../../src/rpg/schema.js";
 import {
   buildCampaignCharacterState,
   cloneCampaignCharacterState,
@@ -19,10 +23,19 @@ import {
   type OpeningPreparation,
 } from "../../src/world/opening_preparation.js";
 import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
+import {
+  assertOpeningPreparationCheckDisclosurePackIntegrity,
+  assertOpeningPreparationCheckDisclosureSourceIntegrity,
+} from "../../src/world/opening_preparation_source_integrity.js";
 import { assertOverworldIntegrity, type OverworldManifest } from "../../src/world/overworld.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const SPONSOR_MEMORY = "albany:memory_civic_sponsorship";
+const CHECK_CONSUMER = {
+  object_id: "paling_rail",
+  verb: "USE",
+  command_verb: "set",
+} as const;
 const SHIPPED_WORLD = loadOverworldManifest(process.cwd());
 
 function preparationScene(): OpeningPreparation {
@@ -205,6 +218,113 @@ describe("opening preparation authoring", () => {
     ];
     six.profiles.push(sixth);
     expect(() => parseOpeningPreparation(six)).toThrow();
+  });
+
+  it("accepts an optional generic check disclosure and rejects malformed authored data", () => {
+    const scene = preparationScene();
+    scene.profiles[0]!.check_disclosure = {
+      skill_id: "skill:repair",
+      skill_label: "Repair",
+      difficulty: 12,
+      consumer: CHECK_CONSUMER,
+    };
+    expect(parseOpeningPreparation(scene).profiles[0]!.check_disclosure).toEqual({
+      skill_id: "skill:repair",
+      skill_label: "Repair",
+      difficulty: 12,
+      consumer: CHECK_CONSUMER,
+    });
+
+    expect(() =>
+      OpeningPreparationProfileSchema.parse({
+        ...scene.profiles[0]!,
+        check_disclosure: {
+          ...scene.profiles[0]!.check_disclosure,
+          hidden_outcome: true,
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      OpeningPreparationProfileSchema.parse({
+        ...scene.profiles[0]!,
+        check_disclosure: {
+          skill_id: "repair",
+          skill_label: "Repair",
+          difficulty: 12,
+          consumer: CHECK_CONSUMER,
+        },
+      }),
+    ).toThrow();
+    for (const difficulty of [0, 12.5, 101]) {
+      expect(() =>
+        OpeningPreparationProfileSchema.parse({
+          ...scene.profiles[0]!,
+          check_disclosure: {
+            skill_id: "skill:repair",
+            skill_label: "Repair",
+            difficulty,
+            consumer: CHECK_CONSUMER,
+          },
+        }),
+      ).toThrow();
+    }
+    expect(() =>
+      OpeningPreparationProfileSchema.parse({
+        ...scene.profiles[0]!,
+        check_disclosure: {
+          skill_id: "skill:repair",
+          skill_label: "Repair",
+          difficulty: 26,
+          consumer: CHECK_CONSUMER,
+        },
+      }),
+    ).not.toThrow();
+    expect(() =>
+      OpeningPreparationProfileSchema.parse({
+        ...scene.profiles[0]!,
+        check_disclosure: {
+          skill_id: "skill:repair",
+          skill_label: " ",
+          difficulty: 12,
+          consumer: CHECK_CONSUMER,
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      OpeningPreparationProfileSchema.parse({
+        ...scene.profiles[0]!,
+        check_disclosure: {
+          ...scene.profiles[0]!.check_disclosure,
+          consumer: { ...CHECK_CONSUMER, wolf_winter_only: true },
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("presents generic check odds without adding fields to the initial comparison", () => {
+    const scene = preparationScene();
+    scene.profiles[0]!.check_disclosure = {
+      skill_id: "skill:repair",
+      skill_label: "Repair",
+      difficulty: 12,
+      consumer: CHECK_CONSUMER,
+    };
+    const character = buildCampaignCharacterState({
+      money: 10,
+      skills: [{ skillId: "skill:repair", rank: 4 }],
+    });
+    const option = presentOpeningPreparation(scene, character).options[0]!;
+    expect(Object.keys(option.summary ?? {}).sort()).toEqual(
+      ["commitment", "fieldTrigger", "immediateCost"].sort(),
+    );
+    expect(option.consequence).toContain(
+      "Current Repair modifier: +4. This d20 + 4 vs DC 12 check succeeds on 8-20 (65%).",
+    );
+
+    scene.profiles[0]!.check_disclosure!.difficulty = 26;
+    expect(presentOpeningPreparation(scene, character).options[0]!.consequence).toContain(
+      "Current Repair modifier: +4. This d20 + 4 vs DC 26 check has no successful natural roll (0%).",
+    );
   });
 
   it("rejects ambiguous, non-persistent, and non-provider effects", () => {
@@ -423,6 +543,39 @@ describe("opening preparation manifest integrity", () => {
     expect(() => assertOverworldIntegrity(draft)).toThrow(pattern);
   }
 
+  function shippedTargetPack(): {
+    quest: OverworldManifest["quests"][number];
+    pack: RpgPack;
+  } {
+    const scene = shippedScene(SHIPPED_WORLD);
+    const quest = SHIPPED_WORLD.quests.find((candidate) => candidate.id === scene.target_quest);
+    if (!quest) throw new Error("expected the shipped preparation target quest");
+    const loaded = loadRpgSourceFile(join(process.cwd(), quest.source));
+    if (!loaded.ok) throw loaded.error;
+    return {
+      quest: structuredClone(quest),
+      pack: structuredClone(loaded.compiled.pack),
+    };
+  }
+
+  function consumerInteraction(
+    scene: OpeningPreparation,
+    pack: RpgPack,
+    profileIndex: number,
+  ): Interaction {
+    const disclosure = scene.profiles[profileIndex]?.check_disclosure;
+    if (!disclosure) throw new Error("expected a shipped preparation check disclosure");
+    const object = pack.objects.find((candidate) => candidate.id === disclosure.consumer.object_id);
+    const interaction = object?.interactions.find(
+      (candidate) =>
+        candidate.verb === disclosure.consumer.verb &&
+        candidate.target === disclosure.consumer.object_id &&
+        candidate.command_verb === disclosure.consumer.command_verb,
+    );
+    if (!interaction) throw new Error("expected the shipped preparation check consumer");
+    return interaction;
+  }
+
   it("binds the scene, providers, imports, contact memories, sponsors, and services", () => {
     expect(() => assertOverworldIntegrity(structuredClone(SHIPPED_WORLD))).not.toThrow();
 
@@ -472,5 +625,138 @@ describe("opening preparation manifest integrity", () => {
       if (!rule?.requires_all_story_choices?.[0]) throw new Error("missing preparation service");
       rule.requires_all_story_choices[0].choice_id = "albany:prep_missing";
     }, /unauthored story choice/i);
+  });
+
+  it("binds all three shipped check disclosures to their exact compiled consumers", () => {
+    expect(() =>
+      assertOpeningPreparationCheckDisclosureSourceIntegrity(
+        process.cwd(),
+        structuredClone(SHIPPED_WORLD),
+      ),
+    ).not.toThrow();
+
+    const scene = structuredClone(shippedScene(SHIPPED_WORLD));
+    const { quest, pack } = shippedTargetPack();
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({ scene, quest, pack }),
+    ).not.toThrow();
+  });
+
+  it("rejects compiled preparation-check skill drift", () => {
+    const scene = structuredClone(shippedScene(SHIPPED_WORLD));
+    const { quest, pack } = shippedTargetPack();
+    consumerInteraction(scene, pack, 0).skill_check!.skill = "streetwise";
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({ scene, quest, pack }),
+    ).toThrow(/skill drift.*skill:repair.*repair.*streetwise/i);
+  });
+
+  it("rejects compiled preparation-check difficulty drift", () => {
+    const scene = structuredClone(shippedScene(SHIPPED_WORLD));
+    const { quest, pack } = shippedTargetPack();
+    consumerInteraction(scene, pack, 1).skill_check!.difficulty = 13;
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({ scene, quest, pack }),
+    ).toThrow(/difficulty drift.*DC 12.*DC 13/i);
+  });
+
+  it("rejects a nonzero compiled base modifier that would falsify disclosed odds", () => {
+    const scene = structuredClone(shippedScene(SHIPPED_WORLD));
+    const { quest, pack } = shippedTargetPack();
+    pack.meta.vars_init.repair = 2;
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({ scene, quest, pack }),
+    ).toThrow(/odds.*repair.*start at 0.*2/i);
+  });
+
+  it("rejects missing and duplicate preparation-check consumers", () => {
+    const missingScene = structuredClone(shippedScene(SHIPPED_WORLD));
+    const missing = missingScene.profiles[2]!.check_disclosure;
+    if (!missing) throw new Error("expected the Relief Protocol disclosure");
+    missing.consumer.command_verb = "drifted";
+    const first = shippedTargetPack();
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({
+        scene: missingScene,
+        quest: first.quest,
+        pack: first.pack,
+      }),
+    ).toThrow(/must resolve to exactly one.*resolved 0/i);
+
+    const duplicateScene = structuredClone(shippedScene(SHIPPED_WORLD));
+    const second = shippedTargetPack();
+    const disclosure = duplicateScene.profiles[2]!.check_disclosure;
+    if (!disclosure) throw new Error("expected the Relief Protocol disclosure");
+    const object = second.pack.objects.find(
+      (candidate) => candidate.id === disclosure.consumer.object_id,
+    );
+    if (!object) throw new Error("expected the Relief Protocol consumer object");
+    object.interactions.push(structuredClone(consumerInteraction(duplicateScene, second.pack, 2)));
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({
+        scene: duplicateScene,
+        quest: second.quest,
+        pack: second.pack,
+      }),
+    ).toThrow(/must resolve to exactly one.*resolved 2/i);
+  });
+
+  it("rejects missing, duplicate, and wrong-target campaign skill imports", () => {
+    const scene = structuredClone(shippedScene(SHIPPED_WORLD));
+
+    const missing = shippedTargetPack();
+    if (!missing.quest.campaign_imports) throw new Error("expected Wolf-Winter campaign imports");
+    missing.quest.campaign_imports.rules = missing.quest.campaign_imports.rules.filter(
+      (rule) => rule.type !== "skill_rank_to_var" || rule.skill_id !== "skill:repair",
+    );
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({
+        scene,
+        quest: missing.quest,
+        pack: missing.pack,
+      }),
+    ).toThrow(/skill:repair.*exactly one campaign skill import.*resolved 0/i);
+
+    const duplicate = shippedTargetPack();
+    if (!duplicate.quest.campaign_imports) {
+      throw new Error("expected Wolf-Winter campaign imports");
+    }
+    const repairImport = duplicate.quest.campaign_imports.rules.find(
+      (rule) => rule.type === "skill_rank_to_var" && rule.skill_id === "skill:repair",
+    );
+    if (!repairImport || repairImport.type !== "skill_rank_to_var") {
+      throw new Error("expected the Wolf-Winter Repair import");
+    }
+    duplicate.quest.campaign_imports.rules.push({
+      ...structuredClone(repairImport),
+      id: "import:test_duplicate_repair",
+      target_var: "duplicate_repair",
+    });
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({
+        scene,
+        quest: duplicate.quest,
+        pack: duplicate.pack,
+      }),
+    ).toThrow(/skill:repair.*exactly one campaign skill import.*resolved 2/i);
+
+    const wrongTarget = shippedTargetPack();
+    if (!wrongTarget.quest.campaign_imports) {
+      throw new Error("expected Wolf-Winter campaign imports");
+    }
+    const wrongTargetImport = wrongTarget.quest.campaign_imports.rules.find(
+      (rule) => rule.type === "skill_rank_to_var" && rule.skill_id === "skill:repair",
+    );
+    if (!wrongTargetImport || wrongTargetImport.type !== "skill_rank_to_var") {
+      throw new Error("expected the Wolf-Winter Repair import");
+    }
+    wrongTargetImport.target_var = "misdirected_repair";
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({
+        scene,
+        quest: wrongTarget.quest,
+        pack: wrongTarget.pack,
+      }),
+    ).toThrow(/skill drift.*skill:repair.*misdirected_repair.*repair/i);
   });
 });

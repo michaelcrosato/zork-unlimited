@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
-import type { GameState } from "../../src/core/state.js";
+import { cloneGameState, type GameState } from "../../src/core/state.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -16,11 +16,15 @@ import {
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { applyOpeningAllyOption } from "../../src/world/opening_ally.js";
 import {
   applyOpeningPreparationProfile,
   parseOpeningPreparation,
 } from "../../src/world/opening_preparation.js";
 import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
+import { applyOpeningReliefAllocationOption } from "../../src/world/opening_relief_allocation.js";
+import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oath.js";
+import { applyOverworldQuestLaunchOption } from "../../src/world/quest_launch.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const world = loadOverworldManifest(process.cwd());
@@ -34,10 +38,30 @@ const registration =
   (() => {
     throw new Error("the Albany starting slice requires opening registration");
   })();
+const reliefOath =
+  world.opening_relief_oath ??
+  (() => {
+    throw new Error("the Albany starting slice requires a relief oath");
+  })();
+const reliefAllocation =
+  world.opening_relief_allocation ??
+  (() => {
+    throw new Error("the Albany starting slice requires a relief allocation");
+  })();
+const ally =
+  world.opening_ally ??
+  (() => {
+    throw new Error("the Albany starting slice requires an ally choice");
+  })();
 const wolfQuest =
   world.quests.find((quest) => quest.id === "wolf_winter") ??
   (() => {
     throw new Error("the Albany starting slice requires Wolf-Winter");
+  })();
+const hillApproach =
+  wolfQuest.launch ??
+  (() => {
+    throw new Error("Wolf-Winter requires hill-approach launch options");
   })();
 const imports =
   wolfQuest.campaign_imports ??
@@ -59,6 +83,85 @@ const IRONHANDS = "albany:ironhands_repairer";
 const COURIER = "albany:unaffiliated_courier";
 const LEDGER = "albany:ledger_advocate";
 const WARDEN = "albany:road_warden";
+
+const DROVER_ROUTE_CASES = [
+  {
+    label: "exposed ridge",
+    approachId: "albany:wolf_approach_exposed_ridge",
+    arrivalAction: "use_exposed_ridge_last_mile",
+    allocationId: "albany:relief_resident_shelter",
+    alarmAfterFoul: 3,
+  },
+  {
+    label: "exposed ridge with Cade fodder",
+    approachId: "albany:wolf_approach_exposed_ridge",
+    arrivalAction: "use_exposed_ridge_last_mile",
+    allocationId: "albany:relief_cade_fodder",
+    alarmAfterFoul: 3,
+  },
+  {
+    label: "sheltered stockway",
+    approachId: "albany:wolf_approach_sheltered_stockway",
+    arrivalAction: "use_sheltered_stockway_last_mile",
+    allocationId: "albany:relief_resident_shelter",
+    alarmAfterFoul: 2,
+  },
+  {
+    label: "sheltered stockway with Cade fodder",
+    approachId: "albany:wolf_approach_sheltered_stockway",
+    arrivalAction: "use_sheltered_stockway_last_mile",
+    allocationId: "albany:relief_cade_fodder",
+    alarmAfterFoul: 2,
+  },
+] as const;
+
+const DROVER_OATH_CASES = [
+  {
+    label: "full Compact duty",
+    optionId: "albany:oath_full_compact_duty",
+    flag: "relief_oath_full_duty",
+    finalAlarmStep: 1,
+  },
+  {
+    label: "aid-only duty",
+    optionId: "albany:oath_limited_aid_only",
+    flag: "relief_oath_limited_duty",
+    finalAlarmStep: 0,
+  },
+  {
+    label: "unaffiliated personal bond",
+    optionId: "albany:oath_unaffiliated_personal_bond",
+    flag: "relief_oath_unaffiliated_bond",
+    finalAlarmStep: 1,
+  },
+] as const;
+
+const PREPARATION_CHECK_CASES = [
+  {
+    profileId: WORKS,
+    skillId: "skill:repair",
+    skillLabel: "Repair",
+    specialistId: IRONHANDS,
+    consumerObjectId: "paling_rail",
+    consumerCommandVerb: "set",
+  },
+  {
+    profileId: DROVER,
+    skillId: "skill:streetwise",
+    skillLabel: "Streetwise",
+    specialistId: COURIER,
+    consumerObjectId: "drover_route_marks",
+    consumerCommandVerb: "run",
+  },
+  {
+    profileId: RELIEF,
+    skillId: "skill:mediation",
+    skillLabel: "Mediation",
+    specialistId: LEDGER,
+    consumerObjectId: "relief_protocol_docket",
+    consumerCommandVerb: "call",
+  },
+] as const;
 
 function fixedRolls(...values: number[]): Rng {
   let cursor = 0;
@@ -103,16 +206,64 @@ function profileState(profileId: string, registrationId: string): GameState {
   return initStateForRpgPack(index, 505, { character: prepared, imports });
 }
 
+function droverScenarioState(args: {
+  route: (typeof DROVER_ROUTE_CASES)[number];
+  oath: (typeof DROVER_OATH_CASES)[number];
+  withJune: boolean;
+}): GameState {
+  const roadWarden = registration.profiles.find((profile) => profile.id === WARDEN);
+  if (!roadWarden) throw new Error("Missing Road-Warden registration profile.");
+  let character = applyOpeningReliefOathOption({
+    scene: reliefOath,
+    character: roadWarden.character,
+    optionId: args.oath.optionId,
+  }).characterAfter;
+  character = applyOpeningPreparationProfile({
+    scene: preparation,
+    character,
+    profileId: DROVER,
+  }).characterAfter;
+  character = applyOpeningReliefAllocationOption({
+    scene: reliefAllocation,
+    character,
+    optionId: args.route.allocationId,
+  }).characterAfter;
+  character = applyOpeningAllyOption({
+    scene: ally,
+    character,
+    optionId: args.withJune ? "albany:ally_june_cattle_first" : "albany:ally_travel_solo",
+  }).characterAfter;
+  character = applyOverworldQuestLaunchOption({
+    launch: hillApproach,
+    approachId: args.route.approachId,
+    character,
+    resources: { minutes: 0, supplies: 10, fatigue: 0 },
+  }).characterAfter;
+  return initStateForRpgPack(index, 505, { character, imports });
+}
+
+function droverRecoveryMechanics(state: GameState): GameState {
+  const mechanics = cloneGameState(state);
+  // A taken action advances the audit counter and appends its journal entry. Normalize
+  // those records so this comparison covers every decision-relevant state field.
+  mechanics.step = 0;
+  mechanics.journal = [];
+  Reflect.deleteProperty(mechanics.flags, "drover_route_attempted");
+  return mechanics;
+}
+
 function reachPaling(state: GameState): GameState {
   state = act(state, "go_north");
   return act(state, "go_north");
 }
 
 function reachFirstLureCast(state: GameState): GameState {
-  return act(state, "go_north");
+  if (state.current === "steading_yard") return act(state, "go_north");
+  expect(state.current).toBe("byre_yard");
+  return state;
 }
 
-function foulFirstCast(state: GameState): GameState {
+function foulFirstCast(state: GameState, expectedAlarm = 2): GameState {
   state = reachFirstLureCast(state);
   state = act(state, "talk_houndsman");
   state = act(state, "ask_lure");
@@ -124,7 +275,7 @@ function foulFirstCast(state: GameState): GameState {
   state = act(state, "go_north");
   state = act(state, "use_winter_feed_sack_on_downwind_feed_line", 1);
   expect(state.flags.lure_trail_fouled).toBe(true);
-  expect(state.vars.cattle_alarm).toBe(2);
+  expect(state.vars.cattle_alarm).toBe(expectedAlarm);
   return state;
 }
 
@@ -144,6 +295,13 @@ function finishLure(state: GameState): GameState {
   state = act(state, "use_winter_feed_sack_on_loft_hatch");
   state = act(state, "go_east");
   state = act(state, "go_north");
+  if (state.flags.june_pike_present) {
+    expect(actionIds(state)).toContain("talk_june_pike");
+    state = act(state, "talk_june_pike");
+    state = act(state, "ask_acknowledge");
+  } else {
+    expect(actionIds(state)).not.toContain("talk_june_pike");
+  }
   state = act(state, "use_winter_feed_sack_on_outer_scent_gate");
   return act(state, "go_north");
 }
@@ -224,6 +382,52 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
         ),
       ).toBe(true);
     }
+  });
+
+  it("shows every preparation check's exact current odds without expanding the initial comparison", () => {
+    for (const checkCase of PREPARATION_CHECK_CASES) {
+      const authored = preparation.profiles.find(
+        (candidate) => candidate.id === checkCase.profileId,
+      );
+      if (!authored) throw new Error(`Missing preparation profile ${checkCase.profileId}.`);
+      expect(authored.check_disclosure).toEqual({
+        skill_id: checkCase.skillId,
+        skill_label: checkCase.skillLabel,
+        difficulty: 12,
+        consumer: {
+          object_id: checkCase.consumerObjectId,
+          verb: "USE",
+          command_verb: checkCase.consumerCommandVerb,
+        },
+      });
+
+      for (const background of registration.profiles) {
+        const modifier = background.id === checkCase.specialistId ? 4 : 0;
+        const minimumRoll = 12 - modifier;
+        const chance = (21 - minimumRoll) * 5;
+        const presented = presentOpeningPreparation(preparation, background.character).options.find(
+          (option) => option.id === checkCase.profileId,
+        );
+        expect(Object.keys(presented?.summary ?? {}).sort(), background.id).toEqual(
+          ["commitment", "fieldTrigger", "fieldTriggerScope", "immediateCost"].sort(),
+        );
+        expect(presented?.consequence, background.id).toContain(
+          `Current ${checkCase.skillLabel} modifier: +${String(modifier)}. This d20 + ${String(modifier)} vs DC 12 check succeeds on ${String(minimumRoll)}-20 (${String(chance)}%).`,
+        );
+      }
+    }
+
+    const drover = preparation.profiles.find((candidate) => candidate.id === DROVER);
+    if (!drover) throw new Error("Missing Emery's Drover Route.");
+    expect(drover.preview).toBe(
+      "Only after the first lure cast fails, the route opens one Streetwise check (DC 12). Success turns the yearling down a service cut and lowers cattle alarm by 1. Failure spends the route without raising alarm; the existing split-rail bind or fight remains available at the same pressure as declining it. Streetwise training improves the attempt without class-locking it.",
+    );
+    const droverDetail = presentOpeningPreparation(
+      preparation,
+      registration.profiles[0]!.character,
+    ).options.find((option) => option.id === DROVER)?.consequence;
+    expect(droverDetail).toContain(drover.preview);
+    expect(droverDetail?.match(/same pressure as declining it/g)).toHaveLength(1);
   });
 
   it("makes Works Repair expertise matter while preserving its deterministic noisy recovery", () => {
@@ -343,15 +547,22 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(actionIds(state)).not.toContain("maneuver_flank_wolf_frost_brace_trip");
   });
 
-  it("makes the one-shot Drover route cleanly recover or worsen the same failed cast", () => {
+  it("lets Courier Drover success improve pressure while Road-Warden failure matches declining it", () => {
     let specialist = foulFirstCast(profileState(DROVER, COURIER));
     let generalist = foulFirstCast(profileState(DROVER, WARDEN));
+    const declined = cloneGameState(generalist);
     expect(specialist.vars.streetwise).toBe(4);
+    expect(generalist.vars.streetwise).toBe(0);
     expect(specialist.campaignImportReceipt?.applied_rules).toEqual([
       "import:wolf_winter_drover_route",
       "import:wolf_winter_drover_streetwise",
     ]);
     expect(actionIds(specialist)).toContain("use_drover_route_marks");
+    expect(generalist.campaignImportReceipt?.applied_rules).toContain(
+      "import:wolf_winter_drover_route",
+    );
+    expect(declined.flags.drover_route_prepared).toBe(true);
+    expect(declined.campaignImportReceipt).toEqual(generalist.campaignImportReceipt);
 
     const hybrid = act(specialist, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
     expect(hybrid.flags.lure_hybrid_combat_entered).toBe(true);
@@ -365,12 +576,16 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(specialist.vars.cattle_alarm).toBe(1);
     expect(actionIds(specialist)).not.toContain("use_drover_route_marks");
     expect(generalist.flags.yearling_redirected).not.toBe(true);
-    expect(generalist.vars.cattle_alarm).toBe(3);
+    expect(generalist.vars.cattle_alarm).toBe(2);
     expect(actionIds(generalist)).not.toContain("use_drover_route_marks");
     expect(actionIds(generalist)).toContain("wedge_paling_rail");
+    expect(actionIds(declined)).toContain("use_drover_route_marks");
+    expect(actionIds(declined)).toContain("wedge_paling_rail");
+    expect(droverRecoveryMechanics(generalist)).toEqual(droverRecoveryMechanics(declined));
 
     const clean = finishLure(specialist);
     const recovered = finishLure(recoverWithSplitRail(generalist));
+    const declinedResult = finishLure(recoverWithSplitRail(declined));
     expect(clean).toMatchObject({
       ended: true,
       endingId: "ending_pack_diverted",
@@ -379,8 +594,98 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(recovered).toMatchObject({
       ended: true,
       endingId: "ending_pack_diverted_cattle_scattered",
-      vars: { cattle_alarm: 5 },
+      vars: { cattle_alarm: 4 },
     });
+    expect(declinedResult).toMatchObject({
+      ended: true,
+      endingId: "ending_pack_diverted_cattle_scattered",
+      vars: { cattle_alarm: 4 },
+    });
+  });
+
+  it("keeps failed Drover pressure equal to declining it across the reachable lure matrix", () => {
+    for (const route of DROVER_ROUTE_CASES) {
+      for (const oath of DROVER_OATH_CASES) {
+        for (const withJune of [false, true]) {
+          const label = `${route.label}, ${oath.label}, ${withJune ? "June" : "solo"}`;
+          let prepared = droverScenarioState({
+            route,
+            oath,
+            withJune,
+          });
+
+          expect(prepared.flags[oath.flag], label).toBe(true);
+          if (withJune) {
+            expect(prepared.flags.june_pike_present, label).toBe(true);
+          } else {
+            expect(prepared.flags.june_pike_present, label).not.toBe(true);
+          }
+          expect(prepared.flags.drover_route_prepared, label).toBe(true);
+          expect(prepared.campaignImportReceipt?.applied_rules, label).toContain(
+            "import:wolf_winter_drover_route",
+          );
+          expect(actionIds(prepared), label).toContain(route.arrivalAction);
+
+          prepared = act(prepared, route.arrivalAction);
+          prepared = foulFirstCast(prepared, route.alarmAfterFoul);
+          let declined = cloneGameState(prepared);
+          expect(prepared.vars.cattle_alarm, label).toBe(route.alarmAfterFoul);
+          expect(declined.vars.cattle_alarm, label).toBe(route.alarmAfterFoul);
+          expect(declined.flags.drover_route_prepared, label).toBe(true);
+          expect(declined.campaignImportReceipt, label).toEqual(prepared.campaignImportReceipt);
+          expect(actionIds(prepared), label).toContain("use_drover_route_marks");
+          expect(actionIds(declined), label).toContain("use_drover_route_marks");
+
+          prepared = act(prepared, "use_drover_route_marks", 8);
+          expect(prepared.vars.streetwise, label).toBe(0);
+          expect(prepared.flags.drover_route_attempted, label).toBe(true);
+          expect(declined.flags.drover_route_attempted, label).not.toBe(true);
+          expect(prepared.flags.yearling_redirected, label).not.toBe(true);
+          expect(droverRecoveryMechanics(prepared), label).toEqual(
+            droverRecoveryMechanics(declined),
+          );
+          expect(actionIds(prepared), label).not.toContain("use_drover_route_marks");
+          expect(actionIds(declined), label).toContain("use_drover_route_marks");
+          expect(actionIds(prepared), label).toContain("wedge_paling_rail");
+          expect(actionIds(declined), label).toContain("wedge_paling_rail");
+          expect(actionIds(prepared), label).toContain(
+            "maneuver_yearling_wolf_commit_hybrid_strike",
+          );
+          expect(actionIds(declined), label).toContain(
+            "maneuver_yearling_wolf_commit_hybrid_strike",
+          );
+
+          prepared = recoverWithSplitRail(prepared);
+          declined = recoverWithSplitRail(declined);
+          expect(prepared.vars.cattle_alarm, label).toBe(declined.vars.cattle_alarm);
+          expect(prepared.vars.score, label).toBe(10);
+          expect(declined.vars.score, label).toBe(10);
+          expect(declined.flags.drover_route_attempted, label).not.toBe(true);
+          expect(actionIds(prepared), label).not.toContain("use_drover_route_marks");
+          expect(actionIds(declined), label).not.toContain("use_drover_route_marks");
+
+          prepared = finishLure(prepared);
+          declined = finishLure(declined);
+          const expectedAlarm = route.alarmAfterFoul + 1 - (withJune ? 1 : 0) + oath.finalAlarmStep;
+          const expectedEnding =
+            expectedAlarm >= 4 ? "ending_pack_diverted_cattle_scattered" : "ending_pack_diverted";
+          expect(prepared, label).toMatchObject({
+            ended: true,
+            endingId: expectedEnding,
+            vars: { cattle_alarm: expectedAlarm, score: 45 },
+          });
+          expect(declined, label).toMatchObject({
+            ended: true,
+            endingId: expectedEnding,
+            vars: { cattle_alarm: expectedAlarm, score: 45 },
+          });
+          expect(prepared.vars.cattle_alarm, label).toBe(declined.vars.cattle_alarm);
+          expect(prepared.vars.score, label).toBe(declined.vars.score);
+          expect(prepared.endingId, label).toBe(declined.endingId);
+          expect(actionIds(prepared), label).not.toContain("use_drover_route_marks");
+        }
+      }
+    }
   });
 
   it("makes Relief Mediation change pressure once after the exact public rail recovery", () => {

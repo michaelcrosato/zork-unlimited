@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 641 -->
+<!-- historical_cycle_count: 642 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - drover_route_fail_forward_truth
+
+- Evidence choice: pure seeds 72568/72621 found Emery's untrained recovery trap and hidden dependency; Terra 72630 then chose the Drover route organically in The Wolf-Winter.
+- Surface: a failed route now spends itself without extra cattle alarm, while expanded terms derive the character's exact modifier and d20 odds through generic profile data bound to the real quest import and check.
+- Counterfactual: success still lowers alarm; across 24 route/oath/ally contexts failure matches declining except for its spent audit state, and rail or fight recovery remains legal.
+- Compatibility: a generic exact-copy registry migrates selected historical preparation journals, rejects tampering and unknown hashes, and composes with completed-Wolf registration-promise closure.
+- Pure evidence: exact mechanical candidate Terra 72630 completed The Wolf-Winter bloodlessly and The Gallowmere, ended voluntarily at 53 decisions, rated clarity/enjoyment 4/4, remained unstuck, and chose replay-yes.
+- Self-critique/follow-through: this closes one real rational-choice/truth defect, not Albany's dense setup or Depth #11; authored Campus and Station events remain next.
+- Guard: independent review is clean, 73 focused checks pass, and pre/post crawls `20260725T182544Z` / `20260725T191805Z` are zero-finding.
 
 ### Cycle result - plain_game_task_handoffs
 
@@ -144,13 +154,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: staged comparison is used organically and leaks no full consequence wall; the replay-no report is retained and, with the other two, localizes residual friction to judging future field conditions before seeing the field, long relief trigger summaries, and the Gallowmere checkpoint transition.
 - Feedback/follow-through: compile `ai-runs\feedback\20260724T0247Z-staged-three-report` accepts 3/3 pure reports with zero rejected; concise relief categories plus review of the intended option's full terms are the next focused increment, not removal of consequence truth.
 - Guard: final-tip crawl `ai-runs\crawl\20260724T025839Z` is zero-finding; focused coverage passes 75 independent tests, independent re-review is clean, and full health passes 415 files/3,332 tests plus UI typecheck and all packs.
-
-### Cycle result - checkpoint_safe_scene_boundaries
-
-- Evidence choice: fixed journey thresholds could pause verified Gallowmere combat or active dialogue instead of waiting for the scene to resolve.
-- Surface: a due checkpoint now waits through unsafe accepted decisions, then materializes at terminal state or a room with neither a live enemy nor active dialogue; an overdue threshold merges into goal completion or death, and Continue schedules the first fixed multiple after the surfaced decision.
-- Counterfactual: an already-safe threshold still pauses immediately, combat/dialogue actions remain live while unsafe, non-counting scene closure can surface the checkpoint without changing decision proof, and save/restore plus compact/full MCP and UI projections preserve the deferred boundary.
-- Pure evidence: exact clean `85269681` passes fresh strict-v2 Terra 4666 and Luna 4667; both divert Wolf-Winter, win Gallowmere, complete two goals, choose replay-yes, and report no rejected action or loop.
-- Measured result: Terra rates clarity/enjoyment 4/4 with no checkpoint complaint; Luna rates 4/5 and says the safe point resumed correctly, while still disliking the room-transition pause during a broader investigation.
-- Feedback/follow-through: Albany setup density and the Rowan collision remain separate queued increments; Luna's broader transition-pacing critique is retained rather than treated as a regression in safe-boundary scheduling.
-- Guard: final crawl `ai-runs\crawl\20260723T151536Z` is zero-finding across 6,000 steps, 247/247 nodes, 344/344 edges, and 12/12 quests; combined focused coverage passes 17 files/218 tests.

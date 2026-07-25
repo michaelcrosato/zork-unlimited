@@ -1,4 +1,5 @@
 import type { CampaignCharacterState } from "../../../src/world/campaign_character_state.js";
+import { DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW } from "../../../src/world/drover_route_fail_forward_legacy.js";
 import type { OverworldManifest } from "../../../src/world/overworld.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "../../../src/world/frost_jamb_signpost_legacy.js";
 import { AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE } from "../../../src/world/local_job_scene_legacy.js";
@@ -118,11 +119,28 @@ const REGISTRATION_PROMISE_CLOSURE_BY_BACKGROUND: ReadonlyMap<string, string> = 
   ["albany:ironhands_repairer", "albany:promise_return_reese_tools"],
 ]);
 
+/** Reconstruct the exact manifest before failed Drover checks became pressure-neutral. */
+export function exactDroverRouteFailForwardPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const preparation = predecessor.opening_preparation;
+  const drover = preparation?.profiles.find((profile) => profile.id === "albany:prep_drover_route");
+  if (!preparation || !drover) {
+    throw new Error("Albany must retain Emery's Drover Route preparation");
+  }
+  for (const profile of preparation.profiles) {
+    Reflect.deleteProperty(profile, "check_disclosure");
+  }
+  drover.preview = DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW;
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before three background obligations closed on return. */
 export function exactRegistrationPromiseClosurePredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactDroverRouteFailForwardPredecessor(current);
   const wolf = predecessor.quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf?.campaign_exports) {
     throw new Error("Albany must retain Wolf-Winter's campaign exports");

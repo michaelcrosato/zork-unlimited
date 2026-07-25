@@ -31,7 +31,7 @@ deterministic_witnesses:
     generalist: "Repair 0 splits the rail, then the marked cold-set braces it without a reroll at cattle alarm 1"
   - counterfactual: "Drover Route after the same fouled first cast, fixed roll 8"
     specialist: "Courier Streetwise 4 redirects the living yearling and lowers cattle alarm from 2 to 1"
-    generalist: "Streetwise 0 raises alarm from 2 to 3, retires the route, and leaves split-rail or combat recovery legal"
+    generalist: "Streetwise 0 leaves alarm at 2, retires the route, and leaves split-rail or combat recovery legal"
   - counterfactual: "Relief Protocol after the same ordinary split-rail redirect, fixed roll 8"
     specialist: "Ledger Mediation 4 lowers cattle alarm from 2 to 1 before the loft cast"
     generalist: "Mediation 0 raises alarm from 2 to 3, retires the protocol, and leaves the loft route legal"

@@ -153,6 +153,10 @@ import {
   proveOpeningPreparationJournal,
   type OpeningPreparationJournalProof,
 } from "./opening_preparation_journal.js";
+import {
+  normalizeOpeningPreparationJournalCopies,
+  openingPreparationJournalCopyMigrationsForSourceWorldHash,
+} from "./opening_preparation_copy_migrations.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "./frost_jamb_signpost_legacy.js";
 import {
   RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW,
@@ -406,7 +410,7 @@ export const OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH
 export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
   "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "1d8ed584e39c462a7eb5132c23796ea39b8f76a545add86a88080ecf926b9f9c";
+  "772918ea2535fbc2bd55253180be22b618a33f0636cfe95ecb4259f73c3ea1c1";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -2567,6 +2571,10 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   }
   const migrationTargetsCurrentManifest = worldHash === OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
+  const openingPreparationCopyMigrations = migrationTargetsCurrentManifest
+    ? openingPreparationJournalCopyMigrationsForSourceWorldHash(sourceSnapshot.worldHash)
+    : [];
+  const migratesOpeningPreparationCopy = openingPreparationCopyMigrations.length > 0;
   const migratesAuthoredLocalJob =
     migrationTargetsCurrentManifest &&
     authoredLocalJobLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;
@@ -2650,6 +2658,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     migrationEra === null &&
     !migratesReliefProtocolTriggerCopy &&
     !migratesReliefAllocationTriggerCategory &&
+    !migratesOpeningPreparationCopy &&
     !migratesRegistrationPromiseClosure &&
     !migratesJuneReturnCopy &&
     !migratesCadeStoryPredicate &&
@@ -2658,6 +2667,16 @@ export function planOverworldSessionSnapshotRestore(args: {
   ) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
+  const snapshotWithOpeningPreparationCopy = migratesOpeningPreparationCopy
+    ? Object.freeze({
+        ...sourceSnapshot,
+        journalEntries: normalizeOpeningPreparationJournalCopies({
+          preparation: indexes.openingPreparation,
+          journalEntries: sourceSnapshot.journalEntries,
+          migrations: openingPreparationCopyMigrations,
+        }),
+      })
+    : sourceSnapshot;
   const normalizesReliefProtocolTriggerCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
@@ -2669,13 +2688,13 @@ export function planOverworldSessionSnapshotRestore(args: {
       migratesAuthoredLocalEvent);
   const snapshotWithReliefProtocolTriggerCopy = normalizesReliefProtocolTriggerCopy
     ? Object.freeze({
-        ...sourceSnapshot,
+        ...snapshotWithOpeningPreparationCopy,
         journalEntries: normalizeReliefProtocolTriggerCopyPredecessorJournal({
           indexes,
-          journalEntries: sourceSnapshot.journalEntries,
+          journalEntries: snapshotWithOpeningPreparationCopy.journalEntries,
         }),
       })
-    : sourceSnapshot;
+    : snapshotWithOpeningPreparationCopy;
   const normalizesFrostJambCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
