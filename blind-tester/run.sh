@@ -812,7 +812,7 @@ if [[ "\${1:-}" == exec || "\${1:-}" == e || "\${1:-}" == review ]]; then
   exec "$REAL_CODEX" "\$sub" "\${args[@]}" \\
     -c 'mcp_servers.adventureforge.command="$CODEX_MCP_CMD"' \\
     -c 'mcp_servers.adventureforge.args=$CODEX_MCP_ARGS_TOML' \\
-    -c 'mcp_servers.adventureforge.startup_timeout_sec=20' \\
+    -c 'mcp_servers.adventureforge.startup_timeout_sec=60' \\
     -c 'mcp_servers.adventureforge.tool_timeout_sec=60' \\
     -c 'mcp_servers.adventureforge.enabled=true' \\
     "\${tail[@]}"
@@ -951,7 +951,7 @@ set +e
     --config "mcp_servers.adventureforge.command=\"$CODEX_MCP_CMD\"" \
     --config "mcp_servers.adventureforge.args=$CODEX_MCP_ARGS_TOML" \
     --config "mcp_servers.adventureforge.enabled_tools=$CODEX_PURE_TOOLS_TOML" \
-    --config 'mcp_servers.adventureforge.startup_timeout_sec=20' \
+    --config 'mcp_servers.adventureforge.startup_timeout_sec=60' \
     --config 'mcp_servers.adventureforge.tool_timeout_sec=60' \
     --config 'mcp_servers.adventureforge.required=true' \
     - \

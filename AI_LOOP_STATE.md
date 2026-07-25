@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 637 -->
+<!-- historical_cycle_count: 638 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - parallel_blind_server_startup
+
+- Evidence choice: while multiple full suites were active, two otherwise valid fresh-overworld players stopped before seeing the game when the private npm/tsx server reached the launcher's exact 20-second startup ceiling.
+- Surface: the project MCP config and both canonical Codex launch paths now allow a bounded 60 seconds for server startup; the 1,200-second play limit, 60-second tool limit, model selection, and game rules are unchanged.
+- Counterfactual: the runner contract pins all three startup settings at 60 seconds and forbids the retired 20-second value, while shell syntax, isolation, and ordinary failure behavior remain intact.
+- Pure evidence: exact dirty-candidate Luna seed 72564 started under the same load, completed The Wolf-Winter, The Gallowmere, and The Tanner's Fever, continued four times, then ended at 80 decisions; clarity 4/5, enjoyment 5/5, unstuck, replay-yes, with no observed bug.
+- Feedback/follow-through: compact responses and long-distance resource planning remain separate usability signals; this increment changes only launch resilience and the dirty run remains qualitative rather than actionable retention evidence.
+- Guard: independent review is clean, 31 runner-contract tests pass, pre/post crawls `20260725T000712Z` / `20260725T001223Z` are zero-finding, and full health passes 419 files/3,393 tests plus both typechecks and all packs.
 
 ### Cycle result - resolved_story_choice_inspection_truth
 
@@ -148,13 +157,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: four pure exits compile to 100% continuation and replay intent, clarity 3.75/5 and enjoyment 4/5, with no rejected action, loop, broken state, death, or soft-lock.
 - Feedback/follow-through: all four repeat Albany setup density; June briefing then progressive preparation/allocation disclosure remain separate queued increments, with comparison cues added only if a post-fix cohort still needs them.
 - Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; independent review is clean, focused counterfactual coverage passes, and full health passes 411 files/3,266 tests plus UI typecheck and all packs.
-
-### Cycle result - frost_jamb_route_truth
-
-- Evidence choice: Hayden's source briefing named the Frost-Heave recovery without its real ordinary-hunt, public-wedge, failed-rail, unbound-leave, yearling-kill, and bare-spear gates; Works splicing and a lure hybrid could also leak the rail state.
-- Surface: the packet now states that exact causal chain, Works preparation owns a separate splice fact, and the lure hybrid cannot advertise or enter the Frost-jamb recovery.
-- Counterfactual: only Hayden plus a failed/split ordinary rail exposes the route; braced rail, Works splice, lure commitment, other packets, retained bindings, living yearling, or extra gear each suppress the matching step, while exact predecessor snapshots migrate to the new authored copy.
-- Pure evidence: exact clean gameplay candidate `ffa065df` passes strict capture-v2 Terra 4637 across 52 turns and 40 accepted decisions, chooses Hayden's report, recovers a failed lure cast, diverts all three wolves alive with the herd whole, continues at goal 29, and ends voluntarily at checkpoint 40.
-- Measured result: clarity/enjoyment 4/4, unstuck, replay-yes, with no rejected action, loop, broken state, or soft-lock; source-blind 4623 separately reaches the failed-split Frost route and a living held ending.
-- Feedback/follow-through: conditional setup density and the decision-40 interruption recur; a six-report compile confirms progressive disclosure, June briefing, and truthful continuation copy as separate queued increments rather than expanding this route fix.
-- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; semantic variant liveness passes 17/17, independent no-weakening review is clean, and solo full health passes 411 files/3,265 tests plus UI typecheck and all packs.

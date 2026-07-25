@@ -7,8 +7,8 @@
 command = "npm"
 args = ["--silent", "run", "mcp"]
 cwd = "."
-# npm + tsx cold start needs more than the 10s default; 60s tool timeout and
-# enabled are the documented defaults, restated here for visibility.
-startup_timeout_sec = 20
+# npm + tsx cold start can contend with health and fleet workers, so startup
+# receives the same bounded 60s allowance as an individual tool call.
+startup_timeout_sec = 60
 tool_timeout_sec = 60
 enabled = true
