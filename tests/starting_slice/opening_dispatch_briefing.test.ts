@@ -270,9 +270,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     );
     expect(allocation.message).not.toContain("Still ahead: none.");
     expect(allocation.message).not.toContain("Optional field-team choice follows");
-    expect(allocation.message).toContain("This is the final required departure-board choice.");
     expect(allocation.message).toContain(
-      `After resolving it, return to the Station actions. ${ALLY_CONTACT.name}'s field-team choice is a separate optional conversation before launch. Talk to ${ALLY_CONTACT.name} (terminal: \`talk ${ALLY_CONTACT.name}\`) to review ${ALLY.options
+      "This departure-board choice is optional: choose one allocation, or close it to leave the relief capacity unassigned.",
+    );
+    expect(allocation.message).not.toMatch(/\b(?:required|mandatory)\b/i);
+    expect(allocation.message).toContain(
+      `After choosing or closing it, return to the Station actions. ${ALLY_CONTACT.name}'s field-team choice is a separate optional conversation before launch. Talk to ${ALLY_CONTACT.name} (terminal: \`talk ${ALLY_CONTACT.name}\`) to review ${ALLY.options
         .map((option) => option.title)
         .slice(0, -1)
         .join(", ")}, and ${ALLY.options.at(-1)!.title}.`,

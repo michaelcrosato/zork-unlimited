@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 638 -->
+<!-- historical_cycle_count: 639 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - optional_relief_allocation_truth
+
+- Evidence choice: exact-build Terra seed 72562 found that Albany called Relief Allocation optional while the dispatch briefing called it the final required choice, making the close-without-allocation route look unlawful.
+- Surface: the dispatch briefing now says Relief Allocation is optional, names both choosing one allocation and closing it with capacity unassigned, and tells June-bound players to return after either outcome.
+- Counterfactual: this changes only derived briefing copy; choice availability, closing, allocation effects, launch legality, state, hashes, and June's separate optional conversation remain unchanged.
+- Pure evidence: exact dirty-candidate Terra seed 72567 saw no optional/required contradiction, completed The Wolf-Winter in 29 accepted decisions and The Gallowmere in 54 total, continued twice, then ended voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes.
+- Feedback/follow-through: dense irreversible Albany planning remains a supported separate cohort finding; this increment corrects one false obligation claim without redesigning the opening.
+- Guard: independent review is clean, 39 focused briefing/CLI tests pass after rebase, pre/post crawls `20260725T001539Z` / `20260725T024949Z` are zero-finding, and full health passes 419 files/3,397 tests plus both typechecks and all packs.
 
 ### Cycle result - parallel_blind_server_startup
 
@@ -146,14 +155,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: Terra rates clarity/enjoyment 4/4 and Luna 4/5, both are unstuck and replay-yes; one malformed Luna handle is rejected without state change, and its copied receipt mismatch is replaced deterministically with the exact server receipt without another model turn.
 - Feedback/follow-through: Albany setup density repeats, Terra exposes a checkpoint interrupting live Gallowmere combat, and Sol 4662 exposed Cade's raw NPC id; progressive disclosure, safe-boundary checkpoint scheduling, and compact NPC display names remain separate queued increments.
 - Guard: final crawl `20260723T120716Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; focused transport coverage passes 189/189, independent review is clean, and full health passes 411 files/3,269 tests plus UI typecheck and all packs.
-
-### Cycle result - certified_quest_anchor_route_truth
-
-- Evidence choice: a certified Wolf-Winter lead named Albany's Station Quarter while its route could remain hidden until an unrelated discovery, contradicting the player's accepted proof.
-- Surface: directly certifying any quest now reveals exactly that quest's authored anchor area, so CLI, MCP, and UI guidance can immediately route the player without a Wolf-specific rule.
-- Counterfactual: unselected quests and other areas remain hidden, ordinary discovery keeps its FIFO order, and arbitrary non-prefix route splices still fail replay authority; only the proof-certified anchor may appear outside the prior prefix.
-- Persistence: exact legacy saves missing only their derived certified anchor migrate on restore, while removal, reordering, unrelated insertion, and uncertified-anchor tampering fail closed.
-- Pure evidence: exact clean `04b8961a` passes four fresh Terra sessions (4651/4655/4656/4657); all complete Wolf-Winter in 26–28 decisions, divert every wolf alive with the herd whole, and choose to continue.
-- Measured result: four pure exits compile to 100% continuation and replay intent, clarity 3.75/5 and enjoyment 4/5, with no rejected action, loop, broken state, death, or soft-lock.
-- Feedback/follow-through: all four repeat Albany setup density; June briefing then progressive preparation/allocation disclosure remain separate queued increments, with comparison cues added only if a post-fix cohort still needs them.
-- Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; independent review is clean, focused counterfactual coverage passes, and full health passes 411 files/3,266 tests plus UI typecheck and all packs.
