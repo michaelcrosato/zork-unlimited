@@ -849,6 +849,16 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner.indexOf("PURE_PUBLICATION_COMPLETE=1")).toBeGreaterThan(launchEnd);
   });
 
+  it("allows the local MCP server to cold-start while parallel verification is busy", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    const projectConfig = readFileSync(join(process.cwd(), ".codex", "config.toml"), "utf8");
+
+    expect(runner.match(/mcp_servers\.adventureforge\.startup_timeout_sec=60/g)).toHaveLength(2);
+    expect(runner).not.toContain("mcp_servers.adventureforge.startup_timeout_sec=20");
+    expect(projectConfig).toContain("startup_timeout_sec = 60");
+    expect(projectConfig).not.toContain("startup_timeout_sec = 20");
+  });
+
   it("leaves Codex login state CLI-owned and captures only the public thread", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     const rolloutCapture = readFileSync(
