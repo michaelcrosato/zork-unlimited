@@ -4649,12 +4649,36 @@ endings:
       unbloodied spear, and a difficult road Albany can truthfully call held.
       *** You have won. ***
     variants:
+      - when:
+          - { has_flag: june_cattle_line_taken }
+          - { has_flag: read_tally }
+          - { has_flag: jerkin_donned }
+          - { not_flag: heard_counsel }
+        text: >
+          Grey dawn finds every wolf alive and the herd whole. June Pike refused the
+          old-grey line, took the lower rail under her cattle-first authority, and held
+          the alarm below Breaking while you finished the scent. The day-book's
+          preparation was only partly followed: you wore the byre-jerkin, but left
+          Cade's quick wolf lesson unheard. That missed lesson is the five-point gap
+          in this otherwise unbloodied watch. Albany receives both truths.
+          *** You have won. ***
       - when: [{ has_flag: june_cattle_line_taken }]
         text: >
           Grey dawn finds every wolf alive and the herd whole. June Pike refused the
           old-grey line, took the lower rail under her cattle-first authority, and held
           the alarm below Breaking while you finished the scent. Albany receives two
           matching accounts. *** You have won. ***
+      - when:
+          - { has_flag: read_tally }
+          - { has_flag: jerkin_donned }
+          - { not_flag: heard_counsel }
+        text: >
+          Grey dawn finds the cattle whole and all three wolves alive in the high wood.
+          Cade's finite winter feed is gone, spent across three committed downwind lines,
+          but the herd never crossed its breaking threshold. The day-book's preparation
+          was only partly followed: you wore the byre-jerkin, but left Cade's quick wolf
+          lesson unheard. That missed lesson is the five-point gap in this otherwise
+          unbloodied watch. *** You have won. ***
   - id: ending_held_gate_barred
     title: "The Byre Held, Inner Gate Barred"
     text: >

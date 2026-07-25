@@ -1,8 +1,8 @@
 /**
- * The route card must combine the already-selected Albany relief allocation
- * with each Wolf-Winter hill road before the player commits to quest start.
- * Full, compact, browser, and CLI surfaces use the dedicated exact field
- * rather than a truncation of preview.
+ * The route card must combine the already-selected Albany relief oath and
+ * allocation with each Wolf-Winter hill road before the player commits to
+ * quest start. Full, compact, browser, and CLI surfaces use the dedicated
+ * exact field rather than a truncation of preview.
  */
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -24,21 +24,94 @@ const RIDGE_ID = "albany:wolf_approach_exposed_ridge";
 const STOCKWAY_ID = "albany:wolf_approach_sheltered_stockway";
 const STALE_ABSOLUTE_RIDGE_RESULT =
   "A clean three-cast lure line therefore reaches alarm 4 (Breaking) and scatters cattle.";
+const STALE_ABSOLUTE_STOCKWAY_RESULT =
+  "A clean three-cast lure line reaches alarm 3 (Restless), keeps the whole herd, and remains below Breaking.";
 const RIDGE_ENTRY_TIMING = "Hill lip 0; final descent 1";
 
-const WITHOUT_FODDER = {
-  ridge:
-    "Hill lip 0; final descent 1; first lure DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
-  stockway:
-    "Arrival alarm 0; first lure cast DC 12; a clean lure reaches alarm 3 and keeps the whole herd.",
-} as const;
-
-const WITH_FODDER = {
-  ridge:
-    "Hill lip 0; final descent 1; first lure DC 10; Cade fodder suppresses the clean first-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
-  stockway:
-    "Arrival alarm 0; first lure cast DC 12; Cade fodder does not alter the sheltered route; a clean lure reaches alarm 3 and keeps the whole herd.",
-} as const;
+const ROUTE_CARD_CASES = [
+  {
+    label: "under full duty without Cade fodder",
+    oathId: "albany:oath_full_compact_duty",
+    reliefId: "albany:relief_resident_shelter",
+    expected: {
+      ridge: {
+        alarm: 4,
+        summary:
+          "Hill lip 0; final descent 1; first lure DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
+        preview: STALE_ABSOLUTE_RIDGE_RESULT,
+      },
+      stockway: {
+        alarm: 3,
+        summary:
+          "Arrival alarm 0; first lure cast DC 12; a clean lure reaches alarm 3 and keeps the whole herd.",
+        preview: STALE_ABSOLUTE_STOCKWAY_RESULT,
+      },
+    },
+  },
+  {
+    label: "under full duty with Cade fodder",
+    oathId: "albany:oath_full_compact_duty",
+    reliefId: "albany:relief_cade_fodder",
+    expected: {
+      ridge: {
+        alarm: 3,
+        summary:
+          "Hill lip 0; final descent 1; first lure DC 10; Cade fodder suppresses the clean first-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
+        preview:
+          "Cade fodder suppresses the clean first-cast alarm; a clean lure reaches alarm 3 and keeps the whole herd.",
+      },
+      stockway: {
+        alarm: 3,
+        summary:
+          "Arrival alarm 0; first lure cast DC 12; Cade fodder does not alter the sheltered route; a clean lure reaches alarm 3 and keeps the whole herd.",
+        preview:
+          "Cade fodder does not alter this route; a clean lure reaches alarm 3 and keeps the whole herd.",
+      },
+    },
+  },
+  {
+    label: "under aid-only without Cade fodder",
+    oathId: "albany:oath_limited_aid_only",
+    reliefId: "albany:relief_resident_shelter",
+    expected: {
+      ridge: {
+        alarm: 3,
+        summary:
+          "Hill lip 0; final descent 1; first lure DC 10; aid-only suppresses the final clean-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
+        preview:
+          "Aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 3 and keeps the whole herd.",
+      },
+      stockway: {
+        alarm: 2,
+        summary:
+          "Arrival alarm 0; first lure cast DC 12; aid-only suppresses the final clean-cast alarm, so a clean lure reaches alarm 2 and keeps the whole herd.",
+        preview:
+          "Aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 2 and keeps the whole herd.",
+      },
+    },
+  },
+  {
+    label: "under aid-only with Cade fodder",
+    oathId: "albany:oath_limited_aid_only",
+    reliefId: "albany:relief_cade_fodder",
+    expected: {
+      ridge: {
+        alarm: 2,
+        summary:
+          "Hill lip 0; final descent 1; first lure DC 10; Cade fodder and aid-only suppress the first and final clean-cast alarms: alarm 2, whole herd.",
+        preview:
+          "Cade fodder suppresses the first clean-cast alarm and aid-only suppresses the final one; a clean lure reaches alarm 2 and keeps the whole herd.",
+      },
+      stockway: {
+        alarm: 2,
+        summary:
+          "Arrival alarm 0; first lure cast DC 12; Cade fodder does not alter this route; aid-only makes the clean-lure result alarm 2, whole herd.",
+        preview:
+          "Cade fodder does not alter this route, while aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 2 and keeps the whole herd.",
+      },
+    },
+  },
+] as const;
 
 function areaPath(from: string, to: string): string[] {
   const queue: Array<{ area: string; routeIds: string[] }> = [{ area: from, routeIds: [] }];
@@ -76,7 +149,10 @@ function moveToArea(session: OverworldSession, areaId: string): void {
   }
 }
 
-function routeCard(reliefChoiceId: string): {
+function routeCard(
+  oathChoiceId: string,
+  reliefChoiceId: string,
+): {
   session: OverworldSession;
   quest: OverworldQuestView;
 } {
@@ -85,7 +161,7 @@ function routeCard(reliefChoiceId: string): {
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(WORLD.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
-  session.chooseJourneyStory("albany:oath_full_compact_duty");
+  session.chooseJourneyStory(oathChoiceId);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);
   session.chooseJourneyStory("albany:prep_works_fortification");
@@ -118,6 +194,68 @@ function compactPreview(session: OverworldSession, optionId: string): string {
   const option = compactQuest?.[3]?.[2].find(([id]) => id === optionId);
   if (!option) throw new Error(`Expected compact route option ${optionId}.`);
   return option[11];
+}
+
+const CLEAN_LURE_TAIL = [
+  "talk_houndsman",
+  "ask_lure",
+  "ask_commit_lure",
+  "ask_leave",
+  "go_west",
+  "take_winter_feed_sack",
+  "go_east",
+  "go_north",
+  "use_winter_feed_sack_on_downwind_feed_line",
+  "go_south",
+  "go_west",
+  "go_up",
+  "use_winter_feed_sack_on_loft_hatch",
+  "go_east",
+  "go_north",
+  "use_winter_feed_sack_on_outer_scent_gate",
+  "go_north",
+] as const;
+
+function playForecastedCleanLure(
+  parent: OverworldSession,
+  approachId: typeof RIDGE_ID | typeof STOCKWAY_ID,
+): { alarm: number; endingId: string | null } {
+  const api = createToolApi({ root: ROOT });
+  const restored = api.restore_overworld_session({
+    compact_context: false,
+    compact_result: false,
+    snapshot: parent.snapshot(),
+  });
+  const launched = api.start_overworld_session_quest({
+    compact_context: false,
+    compact_result: false,
+    compact_observation: false,
+    compact_actions: false,
+    include_actions: true,
+    session_id: restored.session_id,
+    quest_id: WOLF_ID,
+    approach_id: approachId,
+    seed: 26,
+  });
+  const lastMile =
+    approachId === RIDGE_ID ? "use_exposed_ridge_last_mile" : "use_sheltered_stockway_last_mile";
+  for (const actionId of [lastMile, ...CLEAN_LURE_TAIL]) {
+    const step = api.step_action({
+      session_id: launched.rpg_session_id,
+      action_id: actionId,
+      compact_observation: false,
+      compact_events: false,
+    });
+    expect(step.ok, step.rejection_reason).toBe(true);
+  }
+  const state = api.get_state({
+    session_id: launched.rpg_session_id,
+    include_state: true,
+  }).state;
+  return {
+    alarm: state.vars.cattle_alarm ?? -1,
+    endingId: state.endingId,
+  };
 }
 
 describe("Wolf-Winter conditional route tradeoff projection", () => {
@@ -157,13 +295,10 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     await server.close();
   });
 
-  it.each([
-    ["without Cade fodder", "albany:relief_resident_shelter", WITHOUT_FODDER],
-    ["with Cade fodder", "albany:relief_cade_fodder", WITH_FODDER],
-  ] as const)(
-    "keeps decisive full, compact, UI, and CLI terms exact %s",
-    (_, reliefId, expected) => {
-      const { session, quest } = routeCard(reliefId);
+  it.each(ROUTE_CARD_CASES)(
+    "keeps decisive full, compact, UI, and CLI terms exact $label",
+    ({ oathId, reliefId, expected }) => {
+      const { session, quest } = routeCard(oathId, reliefId);
       const snapshotBeforeProjection = session.snapshot();
       const full = fullSummaries(quest);
       const compact = compactSummaries(session);
@@ -182,55 +317,96 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       if (!mcpQuest?.launch) throw new Error("Expected the full MCP Wolf-Winter route card.");
 
       expect(full).toMatchObject({
-        [RIDGE_ID]: expected.ridge,
-        [STOCKWAY_ID]: expected.stockway,
+        [RIDGE_ID]: expected.ridge.summary,
+        [STOCKWAY_ID]: expected.stockway.summary,
       });
       expect(compact).toEqual({
-        [RIDGE_ID]: expected.ridge,
-        [STOCKWAY_ID]: expected.stockway,
+        [RIDGE_ID]: expected.ridge.summary,
+        [STOCKWAY_ID]: expected.stockway.summary,
       });
       expect(fullSummaries(mcpQuest)).toMatchObject({
-        [RIDGE_ID]: expected.ridge,
-        [STOCKWAY_ID]: expected.stockway,
+        [RIDGE_ID]: expected.ridge.summary,
+        [STOCKWAY_ID]: expected.stockway.summary,
       });
-      for (const summary of [expected.ridge, expected.stockway]) {
+      for (const summary of [expected.ridge.summary, expected.stockway.summary]) {
         expect(summary.length).toBeLessThanOrEqual(WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT);
       }
 
       const markup = renderQuestNotice(quest);
       expect(markup.match(/Route tradeoff:/g)).toHaveLength(2);
-      expect(markup).toContain(expected.ridge);
-      expect(markup).toContain(expected.stockway);
+      expect(markup).toContain(expected.ridge.summary);
+      expect(markup).toContain(expected.stockway.summary);
       expect(markup).not.toContain("...");
 
       const cli = renderQuestLaunch(quest);
       expect(cli.match(/Route tradeoff:/g)).toHaveLength(2);
-      expect(cli).toContain(expected.ridge);
-      expect(cli).toContain(expected.stockway);
+      expect(cli).toContain(expected.ridge.summary);
+      expect(cli).toContain(expected.stockway.summary);
 
       const ridgePreview = quest.launch?.options.find((option) => option.id === RIDGE_ID)?.preview;
+      const stockwayPreview = quest.launch?.options.find(
+        (option) => option.id === STOCKWAY_ID,
+      )?.preview;
       const mcpRidgePreview = mcpQuest.launch.options.find(
         (option) => option.id === RIDGE_ID,
       )?.preview;
-      if (reliefId === "albany:relief_cade_fodder") {
-        expect(ridgePreview).toContain("Cade fodder suppresses the clean first-cast alarm");
+      const mcpStockwayPreview = mcpQuest.launch.options.find(
+        (option) => option.id === STOCKWAY_ID,
+      )?.preview;
+      for (const surface of [
+        ridgePreview,
+        mcpRidgePreview,
+        compactPreview(session, RIDGE_ID),
+        markup,
+        cli,
+      ]) {
+        expect(surface).toContain(expected.ridge.preview);
+      }
+      for (const surface of [
+        stockwayPreview,
+        mcpStockwayPreview,
+        compactPreview(session, STOCKWAY_ID),
+        markup,
+        cli,
+      ]) {
+        expect(surface).toContain(expected.stockway.preview);
+      }
+      if (oathId === "albany:oath_limited_aid_only") {
         expect(ridgePreview).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
         expect(mcpRidgePreview).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
-        expect(compactPreview(session, RIDGE_ID)).toContain(
-          "Cade fodder suppresses the clean first-cast alarm",
-        );
         expect(compactPreview(session, RIDGE_ID)).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
+        expect(stockwayPreview).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
+        expect(mcpStockwayPreview).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
+        expect(compactPreview(session, STOCKWAY_ID)).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
         expect(markup).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
+        expect(markup).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
         expect(cli).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
-      } else {
-        expect(ridgePreview).toContain(STALE_ABSOLUTE_RIDGE_RESULT);
-        expect(mcpRidgePreview).toContain(STALE_ABSOLUTE_RIDGE_RESULT);
+        expect(cli).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
       }
       expect(full[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
       expect(compact[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
       expect(fullSummaries(mcpQuest)[RIDGE_ID]).toContain(RIDGE_ENTRY_TIMING);
       expect(markup).toContain(RIDGE_ENTRY_TIMING);
       expect(cli).toContain(RIDGE_ENTRY_TIMING);
+
+      const ridgeRuntime = playForecastedCleanLure(session, RIDGE_ID);
+      const stockwayRuntime = playForecastedCleanLure(session, STOCKWAY_ID);
+      expect(ridgeRuntime).toEqual({
+        alarm: expected.ridge.alarm,
+        endingId:
+          expected.ridge.alarm >= 4
+            ? "ending_pack_diverted_cattle_scattered"
+            : "ending_pack_diverted",
+      });
+      expect(stockwayRuntime).toEqual({
+        alarm: expected.stockway.alarm,
+        endingId:
+          expected.stockway.alarm >= 4
+            ? "ending_pack_diverted_cattle_scattered"
+            : "ending_pack_diverted",
+      });
+      expect(full[RIDGE_ID]).toContain(`alarm ${ridgeRuntime.alarm}`);
+      expect(full[STOCKWAY_ID]).toContain(`alarm ${stockwayRuntime.alarm}`);
       expect(session.snapshot()).toEqual(snapshotBeforeProjection);
     },
   );
