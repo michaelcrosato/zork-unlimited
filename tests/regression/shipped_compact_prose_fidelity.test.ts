@@ -410,10 +410,10 @@ const WORLD = loadOverworldManifest(process.cwd());
 describe("shipped compact prose fidelity", () => {
   it("pins every shipped prose corpus before iterating it", () => {
     expect(QUEST_SOURCES).toHaveLength(12);
-    expect(WORLD.local_events.filter((event) => event.authored_scene)).toHaveLength(4);
+    expect(WORLD.local_events.filter((event) => event.authored_scene)).toHaveLength(5);
     expect(WORLD.local_jobs.filter((job) => job.authored_scene)).toHaveLength(6);
     expect(WORLD.quests.filter((quest) => quest.launch)).toHaveLength(1);
-    expect(WORLD.campaign_service_rules).toHaveLength(28);
+    expect(WORLD.campaign_service_rules).toHaveLength(32);
     expect(WORLD.road_events).toHaveLength(344);
     expect(WORLD.areas).toHaveLength(700);
     expect(WORLD.points_of_interest).toHaveLength(700);

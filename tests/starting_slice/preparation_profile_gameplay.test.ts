@@ -349,6 +349,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       ]),
     ).toEqual([
       ["albany:campus_calibrated_warning_drover_rest", DROVER, "albany_city__campus", "rest"],
+      ["albany:campus_clinic_threshold_card_drover_rest", DROVER, "albany_city__campus", "rest"],
       [
         "albany:wolf_works_fortification_return_resupply",
         WORKS,
@@ -365,7 +366,11 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     ]);
     expect(
       serviceRules
-        .filter((rule) => rule.id !== "albany:campus_calibrated_warning_drover_rest")
+        .filter(
+          (rule) =>
+            rule.id !== "albany:campus_calibrated_warning_drover_rest" &&
+            rule.id !== "albany:campus_clinic_threshold_card_drover_rest",
+        )
         .every((rule) => rule.requires_all_world_facts?.includes("fact:wolf_winter_byre_held")),
     ).toBe(true);
 

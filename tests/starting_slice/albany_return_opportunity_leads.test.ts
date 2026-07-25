@@ -23,6 +23,7 @@ const MARKET_EVENT = "albany_city__market__event";
 const MARKET_POLICY = "hold_household_kitchen_prices";
 const MARKET_JOB = "albany_city__market__job";
 const MARKET_SETTLEMENT = "release_price_hold_operational";
+const CAMPUS_EVENT = "albany_city__campus__event";
 const GREENWAY = "albany_city__greenway";
 const GREENWAY_EVENT = "albany_city__greenway__event";
 const FULL = { compact_context: false, compact_result: false } as const;
@@ -41,6 +42,13 @@ const EXPECTED_LEADS: readonly JourneyOpportunityLeadPresentation[] = [
     title: "Jamie Tanner's Winter Price Policy",
     area: "Albany Market Streets",
     access: "mapped",
+  },
+  {
+    id: CAMPUS_EVENT,
+    kind: "event",
+    title: "Albany Campus Row: Return Evidence Mandate",
+    area: "Albany Campus Row",
+    access: "route_unmapped",
   },
   {
     id: GREENWAY_EVENT,
@@ -166,7 +174,7 @@ function expectExactAlbanyLeads(session: OverworldSession): void {
 }
 
 describe("optional return opportunity leads", () => {
-  it("shows no pre-Wolf lead, then the exact three roots across completion, dawn, and active play", () => {
+  it("shows no pre-Wolf lead, then the exact four roots across completion, dawn, and active play", () => {
     const untouched = new OverworldSession(WORLD);
     const untouchedSnapshot = untouched.snapshot();
     untouched.journey();
@@ -322,6 +330,7 @@ describe("optional return opportunity leads", () => {
       { ...EXPECTED_LEADS[1], access: "mapped" },
       { ...EXPECTED_LEADS[0], access: "mapped" },
       EXPECTED_LEADS[2],
+      EXPECTED_LEADS[3],
     ]);
     expect(restored.compactView().opportunity_leads).toEqual([
       [
@@ -332,6 +341,13 @@ describe("optional return opportunity leads", () => {
         "mapped",
       ],
       ["job", CADE_JOB, "Hayden's Cade Return Packet", "Albany Station Quarter", "mapped"],
+      [
+        "event",
+        CAMPUS_EVENT,
+        "Albany Campus Row: Return Evidence Mandate",
+        "Albany Campus Row",
+        "route_unmapped",
+      ],
       [
         "event",
         GREENWAY_EVENT,
@@ -355,6 +371,7 @@ describe("optional return opportunity leads", () => {
     expect(pending.journey().opportunities?.leads.map((lead) => lead.id)).toEqual([
       MARKET_EVENT,
       CADE_JOB,
+      CAMPUS_EVENT,
       GREENWAY_EVENT,
     ]);
   });

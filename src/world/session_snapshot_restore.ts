@@ -114,6 +114,7 @@ import {
   AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
   WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   authoredLocalEventLegacyCompletion,
@@ -410,7 +411,7 @@ export const OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH
 export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
   "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "772918ea2535fbc2bd55253180be22b618a33f0636cfe95ecb4259f73c3ea1c1";
+  "8bedbbc1176dfa54e82546403d62d10f6527a4e93e6ec9f130e1b2d813031ce9";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -456,6 +457,57 @@ const OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES: Re
     ...WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
     AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
   ]);
+
+type ExactSnapshotMigrationId =
+  | "campus_archive_contact"
+  | "frost_jamb_signpost"
+  | "june_return"
+  | "registration_promise_closure"
+  | "relief_protocol_trigger";
+
+/**
+ * Exact historical normalizers must be fenced by the manifests that actually
+ * shipped their predecessor state. Authored-scene registries are cumulative by
+ * design, so using their broad migration booleans here would replay stale
+ * changes for later conversions.
+ */
+const EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES: Readonly<
+  Record<ExactSnapshotMigrationId, ReadonlySet<string>>
+> = Object.freeze({
+  campus_archive_contact: OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES,
+  frost_jamb_signpost: new Set([
+    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
+  ]),
+  june_return: new Set([
+    OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
+  ]),
+  registration_promise_closure: new Set([
+    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH,
+  ]),
+  relief_protocol_trigger: new Set([
+    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH,
+  ]),
+});
+
+function exactSnapshotMigrationAppliesToSource(
+  migrationId: ExactSnapshotMigrationId,
+  sourceWorldHash: string,
+): boolean {
+  return EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES[migrationId].has(sourceWorldHash);
+}
 /** @deprecated Relief-oath-era current-target name retained for existing callers. */
 export const OVERWORLD_RELIEF_OATH_WORLD_HASH = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
 /** @deprecated Current-target alias retained for earlier migration callers. */
@@ -2577,9 +2629,11 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesOpeningPreparationCopy = openingPreparationCopyMigrations.length > 0;
   const migratesAuthoredLocalJob =
     migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
     authoredLocalJobLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;
   const migratesAuthoredLocalEvent =
     migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
     authoredLocalEventLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;
   const migratesJuneReturnCopy =
     migrationTargetsCurrentManifest &&
@@ -2637,14 +2691,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesRegistrationPromiseClosure =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
-    (sourceSnapshot.worldHash === OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH ||
-      migrationEra !== null ||
-      migratesReliefProtocolTriggerCopy ||
-      migratesReliefAllocationTriggerCategory ||
-      migratesJuneReturnCopy ||
-      migratesCadeStoryPredicate ||
-      migratesAuthoredLocalJob ||
-      migratesAuthoredLocalEvent);
+    exactSnapshotMigrationAppliesToSource("registration_promise_closure", sourceSnapshot.worldHash);
   const migratesLegacyLocalJobSemantics =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
@@ -2680,12 +2727,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const normalizesReliefProtocolTriggerCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
-    (migratesReliefProtocolTriggerCopy ||
-      migrationEra !== null ||
-      migratesJuneReturnCopy ||
-      migratesCadeStoryPredicate ||
-      migratesAuthoredLocalJob ||
-      migratesAuthoredLocalEvent);
+    exactSnapshotMigrationAppliesToSource("relief_protocol_trigger", sourceSnapshot.worldHash);
   const snapshotWithReliefProtocolTriggerCopy = normalizesReliefProtocolTriggerCopy
     ? Object.freeze({
         ...snapshotWithOpeningPreparationCopy,
@@ -2698,11 +2740,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const normalizesFrostJambCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
-    (migrationEra !== null ||
-      migratesJuneReturnCopy ||
-      migratesCadeStoryPredicate ||
-      migratesAuthoredLocalJob ||
-      migratesAuthoredLocalEvent);
+    exactSnapshotMigrationAppliesToSource("frost_jamb_signpost", sourceSnapshot.worldHash);
   const snapshotWithFrostJambCopy = normalizesFrostJambCopy
     ? Object.freeze({
         ...snapshotWithReliefProtocolTriggerCopy,
@@ -2713,10 +2751,9 @@ export function planOverworldSessionSnapshotRestore(args: {
       })
     : snapshotWithReliefProtocolTriggerCopy;
   const normalizesJuneReturnCopy =
-    migratesJuneReturnCopy ||
-    migrationEra === "relief_oath" ||
-    migrationEra === "relief_allocation" ||
-    migrationEra === "hill_approach";
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    exactSnapshotMigrationAppliesToSource("june_return", sourceSnapshot.worldHash);
   const snapshotWithJuneReturnCopy = normalizesJuneReturnCopy
     ? (() => {
         const presentation = indexes.contactPresentationsByJournalId.get(
@@ -2740,31 +2777,31 @@ export function planOverworldSessionSnapshotRestore(args: {
         });
       })()
     : snapshotWithFrostJambCopy;
-  const snapshotWithCampusContact =
-    OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
-      sourceSnapshot.worldHash,
-    )
-      ? (() => {
-          const presentation = indexes.contactPresentationsByJournalId.get(
-            OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id,
+  const snapshotWithCampusContact = exactSnapshotMigrationAppliesToSource(
+    "campus_archive_contact",
+    sourceSnapshot.worldHash,
+  )
+    ? (() => {
+        const presentation = indexes.contactPresentationsByJournalId.get(
+          OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id,
+        );
+        if (!presentation) {
+          throw new Error(
+            `Campus-archive migration target has no contact presentation "${OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id}".`,
           );
-          if (!presentation) {
-            throw new Error(
-              `Campus-archive migration target has no contact presentation "${OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id}".`,
-            );
-          }
-          return Object.freeze({
-            ...snapshotWithJuneReturnCopy,
-            journalEntries: normalizeCampusArchivePredecessorContactJournal({
-              currentContact: describeOverworldContactAction(
-                presentation.contact,
-                presentation.presentationId,
-              ),
-              journalEntries: snapshotWithJuneReturnCopy.journalEntries,
-            }),
-          });
-        })()
-      : snapshotWithJuneReturnCopy;
+        }
+        return Object.freeze({
+          ...snapshotWithJuneReturnCopy,
+          journalEntries: normalizeCampusArchivePredecessorContactJournal({
+            currentContact: describeOverworldContactAction(
+              presentation.contact,
+              presentation.presentationId,
+            ),
+            journalEntries: snapshotWithJuneReturnCopy.journalEntries,
+          }),
+        });
+      })()
+    : snapshotWithJuneReturnCopy;
   const snapshotWithCampaignCopy =
     usesCurrentCampaignSchema ||
     migrationEra === "relief_oath" ||

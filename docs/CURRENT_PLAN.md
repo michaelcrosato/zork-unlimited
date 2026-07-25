@@ -27,12 +27,13 @@ both eligible repair offers on its exact build, then freely skipped them to
 pursue Gallowmere; discovery and optionality are therefore observed, while
 organic selection still needs cohort evidence.
 
-Market and Greenway complete the six-job Albany set and raise authored district
-events to three of six. Each post-Wolf policy irreversibly exposes only its two
-lawful job follow-ups, with fast time versus stronger standing crossing Rowan's
-existing 13-standing recovery threshold. Exact generic predecessors migrate to
-neutral markers, while the Market-authored/pre-Greenway era retains its native
-Market proof and gains no invented Greenway policy.
+Market and Greenway complete the six-job Albany set. Campus is now the fifth
+of six authored district events: its post-Wolf return-evidence mandate records
+either clinic exposure thresholds or traceable route provenance, keeps the two
+base Archive Query methods, and reveals only the matching third method. The
+new services consolidate overlapping Drover/mobile credits; exact proof, replay,
+projection, and migration guards keep a neutral legacy marker from inventing a
+mandate.
 
 The conditional hill-route explanation has a green exact health run: 391 test
 files and 2,977 tests, plus integrity, types, lint, formatting, UI, and pack
@@ -45,15 +46,15 @@ Terra, Sol, and Luna cohorts remain required after the authored Albany work.
 
 ## Chosen Move
 
-Land Market and Greenway as one ordered, green increment after the reusable
-event foundation. Development and blind testing remain parallel; a fresh report
-always binds to one exact clean commit.
+Land the Campus return-evidence mandate after the reusable event foundation.
+It must remain optional and post-Wolf, require the normal Scout/Talk/Investigate
+access sequence, preserve both base job methods, and give each exact event proof
+one exclusive matching method and consolidated service.
 
-Next, replace the three remaining generic checklist events—Station, Works, and
-Campus—with optional or post-Wolf authored scenes. Each replacement
-must have a real counterfactual, a delayed consumer, visible cause and payoff,
-persistence/migration proof, and full/compact/UI/MCP parity without lengthening
-the mandatory first-goal path.
+Next, replace the remaining generic Station checklist event with an authored
+scene. It must have a real counterfactual, a delayed consumer, visible cause and
+payoff, persistence/migration proof, and full/compact/UI/MCP parity without
+lengthening the mandatory first-goal path.
 
 After those changes consolidate, freeze one commit and run separate homogeneous
 ten-player Terra, Sol, and Luna cohorts before the final 100-session milestone
@@ -61,13 +62,13 @@ fleet. Spark remains a separate diagnostic cohort after its quota resets.
 
 ## Acceptance for this increment
 
-1. Market and Greenway expose only the job actions authorized by their exact
-   event choices; neither adds a new recovery coupon or lengthens the mandatory
-   first-goal path.
-2. Foundation and Market-authored predecessor saves migrate through exact hash
-   fences; generic event/job completions stay neutral and native Market proofs
-   remain native.
-3. Full, compact v25, UI, and MCP surfaces agree; replay and forged state fail
+1. Campus remains unavailable before Wolf-Winter and before its normal
+   Scout/Talk/Investigate evidence sequence.
+2. Each exact mandate proof retains both base Archive Query methods and exposes
+   only its matching optional method and consolidated service; neutral legacy
+   markers expose neither.
+3. Full, compact, UI, and MCP surfaces agree; replay and forged state fail
    closed; exact crawl and health remain green.
 4. A verifier-valid blind report exists for the exact combined increment, and
-   both required GitHub checks pass before merge.
+   local health passes before commit. Required GitHub checks remain the merge
+   gate whenever the branch is published.

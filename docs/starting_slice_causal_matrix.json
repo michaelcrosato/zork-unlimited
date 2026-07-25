@@ -785,6 +785,41 @@
         "tests/starting_slice/albany_return_opportunity_leads.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_works_hazard_charter_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F17-campus-return-evidence-mandate",
+      "title": "Choose Albany Campus's return-evidence mandate",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "After Wolf-Winter, Scout the Campus POI, speak with Blair Drake, and investigate the return-evidence mandate. Blair then asks whether to prioritize clinic exposure thresholds or preserve traceable route provenance. Each irreversible record states the matching additional Archive Query method and one-use Campus service before confirmation; it does not replace either established Archive Query method.",
+      "immediate_state_delta": [
+        "world.resolved_event_ids",
+        "journal.local_scene_proof",
+        "world.minutes",
+        "world.region_renown"
+      ],
+      "delayed_consumers": [
+        "The selected event proof keeps both established Campus Archive Query methods and adds only its matching optional method: clinic exposure thresholds authorize the clinic-threshold card, while route provenance authorizes the traceable-route digest.",
+        "Completing a matching optional method grants its exact one-use Campus service. Existing Drover rest and mobile-reserve resupply credits consolidate into that service, so a player never receives duplicate same-action offers.",
+        "A neutral legacy event marker proves no specific mandate and unlocks neither optional method nor either new service."
+      ],
+      "visible_feedback": [
+        "Before Wolf-Winter the Campus event is absent. After return it remains inaccessible until the player has scouted the POI, talked with Blair, and investigated it; the full and compact surfaces expose the same two authored choices.",
+        "The event and job journals retain the exact selected option, decision boundary, and consequence. Full, compact, UI, and MCP projections show only the two base job methods plus the one matching optional method.",
+        "The resulting service names the selected evidence record and, where applicable, the consolidated Drover or mobile credit; consumption removes it across save/restore."
+      ],
+      "systems": ["events", "jobs", "journal", "services", "region_renown", "save_restore"],
+      "persistence_boundaries": ["overworld_save_restore", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/unit/world_local_event_scene.test.ts",
+        "tests/unit/world_local_event_scene_legacy.test.ts",
+        "tests/unit/world_local_job_scene_conditions.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/campus_return_evidence_mandate_counterfactual.test.ts"
     }
   ]
 }

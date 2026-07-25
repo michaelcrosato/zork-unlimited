@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 642 -->
+<!-- historical_cycle_count: 643 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - campus_return_evidence_mandate
+
+- Evidence choice: Depth #11 left Campus as Albany's fifth generic checklist event; exact-clean Terra seed 72631 is this cycle's fresh pure journey through The Wolf-Winter.
+- Surface: after the Wolf return, Blair irreversibly records clinic thresholds or route provenance, revealing only the matching third Archive Query method and one consolidated rest/resupply service.
+- Counterfactual: both base methods remain; clinic is 40 minutes/+3 versus warning 35/+2, while provenance is 65/+4 versus archive 75/+5, so neither event path is a free upgrade.
+- Compatibility: exact predecessor saves gain one neutral marker, native base-job proof survives, later manifests avoid stale copy normalizers, and forged proof/hash/chronology fail closed.
+- Pure evidence: seed 72631 is retained as a verifier-valid canonical journey rather than a coverage target; targeted proofs establish the Campus behavior.
+- Self-critique/follow-through: Campus is now event 5/6, but organic return uptake remains unproven and Station is still the last generic Albany event.
+- Guard: independent review is clean; pre/post crawls `20260725T194113Z` / `20260725T203808Z` are zero-finding.
 
 ### Cycle result - drover_route_fail_forward_truth
 
@@ -144,13 +154,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Diagnostics: Luna's unpublished 29-decision run failed the strict evidence audit; valid game feedback remains unchanged, and no rejected run is counted or compiled.
 - Measured result/follow-through: the new Relief summary works when used without becoming mandatory; opening density, the Relief Protocol's narrow multi-failure summary, June discoverability, and stale promise/action copy remain separate ranked follow-ups, with two valid reports held below the three-report compile threshold.
 - Guard: post-change crawl `ai-runs\crawl\20260724T032033Z` is zero-finding; independent review is clean, focused coverage passes 55 tests plus UI, and full health passes 416 files/3,337 tests plus UI typecheck and all packs.
-
-### Cycle result - staged_station_choice_disclosure
-
-- Evidence choice: five earlier pure exits repeatedly found Albany's all-at-once preparation comparison dense, while the first progressive-copy cohort proved compact UI prose alone did not change the pure MCP surface.
-- Surface: Station preparation now leads with purpose, trigger category, and cost; optional-departure story inspection returns short consequence-free comparisons by default and reveals the complete truthful terms for exactly one requested option, without committing or changing state.
-- Counterfactual: invalid or already-presented story ids fail closed, full verbose inspection remains canonical, reads preserve snapshot hash/time/money/decision count, legacy manifests remain byte-compatible, and the content hash change has an explicit predecessor migration.
-- Pure evidence: exact clean `aea2e896` accepts fresh Terra, Sol, and independent Terra sessions across The Wolf-Winter at 40–56 decisions; all three continue at least once, two are replay-yes, clarity averages 3.33/5, enjoyment 4/5, and one malformed Luna wrapper is excluded without recovery or substitution.
-- Measured result: staged comparison is used organically and leaks no full consequence wall; the replay-no report is retained and, with the other two, localizes residual friction to judging future field conditions before seeing the field, long relief trigger summaries, and the Gallowmere checkpoint transition.
-- Feedback/follow-through: compile `ai-runs\feedback\20260724T0247Z-staged-three-report` accepts 3/3 pure reports with zero rejected; concise relief categories plus review of the intended option's full terms are the next focused increment, not removal of consequence truth.
-- Guard: final-tip crawl `ai-runs\crawl\20260724T025839Z` is zero-finding; focused coverage passes 75 independent tests, independent re-review is clean, and full health passes 415 files/3,332 tests plus UI typecheck and all packs.

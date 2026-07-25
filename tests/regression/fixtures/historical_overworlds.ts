@@ -70,6 +70,13 @@ const CADE_RETURN_PACKET_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:cade_pasture_search_unaffiliated_greenway_resupply",
 ]);
 
+const CAMPUS_EVIDENCE_MANDATE_SERVICE_IDS: ReadonlySet<string> = new Set([
+  "albany:campus_clinic_threshold_card_rest",
+  "albany:campus_clinic_threshold_card_drover_rest",
+  "albany:campus_traceable_route_digest_resupply",
+  "albany:campus_traceable_route_digest_mobile_resupply",
+]);
+
 /** Reconstruct the exact manifest before the Station preparation comparison changed. */
 export function exactReliefProtocolTriggerCopyPredecessor(
   current: OverworldManifest,
@@ -123,7 +130,7 @@ const REGISTRATION_PROMISE_CLOSURE_BY_BACKGROUND: ReadonlyMap<string, string> = 
 export function exactDroverRouteFailForwardPredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactAlbanyCampusEventPredecessor(current);
   const preparation = predecessor.opening_preparation;
   const drover = preparation?.profiles.find((profile) => profile.id === "albany:prep_drover_route");
   if (!preparation || !drover) {
@@ -434,6 +441,53 @@ export function exactAlbanyWorksHazardPredecessor(current: OverworldManifest): O
       option.id === "protect_trapped_public_shift" ||
       option.id === "inventory_outbound_cold_set_stock",
   );
+  return predecessor;
+}
+
+/** Reconstruct the exact manifest before Campus gained its return-evidence mandate. */
+export function exactAlbanyCampusEventPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const event = predecessor.local_events.find(
+    (candidate) => candidate.id === "albany_city__campus__event",
+  );
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__campus__job",
+  );
+  if (!event || !job?.authored_scene) {
+    throw new Error("Albany Campus event and authored archive job must exist");
+  }
+
+  event.title = "Albany Campus Row: missing research request";
+  event.summary =
+    "Albany Campus Row is under rumor pressure around old maps, clinic notes, and experts with narrow hours. Resolving it requires scouting this area, talking to its contact, and investigating on site.";
+  delete event.authored_scene;
+
+  job.summary =
+    "After Wolf-Winter closes, Blair can either send a fast confidence-labelled warning to road crews or preserve the uncertain route evidence as a traceable field archive. The choice is operational, not a Civic public-versus-protected policy.";
+  job.reward =
+    "Choose either 2 Capital / Mohawk renown for a 35-minute calibrated warning or 5 renown for a 75-minute traceable archive, with one exclusive 15-minute Campus service after each exact proof.";
+  job.authored_scene.options = job.authored_scene.options.filter(
+    (option) =>
+      option.id === "issue_calibrated_road_warning" ||
+      option.id === "prepare_traceable_field_archive",
+  );
+
+  predecessor.campaign_service_rules = (predecessor.campaign_service_rules ?? []).filter(
+    (rule) => !CAMPUS_EVIDENCE_MANDATE_SERVICE_IDS.has(rule.id),
+  );
+  for (const rule of predecessor.campaign_service_rules ?? []) {
+    if (
+      rule.id !== "albany:mobile_reserve_return_resupply" &&
+      rule.id !== "albany:wolf_drover_route_return_rest"
+    ) {
+      continue;
+    }
+    rule.forbids_any_local_job_options = rule.forbids_any_local_job_options?.filter(
+      (condition) =>
+        condition.option_id !== "issue_clinic_threshold_card" &&
+        condition.option_id !== "index_traceable_route_digest",
+    );
+  }
   return predecessor;
 }
 
