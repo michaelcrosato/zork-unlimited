@@ -65,7 +65,7 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
       ally?.target_quest === targetQuestId &&
       ally.after_preparation === preparation.id &&
       allyContact
-        ? `After resolving it, return to the Station actions. ${allyContact.name}'s field-team choice is a separate optional conversation before launch. Talk to ${allyContact.name} (terminal: \`talk ${allyContact.name}\`) to review ${listLabels(
+        ? `After choosing or closing it, return to the Station actions. ${allyContact.name}'s field-team choice is a separate optional conversation before launch. Talk to ${allyContact.name} (terminal: \`talk ${allyContact.name}\`) to review ${listLabels(
             ally.options.map((option) => option.title),
           )}. You may instead launch ${quest.title} now as a solo rider.`
         : null,
@@ -134,7 +134,7 @@ export function withOpeningDispatchBriefing(
       : `Chosen for departure: ${listLabels(completed)}. Now choose: ${stage.label}.${
           remaining.length > 0
             ? ` Still ahead: ${listLabels(remaining)}.`
-            : ` This is the final required departure-board choice.${plan.optionalFollowup ? ` ${plan.optionalFollowup}` : ""}`
+            : ` This departure-board choice is optional: choose one allocation, or close it to leave the relief capacity unassigned.${plan.optionalFollowup ? ` ${plan.optionalFollowup}` : ""}`
         }`;
   const missionCard =
     departureStageIndex >= 0
