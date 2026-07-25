@@ -247,30 +247,30 @@ export function buildPrompt(ctx: {
   const isContentNew = top?.category === "content_new";
   const playtestStep = isContentNew
     ? [
-        "## STEP 1 — Add the new world quest, THEN blind-playtest from a FRESH overworld",
+        "## STEP 1 — Add the new world quest, THEN play from a FRESH overworld",
         "",
         "You are expanding the single New York overworld RPG world this cycle. Order for content_new:",
         "1. Author the RPG quest and register it in the overworld quest registry (content/world/new_york_overworld.json), and get it validating green (validate_quest / npm run validate).",
-        "2. THEN run the canonical pure fresh-overworld player below. Let it discover content",
-        "   through normal world play; do not tell the blind player which quest was added or where it is.",
+        "2. THEN start the fresh-overworld player below. Let the player discover content",
+        "   through normal world play; do not say which quest was added or where it is.",
         "   Do not prescribe a route, solution, coverage task, or content target.",
       ]
-    : ["## STEP 1 — MANDATORY fresh-overworld LLM playtest (quality feedback, every cycle)"];
+    : ["## STEP 1 — Play from a fresh overworld (quality feedback, every cycle)"];
 
   playtestStep.push(
     "",
-    "Game context: this is a fictional, deterministic text-based TTRPG.",
-    "The playtester starts as a new player and uses only the game surface; development stays repo-local.",
+    "Game context: AdventureForge is a fictional, deterministic text-based TTRPG.",
+    "Start as a new player and use only the game surface; keep development work inside this repo.",
     "",
-    "Playtest launch this cycle: the CORE GAME — the open-world overworld from a FRESH start.",
+    "Start the CORE GAME — the open-world overworld from a FRESH start.",
     "",
-    "- Run the packaged DEFAULT harness: `npm run blind`. It enforces `play_mode: pure`,",
-    "  the neutral default persona, and one `start_surface: fresh_overworld` session.",
+    "- Run `npm run blind` with its default `play_mode: pure`, neutral persona,",
+    "  and one `start_surface: fresh_overworld` session.",
     "- Do not pass `--quest`, a quest id, a persona overlay, or a saved session. Do not add",
     "  coverage tasks, routes, solutions, content targets, or a call-count stopping rule.",
     "  The game supplies the goal and continue/end checkpoints; interview only after exit.",
-    `- WRITE/COPY the verified V2 report and exact game-returned journey receipt to: ${playtestRecord}`,
-    "  This file is REQUIRED — loop.sh refuses to commit a cycle with no playtest record.",
+    `- After play, copy the V2 player report and game-returned journey receipt to: ${playtestRecord}`,
+    "  loop.sh checks for this report before it commits the cycle.",
     isContentNew
       ? "- Let the fresh-world read test whether the new content is naturally discoverable, then polish it."
       : "- Let the playtest's findings inform the improvement you choose.",
@@ -279,7 +279,7 @@ export function buildPrompt(ctx: {
   return [
     "# AdventureForge AFK improvement cycle (trust, but verify)",
     "",
-    "This is a repo-local AdventureForge maintenance cycle for a packaged fictional deterministic TTRPG player-experience harness.",
+    "This cycle improves AdventureForge, a local fictional text-based TTRPG project.",
     "Make exactly one focused, high-impact AdventureForge maintenance improvement within this repo",
     "and leave it green. Use the available repo context to choose and verify the improvement;",
     "do not route around the verifier.",
@@ -300,7 +300,7 @@ export function buildPrompt(ctx: {
     "",
     "- content_fix: edit the quest source (or apply_content_patch); re-validate.",
     "- content_new: add a world-graph RPG quest, not a detached source file; validate it,",
-    "  then test discovery only through the required fresh-overworld blind run.",
+    "  then test discovery through the fresh-overworld player run.",
     "- engine / repo: change freely under trust-but-verify. New mechanics no longer need",
     "  a §14 ceremony, but keep the verification green and add tests for new behavior.",
     "- If you fix a bug, add a traces/bugs/ artifact + a tests/regression/ test (§15).",
@@ -417,14 +417,14 @@ export function buildUltraplanPrompt(ctx: { playtestRecord: string }): string {
     "  the ONE chosen change and locks it (a traces/bugs/ artifact + a tests/regression/",
     "  test for a bug; tests for new behaviour).",
     "",
-    "## STEP 4 — Mandatory blind playtest + verify (same bar as every cycle)",
-    "- Blind-playtest the CORE GAME — the overworld from a FRESH start — via the packaged",
-    "  default `npm run blind`, which enforces the neutral pure player contract.",
+    "## STEP 4 — Play a new game, then verify (same bar as every cycle)",
+    "- Play the CORE GAME — the overworld from a FRESH start — with the default",
+    "  `npm run blind` neutral-player setup.",
     "- Do not pass `--quest`, a quest id, a persona overlay, or a saved session; every",
     "  live blind player must discover and enter quests only through normal overworld play.",
     "  Add no coverage route, solution, content target, or call-count stopping rule; the",
     "  game's goal/checkpoint choice governs exit, and the interview happens only afterward.",
-    `- Write its structured report to ${playtestRecord} (REQUIRED — loop.sh refuses to commit without it).`,
+    `- Copy its structured report to ${playtestRecord}; loop.sh checks for it before commit.`,
     "- `npm run health` must pass; verify:integrity must stay green; never weaken a check.",
     "- Update AI_LOOP_STATE.md TERSELY (≤8 lines): that this was an ULTRAPLAN cycle, the",
     "  re-aim it chose, evidence. Keep it compact — the log is re-read every cycle.",
