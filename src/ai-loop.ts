@@ -259,8 +259,8 @@ export function buildPrompt(ctx: {
 
   playtestStep.push(
     "",
-    "Packaged harness context: this is a fictional, deterministic TTRPG player-experience study.",
-    "The blind player evaluates only the game surface; this maintenance cycle stays repo-local.",
+    "Game context: this is a fictional, deterministic text-based TTRPG.",
+    "The playtester starts as a new player and uses only the game surface; development stays repo-local.",
     "",
     "Playtest launch this cycle: the CORE GAME — the open-world overworld from a FRESH start.",
     "",

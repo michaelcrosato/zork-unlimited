@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 635 -->
+<!-- historical_cycle_count: 636 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - plain_game_blind_prompt
+
+- Evidence choice: ordinary blind-player tasks were repeatedly interrupted by a false non-game warning after the prompt framed play as a "study" and named unrelated workflow concepts.
+- Surface: the canonical blind prompt and generated cycle handoff now speak only as a first-time text TTRPG player brief while preserving the exact fresh start, gameplay wrapper, voluntary ending, receipt, and report evidence contracts.
+- Counterfactual: prompt tests pin `{}` fresh start, forbid alternate startup or non-game tools, preserve the one-expression/yield wrapper, and require the exact game-owned `exitReceipt` inside the `json exit-interview` fence.
+- Pure evidence: fresh canonical Terra seed 72543 completes The Wolf-Winter and The Gallowmere, continues twice, ends voluntarily at 53 decisions, rates clarity/enjoyment 4/4, is unstuck and replay-yes, with no warning, login interruption, or rejected game action.
+- Feedback/follow-through: the opening remains dense and overworld guidance can become stale during an embedded quest; both are retained as separate gameplay findings rather than folded into transport wording.
+- Guard: independent review is clean after strengthening the startup assertion; the exact prompt build passed full health at 418 files/3,382 tests, and the final cycle-handoff extension passes 53 focused tests, typecheck, integrity, format, and zero-finding crawl `20260724T232143Z`.
 
 ### Cycle result - proper_possessive_item_narration
 
@@ -150,13 +159,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Measured result: every wolf and cow survives the lure, a failed Gallowmere tracking check has a clear recovery, and the player reports no rejection, loop, broken state, or soft-lock; clarity/enjoyment 4/4, unstuck, replay-yes.
 - Feedback/follow-through: Queensbury route revelation and dense Albany setup remain the current friction; verified progressive-disclosure and June-guidance follow-ups stay separate, while Frost-Heave's hash-safe landing must precede conditional preview truth.
 - Guard: post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 48 focused regressions, independent clean re-review, and supported CI two-worker health pass 410 files/3,259 tests plus UI typecheck and all packs.
-
-### Cycle result - cli_journey_gate_authority
-
-- Evidence choice: the human overworld CLI could hide mandatory story/retention decisions, omit the current goal and passage, and misdescribe discovered work after restore; blind players then guessed commands instead of deciding from game-presented consequences.
-- Surface: story and Continue/End gates now preempt ordinary actions, accept numbered/full-label/exact-id choices, render consequences, preserve safe inspection/save/load, expose goal guidance and forecast, execute `follow goal`, and restore ended journeys as read-only receipts.
-- Counterfactual: partial gate guesses fail closed; local future, completed, remote, and duplicate-title jobs receive distinct truthful messages with exact ids for ambiguity; real save/restore histories prove each branch without synthetic state.
-- Pure evidence: exact tracked-clean `6eed4748` passes strict capture-v2 Terra 4592 across 65 turns and 55 accepted decisions, completes Wolf-Winter and Gallowmere, continues at goal 30/checkpoint 40, and ends voluntarily at goal 55.
-- Measured result: the player recovers from a failed first feed cast, diverts every wolf alive with the herd whole, recovers from a failed spoor read, rates clarity/enjoyment 4/4, remains unstuck, and chooses replay-yes with no rejected action, loop, or broken state.
-- Feedback/follow-through: serial permanent setup density and compact-state load remain the strongest friction; command projection and progressive disclosure stay queued as separate increments rather than expanding this CLI authority change.
-- Guard: fresh post-change crawl is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests; 23 focused CLI regressions, clean independent re-review, and full health pass 408 files/3,242 tests plus UI typecheck and all packs.
