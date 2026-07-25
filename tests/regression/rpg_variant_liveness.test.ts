@@ -370,6 +370,30 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     throw new Error(`June clean witness reached unexpected ending "${clean.endingId ?? "none"}".`);
   }
 
+  const missingCounsel = run(
+    ["june_pike_present"],
+    [
+      "go_north",
+      "read_day_book",
+      "go_west",
+      "take_byre_jerkin",
+      "use_byre_jerkin",
+      "go_east",
+      ...startFouled.slice(1),
+      ...livingRecovery,
+      ...reachJune,
+    ],
+  );
+  if (
+    missingCounsel.endingId !== "ending_pack_diverted" ||
+    missingCounsel.flags.read_tally !== true ||
+    missingCounsel.flags.jerkin_donned !== true ||
+    missingCounsel.flags.heard_counsel === true ||
+    missingCounsel.flags.june_cattle_line_taken !== true
+  ) {
+    throw new Error("June missing-counsel witness did not reach its combined living-pack ending.");
+  }
+
   const scattered = run(
     ["june_pike_present", "relief_protocol_prepared"],
     [...startFouled, ...livingRecovery, ["use_relief_protocol_docket", "worst"], ...reachJune],

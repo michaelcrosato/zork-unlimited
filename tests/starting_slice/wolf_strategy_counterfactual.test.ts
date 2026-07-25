@@ -41,7 +41,10 @@ type Route = Readonly<{
   observations: readonly ReturnType<typeof buildRpgObservation>[];
 }>;
 
-function lureRoute(opening: "clean" | "fouled" | "fouled_braced" | "hybrid"): Route {
+function lureRoute(
+  opening: "clean" | "fouled" | "fouled_braced" | "hybrid",
+  preparation: "none" | "missing_counsel" | "complete" = "none",
+): Route {
   let state = initStateForRpgPack(
     index,
     opening === "clean"
@@ -77,7 +80,15 @@ function lureRoute(opening: "clean" | "fouled" | "fouled_braced" | "hybrid"): Ro
   };
 
   act("go_north");
+  if (preparation !== "none") {
+    act("read_day_book");
+    act("go_west");
+    act("take_byre_jerkin");
+    act("use_byre_jerkin");
+    act("go_east");
+  }
   act("talk_houndsman");
+  if (preparation === "complete") act("ask_wolves");
   act("ask_lure");
   expect(state.flags.strategy_lure_committed).not.toBe(true);
   const commitment = enumerateRpgActions(index, state).find(
@@ -187,6 +198,45 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
     const ending = buildRpgObservation(index, route.state);
     expect(ending.ending).toMatchObject({ title: "The Pack Diverted Alive" });
     expect(ending.ending?.text).toMatch(/cattle whole[^]*all three wolves alive/i);
+  });
+
+  it("explains the precise 55/60 missing-counsel gap without changing nonlethal scoring", () => {
+    const missingCounsel = lureRoute("clean", "missing_counsel");
+    const complete = lureRoute("clean", "complete");
+
+    expect(missingCounsel.state).toMatchObject({
+      endingId: "ending_pack_diverted",
+      vars: { score: 55 },
+      flags: { read_tally: true, jerkin_donned: true },
+    });
+    expect(missingCounsel.state.flags.heard_counsel).not.toBe(true);
+    const missingCounselEnding = buildRpgObservation(index, missingCounsel.state);
+    expect(missingCounselEnding.ending?.text).toMatch(
+      /wore the byre-jerkin[^]*quick wolf lesson unheard[^]*five-point gap/i,
+    );
+    expect(missingCounselEnding.description).toContain("Final score: 55 of 60.");
+
+    const juneMissingCounselState = {
+      ...missingCounsel.state,
+      flags: {
+        ...missingCounsel.state.flags,
+        june_cattle_line_taken: true,
+      },
+    };
+    const juneMissingCounselEnding = buildRpgObservation(index, juneMissingCounselState);
+    expect(juneMissingCounselEnding.ending?.text).toMatch(
+      /June Pike[^]*wore the byre-jerkin[^]*quick wolf lesson unheard[^]*five-point gap/i,
+    );
+    expect(juneMissingCounselEnding.description).toContain("Final score: 55 of 60.");
+
+    expect(complete.state).toMatchObject({
+      endingId: "ending_pack_diverted",
+      vars: { score: 60 },
+      flags: { read_tally: true, jerkin_donned: true, heard_counsel: true },
+    });
+    const completeEnding = buildRpgObservation(index, complete.state);
+    expect(completeEnding.ending?.text).not.toMatch(/five-point gap/i);
+    expect(completeEnding.description).toContain("Final score: 60 of 60.");
   });
 
   it("makes a fouled opening fail forward through spent guard wood into visible cattle loss", () => {
