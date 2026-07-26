@@ -787,6 +787,7 @@ describe("journey contract presentation context", () => {
         goalId: INITIAL_JOURNEY_GOAL.id,
         messagePrefix: "Cade's cattle survived.",
         messageSuffix: "Hayden has another live packet.",
+        continueLabel: "Continue to decide the dawn wagon",
         continueConsequencePrefix: "Continue to allocate the wagon.",
         continueConsequenceSuffix: "Your choice will shape the next lead.",
       },
@@ -796,6 +797,7 @@ describe("journey contract presentation context", () => {
     expect(view.pendingChoice?.message).toBe(
       `Cade's cattle survived. ${baseMessage} Hayden has another live packet.`,
     );
+    expect(view.pendingChoice?.options[0].label).toBe("Continue to decide the dawn wagon");
     expect(view.pendingChoice?.options[0].consequence).toBe(
       "Continue to allocate the wagon. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first. Your choice will shape the next lead.",
     );
@@ -819,6 +821,15 @@ describe("journey contract presentation context", () => {
       },
     });
     expect(mismatched.pendingChoice?.message).toBe(baseMessage);
+    expect(() =>
+      journeyPresentation(pending, {
+        goalCompletion: {
+          goalVersion: INITIAL_JOURNEY_GOAL.version,
+          goalId: INITIAL_JOURNEY_GOAL.id,
+          continueLabel: " ",
+        },
+      }),
+    ).toThrow(/continue label cannot be empty/i);
     expect(() => journeyPresentation(pending, { goalGuidance: "   " })).toThrow(
       /goal guidance cannot be empty/i,
     );

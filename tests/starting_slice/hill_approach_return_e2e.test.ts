@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
+import { ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } from "../../src/world/journey_campaign.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const ROOT = process.cwd();
@@ -394,6 +395,9 @@ function playCleanLure(
   expect(finalStep.journey.goal.completedAtDecision).toBe(finalStep.journey.acceptedDecisions);
   expect(finalStep.journey.acceptedDecisions).toBeLessThan(45);
   expect(finalStep.journey.pendingChoice?.options[0]?.id).toBe("continue");
+  expect(finalStep.journey.pendingChoice?.options[0]?.label).toBe(
+    ALBANY_DAWN_DISPATCH_CONTINUE_LABEL,
+  );
   expect(finalStep.journey.pendingChoice?.options[1]?.id).toBe("end");
 
   const finalState = api.get_state({

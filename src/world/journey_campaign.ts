@@ -53,6 +53,8 @@ export type AlbanyDawnDispatchChoiceId = (typeof ALBANY_DAWN_DISPATCH_CHOICE_IDS
 
 export const ALBANY_DAWN_DISPATCH_TEASER =
   "At Albany Station Quarter, Hayden Hale has one dawn relief wagon and another live packet: Hedrick Cradoc's father was killed that morning by an old grey sow above Queensbury. Continue, and you will decide whether the wagon returns to Cade or runs north with the wardens before you carry Hedrick's lead onward." as const;
+export const ALBANY_DAWN_DISPATCH_CONTINUE_LABEL =
+  "Continue to decide the dawn relief wagon" as const;
 
 export const ALBANY_DAWN_DISPATCH_GOALS = Object.freeze({
   send_wagon_to_cade: campaignGoal(
@@ -1101,6 +1103,7 @@ function awaitsRomePostWeirDispatch(journey: JourneyContractSnapshot): boolean {
 export type JourneyCampaignPresentationContext = Readonly<{
   completionContext: string;
   preRetentionTeaser: string | null;
+  continueLabel?: string;
   continueConsequencePrefix: string | null;
   storyChoice: JourneyCampaignStoryChoice | null;
 }>;
@@ -1118,6 +1121,7 @@ export function journeyCampaignPresentationContext(args: {
     return Object.freeze({
       completionContext: outcome.albanyReturnContext,
       preRetentionTeaser: beforeAlbanyRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
+      ...(beforeAlbanyRetention ? { continueLabel: ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } : {}),
       continueConsequencePrefix: beforeAlbanyRetention
         ? "Continue to decide where Albany's only dawn relief wagon goes."
         : null,
@@ -1169,6 +1173,7 @@ export function journeyCampaignPresentationContext(args: {
     return Object.freeze({
       completionContext: outcome.albanyReturnContext,
       preRetentionTeaser: beforeRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
+      ...(beforeRetention ? { continueLabel: ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } : {}),
       continueConsequencePrefix: beforeRetention
         ? "Continue to decide where Albany's only dawn relief wagon goes."
         : null,

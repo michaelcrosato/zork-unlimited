@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALBANY_DAWN_DISPATCH_CHOICE_IDS,
+  ALBANY_DAWN_DISPATCH_CONTINUE_LABEL,
   ALBANY_DAWN_DISPATCH_GOALS,
   ALBANY_DAWN_DISPATCH_ID,
   ALBANY_DAWN_DISPATCH_TEASER,
@@ -540,6 +541,7 @@ describe("journey campaign", () => {
       expect(context?.preRetentionTeaser).toContain("one dawn relief wagon");
       expect(context?.preRetentionTeaser).toContain("Hedrick Cradoc's father");
       expect(context?.preRetentionTeaser).toContain("old grey sow above Queensbury");
+      expect(context?.continueLabel).toBe(ALBANY_DAWN_DISPATCH_CONTINUE_LABEL);
       expect(context?.continueConsequencePrefix).toBe(
         "Continue to decide where Albany's only dawn relief wagon goes.",
       );
@@ -563,6 +565,7 @@ describe("journey campaign", () => {
     const context = journeyCampaignPresentationContext({ journey: continued, questOutcomeIds });
     expect(context?.completionContext).toContain("inner gate you barred");
     expect(context?.preRetentionTeaser).toBeNull();
+    expect(context?.continueLabel).toBeUndefined();
     expect(context?.continueConsequencePrefix).toBeNull();
     expect(context?.storyChoice).toMatchObject({
       id: "albany_dawn_dispatch",

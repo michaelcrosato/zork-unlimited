@@ -274,6 +274,8 @@ export type JourneyGoalCompletionPresentationContext = Readonly<{
   goalId: string;
   messagePrefix?: string;
   messageSuffix?: string;
+  /** Names the immediate authored decision after Continue; generic checkpoints keep the default. */
+  continueLabel?: string;
   continueConsequencePrefix?: string;
   continueConsequenceSuffix?: string;
 }>;
@@ -996,6 +998,9 @@ function pendingChoicePresentation(
   if (!pending) return null;
   const characterDied = hasReason(pending, "character_died");
   const goalContext = matchingGoalCompletionContext(pending, context);
+  if (goalContext?.continueLabel !== undefined && goalContext.continueLabel.trim().length === 0) {
+    throw new Error("Journey goal-completion Continue label cannot be empty.");
+  }
   const options = characterDied
     ? Object.freeze([
         Object.freeze({
@@ -1010,7 +1015,7 @@ function pendingChoicePresentation(
         return Object.freeze([
           Object.freeze({
             id: "continue" as const,
-            label: `Continue toward checkpoint ${String(continueTo)}`,
+            label: goalContext?.continueLabel ?? `Continue toward checkpoint ${String(continueTo)}`,
             consequence: affix(
               `Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold ${String(continueTo)}, whichever comes first.`,
               goalContext?.continueConsequencePrefix,

@@ -1339,6 +1339,7 @@ export class OverworldSession {
           goalId: pending!.goalId!,
           messagePrefix: campaign.completionContext,
           messageSuffix: campaign.preRetentionTeaser,
+          ...(campaign.continueLabel ? { continueLabel: campaign.continueLabel } : {}),
           ...(campaign.continueConsequencePrefix
             ? { continueConsequencePrefix: campaign.continueConsequencePrefix }
             : {}),

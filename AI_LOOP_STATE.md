@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 653 -->
+<!-- historical_cycle_count: 654 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_goal_continue_invitation
+
+- Evidence choice: clean pre-change Spark seeds 72730/72738 both completed The Wolf-Winter in 20 decisions, rated clarity/enjoyment 4/4 and replay-yes, yet both ended at the first goal choice (0/2 continuation).
+- Surface: an optional goal-completion context now labels Continue with its immediate authored decision—“Continue to decide the dawn relief wagon”—while generic checkpoints keep their existing label.
+- Counterfactual: Continue/End ids, checkpoint and exit terms, retention evidence, state, hashes, legal actions, and decision count remain unchanged; empty authored labels fail closed.
+- Pure evidence: Spark seed 72740 failed closed at call 44 and published nothing; fresh Terra seed 72741 continued at Wolf decision 30, chose the dawn wagon, continued at 40, completed Gallowmere, and ended at 54 with clarity/enjoyment 4/4, unstuck, replay-yes.
+- Self-critique/follow-through: one post-change player validates reachability rather than the 70% fleet threshold; dense Albany setup remains a separate S1 follow-up.
+- Guard: independent review is clean, post-crawl `20260726T211742Z` is zero-finding, and full health passes 434 files/3,575 tests plus both typechecks and all 12 packs.
 
 ### Cycle result - wolf_dispatch_window_failure_pressure
 
@@ -148,12 +157,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact dirty-candidate Terra seed 72612 chose aid-only authority, Cade fodder, and June, completed The Wolf-Winter bloodlessly with the herd whole in 29 decisions, continued through The Gallowmere, and ended voluntarily at 53; clarity/enjoyment 4/5, replay-yes, with no forecast mismatch or rejected action.
 - Feedback/follow-through: the same run's under-signposted Queensbury Market Streets discovery remains a separate navigation finding; this increment corrects only precommitment and ending-boundary truth.
 - Guard: independent review is clean, all eight forecasts cross the production quest bridge, 32 focused liveness/strategy tests pass, final crawl `20260725T052550Z` is zero-finding, and full health passes 419 files/3,400 tests plus both typechecks and all packs.
-
-### Cycle result - optional_relief_allocation_truth
-
-- Evidence choice: exact-build Terra seed 72562 found that Albany called Relief Allocation optional while the dispatch briefing called it the final required choice, making the close-without-allocation route look unlawful.
-- Surface: the dispatch briefing now says Relief Allocation is optional, names both choosing one allocation and closing it with capacity unassigned, and tells June-bound players to return after either outcome.
-- Counterfactual: this changes only derived briefing copy; choice availability, closing, allocation effects, launch legality, state, hashes, and June's separate optional conversation remain unchanged.
-- Pure evidence: exact dirty-candidate Terra seed 72567 saw no optional/required contradiction, completed The Wolf-Winter in 29 accepted decisions and The Gallowmere in 54 total, continued twice, then ended voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Feedback/follow-through: dense irreversible Albany planning remains a supported separate cohort finding; this increment corrects one false obligation claim without redesigning the opening.
-- Guard: independent review is clean, 39 focused briefing/CLI tests pass after rebase, pre/post crawls `20260725T001539Z` / `20260725T024949Z` are zero-finding, and full health passes 419 files/3,397 tests plus both typechecks and all packs.

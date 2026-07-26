@@ -25,6 +25,7 @@ import {
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
+import { ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } from "../../src/world/journey_campaign.js";
 import { INITIAL_JOURNEY_GOAL_GUIDANCE } from "../../src/world/journey_contract.js";
 import { cloneOverworldView } from "../../src/world/session_view_clone.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
@@ -477,7 +478,7 @@ describe("OverworldSession", () => {
         expect(markup).not.toContain("journey-opportunity-list");
         expect(markup).not.toContain("keep your objective");
       }
-      expect(markups[0]).toContain("Continue toward checkpoint 40");
+      expect(markups[0]).toContain(ALBANY_DAWN_DISPATCH_CONTINUE_LABEL);
       expect(markups[0]).toContain(
         "first safe break at or after checkpoint threshold 40, whichever comes first",
       );
