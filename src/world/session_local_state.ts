@@ -22,6 +22,7 @@ import {
   projectOverworldSessionLocalJob,
   type OverworldSessionLocalView,
 } from "./session_local_view.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type MutableOverworldSessionLocalState = {
   currentTownId: string;
@@ -45,6 +46,7 @@ export type MutableOverworldSessionLocalState = {
   resolvedEventIds?: ReadonlySet<string>;
   campaignWorldFactIds?: ReadonlySet<string>;
   campaignStoryChoiceKeys?: ReadonlySet<string>;
+  campaignCharacter?: CampaignCharacterState;
   journalEntries?: ReadonlyMap<string, import("./session_snapshot.js").OverworldJournalEntry>;
 };
 
@@ -190,6 +192,7 @@ export function buildOverworldSessionCurrentLocalView(
     ...(state.campaignStoryChoiceKeys
       ? { campaignStoryChoiceKeys: state.campaignStoryChoiceKeys }
       : {}),
+    ...(state.campaignCharacter ? { campaignCharacter: state.campaignCharacter } : {}),
     ...(state.journalEntries ? { journalEntries: state.journalEntries } : {}),
   });
 }

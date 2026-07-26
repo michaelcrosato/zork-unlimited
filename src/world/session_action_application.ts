@@ -18,6 +18,7 @@ import {
   type OverworldServiceResult,
 } from "./session_services.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type OverworldActionResult = {
   minutes: number;
@@ -42,6 +43,7 @@ export type OverworldSessionServiceApplication = {
   minutesAfter: number;
   suppliesAfter: number;
   fatigueAfter: number;
+  characterAfter?: CampaignCharacterState;
   stateChanged: boolean;
 };
 
@@ -116,6 +118,7 @@ export function applyOverworldSessionServicePlan(
     minutesAfter: applied.minutesAfter,
     suppliesAfter: applied.suppliesAfter,
     fatigueAfter: applied.fatigueAfter,
+    ...(applied.characterAfter ? { characterAfter: applied.characterAfter } : {}),
     stateChanged: applied.stateChanged,
   };
 }

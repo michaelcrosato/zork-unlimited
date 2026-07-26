@@ -6,6 +6,8 @@ import {
 } from "./campaign_character_state.js";
 import {
   CampaignCharacterConditionIdsSchema,
+  CampaignCharacterConditionsSchema,
+  CampaignConsequenceEffectsSchema,
   CampaignPromiseConditionsSchema,
   campaignCharacterMatchesConditions,
 } from "./campaign_consequences.js";
@@ -22,7 +24,7 @@ const AUTHORED_TEXT = z
     message: "Authored campaign service text cannot be blank.",
   });
 
-export const CampaignServiceActionSchema = z.enum(["rest", "resupply"]);
+export const CampaignServiceActionSchema = z.enum(["care", "rest", "resupply"]);
 
 export const CampaignServiceRegionRenownRequirementSchema = z
   .object({
@@ -135,6 +137,10 @@ export const CampaignServiceRuleSchema = z
     forbids_any_story_choices: CampaignServiceStoryChoiceRefsSchema.optional(),
     requires_all_companions: CampaignCharacterConditionIdsSchema.optional(),
     requires_all_promises: CampaignPromiseConditionsSchema.optional(),
+    character_conditions: CampaignCharacterConditionsSchema.optional(),
+    effects: CampaignConsequenceEffectsSchema.refine((effects) => effects.length > 0, {
+      message: "Campaign service effects must change campaign character state.",
+    }).optional(),
     requires_region_renown: CampaignServiceRegionRenownRequirementSchema.optional(),
     requires_all_local_job_options: CampaignServiceRequiredLocalJobOptionsSchema.optional(),
     forbids_any_local_job_options: CampaignServiceForbiddenLocalJobOptionsSchema.optional(),
@@ -146,6 +152,7 @@ export const CampaignServiceRuleSchema = z
       (rule.requires_all_story_choices?.length ?? 0) === 0 &&
       (rule.requires_all_companions?.length ?? 0) === 0 &&
       (rule.requires_all_promises?.length ?? 0) === 0 &&
+      rule.character_conditions === undefined &&
       rule.requires_region_renown === undefined &&
       (rule.requires_all_local_job_options?.length ?? 0) === 0
     ) {
@@ -164,6 +171,49 @@ export const CampaignServiceRuleSchema = z
         });
       }
     });
+    if (rule.action === "care") {
+      if (rule.character_conditions === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["character_conditions"],
+          message: `Campaign care rule "${rule.id}" requires exact campaign character conditions.`,
+        });
+      }
+      if (rule.effects === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["effects"],
+          message: `Campaign care rule "${rule.id}" requires a treatment effect.`,
+        });
+      }
+      rule.effects?.forEach((effect, index) => {
+        if (effect.type !== "treat_wound") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["effects", index],
+            message: `Campaign care rule "${rule.id}" may only apply treat_wound effects.`,
+          });
+          return;
+        }
+        const requiresSourceWound = rule.character_conditions?.requires_all_wounds?.some(
+          (wound) =>
+            wound.wound_id === effect.wound_id && wound.treatment === effect.from_treatment,
+        );
+        if (!requiresSourceWound) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["effects", index],
+            message: `Campaign care rule "${rule.id}" must require wound "${effect.wound_id}" at source treatment "${effect.from_treatment}".`,
+          });
+        }
+      });
+    } else if (rule.effects !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["effects"],
+        message: `Campaign ${rule.action} rule "${rule.id}" cannot mutate campaign character state.`,
+      });
+    }
     const requiredChoices = new Set(
       (rule.requires_all_story_choices ?? []).map(campaignStoryChoiceRefKey),
     );
@@ -231,6 +281,7 @@ function campaignServiceRulePredicateKey(rule: CampaignServiceRule): string {
       const idOrder = compareStrings(left.promise_id, right.promise_id);
       return idOrder === 0 ? compareStrings(left.status, right.status) : idOrder;
     }),
+    character_conditions: rule.character_conditions ?? null,
     requires_region_renown: rule.requires_region_renown ?? null,
     requires_all_local_job_options: (rule.requires_all_local_job_options ?? [])
       .map(campaignServiceLocalJobOptionKey)
@@ -329,7 +380,9 @@ function ruleIsActive(
   completedLocalJobOptionKeys: ReadonlySet<string>,
 ): boolean {
   const hasCharacterConditions =
-    rule.requires_all_companions !== undefined || rule.requires_all_promises !== undefined;
+    rule.requires_all_companions !== undefined ||
+    rule.requires_all_promises !== undefined ||
+    rule.character_conditions !== undefined;
   return (
     !consumedRuleIds.has(rule.id) &&
     (rule.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
@@ -351,14 +404,16 @@ function ruleIsActive(
     ) &&
     (!hasCharacterConditions ||
       (character !== undefined &&
-        campaignCharacterMatchesConditions(character, {
-          ...(rule.requires_all_companions
-            ? { requires_all_companions: rule.requires_all_companions }
-            : {}),
-          ...(rule.requires_all_promises
-            ? { requires_all_promises: rule.requires_all_promises }
-            : {}),
-        })))
+        (rule.requires_all_companions === undefined ||
+          campaignCharacterMatchesConditions(character, {
+            requires_all_companions: rule.requires_all_companions,
+          })) &&
+        (rule.requires_all_promises === undefined ||
+          campaignCharacterMatchesConditions(character, {
+            requires_all_promises: rule.requires_all_promises,
+          })) &&
+        (rule.character_conditions === undefined ||
+          campaignCharacterMatchesConditions(character, rule.character_conditions))))
   );
 }
 

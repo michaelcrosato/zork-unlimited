@@ -177,7 +177,10 @@ it is **not yet milestone-certified**:
   skills change distinct checks or recoveries; campaign health remains outside
   the combat import to protect its guarantee, but the gate wound now exports
   back into persistent health and Cade's finite drive rig provides an
-  origin-honest quest-local equipment pattern;
+  origin-honest quest-local equipment pattern. The exact witnessed wound now
+  opens one 45-minute Station care action that advances it from untreated to
+  treated, restores 6 health up to the existing maximum, and changes which
+  deep Greenway surveys are lawful without altering first-goal completion;
 - prepared combat, fully noncombat diversion, bounded mixed recovery,
   drive/evacuate, and fortify/outlast now supply four distinct resolution
   families; all twelve counted forks have paired deterministic proof, while
@@ -471,7 +474,7 @@ keeps immediate solo launch visibly legal and changes no snapshot or decision.
 The full view, MCP/pure prompt, browser, and overworld CLI consume that same
 derived lead. Compact v29 retains v28's separation of current town actions from
 authored one-time terms.
-`service_actions` is the canonical planner-backed rest/resupply surface: each
+`service_actions` is the canonical planner-backed care/rest/resupply surface: each
 entry carries availability, ordinary or campaign-override provenance, exact
 minutes, and supplies/fatigue before and after. `service_offers` remains the
 matching authored terms surface and never adds a duplicate action. Actions are
@@ -502,15 +505,21 @@ player declines the drive before the cattle move, so combat cannot be sampled
 and folded back into a bloodless ending.
 
 The three endings export distinct cattle, wound, and reserve facts. The wound
-crosses into persistent campaign health, while returned-rig and whole-herd
-facts independently gate one-time Station rest and Greenway resupply offers.
+crosses into persistent campaign health and remains untreated through ordinary
+rest and resupply. Cade's exact witness memory and the wound's exact untreated
+state open one 45-minute Station care action: it restores 6 health up to the
+existing maximum and advances only that wound to treated, spending no supplies
+and changing no fatigue. Returned-rig and whole-herd facts independently gate
+the established one-time Station rest and Greenway resupply offers.
 June and Emery retain outcome-specific testimony. Same-boundary proofs vary
 only the ending and preserve those differences through chronological journey
 foldback, current/predecessor snapshot integrity, full/compact MCP, UI, and
 service consumption. Proof lives in
 [`crisis_priority_counterfactual.test.ts`](../tests/starting_slice/crisis_priority_counterfactual.test.ts)
 and
-[`drive_crisis_return_counterfactual.test.ts`](../tests/starting_slice/drive_crisis_return_counterfactual.test.ts).
+[`drive_crisis_return_counterfactual.test.ts`](../tests/starting_slice/drive_crisis_return_counterfactual.test.ts),
+with the persistent care and downstream-action proof in
+[`wolf_wound_care_counterfactual.test.ts`](../tests/starting_slice/wolf_wound_care_counterfactual.test.ts).
 
 The ninth authored increment completes `fortify_and_outlast` and rewrites
 `SS-F08-cade-trust` as an honest conduct fork. Cade discloses two mutually
@@ -828,6 +837,16 @@ bloodshed decisions cannot select quiet policy.
 [`albany_greenway_scene_counterfactual.test.ts`](../tests/starting_slice/albany_greenway_scene_counterfactual.test.ts)
 and
 [`emery_evidence_custody_snapshot_integrity.test.ts`](../tests/regression/emery_evidence_custody_snapshot_integrity.test.ts).
+The cattle-first drive wound now adds a character-state consequence to the
+public and quiet survey frontiers without changing their policy proof. While
+Cade's witnessed byre-mouth wound is untreated, each policy keeps its fast
+field action legal but withholds only its deep witnessed survey. Taking the
+exact Station care advances the wound, restores health, and reopens that deep
+action. Rest and resupply cannot substitute for treatment. Care consumption,
+chronological character replay, full/compact/UI/MCP parity, forged and duplicate
+evidence rejection, and exact grandfathering of both already-completed deep
+predecessor options are proved by
+[`wolf_wound_care_counterfactual.test.ts`](../tests/starting_slice/wolf_wound_care_counterfactual.test.ts).
 Works adds the fourth authored district event without gating departure or
 lengthening the mandatory path. Reese's witnessed-count and cold-set-bypass
 charters each cost 20 minutes and earn 1 standing before Wolf-Winter, then add

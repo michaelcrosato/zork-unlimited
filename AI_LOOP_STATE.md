@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 649 -->
+<!-- historical_cycle_count: 650 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_wound_care_lifecycle
+
+- Evidence choice: the drive-cattle-first gate already inflicted a campaign wound, but that wound had no later mechanical consumer or recovery decision.
+- Surface: the wound now survives quest foldback and save/restore; one optional Albany Station treatment costs 45 minutes, restores up to 6 health, and changes the later Greenway service frontier from untreated to treated.
+- Reuse/counterfactual: data-driven character conditions and effects govern treatment, exact replay chronology, and predecessor migration; paired routes prove untreated quiet review remains withheld while public deep review stays legal.
+- Pure evidence: Spark seed 72663 completed The Wolf-Winter in 22 decisions, ended voluntarily, rated clarity/enjoyment 4/4, remained unstuck, reported no bug, and chose replay-yes.
+- Transport economy: seed 72662's malformed nineteenth wrapper was stopped in-flight with exit 43 and no published evidence; the one replacement canary verified normally.
+- Self-critique/follow-through: the valid player chose combat and ended at the first goal, so it did not organically see wound care; deterministic route, replay, MCP/UI, and migration proofs carry that claim.
+- Guard: independent lifecycle/performance review is clean; 142 integrated tests and zero-finding crawl `20260726T121920Z` are green, with no first-goal decision added.
 
 ### Cycle result - blind_strict_stream_fail_fast
 
@@ -145,12 +155,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: fresh canonical Terra seed 72543 completes The Wolf-Winter and The Gallowmere, continues twice, ends voluntarily at 53 decisions, rates clarity/enjoyment 4/4, is unstuck and replay-yes, with no warning, login interruption, or rejected game action.
 - Feedback/follow-through: the opening remains dense and overworld guidance can become stale during an embedded quest; both are retained as separate gameplay findings rather than folded into transport wording.
 - Guard: independent review is clean after strengthening the startup assertion; the exact prompt build passed full health at 418 files/3,382 tests, and the final cycle-handoff extension passes 53 focused tests, typecheck, integrity, format, and zero-finding crawl `20260724T232143Z`.
-
-### Cycle result - proper_possessive_item_narration
-
-- Evidence choice: a real Wolf-Winter terminal run narrated `You take the Cade's winter-feed sack`, exposing a shared grammar defect rather than a Wolf-specific content error.
-- Surface: TAKE, DROP, OPEN, CLOSE, and default UNLOCK now add `the` to ordinary object names while leaving capitalized proper-owner possessives such as Cade's, Fen's, and Old Cade's intact; authored custom narration remains authoritative.
-- Counterfactual: straight/curly apostrophes, hyphenated and multiword proper owners suppress the article, lowercase generic possessives and ordinary nouns retain it, and paired executions prove identical state and hashes.
-- Blind evidence: exact-build native Terra seed 72520 completes The Wolf-Winter via Cade's fortified terms in 9 decisions with every wolf and cow alive, ends voluntarily, rates clarity/enjoyment 4/4, and reports no duplicate-article narration.
-- Feedback/follow-through: the blocked north exit should name the exact shutter-take action, while "two household shutters" and June's "optional second field seat" remain separate copy debts rather than broadening this grammar fix.
-- Guard: independent review is clean, focused action coverage passes 30 tests, pre/post crawl are zero-finding, and full health passes 419 files/3,390 tests plus both typechecks and all packs.

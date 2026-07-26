@@ -398,7 +398,7 @@ const HELP = `Commands:
   go <town|road #>         travel one road leg (multi-leg journeys go leg by leg)
   routes                   estimates for every discovered destination
   assist | scout | press   resolve a pending road encounter
-  rest · resupply          town services (needs an inn/healer · market)
+  care · rest · resupply   active campaign care · inn/healer · market services
   enter <area>             walk a local route to another area of this town
   explore [<area|site>]    explore the current/named area or a discovered site
   scout <poi>              scout a point of interest
@@ -784,6 +784,9 @@ async function main(): Promise<void> {
           }
           case "rest":
             printServiceResult(session.restAtTown());
+            break;
+          case "care":
+            printServiceResult(session.careAtTown());
             break;
           case "resupply":
             printServiceResult(session.resupplyAtTown());

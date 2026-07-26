@@ -86,6 +86,7 @@ describe("compact legends", () => {
 
     expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("resupply_overworld_session");
     expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("rest_overworld_session");
+    expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("care_overworld_session");
     expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("available");
     expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("blocked_reason");
     expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("campaign_override");

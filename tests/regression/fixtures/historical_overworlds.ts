@@ -132,6 +132,37 @@ const CAMPUS_EVIDENCE_MANDATE_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:campus_traceable_route_digest_mobile_resupply",
 ]);
 
+/** Reconstruct the exact manifest before witnessed Station wound care shipped. */
+export function exactWoundCarePredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  predecessor.campaign_service_rules = (predecessor.campaign_service_rules ?? []).filter(
+    (rule) => rule.id !== "albany:cade_witnessed_gate_wound_station_care",
+  );
+  const options = predecessor.local_jobs.find((job) => job.id === "albany_city__greenway__job")
+    ?.authored_scene?.options;
+  if (!options) {
+    throw new Error("Wound-care predecessor requires the Greenway corridor survey.");
+  }
+  const exactOption = (id: string) => {
+    const option = options.find((candidate) => candidate.id === id);
+    if (!option) throw new Error(`Wound-care predecessor requires Greenway option "${id}".`);
+    return option;
+  };
+  exactOption("stake_shortest_accessible_detour").preview =
+    "Spend 30 minutes staking the shortest passable public detour. Earn 3 Capital / Mohawk renown—enough after the truthful Wolf-Winter return and trail policy to reach Rowan's 13-standing Civic recovery threshold.";
+  const publicDeep = exactOption("map_all_weather_public_loop");
+  publicDeep.preview =
+    "Spend 75 minutes mapping accessible grades, thaw drainage, and public crossings. Earn 5 Capital / Mohawk renown.";
+  delete publicDeep.character_conditions;
+  exactOption("reset_steward_markers").preview =
+    "Spend 20 minutes resetting the minimum low-profile corridor marks. Earn 1 Capital / Mohawk renown.";
+  const quietDeep = exactOption("trace_winter_wildlife_corridor_with_witness_points");
+  quietDeep.preview =
+    "Spend 60 minutes tracing winter movement and witnessed steward points without posting a public route. Earn 4 Capital / Mohawk renown.";
+  delete quietDeep.character_conditions;
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before the Station preparation comparison changed. */
 export function exactReliefProtocolTriggerCopyPredecessor(
   current: OverworldManifest,
@@ -219,7 +250,7 @@ export function exactRegistrationPromiseClosurePredecessor(
 export function exactEmeryEvidenceCustodyPredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactWoundCarePredecessor(current);
   const emery = predecessor.characters.find(
     (candidate) => candidate.id === "albany_city__greenway__contact",
   );

@@ -59,6 +59,7 @@ export const PURE_PLAYER_TOOLS = new Set<string>([
   "travel_overworld_session",
   "follow_overworld_session_goal",
   "resolve_overworld_session_road_encounter",
+  "care_overworld_session",
   "resupply_overworld_session",
   "rest_overworld_session",
   "scout_overworld_session_poi",
@@ -1317,6 +1318,15 @@ tool(
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.resolve_overworld_session_road_encounter(defaultCompactOverworld(a)),
+);
+tool(
+  "care_overworld_session",
+  "Accept the active one-time campaign wound-care offer at the current area, spending its exact time.",
+  {
+    ...OVERWORLD_SESSION,
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.care_overworld_session(defaultCompactOverworld(a)),
 );
 tool(
   "resupply_overworld_session",

@@ -13,6 +13,7 @@ import {
 import {
   AddCompanionConsequenceSchema,
   AffirmValueConsequenceSchema,
+  CampaignCharacterConditionsSchema,
   CampaignConsequenceEffectSchema,
   CampaignConsequenceEffectsSchema,
   LearnKnowledgeConsequenceSchema,
@@ -23,7 +24,10 @@ import {
   ResolvePromiseConsequenceSchema,
   SetWorldFactConsequenceSchema,
   SufferWoundConsequenceSchema,
+  TreatWoundConsequenceSchema,
   applyCampaignConsequences,
+  campaignCharacterConditionsAreMutuallyExclusive,
+  campaignCharacterMatchesConditions,
   campaignConsequenceEffectKey,
   deriveCampaignWorldFactIds,
   type CampaignConsequenceEffect,
@@ -91,6 +95,160 @@ function syntheticEffects(): CampaignConsequenceEffects {
 }
 
 describe("generic campaign consequences", () => {
+  it("matches exact relationship-memory and wound-treatment predicates", () => {
+    const character = buildCampaignCharacterState({
+      relationships: [
+        {
+          npcId: "npc:synthetic_guide",
+          trust: 0,
+          regard: 0,
+          owesPlayer: 0,
+          playerOwes: 0,
+          memories: ["memory:witnessed_fall"],
+        },
+      ],
+      wounds: [
+        {
+          woundId: "wound:archive_fall",
+          severity: 2,
+          treatment: "untreated",
+        },
+      ],
+    });
+    const required = CampaignCharacterConditionsSchema.parse({
+      requires_all_relationship_memories: [
+        {
+          npc_id: "npc:synthetic_guide",
+          memory_id: "memory:witnessed_fall",
+        },
+      ],
+      requires_all_wounds: [{ wound_id: "wound:archive_fall", treatment: "untreated" }],
+    });
+    expect(campaignCharacterMatchesConditions(character, required)).toBe(true);
+    expect(
+      campaignCharacterMatchesConditions(character, {
+        forbids_any_wounds: [{ wound_id: "wound:archive_fall", treatment: "untreated" }],
+      }),
+    ).toBe(false);
+    const absentOrTreated = CampaignCharacterConditionsSchema.parse({
+      forbids_any_wounds: [
+        { wound_id: "wound:archive_fall", treatment: "untreated" },
+        { wound_id: "wound:archive_fall", treatment: "stabilized" },
+      ],
+    });
+    expect(campaignCharacterMatchesConditions(character, absentOrTreated)).toBe(false);
+    expect(
+      campaignCharacterMatchesConditions(
+        buildCampaignCharacterState({
+          wounds: [
+            {
+              woundId: "wound:archive_fall",
+              severity: 2,
+              treatment: "treated",
+            },
+          ],
+        }),
+        absentOrTreated,
+      ),
+    ).toBe(true);
+    expect(() =>
+      CampaignCharacterConditionsSchema.parse({
+        forbids_any_wounds: [
+          { wound_id: "wound:archive_fall", treatment: "untreated" },
+          { wound_id: "wound:archive_fall", treatment: "untreated" },
+        ],
+      }),
+    ).toThrow(/repeat forbidden wound/i);
+    expect(
+      campaignCharacterConditionsAreMutuallyExclusive(required, {
+        requires_all_wounds: [{ wound_id: "wound:archive_fall", treatment: "treated" }],
+      }),
+    ).toBe(true);
+    expect(() =>
+      CampaignCharacterConditionsSchema.parse({
+        requires_all_wounds: [
+          { wound_id: "wound:archive_fall", treatment: "untreated" },
+          { wound_id: "wound:archive_fall", treatment: "treated" },
+        ],
+      }),
+    ).toThrow(/mutually exclusive treatments/i);
+    expect(() =>
+      CampaignCharacterConditionsSchema.parse({
+        requires_all_relationship_memories: [
+          {
+            npc_id: "npc:synthetic_guide",
+            memory_id: "memory:witnessed_fall",
+          },
+        ],
+        forbids_any_relationship_memories: [
+          {
+            npc_id: "npc:synthetic_guide",
+            memory_id: "memory:witnessed_fall",
+          },
+        ],
+      }),
+    ).toThrow(/cannot require and forbid relationship memory/i);
+  });
+
+  it("advances wound treatment once, caps healing, and fails closed on unknown or mismatched wounds", () => {
+    const source = buildCampaignCharacterState({
+      health: { current: 26, max: 30 },
+      wounds: [
+        {
+          woundId: "wound:archive_fall",
+          severity: 2,
+          treatment: "untreated",
+        },
+      ],
+    });
+    const effect = TreatWoundConsequenceSchema.parse({
+      type: "treat_wound",
+      wound_id: "wound:archive_fall",
+      from_treatment: "untreated",
+      to_treatment: "treated",
+      health_restore: 6,
+    });
+    const treated = applyCampaignConsequences({ character: source, effects: [effect] });
+    expect(treated.characterAfter.health).toEqual({ current: 30, max: 30 });
+    expect(treated.characterAfter.wounds[0]?.treatment).toBe("treated");
+    expect(
+      applyCampaignConsequences({
+        character: treated.characterAfter,
+        effects: [effect],
+      }),
+    ).toEqual(treated);
+    expect(source.health.current).toBe(26);
+    expect(source.wounds[0]?.treatment).toBe("untreated");
+
+    expect(() =>
+      TreatWoundConsequenceSchema.parse({
+        ...effect,
+        from_treatment: "treated",
+        to_treatment: "untreated",
+      }),
+    ).toThrow(/must advance/i);
+    expect(() =>
+      applyCampaignConsequences({
+        character: buildCampaignCharacterState(),
+        effects: [effect],
+      }),
+    ).toThrow(/unknown wound/i);
+    expect(() =>
+      applyCampaignConsequences({
+        character: buildCampaignCharacterState({
+          wounds: [
+            {
+              woundId: "wound:archive_fall",
+              severity: 2,
+              treatment: "stabilized",
+            },
+          ],
+        }),
+        effects: [effect],
+      }),
+    ).toThrow(/not required source treatment/i);
+  });
+
   it("parses the complete strict monotonic vocabulary", () => {
     expect(
       AffirmValueConsequenceSchema.parse({

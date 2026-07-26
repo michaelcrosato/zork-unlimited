@@ -4,6 +4,11 @@ import {
   CampaignStoryChoiceRefSchema,
   campaignStoryChoiceRefKey,
 } from "./campaign_story_choices.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
+import {
+  CampaignCharacterConditionsSchema,
+  campaignCharacterMatchesConditions,
+} from "./campaign_consequences.js";
 
 export const LOCAL_JOB_SCENE_VERSION = 1 as const;
 export const LOCAL_JOB_SCENE_MIN_OPTIONS = 2 as const;
@@ -78,6 +83,7 @@ export const LocalJobSceneOptionSchema = z
       .optional(),
     requires_all_story_choices: LocalJobSceneStoryChoiceRefsSchema.optional(),
     forbids_any_story_choices: LocalJobSceneStoryChoiceRefsSchema.optional(),
+    character_conditions: CampaignCharacterConditionsSchema.optional(),
   })
   .strict()
   .superRefine((option, context) => {
@@ -245,6 +251,7 @@ export type LocalJobSceneConditionState = Readonly<{
   resolvedEventIds: ReadonlySet<string>;
   worldFactIds: ReadonlySet<string>;
   storyChoiceKeys?: ReadonlySet<string> | undefined;
+  character?: CampaignCharacterState | undefined;
   eventOptionIdFor: (eventId: string) => string | null;
 }>;
 
@@ -351,7 +358,10 @@ export function localJobSceneOptionRequirementsMet(
       parsed.requires_all_story_choices,
       parsed.forbids_any_story_choices,
       state.storyChoiceKeys ?? new Set<string>(),
-    )
+    ) &&
+    (parsed.character_conditions === undefined ||
+      (state.character !== undefined &&
+        campaignCharacterMatchesConditions(state.character, parsed.character_conditions)))
   );
 }
 

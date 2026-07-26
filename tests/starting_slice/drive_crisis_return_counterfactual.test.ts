@@ -27,6 +27,7 @@ const PROMISE = "albany:promise_june_cattle_first";
 const STATION = "albany_city__transport_hub";
 const GREENWAY = "albany_city__greenway";
 const STATION_REST = "albany:wolf_drive_reserve_returned_station_rest";
+const STATION_CARE = "albany:cade_witnessed_gate_wound_station_care";
 const GREENWAY_RESUPPLY = "albany:wolf_drive_whole_herd_greenway_resupply";
 const WOUND = "wound:wolf_winter_byre_mouth_gate";
 
@@ -44,7 +45,7 @@ const OUTCOMES = {
       "fact:wolf_winter_people_safe",
       "fact:wolf_winter_steading_evacuated",
     ],
-    stationService: STATION_REST,
+    stationServices: [STATION_CARE, STATION_REST],
     greenwayService: GREENWAY_RESUPPLY,
     juneMemory: "albany:memory_june_drive_herd_out_rider_wounded",
     juneCopy: /whole herd[^]*bound shoulder[^]*untreated wound/i,
@@ -63,7 +64,7 @@ const OUTCOMES = {
       "fact:wolf_winter_people_safe",
       "fact:wolf_winter_steading_evacuated",
     ],
-    stationService: STATION_REST,
+    stationServices: [STATION_REST],
     greenwayService: null,
     juneMemory: "albany:memory_june_drive_cattle_line_overrun",
     juneCopy: /every person safe[^]*two cattle still missing/i,
@@ -81,7 +82,7 @@ const OUTCOMES = {
       "fact:wolf_winter_people_safe",
       "fact:wolf_winter_steading_evacuated",
     ],
-    stationService: null,
+    stationServices: [],
     greenwayService: GREENWAY_RESUPPLY,
     juneMemory: "albany:memory_june_drive_signal_spent_herd_out",
     juneCopy: /whole herd[^]*signal-and-rope rig cut apart/i,
@@ -199,7 +200,7 @@ describe("SS-F10 — drive crisis survives the truthful Albany return", () => {
       expect(session.campaignWorldFactIds()).not.toContain("fact:wolf_winter_pack_diverted_alive");
 
       expect(session.view().serviceOffers.map((offer) => offer.id)).toEqual(
-        expected.stationService ? [expected.stationService] : [],
+        expected.stationServices,
       );
       session.chooseJourney("continue");
       session.chooseJourneyStory("send_wagon_to_cade");
@@ -326,7 +327,10 @@ describe("SS-F10 — drive crisis survives the truthful Albany return", () => {
     addRoadStrain(session);
     moveToArea(session, STATION);
 
-    expect(session.view().serviceOffers.map((offer) => offer.id)).toEqual([STATION_REST]);
+    expect(session.view().serviceOffers.map((offer) => offer.id)).toEqual([
+      STATION_CARE,
+      STATION_REST,
+    ]);
     const rested = session.restAtTown();
     expect(rested).toMatchObject({ action: "rest", changed: true, minutes: 15 });
     expect(rested.message).toMatch(
@@ -338,6 +342,7 @@ describe("SS-F10 — drive crisis survives the truthful Albany return", () => {
       severity: 2,
       treatment: "untreated",
     });
+    expect(session.view().serviceOffers.map((offer) => offer.id)).toEqual([STATION_CARE]);
 
     moveToArea(session, GREENWAY);
     expect(session.view().serviceOffers.map((offer) => offer.id)).toEqual([GREENWAY_RESUPPLY]);

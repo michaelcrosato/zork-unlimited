@@ -62,10 +62,10 @@ export function parseRoadJournalId(entryId: string): RoadJournalIdParts {
 }
 
 export function parseServiceJournalId(entryId: string): ServiceJournalIdParts {
-  const match = /^service:(rest|resupply):(\d+)$/.exec(entryId);
+  const match = /^service:(care|rest|resupply):(\d+)$/.exec(entryId);
   if (!match) {
     throw new Error(
-      `Overworld session snapshot journal service entry id "${entryId}" must match "service:<rest|resupply>:<minutes>".`,
+      `Overworld session snapshot journal service entry id "${entryId}" must match "service:<care|rest|resupply>:<minutes>".`,
     );
   }
   const recordedAt = Number(match[2]!);

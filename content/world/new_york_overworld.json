@@ -1350,6 +1350,42 @@
       ]
     },
     {
+      "id": "albany:cade_witnessed_gate_wound_station_care",
+      "home": "albany_city",
+      "area": "albany_city__transport_hub",
+      "action": "care",
+      "title": "Treat Cade's Witnessed Gate Wound",
+      "summary": "Cade's return account identifies the byre-mouth gate wound, and Hayden opens Albany Station's aid room for one exact treatment. The 45-minute care closes that witnessed wound without resting you or replenishing road stores.",
+      "provider_character_id": "albany_city__transport_hub__contact",
+      "minutes": 45,
+      "requires_all_world_facts": [
+        "fact:wolf_winter_courier_wounded"
+      ],
+      "character_conditions": {
+        "requires_all_relationship_memories": [
+          {
+            "npc_id": "npc:old_cade",
+            "memory_id": "memory:wolf_winter_drive_herd_first_wound"
+          }
+        ],
+        "requires_all_wounds": [
+          {
+            "wound_id": "wound:wolf_winter_byre_mouth_gate",
+            "treatment": "untreated"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "type": "treat_wound",
+          "wound_id": "wound:wolf_winter_byre_mouth_gate",
+          "from_treatment": "untreated",
+          "to_treatment": "treated",
+          "health_restore": 6
+        }
+      ]
+    },
+    {
       "id": "albany:wolf_drive_reserve_returned_station_rest",
       "home": "albany_city",
       "area": "albany_city__transport_hub",
@@ -52947,7 +52983,7 @@
           {
             "id": "stake_shortest_accessible_detour",
             "title": "Stake the shortest accessible detour",
-            "preview": "Spend 30 minutes staking the shortest passable public detour. Earn 3 Capital / Mohawk renown—enough after the truthful Wolf-Winter return and trail policy to reach Rowan's 13-standing Civic recovery threshold.",
+            "preview": "Spend 30 minutes staking the shortest passable public detour. Earn 3 Capital / Mohawk renown—enough after the truthful Wolf-Winter return and trail policy to reach Rowan's 13-standing Civic recovery threshold. If Cade's witnessed byre-mouth gate wound is still untreated, this fast line remains lawful while the deeper survey waits for 45-minute care at Albany Station.",
             "consequence": "You stake a direct accessible line around the damaged crossing. Emery can open it immediately, but the record covers only this season's shortest usable detour.",
             "terms": {
               "minutes": 30,
@@ -52963,7 +52999,7 @@
           {
             "id": "map_all_weather_public_loop",
             "title": "Map an all-weather public loop",
-            "preview": "Spend 75 minutes mapping accessible grades, thaw drainage, and public crossings. Earn 5 Capital / Mohawk renown.",
+            "preview": "Spend 75 minutes mapping accessible grades, thaw drainage, and public crossings. Earn 5 Capital / Mohawk renown. Cade's witnessed byre-mouth gate wound must first be treated through 45-minute care at Albany Station when that wound is present.",
             "consequence": "You map a complete all-weather public loop with accessible grades and signed crossings. Emery files the durable route for public use and credits the deeper survey.",
             "terms": {
               "minutes": 75,
@@ -52974,12 +53010,20 @@
                 "event_id": "albany_city__greenway__event",
                 "option_id": "post_accessible_public_detour"
               }
-            ]
+            ],
+            "character_conditions": {
+              "forbids_any_wounds": [
+                {
+                  "wound_id": "wound:wolf_winter_byre_mouth_gate",
+                  "treatment": "untreated"
+                }
+              ]
+            }
           },
           {
             "id": "reset_steward_markers",
             "title": "Reset the steward markers",
-            "preview": "Spend 20 minutes resetting the minimum low-profile corridor marks. Earn 1 Capital / Mohawk renown.",
+            "preview": "Spend 20 minutes resetting the minimum low-profile corridor marks. Earn 1 Capital / Mohawk renown. If Cade's witnessed byre-mouth gate wound is still untreated, this fast line remains lawful while the deeper witnessed trace waits for 45-minute care at Albany Station.",
             "consequence": "You reset the quiet steward marks without advertising the wildlife crossing. Emery can guide trained stewards now, but the record remains a minimal seasonal line.",
             "terms": {
               "minutes": 20,
@@ -52995,7 +53039,7 @@
           {
             "id": "trace_winter_wildlife_corridor_with_witness_points",
             "title": "Trace the winter wildlife corridor with witness points",
-            "preview": "Spend 60 minutes tracing winter movement and witnessed steward points without posting a public route. Earn 4 Capital / Mohawk renown.",
+            "preview": "Spend 60 minutes tracing winter movement and witnessed steward points without posting a public route. Earn 4 Capital / Mohawk renown. Cade's witnessed byre-mouth gate wound must first be treated through 45-minute care at Albany Station when that wound is present.",
             "consequence": "You trace the winter wildlife corridor through witnessed, low-profile steward points. Emery files a durable conservation record without turning the crossing into an obvious public path.",
             "terms": {
               "minutes": 60,
@@ -53006,7 +53050,15 @@
                 "event_id": "albany_city__greenway__event",
                 "option_id": "place_quiet_corridor_markers"
               }
-            ]
+            ],
+            "character_conditions": {
+              "forbids_any_wounds": [
+                {
+                  "wound_id": "wound:wolf_winter_byre_mouth_gate",
+                  "treatment": "untreated"
+                }
+              ]
+            }
           },
           {
             "id": "secure_minimum_bloodshed_custody_marks",

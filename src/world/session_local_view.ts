@@ -7,6 +7,7 @@ import type {
 import { questView, type OverworldQuestView } from "./session_local_discovery.js";
 import { availableLocalJobSceneOptions } from "./local_job_scene.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type OverworldSessionLocalView = {
   areas: OverworldArea[];
@@ -35,6 +36,7 @@ export type OverworldSessionLocalViewState = {
   resolvedEventIds?: ReadonlySet<string>;
   campaignWorldFactIds?: ReadonlySet<string>;
   campaignStoryChoiceKeys?: ReadonlySet<string>;
+  campaignCharacter?: CampaignCharacterState;
   journalEntries?: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
@@ -68,6 +70,7 @@ export function projectOverworldSessionLocalJob(
     | "resolvedEventIds"
     | "campaignWorldFactIds"
     | "campaignStoryChoiceKeys"
+    | "campaignCharacter"
     | "journalEntries"
   >,
   retainUnavailable: true,
@@ -80,6 +83,7 @@ export function projectOverworldSessionLocalJob(
     | "resolvedEventIds"
     | "campaignWorldFactIds"
     | "campaignStoryChoiceKeys"
+    | "campaignCharacter"
     | "journalEntries"
   >,
   retainUnavailable?: false,
@@ -92,6 +96,7 @@ export function projectOverworldSessionLocalJob(
     | "resolvedEventIds"
     | "campaignWorldFactIds"
     | "campaignStoryChoiceKeys"
+    | "campaignCharacter"
     | "journalEntries"
   >,
   retainUnavailable = false,
@@ -105,6 +110,7 @@ export function projectOverworldSessionLocalJob(
     resolvedEventIds,
     worldFactIds: campaignWorldFactIds,
     storyChoiceKeys: state.campaignStoryChoiceKeys ?? new Set<string>(),
+    ...(state.campaignCharacter ? { character: state.campaignCharacter } : {}),
     eventOptionIdFor: (eventId) =>
       journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
   });
@@ -116,6 +122,7 @@ export function projectOverworldSessionLocalJob(
       forbids_any_world_facts: _forbiddenFacts,
       requires_all_story_choices: _requiredChoices,
       forbids_any_story_choices: _forbiddenChoices,
+      character_conditions: _characterConditions,
       ...option
     }) => option,
   );
@@ -125,7 +132,8 @@ export function projectOverworldSessionLocalJob(
       option.requires_all_world_facts !== undefined ||
       option.forbids_any_world_facts !== undefined ||
       option.requires_all_story_choices !== undefined ||
-      option.forbids_any_story_choices !== undefined,
+      option.forbids_any_story_choices !== undefined ||
+      option.character_conditions !== undefined,
   );
   if (!hasPlayerHiddenPredicates && options.length === job.authored_scene.options.length)
     return job;

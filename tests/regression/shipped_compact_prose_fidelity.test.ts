@@ -42,7 +42,10 @@ import {
 import type { RpgObservation } from "../../src/rpg/observation.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
-import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
+import {
+  buildCampaignCharacterState,
+  createInitialCampaignCharacterState,
+} from "../../src/world/campaign_character_state.js";
 import {
   compactCampaignServiceOffer,
   compactOverworldEventScenes,
@@ -439,7 +442,7 @@ describe("shipped compact prose fidelity", () => {
     expect(WORLD.local_events.filter((event) => event.authored_scene)).toHaveLength(6);
     expect(WORLD.local_jobs.filter((job) => job.authored_scene)).toHaveLength(6);
     expect(WORLD.quests.filter((quest) => quest.launch)).toHaveLength(1);
-    expect(WORLD.campaign_service_rules).toHaveLength(32);
+    expect(WORLD.campaign_service_rules).toHaveLength(33);
     expect(WORLD.road_events).toHaveLength(344);
     expect(WORLD.areas).toHaveLength(700);
     expect(WORLD.points_of_interest).toHaveLength(700);
@@ -808,7 +811,20 @@ describe("shipped compact prose fidelity", () => {
         minutes: rule.minutes,
       });
       expectExact(`service:${rule.id}.summary`, rule.summary, offer[3]);
-      const text = campaignServiceJournalCopy(rule, { supplies: 0, fatigue: 100 }).text;
+      const treatment = rule.effects?.find((effect) => effect.type === "treat_wound");
+      const character = treatment
+        ? buildCampaignCharacterState({
+            health: { current: 30 - treatment.health_restore, max: 30 },
+            wounds: [
+              {
+                woundId: treatment.wound_id,
+                severity: 2,
+                treatment: treatment.from_treatment,
+              },
+            ],
+          })
+        : undefined;
+      const text = campaignServiceJournalCopy(rule, { supplies: 0, fatigue: 100 }, character).text;
       const action = compactOverworldServiceAction({
         action: rule.action,
         source: "campaign_override",

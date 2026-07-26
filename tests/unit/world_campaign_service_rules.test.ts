@@ -14,7 +14,10 @@ import {
   type OverworldManifest,
 } from "../../src/world/overworld.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { planOverworldSessionTownResupply } from "../../src/world/session_service_lifecycle.js";
+import {
+  planOverworldSessionTownCare,
+  planOverworldSessionTownResupply,
+} from "../../src/world/session_service_lifecycle.js";
 import { buildCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -51,6 +54,102 @@ function worldWithRule(rule: CampaignServiceRule): OverworldManifest {
 }
 
 describe("campaign service-rule authoring", () => {
+  it("requires care to bind an exact source wound and permits no rest/resupply mutations", () => {
+    const care = {
+      id: "service:test_wound_care",
+      home: "albany_city",
+      area: "albany_city__transport_hub",
+      action: "care",
+      title: "Treat the witnessed wound",
+      summary: "The Station aid room treats one exact witnessed wound.",
+      minutes: 45,
+      requires_all_world_facts: ["fact:wolf_winter_courier_wounded"],
+      character_conditions: {
+        requires_all_wounds: [
+          {
+            wound_id: "wound:wolf_winter_byre_mouth_gate",
+            treatment: "untreated",
+          },
+        ],
+      },
+      effects: [
+        {
+          type: "treat_wound",
+          wound_id: "wound:wolf_winter_byre_mouth_gate",
+          from_treatment: "untreated",
+          to_treatment: "treated",
+          health_restore: 6,
+        },
+      ],
+    } as const;
+    expect(CampaignServiceRuleSchema.parse(care)).toEqual(care);
+    expect(() =>
+      CampaignServiceRuleSchema.parse({
+        ...care,
+        character_conditions: undefined,
+      }),
+    ).toThrow(/requires exact campaign character conditions/i);
+    expect(() =>
+      CampaignServiceRuleSchema.parse({
+        ...care,
+        character_conditions: {
+          requires_all_wounds: [
+            {
+              wound_id: "wound:wolf_winter_byre_mouth_gate",
+              treatment: "stabilized",
+            },
+          ],
+        },
+      }),
+    ).toThrow(/must require wound.*source treatment/i);
+    expect(() =>
+      CampaignServiceRuleSchema.parse({
+        ...serviceRule(),
+        effects: care.effects,
+      }),
+    ).toThrow(/cannot mutate campaign character state/i);
+
+    const character = buildCampaignCharacterState({
+      health: { current: 24, max: 30 },
+      wounds: [
+        {
+          woundId: "wound:wolf_winter_byre_mouth_gate",
+          severity: 2,
+          treatment: "untreated",
+        },
+      ],
+    });
+    expect(
+      planOverworldSessionTownCare({
+        currentTown: { id: "albany_city", name: "Albany", services: [] },
+        currentAreaId: "albany_city__transport_hub",
+        campaignServiceRules: [CampaignServiceRuleSchema.parse(care)],
+        campaignWorldFactIds: ["fact:wolf_winter_courier_wounded"],
+        consumedCampaignServiceRuleIds: [],
+        campaignCharacter: character,
+        supplies: 2,
+        fatigue: 17,
+      }),
+    ).toMatchObject({
+      action: "care",
+      minutes: 45,
+      suppliesBefore: 2,
+      suppliesAfter: 2,
+      fatigueBefore: 17,
+      fatigueAfter: 17,
+      characterAfter: {
+        health: { current: 30, max: 30 },
+        wounds: [
+          {
+            woundId: "wound:wolf_winter_byre_mouth_gate",
+            severity: 2,
+            treatment: "treated",
+          },
+        ],
+      },
+    });
+  });
+
   it("strictly parses bounded, fact-conditioned one-time rules", () => {
     const authored = serviceRule();
     const parsed = CampaignServiceRuleSchema.parse(authored);
@@ -190,6 +289,30 @@ describe("campaign service-rule authoring", () => {
         ),
       ),
     ).toThrow(/unauthored world fact/i);
+    expect(() =>
+      assertOverworldIntegrity(
+        worldWithRule(
+          serviceRule({
+            character_conditions: {
+              requires_all_companions: ["npc:unauthored_service_companion"],
+            },
+          }),
+        ),
+      ),
+    ).toThrow(/unauthored companion/i);
+    expect(() =>
+      assertOverworldIntegrity(
+        worldWithRule(
+          serviceRule({
+            character_conditions: {
+              requires_all_promises: [
+                { promise_id: "promise:unauthored_service_promise", status: "active" },
+              ],
+            },
+          }),
+        ),
+      ),
+    ).toThrow(/unauthored promise/i);
   });
 
   it("binds story predicates and named providers to canonical campaign authoring", () => {
