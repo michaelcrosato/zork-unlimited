@@ -1062,13 +1062,18 @@ function authoredCampaignCharacterPredicateIndex(world: OverworldManifest): Read
   promiseIds: ReadonlySet<string>;
   relationshipMemoryKeys: ReadonlySet<string>;
   woundTreatmentKeys: ReadonlySet<string>;
-  woundSourceKeys: ReadonlySet<string>;
+  reachableWoundTreatmentKeys: ReadonlySet<string>;
 }> {
   const companionIds = new Set<string>();
   const promiseIds = new Set<string>();
   const relationshipMemoryKeys = new Set<string>();
   const woundTreatmentKeys = new Set<string>();
-  const woundSourceKeys = new Set<string>();
+  // A treatment may be staged across service rules.  Keep the states which can
+  // actually arise distinct from every state merely named by an effect: the
+  // latter set is useful for predicates, but it must not make a disconnected
+  // care chain look sourceable.
+  const initialWoundTreatmentKeys = new Set<string>();
+  const woundTreatmentTransitions: Array<readonly [from: string, to: string]> = [];
   const rememberCharacter = (character: CampaignCharacterState): void => {
     character.companions.forEach((companionId) => companionIds.add(companionId));
     character.promises.forEach((promise) => promiseIds.add(promise.promiseId));
@@ -1080,7 +1085,7 @@ function authoredCampaignCharacterPredicateIndex(world: OverworldManifest): Read
     character.wounds.forEach((wound) => {
       const key = JSON.stringify([wound.woundId, wound.treatment]);
       woundTreatmentKeys.add(key);
-      woundSourceKeys.add(key);
+      initialWoundTreatmentKeys.add(key);
     });
   };
   world.opening_registration?.profiles.forEach((profile) => rememberCharacter(profile.character));
@@ -1114,26 +1119,45 @@ function authoredCampaignCharacterPredicateIndex(world: OverworldManifest): Read
       case "suffer_wound": {
         const key = JSON.stringify([effect.wound_id, effect.treatment]);
         woundTreatmentKeys.add(key);
-        woundSourceKeys.add(key);
+        initialWoundTreatmentKeys.add(key);
         break;
       }
-      case "treat_wound":
-        woundTreatmentKeys.add(JSON.stringify([effect.wound_id, effect.from_treatment]));
-        woundTreatmentKeys.add(JSON.stringify([effect.wound_id, effect.to_treatment]));
+      case "treat_wound": {
+        const from = JSON.stringify([effect.wound_id, effect.from_treatment]);
+        const to = JSON.stringify([effect.wound_id, effect.to_treatment]);
+        woundTreatmentKeys.add(from);
+        woundTreatmentKeys.add(to);
+        woundTreatmentTransitions.push([from, to]);
         break;
+      }
     }
   }
   for (const effect of (world.campaign_service_rules ?? []).flatMap((rule) => rule.effects ?? [])) {
     if (effect.type !== "treat_wound") continue;
-    woundTreatmentKeys.add(JSON.stringify([effect.wound_id, effect.from_treatment]));
-    woundTreatmentKeys.add(JSON.stringify([effect.wound_id, effect.to_treatment]));
+    const from = JSON.stringify([effect.wound_id, effect.from_treatment]);
+    const to = JSON.stringify([effect.wound_id, effect.to_treatment]);
+    woundTreatmentKeys.add(from);
+    woundTreatmentKeys.add(to);
+    woundTreatmentTransitions.push([from, to]);
+  }
+  const reachableWoundTreatmentKeys = new Set(initialWoundTreatmentKeys);
+  let expanded = true;
+  while (expanded) {
+    expanded = false;
+    for (const [from, to] of woundTreatmentTransitions) {
+      if (!reachableWoundTreatmentKeys.has(from) || reachableWoundTreatmentKeys.has(to)) {
+        continue;
+      }
+      reachableWoundTreatmentKeys.add(to);
+      expanded = true;
+    }
   }
   return {
     companionIds,
     promiseIds,
     relationshipMemoryKeys,
     woundTreatmentKeys,
-    woundSourceKeys,
+    reachableWoundTreatmentKeys,
   };
 }
 
@@ -3140,7 +3164,7 @@ function assertCampaignServiceRulesIntegrity(
     for (const effect of rule.effects ?? []) {
       if (
         effect.type === "treat_wound" &&
-        !authoredCharacterPredicates.woundSourceKeys.has(
+        !authoredCharacterPredicates.reachableWoundTreatmentKeys.has(
           JSON.stringify([effect.wound_id, effect.from_treatment]),
         )
       ) {

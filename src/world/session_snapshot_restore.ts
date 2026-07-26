@@ -2701,12 +2701,20 @@ const WOUND_CARE_GREENWAY_DEEP_OPTION_IDS: ReadonlySet<string> = new Set([
   "trace_winter_wildlife_corridor_with_witness_points",
 ]);
 
+function isWoundCareGreenwayPredecessorWorldHash(sourceWorldHash: string): boolean {
+  return (
+    sourceWorldHash === OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH ||
+    isEmeryEvidenceCustodyPredecessorWorldHash(sourceWorldHash)
+  );
+}
+
 function isWoundCareGreenwayGrandfatherProof(entry: OverworldJournalEntry): boolean {
   const proof = entry.localSceneProof;
   return (
     entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}` &&
     proof?.sceneId === EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID &&
-    proof.sourceWorldHash === OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH &&
+    proof.sourceWorldHash !== undefined &&
+    isWoundCareGreenwayPredecessorWorldHash(proof.sourceWorldHash) &&
     WOUND_CARE_GREENWAY_DEEP_OPTION_IDS.has(proof.optionId)
   );
 }
@@ -2720,7 +2728,7 @@ function migrateWoundCareGreenwayPredecessorSnapshot(args: {
   indexes: OverworldSnapshotManifestIndex;
   snapshot: OverworldSessionSnapshot;
 }): OverworldSessionSnapshot {
-  if (args.snapshot.worldHash !== OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH) {
+  if (!isWoundCareGreenwayPredecessorWorldHash(args.snapshot.worldHash)) {
     return args.snapshot;
   }
   const job = args.indexes.jobsById.get(EMERY_EVIDENCE_CUSTODY_JOB_ID);
@@ -2772,7 +2780,7 @@ function migrateWoundCareGreenwayPredecessorSnapshot(args: {
         ...entry,
         localSceneProof: {
           ...proof,
-          sourceWorldHash: OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH,
+          sourceWorldHash: proof.sourceWorldHash ?? args.snapshot.worldHash,
         },
       };
     }),
@@ -2981,7 +2989,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     isEmeryFullCombatMemoryPredecessorWorldHash(sourceSnapshot.worldHash);
   const migratesWoundCare =
     migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH;
+    isWoundCareGreenwayPredecessorWorldHash(sourceSnapshot.worldHash);
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null

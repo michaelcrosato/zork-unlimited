@@ -10,6 +10,7 @@ import {
   CampaignConsequenceEffectsSchema,
   CampaignPromiseConditionsSchema,
   campaignCharacterMatchesConditions,
+  type CampaignCharacterConditions,
 } from "./campaign_consequences.js";
 import {
   CampaignStoryChoiceRefSchema,
@@ -258,6 +259,32 @@ function compareStrings(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function canonicalCampaignCharacterConditions(
+  conditions: CampaignCharacterConditions | undefined,
+): object | null {
+  if (conditions === undefined) return null;
+
+  return {
+    requires_all_companions: [...(conditions.requires_all_companions ?? [])].sort(compareStrings),
+    forbids_any_companions: [...(conditions.forbids_any_companions ?? [])].sort(compareStrings),
+    requires_all_promises: (conditions.requires_all_promises ?? [])
+      .map((promise) => JSON.stringify([promise.promise_id, promise.status]))
+      .sort(compareStrings),
+    requires_all_relationship_memories: (conditions.requires_all_relationship_memories ?? [])
+      .map((memory) => JSON.stringify([memory.npc_id, memory.memory_id]))
+      .sort(compareStrings),
+    forbids_any_relationship_memories: (conditions.forbids_any_relationship_memories ?? [])
+      .map((memory) => JSON.stringify([memory.npc_id, memory.memory_id]))
+      .sort(compareStrings),
+    requires_all_wounds: (conditions.requires_all_wounds ?? [])
+      .map((wound) => JSON.stringify([wound.wound_id, wound.treatment]))
+      .sort(compareStrings),
+    forbids_any_wounds: (conditions.forbids_any_wounds ?? [])
+      .map((wound) => JSON.stringify([wound.wound_id, wound.treatment]))
+      .sort(compareStrings),
+  };
+}
+
 /**
  * Canonicalize only the fields that decide whether a rule activates. Copy,
  * duration, provider, and identity cannot make two otherwise identical offers
@@ -281,7 +308,7 @@ function campaignServiceRulePredicateKey(rule: CampaignServiceRule): string {
       const idOrder = compareStrings(left.promise_id, right.promise_id);
       return idOrder === 0 ? compareStrings(left.status, right.status) : idOrder;
     }),
-    character_conditions: rule.character_conditions ?? null,
+    character_conditions: canonicalCampaignCharacterConditions(rule.character_conditions),
     requires_region_renown: rule.requires_region_renown ?? null,
     requires_all_local_job_options: (rule.requires_all_local_job_options ?? [])
       .map(campaignServiceLocalJobOptionKey)

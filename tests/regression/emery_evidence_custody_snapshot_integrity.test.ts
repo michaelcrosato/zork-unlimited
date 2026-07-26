@@ -231,7 +231,7 @@ describe("Emery evidence-custody snapshot integrity", () => {
     expect(OverworldSession.restore(WORLD, restored).snapshot()).toEqual(restored);
   });
 
-  it("leaves public and bloodless quiet Greenway records unchanged", () => {
+  it("adds only pre-care provenance to a bloodless quiet deep record", () => {
     const predecessor = completedGreenwayPolicy({
       world: PREDECESSOR,
       endingId: "ending_pack_diverted",
@@ -241,6 +241,8 @@ describe("Emery evidence-custody snapshot integrity", () => {
     }).snapshot();
     const expected = structuredClone(predecessor);
     expected.worldHash = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
+    entry(expected, `job:${JOB}`).localSceneProof!.sourceWorldHash =
+      OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH;
 
     expect(OverworldSession.restore(WORLD, predecessor).snapshot()).toEqual(expected);
   });
