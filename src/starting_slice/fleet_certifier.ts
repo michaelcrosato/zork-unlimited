@@ -542,6 +542,7 @@ const FleetAttemptSchema = z
     exit: z.number().int().nonnegative().safe(),
     classification: z.enum([
       "technical_timeout",
+      "strict_stream_rejected",
       "launcher_or_run_failure",
       "verifier_failure",
       "verified",
@@ -1620,6 +1621,11 @@ function validateAuthenticatedStartingSliceCohort(
         ) {
           errors.push(
             `seed ${seed} attempt ${attempt.attempt}: timeout exit must be classified technical_timeout`,
+          );
+        }
+        if ((attempt.classification === "strict_stream_rejected") !== (attempt.exit === 43)) {
+          errors.push(
+            `seed ${seed} attempt ${attempt.attempt}: strict-stream rejection must use exit 43 and its exact classification`,
           );
         }
         if (attempt.report_recovered) {

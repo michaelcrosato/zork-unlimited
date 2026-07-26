@@ -219,7 +219,7 @@ if [[ "\${1:-}" == "--version" ]]; then
   printf 'codex-cli 0.144.1\\n'
   exit 0
 fi
-printf '{"type":"not-a-valid-codex-thread"}\\n'
+printf '{"type":"thread.started","thread_id":"77777777-7777-4777-8777-777777777777"}\\n'
 exit 0
 `,
       );
@@ -786,6 +786,10 @@ printf 'codex-cli 0.144.1\\n'
       join(process.cwd(), "blind-tester", "codex-pure-envelope.mjs"),
       "utf8",
     );
+    const strictStream = readFileSync(
+      join(process.cwd(), "blind-tester", "codex-strict-stream.mjs"),
+      "utf8",
+    );
 
     expect(runner).toContain('PROVIDER="${BLIND_PROVIDER:-codex}"');
     expect(runner).toContain("--provider)");
@@ -799,11 +803,15 @@ printf 'codex-cli 0.144.1\\n'
     expect(launchAt).toBeGreaterThan(0);
     expect(launchEnd).toBeGreaterThan(launchAt);
     const codexLaunch = runner.slice(launchAt, launchEnd);
-    expect(codexLaunch).toContain('"$SELECTED_CODEX_BIN" exec');
+    expect(codexLaunch).toContain('"$NODE_CMD" "$CODEX_STRICT_STREAM_SCRIPT"');
+    expect(codexLaunch).toContain('--binary "$SELECTED_CODEX_BIN"');
+    expect(codexLaunch).toContain("\n    exec \\");
     expect(codexLaunch).toContain("--sandbox read-only");
     expect(codexLaunch).not.toContain("--ephemeral");
-    expect(codexLaunch).toContain('cd "$CODEX_PLAYER_CWD"');
-    expect(codexLaunch).toContain('CODEX_HOME="$ACTIVE_CODEX_HOME_ARG"');
+    expect(codexLaunch).toContain('--cwd "$CODEX_PLAYER_CWD_ARG"');
+    expect(strictStream).toContain("detached: true");
+    expect(strictStream).toContain("CODEX_HOME: codexHome");
+    expect(strictStream).toContain('spawnSync("taskkill.exe"');
     expect(codexLaunch).toContain('CODEX_ROLLOUT="$OUT.codex-rollout.jsonl"');
     expect(codexLaunch).toContain('--home "$ACTIVE_CODEX_HOME_ARG"');
     expect(codexLaunch).toContain('--events "$CODEX_EVENTS_ARG"');

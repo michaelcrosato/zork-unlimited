@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 648 -->
+<!-- historical_cycle_count: 649 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - blind_strict_stream_fail_fast
+
+- Evidence choice: the clean 10-Spark cohort yielded only 2/10 verified reports, with 95.0% of its raw tokens attached to eight inadmissible transport runs.
+- Surface: a negative-only live guard now stops complete forbidden server/tool and bound malformed-wrapper/lifecycle rows without accepting evidence or treating absent future rows as failure.
+- Custody: Windows uses a suspended Codex process inside a kill-on-close Job Object before resuming it; POSIX uses a runner-owned process group, and only verified descendant termination can prove fail-fast cleanup.
+- Pure evidence: dirty-candidate Spark seed 72661 completed The Wolf-Winter, continued through The Gallowmere, ended voluntarily at checkpoint 40 after 42 decisions, rated clarity/enjoyment 4/4, and chose replay-yes with verified evidence.
+- Self-critique/follow-through: one valid canary proves no false rejection on that route, while synthetic adverse streams carry rejection coverage; no further fleet launches precede a clean merge.
+- Guard: all review blockers are closed; 217 focused tests, typecheck, lint, format, and zero-finding post-crawl `20260726T112309Z` are green.
 
 ### Cycle result - wolf_post_lure_northbound_closure
 
@@ -145,12 +154,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind evidence: exact-build native Terra seed 72520 completes The Wolf-Winter via Cade's fortified terms in 9 decisions with every wolf and cow alive, ends voluntarily, rates clarity/enjoyment 4/4, and reports no duplicate-article narration.
 - Feedback/follow-through: the blocked north exit should name the exact shutter-take action, while "two household shutters" and June's "optional second field seat" remain separate copy debts rather than broadening this grammar fix.
 - Guard: independent review is clean, focused action coverage passes 30 tests, pre/post crawl are zero-finding, and full health passes 419 files/3,390 tests plus both typechecks and all packs.
-
-### Cycle result - blind_direct_inline_flag_authority
-
-- Evidence choice: invoking the native blind launcher with an inline value such as `--seed=72525` treated that switch as a quest target and stopped before play, while recovered npm residue could outrank an explicit operator value.
-- Surface: the shell entrypoint now accepts both spaced and inline forms for every supported value flag, rejects unknown switches, and the JavaScript recovery layer recognizes the same forms and quest aliases so explicit arguments retain authority.
-- Counterfactual: hostile npm residue cannot replace explicit model/seed/turn/report settings; empty or repeated inline values, quest aliases, extra positionals, and unknown flags stop before any model call, while legitimate npm forwarding and the live-quest prohibition remain intact.
-- Blind evidence: exact-build native Terra human-terminal seed 72526 completes The Wolf-Winter after a failed first lure cast, continues, completes The Gallowmere, then ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Feedback/follow-through: `npm run play` remains a direct random-quest surface rather than the fresh-overworld journey; Queensbury route revelation and Cade lure-topic discoverability are separate game-surface findings already assigned to focused work.
-- Guard: independent final review is clean, post-change crawl `20260724T191532Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 38 focused tests pass, and exact integrated full health passes 418 files/3,384 tests plus both typechecks and all packs.

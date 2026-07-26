@@ -1084,13 +1084,16 @@ ${JSON.stringify({ ...pureInterview, journey_exit_receipt: currentReceipt })}
 });
 
 describe("fleet attempt evidence", () => {
-  it("classifies timeout, launcher, verifier, and verified attempts from durable stages", () => {
+  it("classifies timeout, strict rejection, launcher, verifier, and verified attempts", () => {
     expect(
       classifyFleetAttempt({ runnerExit: 124, verifierAttempted: false, verified: false }),
     ).toBe("technical_timeout");
     expect(classifyFleetAttempt({ runnerExit: 9, verifierAttempted: false, verified: false })).toBe(
       "launcher_or_run_failure",
     );
+    expect(
+      classifyFleetAttempt({ runnerExit: 43, verifierAttempted: false, verified: false }),
+    ).toBe("strict_stream_rejected");
     expect(classifyFleetAttempt({ runnerExit: 1, verifierAttempted: true, verified: false })).toBe(
       "verifier_failure",
     );

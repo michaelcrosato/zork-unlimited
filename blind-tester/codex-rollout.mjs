@@ -992,6 +992,26 @@ function isExactTurnContextReplay(initial, replay) {
   );
 }
 
+function assertExactTurnContextReplays(rows, turns, label) {
+  const initialTurn = turns[0];
+  for (const duplicateTurn of turns.slice(1)) {
+    const precededByCompaction =
+      duplicateTurn.index >= 2 &&
+      rows[duplicateTurn.index - 2]?.type === "compacted" &&
+      rows[duplicateTurn.index - 1]?.type === "world_state";
+    const afterCompletion = rows
+      .slice(0, duplicateTurn.index)
+      .some((row) => row?.type === "event_msg" && row?.payload?.type === "task_complete");
+    if (
+      !precededByCompaction ||
+      afterCompletion ||
+      !isExactTurnContextReplay(initialTurn.row, duplicateTurn.row)
+    ) {
+      fail(`${label} permits only an exact compacted duplicate turn_context`);
+    }
+  }
+}
+
 function parseJsonlBytes(bytes, label) {
   return bytes
     .toString("utf8")
@@ -1034,22 +1054,7 @@ function rolloutRecordedIdentity(rolloutBytes) {
     fail("Codex rollout cwd capture requires exactly one session_meta and a turn_context");
   }
   const initialTurn = turns[0];
-  for (const duplicateTurn of turns.slice(1)) {
-    const precededByCompaction =
-      duplicateTurn.index >= 2 &&
-      rows[duplicateTurn.index - 2]?.type === "compacted" &&
-      rows[duplicateTurn.index - 1]?.type === "world_state";
-    const afterCompletion = rows
-      .slice(0, duplicateTurn.index)
-      .some((row) => row?.type === "event_msg" && row?.payload?.type === "task_complete");
-    if (
-      !precededByCompaction ||
-      afterCompletion ||
-      !isExactTurnContextReplay(initialTurn.row, duplicateTurn.row)
-    ) {
-      fail("Codex rollout cwd capture permits only an exact compacted duplicate turn_context");
-    }
-  }
+  assertExactTurnContextReplays(rows, turns, "Codex rollout cwd capture");
   const threadId = sessions[0]?.payload?.id;
   const sessionCwd = sessions[0]?.payload?.cwd;
   const turnCwd = initialTurn.row?.payload?.cwd;
@@ -1088,6 +1093,222 @@ function sha256(bytes) {
 }
 
 const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v2";
+
+function assertSameDirectoryAuthority(path, expected, label, { allowLinkedPath = false } = {}) {
+  const actual = canonicalExistingDirectory(path, label, { allowLinkedPath });
+  if (!sameDirectoryAuthority(actual, expected)) {
+    fail(`${label} identity changed while the strict stream watcher was active`);
+  }
+  return actual;
+}
+
+/**
+ * Freeze the three directories that give a live rollout its authority before
+ * opening any matching session file. The watcher never copies or accepts
+ * evidence; terminal capture repeats the stronger stable-file transaction.
+ */
+export function createCodexRolloutWatchAuthority(codexHome, expectedCwd) {
+  const homeAuthority = canonicalExistingDirectory(resolve(codexHome), "Codex home", {
+    allowLinkedPath: true,
+  });
+  const sessionsAuthority = requireContainedDirectory(
+    join(homeAuthority.canonicalPath, "sessions"),
+    homeAuthority.canonicalPath,
+    "Codex sessions root",
+  );
+  const expectedCwdAuthority = canonicalExistingDirectory(expectedCwd, "Codex expected player cwd");
+  return {
+    home: homeAuthority,
+    sessions: sessionsAuthority,
+    expectedCwd: expectedCwdAuthority,
+  };
+}
+
+export function tryCreateCodexRolloutWatchAuthority(codexHome, expectedCwd) {
+  const homeAuthority = canonicalExistingDirectory(resolve(codexHome), "Codex home", {
+    allowLinkedPath: true,
+  });
+  if (!existsSync(join(homeAuthority.canonicalPath, "sessions"))) return null;
+  return createCodexRolloutWatchAuthority(homeAuthority.canonicalPath, expectedCwd);
+}
+
+function assertCodexRolloutWatchAuthority(authority) {
+  assertSameDirectoryAuthority(authority.home.canonicalPath, authority.home, "Codex home", {
+    allowLinkedPath: true,
+  });
+  assertSameDirectoryAuthority(
+    authority.sessions.canonicalPath,
+    authority.sessions,
+    "Codex sessions root",
+  );
+  assertSameDirectoryAuthority(
+    authority.expectedCwd.canonicalPath,
+    authority.expectedCwd,
+    "Codex expected player cwd",
+  );
+}
+
+function sameOpenFileIdentity(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.nlink === right.nlink &&
+    left.isFile() &&
+    right.isFile()
+  );
+}
+
+/**
+ * Open the one filename-matched rollout if it exists yet. A missing file is an
+ * ordinary in-flight prefix; ambiguity, links, path escape, or identity drift
+ * fail closed.
+ */
+export function tryOpenThreadBoundCodexRollout(authority, threadId) {
+  if (typeof threadId !== "string" || !THREAD_ID_RE.test(threadId)) {
+    fail("Codex strict stream watcher requires one valid public thread identity");
+  }
+  assertCodexRolloutWatchAuthority(authority);
+  const rollouts = [];
+  walkMatchingRollouts(
+    authority.sessions.canonicalPath,
+    authority.sessions.canonicalPath,
+    threadId,
+    rollouts,
+  );
+  if (rollouts.length === 0) return null;
+  if (rollouts.length !== 1) {
+    fail(
+      `Codex strict stream watcher requires one rollout matching its public thread (found ${rollouts.length})`,
+    );
+  }
+  const path = rollouts[0];
+  const linked = lstatSync(path, { bigint: true });
+  if (linked.isSymbolicLink() || !linked.isFile() || linked.nlink !== 1n) {
+    fail("Matching Codex rollout must remain one private regular non-linked file");
+  }
+  const canonicalPath = realpathSync.native(path);
+  if (!isContainedPath(canonicalPath, authority.sessions.canonicalPath)) {
+    fail("Matching Codex rollout escapes the sessions root");
+  }
+  const descriptor = openSync(canonicalPath, "r");
+  try {
+    const opened = fstatSync(descriptor, { bigint: true });
+    if (!sameOpenFileIdentity(linked, opened)) {
+      fail("Matching Codex rollout changed while its watcher descriptor was opened");
+    }
+    return {
+      authority,
+      threadId,
+      path: canonicalPath,
+      descriptor,
+      identity: { dev: opened.dev, ino: opened.ino },
+      offset: 0n,
+    };
+  } catch (error) {
+    closeSync(descriptor);
+    throw error;
+  }
+}
+
+function assertOpenThreadBoundCodexRollout(watch) {
+  assertCodexRolloutWatchAuthority(watch.authority);
+  const linked = lstatSync(watch.path, { bigint: true });
+  const canonicalPath = realpathSync.native(watch.path);
+  const opened = fstatSync(watch.descriptor, { bigint: true });
+  if (
+    canonicalPath !== watch.path ||
+    !isContainedPath(canonicalPath, watch.authority.sessions.canonicalPath) ||
+    linked.isSymbolicLink() ||
+    linked.nlink !== 1n ||
+    !sameOpenFileIdentity(linked, opened) ||
+    opened.dev !== watch.identity.dev ||
+    opened.ino !== watch.identity.ino
+  ) {
+    fail("Matching Codex rollout file identity changed while its watcher was active");
+  }
+  if (opened.size < watch.offset) {
+    fail("Matching Codex rollout shrank while its watcher was active");
+  }
+  return opened;
+}
+
+/** Read only newly appended bytes through the pinned descriptor. */
+export function readThreadBoundCodexRolloutChunk(watch) {
+  const before = assertOpenThreadBoundCodexRollout(watch);
+  const length = before.size - watch.offset;
+  if (length === 0n) return Buffer.alloc(0);
+  if (length > BigInt(Number.MAX_SAFE_INTEGER) || watch.offset > BigInt(Number.MAX_SAFE_INTEGER)) {
+    fail("Matching Codex rollout append is too large to inspect safely");
+  }
+  const bytes = Buffer.alloc(Number(length));
+  let readOffset = 0;
+  while (readOffset < bytes.byteLength) {
+    const count = readSync(
+      watch.descriptor,
+      bytes,
+      readOffset,
+      bytes.byteLength - readOffset,
+      Number(watch.offset) + readOffset,
+    );
+    if (count === 0) fail("Matching Codex rollout changed while its prefix was read");
+    readOffset += count;
+  }
+  const after = assertOpenThreadBoundCodexRollout(watch);
+  if (after.size < before.size) {
+    fail("Matching Codex rollout shrank while its prefix was read");
+  }
+  watch.offset += BigInt(bytes.byteLength);
+  return bytes;
+}
+
+function bindRecordedCwd(recordedCwd, expected, label) {
+  if (typeof recordedCwd !== "string") fail(`${label} cwd is missing`);
+  const recorded = canonicalExistingDirectory(recordedCwd, `${label} player cwd`);
+  if (!sameDirectoryAuthority(recorded, expected)) {
+    fail(`${label} cwd does not equal the isolated player cwd`);
+  }
+}
+
+/**
+ * Bind complete private rows to the public UUID and live isolated cwd before
+ * their gameplay wrappers are eligible for prefix inspection.
+ */
+export function bindThreadBoundCodexRolloutRows(watch, rows, expectedModel) {
+  if (!Array.isArray(rows)) fail("Codex strict stream rollout rows must be an array");
+  if (rows.length === 0) return { sessionBound: false, turnBound: false };
+  const sessions = rows.flatMap((row, index) =>
+    row?.type === "session_meta" ? [{ row, index }] : [],
+  );
+  if (sessions.length !== 1 || sessions[0].index !== 0) {
+    fail("Codex strict stream rollout requires one leading session_meta");
+  }
+  const sessionId = sessions[0].row?.payload?.id;
+  if (sessionId !== watch.threadId) {
+    fail("Codex strict stream rollout session id differs from public thread.started");
+  }
+  bindRecordedCwd(
+    sessions[0].row?.payload?.cwd,
+    watch.authority.expectedCwd,
+    "Codex recorded session",
+  );
+
+  const turns = rows.flatMap((row, index) =>
+    row?.type === "turn_context" ? [{ row, index }] : [],
+  );
+  if (turns.length === 0) return { sessionBound: true, turnBound: false };
+  assertExactTurnContextReplays(rows, turns, "Codex strict stream rollout");
+  for (const turn of turns) {
+    if (turn.row?.payload?.model !== expectedModel) {
+      fail("Codex strict stream rollout model differs from the requested model");
+    }
+    bindRecordedCwd(turn.row?.payload?.cwd, watch.authority.expectedCwd, "Codex recorded turn");
+  }
+  return { sessionBound: true, turnBound: true };
+}
+
+export function closeThreadBoundCodexRollout(watch) {
+  closeSync(watch.descriptor);
+}
 
 export function captureThreadBoundCodexRollout(
   codexHome,
