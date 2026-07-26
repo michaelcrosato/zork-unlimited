@@ -35,6 +35,7 @@
  */
 import { exitFlag, type Effect } from "../core/effects.js";
 import type { Condition } from "../core/conditions.js";
+import { wolfWinterDispatchOverlayFlagForPack } from "../core/embedded_launch_overlay_receipt.js";
 import { validateRpgFoundation } from "./rpg_foundation_validator.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 import {
@@ -662,7 +663,12 @@ function skillCheckEffects(pack: RpgPack): Effect[] {
   const out: Effect[] = [];
   for (const o of pack.objects)
     for (const it of o.interactions)
-      if (it.skill_check) out.push(...it.skill_check.on_success, ...it.skill_check.on_failure);
+      if (it.skill_check)
+        out.push(
+          ...it.skill_check.on_success,
+          ...it.skill_check.on_failure,
+          ...(it.skill_check.on_failure_when ?? []).flatMap((branch) => branch.effects),
+        );
   return out;
 }
 
@@ -688,6 +694,8 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
   const enemyEffects = enemyRuntimeEffects(pack);
   const maneuverEffects = maneuverRuntimeEffects(pack);
   const extraSettableFlags: string[] = [...(opts.extraSettableFlags ?? [])];
+  const launchOverlayFlag = wolfWinterDispatchOverlayFlagForPack(pack.meta.id);
+  if (launchOverlayFlag !== undefined) extraSettableFlags.push(launchOverlayFlag);
   const extraObtainable: string[] = [...(opts.extraObtainable ?? [])];
   for (const enemy of pack.enemies) {
     if (enemy.defeat_flag) extraSettableFlags.push(enemy.defeat_flag);

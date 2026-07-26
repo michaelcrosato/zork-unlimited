@@ -56,6 +56,7 @@ import {
   type OverworldQuestCompletionResult,
   type OverworldQuestStartPreparation,
 } from "./session_quests.js";
+import { deriveQuestDispatchWindow } from "./quest_dispatch_window.js";
 import { deriveCampaignWorldFactIds } from "./campaign_consequences.js";
 import {
   resolveCampaignServiceRules,
@@ -350,6 +351,40 @@ export type OverworldJourneyStoryChoiceResult = Readonly<{
 const DEFAULT_CAMPAIGN_CHARACTER_SERIALIZED = serializeCampaignCharacterState(
   createInitialCampaignCharacterState(),
 );
+
+const authenticatedQuestStartPreparations = new WeakMap<
+  object,
+  Readonly<{ session: object; preparationHash: string }>
+>();
+
+function authenticateQuestStartPreparation(
+  session: OverworldSession,
+  preparation: OverworldQuestStartPreparation,
+): OverworldQuestStartPreparation {
+  authenticatedQuestStartPreparations.set(
+    preparation,
+    Object.freeze({
+      session,
+      preparationHash: hashState(preparation),
+    }),
+  );
+  return preparation;
+}
+
+/**
+ * Proves that an unchanged quest-start preparation came directly from this
+ * live session. The module-private WeakMap is the capability: structural
+ * lookalikes and mutated preparations cannot mint embedded launch state.
+ */
+export function assertAuthenticatedQuestStartPreparation(
+  session: OverworldSession,
+  preparation: OverworldQuestStartPreparation,
+): void {
+  const authority = authenticatedQuestStartPreparations.get(preparation);
+  if (authority?.session !== session || authority.preparationHash !== hashState(preparation)) {
+    throw new Error("Quest start preparation lacks live session provenance.");
+  }
+}
 
 type OverworldClockState = {
   minutesAfter: number;
@@ -2173,6 +2208,25 @@ export class OverworldSession {
     const localState = this.localState();
     const currentAreaId = requireOverworldSessionCurrentAreaId(currentArea);
     const localView = buildOverworldSessionCurrentLocalView(localState, currentAreaId);
+    const questDispatchWindows = new Map(
+      localView.quests.map(
+        (quest) =>
+          [
+            quest.id,
+            deriveQuestDispatchWindow({
+              questId: quest.id,
+              journalEntries: this.journalEntries,
+              openingRegistration: this.world.opening_registration ?? null,
+              openingReliefOath: this.world.opening_relief_oath ?? null,
+              openingLeadSource: this.world.opening_lead_source ?? null,
+              openingPreparation: this.world.opening_preparation ?? null,
+              openingReliefAllocation: this.world.opening_relief_allocation ?? null,
+              openingAlly: this.world.opening_ally ?? null,
+              trustedLegacySourceWorldHash: this.trustedLegacyRegistrationReceiptSourceWorldHash,
+            }),
+          ] as const,
+      ),
+    );
     const serviceOffers = this.campaignServiceOffers(currentAreaId);
     return {
       caches: this.caches,
@@ -2199,6 +2253,7 @@ export class OverworldSession {
       ),
       jobChoices: this.liveJobChoices(localView.jobs),
       questStarts: this.liveQuestStarts(localView.quests),
+      questDispatchWindows,
       routePlannerIndex: this.routePlannerIndex,
       roadEventState: {
         activeGoalId: this.journeyState.goal.id,
@@ -2403,6 +2458,14 @@ export class OverworldSession {
       supplies: this.supplies,
       fatigue: this.fatigue,
       character: this.characterState,
+      journalEntries: this.journalEntries,
+      openingRegistration: this.world.opening_registration ?? null,
+      openingReliefOath: this.world.opening_relief_oath ?? null,
+      openingLeadSource: this.world.opening_lead_source ?? null,
+      openingPreparation: this.world.opening_preparation ?? null,
+      openingReliefAllocation: this.world.opening_relief_allocation ?? null,
+      openingAlly: this.world.opening_ally ?? null,
+      trustedLegacySourceWorldHash: this.trustedLegacyRegistrationReceiptSourceWorldHash,
       questsById: this.questsById,
       areasById: this.areasById,
       currentTownId: this.currentId,
@@ -2420,7 +2483,10 @@ export class OverworldSession {
   }
 
   prepareQuestStart(questId: string, approachId?: string): OverworldQuestStartPreparation {
-    return planOverworldSessionQuestStart(this.questStartState(questId, approachId));
+    return authenticateQuestStartPreparation(
+      this,
+      planOverworldSessionQuestStart(this.questStartState(questId, approachId)),
+    );
   }
 
   commitQuestStart(plan: OverworldQuestStartPreparation): OverworldJourneyQuestStartResult {

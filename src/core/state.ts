@@ -8,6 +8,10 @@ import {
   cloneCampaignImportReceipt,
   type CampaignImportReceipt,
 } from "./campaign_import_receipt.js";
+import {
+  cloneEmbeddedLaunchOverlayReceipt,
+  type EmbeddedLaunchOverlayReceipt,
+} from "./embedded_launch_overlay_receipt.js";
 
 /**
  * Highest persisted action counter the engine will accept. The reducer needs
@@ -70,6 +74,8 @@ export type GameState = {
 
   /** Present only when persistent campaign state materially changed this RPG's fresh state. */
   campaignImportReceipt?: CampaignImportReceipt;
+  /** Quest-local opening condition from a trusted embedded overworld launch. */
+  embeddedLaunchOverlayReceipt?: EmbeddedLaunchOverlayReceipt;
 };
 
 export type InitOptions = {
@@ -120,6 +126,13 @@ export function cloneGameState(state: GameState): GameState {
     questStage: { ...state.questStage },
     ...(state.campaignImportReceipt !== undefined
       ? { campaignImportReceipt: cloneCampaignImportReceipt(state.campaignImportReceipt) }
+      : {}),
+    ...(state.embeddedLaunchOverlayReceipt !== undefined
+      ? {
+          embeddedLaunchOverlayReceipt: cloneEmbeddedLaunchOverlayReceipt(
+            state.embeddedLaunchOverlayReceipt,
+          ),
+        }
       : {}),
   };
 }

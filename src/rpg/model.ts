@@ -26,6 +26,10 @@ import type { GameState } from "../core/state.js";
 import type { DialogueNode, Ending, GameObject, Npc, Room, RpgPack } from "./schema.js";
 import { initRuntimeState } from "./state_init.js";
 import type { CampaignCharacterImportInput } from "./campaign_character_import.js";
+import {
+  wolfWinterDispatchOverlayFlagForPack,
+  type EmbeddedLaunchOverlay,
+} from "../core/embedded_launch_overlay_receipt.js";
 
 export type RpgModelIndex = {
   pack: RpgPack;
@@ -163,8 +167,15 @@ export function initStateForRpgModel(
   index: RpgModelIndex,
   seed: number,
   campaignImport?: CampaignCharacterImportInput,
+  launchOverlay?: EmbeddedLaunchOverlay,
 ): GameState {
   const meta = index.pack.meta;
+  if (
+    launchOverlay !== undefined &&
+    wolfWinterDispatchOverlayFlagForPack(meta.id) !== launchOverlay.receipt.applied_flag
+  ) {
+    throw new Error(`RPG pack "${meta.id}" cannot consume this embedded launch overlay.`);
+  }
   const startRoom = index.rooms.get(meta.start_room);
   return initRuntimeState({
     seed,
@@ -176,5 +187,6 @@ export function initStateForRpgModel(
     ...(campaignImport !== undefined
       ? { campaignImport: { pack: index.pack, ...campaignImport } }
       : {}),
+    ...(launchOverlay !== undefined ? { launchOverlay } : {}),
   });
 }

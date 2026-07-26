@@ -8,7 +8,9 @@
  * fodder allocation and Aid-Only's final-cast suppression.
  */
 
-export const WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT = 160;
+import type { QuestDispatchWindow } from "./quest_dispatch_window.js";
+
+export const WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT = 360;
 
 const WOLF_HILL_APPROACH_LAUNCH_ID = "albany:wolf_hill_approach";
 const EXPOSED_RIDGE_OPTION_ID = "albany:wolf_approach_exposed_ridge";
@@ -62,10 +64,39 @@ function boundedSummary(summary: string): string {
   return summary;
 }
 
+function dispatchBriefing(window: QuestDispatchWindow | undefined): string | null {
+  if (!window) return null;
+  if (window.status === "delayed" && window.ledgerMinutes !== undefined) {
+    return (
+      `Dispatch ledger: ${String(window.ledgerMinutes)} minutes—delayed. ` +
+      "Road choice changes arrival conditions, not this status. " +
+      "First local failure adds cattle alarm +1 for lure, drive, or hunt; fortify pressure +1."
+    );
+  }
+  if (window.status === "on_time" && window.ledgerMinutes !== undefined) {
+    return (
+      `Dispatch ledger: ${String(window.ledgerMinutes)} minutes—on time. ` +
+      "Road choice changes arrival conditions, not this status. " +
+      "Opening delay adds no failure pressure."
+    );
+  }
+  return (
+    "Dispatch ledger: unverified—neutral. " +
+    "Road choice changes arrival conditions, not this status. " +
+    "Opening delay adds no failure pressure."
+  );
+}
+
+function withDispatchBriefing(summary: string, window: QuestDispatchWindow | undefined): string {
+  const briefing = dispatchBriefing(window);
+  return briefing ? `${briefing} ${summary}` : summary;
+}
+
 export function wolfHillRoutePresentation(args: {
   launchId: string;
   optionId: string;
   knowledgeIds?: readonly string[];
+  dispatchWindow?: QuestDispatchWindow;
 }): WolfHillRoutePresentation | null {
   if (args.launchId !== WOLF_HILL_APPROACH_LAUNCH_ID) return null;
   const hasCadeFodder = args.knowledgeIds?.includes(CADE_FODDER_KNOWLEDGE_ID) === true;
@@ -85,7 +116,7 @@ export function wolfHillRoutePresentation(args: {
       previewOverride = EXPOSED_RIDGE_WITH_AID_ONLY_PREVIEW;
     }
     return Object.freeze({
-      tradeoffSummary: boundedSummary(tradeoffSummary),
+      tradeoffSummary: boundedSummary(withDispatchBriefing(tradeoffSummary, args.dispatchWindow)),
       ...(previewOverride ? { previewOverride } : {}),
     });
   }
@@ -103,7 +134,7 @@ export function wolfHillRoutePresentation(args: {
       previewOverride = SHELTERED_STOCKWAY_WITH_AID_ONLY_PREVIEW;
     }
     return Object.freeze({
-      tradeoffSummary: boundedSummary(tradeoffSummary),
+      tradeoffSummary: boundedSummary(withDispatchBriefing(tradeoffSummary, args.dispatchWindow)),
       ...(previewOverride ? { previewOverride } : {}),
     });
   }

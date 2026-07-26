@@ -23,9 +23,13 @@ import {
   overworldQuestStartPreconditionFingerprint,
 } from "./quest_launch.js";
 import type { OpeningLeadSource } from "./opening_lead_source.js";
+import type { OpeningAlly } from "./opening_ally.js";
+import type { OpeningPreparation } from "./opening_preparation.js";
 import type { OpeningRegistration } from "./opening_registration.js";
+import type { OpeningReliefAllocation } from "./opening_relief_allocation.js";
 import type { OpeningReliefOath } from "./opening_relief_oath.js";
 import { deriveRegistrationPromiseFoldbackReceipt } from "./registration_promise_receipt.js";
+import { deriveQuestDispatchWindow, type QuestDispatchWindow } from "./quest_dispatch_window.js";
 
 export type OverworldQuestCompletionOutcome = {
   endingId: string;
@@ -51,6 +55,14 @@ export type OverworldQuestPrepareState = OverworldQuestStartState & {
   supplies: number;
   fatigue: number;
   character: CampaignCharacterState;
+  journalEntries?: readonly OverworldJournalEntry[];
+  openingRegistration?: OpeningRegistration | null;
+  openingReliefOath?: OpeningReliefOath | null;
+  openingLeadSource?: OpeningLeadSource | null;
+  openingPreparation?: OpeningPreparation | null;
+  openingReliefAllocation?: OpeningReliefAllocation | null;
+  openingAlly?: OpeningAlly | null;
+  trustedLegacySourceWorldHash?: string | null;
 };
 
 export type OverworldQuestCompletionState = {
@@ -87,6 +99,7 @@ export type OverworldQuestStartPreparation = OverworldQuestStartPlan & {
   fatigueBefore: number;
   fatigueAfter: number;
   characterAfter: CampaignCharacterState;
+  dispatchWindow: QuestDispatchWindow;
 };
 
 export type OverworldQuestCompletionPlan = {
@@ -300,8 +313,38 @@ function questStartPreconditionFingerprint(
   });
 }
 
+function questDispatchWindowForPreparation(
+  state: OverworldQuestPrepareState,
+  questId: string,
+): QuestDispatchWindow {
+  return deriveQuestDispatchWindow({
+    questId,
+    ...(state.journalEntries !== undefined ? { journalEntries: state.journalEntries } : {}),
+    ...(state.openingRegistration !== undefined
+      ? { openingRegistration: state.openingRegistration }
+      : {}),
+    ...(state.openingReliefOath !== undefined
+      ? { openingReliefOath: state.openingReliefOath }
+      : {}),
+    ...(state.openingLeadSource !== undefined
+      ? { openingLeadSource: state.openingLeadSource }
+      : {}),
+    ...(state.openingPreparation !== undefined
+      ? { openingPreparation: state.openingPreparation }
+      : {}),
+    ...(state.openingReliefAllocation !== undefined
+      ? { openingReliefAllocation: state.openingReliefAllocation }
+      : {}),
+    ...(state.openingAlly !== undefined ? { openingAlly: state.openingAlly } : {}),
+    ...(state.trustedLegacySourceWorldHash !== undefined
+      ? { trustedLegacySourceWorldHash: state.trustedLegacySourceWorldHash }
+      : {}),
+  });
+}
+
 export function previewOverworldQuestStart(state: OverworldQuestPrepareState): OverworldQuestView {
   const quest = questForOverworldQuestStart(state);
+  const dispatchWindow = questDispatchWindowForPreparation(state, quest.id);
   return questView(
     quest,
     {
@@ -311,6 +354,7 @@ export function previewOverworldQuestStart(state: OverworldQuestPrepareState): O
     },
     undefined,
     state.character.knowledge,
+    dispatchWindow,
   );
 }
 
@@ -359,11 +403,13 @@ export function prepareOverworldQuestStart(
   const fatigueAfter = launchApplication?.projection.fatigueAfter ?? state.fatigue;
   const characterAfter =
     launchApplication?.characterAfter ?? cloneCampaignCharacterState(state.character);
+  const dispatchWindow = questDispatchWindowForPreparation(state, quest.id);
   const questPresentation = questView(
     quest,
     resources,
     launchApplication?.option.id,
     state.character.knowledge,
+    dispatchWindow,
   );
   return {
     approachId,
@@ -377,6 +423,7 @@ export function prepareOverworldQuestStart(
     fatigueBefore: state.fatigue,
     fatigueAfter,
     characterAfter,
+    dispatchWindow,
     quest: questPresentation,
     entryDraft: {
       id: `quest:${quest.id}`,

@@ -1,7 +1,23 @@
-import type { OverworldJourneyQuestStartResult, OverworldSession } from "../world/session.js";
+import {
+  assertAuthenticatedQuestStartPreparation,
+  type OverworldJourneyQuestStartResult,
+  type OverworldSession,
+} from "../world/session.js";
 import type { CampaignCharacterState } from "../world/campaign_character_state.js";
 import type { OverworldQuestCompletionOutcome } from "../world/session_quests.js";
+import {
+  QUEST_DISPATCH_WINDOW_SCHEMA_VERSION,
+  type QuestDispatchWindow,
+} from "../world/quest_dispatch_window.js";
 import type { Session } from "./sessions.js";
+import { hashState } from "../core/hash.js";
+import {
+  EMBEDDED_LAUNCH_OVERLAY_RECEIPT_VERSION,
+  WOLF_WINTER_DISPATCH_DELAY_FLAG,
+  WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES,
+  cloneEmbeddedLaunchOverlay,
+  type EmbeddedLaunchOverlay,
+} from "../core/embedded_launch_overlay_receipt.js";
 
 export type OverworldQuestRpgStartOptions = {
   seed?: number;
@@ -23,6 +39,11 @@ export type OverworldQuestRpgStartArgs = {
 export type EmbeddedOverworldQuestStartContext = {
   overworldSessionId: string;
   character: CampaignCharacterState;
+  /**
+   * Private, quest-local opening state derived from the accepted parent launch
+   * plan. It is not character continuity or a durable overworld fact.
+   */
+  launchOverlay?: EmbeddedLaunchOverlay;
 };
 
 export type OverworldStartedRpgSession = {
@@ -38,6 +59,58 @@ export type OverworldQuestCompletionSync = {
   questId: string;
   outcome: OverworldQuestCompletionOutcome;
 };
+
+type QuestStartPlanWithDispatchWindow = {
+  quest: { id: string };
+  dispatchWindow: QuestDispatchWindow;
+};
+
+function embeddedLaunchOverlayForPlan(
+  plan: QuestStartPlanWithDispatchWindow,
+  overworldSessionId: string,
+): EmbeddedLaunchOverlay | undefined {
+  const dispatchWindow = plan.dispatchWindow;
+  const ledgerMinutes = dispatchWindow.ledgerMinutes;
+  // Current plans always carry the dispatch field. A missing or legacy-neutral
+  // proof is deliberately neutral; only a complete, self-verifying delayed
+  // receipt can change this child opening.
+  if (dispatchWindow.status !== "delayed") return undefined;
+  if (
+    dispatchWindow.schemaVersion !== QUEST_DISPATCH_WINDOW_SCHEMA_VERSION ||
+    dispatchWindow.questId !== plan.quest.id ||
+    typeof ledgerMinutes !== "number" ||
+    !Number.isSafeInteger(ledgerMinutes) ||
+    ledgerMinutes <= WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES ||
+    dispatchWindow.receipt === undefined ||
+    dispatchWindow.proofHash !==
+      hashState({
+        schemaVersion: dispatchWindow.schemaVersion,
+        questId: dispatchWindow.questId,
+        status: dispatchWindow.status,
+        ledgerMinutes: dispatchWindow.ledgerMinutes,
+        receipt: dispatchWindow.receipt,
+      })
+  ) {
+    throw new Error("Quest dispatch window is incomplete or lacks current provenance.");
+  }
+  // This is a launch-local Wolf-Winter condition. Other quests retain their
+  // authored fresh state even when the parent carries dispatch timing data.
+  if (plan.quest.id !== "wolf_winter") return undefined;
+
+  return cloneEmbeddedLaunchOverlay({
+    receipt: {
+      version: EMBEDDED_LAUNCH_OVERLAY_RECEIPT_VERSION,
+      kind: "overworld_dispatch_opening",
+      world_quest_id: "wolf_winter",
+      overworld_session_id: overworldSessionId,
+      dispatch_window_version: dispatchWindow.schemaVersion,
+      status: "delayed",
+      ledger_minutes: ledgerMinutes,
+      provenance_hash: dispatchWindow.proofHash,
+      applied_flag: WOLF_WINTER_DISPATCH_DELAY_FLAG,
+    },
+  });
+}
 
 function rpgStartArgsForOverworldQuest(
   questId: string,
@@ -67,11 +140,14 @@ export function startOverworldQuestThroughRpg<Payload extends OverworldStartedRp
   ) => Payload;
 }): OverworldQuestStartSync<Payload> {
   const plan = args.session.prepareQuestStart(args.questId, args.approachId);
+  assertAuthenticatedQuestStartPreparation(args.session, plan);
+  const launchOverlay = embeddedLaunchOverlayForPlan(plan, args.overworldSessionId);
   const rpgSession = args.startEmbeddedWorldQuest(
     rpgStartArgsForOverworldQuest(plan.quest.id, args.startOptions),
     {
       overworldSessionId: args.overworldSessionId,
       character: plan.characterAfter,
+      ...(launchOverlay !== undefined ? { launchOverlay } : {}),
     },
   );
   const startedQuest = args.session.commitQuestStart(plan);

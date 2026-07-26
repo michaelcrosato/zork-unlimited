@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 652 -->
+<!-- historical_cycle_count: 653 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_dispatch_window_failure_pressure
+
+- Evidence choice: verified pure Spark seed 72721 completed The Wolf-Winter in 19 decisions, ended voluntarily, rated clarity/enjoyment 4/4, remained unstuck, reported no bug, and chose replay-yes.
+- Surface: an authenticated departure ledger now classifies ≤60 minutes on time and >60 delayed, names that status at both hill approaches, and keeps road choice from rewriting departure history.
+- Failure-forward: a delayed opening adds exactly one first-local-failure pressure step across lure, drive, fortify, and the uncommitted hunt rail while preserving every authored recovery.
+- Counterfactual: on-time behavior, successful checks, rail skips, legal actions, and other-strategy rail recoveries remain unchanged; one reusable conditional-failure primitive carries all four consumers.
+- Provenance/self-critique: a session-bound opaque preparation capability rejects forged or mutated launch overlays; the pure player sampled combat, so deterministic paired routes carry the other strategy claims.
+- Guard: independent review is clean; zero-finding post-crawl `20260726T201536Z` covers the consolidated world and full health passes 434 files/3,575 tests plus both typechecks and all 12 packs.
 
 ### Cycle result - wolf_lure_quick_lesson_choice
 
@@ -148,12 +157,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact dirty-candidate Terra seed 72567 saw no optional/required contradiction, completed The Wolf-Winter in 29 accepted decisions and The Gallowmere in 54 total, continued twice, then ended voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes.
 - Feedback/follow-through: dense irreversible Albany planning remains a supported separate cohort finding; this increment corrects one false obligation claim without redesigning the opening.
 - Guard: independent review is clean, 39 focused briefing/CLI tests pass after rebase, pre/post crawls `20260725T001539Z` / `20260725T024949Z` are zero-finding, and full health passes 419 files/3,397 tests plus both typechecks and all packs.
-
-### Cycle result - parallel_blind_server_startup
-
-- Evidence choice: while multiple full suites were active, two otherwise valid fresh-overworld players stopped before seeing the game when the private npm/tsx server reached the launcher's exact 20-second startup ceiling.
-- Surface: the project MCP config and both canonical Codex launch paths now allow a bounded 60 seconds for server startup; the 1,200-second play limit, 60-second tool limit, model selection, and game rules are unchanged.
-- Counterfactual: the runner contract pins all three startup settings at 60 seconds and forbids the retired 20-second value, while shell syntax, isolation, and ordinary failure behavior remain intact.
-- Pure evidence: exact dirty-candidate Luna seed 72564 started under the same load, completed The Wolf-Winter, The Gallowmere, and The Tanner's Fever, continued four times, then ended at 80 decisions; clarity 4/5, enjoyment 5/5, unstuck, replay-yes, with no observed bug.
-- Feedback/follow-through: compact responses and long-distance resource planning remain separate usability signals; this increment changes only launch resilience and the dirty run remains qualitative rather than actionable retention evidence.
-- Guard: independent review is clean, 31 runner-contract tests pass, pre/post crawls `20260725T000712Z` / `20260725T001223Z` are zero-finding, and full health passes 419 files/3,393 tests plus both typechecks and all packs.
