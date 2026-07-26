@@ -186,6 +186,67 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(ids).not.toContain("ask_wolves_back");
   });
 
+  it("keeps Cade's existing quick lesson beside the lure commitment until its +5 credit is decided", () => {
+    const root = startCadeDialogue();
+    const rootQuick = buildRpgObservation(index, root).available_actions.find(
+      (option) => option.id === "ask_wolves",
+    );
+    expect(rootQuick).toBeDefined();
+
+    let unheard = act(root, { type: "ASK", npc: "houndsman", topic: "lure" });
+    let observation = buildRpgObservation(index, unheard);
+    const unheardCommit = observation.available_actions.find(
+      (option) => option.id === "ask_commit_lure",
+    );
+    const directQuick = observation.available_actions.find(
+      (option) => option.id === "ask_quick_lesson",
+    );
+
+    // This is the irreversible choice point: the player must see both the lost
+    // final-tally credit and the one existing action that can still secure it.
+    expect(observation.dialogue?.npc_text).toMatch(
+      /quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*commitment closes it/i,
+    );
+    expect(unheardCommit?.command).toMatch(/commit[^]*finite feed-and-hounds line/i);
+    expect(directQuick).toMatchObject({
+      id: "ask_quick_lesson",
+      command: expect.stringMatching(/quick lesson/i),
+      action: { type: "ASK", npc: "houndsman", topic: "quick_lesson" },
+    });
+    expect(
+      observation.available_actions.filter((option) => /quick|lesson|wolves/i.test(option.command)),
+    ).toEqual([directQuick]);
+
+    // The compact action now names the lesson and keeps Cade's established lure
+    // follow-up rather than making the player reopen his root dialogue.
+    unheard = act(unheard, { type: "ASK", npc: "houndsman", topic: "quick_lesson" });
+    expect(unheard.vars).toMatchObject({ attack: 7, score: 5 });
+    observation = buildRpgObservation(index, unheard);
+    expect(observation.available_actions.map((option) => option.id)).toContain("ask_lure");
+    expect(observation.available_actions.map((option) => option.id)).not.toContain("ask_wolves");
+    unheard = act(unheard, { type: "ASK", npc: "houndsman", topic: "lure" });
+    observation = buildRpgObservation(index, unheard);
+    expect(observation.available_actions.map((option) => option.id)).toContain("ask_commit_lure");
+    expect(observation.dialogue?.npc_text).not.toMatch(
+      /quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*commitment closes it/i,
+    );
+    unheard = act(unheard, { type: "ASK", npc: "houndsman", topic: "commit_lure" });
+    expect(unheard.flags.strategy_lure_committed).toBe(true);
+
+    // The same commitment stays legal for a player who heard the existing lesson
+    // before asking about the lure, but its stale forfeiture warning must not repeat.
+    let heard = act(root, { type: "ASK", npc: "houndsman", topic: "wolves" });
+    expect(heard.vars).toMatchObject({ attack: 7, score: 5 });
+    heard = act(heard, { type: "ASK", npc: "houndsman", topic: "lure" });
+    observation = buildRpgObservation(index, heard);
+    expect(observation.available_actions.map((option) => option.id)).toContain("ask_commit_lure");
+    expect(observation.dialogue?.npc_text).not.toMatch(
+      /quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*commitment closes it/i,
+    );
+    heard = act(heard, { type: "ASK", npc: "houndsman", topic: "commit_lure" });
+    expect(heard.flags.strategy_lure_committed).toBe(true);
+  });
+
   it("auto-resumes Cade's reactive root without a nested filler reply", () => {
     const state = startCadeDialogue();
     const advised = step(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
