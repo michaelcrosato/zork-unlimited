@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 645 -->
+<!-- historical_cycle_count: 646 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - comparison_first_albany_departure
+
+- Evidence choice: three exact-build players repeated one Wolf-Winter route and named dense Albany setup; fresh pure Spark seed 72634 judges the comparison-first candidate.
+- Surface: all six opening decisions now expose commitment, trigger, immediate cost, and tradeoff while compact active choices stage exact terms behind read-only one-option inspection.
+- Measured effect: the six always-visible payloads fall 4,191→3,558 `o200k_base` tokens (-15.1%); the observed one-inspection path falls 4,992→4,308 (-13.7%).
+- Counterfactual: all legal choices and mechanics remain; direct/inspected choices hash identically, sibling terms do not leak, and the exact presentation-only predecessor restores without state changes.
+- Pure evidence: exact-clean Spark seed 72634 completes The Wolf-Winter bloodlessly in 22 decisions, ends voluntarily, rates clarity/enjoyment 4/4, remains unstuck, reports no bugs, and chooses replay-yes.
+- Self-critique/follow-through: the player skipped optional Station setup and noted mild anchor-area relocation friction; selected-detail responses still repeat comparison context and are the next bounded efficiency candidate.
+- Guard: independent review is clean; post-crawl `20260726T024526Z` is zero-finding and full health passes 424 files/3,450 tests plus both typechecks and all packs.
 
 ### Cycle result - journey_boundary_opportunity_deferral
 
@@ -143,13 +153,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Rebased check: exact-clean native Terra human-terminal seed 72517 on `90f1d93f` organically finds June, chooses cattle-first, recovers a failed first cast, diverts every wolf alive with the herd whole, and ends voluntarily at first-goal completion in 10 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
 - Feedback/follow-through: two native terminal sessions now cluster opaque active-dialogue scope/help discovery; the false first-cast whole-sack claim observed on this pre-fix content is separately corrected and locked in prepared commit `0866db3d`.
 - Guard: independent review is clean, post-integration crawl `20260724T151511Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 187 focused tests pass, and full health passes 418 files/3,380 tests plus both typechecks and all packs.
-
-### Cycle result - staged_terminal_story_choices
-
-- Evidence choice: the human terminal flattened structured Station decisions into a dense commitment screen even though compact MCP and UI already supported noncommitting comparison and one-option detail.
-- Surface: one shared controller now renders purpose/trigger/cost comparisons, inspects exactly one option, returns hash-neutrally, and commits by exact id; direct and inspected choices reach identical state, while departure interactions reuse the same grammar.
-- Counterfactual: Continue/End and unstructured authored choices remain direct, malformed or unavailable detail fails without mutation or stack output, cancel/back preserves the hash, and the CLI's final hash matches direct session execution.
-- Pure evidence: exact-clean canonical Terra `887f7b20` seed 72513 completes The Wolf-Winter under Cade's terms and The Gallowmere, continues twice, then ends voluntarily at 45 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Rebased check: exact-clean native Sol human-terminal seed 72516 on `206be452` completes The Wolf-Winter (`ending_fortified_cade_terms`), continues into The Gallowmere (`ending_hunt_won`), and ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
-- Feedback/follow-through: active-dialogue scope is visually opaque and permanent setup remains dense; both stay separate focused candidates, while the queued June contact removes the already-compiled missing-seat hotspot.
-- Guard: independent review is clean, post-rebase crawl `20260724T144243Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 59 combined terminal/Registration tests pass, and full health passes 418 files/3,376 tests plus both typechecks and all packs.
