@@ -18,7 +18,7 @@ import { replayTrace } from "../../src/trace/replay.js";
 import { GameSession } from "../../ui/src/engine.js";
 
 const SOURCE_PATH = "content/rpg/quests/wolf_winter.yaml";
-const SOURCE_HASH = "fb108e2eccef77fcd1c3fafc23678469cf8fba663861f43f5959f6742eacb11d";
+const SOURCE_HASH = "4fdbdfdcdce992ec53c42ebae2f39a694bde32f83ebe954f026225403cc12c14";
 const loaded = loadRpgSourceFile(SOURCE_PATH);
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
@@ -195,7 +195,7 @@ describe("Wolf-Winter paling stage action identities", () => {
     });
   });
 
-  it("keeps structured replay and a pre-change-hash save valid", () => {
+  it("keeps structured replay and a matching-hash save valid", () => {
     const split = choose(atPaling(), "wedge_paling_rail", "worst");
     const saved = save(split, SOURCE_HASH, SAVE_MODE, { worldQuestId: "wolf_winter" });
     const restored = load(saved, SOURCE_HASH);

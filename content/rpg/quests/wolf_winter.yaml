@@ -148,10 +148,14 @@ rooms:
       hold the cattle till dawn.
     # The yard re-describes itself once visit history proves the player reached the byre.
     # This is reactive prose only — no synthetic watch flag or repeated on-enter event is
-    # needed. A separate byre_held variant is unnecessary: the locomotion win still waits at
-    # cattle_stand, so even a legal last backtrack has one task left at the byre — returning
-    # north to the whole cattle.
+    # needed. The pack-diverted case protects historical or injected states already south
+    # of the new one-way completion boundary; the locomotion win still waits at cattle_stand.
     variants:
+      - when: [{ has_flag: pack_diverted }]
+        text: >
+          Cade's final feed cast has already drawn the remaining living wolves into the
+          high wood, but the dawn count is unfinished. Go north through the gate, then
+          keep going north through the empty wolf line until you stand among the cattle.
       - when: [{ visited: byre_yard }]
         text: >
           The steading yard, the Albany route tag tucked cold under your coat and the
@@ -232,6 +236,12 @@ rooms:
     # clue state. Re-entering this hub must describe the wolves actually left alive; visit
     # history alone handles the steading-yard watch prose without emitting repeat state.
     variants:
+      - when: [{ has_flag: pack_diverted }]
+        text: >
+          Cade's wolf line is finished: the remaining living wolves followed the spent
+          feed into the high wood. Do not leave by the south gate or return to the store.
+          Go north through the settled paling, empty threshold, and byre mouth; standing
+          among the cattle closes the exact count Albany still needs.
       - when:
           - { has_flag: strategy_drive_committed }
           - { not_visited: paling_gap }
@@ -408,13 +418,15 @@ rooms:
         conditions:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
-        locked_msg: "A hard strategy is underway. Go north with its finite resource; the outer yard does not reopen, and this line cannot switch to combat."
+          - { not_flag: pack_diverted }
+        locked_msg: "The unfinished obligation lies north. Go north: a completed scent line still needs its cattle count; a hard strategy needs its committed beat. The outer yard does not reopen either line."
       - direction: west
         to: store
         conditions:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
-        locked_msg: "Store preparation had to finish before commitment. Go north with the finite drive or fortification resource; the store and other strategies stay closed."
+          - { not_flag: pack_diverted }
+        locked_msg: "Store preparation had to finish before commitment. Go north with the completed scent line or the finite drive or fortification resource; the store and other strategies stay closed."
       - direction: north
         to: paling_gap
         conditions:
@@ -454,6 +466,11 @@ rooms:
       byre-jerkin waits on a peg: hide and wool meant to turn horns, hooves, or teeth.
       A ladder climbs toward broken loft boards a bound cross-piece could bridge; yard east.
     variants:
+      - when: [{ has_flag: pack_diverted }]
+        text: >
+          Cade's feed sack is spent and the remaining living wolves are already in the
+          high wood. Store work cannot close the watch now. Leave east for the yard, then
+          keep north through the empty wolf line until you stand among the cattle.
       - when: [{ has_item: winter_feed_sack }]
         text: >
           The winter-feed peg is bare. Cade's finite sack rides with you: one downwind
@@ -566,6 +583,11 @@ rooms:
     # A committed feed line returns through the yard and loft for its second cast;
     # ordinary combat states retain the ground road north after the yearling falls.
     variants:
+      - when: [{ has_flag: pack_diverted }]
+        text: >
+          The broken paling no longer holds a living wolf. Cade's final scent drew the
+          remaining pack into the high wood. Continue north through the empty threshold
+          and byre mouth to stand among the cattle; the yard south is closed.
       - when:
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_yearling_turned }
@@ -872,7 +894,8 @@ rooms:
         conditions:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
-        locked_msg: "Complete the paling beat, then continue north. The hard strategy commitment does not reopen the yard or switch to combat, whether drive or fortification."
+          - { not_flag: pack_diverted }
+        locked_msg: "Go north: after the completed scent cast, count the cattle. A hard strategy commitment must finish its drive or fortification beat; it does not reopen the yard or switch to combat."
       - direction: north
         to: byre_door
         conditions:
@@ -894,6 +917,11 @@ rooms:
       The committed loft route drops from overhead if chosen. Cattle north; paling south.
     objects: [drive_threshold_line, fortify_threshold_seal]
     variants:
+      - when: [{ has_flag: pack_diverted }]
+        text: >
+          The byre threshold is empty. The remaining living wolves followed Cade's final
+          scent beyond the broken paling into the high wood. The only unfinished route is
+          north through the byre mouth to stand among the cattle and close the exact count.
       - when:
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_flank_turned }
@@ -1126,7 +1154,8 @@ rooms:
         conditions:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
-        locked_msg: "Finish the committed threshold beat, then continue north. The hard drive or fortification line does not reopen the paling or switch to combat."
+          - { not_flag: pack_diverted }
+        locked_msg: "Continue north to the unfinished cattle count or hard-committed threshold beat. The completed scent line and hard drive or fortification lines do not reopen the paling."
       - direction: north
         to: byre_mouth
         conditions:
@@ -1194,13 +1223,15 @@ rooms:
       - when: [{ has_flag: leader_redirected }, { has_flag: yearling_down }]
         text: >
           The yearling lies dead at the broken paling. Beyond it, the grey leader follows
-          the last feed cast and the living flank-wolf into the high wood. The route to the
-          cattle is open north. Behind you, the empty threshold runs south to the spent scent line.
+          the last feed cast and the living flank-wolf into the high wood. The only
+          unfinished action is north: stand among the cattle and close the exact count.
+          The spent threshold south is closed.
       - when: [{ has_flag: leader_redirected }, { not_flag: yearling_down }]
         text: >
           The grey leader is alive beyond the broken paling, following the last feed
-          cast and the two younger wolves into the high wood. The route to the cattle is
-          open north. Behind you, the empty threshold runs south to the spent scent line.
+          cast and the two younger wolves into the high wood. The only unfinished action
+          is north: stand among the cattle and close the exact count. The spent threshold
+          south is closed.
       - when:
           - { has_flag: june_pike_present }
           - { has_flag: strategy_lure_committed }
@@ -1398,7 +1429,8 @@ rooms:
         conditions:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
-        locked_msg: "Finish the committed drive crisis or fortification dawn watch here. Neither hard line can retreat or switch strategies after reaching the byre."
+          - { not_flag: pack_diverted }
+        locked_msg: "Finish here by going north to the cattle count, completing the drive crisis, or holding the fortification dawn watch. A hard strategy commitment does not reopen retreat or switch to combat; a completed scent line cannot retreat."
       - direction: north
         to: cattle_stand
         conditions:
@@ -3389,6 +3421,12 @@ npcs:
             all if fed; foul risks herd. DRIVE spares pack/people; defense lost; crisis cost.
             FORTIFY spares all; property/seals; no retreat. Cross uncommitted=HUNT; others shut.
           variants:
+            - when: [{ has_flag: pack_diverted }]
+              text: >
+                Pack's clear of the byre. Do not go south or back to the store. From this
+                yard go north through the settled paling, north through the empty threshold,
+                and north past the spent scent. Stand among the cattle and take the exact
+                count; then Albany gets the truth.
             - when:
                 - { has_flag: strategy_drive_committed }
                 - { not_visited: paling_gap }

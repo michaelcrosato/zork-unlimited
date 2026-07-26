@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 647 -->
+<!-- historical_cycle_count: 648 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_post_lure_northbound_closure
+
+- Evidence choice: verified Spark seed 72659 completed all three The Wolf-Winter lure casts, then backtracked into stale wolf prose and ended at checkpoint 40 with Albany's goal active; seed 72652 separately found earlier first-cast recovery friction.
+- Surface: the final diversion is now a one-way northbound boundary; every current and predecessor-save room plus Cade truthfully names the empty wolf line and exact cattle-count route.
+- Counterfactual: all four lure outcomes retain distinct endings; hunt, drive, and fortify behavior is unchanged, the cattle capstone remains one legal locomotion action, and no decision was added.
+- Pure evidence: dirty-candidate Terra seed 72660 completed The Wolf-Winter at decision 29 and The Gallowmere at 54 with no rejection, loop, or broken state; clarity/enjoyment 4/4 and replay-yes.
+- Cohort/economy: a clean 10-Spark cohort yielded 2/10 verified reports at 96.1% input-cache reuse; 40.9M raw-input tokens continued after first protocol violations, motivating the parallel negative-only fail-fast guard rather than weaker reasoning.
+- Self-critique/follow-through: the canary did not deliberately test reverse exits, so four-route full/compact deterministic proofs carry that claim; seed 72652's earlier recovery opacity remains open, and wound lifecycle depth is next.
+- Guard: review blockers are fixed; zero-finding crawls `20260726T080313Z` / `20260726T085759Z`, exact source-hash replay, pack validation, and focused route/liveness proofs are green.
 
 ### Cycle result - emery_evidence_custody_agenda
 
@@ -144,12 +154,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind evidence: exact-build native Terra human-terminal seed 72526 completes The Wolf-Winter after a failed first lure cast, continues, completes The Gallowmere, then ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes.
 - Feedback/follow-through: `npm run play` remains a direct random-quest surface rather than the fresh-overworld journey; Queensbury route revelation and Cade lure-topic discoverability are separate game-surface findings already assigned to focused work.
 - Guard: independent final review is clean, post-change crawl `20260724T191532Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 38 focused tests pass, and exact integrated full health passes 418 files/3,384 tests plus both typechecks and all packs.
-
-### Cycle result - active_dialogue_terminal_prompt
-
-- Evidence choice: two independent native terminal players briefly lost the active NPC scope because normal room rendering hid both the speaker and exact dialogue verbs while the parser remained conversation-bound.
-- Surface: standalone and embedded RPG terminals now share one read-only prompt that names the active speaker and renders only that NPC's current legal ASK commands before input, using the same executable projection as full help.
-- Counterfactual: root topics refresh to commitment topics after selection, colliding aliases retain exact `choose <id>` fallbacks, every printed command resolves, rendering preserves the state hash, and non-dialogue or terminal observations add no prompt.
-- Exact-build evidence: native Sol human-terminal seed 72518 on `36bc6562` completes The Wolf-Winter nonlethally and The Gallowmere in 18 accepted decisions, continues once, then ends voluntarily; dialogue is understandable without help, clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
-- Feedback/follow-through: the same run reproduced proper-possessive TAKE grammar and resolved-choice error-copy defects; both are diagnosed P3, isolated from this prompt, and prepared as separate bounded fixes.
-- Guard: independent review is clean, post-change crawl `20260724T155155Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 62 focused tests pass, and full health passes 418 files/3,382 tests plus both typechecks and all packs.

@@ -1,0 +1,44 @@
+id: bug_0532
+title: "Wolf-Winter final lure allowed a truthful state to decay into a false backtracking loop"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: verified Spark blind seed 72659
+reports:
+  - blind-tester/reports/20260726T074612Z_overworld_seed72659.md
+related_reports:
+  - report: blind-tester/reports/20260726T074612Z_overworld_seed72652.md
+    note: >
+      This player completed Wolf-Winter but separately found the earlier failed-first-cast
+      recovery route opaque. That friction remains open and is not evidence for, or fixed
+      by, the final-cast northbound closure.
+severity: S2
+symptom: >
+  Verified blind seed 72659 finished all three feed casts, then legally walked south from
+  the open cattle route. Earlier rooms fell back to stale prose claiming wolves still
+  occupied the paling, threshold, and inner byre. Cade said only to finish the line, so
+  the player looped between the yard and steading until the decision-40 checkpoint with
+  the Albany goal still active.
+root_cause: >
+  The final cast correctly set pack_diverted and made the cattle reachable north, but it
+  left every reverse exit legal. The Byre-Yard and Byre Door variant order had no
+  pack-diverted case, so broad earlier-stage variants overrode causal truth after a
+  backtrack. Cade's committed-lure dialogue likewise did not distinguish a pending feed
+  line from one whose three casts were already complete.
+fix: >
+  Make the final scent cast a one-way completion boundary: the Byre Mouth, Byre Door,
+  Broken Paling, and Byre-Yard no longer reopen south or store branches once
+  pack_diverted is true. Add highest-priority truthful variants for every historical or
+  injected backtrack room and give Cade an exact northbound cattle-count instruction.
+  Keep the final north locomotion capstone; do not auto-complete or add a decision.
+deterministic_witnesses:
+  - route: "living or hybrid lure -> final outer scent cast"
+    invariant: "north to the cattle is legal, south is retired, and the next move reaches the authored ending"
+  - route: "restore a post-diversion state in door, paling, yard, store, or steading"
+    invariant: "each surface says the living pack is already clear and points back to the cattle count without stale wolves"
+  - route: "talk to Cade from a restored post-diversion yard"
+    invariant: "Cade names the exact northbound route and does not say the feed line is still in motion"
+tests:
+  - tests/regression/wolf_winter_postcast_state_truth.test.ts
+verification:
+  - npx vitest run tests/regression/wolf_winter_postcast_state_truth.test.ts
+  - npm run validate -- wolf_winter
+  - npm run crawl:smoke

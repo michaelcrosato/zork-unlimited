@@ -59,7 +59,9 @@ describe("Wolf-Winter state and shared-prose consistency", () => {
     const byreYard = pack.rooms.find((room) => room.id === "byre_yard");
     const steadingYard = pack.rooms.find((room) => room.id === "steading_yard");
     expect(byreYard?.on_enter).toEqual([]);
-    expect(steadingYard?.variants?.[0]?.when).toContainEqual({ visited: "byre_yard" });
+    expect(steadingYard?.variants?.map((variant) => variant.when)).toContainEqual([
+      { visited: "byre_yard" },
+    ]);
 
     let state = initStateForRpgPack(index, 497);
     expect(buildRpgObservation(index, state).description).toContain("killing winter night");

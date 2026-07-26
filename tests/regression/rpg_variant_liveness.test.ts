@@ -519,9 +519,9 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
   }
 
   const required = [
-    "room:steading_yard#1",
-    "room:steading_yard#3",
-    "room:steading_yard#5",
+    "room:steading_yard#2",
+    "room:steading_yard#4",
+    "room:steading_yard#6",
     "room:byre_mouth#5",
     "ending:ending_pack_diverted#0",
     "ending:ending_pack_diverted_cattle_scattered#0",
@@ -574,14 +574,18 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
 } {
   const displayed = new Set<string>();
   const present = new Set<string>();
-  const run = (flags: string | readonly string[], actions: readonly WitnessAction[]): void => {
+  const record = (witness: { displayed: Set<string>; present: Set<string> }): void => {
+    for (const key of witness.displayed) displayed.add(key);
+    for (const key of witness.present) present.add(key);
+  };
+  const run = (flags: string | readonly string[], actions: readonly WitnessAction[]): GameState => {
     const initial = initStateForRpgPack(index, 7);
     for (const flag of typeof flags === "string" ? [flags] : flags) {
       initial.flags[flag] = true;
     }
     const witness = replayConcreteWitness(index, initial, actions);
-    for (const key of witness.displayed) displayed.add(key);
-    for (const key of witness.present) present.add(key);
+    record(witness);
+    return witness.final;
   };
 
   const reachAuthorityFortification: readonly WitnessAction[] = [
@@ -595,7 +599,7 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
   ];
   run(["relief_oath_full_duty", "works_fortification_prepared"], reachAuthorityFortification);
   run("relief_oath_full_duty", reachAuthorityFortification);
-  run("relief_oath_limited_duty", [
+  const limitedDutyPostDiversion = run("relief_oath_limited_duty", [
     "go_north",
     "talk_houndsman",
     "ask_lure",
@@ -613,8 +617,16 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "go_east",
     "go_north",
     "use_winter_feed_sack_on_outer_scent_gate",
-    "go_north",
   ]);
+  // The final cast is now a one-way completion boundary, but predecessor saves can
+  // legitimately restore the same legally-earned post-diversion state in rooms that
+  // were south of that boundary. Credit only those exact historical room locations,
+  // derived from the real route above, so their compatibility prose remains live
+  // without reopening the route in current gameplay.
+  for (const room of ["steading_yard", "byre_yard", "store", "paling_gap", "byre_door"]) {
+    creditViewedState(index, { ...limitedDutyPostDiversion, current: room }, displayed, present);
+  }
+  record(replayConcreteWitness(index, limitedDutyPostDiversion, ["go_north"]));
   run("relief_oath_unaffiliated_bond", [
     "go_north",
     "talk_houndsman",
@@ -739,10 +751,10 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "object:fortify_outer_seal#1",
     "object:outer_scent_gate#2",
     "object:drive_breach_signal#0",
-    "room:store#3",
+    "room:store#4",
     "room:fodder_loft#1",
-    "room:byre_door#8",
-    "room:byre_door#23",
+    "room:byre_door#9",
+    "room:byre_door#24",
     semanticVariantKeyByText(
       index,
       "room",
@@ -793,7 +805,7 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
       "Hayden frost report before the spear is set",
       "frost-jammed brace north",
     ),
-    "room:byre_door#25",
+    "room:byre_door#26",
     semanticVariantKeyByText(
       index,
       "object",
@@ -801,9 +813,9 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
       "Hayden-compatible unbound split rail",
       "only a bare spear can trip that line",
     ),
-    "room:byre_door#21",
+    "room:byre_door#22",
+    "room:byre_door#8",
     "room:byre_door#7",
-    "room:byre_door#6",
     semanticVariantKeyByText(
       index,
       "object",
@@ -853,11 +865,11 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
       "braced scent-pen recovery",
       "one living exit",
     ),
-    "room:byre_yard#1",
+    "room:byre_yard#2",
     "object:relief_protocol_docket@present",
-    "room:steading_yard#2",
+    "room:steading_yard#3",
     "object:exposed_ridge_last_mile@present",
-    "room:steading_yard#4",
+    "room:steading_yard#5",
     "object:sheltered_stockway_last_mile@present",
   ];
   const missing = required.filter((key) => !displayed.has(key) && !present.has(key));
@@ -942,6 +954,15 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
         "ending:ending_drive_reserve_spent#0",
         "ending:ending_fortified_cade_terms#0",
         "ending:ending_fortified_albany_authority#0",
+      ]),
+    );
+    expect([...witness.displayed]).toEqual(
+      expect.arrayContaining([
+        "room:steading_yard#0",
+        "room:byre_yard#0",
+        "room:store#0",
+        "room:paling_gap#0",
+        "room:byre_door#0",
       ]),
     );
   });
