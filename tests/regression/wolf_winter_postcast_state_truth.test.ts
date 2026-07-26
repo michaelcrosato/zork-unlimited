@@ -42,9 +42,23 @@ const FINAL_LURE_HYBRID =
 const JUNE_PENDING =
   "The old grey leader waits between you and the bellowing cattle. June Pike reaches the inner rail from the lower stock path. The failed lure left the herd pressing; speak to her before the last cast if her cattle-first authority still matters. The byre door is south.";
 const PACK_REDIRECTED_LIVING =
-  "The grey leader is alive beyond the broken paling, following the last feed cast and the two younger wolves into the high wood. The route to the cattle is open north. Behind you, the empty threshold runs south to the spent scent line.";
+  "The grey leader is alive beyond the broken paling, following the last feed cast and the two younger wolves into the high wood. The only unfinished action is north: stand among the cattle and close the exact count. The spent threshold south is closed.";
 const PACK_REDIRECTED_HYBRID =
-  "The yearling lies dead at the broken paling. Beyond it, the grey leader follows the last feed cast and the living flank-wolf into the high wood. The route to the cattle is open north. Behind you, the empty threshold runs south to the spent scent line.";
+  "The yearling lies dead at the broken paling. Beyond it, the grey leader follows the last feed cast and the living flank-wolf into the high wood. The only unfinished action is north: stand among the cattle and close the exact count. The spent threshold south is closed.";
+const POST_DIVERSION_DOOR =
+  "The byre threshold is empty. The remaining living wolves followed Cade's final scent beyond the broken paling into the high wood. The only unfinished route is north through the byre mouth to stand among the cattle and close the exact count.";
+const POST_DIVERSION_PALING =
+  "The broken paling no longer holds a living wolf. Cade's final scent drew the remaining pack into the high wood. Continue north through the empty threshold and byre mouth to stand among the cattle; the yard south is closed.";
+const POST_DIVERSION_YARD =
+  "Cade's wolf line is finished: the remaining living wolves followed the spent feed into the high wood. Do not leave by the south gate or return to the store. Go north through the settled paling, empty threshold, and byre mouth; standing among the cattle closes the exact count Albany still needs.";
+const POST_DIVERSION_STORE =
+  "Cade's feed sack is spent and the remaining living wolves are already in the high wood. Store work cannot close the watch now. Leave east for the yard, then keep north through the empty wolf line until you stand among the cattle.";
+const POST_DIVERSION_STEADING =
+  "Cade's final feed cast has already drawn the remaining living wolves into the high wood, but the dawn count is unfinished. Go north through the gate, then keep going north through the empty wolf line until you stand among the cattle.";
+const POST_DIVERSION_CADE =
+  "Pack's clear of the byre. Do not go south or back to the store. From this yard go north through the settled paling, north through the empty threshold, and north past the spent scent. Stand among the cattle and take the exact count; then Albany gets the truth.";
+const POST_DIVERSION_BLOCKED_SOUTH =
+  "Finish here by going north to the cattle count, completing the drive crisis, or holding the fortification dawn watch. A hard strategy commitment does not reopen retreat or switch to combat; a completed scent line cannot retreat.";
 const PLAIN_COMBAT =
   "The old grey leader waits between you and the bellowing cattle in the byre's dark heart, shaping a practiced feint. Cade may have taught you to hold or close; a saved guard offers another catch. Without either, only plain spear work remains. The door is south.";
 
@@ -218,6 +232,48 @@ describe("Wolf-Winter post-cast state truth", () => {
     state = act(state, "use_winter_feed_sack_on_outer_scent_gate");
     expectRoomSurface(state, spec.finalRedirected);
     expect(state.inventory).not.toContain("winter_feed_sack");
+    expect(actionIds(state)).toContain("go_north");
+    expect(actionIds(state)).not.toContain("go_south");
+    const fullPostDiversion = buildRpgObservation(index, state);
+    expect(fullPostDiversion.blocked_exits).toContainEqual({
+      direction: "south",
+      message: POST_DIVERSION_BLOCKED_SOUTH,
+    });
+    expect(
+      compactRpgObservation(fullPostDiversion, actionIds(state), {
+        includeActions: true,
+      }).blocked,
+    ).toContainEqual(["south", POST_DIVERSION_BLOCKED_SOUTH]);
+
+    const at = (room: string): GameState => ({ ...state, current: room });
+    const restoredDoor = at("byre_door");
+    expectRoomSurface(restoredDoor, POST_DIVERSION_DOOR);
+    expect(actionIds(restoredDoor)).toContain("go_north");
+    expect(actionIds(restoredDoor)).not.toContain("go_south");
+
+    const restoredPaling = at("paling_gap");
+    expectRoomSurface(restoredPaling, POST_DIVERSION_PALING);
+    expect(actionIds(restoredPaling)).toContain("go_north");
+    expect(actionIds(restoredPaling)).not.toContain("go_south");
+
+    const restoredYard = at("byre_yard");
+    expectRoomSurface(restoredYard, POST_DIVERSION_YARD);
+    expect(actionIds(restoredYard)).toContain("go_north");
+    expect(actionIds(restoredYard)).not.toContain("go_south");
+    expect(actionIds(restoredYard)).not.toContain("go_west");
+    const talkingToCade = act(restoredYard, "talk_houndsman");
+    expect(buildRpgObservation(index, talkingToCade).dialogue?.npc_text.trimEnd()).toBe(
+      POST_DIVERSION_CADE,
+    );
+
+    const restoredStore = at("store");
+    expectRoomSurface(restoredStore, POST_DIVERSION_STORE);
+    expect(actionIds(restoredStore)).toContain("go_east");
+    expect(actionIds(restoredStore)).not.toContain("go_up");
+
+    const restoredSteading = at("steading_yard");
+    expectRoomSurface(restoredSteading, POST_DIVERSION_STEADING);
+    expect(actionIds(restoredSteading)).toContain("go_north");
     state = act(state, "go_north");
     expect(state.endingId).toBe(spec.endingId);
   });
