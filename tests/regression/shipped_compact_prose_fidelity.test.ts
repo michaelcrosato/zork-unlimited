@@ -229,7 +229,8 @@ function expectOpeningPromptExact(
     expect(inspectedOption!.label).toBe(sourceOption.title);
     expect(inspectedOption!.consequence).toContain(sourceOption.consequence);
     expect(inspectedOption!.consequence).not.toMatch(TRUNCATION_CHROME);
-    expect(inspected.options.every((option) => !("consequence" in option))).toBe(true);
+    expect(inspected).not.toHaveProperty("message");
+    expect(inspected).not.toHaveProperty("options");
     const inspectedJson = JSON.stringify(inspected);
     for (const sibling of prompt.options.filter((option) => option.id !== sourceOption.id)) {
       expect(inspectedJson).not.toContain(sibling.consequence);

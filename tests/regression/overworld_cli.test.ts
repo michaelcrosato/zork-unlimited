@@ -475,12 +475,12 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       storyChoice,
       inspected.id,
     ).inspectedOption;
-    if (!projected?.summary) throw new Error("Expected projected Station detail.");
+    if (!inspected.summary) throw new Error("Expected structured Station detail.");
     const detail = renderTerminalStoryChoiceDetail(storyChoice, inspected);
-    expect(detail.split(projected.summary.commitment)).toHaveLength(2);
-    expect(detail.split(projected.summary.fieldTrigger)).toHaveLength(2);
-    expect(detail.split(projected.summary.immediateCost!)).toHaveLength(2);
-    expect(detail.split(projected.summary.tradeoff)).toHaveLength(2);
+    expect(detail.split(inspected.summary.commitment)).toHaveLength(2);
+    expect(detail.split(inspected.summary.fieldTrigger)).toHaveLength(2);
+    expect(detail.split(inspected.summary.immediateCost)).toHaveLength(2);
+    expect(detail.split(inspected.summary.tradeoff)).toHaveLength(2);
     expect(detail).toContain(projected.consequence);
   });
 

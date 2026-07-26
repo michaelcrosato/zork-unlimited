@@ -11,7 +11,7 @@ import type { McpObservation } from "./types.js";
 
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 2 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 3 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Complete terms are staged; inspect this exact option before choosing if you need them." as const;
 
@@ -21,19 +21,38 @@ export type JourneyStoryChoiceComparisonOption = Readonly<{
   summary?: JourneyStoryChoiceSummary;
 }>;
 
+export type JourneyStoryChoiceDetailOption = Readonly<{
+  id: string;
+  label: string;
+  consequence: string;
+}>;
+
 /**
  * Compact, read-only story inspection. The first response is deliberately only
  * a comparison surface; one exact option can be expanded without exposing the
  * other options' full terms.
  */
-export type JourneyStoryChoiceComparison = Readonly<{
+type JourneyStoryChoiceProjectionBase = Readonly<{
   comparisonVersion: typeof JOURNEY_STORY_CHOICE_COMPARISON_VERSION;
   id: string;
   kind?: JourneyStoryChoicePresentationKind;
-  message: string;
-  options: readonly JourneyStoryChoiceComparisonOption[];
-  inspectedOption: JourneyStoryChoiceOption | null;
 }>;
+
+export type JourneyStoryChoiceSummaryComparison = JourneyStoryChoiceProjectionBase &
+  Readonly<{
+    message: string;
+    options: readonly JourneyStoryChoiceComparisonOption[];
+    inspectedOption: null;
+  }>;
+
+export type JourneyStoryChoiceDetail = JourneyStoryChoiceProjectionBase &
+  Readonly<{
+    inspectedOption: JourneyStoryChoiceDetailOption;
+  }>;
+
+export type JourneyStoryChoiceComparison =
+  | JourneyStoryChoiceSummaryComparison
+  | JourneyStoryChoiceDetail;
 
 export type EmbeddedJourneyField = {
   journey: JourneyPresentation;
@@ -116,20 +135,33 @@ export function compactJourneyStoryChoicePrompt(
 /** Build the staged compact inspection without changing the canonical prompt. */
 export function compactJourneyStoryChoiceComparison(
   prompt: JourneyStoryChoicePrompt,
+): JourneyStoryChoiceSummaryComparison;
+export function compactJourneyStoryChoiceComparison(
+  prompt: JourneyStoryChoicePrompt,
+  optionId: string,
+): JourneyStoryChoiceDetail;
+export function compactJourneyStoryChoiceComparison(
+  prompt: JourneyStoryChoicePrompt,
   optionId?: string,
 ): JourneyStoryChoiceComparison {
-  const inspectedSource =
-    optionId === undefined
-      ? null
-      : compactJourneyStoryChoiceOption(journeyStoryChoiceOptionById(prompt, optionId));
-  const inspectedOption = inspectedSource
-    ? Object.freeze({
-        ...inspectedSource,
-        ...(inspectedSource.summary
-          ? { summary: Object.freeze({ ...inspectedSource.summary }) }
-          : {}),
-      })
-    : null;
+  const base = Object.freeze({
+    comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+    id: prompt.id,
+    ...(prompt.kind === undefined ? {} : { kind: prompt.kind }),
+  });
+  if (optionId !== undefined) {
+    const inspectedSource = compactJourneyStoryChoiceOption(
+      journeyStoryChoiceOptionById(prompt, optionId),
+    );
+    return Object.freeze({
+      ...base,
+      inspectedOption: Object.freeze({
+        id: inspectedSource.id,
+        label: inspectedSource.label,
+        consequence: inspectedSource.consequence,
+      }),
+    });
+  }
   const options = prompt.options.map((option) =>
     Object.freeze({
       id: option.id,
@@ -138,12 +170,10 @@ export function compactJourneyStoryChoiceComparison(
     }),
   );
   return Object.freeze({
-    comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
-    id: prompt.id,
-    ...(prompt.kind === undefined ? {} : { kind: prompt.kind }),
+    ...base,
     message: prompt.message,
     options: Object.freeze(options),
-    inspectedOption,
+    inspectedOption: null,
   });
 }
 

@@ -352,7 +352,8 @@ describe("Breaking Weir next-adventure dispatch", () => {
       option_id: selectedOption.id,
     });
     expect(inspection.story.inspectedOption).toEqual(selectedOption);
-    expect(inspection.story.options.every((option) => !("consequence" in option))).toBe(true);
+    expect(inspection.story).not.toHaveProperty("message");
+    expect(inspection.story).not.toHaveProperty("options");
     expect(JSON.stringify(inspection.story)).not.toContain(siblingOption.consequence);
     expect(api.export_overworld_session({ session_id: restored.session_id })).toEqual(
       beforeInspection,

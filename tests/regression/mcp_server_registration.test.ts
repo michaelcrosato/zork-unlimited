@@ -144,8 +144,9 @@ describe("MCP server registration", () => {
     );
     expect(registration?.description).toContain("currently presented journey.storyChoice");
     expect(registration?.description).toContain("listed in departure_interactions");
-    expect(registration?.description).toContain("default compact result");
-    expect(registration?.description).toContain("only that option's complete terms");
+    expect(registration?.description).toContain("default compact read");
+    expect(registration?.description).toContain("only that option's new detail");
+    expect(registration?.description).toContain("omits repeated world context");
     expect(registration?.description).toContain(
       "compact_result:false intentionally returns the canonical full story",
     );
@@ -153,7 +154,8 @@ describe("MCP server registration", () => {
     const block = registeredToolBlock("inspect_overworld_session_story");
     expect(block).toContain("journey.storyChoice or departure_interactions");
     expect(block).toContain("option_id: z");
-    expect(block).toContain("Default compact output adds only its complete terms");
+    expect(block).toContain("Compact output returns only that option's new detail");
+    expect(block).toContain("unchanged receipt");
     expect(block).toContain(
       "compact_result:false validates the id but returns the canonical full story",
     );

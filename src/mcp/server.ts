@@ -1480,7 +1480,7 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect a currently presented journey.storyChoice or an optional story listed in departure_interactions without changing the journey or snapshot. The default compact result is a short comparison; pass option_id to add only that option's complete terms. Developer compact_result:false intentionally returns the canonical full story.",
+  "Inspect a currently presented journey.storyChoice or an optional story listed in departure_interactions without changing the journey or snapshot. The default compact read returns only a short comparison plus an unchanged receipt; after seeing that comparison, pass option_id for only that option's new detail. Compact inspection deliberately omits repeated world context. Developer compact_result:false intentionally returns the canonical full story and context.",
   {
     ...OVERWORLD_SESSION,
     story_choice_id: z
@@ -1490,7 +1490,7 @@ tool(
       .string()
       .optional()
       .describe(
-        "Exact option id from story.options. Default compact output adds only its complete terms; compact_result:false validates the id but returns the canonical full story.",
+        "Exact option id from the prior compact story.options. Compact output returns only that option's new detail and unchanged receipt; compact_result:false validates the id but returns the canonical full story.",
       ),
     ...OVERWORLD_ACTION_CONTEXT,
   },
