@@ -59,10 +59,11 @@
  * ── The roll-bracket soundness guard (shared with the RPG liveness/score proofs) ─────
  * "No collision in any reachable state" is only as complete as the set of states the bracket
  * reaches. The best/worst extremes bracket every middle-roll routing outcome UNLESS a route
- * gates on a raw HP value the extremes skip (a middle roll can land an intermediate HP). So,
- * exactly as rpg_all_endings_reachable / rpg_variant_liveness do, the suite ASSERTS no pack
- * condition reads an HP var — a future HP-gated route would FAIL LOUD (branch the HP in the
- * solver) rather than let an unvisited state hide a colliding menu behind a false pass.
+ * gates on a raw HP value the extremes skip (a middle roll can land an intermediate HP).
+ * The one supported exception is a monotone player `hp <= threshold` route in a
+ * `combat_guaranteed` pack whose threshold is at least the maximum possible one-round
+ * counterattack: the all-worst regime must cross it alive. Enemy HP, equality/lower-bound,
+ * and unsafe player-HP predicates still FAIL LOUD rather than hide a colliding menu.
  *
  * Packs are auto-discovered, so a new RPG pack is covered the moment it ships (bug_0096).
  */
@@ -78,11 +79,11 @@ import {
   type RpgIndex,
 } from "../../src/rpg/runner.js";
 import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
-import { HP_VAR } from "../../src/rpg/schema.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { Action } from "../../src/api/types.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -137,36 +138,6 @@ function fixedSeqRng(fracs: number[]): Rng {
 // WORST for the player: own strike min, damage taken max, skill roll min → [LOW, HIGH].
 const bestRng = (): Rng => fixedSeqRng([HIGH, LOW]);
 const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
-
-/** True for the player HP var and any hidden per-enemy HP var (`__enemy_hp_*`). */
-function isHpVar(name: string): boolean {
-  return name === HP_VAR || name.startsWith("__enemy_hp_");
-}
-
-/**
- * Recursively scan a compiled pack for any CONDITION (var_gte/var_lte/var_eq) that gates on
- * an HP var — the load-bearing assumption the best/worst-roll bracket rests on (see header).
- * Effect writes (set_var/inc_var) are not condition kinds and never match. Mirrors
- * rpg_all_endings_reachable / rpg_variant_liveness.
- */
-function readsHpInCondition(node: unknown): boolean {
-  if (Array.isArray(node)) return node.some(readsHpInCondition);
-  if (node && typeof node === "object") {
-    for (const k of ["var_gte", "var_lte", "var_eq"] as const) {
-      const cmp = (node as Record<string, unknown>)[k];
-      if (
-        cmp &&
-        typeof cmp === "object" &&
-        typeof (cmp as { name?: unknown }).name === "string" &&
-        isHpVar((cmp as { name: string }).name)
-      ) {
-        return true;
-      }
-    }
-    return Object.values(node as Record<string, unknown>).some(readsHpInCondition);
-  }
-  return false;
-}
 
 type MenuReport = {
   /** Human-readable descriptions of every state whose menu contained a duplicate id. */
@@ -230,13 +201,13 @@ describe("bug_0152 — every reachable action menu of every RPG pack has unique 
       if (!loaded.ok) return;
       const pack = loaded.compiled.pack;
 
-      // The bracket reaches every routing-relevant state soundly only when no route gates
-      // on a raw HP value the best/worst extremes skip — else a colliding menu could hide in
-      // an unvisited state behind a false pass. Both shipped packs satisfy this today.
+      // Load-bearing assumption guard: only a monotone, safely crossed player-HP upper
+      // bound is supported. Every other raw HP route still fails loudly.
+      const hpSupport = hpConditionSupportForPack(pack);
       expect(
-        readsHpInCondition(pack),
-        `pack gates a condition on an HP var — the best/worst-roll bracket assumes no ` +
-          `HP-gated route; branch the HP in the solver before trusting menu coverage here`,
+        hpSupport.unsupported,
+        `pack gates a condition on an unsupported HP predicate — only player hp <= threshold ` +
+          `at or above the maximum one-round counterattack in a combat_guaranteed pack is supported`,
       ).toBe(false);
 
       const { collisions, statesChecked, actionsSeen, cappedOut } = analyze(indexRpgPack(pack));

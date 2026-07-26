@@ -40,7 +40,8 @@
  *     skill-check/combat outcomes that
  *     are monotone in the roll are represented in the graph. A state LIVE under the bracketed
  *     edges is LIVE under some real play, and a state dead under BOTH extremes is genuinely
- *     dead — guarded, for RPG, by asserting no condition gates on a raw HP value.
+ *     dead. RPG permits only the shared conservative player-HP upper-bound exception;
+ *     every unsupported raw HP predicate still fails the soundness guard.
  *   - A cap-out makes the graph partial and the result unproven → the test FAILS (never a
  *     silent pass), matching the ending suites.
  *
@@ -59,8 +60,8 @@ import { stateKey, exhaustiveEndingsMulti } from "./support/exhaustive_endings.j
 import { loadRpgSourceFile, compileRpgSource } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
-import { HP_VAR } from "../../src/rpg/schema.js";
 import type { RpgAction } from "../../src/api/types.js";
+import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
 
 // Same backstop as the ending suites. The route-rich Wolf-Winter progress graph
 // exhausts at 315,100 states (measured 2026-07-14). The cap keeps bounded headroom while a
@@ -203,28 +204,6 @@ function rpgProgressExplore(index: ReturnType<typeof indexRpgPack>, action: RpgA
   return isAuthoredInspectAction(index, action) || !RPG_PROGRESS_SKIP.has(action.type);
 }
 
-function isHpVar(name: string): boolean {
-  return name === HP_VAR || name.startsWith("__enemy_hp_");
-}
-function readsHpInCondition(node: unknown): boolean {
-  if (Array.isArray(node)) return node.some(readsHpInCondition);
-  if (node && typeof node === "object") {
-    for (const k of ["var_gte", "var_lte", "var_eq"] as const) {
-      const cmp = (node as Record<string, unknown>)[k];
-      if (
-        cmp &&
-        typeof cmp === "object" &&
-        typeof (cmp as { name?: unknown }).name === "string" &&
-        isHpVar((cmp as { name: string }).name)
-      ) {
-        return true;
-      }
-    }
-    return Object.values(node as Record<string, unknown>).some(readsHpInCondition);
-  }
-  return false;
-}
-
 // ── Positive coverage: every shipped RPG pack ───────────────────────────────────────────────
 describe("bug_0150 — every progress-reachable state of every shipped pack is LIVE", () => {
   const rpgPacks = readdirSync("content/rpg/quests")
@@ -244,12 +223,13 @@ describe("bug_0150 — every progress-reachable state of every shipped pack is L
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const pack = loaded.compiled.pack;
-        // The best/worst-roll bracket is complete only when no route gates on a raw HP value
-        // (same load-bearing guard as the RPG ending proof). Fail loudly if a pack ever does.
+        // Load-bearing assumption guard: only a monotone, safely crossed player-HP upper
+        // bound is supported. Every other raw HP route still fails loudly.
+        const hpSupport = hpConditionSupportForPack(pack);
         expect(
-          readsHpInCondition(pack),
-          `${file}: a condition gates on an HP var — extend the solver to branch HP before ` +
-            `trusting the best/worst-roll liveness bracket`,
+          hpSupport.unsupported,
+          `${file}: an unsupported HP predicate gates progress — only player hp <= threshold ` +
+            `at or above the maximum one-round counterattack in a combat_guaranteed pack is supported`,
         ).toBe(false);
         const index = indexRpgPack(pack);
         expectAllLive(

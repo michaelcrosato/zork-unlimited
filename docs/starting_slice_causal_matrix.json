@@ -476,6 +476,7 @@
       "delayed_consumers": [
         "A clean feed commitment removes combat from all three encounters and preserves every wolf at full implicit HP; the established prepared combat route instead defeats all three.",
         "A failed first stockway cast permanently raises cattle alarm from 0 to 2; the exposed ridge already starts at 1 and its failed cast truthfully reports the full +2 rise to 3. Both remove the identical retry. Spending a failed split rail preserves the all-alive route; fighting only the yearling creates a bounded hybrid with its own survivor identity.",
+        "On the pure combat route, defeating both younger wolves while falling to 12 health or less opens one pre-maneuver evacuation instead of forcing old grey or death. Taking it ends the defense immediately: people escape, old grey remains in the abandoned byre, and two cattle go missing. HP 13, any living younger wolf, any strategy commitment, or any old-grey maneuver withholds it.",
         "Cattle alarm 3 keeps the herd whole, while alarm 4 leaves two cattle missing. Clean, recovered-noncombat, hybrid, and combat endings remain mechanically and textually distinct.",
         "Quest exports give Cade and Emery ending-specific memories and world facts. Only the all-alive, whole-herd result unlocks Emery's one-time 15-minute Greenway resupply cache after the truthful Albany return.",
         "Wolf bloodshed changes Emery's later legal agenda: a bloodless return permits quiet corridor policy, while hybrid or full-combat bloodshed forbids that policy and opens an evidence-custody line with two matching survey actions. The accessible public detour remains legal in every case."
@@ -484,6 +485,7 @@
         "Cade's free explanation, separate commitment prompt, finite non-droppable feed, locked pre-breach handoff, room copy, and legal actions expose the plan and its irreversibility before execution.",
         "Full MCP, compact MCP, and browser views show exact Steady, Restless, and Breaking cattle-alarm bands with the next threshold.",
         "Ending, Albany dispatch, Emery's reactive Greenway copy, campaign facts and memories, and the conditional service all name the exact wolf/cattle count rather than collapsing mixed and noncombat results.",
+        "The bloodied evacuation action appears beside old grey's combat choices only at its exact threshold and states its terminal cost before use; its ending, Cade/Emery/June memory, Albany return, and both dawn dispatches preserve the two dead wolves, surviving old grey, safe people, missing cattle, and abandoned byre.",
         "Full, compact, browser, and MCP Greenway projections expose only the two policies legal for the proven Wolf outcome; withheld quiet or custody option ids, titles, copy, and terms do not leak."
       ],
       "systems": [
@@ -516,8 +518,10 @@
       "baseline_evidence": [
         "tests/regression/wolf_winter_three_fight_gauntlet.test.ts",
         "tests/regression/wolf_winter_cross_encounter_agency.test.ts",
+        "tests/regression/wolf_winter_bloodied_byre_evacuation.test.ts",
         "tests/unit/rpg_pressure_tracks.test.ts",
         "tests/starting_slice/wolf_strategy_counterfactual.test.ts",
+        "tests/starting_slice/bloodied_byre_evacuation_return_e2e.test.ts",
         "traces/bugs/bug_0520_wolf_winter_noncombat_strategy.yaml",
         "traces/bugs/bug_0531_wolf_winter_ridge_alarm_journal_truth.yaml"
       ],

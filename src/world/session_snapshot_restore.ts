@@ -426,8 +426,11 @@ export const OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before persistent Station wound care and Greenway recovery gates. */
 export const OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH =
   "0770c6e8349923d1ed0c025d8b7e2e12323c53c457b7801667ea0574d90003ed";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before the bloodied byre gained a costly evacuation ending. */
+export const OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH =
   "5757ef201328662d8145b1e4fbad87907996fc1d9dad10170c3c2f8d422d2077";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "155ab48207c496c158dd5bb07fb9d44502d75fa456e219f25abf148118f40b31";
 /** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
 export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
@@ -2990,6 +2993,9 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesWoundCare =
     migrationTargetsCurrentManifest &&
     isWoundCareGreenwayPredecessorWorldHash(sourceSnapshot.worldHash);
+  const migratesBloodiedByreEvacuation =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
@@ -3054,6 +3060,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesComparisonCardContract &&
     !migratesEmeryEvidenceCustody &&
     !migratesWoundCare &&
+    !migratesBloodiedByreEvacuation &&
     !migratesAuthoredLocalJob &&
     !migratesAuthoredLocalEvent
   ) {
@@ -3350,6 +3357,14 @@ export function planOverworldSessionSnapshotRestore(args: {
   ) {
     throw new Error(
       "Trusted predecessor snapshot has a Wolf-Winter quest outcome introduced by a later manifest.",
+    );
+  }
+  if (
+    sourceSnapshot.worldHash !== worldHash &&
+    questOutcomeIds.get("wolf_winter") === "ending_bloodied_byre_evacuated"
+  ) {
+    throw new Error(
+      "Pre-bloodied-byre snapshot has a Wolf-Winter quest outcome introduced by a later manifest.",
     );
   }
   assertJourneyCampaignGoalCompletionProof({

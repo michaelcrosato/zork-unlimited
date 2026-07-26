@@ -110,7 +110,7 @@ Wolf-Winter is the strongest existing gameplay proof:
   changes a one-time Albany service;
 - Albany's dawn dispatch creates a mutually exclusive return fork between
   Jamie's Market resupply credit and Emery's Greenway rest claim;
-- eleven truthful non-death victory identities reach Albany's campaign
+- twelve truthful non-death victory identities reach Albany's campaign
   presentation.
 
 Relevant guards include
@@ -237,7 +237,7 @@ tamper guards. A generic quest-export catalog applies relationship
 memories/floors and derives historical world facts from canonical outcome ids;
 character-conditioned effects additionally resolve promises and add or remove
 companions in canonical completion order.
-Wolf-Winter's eleven non-death endings create distinct Cade, Emery, and Hayden
+Wolf-Winter's twelve non-death endings create distinct Cade, Emery, and Hayden
 memories plus byre/gate/timber/wolf/cattle/property/relief-stock facts; restore replays the character result,
 rejects forged outcome/journal/state combinations, and fences prior manifests
 to one exact migration target. Generic campaign service rules can now consume
@@ -408,6 +408,21 @@ one-time Greenway nonlethal-response cache. Same-character/source/seed paired
 proof, RPG save/replay, journey foldback, compact/full/UI parity, overworld
 restore, and service consumption live in
 [`wolf_strategy_return_e2e.test.ts`](../tests/starting_slice/wolf_strategy_return_e2e.test.ts).
+
+The combat route now has one costly, state-specific failure-forward exit rather
+than forcing a wounded player through old grey or into death. After both younger
+wolves are dead, at 12 health or less, and before committing to any old-grey
+maneuver, the player may evacuate Cade and every rider through the rear cattle
+door. This is not a combat victory or a strategy reset: old grey remains in the
+abandoned byre, two cattle go missing, the outer line is lost, and the journey
+returns that exact account to Albany. HP 13, either younger wolf still living,
+any redirected/defeated leader state, a committed lure/drive/fortification, or
+any old-grey maneuver withholds the exit. Quest legality, terminal replay,
+campaign facts and memories, June's broken cattle-first agreement, Albany dawn
+dispatch, and save migration are proved by
+[`wolf_winter_bloodied_byre_evacuation.test.ts`](../tests/regression/wolf_winter_bloodied_byre_evacuation.test.ts)
+and
+[`bloodied_byre_evacuation_return_e2e.test.ts`](../tests/starting_slice/bloodied_byre_evacuation_return_e2e.test.ts).
 
 The sixth authored increment makes Albany preparation a durable, finite choice
 instead of a promise in the matrix. After source certification, every one of the
@@ -803,7 +818,7 @@ different mutually exclusive repair dispatches, while fortified no-loss
 returns expose none. The chosen dispatch consumes time, changes standing, and
 creates or consolidates an exact one-use Albany service without duplicating a
 legacy returned-rig cache. Migration, replay, action-order, full/compact/UI/MCP,
-and all eleven non-death ending counterfactuals are proved by
+and all twelve non-death ending counterfactuals are proved by
 [`cade_return_packet_counterfactual.test.ts`](../tests/starting_slice/cade_return_packet_counterfactual.test.ts).
 Jamie's Market policy and disputed-crates pair adds a second authored event and
 fifth authored job: household-price protection consistently buys more standing
@@ -1044,15 +1059,16 @@ cohort that misses a quality threshold exits 1; a pass exits 0.
 
 Wolf-Winter outcomes map to strategy families as follows:
 
-| Strategy family       | Accepted Wolf-Winter ending ids                                                                     |
-| --------------------- | --------------------------------------------------------------------------------------------------- |
-| `hunt_and_hold`       | `ending_held_gate_barred`, `ending_held_timber_saved`, `ending_held`                                |
-| `lure_and_divert`     | `ending_pack_diverted`, `ending_pack_diverted_cattle_scattered`, `ending_pack_diverted_after_blood` |
-| `fortify_and_outlast` | `ending_fortified_cade_terms`, `ending_fortified_albany_authority`                                  |
-| `drive_and_evacuate`  | `ending_drive_cattle_wounded`, `ending_drive_person_cattle_lost`, `ending_drive_reserve_spent`      |
+| Strategy family       | Accepted Wolf-Winter ending ids                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `hunt_and_hold`       | `ending_bloodied_byre_evacuated`, `ending_held_gate_barred`, `ending_held_timber_saved`, `ending_held` |
+| `lure_and_divert`     | `ending_pack_diverted`, `ending_pack_diverted_cattle_scattered`, `ending_pack_diverted_after_blood`    |
+| `fortify_and_outlast` | `ending_fortified_cade_terms`, `ending_fortified_albany_authority`                                     |
+| `drive_and_evacuate`  | `ending_drive_cattle_wounded`, `ending_drive_person_cattle_lost`, `ending_drive_reserve_spent`         |
 
-`ending_pack_diverted_after_blood` is the lure family's bounded hybrid
-recovery, not a fifth strategy. A missing Wolf-Winter outcome is an incomplete
+`ending_pack_diverted_after_blood` is the lure family's bounded hybrid recovery,
+and `ending_bloodied_byre_evacuated` is the hunt family's costly terminal
+failure-forward exit; neither is a fifth strategy. A missing Wolf-Winter outcome is an incomplete
 starting-goal run. A death ending or any unknown Wolf-Winter ending invalidates
 the certification bundle rather than being silently bucketed.
 

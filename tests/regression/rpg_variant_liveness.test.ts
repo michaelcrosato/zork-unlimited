@@ -41,18 +41,12 @@
  * of the two regimes, so no live variant is missed.
  *
  * ── The roll-bracket caveat (the exact crux bug_0146's next-focus named), resolved ──────
- * The bracket is complete for VARIANT LIVENESS only if no variant's `when` reads a
- * roll-dependent TRANSIENT the best/worst extremes skip over — i.e. a raw HP value (a
- * middle roll can land an intermediate HP the two extremes never visit). RPG variants gate
- * on flags / items / non-HP vars / object state / visited — all of which evolve either by
- * roll-independent actions or by MONOTONE combat consequences (an enemy's `defeat_flag` and
- * `on_defeat` fire when it dies; a skill check's `on_success`/`on_failure` fire on the
- * best/worst roll), so the bracket reaches them. The one way this could break is a variant
- * gated on a raw HP var, so the suite ASSERTS no pack condition reads an HP var (player `hp`
- * or a hidden `__enemy_hp_*`) — the SAME load-bearing guard rpg_all_endings_reachable makes,
- * here covering variant `when`s as a subset of all pack conditions. A pack that violates it
- * trips a loud, explained failure (branch the HP in the solver) rather than silently
- * under-crediting a variant. Both shipped packs pass it today.
+ * A middle roll can land at an HP value the extremes skip. One conservative form remains
+ * complete under the two-regime bracket: a monotone player `hp <= threshold` route in a
+ * `combat_guaranteed` pack whose threshold is at least the maximum possible one-round
+ * counterattack. The all-worst regime must cross it alive. Enemy HP, equality/lower-bound,
+ * and unsafe player-HP predicates trip a loud failure rather than silently under-crediting
+ * a variant.
  *
  * ── The action policy (shared with the parser liveness proof) ───────────────────────────
  * The shared BFS defaults to a MONOTONE progress-only policy (skip reversible/observation
@@ -81,7 +75,6 @@ import {
   enumerateRpgActions,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
-import { HP_VAR } from "../../src/rpg/schema.js";
 import { visibleObjectIds } from "../../src/rpg/model.js";
 import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 import { evalConditions } from "../../src/core/conditions.js";
@@ -92,6 +85,7 @@ import type { Action } from "../../src/api/types.js";
 import { makeStep } from "../../src/core/engine.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -154,36 +148,6 @@ function fixedSeqRng(fracs: number[]): Rng {
 // WORST for the player: own strike min, damage taken max, skill roll min → [LOW, HIGH].
 const bestRng = (): Rng => fixedSeqRng([HIGH, LOW]);
 const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
-
-/** True for the player HP var and any hidden per-enemy HP var (`__enemy_hp_*`). */
-function isHpVar(name: string): boolean {
-  return name === HP_VAR || name.startsWith("__enemy_hp_");
-}
-
-/**
- * Recursively scan a compiled pack for any CONDITION (var_gte/var_lte/var_eq) that gates
- * on an HP var — the load-bearing assumption the best/worst-roll bracket rests on (see the
- * header). Effect writes (set_var/inc_var) are not condition kinds and never match, so this
- * flags exactly variant/route gating on a raw HP value. Mirrors rpg_all_endings_reachable.
- */
-function readsHpInCondition(node: unknown): boolean {
-  if (Array.isArray(node)) return node.some(readsHpInCondition);
-  if (node && typeof node === "object") {
-    for (const k of ["var_gte", "var_lte", "var_eq"] as const) {
-      const cmp = (node as Record<string, unknown>)[k];
-      if (
-        cmp &&
-        typeof cmp === "object" &&
-        typeof (cmp as { name?: unknown }).name === "string" &&
-        isHpVar((cmp as { name: string }).name)
-      ) {
-        return true;
-      }
-    }
-    return Object.values(node as Record<string, unknown>).some(readsHpInCondition);
-  }
-  return false;
-}
 
 /** The index of the first variant whose `when` holds in `state` (first-match-wins,
  *  identical to model.ts roomDescription/objectDescription), or -1 for the base text. */
@@ -976,12 +940,13 @@ describe("bug_0147 — every reactive variant of every RPG pack is reachable as 
         if (!loaded.ok) return;
         const pack = loaded.compiled.pack;
 
-        // The caveat guard: the best/worst-roll bracket credits variant display soundly only
-        // when no variant (no condition at all) gates on a raw HP value the extremes skip.
+        // Load-bearing assumption guard: only a monotone, safely crossed player-HP upper
+        // bound is supported. Every other raw HP route still fails loudly.
+        const hpSupport = hpConditionSupportForPack(pack);
         expect(
-          readsHpInCondition(pack),
-          `pack gates a condition on an HP var — the best/worst-roll bracket assumes no ` +
-            `HP-gated variant guard; branch the HP in the solver before trusting liveness here`,
+          hpSupport.unsupported,
+          `pack gates a condition on an unsupported HP predicate — only player hp <= threshold ` +
+            `at or above the maximum one-round counterattack in a combat_guaranteed pack is supported`,
         ).toBe(false);
 
         const { displayed, declared, present, presenceDeclared, cappedOut } = analyze(

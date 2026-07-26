@@ -36,11 +36,13 @@
  *     the player reach 0 HP, did d20 + skill meet the difficulty. The best/worst extremes
  *     therefore bracket every outcome a middle roll could yield, so an ending reachable
  *     under SOME rolls is reached under one of the two regimes. The one way this could
- *     miss is an ending that gates on a RAW HP VALUE (e.g. "only winnable if you finish a
- *     fight at >10 HP"), where a middle roll lands an HP the extremes skip — so the test
- *     ASSERTS no pack condition reads an HP var (player `hp` or an `__enemy_hp_*` var). A
- *     pack that violates that trips a loud, explained failure (extend the solver to branch
- *     the HP), never a silent pass — matching the helper's standing guarantee.
+ *     miss is an ending that gates on a RAW HP VALUE where a middle roll lands an HP the
+ *     extremes skip. Equality, lower-bound player HP, and every enemy-HP condition therefore
+ *     still fail closed. A monotone player `hp <= threshold` route is supported only when
+ *     its threshold is at least the pack's maximum possible one-round counterattack and the
+ *     pack carries the validator's cumulative worst-roll survival guarantee. The WORST
+ *     regime then maximizes damage taken before each enemy falls and remains a concrete,
+ *     surviving route; if it does not cross the upper bound, no middle roll can.
  *
  * What this proves vs. what the validator proves: this is ROUTE EXISTENCE — every declared
  * ending (including the death ending, reachable by an under-prepared or unlucky player) is
@@ -50,7 +52,7 @@
  *
  * Failure modes (all loud, none silent): a declared-but-unreachable ending fails; a
  * reached-but-undeclared ending fails; a severed route fails; a cap-out (truncated,
- * unproven search) fails; an HP-gated condition fails the assumption guard. Packs are
+ * unproven search) fails; an unsupported HP-gated condition fails the assumption guard. Packs are
  * auto-discovered from content/rpg/quests, so a new RPG pack is covered the moment it ships
  * (the health-covers-all-packs bar, bug_0096).
  */
@@ -61,8 +63,8 @@ import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
-import { HP_VAR } from "../../src/rpg/schema.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
+import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -114,36 +116,6 @@ function fixedSeqRng(fracs: number[]): Rng {
 const bestRng = (): Rng => fixedSeqRng([HIGH, LOW]);
 const worstRng = (): Rng => fixedSeqRng([LOW, HIGH]);
 
-/** True for the player HP var and any hidden per-enemy HP var (`__enemy_hp_*`). */
-function isHpVar(name: string): boolean {
-  return name === HP_VAR || name.startsWith("__enemy_hp_");
-}
-
-/**
- * Recursively scan a compiled pack for any CONDITION (var_gte/var_lte/var_eq — the only
- * condition kinds that read a numeric var) that gates on an HP var. Effect writes
- * (set_var/inc_var, e.g. combat lowering HP) are NOT condition kinds and never match, so
- * this flags exactly the load-bearing assumption: that no route gates on a raw HP value.
- */
-function readsHpInCondition(node: unknown): boolean {
-  if (Array.isArray(node)) return node.some(readsHpInCondition);
-  if (node && typeof node === "object") {
-    for (const k of ["var_gte", "var_lte", "var_eq"] as const) {
-      const cmp = (node as Record<string, unknown>)[k];
-      if (
-        cmp &&
-        typeof cmp === "object" &&
-        typeof (cmp as { name?: unknown }).name === "string" &&
-        isHpVar((cmp as { name: string }).name)
-      ) {
-        return true;
-      }
-    }
-    return Object.values(node as Record<string, unknown>).some(readsHpInCondition);
-  }
-  return false;
-}
-
 describe("every declared ending of every RPG pack is reachable by concrete play", () => {
   it("discovers the shipped RPG packs", () => {
     // Guard: an empty glob would make the per-pack assertions vacuously pass.
@@ -164,13 +136,13 @@ describe("every declared ending of every RPG pack is reachable by concrete play"
         // Guard: a pack with no declared endings would also pass vacuously.
         expect(declared.size).toBeGreaterThan(0);
 
-        // Load-bearing assumption guard: the best/worst-roll bracket is complete only when no
-        // route gates on a raw HP value. If a pack ever does, this fails loudly so the solver
-        // is extended (branch the HP) rather than silently under-reporting reachability.
+        // Load-bearing assumption guard: only a monotone, safely crossed player-HP upper
+        // bound is supported. Every other raw HP route still fails loudly.
+        const hpSupport = hpConditionSupportForPack(pack);
         expect(
-          readsHpInCondition(pack),
-          `pack gates a condition on an HP var — the best/worst-roll reachability bracket ` +
-            `assumes no HP-gated routing; extend the RPG solver to branch HP before trusting it`,
+          hpSupport.unsupported,
+          `pack gates a condition on an unsupported HP predicate — only player hp <= threshold ` +
+            `at or above the maximum one-round counterattack in a combat_guaranteed pack is supported`,
         ).toBe(false);
 
         const index = indexRpgPack(pack);

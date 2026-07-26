@@ -182,6 +182,7 @@ export type WolfWinterCampaignOutcome =
   | "pack_diverted"
   | "pack_diverted_cattle_scattered"
   | "pack_diverted_after_blood"
+  | "bloodied_byre_evacuated"
   | "drive_cattle_wounded"
   | "drive_person_cattle_lost"
   | "drive_reserve_spent"
@@ -215,6 +216,12 @@ export const WOLF_WINTER_CAMPAIGN_OUTCOMES = Object.freeze({
     endingId: "ending_pack_diverted_after_blood",
     albanyReturnContext:
       "The yearling is dead, the flank wolf and grey leader remain alive in the high wood, and most of Cade's herd is safe; two cattle are still missing down the lower pasture, his winter feed is spent, and the outer paling remains broken.",
+  }),
+  ending_bloodied_byre_evacuated: Object.freeze({
+    id: "bloodied_byre_evacuated",
+    endingId: "ending_bloodied_byre_evacuated",
+    albanyReturnContext:
+      "The yearling and flank wolf are dead, and the old grey remains in Cade's abandoned byre. Cade and every person escaped, but two cattle are still missing and the outer line stands abandoned.",
   }),
   ending_drive_cattle_wounded: Object.freeze({
     id: "drive_cattle_wounded",
@@ -288,6 +295,12 @@ const ALBANY_DAWN_DISPATCH_CONSEQUENCES = Object.freeze({
       "The wagon returns to repair Cade's broken outer line and help search the lower pasture; the yearling remains dead, the other two wolves remain alive, and two cattle are still missing when you take Hedrick's packet north alone.",
     send_wardens_north:
       "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood.",
+  }),
+  bloodied_byre_evacuated: Object.freeze({
+    send_wagon_to_cade:
+      "The wagon returns for Cade and every evacuated person, all safe on the road, then begins the search for two missing cattle and a safe line around the abandoned byre; the yearling and flank wolf remain dead, and the old grey still holds the byre when you take Hedrick's packet north alone.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade and every other person remain safe on the evacuation road, but two cattle are still missing, the yearling and flank wolf are dead, and the old grey remains in the abandoned byre.",
   }),
   drive_cattle_wounded: Object.freeze({
     send_wagon_to_cade:

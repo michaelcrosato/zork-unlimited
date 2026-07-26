@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 650 -->
+<!-- historical_cycle_count: 651 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_bloodied_byre_evacuation
+
+- Evidence choice: verified pure Spark seed 72672 killed both younger wolves, found only repeated attacks at the old grey, died at decision 18, and reported stuck=true, clarity 3/5, enjoyment 2/5, and an S2 unrecoverable-combat finding.
+- Surface: after those two kills, a courier at 12 HP or less may evacuate the people before engaging the old grey; the attack remains legal, while the costly exit leaves the byre abandoned, old grey alive, and two cattle missing.
+- Campaign truth: Cade and Emery remember the exact bloodshed and losses; Albany receives an evacuation docket, and June breaks her cattle-first promise and leaves if she witnessed the choice.
+- Counterfactual: evacuation is absent at 13 HP, before either kill, after any lure/drive/fortify route, and after beginning an old-grey maneuver; it awards no score and remains hunt-and-hold rather than inventing a fifth strategy.
+- Proof: all 13 endings are reachable from real starts, and shared exhaustive guards accept only a safely crossed player-HP upper bound while still rejecting equality, lower-bound, enemy-HP, unsafe-threshold, and non-guaranteed predicates.
+- Self-critique/follow-through: this is failure-forward, not forgiveness—the player permanently yields the holding, old grey, and cattle; a clean-commit Spark canary remains the landing gate rather than implementation evidence.
+- Guard: 502 historical migration/counterfactual checks preserve every older hash, 84 focused behavior/proof checks are green, and zero-finding post-crawl `20260726T164135Z` covers the consolidated world.
 
 ### Cycle result - wolf_wound_care_lifecycle
 
@@ -146,12 +156,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Blind evidence: exact-build native Sol seed 72521 completes The Wolf-Winter bloodlessly under Albany authority with the herd, property, and all wolves alive, ends voluntarily, rates clarity/enjoyment 4/4, remains unstuck, and chooses replay-yes; targeted regression remains the direct proof because the player did not organically retry a consumed id.
 - Feedback/follow-through: terminal comparison density and irrelevant alternatives in some blocked messages remain broader copy work; the corrected resolved-id message stays one bounded truthfulness fix.
 - Guard: independent review is clean, 44 rebased CLI/departure tests pass, pre/post crawl are zero-finding, and full health passes 419 files/3,394 tests plus both typechecks and all packs.
-
-### Cycle result - plain_game_blind_prompt
-
-- Evidence choice: ordinary blind-player tasks were repeatedly interrupted by a false non-game warning after the prompt framed play as a "study" and named unrelated workflow concepts.
-- Surface: the canonical blind prompt and generated cycle handoff now speak only as a first-time text TTRPG player brief while preserving the exact fresh start, gameplay wrapper, voluntary ending, receipt, and report evidence contracts.
-- Counterfactual: prompt tests pin `{}` fresh start, forbid alternate startup or non-game tools, preserve the one-expression/yield wrapper, and require the exact game-owned `exitReceipt` inside the `json exit-interview` fence.
-- Pure evidence: fresh canonical Terra seed 72543 completes The Wolf-Winter and The Gallowmere, continues twice, ends voluntarily at 53 decisions, rates clarity/enjoyment 4/4, is unstuck and replay-yes, with no warning, login interruption, or rejected game action.
-- Feedback/follow-through: the opening remains dense and overworld guidance can become stale during an embedded quest; both are retained as separate gameplay findings rather than folded into transport wording.
-- Guard: independent review is clean after strengthening the startup assertion; the exact prompt build passed full health at 418 files/3,382 tests, and the final cycle-handoff extension passes 53 focused tests, typecheck, integrity, format, and zero-finding crawl `20260724T232143Z`.

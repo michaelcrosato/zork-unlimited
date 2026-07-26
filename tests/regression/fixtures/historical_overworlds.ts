@@ -132,9 +132,36 @@ const CAMPUS_EVIDENCE_MANDATE_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:campus_traceable_route_digest_mobile_resupply",
 ]);
 
+/**
+ * Reconstruct the exact manifest before the bloodied-byre evacuation outcome
+ * shipped. Every older exact-world helper must pass through this newest layer
+ * first so later authored additions cannot leak backward into historical hashes.
+ */
+export function exactBloodiedByreEvacuationPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const emery = predecessor.characters.find(
+    (candidate) => candidate.id === "albany_city__greenway__contact",
+  );
+  const wolf = predecessor.quests.find((candidate) => candidate.id === "wolf_winter");
+  if (!emery?.variants || !wolf?.campaign_exports) {
+    throw new Error(
+      "Bloodied-byre evacuation predecessor requires Emery and Wolf-Winter campaign exports.",
+    );
+  }
+  emery.variants = emery.variants.filter(
+    (variant) => variant.id !== "wolf_bloodied_byre_evacuated",
+  );
+  wolf.campaign_exports = wolf.campaign_exports.filter(
+    (campaignExport) => campaignExport.ending_id !== "ending_bloodied_byre_evacuated",
+  );
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before witnessed Station wound care shipped. */
 export function exactWoundCarePredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactBloodiedByreEvacuationPredecessor(current);
   predecessor.campaign_service_rules = (predecessor.campaign_service_rules ?? []).filter(
     (rule) => rule.id !== "albany:cade_witnessed_gate_wound_station_care",
   );
