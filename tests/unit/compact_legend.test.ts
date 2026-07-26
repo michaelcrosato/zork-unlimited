@@ -73,6 +73,16 @@ describe("compact legends", () => {
     expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads).not.toContain(
       "journey objective remains available",
     );
+    expect(OVERWORLD_COMPACT_LEGEND.opportunity_guidance).toContain(
+      "temporarily deferred at a journey decision boundary",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads_deferred).toContain(
+      "after the current journey decision",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads_deferred).toContain(
+      "opportunity_leads is omitted",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.opportunity_leads_truncated).not.toContain("deferred");
 
     expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("resupply_overworld_session");
     expect(OVERWORLD_COMPACT_LEGEND.service_actions).toContain("rest_overworld_session");

@@ -315,6 +315,7 @@ export type JourneyOpportunityLeadPresentation = Readonly<{
 export type JourneyOpportunityPresentation = Readonly<{
   guidance: string;
   leads: readonly JourneyOpportunityLeadPresentation[];
+  deferredLeadCount?: number;
 }>;
 
 export type JourneyPresentationContext = Readonly<{
@@ -1189,6 +1190,9 @@ export function cloneJourneyOpportunityPresentation(
   return {
     guidance: opportunities.guidance,
     leads: opportunities.leads.map((lead) => ({ ...lead })),
+    ...(opportunities.deferredLeadCount === undefined
+      ? {}
+      : { deferredLeadCount: opportunities.deferredLeadCount }),
   };
 }
 
@@ -1199,8 +1203,18 @@ function freezeJourneyOpportunities(
   if (opportunities.guidance.trim().length === 0) {
     throw new Error("Journey opportunity guidance cannot be empty.");
   }
-  if (opportunities.leads.length === 0) {
-    throw new Error("Journey opportunities require at least one lead.");
+  const deferredLeadCount = opportunities.deferredLeadCount;
+  if (
+    deferredLeadCount !== undefined &&
+    (!Number.isSafeInteger(deferredLeadCount) || deferredLeadCount <= 0)
+  ) {
+    throw new Error("Deferred journey opportunity count must be a positive safe integer.");
+  }
+  if (deferredLeadCount === undefined && opportunities.leads.length === 0) {
+    throw new Error("Detailed journey opportunities require at least one lead.");
+  }
+  if (deferredLeadCount !== undefined && opportunities.leads.length > 0) {
+    throw new Error("Deferred journey opportunities cannot disclose detailed leads.");
   }
   const keys = new Set<string>();
   const leads = opportunities.leads.map((lead) => {
@@ -1225,6 +1239,7 @@ function freezeJourneyOpportunities(
   return Object.freeze({
     guidance: opportunities.guidance,
     leads: Object.freeze(leads),
+    ...(deferredLeadCount === undefined ? {} : { deferredLeadCount }),
   });
 }
 

@@ -30,6 +30,19 @@ const ACCESS_ORDER: Readonly<Record<JourneyOpportunityAccess, number>> = Object.
   route_unmapped: 2,
 });
 
+export function deferJourneyOpportunityDetails(
+  opportunities: JourneyOpportunityPresentation | null,
+): JourneyOpportunityPresentation | null {
+  if (!opportunities || opportunities.leads.length === 0) return opportunities;
+  const deferredLeadCount = opportunities.leads.length;
+  const subject = deferredLeadCount === 1 ? "lead remains" : "leads remain";
+  return Object.freeze({
+    guidance: `${String(deferredLeadCount)} optional aftermath ${subject}; finish this journey decision first, and full district details return if play continues.`,
+    leads: Object.freeze([]),
+    deferredLeadCount,
+  });
+}
+
 function opportunityAccess(
   areaId: string,
   currentAreaId: string | null,

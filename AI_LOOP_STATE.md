@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 644 -->
+<!-- historical_cycle_count: 645 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - journey_boundary_opportunity_deferral
+
+- Evidence choice: repeated blind players found the post-Wolf Albany return stack dense; exact-clean Terra seed 72633 follows this commit through The Wolf-Winter.
+- Surface: Continue/End and an immediate journey consequence now show only the number of optional aftermath leads; unchanged district details return when active play resumes.
+- Contract: compact v30 names deferral separately from truncation, while full journey, compact MCP, and UI share one derived, button-free presentation with no root identity leak.
+- Counterfactual: the same five roots become count 5 at both Wolf completion boundaries and return exactly after dawn dispatch; reads preserve snapshot, hash, proof, legal choices, and decision count.
+- Self-critique/follow-through: this removes post-goal competition for attention, not the still-dense mandatory Albany departure sequence; fresh blind evidence must judge whether the transition now reads cleanly.
+- Guard: independent Terra review corrected compact semantics; post-crawl `20260726T004455Z` is zero-finding and full health passes 423 files/3,447 tests plus both typechecks and all packs.
 
 ### Cycle result - station_return_filing_standard
 
@@ -144,12 +153,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Rebased check: exact-clean native Sol human-terminal seed 72516 on `206be452` completes The Wolf-Winter (`ending_fortified_cade_terms`), continues into The Gallowmere (`ending_hunt_won`), and ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
 - Feedback/follow-through: active-dialogue scope is visually opaque and permanent setup remains dense; both stay separate focused candidates, while the queued June contact removes the already-compiled missing-seat hotspot.
 - Guard: independent review is clean, post-rebase crawl `20260724T144243Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 59 combined terminal/Registration tests pass, and full health passes 418 files/3,376 tests plus both typechecks and all packs.
-
-### Cycle result - witnessed_registration_foldback
-
-- Evidence choice: the selected Albany registration obligation could close mechanically after The Wolf-Winter without immediate player-visible proof tying that closure to the actual dispatch and return.
-- Surface: one witnessed profile-specific receipt now follows the exact return summary in terminal, compact MCP, and the durable journal; it names the correct recipient/witness or Reese's exact 100/100 roll while changing only the selected active promise to kept.
-- Counterfactual: all four profiles across eleven non-death endings prove exact export facts and character transitions; unrelated/death paths add no receipt, missing planner evidence fails closed, and current or legacy replay rejects altered equipment, dispatch proof, source hashes, duplicate receipts, or adjacent manifests.
-- Pure evidence: exact-clean Terra `750b8633` seed 72511 completes The Wolf-Winter bloodlessly with the herd whole, visibly receives Hayden's receipt, continues twice, wins The Gallowmere, and ends voluntarily at 50 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Feedback/follow-through: setup density and the advertised-but-unavailable June seat recur; the already-green staged terminal controller and queued June increment address those separately rather than broadening Registration.
-- Guard: independent re-review is clean, exact post-rebase crawl `20260724T125355Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, and full health passes 418 files/3,371 tests plus both typechecks and all packs.

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
-import { OVERWORLD_COMPACT_VIEW_VERSION } from "../../src/world/compact_view.js";
+import {
+  OVERWORLD_COMPACT_VIEW_VERSION,
+  cloneOverworldCompactView,
+} from "../../src/world/compact_view.js";
 import {
   JOURNEY_OPPORTUNITY_GUIDANCE,
   type JourneyOpportunityLeadPresentation,
@@ -28,6 +31,8 @@ const CAMPUS_EVENT = "albany_city__campus__event";
 const GREENWAY = "albany_city__greenway";
 const GREENWAY_EVENT = "albany_city__greenway__event";
 const FULL = { compact_context: false, compact_result: false } as const;
+const EXPECTED_DEFERRED_GUIDANCE =
+  "5 optional aftermath leads remain; finish this journey decision first, and full district details return if play continues.";
 
 const EXPECTED_LEADS: readonly JourneyOpportunityLeadPresentation[] = [
   {
@@ -173,6 +178,7 @@ function expectExactAlbanyLeads(session: OverworldSession): void {
   ]);
   expect(session.compactView().opportunity_guidance).toBe(JOURNEY_OPPORTUNITY_GUIDANCE);
   expect(session.compactView().opportunity_leads).toEqual(EXPECTED_COMPACT);
+  expect(session.compactView().opportunity_leads_truncated).toBeUndefined();
   expect(JSON.stringify(opportunities)).not.toMatch(
     /dispatch_|hold_household|post_accessible|terms|minutes|renown|reward|consequence|prompt/i,
   );
@@ -181,8 +187,33 @@ function expectExactAlbanyLeads(session: OverworldSession): void {
   expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
 }
 
+function expectDeferredAlbanyLeads(session: OverworldSession): void {
+  const before = session.snapshot();
+  const beforeHash = session.snapshotHash();
+  const beforeDecisions = session.journey().acceptedDecisions;
+  const opportunities = session.journey().opportunities;
+
+  expect(opportunities).toEqual({
+    guidance: EXPECTED_DEFERRED_GUIDANCE,
+    leads: [],
+    deferredLeadCount: EXPECTED_LEADS.length,
+  });
+  expect(Object.keys(opportunities!).sort()).toEqual(["deferredLeadCount", "guidance", "leads"]);
+  const compact = session.compactView();
+  expect(compact).toMatchObject({
+    opportunity_guidance: EXPECTED_DEFERRED_GUIDANCE,
+    opportunity_leads_deferred: EXPECTED_LEADS.length,
+  });
+  expect(compact.opportunity_leads).toBeUndefined();
+  expect(compact.opportunity_leads_truncated).toBeUndefined();
+  expect(cloneOverworldCompactView(compact).opportunity_leads_deferred).toBe(EXPECTED_LEADS.length);
+  expect(session.snapshot()).toEqual(before);
+  expect(session.snapshotHash()).toBe(beforeHash);
+  expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
+}
+
 describe("optional return opportunity leads", () => {
-  it("shows no pre-Wolf lead, then the exact five roots across completion, dawn, and active play", () => {
+  it("defers five roots at journey boundaries, then restores their exact active-play detail", () => {
     const untouched = new OverworldSession(WORLD);
     const untouchedSnapshot = untouched.snapshot();
     untouched.journey();
@@ -205,7 +236,7 @@ describe("optional return opportunity leads", () => {
       goal: { id: "albany_local_lead", status: "completed" },
       pendingChoice: { reasons: ["goal_completed"] },
     });
-    expectExactAlbanyLeads(prepared.session);
+    expectDeferredAlbanyLeads(prepared.session);
 
     prepared.session.chooseJourney("continue");
     expect(prepared.session.journey()).toMatchObject({
@@ -213,7 +244,7 @@ describe("optional return opportunity leads", () => {
       acceptedDecisions: 10,
       storyChoice: { id: "albany_dawn_dispatch" },
     });
-    expectExactAlbanyLeads(prepared.session);
+    expectDeferredAlbanyLeads(prepared.session);
 
     prepared.session.chooseJourneyStory("send_wagon_to_cade");
     expect(prepared.session.journey()).toMatchObject({
@@ -233,6 +264,24 @@ describe("optional return opportunity leads", () => {
   });
 
   it("keeps one structured journey authority and an exact bounded compact projection in MCP", () => {
+    const boundary = atWolfCompletion();
+    const boundaryFull = createToolApi({ root: process.cwd() }).restore_overworld_session({
+      ...FULL,
+      snapshot: boundary.snapshot(),
+    });
+    const boundaryCompact = createToolApi({ root: process.cwd() }).restore_overworld_session({
+      compact_context: true,
+      snapshot: boundary.snapshot(),
+    });
+    expect(boundaryFull.journey.opportunities).toEqual(boundary.journey().opportunities);
+    expect(boundaryCompact.journey.opportunities).toEqual(boundaryFull.journey.opportunities);
+    expect(boundaryCompact.context).toMatchObject({
+      opportunity_guidance: EXPECTED_DEFERRED_GUIDANCE,
+      opportunity_leads_deferred: EXPECTED_LEADS.length,
+    });
+    expect(boundaryCompact.context.opportunity_leads).toBeUndefined();
+    expect(boundaryCompact.context.opportunity_leads_truncated).toBeUndefined();
+
     const session = atNorthGoal();
     const api = createToolApi({ root: process.cwd() });
     const full = api.restore_overworld_session({ ...FULL, snapshot: session.snapshot() });

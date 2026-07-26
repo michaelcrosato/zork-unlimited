@@ -189,10 +189,13 @@ export function buildOverworldSessionCompactView(
     ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
     ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
     ...(departureContactLeads.length > 0 ? { departure_contact_leads: departureContactLeads } : {}),
-    ...(opportunityLeads.length > 0 && state.opportunities
+    ...(state.opportunities
       ? {
           opportunity_guidance: state.opportunities.guidance,
-          opportunity_leads: opportunityLeads,
+          ...(opportunityLeads.length > 0 ? { opportunity_leads: opportunityLeads } : {}),
+          ...(state.opportunities.deferredLeadCount === undefined
+            ? {}
+            : { opportunity_leads_deferred: state.opportunities.deferredLeadCount }),
         }
       : {}),
     ...(state.opportunities &&

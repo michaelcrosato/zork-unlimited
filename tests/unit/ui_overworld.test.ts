@@ -25,10 +25,7 @@ import {
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
-import {
-  INITIAL_JOURNEY_GOAL_GUIDANCE,
-  JOURNEY_OPPORTUNITY_GUIDANCE,
-} from "../../src/world/journey_contract.js";
+import { INITIAL_JOURNEY_GOAL_GUIDANCE } from "../../src/world/journey_contract.js";
 import { cloneOverworldView } from "../../src/world/session_view_clone.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import {
@@ -422,12 +419,19 @@ describe("OverworldSession", () => {
     completeAlbanyFirstGoal(session);
     const pendingJourney = session.journey();
     expect(pendingJourney.pendingChoice?.reasons).toContain("goal_completed");
-    expect(pendingJourney.opportunities?.guidance).toBe(JOURNEY_OPPORTUNITY_GUIDANCE);
+    const deferredLeadCount = pendingJourney.opportunities?.deferredLeadCount;
+    expect(deferredLeadCount).toBeGreaterThan(0);
+    if (!deferredLeadCount) throw new Error("Expected deferred Albany opportunity leads.");
+    expect(pendingJourney.opportunities).toMatchObject({
+      leads: [],
+      deferredLeadCount,
+    });
+    expect(pendingJourney.opportunities?.guidance).toContain("finish this journey decision first");
 
     session.chooseJourney("continue");
     const dawnJourney = session.journey();
     expect(dawnJourney.storyChoice?.id).toBe("albany_dawn_dispatch");
-    expect(dawnJourney.opportunities?.guidance).toBe(JOURNEY_OPPORTUNITY_GUIDANCE);
+    expect(dawnJourney.opportunities).toEqual(pendingJourney.opportunities);
 
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
@@ -467,7 +471,10 @@ describe("OverworldSession", () => {
 
       for (const markup of markups) {
         expect(markup).toContain("Return opportunities");
-        expect(markup).toContain("leave these leads for later");
+        expect(markup).toContain(`${String(deferredLeadCount)} optional aftermath leads remain`);
+        expect(markup).toContain("finish this journey decision first");
+        expect(markup).not.toContain("Jamie Tanner&#x27;s Winter Price Policy");
+        expect(markup).not.toContain("journey-opportunity-list");
         expect(markup).not.toContain("keep your objective");
       }
       expect(markups[0]).toContain("Continue toward checkpoint 40");

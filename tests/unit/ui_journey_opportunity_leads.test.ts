@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createServer } from "vite";
 
 import { JOURNEY_OPPORTUNITY_GUIDANCE } from "../../src/world/journey_contract.js";
+import { deferJourneyOpportunityDetails } from "../../src/world/journey_opportunity_leads.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
@@ -60,9 +61,10 @@ describe("journey opportunity UI", () => {
           },
         ],
       };
+      const deferredOpportunities = deferJourneyOpportunityDetails(opportunities)!;
       const choiceJourney = {
         ...base,
-        opportunities,
+        opportunities: deferredOpportunities,
         storyChoice: null,
         pendingChoice: {
           id: "journey:test",
@@ -80,7 +82,7 @@ describe("journey opportunity UI", () => {
       };
       const storyJourney = {
         ...base,
-        opportunities,
+        opportunities: deferredOpportunities,
         storyChoice: {
           id: "albany_dawn_dispatch",
           message: "Choose where Albany's relief wagon goes at dawn.",
@@ -119,18 +121,26 @@ describe("journey opportunity UI", () => {
         }),
       );
 
-      for (const markup of [choiceMarkup, storyMarkup, statusMarkup]) {
+      for (const markup of [choiceMarkup, storyMarkup]) {
         expect(markup).toContain("Optional aftermath");
         expect(markup).toContain("Return opportunities");
-        expect(markup).toContain(JOURNEY_OPPORTUNITY_GUIDANCE);
-        expect(markup).toContain("When town actions are available");
-        expect(markup).toContain("Albany Greenway: trail sign damage");
-        expect(markup).toContain("Albany Station Quarter");
-        expect(markup).toContain("Here now");
-        expect(markup).toContain("Mapped district");
-        expect(markup).toContain("Route not yet mapped");
+        expect(markup).toContain(deferredOpportunities.guidance);
+        expect(markup).toContain("3 optional aftermath leads remain");
+        expect(markup).not.toContain("Albany Greenway: trail sign damage");
+        expect(markup).not.toContain("Albany Station Quarter");
+        expect(markup).not.toContain("journey-opportunity-list");
         expect(markup).not.toMatch(/albany_city__|dispatch_|option_id|reward|renown/i);
       }
+      expect(statusMarkup).toContain("Optional aftermath");
+      expect(statusMarkup).toContain("Return opportunities");
+      expect(statusMarkup).toContain(JOURNEY_OPPORTUNITY_GUIDANCE);
+      expect(statusMarkup).toContain("When town actions are available");
+      expect(statusMarkup).toContain("Albany Greenway: trail sign damage");
+      expect(statusMarkup).toContain("Albany Station Quarter");
+      expect(statusMarkup).toContain("Here now");
+      expect(statusMarkup).toContain("Mapped district");
+      expect(statusMarkup).toContain("Route not yet mapped");
+      expect(statusMarkup).not.toMatch(/albany_city__|dispatch_|option_id|reward|renown/i);
       expect(choiceMarkup.match(/<button/g)).toHaveLength(2);
       expect(storyMarkup.match(/<button/g)).toHaveLength(storyJourney.storyChoice.options.length);
       expect(statusMarkup).not.toContain("<button");

@@ -173,12 +173,16 @@ describe("Albany Works hazard-shift charter", () => {
     expect(source.session.snapshot().discoveredJobIds).toContain(JOB);
 
     const atCompletion = completeWolf(source, WORLD, false);
-    const leadIds = atCompletion.journey().opportunities?.leads.map((lead) => lead.id) ?? [];
-    expect(leadIds).toContain(JOB);
-    expect(leadIds).not.toContain(EVENT);
+    expect(atCompletion.journey().opportunities).toMatchObject({
+      leads: [],
+      deferredLeadCount: expect.any(Number),
+    });
 
     atCompletion.chooseJourney("continue");
     atCompletion.chooseJourneyStory("send_wardens_north");
+    const leadIds = atCompletion.journey().opportunities?.leads.map((lead) => lead.id) ?? [];
+    expect(leadIds).toContain(JOB);
+    expect(leadIds).not.toContain(EVENT);
     moveToArea(atCompletion, WORKS);
     expect(atCompletion.view().events.map((candidate) => candidate.id)).not.toContain(EVENT);
     expect(atCompletion.view().jobChoices).toEqual(expectedJobChoices());
