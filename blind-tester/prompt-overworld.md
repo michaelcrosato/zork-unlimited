@@ -105,7 +105,13 @@ WHEN TO CONTINUE OR END
   `session_id`, passing that option's visible `id` value as the tool's `choice`
   argument.
 - The game may present `journey.storyChoice` after you continue. Choose between
-  its visible consequences as you would in the human UI, then call
+  its visible comparison cards as you would in the human UI. The compact
+  consequence line stages rather than repeats the complete terms. You may call
+  `mcp__adventureforge__inspect_overworld_session_story` with the visible
+  `journey.storyChoice.id` for the comparison, then call it again with one exact
+  option `id` as `option_id` to read only that option's complete terms. Reading
+  either view does not change the game, and you need not expand every option.
+  Then call
   `mcp__adventureforge__choose_overworld_session_story` with the same overworld
   `session_id` and that option's visible `id`. This is a normal gameplay
   decision that can set the next current goal; it is not a harness task.

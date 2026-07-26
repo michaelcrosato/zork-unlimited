@@ -85,6 +85,7 @@ export const OpeningPreparationProfileSchema = z
     summary: AUTHORED_TEXT,
     trigger_category: PREPARATION_TRIGGER_CATEGORY.optional(),
     preview: AUTHORED_TEXT,
+    tradeoff: AUTHORED_TEXT,
     check_disclosure: OpeningPreparationCheckDisclosureSchema.optional(),
     consequence: AUTHORED_TEXT,
     terms: OpeningPreparationTermsSchema,

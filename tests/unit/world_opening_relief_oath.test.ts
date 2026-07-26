@@ -38,6 +38,7 @@ function reliefOathScene(): OpeningReliefOath {
         title: "Take the Official Relief Oath",
         summary: "Carry Albany's public authority into the Wolf-Winter dispatch.",
         preview: "The full seal opens the public record and makes restraint a binding duty.",
+        tradeoff: "Public seals bind the fortification duty.",
         access: "Full emergency records and the sealed public stores.",
         duty: "Protect people and herd before property, then return a complete account.",
         consequence: "Rowan witnesses the official oath and enters it under your own name.",
@@ -77,6 +78,7 @@ function reliefOathScene(): OpeningReliefOath {
         title: "Negotiate Limited Duty",
         summary: "Accept a bounded public commission for the named steading only.",
         preview: "The limited tag grants the route record but withholds unrestricted stores.",
+        tradeoff: "The commission withholds unrestricted stores.",
         access: "Wolf-Winter route records and one witnessed emergency requisition.",
         duty: "Hold the byre if possible and report any departure from the named task.",
         consequence: "Rowan writes the limit into the margin before either of you signs.",
@@ -116,6 +118,7 @@ function reliefOathScene(): OpeningReliefOath {
         title: "Remain an Unaffiliated Helper",
         summary: "Carry the public facts without accepting Albany's command authority.",
         preview: "You keep independent judgment and receive no oath-gated requisition.",
+        tradeoff: "No public warrant or oath-gated requisition is granted.",
         access: "The public Wolf-Winter docket and ordinary paid services.",
         duty: "No civic promise; your conduct and truthful return stand on their own.",
         consequence:

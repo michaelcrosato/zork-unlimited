@@ -141,6 +141,7 @@ describe("MCP server registration", () => {
     const registration = TOOL_REGISTRATIONS.find(
       (candidate) => candidate.name === "inspect_overworld_session_story",
     );
+    expect(registration?.description).toContain("currently presented journey.storyChoice");
     expect(registration?.description).toContain("listed in departure_interactions");
     expect(registration?.description).toContain("default compact result");
     expect(registration?.description).toContain("only that option's complete terms");
@@ -149,6 +150,7 @@ describe("MCP server registration", () => {
     );
 
     const block = registeredToolBlock("inspect_overworld_session_story");
+    expect(block).toContain("journey.storyChoice or departure_interactions");
     expect(block).toContain("option_id: z");
     expect(block).toContain("Default compact output adds only its complete terms");
     expect(block).toContain(

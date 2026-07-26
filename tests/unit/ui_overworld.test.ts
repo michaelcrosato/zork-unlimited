@@ -1172,7 +1172,7 @@ describe("OverworldSession", () => {
     }
   });
 
-  it("renders the source-earned Wolf-Winter mission and compact route preview from the optional Station interaction", async () => {
+  it("defers Wolf-Winter route terms to launch while rendering the optional Station interaction", async () => {
     const session = new OverworldSession(world);
     const opening = session.view();
     session.scoutPoi(opening.pois[0]!.id);
@@ -1215,15 +1215,15 @@ describe("OverworldSession", () => {
         }),
       );
 
-      expect(markup).toContain("Mission —");
-      expect(markup).toContain("Old Cade");
-      expect(markup).toContain("wolf pack coming down with the weather");
-      expect(markup).toContain("Take the Exposed Ridge Road");
-      expect(markup).toContain("30 min, 1 supply, fatigue +25");
-      expect(markup).toContain("harder cattle arrival for a clearer first feed cast");
-      expect(markup).toContain("Take the Sheltered Stockway");
-      expect(markup).toContain("75 min, 2 supplies, fatigue +10");
-      expect(markup).toContain("keep the herd calm");
+      expect(markup).toContain("Mission: The Wolf-Winter");
+      expect(markup).toContain(
+        "Last-mile route costs and field tradeoffs remain on its launch card.",
+      );
+      expect(markup).not.toContain("Old Cade");
+      expect(markup).not.toContain("wolf pack coming down with the weather");
+      expect(markup).not.toContain("Take the Exposed Ridge Road");
+      expect(markup).not.toContain("Take the Sheltered Stockway");
+      expect(markup).toContain("Tradeoff:");
       expect(markup).not.toContain("clean three-cast lure line");
       expect(markup).toContain("Return to the Station without choosing");
       expect(markup.match(/<button/g)).toHaveLength(4);

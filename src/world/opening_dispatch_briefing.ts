@@ -10,7 +10,6 @@ type OpeningDispatchStage = Readonly<{
 type OpeningDispatchPlan = Readonly<{
   questTitle: string;
   questDiscovery: string;
-  launchBriefing: string | null;
   optionalFollowup: string | null;
   civicStages: readonly OpeningDispatchStage[];
   departureStages: readonly OpeningDispatchStage[];
@@ -51,23 +50,11 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
   return {
     questTitle: quest.title,
     questDiscovery: quest.discovery,
-    launchBriefing: quest.launch
-      ? quest.launch.options
-          .map((option) => {
-            const supplies = `${option.terms.supplies} ${
-              option.terms.supplies === 1 ? "supply" : "supplies"
-            }`;
-            return `${option.title} (${option.terms.minutes} min, ${supplies}, fatigue +${option.terms.fatigue}): ${option.summary}`;
-          })
-          .join(" Or: ")
-      : null,
     optionalFollowup:
       ally?.target_quest === targetQuestId &&
       ally.after_preparation === preparation.id &&
       allyContact
-        ? `After choosing or closing it, return to the Station actions. ${allyContact.name}'s field-team choice is a separate optional conversation before launch. Talk to ${allyContact.name} (terminal: \`talk ${allyContact.name}\`) to review ${listLabels(
-            ally.options.map((option) => option.title),
-          )}. You may instead launch ${quest.title} now as a solo rider.`
+        ? `After choosing or closing it, return to the Station actions. ${allyContact.name}'s field-team terms are a separate optional conversation; launching ${quest.title} without that conversation keeps the disclosed solo rider.`
         : null,
     civicStages: Object.freeze([
       Object.freeze({
@@ -138,7 +125,7 @@ export function withOpeningDispatchBriefing(
         }`;
   const missionCard =
     departureStageIndex >= 0
-      ? `Mission — ${plan.questDiscovery}${plan.launchBriefing ? ` Route preview — ${plan.launchBriefing}` : ""}`
+      ? `Mission: ${plan.questTitle}. Last-mile route costs and field tradeoffs remain on its launch card.`
       : null;
   return {
     ...prompt,

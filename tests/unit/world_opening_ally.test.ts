@@ -17,8 +17,17 @@ describe("opening ally contract", () => {
   it("presents capability, condition, exact cost, and one real joining bond", () => {
     const prompt = presentOpeningAlly(ALLY, CHARACTER);
     expect(prompt).toMatchObject({ id: ALLY.id, kind: "ally" });
-    expect(prompt.message).toMatch(/capability:.*condition:/i);
+    expect(prompt.message).toBe(`${ALLY.title}. ${ALLY.message}`);
     expect(prompt.options).toHaveLength(3);
+    expect(
+      prompt.options.every(
+        (option) =>
+          option.summary?.immediateCost &&
+          option.summary.fieldTrigger &&
+          option.summary.tradeoff ===
+            ALLY.options.find((candidate) => candidate.id === option.id)?.tradeoff,
+      ),
+    ).toBe(true);
     expect(prompt.options.map((option) => option.consequence)).toEqual([
       expect.stringMatching(/actual cost: 15 minutes/i),
       expect.stringMatching(/actual cost: 5 minutes/i),

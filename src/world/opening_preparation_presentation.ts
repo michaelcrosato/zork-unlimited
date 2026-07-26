@@ -53,6 +53,7 @@ export function presentOpeningPreparation(
             fieldTrigger: triggerCategory ?? profile.preview,
             ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
             immediateCost: cost,
+            tradeoff: profile.tradeoff,
           }),
           consequence: triggerCategory
             ? `${profile.summary} ${triggerCategory} Full field terms: ${profile.preview}${checkDisclosure} Actual cost: ${cost}.${sponsorship} ${profile.consequence}`

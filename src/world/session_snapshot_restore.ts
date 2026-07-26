@@ -414,8 +414,11 @@ export const OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH
 /** Exact manifest before Wolf-Winter closed every selected registration obligation. */
 export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
   "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before journey choices gained structured comparison cards. */
+export const OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH =
   "3b7ccae1235ee3dd0fad5202594faf1d18e9c3f3d162bb214008d911cb2082d5";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -2685,6 +2688,9 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesCadeStoryPredicate =
     migrationTargetsCurrentManifest &&
     AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash);
+  const migratesComparisonCardContract =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
@@ -2746,6 +2752,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesRegistrationPromiseClosure &&
     !migratesJuneReturnCopy &&
     !migratesCadeStoryPredicate &&
+    !migratesComparisonCardContract &&
     !migratesAuthoredLocalJob &&
     !migratesAuthoredLocalEvent
   ) {

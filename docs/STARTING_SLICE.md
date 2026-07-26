@@ -328,6 +328,29 @@ and
 plus
 [`overworld_optional_departure_interactions.test.ts`](../tests/regression/overworld_optional_departure_interactions.test.ts).
 
+The comparison-first follow-up keeps all six irreversible Albany decisions
+truthful while reducing compulsory presentation load. Registration, Relief
+Oath, Lead Source, Preparation, June, and Relief Allocation now share four
+visible fields: commitment, field trigger, immediate cost, and tradeoff. Compact
+active choices stage the long exact consequence for pull-based inspection of
+one option; the canonical full view and human UI retain complete terms. Reads
+do not mutate the snapshot, inspecting a choice does not change its result, and
+siblings' complete terms are not repeated in a selected-detail response. The
+Station departure card also stops repeating Wolf-Winter discovery and both
+route previews immediately before the canonical launch card.
+
+On the exact recent Road-Warden path, the six always-visible story payloads fall
+from 4,191 to 3,558 `o200k_base` tokens (15.1%). Including the one Drover detail
+inspection observed on that path, the comparable total falls from 4,992 to
+4,308 (13.7%). This is a presentation saving rather than a game simplification:
+legal choices, state transitions, delayed consumers, and decision counts are
+unchanged. The exact presentation-only predecessor world hash restores by
+rebinding the hash after ordinary replay and integrity checks; adjacent hashes
+still fail closed. Contract proof lives in
+[`compact_journey_projection.test.ts`](../tests/unit/compact_journey_projection.test.ts),
+[`mcp_journey_surface.test.ts`](../tests/unit/mcp_journey_surface.test.ts), and
+[`comparison_card_manifest_snapshot_integrity.test.ts`](../tests/regression/comparison_card_manifest_snapshot_integrity.test.ts).
+
 Legacy migration is deliberately fail-closed at this causal boundary. An
 untouched registration-era save receives the real source prompt. Every progressed
 post-registration suffix is rejected rather than being falsely certified as

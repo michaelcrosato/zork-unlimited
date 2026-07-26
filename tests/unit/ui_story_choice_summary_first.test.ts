@@ -37,6 +37,26 @@ function registrationJourney(): ReturnType<OverworldSession["journey"]> {
   return session.journey();
 }
 
+function reliefOathJourney(): ReturnType<OverworldSession["journey"]> {
+  const session = new OverworldSession(WORLD);
+  const registration = WORLD.opening_registration!;
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(registration.contact);
+  session.chooseJourneyStory(registration.profiles[0]!.id);
+  return session.journey();
+}
+
+function leadSourceJourney(): ReturnType<OverworldSession["journey"]> {
+  const session = new OverworldSession(WORLD);
+  const registration = WORLD.opening_registration!;
+  const oath = WORLD.opening_relief_oath!;
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(registration.contact);
+  session.chooseJourneyStory(registration.profiles[0]!.id);
+  session.chooseJourneyStory(oath.options[0]!.id);
+  return session.journey();
+}
+
 function preparationJourney(): ReturnType<OverworldSession["journey"]> {
   const session = new OverworldSession(WORLD);
   const registration = WORLD.opening_registration;
@@ -83,6 +103,28 @@ function reliefAllocationJourney(): ReturnType<OverworldSession["journey"]> {
   session.chooseJourneyStory(preparation.profiles[0]!.id);
   const storyChoice = session.inspectJourneyStory(allocation.id);
   return Object.freeze({ ...session.journey(), storyChoice });
+}
+
+function allyJourney(): ReturnType<OverworldSession["journey"]> {
+  const session = new OverworldSession(WORLD);
+  const registration = WORLD.opening_registration!;
+  const oath = WORLD.opening_relief_oath!;
+  const source = WORLD.opening_lead_source!;
+  const preparation = WORLD.opening_preparation!;
+  const ally = WORLD.opening_ally!;
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(registration.contact);
+  session.chooseJourneyStory(registration.profiles[0]!.id);
+  session.chooseJourneyStory(oath.options[0]!.id);
+  session.chooseJourneyStory(source.options[0]!.id);
+  const route = session
+    .view()
+    .areaExits.find((candidate) => candidate.destination.id === preparation.area);
+  if (!route) throw new Error("Expected a route to Albany's Station ally.");
+  session.moveArea(route.id);
+  session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
+  session.talkToCharacter(ally.contact);
+  return session.journey();
 }
 
 describe("JourneyStoryChoiceScreen summary-first cards", () => {
@@ -193,6 +235,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       if (!choiceButton || !details || !disclosure) {
         throw new Error("Expected a choice button beside a native details disclosure.");
       }
+      const choiceButtonText = (choiceButton as { textContent?: string | null }).textContent;
+      expect(choiceButtonText).toContain("Immediate cost:");
+      expect(choiceButtonText).toContain("Tradeoff:");
 
       expect(details.parentElement).toBe(card);
       expect(choiceButton.contains(details)).toBe(false);
@@ -246,6 +291,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(stationButton.textContent).toContain("Purpose:");
       expect(stationButton.textContent).toContain("Trigger category:");
       expect(stationButton.textContent).toContain("Immediate cost:");
+      expect(stationButton.textContent).toContain("Tradeoff:");
+      expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.tradeoff);
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.summary);
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.trigger_category);
       expect(stationButton.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
@@ -290,10 +337,35 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       }
       expect(allocationButton.textContent).toContain("Purpose:");
       expect(allocationButton.textContent).toContain("Trigger category:");
+      expect(allocationButton.textContent).toContain("Immediate cost:");
+      expect(allocationButton.textContent).toContain("Tradeoff:");
+      expect(allocationButton.textContent).toContain(
+        `Leaves exposed: ${allocation.options[0]!.leaves_exposed}`,
+      );
       expect(allocationButton.textContent).toContain(allocation.options[0]!.trigger_category);
       expect(allocationButton.textContent).not.toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).toContain(allocation.options[0]!.consequence);
+
+      for (const comparedJourney of [reliefOathJourney(), leadSourceJourney(), allyJourney()]) {
+        await act(async () => {
+          root!.render(
+            react.createElement(module.JourneyStoryChoiceScreen, {
+              journey: comparedJourney,
+              onChoose: (choiceId: string) => selected.push(choiceId),
+            }),
+          );
+        });
+        const comparedButton = rootElement.querySelector(".journey-choice-card button") as {
+          textContent: string | null;
+        } | null;
+        const comparedDetails = rootElement.querySelector(".journey-choice-card details");
+        if (!comparedButton || !comparedDetails) {
+          throw new Error("Expected every Albany setup kind to use the comparison-first card.");
+        }
+        expect(comparedButton.textContent).toContain("Immediate cost:");
+        expect(comparedButton.textContent).toContain("Tradeoff:");
+      }
     } finally {
       if (root && act) {
         await act(async () => root!.unmount());

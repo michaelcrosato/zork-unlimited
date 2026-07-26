@@ -123,6 +123,7 @@ const PREPARATION_PROFILE = OpeningPreparationProfileSchema.parse({
   provider_npc_id: "albany:reese_pryce",
   summary: "The field plan is selected.",
   preview: "Its knowledge will remain available.",
+  tradeoff: "The other field plans remain behind.",
   consequence: "Reese records the selected preparation.",
   terms: { minutes: 0, money: 0 },
   effects: [

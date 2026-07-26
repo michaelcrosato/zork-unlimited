@@ -165,7 +165,8 @@ export type JourneyStoryChoiceSummary = Readonly<{
   fieldTrigger: string;
   /** Present only when fieldTrigger is a broad comparison category, not exact terms. */
   fieldTriggerScope?: "category";
-  immediateCost?: string;
+  immediateCost: string;
+  tradeoff: string;
 }>;
 
 export type JourneyStoryChoiceOption = Readonly<{
@@ -1089,6 +1090,7 @@ function freezeStoryChoice(
   }
   const requiresStructuredSummary =
     presentationKind === "registration" ||
+    presentationKind === "ally" ||
     presentationKind === "relief_oath" ||
     presentationKind === "lead_source" ||
     presentationKind === "preparation" ||
@@ -1103,12 +1105,14 @@ function freezeStoryChoice(
     }
     if (
       option.summary &&
-      (option.summary.commitment.length === 0 || option.summary.fieldTrigger.length === 0)
+      (option.summary.commitment.length === 0 ||
+        option.summary.fieldTrigger.length === 0 ||
+        typeof option.summary.immediateCost !== "string" ||
+        option.summary.immediateCost.length === 0 ||
+        typeof option.summary.tradeoff !== "string" ||
+        option.summary.tradeoff.length === 0)
     ) {
       throw new Error("Journey story choice summary fields cannot be empty.");
-    }
-    if (option.summary?.immediateCost !== undefined && option.summary.immediateCost.length === 0) {
-      throw new Error("Journey story choice immediate cost cannot be empty when provided.");
     }
     if (
       option.summary?.fieldTriggerScope !== undefined &&

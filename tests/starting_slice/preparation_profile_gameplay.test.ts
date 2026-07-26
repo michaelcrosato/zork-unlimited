@@ -414,7 +414,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
           (option) => option.id === checkCase.profileId,
         );
         expect(Object.keys(presented?.summary ?? {}).sort(), background.id).toEqual(
-          ["commitment", "fieldTrigger", "fieldTriggerScope", "immediateCost"].sort(),
+          ["commitment", "fieldTrigger", "fieldTriggerScope", "immediateCost", "tradeoff"].sort(),
         );
         expect(presented?.consequence, background.id).toContain(
           `Current ${checkCase.skillLabel} modifier: +${String(modifier)}. This d20 + ${String(modifier)} vs DC 12 check succeeds on ${String(minimumRoll)}-20 (${String(chance)}%).`,
@@ -708,6 +708,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       fieldTrigger: RELIEF_TRIGGER_CATEGORY,
       fieldTriggerScope: "category",
       immediateCost: "30 minutes and $4",
+      tradeoff: reliefProfile?.tradeoff,
     });
     expect(presented?.consequence).toContain(`Full field terms: ${RELIEF_PREVIEW}`);
     let specialist = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, LEDGER)));

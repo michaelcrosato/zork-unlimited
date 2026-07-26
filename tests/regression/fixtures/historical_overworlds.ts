@@ -9,6 +9,61 @@ import {
 } from "../../../src/world/relief_protocol_trigger_copy_legacy.js";
 import type { OverworldSessionSnapshot } from "../../../src/world/session_snapshot.js";
 
+type ComparisonCardOption = { id: string; tradeoff?: string };
+
+function comparisonCardOptionGroups(world: OverworldManifest): ComparisonCardOption[][] {
+  return [
+    world.opening_registration?.profiles ?? [],
+    world.opening_relief_oath?.options ?? [],
+    world.opening_lead_source?.options ?? [],
+    world.opening_preparation?.profiles ?? [],
+    world.opening_ally?.options ?? [],
+  ];
+}
+
+/**
+ * Remove the presentation-only fields that did not exist in historical
+ * manifests reconstructed from the current world.
+ */
+export function withoutJourneyComparisonCards(world: OverworldManifest): OverworldManifest {
+  const historical = structuredClone(world);
+  for (const options of comparisonCardOptionGroups(historical)) {
+    for (const option of options) delete option.tradeoff;
+  }
+  return historical;
+}
+
+/**
+ * Current replay parsers require comparison-card authoring. Historical fixtures
+ * expose it non-enumerably so replay can validate the content without changing
+ * the exact serialized manifest hash under test.
+ */
+export function withRuntimeJourneyComparisonCards(
+  historical: OverworldManifest,
+  current: OverworldManifest,
+): OverworldManifest {
+  const historicalGroups = comparisonCardOptionGroups(historical);
+  const currentGroups = comparisonCardOptionGroups(current);
+  for (const [index, historicalOptions] of historicalGroups.entries()) {
+    const currentOptions = currentGroups[index] ?? [];
+    for (const option of historicalOptions) {
+      const tradeoff = currentOptions.find((candidate) => candidate.id === option.id)?.tradeoff;
+      if (!tradeoff) throw new Error(`Current comparison card is missing ${option.id}.`);
+      Object.defineProperty(option, "tradeoff", {
+        configurable: true,
+        enumerable: false,
+        value: tradeoff,
+        writable: true,
+      });
+    }
+  }
+  return historical;
+}
+
+function historicalManifestClone(current: OverworldManifest): OverworldManifest {
+  return withRuntimeJourneyComparisonCards(withoutJourneyComparisonCards(current), current);
+}
+
 const RELIEF_OATH_SERVICE_IDS: ReadonlySet<string> = new Set([
   "albany:full_oath_authority_return_resupply",
   "albany:limited_oath_living_pack_return_rest",
@@ -446,7 +501,7 @@ export function exactAlbanyWorksHazardPredecessor(current: OverworldManifest): O
 
 /** Reconstruct the exact manifest before Station gained its return-filing standard. */
 export function exactAlbanyStationEventPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = historicalManifestClone(current);
   const event = predecessor.local_events.find(
     (candidate) => candidate.id === "albany_city__transport_hub__event",
   );

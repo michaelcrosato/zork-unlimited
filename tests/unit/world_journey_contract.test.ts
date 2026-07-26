@@ -885,6 +885,8 @@ describe("journey contract presentation context", () => {
         summary: {
           commitment: `Carry background ${String(index)}.`,
           fieldTrigger: `Its first field tradeoff is known before departure.`,
+          immediateCost: "No added time or fee.",
+          tradeoff: `Background ${String(index)} excludes the other histories.`,
         },
         consequence: `Carry background ${String(index)} into the journey.`,
       })) as unknown as JourneyRegistrationStoryChoiceOptions,
@@ -904,6 +906,7 @@ describe("journey contract presentation context", () => {
 
   it.each([
     ["registration", 4],
+    ["ally", 3],
     ["relief_oath", 3],
     ["lead_source", 3],
     ["preparation", 3],
@@ -940,6 +943,7 @@ describe("journey contract presentation context", () => {
           fieldTrigger: `Trigger category ${String(index)}.`,
           fieldTriggerScope: "category" as const,
           immediateCost: `${String(index + 5)} minutes`,
+          tradeoff: `Preparation ${String(index)} excludes the other packets.`,
         },
         consequence: `Full terms ${String(index)}.`,
       })) as unknown as JourneyPreparationStoryChoiceOptions,
@@ -973,6 +977,12 @@ describe("journey contract presentation context", () => {
       options: Array.from({ length: 4 }, (_, index) => ({
         id: `ally_${String(index)}`,
         label: `Commitment ${String(index)}`,
+        summary: {
+          commitment: `Field role ${String(index)}.`,
+          fieldTrigger: `Ally trigger ${String(index)}.`,
+          immediateCost: `${String(index)} minutes`,
+          tradeoff: `Ally limit ${String(index)}.`,
+        },
         consequence: `Field consequence ${String(index)}. Actual cost: ${String(index)} minutes.`,
       })) as unknown as JourneyAllyStoryChoiceOptions,
     } satisfies JourneyStoryChoicePrompt;
@@ -984,6 +994,7 @@ describe("journey contract presentation context", () => {
     expect(Object.isFrozen(view.storyChoice)).toBe(true);
     expect(Object.isFrozen(view.storyChoice?.options)).toBe(true);
     expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
+    expect(view.storyChoice?.options.every((option) => Object.isFrozen(option.summary))).toBe(true);
 
     expect(() =>
       journeyPresentation(state, {
@@ -1016,6 +1027,7 @@ describe("journey contract presentation context", () => {
           commitment: `Bind term ${String(index)}.`,
           fieldTrigger: `Its first field tradeoff is known before departure.`,
           immediateCost: `${String(index)} minutes`,
+          tradeoff: `Duty limit ${String(index)}.`,
         },
         consequence: `Access and duty ${String(index)}.`,
       })) as unknown as JourneyReliefOathStoryChoiceOptions,

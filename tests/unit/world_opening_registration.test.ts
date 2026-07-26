@@ -57,6 +57,7 @@ function registrationInput(profileCount: number = OPENING_REGISTRATION_MIN_PROFI
       title: `Registration profile ${String(index + 1)}`,
       summary: `A concise history for profile ${String(index + 1)}.`,
       preview: `Fieldcraft, obligations, and resources for profile ${String(index + 1)}.`,
+      tradeoff: `Profile ${String(index + 1)} excludes the other histories.`,
       consequence: `This history becomes the character's permanent background ${id}.`,
       character: profileCharacter(id, index),
     })),
@@ -95,6 +96,7 @@ describe("opening registration", () => {
       "preview",
       "summary",
       "title",
+      "tradeoff",
     ]);
   });
 

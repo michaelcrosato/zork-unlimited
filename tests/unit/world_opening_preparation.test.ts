@@ -55,6 +55,7 @@ function preparationScene(): OpeningPreparation {
         provider_npc_id: "albany:reese_pryce",
         summary: "Reese walks you through the damaged waterworks ledger.",
         preview: "You will enter knowing which frozen valves matter.",
+        tradeoff: "The other specialist plans remain behind.",
         consequence: "Reese remembers that you trusted the civic plan.",
         terms: { minutes: 25, money: 4 },
         sponsor: {
@@ -82,6 +83,7 @@ function preparationScene(): OpeningPreparation {
         provider_npc_id: "albany:morgan_bell",
         summary: "Morgan maps the drovers who can move through a whiteout.",
         preview: "You will know the relay calls and fallback barns.",
+        tradeoff: "The other specialist plans remain behind.",
         consequence: "Morgan remembers that you backed the road network.",
         terms: { minutes: 15, money: 0 },
         effects: [
@@ -103,6 +105,7 @@ function preparationScene(): OpeningPreparation {
         provider_npc_id: "albany:avery_shaw",
         summary: "Avery reconstructs the relief committee's disputed route.",
         preview: "You will know which witnesses concealed a usable winter track.",
+        tradeoff: "The other specialist plans remain behind.",
         consequence: "Avery remembers that you heard the committee out.",
         terms: { minutes: 0, money: 2 },
         effects: [
@@ -315,7 +318,7 @@ describe("opening preparation authoring", () => {
     });
     const option = presentOpeningPreparation(scene, character).options[0]!;
     expect(Object.keys(option.summary ?? {}).sort()).toEqual(
-      ["commitment", "fieldTrigger", "immediateCost"].sort(),
+      ["commitment", "fieldTrigger", "immediateCost", "tradeoff"].sort(),
     );
     expect(option.consequence).toContain(
       "Current Repair modifier: +4. This d20 + 4 vs DC 12 check succeeds on 8-20 (65%).",
@@ -509,6 +512,7 @@ describe("opening preparation application and presentation", () => {
         commitment: "Reese walks you through the damaged waterworks ledger.",
         fieldTrigger: "You will enter knowing which frozen valves matter.",
         immediateCost: "25 minutes and $4",
+        tradeoff: "The other specialist plans remain behind.",
       },
       consequence:
         "Reese walks you through the damaged waterworks ledger. You will enter knowing which frozen valves matter. Actual cost: 25 minutes and $4. Reese remembers that you trusted the civic plan.",

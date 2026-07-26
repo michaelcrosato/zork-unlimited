@@ -135,9 +135,14 @@ export function JourneyStoryChoiceScreen({
                       {conciseSummary.fieldTrigger}
                     </small>
                   )}
-                  {conciseSummary?.immediateCost && (
+                  {conciseSummary && (
                     <small className="journey-choice-cost">
                       <b>Immediate cost:</b> {conciseSummary.immediateCost}
+                    </small>
+                  )}
+                  {conciseSummary && (
+                    <small className="journey-choice-tradeoff">
+                      <b>Tradeoff:</b> {conciseSummary.tradeoff}
                     </small>
                   )}
                 </button>

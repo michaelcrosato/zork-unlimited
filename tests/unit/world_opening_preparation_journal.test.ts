@@ -51,6 +51,7 @@ function preparationScene(): OpeningPreparation {
         provider_npc_id: "albany:reese_pryce",
         summary: "Reese walks you through the damaged waterworks ledger.",
         preview: "You will enter knowing which frozen valves matter.",
+        tradeoff: "The other specialist plans remain behind.",
         consequence: "Reese remembers that you trusted the civic plan.",
         terms: { minutes: 20, money: 4 },
         sponsor: {
@@ -78,6 +79,7 @@ function preparationScene(): OpeningPreparation {
         provider_npc_id: "albany:morgan_bell",
         summary: "Morgan maps the whiteout relay.",
         preview: "You will know its fallback barns.",
+        tradeoff: "The other specialist plans remain behind.",
         consequence: "Morgan remembers your road plan.",
         terms: { minutes: 15, money: 0 },
         effects: [
@@ -98,6 +100,7 @@ function preparationScene(): OpeningPreparation {
         provider_npc_id: "albany:avery_shaw",
         summary: "Avery reconstructs the disputed route.",
         preview: "You will know its hidden winter track.",
+        tradeoff: "The other specialist plans remain behind.",
         consequence: "Avery remembers your hearing.",
         terms: { minutes: 0, money: 2 },
         effects: [
@@ -140,6 +143,7 @@ const LEAD_OPTION = OpeningLeadSourceOptionSchema.parse({
   source_npc_id: "albany:rowan_quill",
   summary: "Rowan certifies the docket.",
   preview: "The priority is now clear.",
+  tradeoff: "Other packets remain uncertified.",
   consequence: "The lead is durable.",
   terms: { minutes: 0, money: 0 },
   effects: [],
