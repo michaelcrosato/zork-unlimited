@@ -49,6 +49,7 @@ function registration(): OpeningRegistration {
       title: `Profile ${String(index + 1)}`,
       summary: `Summary ${String(index + 1)}.`,
       preview: `Visible mechanical preview ${String(index + 1)}.`,
+      tradeoff: `Visible tradeoff ${String(index + 1)}.`,
       consequence: `Permanent consequence ${String(index + 1)}.`,
       character: buildCampaignCharacterState({
         background: id,
@@ -148,6 +149,8 @@ describe("opening registration presentation", () => {
         summary: {
           commitment: profile.summary,
           fieldTrigger: profile.preview,
+          immediateCost: `No added time or fee; starting funds $${String(profile.character.money)}`,
+          tradeoff: profile.tradeoff,
         },
         consequence: `${profile.summary} ${profile.preview} ${profile.consequence}`,
       })),
@@ -158,6 +161,10 @@ describe("opening registration presentation", () => {
       expect(option.summary).toEqual({
         commitment: scene.profiles[index]!.summary,
         fieldTrigger: scene.profiles[index]!.preview,
+        immediateCost: `No added time or fee; starting funds $${String(
+          scene.profiles[index]!.character.money,
+        )}`,
+        tradeoff: scene.profiles[index]!.tradeoff,
       });
       expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label", "summary"]);
       expect(Object.isFrozen(option.summary)).toBe(true);

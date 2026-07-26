@@ -31,6 +31,23 @@ const PREPARATION_TRIGGER_CATEGORY = z
     message: "Preparation trigger category cannot be blank.",
   });
 
+export const OpeningPreparationCheckConsumerSchema = z
+  .object({
+    object_id: z.string().min(1),
+    verb: z.enum(["USE", "READ", "INSPECT", "OPEN", "CLOSE"]),
+    command_verb: z.string().regex(/^[a-z]+$/),
+  })
+  .strict();
+
+export const OpeningPreparationCheckDisclosureSchema = z
+  .object({
+    skill_id: CampaignCharacterIdSchema,
+    skill_label: AUTHORED_TEXT,
+    difficulty: z.number().int().min(1).max(100),
+    consumer: OpeningPreparationCheckConsumerSchema,
+  })
+  .strict();
+
 export const OpeningPreparationTermsSchema = z
   .object({
     minutes: z
@@ -68,6 +85,8 @@ export const OpeningPreparationProfileSchema = z
     summary: AUTHORED_TEXT,
     trigger_category: PREPARATION_TRIGGER_CATEGORY.optional(),
     preview: AUTHORED_TEXT,
+    tradeoff: AUTHORED_TEXT,
+    check_disclosure: OpeningPreparationCheckDisclosureSchema.optional(),
     consequence: AUTHORED_TEXT,
     terms: OpeningPreparationTermsSchema,
     sponsor: OpeningPreparationSponsorSchema.optional(),
@@ -194,6 +213,10 @@ export const OpeningPreparationSchema = z
 
 export type OpeningPreparationTermsInput = z.infer<typeof OpeningPreparationTermsSchema>;
 export type OpeningPreparationSponsor = z.infer<typeof OpeningPreparationSponsorSchema>;
+export type OpeningPreparationCheckConsumer = z.infer<typeof OpeningPreparationCheckConsumerSchema>;
+export type OpeningPreparationCheckDisclosure = z.infer<
+  typeof OpeningPreparationCheckDisclosureSchema
+>;
 export type OpeningPreparationProfile = z.infer<typeof OpeningPreparationProfileSchema>;
 export type OpeningPreparation = z.infer<typeof OpeningPreparationSchema>;
 

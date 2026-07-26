@@ -247,7 +247,10 @@ import {
   type JourneyPresentationContext,
   type JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
-import { projectJourneyOpportunities } from "./journey_opportunity_leads.js";
+import {
+  deferJourneyOpportunityDetails,
+  projectJourneyOpportunities,
+} from "./journey_opportunity_leads.js";
 import {
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalIsComplete,
@@ -1269,7 +1272,7 @@ export class OverworldSession {
     const pendingGoalCompletion = pending?.reasons.includes("goal_completed") === true;
     const goalRoute = this.currentGoalRoute();
     const goalGuidance = this.journeyGoalGuidance(goalRoute);
-    const opportunities = this.journeyOpportunities();
+    const opportunityDetails = this.journeyOpportunities();
     let goalCompletion: JourneyPresentationContext["goalCompletion"];
     const registration = this.openingRegistrationAvailable();
     const reliefOath = this.openingReliefOathAvailable();
@@ -1322,6 +1325,10 @@ export class OverworldSession {
         };
       }
     }
+    const opportunities =
+      pending || storyChoice
+        ? deferJourneyOpportunityDetails(opportunityDetails)
+        : opportunityDetails;
     const goalPassage = this.journeyGoalPassage(goalRoute, storyChoice);
     if (!goalCompletion && !storyChoice && !goalGuidance && !goalPassage && !opportunities) {
       return undefined;
@@ -2172,7 +2179,7 @@ export class OverworldSession {
       minutes: this.minutes,
       supplies: this.supplies,
       fatigue: this.fatigue,
-      opportunities: this.journeyOpportunities(),
+      opportunities: this.journey().opportunities,
       serviceOffers,
       serviceActions: this.currentServiceActions(currentAreaId),
       departureInteractions: this.departureInteractions(),
@@ -2279,6 +2286,7 @@ export class OverworldSession {
             currentRegion: this.currentNode().region,
             currentAreaId: this.currentAreaIdOrThrow(),
             completedQuestIds: this.completedQuestIds,
+            completedJobIds: this.completedJobIds,
             resolvedEventIds: this.resolvedEventIds,
             journalEntries: this.journalEntriesById,
             poisByArea: this.poisByArea,
@@ -2659,6 +2667,7 @@ export class OverworldSession {
         eventId,
         eventsById: this.localEventsById,
         completedQuestIds: this.completedQuestIds,
+        completedJobIds: this.completedJobIds,
         currentTownId: this.currentId,
         currentAreaId: () => this.currentAreaIdOrThrow(),
         currentTownName: current.name,
@@ -2684,6 +2693,7 @@ export class OverworldSession {
         currentRegion: current.region,
         currentAreaId: this.currentAreaIdOrThrow(),
         completedQuestIds: this.completedQuestIds,
+        completedJobIds: this.completedJobIds,
         resolvedEventIds: this.resolvedEventIds,
         resolvedEventHomeIds: this.resolvedEventHomeIds,
         regionRenown: this.regionRenown,

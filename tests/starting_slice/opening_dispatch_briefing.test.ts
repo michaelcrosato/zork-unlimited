@@ -48,14 +48,14 @@ function expectStage(
   return storyChoice;
 }
 
-function expectCompactRoutePreview(storyChoice: { message: string }): void {
+function expectLaunchDetailsDeferred(storyChoice: { message: string }): void {
+  expect(storyChoice.message).toContain(
+    `Mission: ${WOLF.title}. Last-mile route costs and field tradeoffs remain on its launch card.`,
+  );
+  expect(storyChoice.message).not.toContain(WOLF.discovery);
   for (const option of WOLF.launch?.options ?? []) {
-    const supplies = `${option.terms.supplies} ${
-      option.terms.supplies === 1 ? "supply" : "supplies"
-    }`;
-    expect(storyChoice.message).toContain(
-      `${option.title} (${option.terms.minutes} min, ${supplies}, fatigue +${option.terms.fatigue}): ${option.summary}`,
-    );
+    expect(storyChoice.message).not.toContain(option.title);
+    expect(storyChoice.message).not.toContain(option.summary);
     expect(storyChoice.message).not.toContain(option.preview);
   }
 }
@@ -65,9 +65,13 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
     expect(option.summary).toMatchObject({
       commitment: expect.any(String),
       fieldTrigger: expect.any(String),
+      immediateCost: expect.any(String),
+      tradeoff: expect.any(String),
     });
     expect(option.summary?.commitment.length).toBeGreaterThan(0);
     expect(option.summary?.fieldTrigger.length).toBeGreaterThan(0);
+    expect(option.summary?.immediateCost.length).toBeGreaterThan(0);
+    expect(option.summary?.tradeoff.length).toBeGreaterThan(0);
     expect(option.consequence).toContain(option.summary!.commitment);
     expect(option.consequence).toContain(option.summary!.fieldTrigger);
   }
@@ -78,6 +82,8 @@ function expectCompactSummaryOptions(storyChoice: JourneyStoryChoiceComparison):
     expect(option.summary).toMatchObject({
       commitment: expect.any(String),
       fieldTrigger: expect.any(String),
+      immediateCost: expect.any(String),
+      tradeoff: expect.any(String),
     });
     expect(option).not.toHaveProperty("consequence");
   }
@@ -94,6 +100,7 @@ function expectProgressivePreparationOptions(storyChoice: JourneyStoryChoiceProm
       fieldTrigger: triggerCategory,
       fieldTriggerScope: "category",
       immediateCost: expect.any(String),
+      tradeoff: profile.tradeoff,
     });
     expect(option?.summary?.commitment.split(/\s+/).length).toBeLessThanOrEqual(16);
     expect(option?.summary?.fieldTrigger.split(/\s+/).length).toBeLessThanOrEqual(10);
@@ -113,6 +120,7 @@ function expectProgressivePreparationComparison(storyChoice: JourneyStoryChoiceC
       fieldTrigger: triggerCategory,
       fieldTriggerScope: "category",
       immediateCost: expect.any(String),
+      tradeoff: profile.tradeoff,
     });
     expect(option).not.toHaveProperty("consequence");
   }
@@ -130,6 +138,7 @@ function expectProgressiveReliefAllocationOptions(storyChoice: JourneyStoryChoic
       fieldTrigger: triggerCategory,
       fieldTriggerScope: "category",
       immediateCost: expect.any(String),
+      tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
     });
     expect(option?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
     expect(option?.consequence).toContain(allocationOption.consequence);
@@ -150,6 +159,7 @@ function expectProgressiveReliefAllocationComparison(
       fieldTrigger: triggerCategory,
       fieldTriggerScope: "category",
       immediateCost: expect.any(String),
+      tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
     });
     expect(option).not.toHaveProperty("consequence");
   }
@@ -178,9 +188,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       "two docket decisions stay open. Each changes field conditions or consequences; none locks your solution.",
     );
     expectSummaryFirstOptions(registration);
-    expect(
-      registration.options.every((option) => option.summary?.immediateCost === undefined),
-    ).toBe(true);
+    expect(registration.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
       registration,
     );
@@ -244,8 +252,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(preparation.message).toContain(`${WOLF.title} Departure plan · 1/2 — preparation.`);
     expect(preparation.message).toContain(`${PREPARATION.title}. ${PREPARATION.message}`);
     expect(preparation.message).toContain("Still ahead: relief allocation.");
-    expect(preparation.message).toContain(`Mission — ${WOLF.discovery}`);
-    expectCompactRoutePreview(preparation);
+    expectLaunchDetailsDeferred(preparation);
     expectSummaryFirstOptions(preparation);
     expectProgressivePreparationOptions(preparation);
     expect(preparation.options.every((option) => option.summary?.immediateCost)).toBe(true);
@@ -275,16 +282,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     );
     expect(allocation.message).not.toMatch(/\b(?:required|mandatory)\b/i);
     expect(allocation.message).toContain(
-      `After choosing or closing it, return to the Station actions. ${ALLY_CONTACT.name}'s field-team choice is a separate optional conversation before launch. Talk to ${ALLY_CONTACT.name} (terminal: \`talk ${ALLY_CONTACT.name}\`) to review ${ALLY.options
-        .map((option) => option.title)
-        .slice(0, -1)
-        .join(", ")}, and ${ALLY.options.at(-1)!.title}.`,
+      `After choosing or closing it, return to the Station actions. ${ALLY_CONTACT.name}'s field-team terms are a separate optional conversation; launching ${WOLF.title} without that conversation keeps the disclosed solo rider.`,
     );
-    expect(allocation.message).toContain(
-      `You may instead launch ${WOLF.title} now as a solo rider.`,
-    );
-    expect(allocation.message).toContain(`Mission — ${WOLF.discovery}`);
-    expectCompactRoutePreview(allocation);
+    expectLaunchDetailsDeferred(allocation);
     expectSummaryFirstOptions(allocation);
     expectProgressiveReliefAllocationOptions(allocation);
     expect(allocation.options.every((option) => option.summary?.immediateCost)).toBe(true);
@@ -358,8 +358,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     }).story;
     expect(mcpPreparation).toEqual(compactJourneyStoryChoiceComparison(uiPreparation));
     expect(mcpPreparation).not.toEqual(uiPreparation);
-    expect(mcpPreparation.message).toContain(`Mission — ${WOLF.discovery}`);
-    expectCompactRoutePreview(mcpPreparation);
+    expectLaunchDetailsDeferred(mcpPreparation);
     expectCompactSummaryOptions(mcpPreparation);
     expectProgressivePreparationComparison(mcpPreparation);
     expectSummaryFirstOptions(uiPreparation);

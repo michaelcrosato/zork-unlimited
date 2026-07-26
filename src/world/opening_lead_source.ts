@@ -54,6 +54,7 @@ export const OpeningLeadSourceOptionSchema = z
     source_npc_id: CampaignCharacterIdSchema,
     summary: AUTHORED_TEXT,
     preview: AUTHORED_TEXT,
+    tradeoff: AUTHORED_TEXT,
     consequence: AUTHORED_TEXT,
     terms: OpeningLeadSourceTermsSchema,
     sponsor: OpeningLeadSourceSponsorSchema.optional(),

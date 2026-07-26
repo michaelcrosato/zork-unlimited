@@ -20,6 +20,10 @@ import {
   resolveVisibleAreaRouteId,
   toolAvailableInPlayMode,
 } from "../../src/mcp/server.js";
+import {
+  JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+} from "../../src/mcp/journey_projection.js";
 import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
 
 const ROOT = process.cwd();
@@ -1885,15 +1889,45 @@ describe("MCP pure play mode", () => {
           registration.journey as {
             storyChoice?: {
               kind?: string;
-              options?: { id: string }[];
+              options?: {
+                id: string;
+                consequence?: string;
+                summary?: { tradeoff?: string };
+              }[];
             };
           }
         ).storyChoice;
         expect(registrationChoice?.kind).toBe("registration");
+        expect(
+          registrationChoice?.options?.every(
+            (option) =>
+              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
+              typeof option.summary?.tradeoff === "string",
+          ),
+        ).toBe(true);
         const ledgerAdvocate = registrationChoice?.options?.find(
           (option) => option.id === "albany:ledger_advocate",
         );
         if (!ledgerAdvocate) throw new Error("expected visible Ledger Advocate profile");
+        const registrationInspection = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: "albany:relief_registration",
+              option_id: ledgerAdvocate.id,
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        expect(registrationInspection.snapshot_hash).toBe(registration.snapshot_hash);
+        expect(
+          (registrationInspection.story as { comparisonVersion?: number }).comparisonVersion,
+        ).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
+        expect(
+          (registrationInspection.story as { inspectedOption?: { id?: string } }).inspectedOption,
+        ).toMatchObject({ id: ledgerAdvocate.id });
         const wolfBeforeSource = areaView(registration).quests.find(
           (quest) => quest.id === "wolf_winter",
         );
@@ -1913,11 +1947,18 @@ describe("MCP pure play mode", () => {
           selected.journey as {
             storyChoice?: {
               kind?: string;
-              options?: { id: string }[];
+              options?: { id: string; consequence?: string; summary?: { tradeoff?: string } }[];
             };
           }
         ).storyChoice;
         expect(oathChoice?.kind).toBe("relief_oath");
+        expect(
+          oathChoice?.options?.every(
+            (option) =>
+              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
+              typeof option.summary?.tradeoff === "string",
+          ),
+        ).toBe(true);
         const limitedOath = oathChoice?.options?.find(
           (option) => option.id === "albany:oath_limited_aid_only",
         );
@@ -1937,11 +1978,18 @@ describe("MCP pure play mode", () => {
           oathed.journey as {
             storyChoice?: {
               kind?: string;
-              options?: { id: string }[];
+              options?: { id: string; consequence?: string; summary?: { tradeoff?: string } }[];
             };
           }
         ).storyChoice;
         expect(sourceChoice?.kind).toBe("lead_source");
+        expect(
+          sourceChoice?.options?.every(
+            (option) =>
+              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
+              typeof option.summary?.tradeoff === "string",
+          ),
+        ).toBe(true);
         const rowanDocket = sourceChoice?.options?.find(
           (option) => option.id === "albany:source_rowan_civic_docket",
         );
@@ -2022,7 +2070,7 @@ describe("MCP pure play mode", () => {
           options?: { id: string; consequence?: string }[];
           inspectedOption?: { id: string; consequence: string } | null;
         };
-        expect(preparationChoice?.comparisonVersion).toBe(1);
+        expect(preparationChoice?.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
         expect(preparationChoice?.kind).toBe("preparation");
         expect(preparationChoice?.inspectedOption).toBeNull();
         expect(
@@ -2101,7 +2149,7 @@ describe("MCP pure play mode", () => {
             storyChoice?: {
               id?: string;
               kind?: string;
-              options?: { id: string }[];
+              options?: { id: string; consequence?: string; summary?: { tradeoff?: string } }[];
             };
           }
         ).storyChoice;
@@ -2109,6 +2157,13 @@ describe("MCP pure play mode", () => {
           id: "albany:wolf_ally_commitment",
           kind: "ally",
         });
+        expect(
+          allyChoice?.options?.every(
+            (option) =>
+              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
+              typeof option.summary?.tradeoff === "string",
+          ),
+        ).toBe(true);
         if (!allyChoice?.id) throw new Error("expected June's active field-team choice");
         const cattleFirst = allyChoice.options?.find(
           (option) => option.id === "albany:ally_june_cattle_first",

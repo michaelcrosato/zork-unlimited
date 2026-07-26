@@ -271,6 +271,7 @@ describe("opening relief allocation application and presentation", () => {
       fieldTrigger: scene.options[0]!.trigger_category,
       fieldTriggerScope: "category",
       immediateCost: "10 minutes",
+      tradeoff: "Leaves exposed: Albany's resident counter and the roaming reserve.",
     });
     expect(prompt.options[1]!.consequence).toMatch(/actual cost: no added time/i);
     expect(formatOpeningReliefAllocationCost({ minutes: 5 })).toBe("5 minutes");

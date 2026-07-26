@@ -425,9 +425,8 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       expect(text).toContain(option.label);
       expect(text).toContain(`Commitment: ${option.summary!.commitment}`);
       expect(text).toContain(`Field trigger: ${option.summary!.fieldTrigger}`);
-      expect(text).toContain(
-        `Immediate cost: ${option.summary!.immediateCost ?? "No separate immediate cost stated."}`,
-      );
+      expect(text).toContain(`Immediate cost: ${option.summary!.immediateCost}`);
+      expect(text).toContain(`Tradeoff: ${option.summary!.tradeoff}`);
       expect(text).toContain(`Inspect: \`inspect ${option.id}\``);
       expect(text).toContain(`Choose: \`choose ${option.id}\``);
       expect(text).not.toContain(option.consequence);
@@ -481,6 +480,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(detail.split(projected.summary.commitment)).toHaveLength(2);
     expect(detail.split(projected.summary.fieldTrigger)).toHaveLength(2);
     expect(detail.split(projected.summary.immediateCost!)).toHaveLength(2);
+    expect(detail.split(projected.summary.tradeoff)).toHaveLength(2);
     expect(detail).toContain(projected.consequence);
   });
 
@@ -794,7 +794,7 @@ describe("overworld_play CLI (scripted mode)", () => {
 
       expect(run.status, run.output).toBe(0);
       expect(run.output).not.toContain("A scripted command was rejected.");
-      expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(2);
+      expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(3);
       for (const option of [preparationOption, allocationOption]) {
         expect(run.output).toContain(`! Story choice detail — ${option.title}`);
       }
@@ -806,10 +806,10 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.output).toContain("After choosing or closing it, return to the Station actions.");
       expect(run.output).toContain("Optional before departure:");
       expect(run.output.match(/Command: talk June Pike/g) ?? []).toHaveLength(1);
-      const junePromptStart = run.output.lastIndexOf("\n! Story choice\n");
+      const junePromptStart = run.output.lastIndexOf("\n! Story choice comparison\n");
       expect(junePromptStart).toBeGreaterThan(-1);
       const juneFlowOutput = run.output.slice(junePromptStart);
-      expect(juneFlowOutput).not.toContain("Inspect:");
+      expect(juneFlowOutput).toContain(`Inspect: \`inspect ${allyOption.id}\``);
       expect(run.output).toContain("Choose the Wolf-Winter Field Team");
       expect(run.output).toContain(`Chosen: ${allyOption.title}.`);
       expect(run.output).toContain(`Consequence: ${presentedAllyOption.consequence}`);

@@ -776,12 +776,6 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         args.session_id,
         "story",
         (session) => {
-          const presentedStory = session.journey().storyChoice;
-          if (presentedStory?.id === args.story_choice_id) {
-            throw new Error(
-              `Story choice "${args.story_choice_id}" is already presented in journey.storyChoice; inspect_overworld_session_story is only for optional departure_interactions.`,
-            );
-          }
           const story = session.inspectJourneyStory(args.story_choice_id);
           if (args.option_id !== undefined) {
             journeyStoryChoiceOptionById(story, args.option_id);

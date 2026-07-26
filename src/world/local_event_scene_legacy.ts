@@ -6,10 +6,14 @@ import type {
   OverworldLocalSceneProof,
 } from "./session_snapshot.js";
 import {
+  AUTHORED_ALBANY_CAMPUS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_GREENWAY_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_MARKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
@@ -17,10 +21,14 @@ import {
 } from "./local_scene_legacy_sources.js";
 
 export {
+  AUTHORED_ALBANY_CAMPUS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_GREENWAY_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_MARKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_STATION_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
@@ -35,6 +43,10 @@ export const AUTHORED_ALBANY_GREENWAY_EVENT_ID = "albany_city__greenway__event";
 export const AUTHORED_ALBANY_GREENWAY_EVENT_SCENE_ID = "albany:greenway-trail-policy";
 export const AUTHORED_ALBANY_WORKS_EVENT_ID = "albany_city__industrial__event";
 export const AUTHORED_ALBANY_WORKS_EVENT_SCENE_ID = "albany:works-hazard-shift-charter";
+export const AUTHORED_ALBANY_CAMPUS_EVENT_ID = "albany_city__campus__event";
+export const AUTHORED_ALBANY_CAMPUS_EVENT_SCENE_ID = "albany:campus-return-evidence-mandate";
+export const AUTHORED_ALBANY_STATION_EVENT_ID = "albany_city__transport_hub__event";
+export const AUTHORED_ALBANY_STATION_EVENT_SCENE_ID = "albany:cade-return-filing-standard";
 
 export const AUTHORED_ALBANY_CHARTER_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
   id: AUTHORED_ALBANY_CHARTER_EVENT_ID,
@@ -78,6 +90,28 @@ export const AUTHORED_ALBANY_WORKS_LEGACY_EVENT: OverworldLocalEvent = Object.fr
   intensity: 4,
   summary:
     "Albany Works District is under hazard pressure around locked yards, bad machinery, and crews staying past dusk. Resolving it requires scouting this area, talking to its contact, and investigating on site.",
+});
+
+export const AUTHORED_ALBANY_CAMPUS_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
+  id: AUTHORED_ALBANY_CAMPUS_EVENT_ID,
+  home: "albany_city",
+  area: "albany_city__campus",
+  title: "Albany Campus Row: missing research request",
+  pressure: "rumor",
+  intensity: 3,
+  summary:
+    "Albany Campus Row is under rumor pressure around old maps, clinic notes, and experts with narrow hours. Resolving it requires scouting this area, talking to its contact, and investigating on site.",
+});
+
+export const AUTHORED_ALBANY_STATION_LEGACY_EVENT: OverworldLocalEvent = Object.freeze({
+  id: AUTHORED_ALBANY_STATION_EVENT_ID,
+  home: "albany_city",
+  area: "albany_city__transport_hub",
+  title: "Albany Station Quarter: winter relief packet",
+  pressure: "conflict",
+  intensity: 3,
+  summary:
+    "A northbound relief packet sits open at the route desk: Rowan's docket mark, Hayden's route pin, no team back from the hill road, Old Cade's cattle penned at a byre, and the weather report worsening. Resolving it requires scouting this area, talking to its contact, and investigating on site.",
 });
 
 export type AuthoredLocalEventLegacyDefinition = Readonly<{
@@ -129,6 +163,20 @@ export const AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS: readonly AuthoredLocalEven
       sceneId: AUTHORED_ALBANY_WORKS_EVENT_SCENE_ID,
       legacyEvent: AUTHORED_ALBANY_WORKS_LEGACY_EVENT,
       acceptedSourceWorldHashes: AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
+      eventId: AUTHORED_ALBANY_CAMPUS_EVENT_ID,
+      sceneId: AUTHORED_ALBANY_CAMPUS_EVENT_SCENE_ID,
+      legacyEvent: AUTHORED_ALBANY_CAMPUS_LEGACY_EVENT,
+      acceptedSourceWorldHashes: AUTHORED_ALBANY_CAMPUS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    }),
+    Object.freeze({
+      sourceWorldHash: AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
+      eventId: AUTHORED_ALBANY_STATION_EVENT_ID,
+      sceneId: AUTHORED_ALBANY_STATION_EVENT_SCENE_ID,
+      legacyEvent: AUTHORED_ALBANY_STATION_LEGACY_EVENT,
+      acceptedSourceWorldHashes: AUTHORED_ALBANY_STATION_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
     }),
   ]);
 

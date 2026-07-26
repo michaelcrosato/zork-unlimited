@@ -31,6 +31,7 @@ export function presentOpeningLeadSource(
             commitment: option.summary,
             fieldTrigger: option.preview,
             immediateCost: formatOpeningLeadSourceCost(terms),
+            tradeoff: option.tradeoff,
           }),
           consequence: `${option.summary} ${option.preview} Actual cost: ${formatOpeningLeadSourceCost(terms)}.${sponsorship} ${option.consequence}`,
         });

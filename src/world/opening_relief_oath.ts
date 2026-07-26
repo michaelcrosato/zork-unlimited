@@ -39,6 +39,7 @@ export const OpeningReliefOathOptionSchema = z
     title: AUTHORED_TEXT,
     summary: AUTHORED_TEXT,
     preview: AUTHORED_TEXT,
+    tradeoff: AUTHORED_TEXT,
     consequence: AUTHORED_TEXT,
     access: AUTHORED_TEXT,
     duty: AUTHORED_TEXT,

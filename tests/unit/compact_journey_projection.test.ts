@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   compactJourneyPresentation,
+  compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
+  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
 } from "../../src/mcp/journey_projection.js";
 import {
   createInitialJourneyContractSnapshot,
@@ -37,53 +39,84 @@ function twoOptionPrompt(option: JourneyStoryChoiceOption): JourneyStoryChoicePr
   });
 }
 
+function structuredPrompt(option: JourneyStoryChoiceOption): JourneyStoryChoicePrompt {
+  return Object.freeze({
+    id: "test:structured-story",
+    kind: undefined,
+    message: "Choose the disclosed terms.",
+    options: Object.freeze([
+      Object.freeze(option),
+      Object.freeze({
+        id: "test:other-card",
+        label: "Another comparison card",
+        summary: Object.freeze({
+          commitment: "Carry another term.",
+          fieldTrigger: "At another trigger.",
+          immediateCost: "No time",
+          tradeoff: "The first term stays behind.",
+        }),
+        consequence:
+          "Carry another term. At another trigger. Actual cost: No time. Another consequence.",
+      }),
+    ]) as JourneyStoryChoiceOptions,
+  });
+}
+
 describe("compact journey projection", () => {
-  it("retains structured summaries while removing only their exact repeated prose", () => {
+  it("stages active compact consequences while preserving one exact inspected detail", () => {
     const commitment = "Take the Works charter.";
     const fieldTrigger = "At first pressure, lower alarm.";
     const immediateCost = "20 minutes and 1 supply";
+    const tradeoff = "The road kit stays behind.";
     const option = Object.freeze({
       id: "test:works",
       label: "Works charter",
-      summary: Object.freeze({ commitment, fieldTrigger, immediateCost }),
+      summary: Object.freeze({ commitment, fieldTrigger, immediateCost, tradeoff }),
       consequence:
         `${commitment} ${fieldTrigger} Sponsor concession remains. ` +
         `Actual cost: ${immediateCost}. The Works will remember it.`,
     });
-    const prompt = twoOptionPrompt(option);
+    const prompt = structuredPrompt(option);
     const before = JSON.stringify(prompt);
 
     const compact = compactJourneyStoryChoicePrompt(prompt);
+    const inspected = compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption;
 
     expect(compact).not.toBe(prompt);
     expect(compact.options[0]).toEqual({
       ...option,
-      consequence: "Sponsor concession remains. The Works will remember it.",
+      consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
     });
     expect(compact.options[0]!.summary).toBe(option.summary);
-    expect(compact.options[1]).toBe(prompt.options[1]);
+    expect(compact.options[1]).not.toBe(prompt.options[1]);
+    expect(compact.options[1]!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+    expect(inspected).toEqual({
+      ...option,
+      consequence: "Sponsor concession remains. The Works will remember it.",
+    });
     expect(JSON.stringify(prompt)).toBe(before);
     expect(prompt.options[0]).toBe(option);
   });
 
-  it("removes the exact repeated lead when a summary has no immediate cost", () => {
+  it("stages a historical prompt and expands only the selected exact term", () => {
     const option = Object.freeze({
       id: "test:registration",
       label: "Register",
-      summary: Object.freeze({
-        commitment: "Register as a public advocate.",
-        fieldTrigger: "Witnesses expect an open accounting.",
-      }),
-      consequence:
-        "Register as a public advocate. Witnesses expect an open accounting. Rowan records the role.",
+      consequence: "Rowan records the role.",
     });
 
-    expect(compactJourneyStoryChoicePrompt(twoOptionPrompt(option)).options[0]!.consequence).toBe(
-      "Rowan records the role.",
-    );
+    const prompt = twoOptionPrompt(option);
+    const compact = compactJourneyStoryChoicePrompt(prompt);
+    expect(compact).not.toBe(prompt);
+    expect(
+      compact.options.every(
+        (candidate) => candidate.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+      ),
+    ).toBe(true);
+    expect(compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption).toEqual(option);
   });
 
-  it("passes ally and other no-summary prompts through by identity", () => {
+  it("stages an unstructured historic ally prompt without changing its source", () => {
     const ally = Object.freeze({
       id: "test:ally",
       kind: "ally" as const,
@@ -95,7 +128,16 @@ describe("compact journey projection", () => {
       ]),
     }) as JourneyStoryChoicePrompt;
 
-    expect(compactJourneyStoryChoicePrompt(ally)).toBe(ally);
+    const before = JSON.stringify(ally);
+    const compact = compactJourneyStoryChoicePrompt(ally);
+    expect(compact).not.toBe(ally);
+    expect(
+      compact.options.every(
+        (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+      ),
+    ).toBe(true);
+    expect(compactJourneyStoryChoiceComparison(ally, "a").inspectedOption).toEqual(ally.options[0]);
+    expect(JSON.stringify(ally)).toBe(before);
   });
 
   it("keeps exact Station preparation terms behind the concise compact comparison", () => {
@@ -116,11 +158,14 @@ describe("compact journey projection", () => {
         fieldTrigger: triggerCategory,
         fieldTriggerScope: "category",
         immediateCost: expect.any(String),
+        tradeoff: expect.any(String),
       });
-      expect(option?.consequence).toContain(`Full field terms: ${profile.preview}`);
-      expect(option?.consequence).toContain(profile.consequence);
-      expect(option?.consequence).not.toContain(profile.summary);
-      expect(option?.consequence).not.toContain(triggerCategory);
+      expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      const detail = compactJourneyStoryChoiceComparison(full, profile.id).inspectedOption;
+      expect(detail?.consequence).toContain(`Full field terms: ${profile.preview}`);
+      expect(detail?.consequence).toContain(profile.consequence);
+      expect(detail?.consequence).not.toContain(profile.summary);
+      expect(detail?.consequence).not.toContain(triggerCategory);
     }
   });
 
@@ -144,11 +189,14 @@ describe("compact journey projection", () => {
         fieldTrigger: triggerCategory,
         fieldTriggerScope: "category",
         immediateCost: expect.any(String),
+        tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
       });
-      expect(option?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
-      expect(option?.consequence).toContain(allocationOption.consequence);
-      expect(option?.consequence).not.toContain(allocationOption.summary);
-      expect(option?.consequence).not.toContain(triggerCategory);
+      expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      const detail = compactJourneyStoryChoiceComparison(full, allocationOption.id).inspectedOption;
+      expect(detail?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
+      expect(detail?.consequence).toContain(allocationOption.consequence);
+      expect(detail?.consequence).not.toContain(allocationOption.summary);
+      expect(detail?.consequence).not.toContain(triggerCategory);
     }
   });
 
@@ -157,10 +205,6 @@ describe("compact journey projection", () => {
       name: "the structured lead is not at the beginning",
       consequence:
         "Other prose first. Commit. Trigger. Actual cost: 5 minutes. Remaining consequence.",
-    },
-    {
-      name: "the exact cost sentence is absent",
-      consequence: "Commit. Trigger. Actual cost — 5 minutes. Remaining consequence.",
     },
     {
       name: "the exact cost sentence occurs more than once",
@@ -175,29 +219,36 @@ describe("compact journey projection", () => {
         commitment: "Commit.",
         fieldTrigger: "Trigger.",
         immediateCost: "5 minutes",
+        tradeoff: "Tradeoff.",
       }),
       consequence,
     });
     const prompt = twoOptionPrompt(option);
 
-    expect(compactJourneyStoryChoicePrompt(prompt)).toBe(prompt);
-    expect(prompt.options[0]).toBe(option);
+    expect(compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption).toEqual(option);
   });
 
-  it("fails closed when the sole cost sentence belongs to the structured lead", () => {
+  it("keeps a cost sentence visible in the structured lead without repeating it in detail", () => {
     const repeatedCost = "Actual cost: 5 minutes.";
     const commitment = `Commit. ${repeatedCost}`;
     const fieldTrigger = "Trigger.";
-    const option = Object.freeze({
+    const option: JourneyStoryChoiceOption = Object.freeze({
       id: "test:lead-cost",
       label: "Fail closed on lead cost",
-      summary: Object.freeze({ commitment, fieldTrigger, immediateCost: "5 minutes" }),
+      summary: Object.freeze({
+        commitment,
+        fieldTrigger,
+        immediateCost: "5 minutes",
+        tradeoff: "Tradeoff.",
+      }),
       consequence: `${commitment} ${fieldTrigger} Remaining consequence.`,
     });
     const prompt = twoOptionPrompt(option);
 
-    expect(compactJourneyStoryChoicePrompt(prompt)).toBe(prompt);
-    expect(prompt.options[0]).toBe(option);
+    expect(compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption).toEqual({
+      ...option,
+      consequence: "Remaining consequence.",
+    });
   });
 
   it("projects only storyChoice and shares every other journey field", () => {
@@ -205,12 +256,17 @@ describe("compact journey projection", () => {
       Object.freeze({
         id: "test:projected",
         label: "Projected",
-        summary: Object.freeze({ commitment: "Commit.", fieldTrigger: "Trigger." }),
-        consequence: "Commit. Trigger. Unique consequence.",
+        summary: Object.freeze({
+          commitment: "Commit.",
+          fieldTrigger: "Trigger.",
+          immediateCost: "No time",
+          tradeoff: "A tradeoff.",
+        }),
+        consequence: "Commit. Trigger. Actual cost: No time. Unique consequence.",
       }),
     );
     const journey = Object.freeze({
-      storyChoice: prompt,
+      storyChoice: structuredPrompt(prompt.options[0]!),
       goal: Object.freeze({ id: "goal" }),
       pendingChoice: null,
       retentionHistory: Object.freeze([]),
@@ -219,7 +275,9 @@ describe("compact journey projection", () => {
     const compact = compactJourneyPresentation(journey);
 
     expect(compact).not.toBe(journey);
-    expect(compact.storyChoice?.options[0]!.consequence).toBe("Unique consequence.");
+    expect(compact.storyChoice?.options[0]!.consequence).toBe(
+      JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+    );
     expect(compact.goal).toBe(journey.goal);
     expect(compact.pendingChoice).toBe(journey.pendingChoice);
     expect(compact.retentionHistory).toBe(journey.retentionHistory);

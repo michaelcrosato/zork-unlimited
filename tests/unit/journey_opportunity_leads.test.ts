@@ -11,7 +11,10 @@ import {
   journeyPresentation,
   type JourneyOpportunityPresentation,
 } from "../../src/world/journey_contract.js";
-import { projectJourneyOpportunities } from "../../src/world/journey_opportunity_leads.js";
+import {
+  deferJourneyOpportunityDetails,
+  projectJourneyOpportunities,
+} from "../../src/world/journey_opportunity_leads.js";
 import type {
   OverworldArea,
   OverworldLocalEvent,
@@ -131,6 +134,49 @@ describe("journey opportunity projection", () => {
     expect(clone).toEqual(base);
     expect(clone).not.toBe(presented.opportunities);
     expect(clone?.leads).not.toBe(presented.opportunities?.leads);
+
+    const deferred = deferJourneyOpportunityDetails(base)!;
+    const deferredPresentation = journeyPresentation(createInitialJourneyContractSnapshot(), {
+      opportunities: deferred,
+    }).opportunities;
+    const deferredClone = cloneJourneyOpportunityPresentation(deferredPresentation);
+    expect(deferredPresentation).toEqual({
+      guidance:
+        "2 optional aftermath leads remain; finish this journey decision first, and full district details return if play continues.",
+      leads: [],
+      deferredLeadCount: 2,
+    });
+    expect(Object.isFrozen(deferredPresentation)).toBe(true);
+    expect(Object.isFrozen(deferredPresentation?.leads)).toBe(true);
+    expect(deferredClone).toEqual(deferredPresentation);
+    expect(deferredClone).not.toBe(deferredPresentation);
+    expect(deferredClone?.leads).not.toBe(deferredPresentation?.leads);
+
+    const one = deferJourneyOpportunityDetails({
+      guidance: JOURNEY_OPPORTUNITY_GUIDANCE,
+      leads: [base.leads[0]!],
+    });
+    expect(one?.guidance).toMatch(/^1 optional aftermath lead remains;/);
+
+    expect(() =>
+      journeyPresentation(createInitialJourneyContractSnapshot(), {
+        opportunities: { guidance: "Deferred.", leads: [] },
+      }),
+    ).toThrow(/detailed journey opportunities require at least one lead/i);
+    expect(() =>
+      journeyPresentation(createInitialJourneyContractSnapshot(), {
+        opportunities: { guidance: "Deferred.", leads: [], deferredLeadCount: 0 },
+      }),
+    ).toThrow(/positive safe integer/i);
+    expect(() =>
+      journeyPresentation(createInitialJourneyContractSnapshot(), {
+        opportunities: {
+          guidance: "Deferred.",
+          leads: [base.leads[0]!],
+          deferredLeadCount: 1,
+        },
+      }),
+    ).toThrow(/cannot disclose detailed leads/i);
 
     const many: JourneyOpportunityPresentation = {
       guidance: JOURNEY_OPPORTUNITY_GUIDANCE,

@@ -1296,6 +1296,13 @@ function assertEntitiesIntegrity(
           );
         }
       }
+      for (const jobId of scene.forbids_completed_jobs ?? []) {
+        if (!world.local_jobs.some((job) => job.id === jobId)) {
+          throw new Error(
+            `Authored local-event scene "${scene.id}" forbids missing local job "${jobId}".`,
+          );
+        }
+      }
     }
     eventAreas.add(event.area);
   }

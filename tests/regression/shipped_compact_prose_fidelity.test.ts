@@ -16,7 +16,11 @@ import {
   OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
   OVERWORLD_COMPACT_SERVICE_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
-import { compactJourneyStoryChoicePrompt } from "../../src/mcp/journey_projection.js";
+import {
+  compactJourneyStoryChoiceComparison,
+  compactJourneyStoryChoicePrompt,
+  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+} from "../../src/mcp/journey_projection.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
 import {
   COMPACT_EVENT_JOURNAL_CHAR_LIMIT,
@@ -211,8 +215,23 @@ function expectOpeningPromptExact(
       `opening:${source.id}.${sourceOption.id} must be compacted`,
     ).toBeDefined();
     expect(projectedOption!.label).toBe(sourceOption.title);
-    expect(projectedOption!.consequence).toContain(sourceOption.consequence);
-    expect(projectedOption!.consequence).not.toMatch(TRUNCATION_CHROME);
+    expect(projectedOption!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+
+    const inspected = compactJourneyStoryChoiceComparison(prompt, sourceOption.id);
+    const inspectedOption = inspected.inspectedOption;
+    expect(
+      inspectedOption,
+      `opening:${source.id}.${sourceOption.id} must be inspectable`,
+    ).toBeDefined();
+    expect(inspectedOption!.label).toBe(sourceOption.title);
+    expect(inspectedOption!.consequence).toContain(sourceOption.consequence);
+    expect(inspectedOption!.consequence).not.toMatch(TRUNCATION_CHROME);
+    expect(inspected.options.every((option) => !("consequence" in option))).toBe(true);
+    const inspectedJson = JSON.stringify(inspected);
+    for (const sibling of prompt.options.filter((option) => option.id !== sourceOption.id)) {
+      expect(inspectedJson).not.toContain(sibling.consequence);
+    }
+
     if (projectedOption!.summary) {
       expectExact(
         `opening:${source.id}.${sourceOption.id}.summary`,
@@ -225,7 +244,14 @@ function expectOpeningPromptExact(
           sourceOption.trigger_category!,
           projectedOption!.summary!.fieldTrigger,
         );
-        expect(projectedOption!.consequence).toContain(`Full field terms: ${sourceOption.preview}`);
+        expect(inspectedOption!.consequence).toContain(`Full field terms: ${sourceOption.preview}`);
+      } else if (prompt.kind === "ally") {
+        expectExact(
+          `opening:${source.id}.${sourceOption.id}.field_trigger`,
+          canonicalOption!.summary!.fieldTrigger,
+          projectedOption!.summary!.fieldTrigger,
+        );
+        expect(inspectedOption!.consequence).toContain(sourceOption.preview);
       } else {
         expectExact(
           `opening:${source.id}.${sourceOption.id}.preview`,
@@ -234,8 +260,8 @@ function expectOpeningPromptExact(
         );
       }
     } else {
-      expect(projectedOption!.consequence).toContain(sourceOption.summary);
-      expect(projectedOption!.consequence).toContain(sourceOption.preview);
+      expect(inspectedOption!.consequence).toContain(sourceOption.summary);
+      expect(inspectedOption!.consequence).toContain(sourceOption.preview);
     }
   }
   return projected;
@@ -410,10 +436,10 @@ const WORLD = loadOverworldManifest(process.cwd());
 describe("shipped compact prose fidelity", () => {
   it("pins every shipped prose corpus before iterating it", () => {
     expect(QUEST_SOURCES).toHaveLength(12);
-    expect(WORLD.local_events.filter((event) => event.authored_scene)).toHaveLength(4);
+    expect(WORLD.local_events.filter((event) => event.authored_scene)).toHaveLength(6);
     expect(WORLD.local_jobs.filter((job) => job.authored_scene)).toHaveLength(6);
     expect(WORLD.quests.filter((quest) => quest.launch)).toHaveLength(1);
-    expect(WORLD.campaign_service_rules).toHaveLength(28);
+    expect(WORLD.campaign_service_rules).toHaveLength(32);
     expect(WORLD.road_events).toHaveLength(344);
     expect(WORLD.areas).toHaveLength(700);
     expect(WORLD.points_of_interest).toHaveLength(700);

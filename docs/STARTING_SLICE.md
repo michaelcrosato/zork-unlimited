@@ -122,17 +122,19 @@ The current slice now satisfies the twelve-fork structural proof threshold, but
 it is **not yet milestone-certified**:
 
 - Wolf-Winter is now withheld from Albany's FIFO discovery and requires one of
-  three certified source packets. All six Albany district jobs are authored;
-  Civic, Market, Greenway, and Works are four of six authored district events.
+  three certified source packets. All six Albany district jobs and all six
+  district events are authored.
   Works' optional pre-Wolf hazard charter adds only its matching post-return
   shift method, and its slower cold-set line can cross the 13-standing threshold
   for a Civic recovery cot; Civic's
   first authored event fixes a public-or-protected policy before Wolf-Winter,
   then its return docket exposes exactly one lawful closure from that policy
-  and the truthful held-or-evacuated outcome. Campus adds a post-Wolf
-  confidence-labelled warning versus traceable-archive decision: fast, lower
-  standing recovery versus slower, higher standing resupply, with both exact
-  options replay-bound and neither a Civic legal-policy substitute. Jamie's
+  and the truthful held-or-evacuated outcome. Campus now requires its
+  post-Wolf return-evidence mandate: choosing clinic exposure thresholds or
+  traceable route provenance opens only the matching extra Archive Query
+  method, while preserving the two established methods. The selected method
+  records one exclusive Campus service and consolidates any overlapping
+  Drover/mobile credit. Jamie's
   post-Wolf
   Market policy then binds either named household/kitchen prices or an open-bid
   ceiling and visible buyer board. From the reachable 10-standing post-policy
@@ -141,8 +143,15 @@ it is **not yet milestone-certified**:
   earns 1. Their thorough settlements preserve the frontier at 75 minutes/+5
   versus 60 minutes/+4. Greenway adds a post-Wolf
   public-access-or-wildlife-corridor policy whose later survey
-  exposes only the two lawful follow-ups for that exact choice. No district jobs
-  and two checklist events—Station and Campus—remain generic;
+  exposes only the two lawful follow-ups for that exact choice. Station
+  completes the event set after Wolf-Winter: Hayden binds either a quick
+  operational route abstract or a slower named-witness return. Binding the
+  standard does not itself close Cade's packet; the exact proof adds only its
+  matching no-service administrative closure while preserving every truthful
+  physical-loss dispatch. The filing event expires once any packet method is
+  complete, and an unresolved exact-predecessor investigation retains trusted
+  provenance without inventing either current filing choice. No generic
+  district job or checklist event remains;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
   the Road-Warden retains its fieldcraft import. Ironhands Repairer,
@@ -155,8 +164,9 @@ it is **not yet milestone-certified**:
   replay across the Albany/quest boundary. The wider cast still needs more
   independent agendas and mechanically changed availability;
 - Wolf-Winter's saved-wood and clean living-pack facts now change Albany
-  services, but its remaining Cade memories and loss facts still lack later
-  opportunity consumers;
+  services, while its broken-paling, abandoned-line, and scattered-cattle facts
+  feed distinct Station dispatches; broader Cade memory consumers remain future
+  depth rather than an authored-Albany gap;
 - fieldcraft now crosses the trusted boundary into both defence and the visible
   lure check, two certified reports alter combat routes, and three preparation
   skills change distinct checks or recoveries; campaign health remains outside
@@ -201,7 +211,7 @@ The first implementation sequence is:
    landed)_ — quest content declares reusable, validated character/world
    effects; campaign code consumes generic state rather than adding
    Wolf-specific ending conditionals.
-4. **Authored Albany** _(6/6 district jobs and 4/6 events converted)_ — replace
+4. **Authored Albany** _(6/6 district jobs and 6/6 events converted)_ — replace
    the visible slice's generic local transactions with scenes whose evidence,
    time, relationships, resources, and promises alter Wolf-Winter and its
    return.
@@ -318,6 +328,29 @@ and
 plus
 [`overworld_optional_departure_interactions.test.ts`](../tests/regression/overworld_optional_departure_interactions.test.ts).
 
+The comparison-first follow-up keeps all six irreversible Albany decisions
+truthful while reducing compulsory presentation load. Registration, Relief
+Oath, Lead Source, Preparation, June, and Relief Allocation now share four
+visible fields: commitment, field trigger, immediate cost, and tradeoff. Compact
+active choices stage the long exact consequence for pull-based inspection of
+one option; the canonical full view and human UI retain complete terms. Reads
+do not mutate the snapshot, inspecting a choice does not change its result, and
+siblings' complete terms are not repeated in a selected-detail response. The
+Station departure card also stops repeating Wolf-Winter discovery and both
+route previews immediately before the canonical launch card.
+
+On the exact recent Road-Warden path, the six always-visible story payloads fall
+from 4,191 to 3,558 `o200k_base` tokens (15.1%). Including the one Drover detail
+inspection observed on that path, the comparable total falls from 4,992 to
+4,308 (13.7%). This is a presentation saving rather than a game simplification:
+legal choices, state transitions, delayed consumers, and decision counts are
+unchanged. The exact presentation-only predecessor world hash restores by
+rebinding the hash after ordinary replay and integrity checks; adjacent hashes
+still fail closed. Contract proof lives in
+[`compact_journey_projection.test.ts`](../tests/unit/compact_journey_projection.test.ts),
+[`mcp_journey_surface.test.ts`](../tests/unit/mcp_journey_surface.test.ts), and
+[`comparison_card_manifest_snapshot_integrity.test.ts`](../tests/regression/comparison_card_manifest_snapshot_integrity.test.ts).
+
 Legacy migration is deliberately fail-closed at this causal boundary. An
 untouched registration-era save receives the real source prompt. Every progressed
 post-registration suffix is rejected rather than being falsely certified as
@@ -370,10 +403,13 @@ restore, and service consumption live in
 
 The sixth authored increment makes Albany preparation a durable, finite choice
 instead of a promise in the matrix. After source certification, every one of the
-four backgrounds can select any of three affordable specialist packets. Reese's
-Works sequence replaces the public paling wedge with a Repair check and turns a
-miss into a noisy deterministic cold-set. Emery's drover route creates a
-one-shot Streetwise recovery after a failed first lure cast. Jamie's relief
+four backgrounds can select any of three affordable specialist packets. The
+expanded terms derive each character's current matching skill modifier and d20
+success range from generic profile data without crowding the initial comparison.
+Reese's Works sequence replaces the public paling wedge with a Repair check and
+turns a miss into a noisy deterministic cold-set. Emery's drover route creates
+a one-shot Streetwise recovery after a failed first lure cast; a miss spends
+the route but preserves the public recovery's pressure. Jamie's relief
 protocol creates a one-shot Mediation pressure adjustment only after the public
 split-rail recovery. The three plans import as knowledge plus their actual
 background skill, remember their providers, retain direct-start defaults, and
@@ -710,7 +746,7 @@ Certification requires all of the following simultaneously:
 12. One playthrough cannot expose every meaningful scene, relationship state,
     resolution family, or outcome.
 
-Depth Contract #11 remains open. Albany Works proves the reusable authored-job
+Depth Contract #11 is closed. Albany Works proves the reusable authored-job
 grammar, one exclusive post-return priority, and a delayed 13-standing Civic
 service consumer. Its hazard-shift charter now also proves a pre-Wolf authored
 event whose exact option adds one legal return method without replacing either
@@ -721,13 +757,32 @@ duration and policy-dependent standing. The paired held/evacuated, restore,
 migration, replay, and surface
 proof is
 [`winter_return_docket_counterfactual.test.ts`](../tests/starting_slice/winter_return_docket_counterfactual.test.ts).
-Campus extends the job grammar with exact scene-option predicates for exclusive
-one-use services; generic predecessor completions deliberately satisfy neither
-option. Drover-rest and mobile-reserve overlaps consolidate at Blair's Campus
-counter, so both advertised Archive Query payoffs remain available after held
-or evacuated returns without creating two same-action offers. Its
-full/compact/UI/MCP and replay proof is
-[`campus_archive_query_counterfactual.test.ts`](../tests/starting_slice/campus_archive_query_counterfactual.test.ts).
+Campus is the fifth authored Albany event. Blair's post-Wolf return-evidence
+mandate requires the Campus POI, Blair's contact, and an explicit investigation
+before a player records either clinic exposure thresholds or traceable route
+provenance. Each proof keeps Archive Query's two established methods and opens
+only its matching additional method. Each completed method creates the matching
+exclusive Campus service, consolidating an overlapping Drover rest or mobile
+resupply credit rather than duplicating a same-action offer. Exact event and job
+proof, save/restore, full/compact/UI/MCP projection, neutral legacy markers,
+and chronology/tamper/hash failures are covered by
+[`campus_return_evidence_mandate_counterfactual.test.ts`](../tests/starting_slice/campus_return_evidence_mandate_counterfactual.test.ts).
+Station completes the six-event set with Hayden's optional post-Wolf Cade Return
+Filing Standard. After the Station POI, Hayden contact, and explicit
+investigation, the player binds either an operational route abstract or a
+named-witness return. Both cost 20 minutes and earn 1 standing. The exact event
+proof adds only its matching Cade Return Packet close: the abstract retires the
+record in 30 minutes for 3 standing, while the witnessed return takes 45 minutes
+for 4. Neither administrative close dispatches a crew, repairs a loss, creates a
+service claim, or erases the packet's physical evidence; all three existing
+loss-backed dispatches remain available when their facts and dawn choice permit.
+From the lowest 8-standing held return, the quick path ends at 12 and wins by 15
+minutes when rested, while the witnessed path ends at 13 and opens Rowan's
+existing 15-minute Civic recovery cot when fatigued. A neutral generic
+predecessor marker unlocks neither close. Exact proof, save/restore,
+full/compact/UI/MCP projection, opportunity leads, migration exclusion,
+chronology/tamper/hash failure, and the standing/fatigue reversal are covered by
+[`albany_station_return_filing_standard_counterfactual.test.ts`](../tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts).
 Cade's Return Packet adds an outcome-authored Station job after Wolf-Winter:
 broken outer paling, an abandoned evacuation line, and scattered cattle expose
 different mutually exclusive repair dispatches, while fortified no-loss
@@ -798,8 +853,9 @@ non-null lead and is excluded; one of the three eligible players organically
 recognized the optional Albany opportunities, none pursued one, and none named
 an individual decline. Recognition therefore improves to 1/3 eligible
 players, while actual return-route uptake remains unproven.
-No generic district jobs remain. Two checklist events—Station and Campus—are
-still visible and generic.
+No generic district job or checklist event remains in the visible Albany slice.
+The filing standard is optional after Wolf-Winter, so completing the authored
+event set does not add a decision to first-goal completion.
 
 ## Evidence contract
 

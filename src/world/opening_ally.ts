@@ -37,6 +37,7 @@ export const OpeningAllyOptionSchema = z
     title: AUTHORED_TEXT,
     summary: AUTHORED_TEXT,
     preview: AUTHORED_TEXT,
+    tradeoff: AUTHORED_TEXT,
     consequence: AUTHORED_TEXT,
     terms: OpeningAllyTermsSchema,
     effects: CampaignConsequenceEffectsSchema,

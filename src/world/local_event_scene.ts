@@ -3,6 +3,7 @@ import { z } from "zod";
 export const LOCAL_EVENT_SCENE_VERSION = 1 as const;
 export const LOCAL_EVENT_SCENE_MIN_OPTIONS = 2 as const;
 export const LOCAL_EVENT_SCENE_MAX_OPTIONS = 4 as const;
+export const LOCAL_EVENT_SCENE_MAX_REQUIREMENTS = 8 as const;
 export const LOCAL_EVENT_SCENE_MAX_MINUTES = 24 * 60;
 export const LOCAL_EVENT_SCENE_MAX_RENOWN = 10;
 
@@ -39,6 +40,11 @@ export const LocalEventSceneSchema = z
     required_contact_id: NON_BLANK_TEXT,
     requires_completed_quests: z.array(NON_BLANK_TEXT).min(1).optional(),
     forbids_completed_quests: z.array(NON_BLANK_TEXT).min(1).optional(),
+    forbids_completed_jobs: z
+      .array(NON_BLANK_TEXT)
+      .min(1)
+      .max(LOCAL_EVENT_SCENE_MAX_REQUIREMENTS)
+      .optional(),
     options: z
       .array(LocalEventSceneOptionSchema)
       .min(LOCAL_EVENT_SCENE_MIN_OPTIONS)
@@ -86,6 +92,17 @@ export const LocalEventSceneSchema = z
       }
       forbiddenQuestIds.add(questId);
     });
+    const forbiddenJobIds = new Set<string>();
+    scene.forbids_completed_jobs?.forEach((jobId, index) => {
+      if (forbiddenJobIds.has(jobId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["forbids_completed_jobs", index],
+          message: `Duplicate forbidden completed job id "${jobId}".`,
+        });
+      }
+      forbiddenJobIds.add(jobId);
+    });
   });
 
 export type LocalEventScene = z.infer<typeof LocalEventSceneSchema>;
@@ -94,6 +111,7 @@ export type LocalEventSceneTerms = z.infer<typeof LocalEventSceneTermsSchema>;
 
 export type LocalEventSceneConditionState = Readonly<{
   completedQuestIds: ReadonlySet<string>;
+  completedJobIds?: ReadonlySet<string> | undefined;
 }>;
 
 export type LocalEventSceneLegalTuple = readonly [
@@ -120,7 +138,8 @@ export function localEventSceneRequirementsMet(
     ) &&
     (parsed.forbids_completed_quests ?? []).every(
       (questId) => !state.completedQuestIds.has(questId),
-    )
+    ) &&
+    (parsed.forbids_completed_jobs ?? []).every((jobId) => !state.completedJobIds?.has(jobId))
   );
 }
 
@@ -138,8 +157,14 @@ export function localEventSceneRequirementError(
   const forbidden = (parsed.forbids_completed_quests ?? []).filter((questId) =>
     state.completedQuestIds.has(questId),
   );
-  return forbidden.length > 0
-    ? `This authored choice must be made before completing ${forbidden.join(", ")}.`
+  if (forbidden.length > 0) {
+    return `This authored choice must be made before completing ${forbidden.join(", ")}.`;
+  }
+  const completedJobs = (parsed.forbids_completed_jobs ?? []).filter((jobId) =>
+    state.completedJobIds?.has(jobId),
+  );
+  return completedJobs.length > 0
+    ? `This authored choice must be made before completing local job ${completedJobs.join(", ")}.`
     : null;
 }
 

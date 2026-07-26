@@ -776,8 +776,26 @@ describe("New York overworld graph", () => {
     expect(stationPoi?.summary).toContain("Old Cade waiting");
     expect(hayden?.agenda).toContain("controlling source certification");
     expect(hayden?.agenda).toContain("Old Cade's steading");
-    expect(stationEvent?.summary).toContain("Hayden's route pin");
-    expect(stationEvent?.summary).toContain("Old Cade's cattle");
+    expect(stationEvent?.title).toBe("Hayden Hale's Cade Return Filing Standard");
+    expect(stationEvent?.summary).toContain("truthful Wolf-Winter return");
+    expect(stationEvent?.summary).toContain("physical loss");
+    expect(stationEvent?.authored_scene).toMatchObject({
+      id: "albany:cade-return-filing-standard",
+      required_poi_id: "albany_city__transport_hub__poi",
+      required_contact_id: "albany_city__transport_hub__contact",
+      requires_completed_quests: ["wolf_winter"],
+      forbids_completed_jobs: ["albany_city__transport_hub__job"],
+      options: [
+        {
+          id: "bind_operational_route_abstract",
+          terms: { minutes: 20, renown: 1 },
+        },
+        {
+          id: "bind_witnessed_return_record",
+          terms: { minutes: 20, renown: 1 },
+        },
+      ],
+    });
     expect(stationJob?.summary).toMatch(/wolf-winter/i);
     expect(stationSite?.discovery).toContain("Rowan's docket mark");
     expect(stationSite?.discovery).toContain("Old Cade's byre tag");
@@ -880,6 +898,60 @@ describe("New York overworld graph", () => {
     expect(worksCopy).not.toContain("concrete lead about Albany City");
   });
 
+  it("authors the post-Wolf Campus return-evidence mandate and its exact extra Archive Query methods", () => {
+    const campusEvent = world.local_events.find(
+      (event) => event.id === "albany_city__campus__event",
+    );
+    const campusJob = world.local_jobs.find((job) => job.id === "albany_city__campus__job");
+    const eventScene = campusEvent?.authored_scene;
+    const jobScene = campusJob?.authored_scene;
+
+    expect(campusEvent?.title).toBe("Albany Campus Row: Return Evidence Mandate");
+    expect(eventScene).toMatchObject({
+      id: "albany:campus-return-evidence-mandate",
+      required_poi_id: "albany_city__campus__poi",
+      required_contact_id: "albany_city__campus__contact",
+      requires_completed_quests: ["wolf_winter"],
+    });
+    expect(eventScene?.options.map((option) => [option.id, option.terms])).toEqual([
+      ["prioritize_clinic_exposure_thresholds", { minutes: 20, renown: 1 }],
+      ["preserve_traceable_route_provenance", { minutes: 20, renown: 1 }],
+    ]);
+    expect(jobScene?.options).toHaveLength(4);
+    expect(jobScene?.options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "issue_calibrated_road_warning",
+          terms: { minutes: 35, renown: 2 },
+        }),
+        expect.objectContaining({
+          id: "prepare_traceable_field_archive",
+          terms: { minutes: 75, renown: 5 },
+        }),
+        expect.objectContaining({
+          id: "issue_clinic_threshold_card",
+          terms: { minutes: 20, renown: 2 },
+          requires_event_options: [
+            {
+              event_id: "albany_city__campus__event",
+              option_id: "prioritize_clinic_exposure_thresholds",
+            },
+          ],
+        }),
+        expect.objectContaining({
+          id: "index_traceable_route_digest",
+          terms: { minutes: 45, renown: 3 },
+          requires_event_options: [
+            {
+              event_id: "albany_city__campus__event",
+              option_id: "preserve_traceable_route_provenance",
+            },
+          ],
+        }),
+      ]),
+    );
+  });
+
   it("turns Cade's certified losses into one exact Station return priority", () => {
     const stationJob = world.local_jobs.find((job) => job.id === "albany_city__transport_hub__job");
     const scene = stationJob?.authored_scene;
@@ -904,6 +976,26 @@ describe("New York overworld graph", () => {
         id: "dispatch_pasture_search",
         terms: { minutes: 60, renown: 4 },
         requires_all_world_facts: ["fact:wolf_winter_cattle_scattered"],
+      }),
+      expect.objectContaining({
+        id: "close_packet_under_route_abstract",
+        terms: { minutes: 30, renown: 3 },
+        requires_event_options: [
+          {
+            event_id: "albany_city__transport_hub__event",
+            option_id: "bind_operational_route_abstract",
+          },
+        ],
+      }),
+      expect.objectContaining({
+        id: "close_packet_under_witnessed_record",
+        terms: { minutes: 45, renown: 4 },
+        requires_event_options: [
+          {
+            event_id: "albany_city__transport_hub__event",
+            option_id: "bind_witnessed_return_record",
+          },
+        ],
       }),
     ]);
   });

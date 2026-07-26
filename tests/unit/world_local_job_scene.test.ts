@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   LOCAL_JOB_SCENE_MAX_MINUTES,
+  LOCAL_JOB_SCENE_MAX_OPTIONS,
   LOCAL_JOB_SCENE_MAX_REQUIRED_QUESTS,
   LocalJobSceneSchema,
   localJobSceneLegalTuples,
@@ -179,14 +180,19 @@ describe("authored local-job scenes", () => {
     expect(() =>
       LocalJobSceneSchema.parse({ ...WORKS_SCENE, options: [WORKS_SCENE.options[0]] }),
     ).toThrow();
+    const maximumOptions = [
+      ...WORKS_SCENE.options,
+      { ...WORKS_SCENE.options[0], id: "fourth" },
+      { ...WORKS_SCENE.options[0], id: "fifth" },
+    ];
+    expect(maximumOptions).toHaveLength(LOCAL_JOB_SCENE_MAX_OPTIONS);
+    expect(() =>
+      LocalJobSceneSchema.parse({ ...WORKS_SCENE, options: maximumOptions }),
+    ).not.toThrow();
     expect(() =>
       LocalJobSceneSchema.parse({
         ...WORKS_SCENE,
-        options: [
-          ...WORKS_SCENE.options,
-          { ...WORKS_SCENE.options[0], id: "fourth" },
-          { ...WORKS_SCENE.options[0], id: "fifth" },
-        ],
+        options: [...maximumOptions, { ...WORKS_SCENE.options[0], id: "sixth" }],
       }),
     ).toThrow();
     expect(() =>

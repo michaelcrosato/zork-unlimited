@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice_id": "albany_winter_relief_v1",
   "status": "active_unproven",
-  "updated_local_date": "2026-07-23",
+  "updated_local_date": "2026-07-25",
   "contract": {
     "minimum_material_forks": 12,
     "minimum_delayed": 8,
@@ -248,7 +248,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, optionally inspect and commit one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation; both hill launches remain legal without a selection.",
+      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, optionally inspect and commit one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, current matching skill modifier and d20 success chance, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation. Emery's authored field terms additionally compare failure with declining the route; both hill launches remain legal without a selection.",
       "immediate_state_delta": [
         "character.money",
         "character.knowledge",
@@ -259,7 +259,7 @@
       "delayed_consumers": [
         "Wolf-Winter imports only the selected plan flag plus the character's matching Repair, Streetwise, or Mediation rank. Direct starts retain exact zero-rank, no-plan defaults.",
         "Works replaces the public paling wedge with one Repair check. A miss preserves the split rail, then Reese's marked cold-set restores the breach without a reroll while raising cattle alarm by 1.",
-        "Drover appears only after the first lure cast fails. Success redirects the living yearling and lowers cattle alarm by 1; failure raises alarm by 1, retires the route, and leaves the established rail-or-fight recovery legal.",
+        "Drover appears only after the first lure cast fails. Success redirects the living yearling and lowers cattle alarm by 1; failure retires the route without raising pressure beyond the public recovery and leaves the established rail-or-fight recovery legal.",
         "Relief appears only after the ordinary split-rail recovery redirects the yearling. Success lowers cattle alarm by 1 before the loft cast; failure raises it by 1 and retires without blocking completion.",
         "A truthful held-byre return pairs each selected plan with one different 15-minute service: Works District resupply, Campus rest, or Civic Core resupply. Paired low-supply and fatigued states include paid preparation, shortest Albany relocation, and each alternative profile's best matching service; each profile wins somewhere, so none dominates globally."
       ],
@@ -785,6 +785,79 @@
         "tests/starting_slice/albany_return_opportunity_leads.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_works_hazard_charter_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F17-campus-return-evidence-mandate",
+      "title": "Choose Albany Campus's return-evidence mandate",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "After Wolf-Winter, Scout the Campus POI, speak with Blair Drake, and investigate the return-evidence mandate. Blair then asks whether to prioritize clinic exposure thresholds or preserve traceable route provenance. Each irreversible record states the matching additional Archive Query method and one-use Campus service before confirmation; it does not replace either established Archive Query method.",
+      "immediate_state_delta": [
+        "world.resolved_event_ids",
+        "journal.local_scene_proof",
+        "world.minutes",
+        "world.region_renown"
+      ],
+      "delayed_consumers": [
+        "The selected event proof keeps both established Campus Archive Query methods and adds only its matching optional method: clinic exposure thresholds authorize the clinic-threshold card, while route provenance authorizes the traceable-route digest.",
+        "Completing a matching optional method grants its exact one-use Campus service. Existing Drover rest and mobile-reserve resupply credits consolidate into that service, so a player never receives duplicate same-action offers.",
+        "A neutral legacy event marker proves no specific mandate and unlocks neither optional method nor either new service."
+      ],
+      "visible_feedback": [
+        "Before Wolf-Winter the Campus event is absent. After return it remains inaccessible until the player has scouted the POI, talked with Blair, and investigated it; the full and compact surfaces expose the same two authored choices.",
+        "The event and job journals retain the exact selected option, decision boundary, and consequence. Full, compact, UI, and MCP projections show only the two base job methods plus the one matching optional method.",
+        "The resulting service names the selected evidence record and, where applicable, the consolidated Drover or mobile credit; consumption removes it across save/restore."
+      ],
+      "systems": ["events", "jobs", "journal", "services", "region_renown", "save_restore"],
+      "persistence_boundaries": ["overworld_save_restore", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/unit/world_local_event_scene.test.ts",
+        "tests/unit/world_local_event_scene_legacy.test.ts",
+        "tests/unit/world_local_job_scene_conditions.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/campus_return_evidence_mandate_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F18-station-return-filing-standard",
+      "title": "Bind Hayden's Cade return filing standard",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "After Wolf-Winter, Scout the Station POI, speak with Hayden Hale, and investigate the Cade Return Filing Standard. Bind either an operational route abstract or a named-witness return. Both cost 20 minutes and earn 1 Capital / Mohawk renown; each states its one matching administrative Cade Return Packet close before confirmation, neither closes the packet at filing time, and neither is required for first-goal completion. Completing any packet method first removes the filing event instead of leaving a dead choice.",
+      "immediate_state_delta": [
+        "world.resolved_event_ids",
+        "journal.local_scene_proof",
+        "world.minutes",
+        "world.region_renown"
+      ],
+      "delayed_consumers": [
+        "The operational route abstract adds only `close_packet_under_route_abstract`, a 30-minute/+3-standing packet close. The witnessed return adds only `close_packet_under_witnessed_record`, a 45-minute/+4-standing close. A neutral generic predecessor marker unlocks neither method.",
+        "Both administrative closes preserve the existing broken-paling, abandoned-line, and missing-cattle dispatches whenever their Wolf-Winter facts and dawn-dispatch predicates permit. Choosing a close completes the administrative record but records no physical work, creates no rest or resupply claim, and leaves every certified physical loss honestly deferred.",
+        "From the lowest 8-standing held return, either filing choice first reaches 9. The operational close ends at 12 and is 15 minutes faster when already rested; the witnessed close ends at 13 and opens Rowan's existing 15-minute Civic recovery cot, beating the quick line plus ordinary 180-minute recovery when fatigued.",
+        "Because the event requires completed Wolf-Winter and every action is optional, the filing standard adds no decision to the first-goal path."
+      ],
+      "visible_feedback": [
+        "Before Wolf-Winter the Station filing event is absent. After return it remains inaccessible until the player has scouted the Station POI, talked with Hayden, and investigated it; full, compact, UI, and MCP surfaces expose the same two exact choices and terms.",
+        "The Cade Return Packet board retains every currently lawful physical dispatch and appends only the close matching the resolved filing proof. Its copy states that administrative closure dispatches no crew, grants no recovery claim, and leaves physical losses deferred.",
+        "The unresolved event and eligible Cade job remain truthful optional opportunity leads until one packet method is complete. Event/job journals and save/restore retain exact proofs; an unresolved exact-predecessor investigation gains trusted source-world provenance without inventing a filing choice, a completed generic predecessor becomes a neutral source-hashed marker, current-copy migrations are excluded, and relabelled, reversed, or divergent evidence fails closed."
+      ],
+      "systems": ["events", "jobs", "journal", "region_renown", "services", "save_restore"],
+      "persistence_boundaries": ["overworld_save_restore", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/unit/world_local_event_scene.test.ts",
+        "tests/unit/world_local_event_scene_legacy.test.ts",
+        "tests/unit/world_local_job_scene_conditions.test.ts",
+        "tests/unit/world_session_snapshot.test.ts",
+        "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
+        "tests/starting_slice/albany_return_opportunity_leads.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts"
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
+import { DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW } from "../../src/world/drover_route_fail_forward_legacy.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
@@ -15,6 +16,9 @@ import {
 
 const WORLD = loadOverworldManifest(process.cwd());
 const PREDECESSOR = exactRegistrationPromiseClosurePredecessor(WORLD);
+const DROVER = "albany:prep_drover_route";
+const CURRENT_DROVER = WORLD.opening_preparation?.profiles.find((profile) => profile.id === DROVER);
+if (!CURRENT_DROVER) throw new Error("Albany must retain Emery's Drover Route");
 const BACKGROUND_PROMISES = new Map([
   ["albany:road_warden", "albany:promise_return_hayden_packet"],
   ["albany:ledger_advocate", "albany:promise_truthful_relief_account"],
@@ -67,7 +71,7 @@ function wolfBoundary(world: OverworldManifest, profileId: string): OverworldSes
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_hayden_frost_report");
   moveToArea(world, session, preparation.area);
-  session.chooseJourneyStory("albany:prep_works_fortification");
+  session.chooseJourneyStory(DROVER);
   session.chooseJourneyStory("albany:relief_resident_shelter");
   moveToArea(world, session, wolf.area);
   session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway");
@@ -97,6 +101,12 @@ function promiseStatus(session: OverworldSession, promiseId: string): string | n
   );
 }
 
+function droverPreparationText(snapshot: ReturnType<OverworldSession["snapshot"]>): string {
+  const entry = snapshot.journalEntries.find((candidate) => candidate.id.endsWith(`:${DROVER}`));
+  if (!entry) throw new Error("Expected persisted Drover preparation");
+  return entry.text;
+}
+
 describe("registration-promise return snapshot integrity", () => {
   it("pins the exact predecessor and current manifest hashes", () => {
     expect(hashState(PREDECESSOR)).toBe(
@@ -107,7 +117,7 @@ describe("registration-promise return snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "1d8ed584e39c462a7eb5132c23796ea39b8f76a545add86a88080ecf926b9f9c",
+      "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3",
     );
   });
 
@@ -134,8 +144,17 @@ describe("registration-promise return snapshot integrity", () => {
       const predecessor = exactRegistrationPromiseClosurePredecessorSnapshot(
         predecessorSession.snapshot(),
       );
+      expect(droverPreparationText(predecessor), profileId).toContain(
+        DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW,
+      );
       const restored = OverworldSession.restore(WORLD, predecessor);
       expect(promiseStatus(restored, selectedPromiseId), profileId).toBe("kept");
+      expect(droverPreparationText(restored.snapshot()), profileId).toContain(
+        CURRENT_DROVER.preview,
+      );
+      expect(droverPreparationText(restored.snapshot()), profileId).not.toContain(
+        DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW,
+      );
       expect(
         restored.snapshot().character.promises.map((promise) => promise.promiseId),
         profileId,
@@ -149,13 +168,15 @@ describe("registration-promise return snapshot integrity", () => {
         .journalEntries.find((entry) => entry.id === "quest_done:wolf_winter")!;
       expect(predecessorCompletion.text).not.toContain("Registration receipt —");
       expect(restoredCompletion.text).toContain("Registration receipt —");
-      const restoredWithoutCompletion = restored
+      const restoredWithoutMigratedEntries = restored
         .snapshot()
-        .journalEntries.filter((entry) => entry.id !== "quest_done:wolf_winter");
-      const predecessorWithoutCompletion = predecessor.journalEntries.filter(
-        (entry) => entry.id !== "quest_done:wolf_winter",
+        .journalEntries.filter(
+          (entry) => entry.id !== "quest_done:wolf_winter" && !entry.id.endsWith(`:${DROVER}`),
+        );
+      const predecessorWithoutMigratedEntries = predecessor.journalEntries.filter(
+        (entry) => entry.id !== "quest_done:wolf_winter" && !entry.id.endsWith(`:${DROVER}`),
       );
-      expect(restoredWithoutCompletion).toEqual(predecessorWithoutCompletion);
+      expect(restoredWithoutMigratedEntries).toEqual(predecessorWithoutMigratedEntries);
       expect(OverworldSession.restore(WORLD, restored.snapshot()).snapshot()).toEqual(
         restored.snapshot(),
       );

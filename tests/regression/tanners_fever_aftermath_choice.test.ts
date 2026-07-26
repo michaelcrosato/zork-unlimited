@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE } from "../../src/mcp/journey_projection.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
@@ -199,7 +200,7 @@ describe("Tanner's Fever accountability aftermath", () => {
     expect(branchResults[0]!.selected.entry.text).not.toBe(branchResults[1]!.selected.entry.text);
   });
 
-  it("projects the identical choice through full and compact MCP context", () => {
+  it("stages the choice in compact MCP and reveals only one inspected branch", () => {
     const session = reachTannersGoalCompletion();
     session.chooseJourney("continue");
     const humanJourney = session.journey();
@@ -211,11 +212,39 @@ describe("Tanner's Fever accountability aftermath", () => {
     });
 
     expect(restored.journey).toEqual(humanJourney);
-    expect(
-      api.get_overworld_session_context({
-        session_id: restored.session_id,
-        compact_context: true,
-      }).journey,
-    ).toEqual(humanJourney);
+    const compactJourney = api.get_overworld_session_context({
+      session_id: restored.session_id,
+      compact_context: true,
+    }).journey;
+    const { storyChoice: humanStory, ...humanWithoutStory } = humanJourney;
+    const { storyChoice: compactStory, ...compactWithoutStory } = compactJourney;
+    expect(compactWithoutStory).toEqual(humanWithoutStory);
+    expect(compactStory).toMatchObject({
+      id: TANNERS_FEVER_ACCOUNTABILITY_ID,
+      message: humanStory!.message,
+    });
+    expect(compactStory!.options).toEqual(
+      humanStory!.options.map((option) => ({
+        ...option,
+        consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+      })),
+    );
+
+    const selectedOption = humanStory!.options[0]!;
+    const siblingOption = humanStory!.options[1]!;
+    const beforeInspection = api.export_overworld_session({
+      session_id: restored.session_id,
+    });
+    const inspection = api.inspect_overworld_session_story({
+      session_id: restored.session_id,
+      story_choice_id: humanStory!.id,
+      option_id: selectedOption.id,
+    });
+    expect(inspection.story.inspectedOption).toEqual(selectedOption);
+    expect(inspection.story.options.every((option) => !("consequence" in option))).toBe(true);
+    expect(JSON.stringify(inspection.story)).not.toContain(siblingOption.consequence);
+    expect(api.export_overworld_session({ session_id: restored.session_id })).toEqual(
+      beforeInspection,
+    );
   });
 });

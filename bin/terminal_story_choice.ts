@@ -62,9 +62,8 @@ export function renderTerminalStoryChoiceComparison(
     lines.push(`    ${String(index + 1)}. ${option.label}`);
     lines.push(`       ${labels.commitment}: ${option.summary.commitment}`);
     lines.push(`       ${labels.trigger}: ${option.summary.fieldTrigger}`);
-    lines.push(
-      `       Immediate cost: ${option.summary.immediateCost ?? "No separate immediate cost stated."}`,
-    );
+    lines.push(`       Immediate cost: ${option.summary.immediateCost}`);
+    lines.push(`       Tradeoff: ${option.summary.tradeoff}`);
     lines.push(`       Inspect: \`inspect ${option.id}\``);
     lines.push(`       Choose: \`choose ${option.id}\``);
   });
@@ -93,9 +92,8 @@ export function renderTerminalStoryChoiceDetail(
     const labels = summaryLabels(projected.summary);
     lines.push(`  ${labels.commitment}: ${projected.summary.commitment}`);
     lines.push(`  ${labels.trigger}: ${projected.summary.fieldTrigger}`);
-    lines.push(
-      `  Immediate cost: ${projected.summary.immediateCost ?? "No separate immediate cost stated."}`,
-    );
+    lines.push(`  Immediate cost: ${projected.summary.immediateCost}`);
+    lines.push(`  Tradeoff: ${projected.summary.tradeoff}`);
   }
   lines.push(`  Consequence: ${projected.consequence}`);
   lines.push(`  Choose: \`choose ${projected.id}\``);

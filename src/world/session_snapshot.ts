@@ -334,11 +334,13 @@ const OverworldJournalEntrySchema = z
     if (
       entry.sourceWorldHash !== undefined &&
       entry.kind !== "preparation" &&
-      entry.kind !== "preparation_offer"
+      entry.kind !== "preparation_offer" &&
+      entry.kind !== "event"
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Source-world provenance is only valid on migrated preparation evidence.",
+        message:
+          "Source-world provenance is only valid on migrated preparation or event-investigation evidence.",
       });
     }
     if (hasServiceProof && entry.kind !== "service") {

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
-import { OVERWORLD_COMPACT_VIEW_VERSION } from "../../src/world/compact_view.js";
+import {
+  OVERWORLD_COMPACT_VIEW_VERSION,
+  cloneOverworldCompactView,
+} from "../../src/world/compact_view.js";
 import {
   JOURNEY_OPPORTUNITY_GUIDANCE,
   type JourneyOpportunityLeadPresentation,
@@ -14,6 +17,7 @@ const WORLD = loadOverworldManifest(process.cwd());
 const STATION = "albany_city__transport_hub";
 const STATION_POI = "albany_city__transport_hub__poi";
 const STATION_CONTACT = "albany_city__transport_hub__contact";
+const STATION_EVENT = "albany_city__transport_hub__event";
 const CADE_JOB = "albany_city__transport_hub__job";
 const CADE_OPTION = "dispatch_pasture_search";
 const MARKET = "albany_city__market";
@@ -23,11 +27,21 @@ const MARKET_EVENT = "albany_city__market__event";
 const MARKET_POLICY = "hold_household_kitchen_prices";
 const MARKET_JOB = "albany_city__market__job";
 const MARKET_SETTLEMENT = "release_price_hold_operational";
+const CAMPUS_EVENT = "albany_city__campus__event";
 const GREENWAY = "albany_city__greenway";
 const GREENWAY_EVENT = "albany_city__greenway__event";
 const FULL = { compact_context: false, compact_result: false } as const;
+const EXPECTED_DEFERRED_GUIDANCE =
+  "5 optional aftermath leads remain; finish this journey decision first, and full district details return if play continues.";
 
 const EXPECTED_LEADS: readonly JourneyOpportunityLeadPresentation[] = [
+  {
+    id: STATION_EVENT,
+    kind: "event",
+    title: "Hayden Hale's Cade Return Filing Standard",
+    area: "Albany Station Quarter",
+    access: "here",
+  },
   {
     id: CADE_JOB,
     kind: "job",
@@ -41,6 +55,13 @@ const EXPECTED_LEADS: readonly JourneyOpportunityLeadPresentation[] = [
     title: "Jamie Tanner's Winter Price Policy",
     area: "Albany Market Streets",
     access: "mapped",
+  },
+  {
+    id: CAMPUS_EVENT,
+    kind: "event",
+    title: "Albany Campus Row: Return Evidence Mandate",
+    area: "Albany Campus Row",
+    access: "route_unmapped",
   },
   {
     id: GREENWAY_EVENT,
@@ -157,6 +178,7 @@ function expectExactAlbanyLeads(session: OverworldSession): void {
   ]);
   expect(session.compactView().opportunity_guidance).toBe(JOURNEY_OPPORTUNITY_GUIDANCE);
   expect(session.compactView().opportunity_leads).toEqual(EXPECTED_COMPACT);
+  expect(session.compactView().opportunity_leads_truncated).toBeUndefined();
   expect(JSON.stringify(opportunities)).not.toMatch(
     /dispatch_|hold_household|post_accessible|terms|minutes|renown|reward|consequence|prompt/i,
   );
@@ -165,8 +187,33 @@ function expectExactAlbanyLeads(session: OverworldSession): void {
   expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
 }
 
+function expectDeferredAlbanyLeads(session: OverworldSession): void {
+  const before = session.snapshot();
+  const beforeHash = session.snapshotHash();
+  const beforeDecisions = session.journey().acceptedDecisions;
+  const opportunities = session.journey().opportunities;
+
+  expect(opportunities).toEqual({
+    guidance: EXPECTED_DEFERRED_GUIDANCE,
+    leads: [],
+    deferredLeadCount: EXPECTED_LEADS.length,
+  });
+  expect(Object.keys(opportunities!).sort()).toEqual(["deferredLeadCount", "guidance", "leads"]);
+  const compact = session.compactView();
+  expect(compact).toMatchObject({
+    opportunity_guidance: EXPECTED_DEFERRED_GUIDANCE,
+    opportunity_leads_deferred: EXPECTED_LEADS.length,
+  });
+  expect(compact.opportunity_leads).toBeUndefined();
+  expect(compact.opportunity_leads_truncated).toBeUndefined();
+  expect(cloneOverworldCompactView(compact).opportunity_leads_deferred).toBe(EXPECTED_LEADS.length);
+  expect(session.snapshot()).toEqual(before);
+  expect(session.snapshotHash()).toBe(beforeHash);
+  expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
+}
+
 describe("optional return opportunity leads", () => {
-  it("shows no pre-Wolf lead, then the exact three roots across completion, dawn, and active play", () => {
+  it("defers five roots at journey boundaries, then restores their exact active-play detail", () => {
     const untouched = new OverworldSession(WORLD);
     const untouchedSnapshot = untouched.snapshot();
     untouched.journey();
@@ -189,7 +236,7 @@ describe("optional return opportunity leads", () => {
       goal: { id: "albany_local_lead", status: "completed" },
       pendingChoice: { reasons: ["goal_completed"] },
     });
-    expectExactAlbanyLeads(prepared.session);
+    expectDeferredAlbanyLeads(prepared.session);
 
     prepared.session.chooseJourney("continue");
     expect(prepared.session.journey()).toMatchObject({
@@ -197,7 +244,7 @@ describe("optional return opportunity leads", () => {
       acceptedDecisions: 10,
       storyChoice: { id: "albany_dawn_dispatch" },
     });
-    expectExactAlbanyLeads(prepared.session);
+    expectDeferredAlbanyLeads(prepared.session);
 
     prepared.session.chooseJourneyStory("send_wagon_to_cade");
     expect(prepared.session.journey()).toMatchObject({
@@ -217,6 +264,24 @@ describe("optional return opportunity leads", () => {
   });
 
   it("keeps one structured journey authority and an exact bounded compact projection in MCP", () => {
+    const boundary = atWolfCompletion();
+    const boundaryFull = createToolApi({ root: process.cwd() }).restore_overworld_session({
+      ...FULL,
+      snapshot: boundary.snapshot(),
+    });
+    const boundaryCompact = createToolApi({ root: process.cwd() }).restore_overworld_session({
+      compact_context: true,
+      snapshot: boundary.snapshot(),
+    });
+    expect(boundaryFull.journey.opportunities).toEqual(boundary.journey().opportunities);
+    expect(boundaryCompact.journey.opportunities).toEqual(boundaryFull.journey.opportunities);
+    expect(boundaryCompact.context).toMatchObject({
+      opportunity_guidance: EXPECTED_DEFERRED_GUIDANCE,
+      opportunity_leads_deferred: EXPECTED_LEADS.length,
+    });
+    expect(boundaryCompact.context.opportunity_leads).toBeUndefined();
+    expect(boundaryCompact.context.opportunity_leads_truncated).toBeUndefined();
+
     const session = atNorthGoal();
     const api = createToolApi({ root: process.cwd() });
     const full = api.restore_overworld_session({ ...FULL, snapshot: session.snapshot() });
@@ -296,6 +361,7 @@ describe("optional return opportunity leads", () => {
     expect(cade.view().jobChoices).toContainEqual([CADE_JOB, CADE_OPTION]);
     cade.workLocalJob(CADE_JOB, CADE_OPTION);
     expect(cade.journey().opportunities?.leads.map((lead) => lead.id)).not.toContain(CADE_JOB);
+    expect(cade.journey().opportunities?.leads.map((lead) => lead.id)).not.toContain(STATION_EVENT);
   });
 
   it("survives cross-area travel, goal-follow departure, pending road, restore, and arrival", () => {
@@ -319,9 +385,11 @@ describe("optional return opportunity leads", () => {
     expect(restored.view().pendingRoadEncounter).not.toBeNull();
     expect(restored.journey().acceptedDecisions).toBe(beforeFollow + 1);
     expect(restored.journey().opportunities?.leads).toEqual([
-      { ...EXPECTED_LEADS[1], access: "mapped" },
+      { ...EXPECTED_LEADS[2], access: "mapped" },
       { ...EXPECTED_LEADS[0], access: "mapped" },
-      EXPECTED_LEADS[2],
+      { ...EXPECTED_LEADS[1], access: "mapped" },
+      EXPECTED_LEADS[3],
+      EXPECTED_LEADS[4],
     ]);
     expect(restored.compactView().opportunity_leads).toEqual([
       [
@@ -331,7 +399,21 @@ describe("optional return opportunity leads", () => {
         "Albany Market Streets",
         "mapped",
       ],
+      [
+        "event",
+        STATION_EVENT,
+        "Hayden Hale's Cade Return Filing Standard",
+        "Albany Station Quarter",
+        "mapped",
+      ],
       ["job", CADE_JOB, "Hayden's Cade Return Packet", "Albany Station Quarter", "mapped"],
+      [
+        "event",
+        CAMPUS_EVENT,
+        "Albany Campus Row: Return Evidence Mandate",
+        "Albany Campus Row",
+        "route_unmapped",
+      ],
       [
         "event",
         GREENWAY_EVENT,
@@ -354,7 +436,9 @@ describe("optional return opportunity leads", () => {
     expect(pending.journey().goal.id).toBe("carry_hedricks_packet_north");
     expect(pending.journey().opportunities?.leads.map((lead) => lead.id)).toEqual([
       MARKET_EVENT,
+      STATION_EVENT,
       CADE_JOB,
+      CAMPUS_EVENT,
       GREENWAY_EVENT,
     ]);
   });

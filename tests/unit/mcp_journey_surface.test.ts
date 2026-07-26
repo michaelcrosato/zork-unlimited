@@ -6,6 +6,7 @@ import {
   compactJourneyPresentation,
   compactJourneyStoryChoicePrompt,
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
 } from "../../src/mcp/journey_projection.js";
 import {
   INITIAL_JOURNEY_GOAL,
@@ -285,24 +286,20 @@ function mcpWolfWinterCheckpointInsideQuest() {
   }).journey;
   expect(journey.acceptedDecisions).toBe(13);
 
-  // Resolve the Station's visible dispatch event before leaving it. These are
-  // actual local actions (rather than a repeated scout), and retain an even
-  // movement count so the helper returns to the quest departure area.
+  // Talk with Hayden and map the Station before leaving it. These are actual
+  // local actions (rather than a repeated scout), and retain an even movement
+  // count so the helper returns to the quest departure area. The authored
+  // filing-standard event is intentionally post-Wolf and absent here.
   journey = a.talk_overworld_session_contact({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
     character_id: HAYDEN_ID,
   }).journey;
   expect(journey.acceptedDecisions).toBe(14);
-  const stationEvent = a.get_overworld_session({
-    session_id: overworldSessionId,
-    include_observation: true,
-  }).observation.events[0];
-  if (!stationEvent) throw new Error("expected the Station Quarter dispatch event");
-  journey = a.investigate_overworld_session_event({
+  journey = a.explore_overworld_session_area({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
-    event_id: stationEvent.id,
+    area_id: quest.area,
   }).journey;
   expect(journey.acceptedDecisions).toBe(15);
 
@@ -759,19 +756,16 @@ describe("MCP journey surface", () => {
           id: fullOption.id,
           label: fullOption.label,
           summary: fullOption.summary,
-          consequence: expect.any(String),
+          consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
         });
         expect(compactOption.consequence.length).toBeLessThan(fullOption.consequence.length);
         expect(fullOption.consequence).toContain(fullOption.summary.commitment);
         expect(fullOption.consequence).toContain(fullOption.summary.fieldTrigger);
-        expect(compactOption.consequence.startsWith(`${fullOption.summary.commitment} `)).toBe(
-          false,
-        );
-        if (fullOption.summary.immediateCost) {
-          expect(compactOption.consequence).not.toContain(
-            `Actual cost: ${fullOption.summary.immediateCost}.`,
-          );
-        }
+        expect(compactOption.consequence).not.toContain(fullOption.summary.commitment);
+        expect(compactOption.consequence).not.toContain(fullOption.summary.fieldTrigger);
+        expect(compactOption.consequence).not.toContain(fullOption.summary.immediateCost);
+        expect(compactOption.consequence).not.toContain(fullOption.summary.tradeoff);
+        expect(JSON.stringify(compactJourney.storyChoice)).not.toContain(fullOption.consequence);
       }
     };
     const reachRegistration = (sessionId: string, compactResult: boolean) => {
@@ -911,7 +905,7 @@ describe("MCP journey surface", () => {
     });
   });
 
-  it("reserves story inspection for optional departures without leaking a presented choice", () => {
+  it("inspects one active option without mutation or sibling-term leakage", () => {
     const a = api();
     const started = a.start_overworld();
     const registration = WORLD.opening_registration;
@@ -920,46 +914,96 @@ describe("MCP journey surface", () => {
       session_id: started.session_id,
       poi_id: "albany_city__civic_core__poi",
     });
-    const presented = a.talk_overworld_session_contact({
+    const compactPresented = a.talk_overworld_session_contact({
       session_id: started.session_id,
       character_id: registration.contact,
     }).journey.storyChoice;
-    if (!presented) throw new Error("expected a currently presented registration");
-    expect(presented).toMatchObject({ id: registration.id, kind: "registration" });
+    if (!compactPresented) throw new Error("expected a currently presented registration");
+    expect(compactPresented).toMatchObject({ id: registration.id, kind: "registration" });
+    expect(
+      compactPresented.options.every(
+        (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+      ),
+    ).toBe(true);
+    const canonical = a.get_overworld_session({
+      session_id: started.session_id,
+      include_observation: true,
+    }).journey.storyChoice;
+    if (!canonical) throw new Error("expected canonical registration terms");
+    const selected = canonical.options[1]!;
 
     const before = a.export_overworld_session({ session_id: started.session_id });
     if (!before.ok) throw new Error("expected an exportable presented-choice session");
-    const expectedError = `Story choice "${registration.id}" is already presented in journey.storyChoice; inspect_overworld_session_story is only for optional departure_interactions.`;
-    const inspectError = (full: boolean): string => {
-      try {
-        if (full) {
-          a.inspect_overworld_session_story({
-            session_id: started.session_id,
-            story_choice_id: registration.id,
-            ...FULL_OVERWORLD,
-          });
-        } else {
-          a.inspect_overworld_session_story({
-            session_id: started.session_id,
-            story_choice_id: registration.id,
-          });
-        }
-      } catch (error) {
-        return (error as Error).message;
-      }
-      throw new Error("presented story inspection unexpectedly succeeded");
-    };
-    const compactError = inspectError(false);
-    const fullError = inspectError(true);
-    expect(compactError).toBe(expectedError);
-    expect(fullError).toBe(expectedError);
-    for (const option of presented.options) {
-      expect(compactError).not.toContain(option.label);
-      expect(compactError).not.toContain(option.consequence);
-      expect(fullError).not.toContain(option.label);
-      expect(fullError).not.toContain(option.consequence);
+    const comparison = a.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: registration.id,
+    });
+    expect(comparison.snapshot_hash).toBe(before.snapshot_hash);
+    expect(comparison.story).toEqual(compactJourneyStoryChoiceComparison(canonical));
+    const detail = a.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: registration.id,
+      option_id: selected.id,
+    });
+    expect(detail.snapshot_hash).toBe(before.snapshot_hash);
+    expect(detail.story).toEqual(compactJourneyStoryChoiceComparison(canonical, selected.id));
+    expect(
+      detail.journey.storyChoice?.options.every(
+        (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+      ),
+    ).toBe(true);
+    const detailJson = JSON.stringify({
+      journey: detail.journey,
+      story: detail.story,
+    });
+    for (const sibling of canonical.options.filter((option) => option.id !== selected.id)) {
+      expect(detailJson).not.toContain(sibling.consequence);
     }
+    const full = a.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: registration.id,
+      ...FULL_OVERWORLD,
+    });
+    expect(full.story).toEqual(canonical);
+
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: started.session_id,
+        story_choice_id: "albany:not_the_presented_story",
+      }),
+    ).toThrow(/finish the presented story choice/i);
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: started.session_id,
+        story_choice_id: registration.id,
+        option_id: "albany:not_an_option",
+      }),
+    ).toThrow(/does not offer option/i);
     expect(a.export_overworld_session({ session_id: started.session_id })).toEqual(before);
+
+    const directBranch = a.restore_overworld_session({
+      snapshot: before.snapshot,
+      compact_context: true,
+    });
+    const inspectedBranch = a.restore_overworld_session({
+      snapshot: before.snapshot,
+      compact_context: true,
+    });
+    a.inspect_overworld_session_story({
+      session_id: inspectedBranch.session_id,
+      story_choice_id: registration.id,
+      option_id: selected.id,
+    });
+    const directChoice = a.choose_overworld_session_story({
+      session_id: directBranch.session_id,
+      choice: selected.id,
+    });
+    const inspectedChoice = a.choose_overworld_session_story({
+      session_id: inspectedBranch.session_id,
+      choice: selected.id,
+    });
+    expect(inspectedChoice.snapshot_hash).toBe(directChoice.snapshot_hash);
+    expect(inspectedChoice.result).toEqual(directChoice.result);
   });
 
   it("stages compact departure terms without mutating zero-, one-, or multi-inspection play", () => {
@@ -1359,12 +1403,21 @@ describe("MCP journey surface", () => {
         session_id: restored.session_id,
         compact_context: true,
       }).journey,
-    ).toEqual(uiJourney);
+    ).toEqual(compactJourneyPresentation(uiJourney));
     expect(Object.keys(restored.journey.storyChoice!).sort()).toEqual(["id", "message", "options"]);
     for (const option of restored.journey.storyChoice!.options) {
       expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label"]);
       expect(option.summary).toBeUndefined();
     }
+    const compactStory = a.get_overworld_session_context({
+      session_id: restored.session_id,
+      compact_context: true,
+    }).journey.storyChoice;
+    expect(
+      compactStory?.options.every(
+        (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+      ),
+    ).toBe(true);
     const playerChoicePayload = JSON.stringify({
       goal: restored.journey.goal,
       storyChoice: restored.journey.storyChoice,

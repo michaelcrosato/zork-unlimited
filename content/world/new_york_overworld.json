@@ -13,11 +13,12 @@
     "message": "Rowan lays four registration cards across the municipal counter. Albany's electric grid, buses, clinics, and radio repeaters protect the dense corridor, but plowed service ends before many chartered steadings and old-boundary farms. The Relief Compact lets an independent troubleshooter carry a public emergency tag across both systems, provided the traveler names the experience, sponsor, kit, and obligation they will answer for. Your registration is permanent; the field package and relationships travel with you.",
     "profiles": [
       {
-        "id": "albany:road_warden",
+      "id": "albany:road_warden",
         "title": "Road-Warden Relief Hand",
         "summary": "You have worked the unplowed miles between Albany's staffed route desks and isolated charter steadings.",
-        "preview": "Contact: Hayden Hale. Skill edge: Fieldcraft 4. Value: Stewardship 4. Kit: weatherproof field kit. Funds: 12. Standing: Road Wardens +5. Knowledge: Relief Compact and winter routes. Obligation: return Hayden's winter packet with an honest account.",
-        "consequence": "Rowan stamps you as a Road-Warden Relief Hand. Your Fieldcraft 4 raises Wolf-Winter's imported starting DEF floor from 3 to 4 when that quest is launched from this journey. Hayden remembers sponsoring you, you carry a weatherproof field kit, and his return-packet promise remains active.",
+      "preview": "Contact: Hayden Hale. Skill edge: Fieldcraft 4. Value: Stewardship 4. Kit: weatherproof field kit. Funds: 12. Standing: Road Wardens +5. Knowledge: Relief Compact and winter routes. Obligation: return Hayden's winter packet with an honest account.",
+      "tradeoff": "Owe Hayden the winter packet and an honest account.",
+      "consequence": "Rowan stamps you as a Road-Warden Relief Hand. Your Fieldcraft 4 raises Wolf-Winter's imported starting DEF floor from 3 to 4 when that quest is launched from this journey. Hayden remembers sponsoring you, you carry a weatherproof field kit, and his return-packet promise remains active.",
         "character": {
           "version": 1,
           "background": "albany:road_warden",
@@ -92,11 +93,12 @@
         }
       },
       {
-        "id": "albany:ledger_advocate",
+      "id": "albany:ledger_advocate",
         "title": "Ledger Advocate",
         "summary": "You know how emergency authority, testimony, and scarce municipal aid move through Albany's public counters.",
-        "preview": "Contact: Jamie Tanner. Skill edge: Mediation 4. Value: Accountability 4. Kit: sealed evidence folio. Funds: 25. Standing: Municipal Ledger +5. Knowledge: emergency ledger and Relief Compact. Obligation: return a truthful relief account to Rowan.",
-        "consequence": "Rowan registers you as a Ledger Advocate and Jamie remembers vouching for your judgment. You carry a sealed evidence folio and owe Rowan a truthful relief account. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+      "preview": "Contact: Jamie Tanner. Skill edge: Mediation 4. Value: Accountability 4. Kit: sealed evidence folio. Funds: 25. Standing: Municipal Ledger +5. Knowledge: emergency ledger and Relief Compact. Obligation: return a truthful relief account to Rowan.",
+      "tradeoff": "No Road-Warden Fieldcraft DEF import; owe Rowan a truthful relief account.",
+      "consequence": "Rowan registers you as a Ledger Advocate and Jamie remembers vouching for your judgment. You carry a sealed evidence folio and owe Rowan a truthful relief account. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
         "character": {
           "version": 1,
           "background": "albany:ledger_advocate",
@@ -171,11 +173,12 @@
         }
       },
       {
-        "id": "albany:ironhands_repairer",
+      "id": "albany:ironhands_repairer",
         "title": "Ironhands Repairer",
         "summary": "You have kept pumps, heaters, gates, and improvised ward-housings alive after staffed crews clocked out.",
-        "preview": "Contact: Reese Pryce. Skill edge: Repair 4. Value: Ingenuity 4. Kit: insulated repair roll. Funds: 10. Standing: Ironhands Local +5. Knowledge: field infrastructure and Relief Compact. Obligation: return Reese's borrowed diagnostic tools intact.",
-        "consequence": "Rowan registers you as an Ironhands Repairer and Reese remembers staking borrowed tools on your field judgment. You carry an insulated repair roll and owe Reese its safe return. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+      "preview": "Contact: Reese Pryce. Skill edge: Repair 4. Value: Ingenuity 4. Kit: insulated repair roll. Funds: 10. Standing: Ironhands Local +5. Knowledge: field infrastructure and Relief Compact. Obligation: return Reese's borrowed diagnostic tools intact.",
+      "tradeoff": "No Road-Warden Fieldcraft DEF import; Reese's borrowed tools must return intact.",
+      "consequence": "Rowan registers you as an Ironhands Repairer and Reese remembers staking borrowed tools on your field judgment. You carry an insulated repair roll and owe Reese its safe return. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
         "character": {
           "version": 1,
           "background": "albany:ironhands_repairer",
@@ -250,11 +253,12 @@
         }
       },
       {
-        "id": "albany:unaffiliated_courier",
+      "id": "albany:unaffiliated_courier",
         "title": "Unaffiliated Courier",
         "summary": "You refuse a faction oath, but accept one emergency tag on your own name and the consequences of carrying it alone.",
-        "preview": "Contact: Emery Sloane. Skill edge: Streetwise 4. Value: Independence 4. Kit: unmarked courier satchel. Funds: 18. Standing: Independent Carriers +2. Knowledge: Relief Compact and service corridors. Obligation: return or publicly void the emergency tag; no unchanged refusal retry.",
-        "consequence": "You decline institutional sponsorship. Rowan records the refusal instead of reopening the same question, then issues one limited emergency tag on your personal bond. Emery remembers witnessing the arrangement. You carry an unmarked courier satchel and must return or publicly void the tag. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
+      "preview": "Contact: Emery Sloane. Skill edge: Streetwise 4. Value: Independence 4. Kit: unmarked courier satchel. Funds: 18. Standing: Independent Carriers +2. Knowledge: Relief Compact and service corridors. Obligation: return or publicly void the emergency tag; no unchanged refusal retry.",
+      "tradeoff": "Only +2 Independent standing and no Fieldcraft DEF import; return or publicly void the tag.",
+      "consequence": "You decline institutional sponsorship. Rowan records the refusal instead of reopening the same question, then issues one limited emergency tag on your personal bond. Emery remembers witnessing the arrangement. You carry an unmarked courier satchel and must return or publicly void the tag. Wolf-Winter remains fully winnable through its default routes, but this profile does not receive the Road-Warden's current Fieldcraft DEF import.",
         "character": {
           "version": 1,
           "background": "albany:unaffiliated_courier",
@@ -343,12 +347,13 @@
     "message": "Your registration says who you are; this line binds only the Wolf-Winter dispatch and does not replace your background or sponsor. Rowan offers three exact terms. Full Compact duty carries a provisional warrant and public-stock obligation. Aid-only duty keeps property authority with Cade. A personal bond declines deputization but still promises an exact return account. Rowan will close the selected promise as kept, released with a recorded bend, or broken; the choice cannot be rewritten after source certification.",
     "options": [
       {
-        "id": "albany:oath_full_compact_duty",
+      "id": "albany:oath_full_compact_duty",
         "kind": "official",
         "title": "Take Full Compact Duty",
         "summary": "Accept Rowan's provisional Wolf-Winter warrant and answer for Albany's public relief authority.",
-        "preview": "The sealed boundary annex lowers the first Albany-authority fortification seat by 2 DC without changing Cade's refusal or the one-shot recovery. A kept authority return creates one fast Civic resupply claim. The ten-minute oath makes Cade's household-shutter substitution a disclosed breach.",
-        "consequence": "Rowan countersigns full duty. Public duty becomes a named value, the Relief Compact records official standing, and the exact promise travels with the character until Wolf-Winter closes it.",
+      "preview": "The sealed boundary annex lowers the first Albany-authority fortification seat by 2 DC without changing Cade's refusal or the one-shot recovery. A kept authority return creates one fast Civic resupply claim. The ten-minute oath makes Cade's household-shutter substitution a disclosed breach.",
+      "tradeoff": "If fortifying, use public seals; Cade's household-shutter substitution breaches the duty.",
+      "consequence": "Rowan countersigns full duty. Public duty becomes a named value, the Relief Compact records official standing, and the exact promise travels with the character until Wolf-Winter closes it.",
         "access": "A provisional warrant, boundary annex, and one Civic return-cache claim. Jamie's identical Relief Protocol claim consolidates into that cache.",
         "duty": "If you fortify, use Albany's assigned public seals; otherwise act life-first. Return the exact count of people, wolves, cattle, property, and public stock. Substituting Cade's household fortification breaks this term.",
         "terms": { "minutes": 10 },
@@ -382,12 +387,13 @@
         ]
       },
       {
-        "id": "albany:oath_limited_aid_only",
+      "id": "albany:oath_limited_aid_only",
         "kind": "limited",
         "title": "Negotiate Aid-Only Duty",
         "summary": "Accept a bounded public duty to protect and testify without taking authority over Cade's property.",
-        "preview": "Jamie's witnessed count slip suppresses only the final ordinary cattle-alarm step on a wholly bloodless lure; it never repairs a failed cast or helps another strategy. A kept living-pack, whole-herd return creates one fast Market-rest claim. Invoking Albany authority releases the promise with a public bend on record.",
-        "consequence": "Rowan seals the limit into the dispatch. Bounded authority becomes a named value, the Relief Compact records limited standing, and any later overstep must survive as part of the return account.",
+      "preview": "Jamie's witnessed count slip suppresses only the final ordinary cattle-alarm step on a wholly bloodless lure; it never repairs a failed cast or helps another strategy. A kept living-pack, whole-herd return creates one fast Market-rest claim. Invoking Albany authority releases the promise with a public bend on record.",
+      "tradeoff": "Property authority stays with Cade; invoking Albany authority records a bend and releases the promise.",
+      "consequence": "Rowan seals the limit into the dispatch. Bounded authority becomes a named value, the Relief Compact records limited standing, and any later overstep must survive as part of the return account.",
         "access": "A witnessed count slip and one Market cot after a whole-herd living-pack return. A Resident Shelter cot consolidates into that same rest.",
         "duty": "Protect people and cattle, leave property authority with Cade, and return the exact count. Invoking Albany authority bends the limit and releases—rather than silently erases—the promise.",
         "terms": { "minutes": 5 },
@@ -421,12 +427,13 @@
         ]
       },
       {
-        "id": "albany:oath_unaffiliated_personal_bond",
+      "id": "albany:oath_unaffiliated_personal_bond",
         "kind": "unaffiliated",
         "title": "Remain an Unaffiliated Helper",
         "summary": "Decline deputization and carry the Wolf-Winter tag on a witnessed personal bond.",
-        "preview": "Emery's service-cut insert lowers the first drive shutter signal from DC 12 to DC 10 without helping lure, hunt, or fortification. A kept returned-rig line creates one fast Independent Carriers resupply claim. Claiming Albany authority breaks the personal bond.",
-        "consequence": "Rowan records no public warrant. Voluntary aid becomes a named value, Independent Carriers standing rises, and the personal return promise remains binding without turning the helper into Albany staff.",
+      "preview": "Emery's service-cut insert lowers the first drive shutter signal from DC 12 to DC 10 without helping lure, hunt, or fortification. A kept returned-rig line creates one fast Independent Carriers resupply claim. Claiming Albany authority breaks the personal bond.",
+      "tradeoff": "No public warrant; claiming Albany authority breaks the personal bond.",
+      "consequence": "Rowan records no public warrant. Voluntary aid becomes a named value, Independent Carriers standing rises, and the personal return promise remains binding without turning the helper into Albany staff.",
         "access": "An ash-lane insert and one Greenway cache when the rig returns. A whole-herd drive consolidates this with Emery's existing cache; cattle-scattered return keeps the oath-named claim.",
         "duty": "Claim no Albany authority; return or publicly void the emergency tag with the exact count. Invoking Albany authority breaks this personal bond.",
         "terms": { "minutes": 0 },
@@ -472,12 +479,13 @@
     "message": "Rowan can attach one account before the hill dispatch closes. The civic docket leaves immediately with only the public facts. Jamie Tanner's market testimony costs time and money to verify but maps a feed-hauler's crawlboard into Cade's loft. Hayden Hale's frost report costs time but marks a frost brace only after an ordinary hunt attempts the public wedge, frozen ground splits the rail, and the lengths remain unbound. Albany will pack this run against the one source you certify now; the other packets cannot be added after departure.",
     "options": [
       {
-        "id": "albany:source_rowan_civic_docket",
+      "id": "albany:source_rowan_civic_docket",
         "title": "Leave on Rowan's Civic Docket",
         "source_npc_id": "albany:rowan_quill",
         "summary": "Take the signed public docket without delaying the hill dispatch.",
-        "preview": "You keep the public routes already recorded in Cade's packet, including the split-rail recovery, but carry no private market or frost evidence.",
-        "consequence": "Rowan certifies the unaugmented civic docket. It leaves at once without a fee; the relief party will have to work from public routes and whatever it learns at the steading.",
+      "preview": "You keep the public routes already recorded in Cade's packet, including the split-rail recovery, but carry no private market or frost evidence.",
+      "tradeoff": "Leaves immediately, but adds no private market or frost evidence.",
+      "consequence": "Rowan certifies the unaugmented civic docket. It leaves at once without a fee; the relief party will have to work from public routes and whatever it learns at the steading.",
         "terms": {
           "minutes": 0,
           "money": 0
@@ -485,12 +493,13 @@
         "effects": []
       },
       {
-        "id": "albany:source_jamie_market_testimony",
+      "id": "albany:source_jamie_market_testimony",
         "title": "Verify Jamie's Market Testimony",
         "source_npc_id": "albany:jamie_tanner",
         "summary": "Cross-check missing cattle feed against Jamie Tanner's named delivery witnesses.",
-        "preview": "The certified testimony identifies the feed-hauler's crawlboard into Cade's fodder loft. After the yearling is dealt with, that knowledge opens the loft approach to the flank-wolf without requiring a bound split rail; taking the drop commits you away from the ground approaches.",
-        "consequence": "Rowan seals Jamie's witness list into the relief packet. Jamie remembers that you put the market account on the public record; after the yearling falls, the certified crawlboard becomes a committed loft approach at Cade's steading.",
+      "preview": "The certified testimony identifies the feed-hauler's crawlboard into Cade's fodder loft. After the yearling is dealt with, that knowledge opens the loft approach to the flank-wolf without requiring a bound split rail; taking the drop commits you away from the ground approaches.",
+      "tradeoff": "The loft drop commits you away from both ground approaches.",
+      "consequence": "Rowan seals Jamie's witness list into the relief packet. Jamie remembers that you put the market account on the public record; after the yearling falls, the certified crawlboard becomes a committed loft approach at Cade's steading.",
         "terms": {
           "minutes": 35,
           "money": 6
@@ -516,12 +525,13 @@
         ]
       },
       {
-        "id": "albany:source_hayden_frost_report",
+      "id": "albany:source_hayden_frost_report",
         "title": "Take Hayden's Frost-Heave Report",
         "source_npc_id": "albany:hayden_hale",
         "summary": "Review Hayden Hale's boundary sketch and overnight frost-heave readings.",
-        "preview": "On the ordinary hunt, attempt the public wedge at the paling. Only if frozen ground splits that attempted rail may you leave its lengths unbound; after the yearling falls, go north with the bare spear for a fast, exposed frost-jamb line against the flank-wolf. Skipping the wedge creates no split, and binding the familiar splinter guard commits away. Reese's Works preparation replaces that wedge and forgoes the frost brace.",
-        "consequence": "Rowan stamps Hayden's route report as the controlling field account. Hayden remembers that his boundary reading carried the dispatch: on the ordinary hunt, attempt the public wedge; only its frozen split may stay unbound through the yearling's fall and north to become the exposed frost-jamb maneuver. Works preparation replaces that wedge and forgoes the frost brace.",
+      "preview": "On the ordinary hunt, attempt the public wedge at the paling. Only if frozen ground splits that attempted rail may you leave its lengths unbound; after the yearling falls, go north with the bare spear for a fast, exposed frost-jamb line against the flank-wolf. Skipping the wedge creates no split, and binding the familiar splinter guard commits away. Reese's Works preparation replaces that wedge and forgoes the frost brace.",
+      "tradeoff": "Requires an attempted unbound split rail; Works preparation replaces it and forfeits the frost brace.",
+      "consequence": "Rowan stamps Hayden's route report as the controlling field account. Hayden remembers that his boundary reading carried the dispatch: on the ordinary hunt, attempt the public wedge; only its frozen split may stay unbound through the yearling's fall and north to become the exposed frost-jamb maneuver. Works preparation replaces that wedge and forgoes the frost brace.",
         "terms": {
           "minutes": 20,
           "money": 0
@@ -559,12 +569,23 @@
     "message": "At Hayden's departure board, choose the one sealed specialist packet that rides with the relief dispatch. Reese Pryce can mark a cold-set repair sequence onto the failing paling, Emery Sloane can map a drover's cut that peels a fouled yearling away from the herd, or Jamie Tanner can seal a relief protocol for calming the cattle after an improvised recovery. Each plan remains usable by any registered traveler, but the provider who sponsored your registration can waive the public charge and shorten the handoff. Choose one: Albany cannot put three incompatible field plans into the same urgent packet.",
     "profiles": [
       {
-        "id": "albany:prep_works_fortification",
+      "id": "albany:prep_works_fortification",
         "title": "Reese's Works Fortification",
         "provider_npc_id": "albany:reese_pryce",
         "summary": "Carry Reese Pryce's measured wedge, splice, and cold-set sequence for Cade's failing paling.",
         "trigger_category": "Opening repair at Cade's first loose paling rail.",
-        "preview": "At the first loose paling rail, this replaces the ordinary wedge with one Repair check (DC 12), so it forgoes Hayden's frost-brace line. Success braces the breach immediately. Failure still splits the frozen rail, but the marked splice can then cold-set it without another roll; the breach is restored while the extra hammering raises cattle alarm by 1. Repair training improves the check, but every background retains the deterministic recovery.",
+      "preview": "At the first loose paling rail, this replaces the ordinary wedge with one Repair check (DC 12), so it forgoes Hayden's frost-brace line. Success braces the breach immediately. Failure still splits the frozen rail, but the marked splice can then cold-set it without another roll; the breach is restored while the extra hammering raises cattle alarm by 1. Repair training improves the check, but every background retains the deterministic recovery.",
+      "tradeoff": "Replaces the ordinary wedge and forfeits Hayden's frost-brace line.",
+      "check_disclosure": {
+          "skill_id": "skill:repair",
+          "skill_label": "Repair",
+          "difficulty": 12,
+          "consumer": {
+            "object_id": "paling_rail",
+            "verb": "USE",
+            "command_verb": "set"
+          }
+        },
         "consequence": "Reese inks three measured cuts and a cold-set order onto Cade's boundary sketch. Only this fortification sequence enters the packet; Reese records who accepted the works allocation and reserves one Albany Works resupply claim if the byre is truthfully returned held.",
         "terms": { "minutes": 25, "money": 4 },
         "sponsor": {
@@ -588,12 +609,23 @@
         ]
       },
       {
-        "id": "albany:prep_drover_route",
+      "id": "albany:prep_drover_route",
         "title": "Emery's Drover Route",
         "provider_npc_id": "albany:emery_sloane",
         "summary": "Carry Emery Sloane's one-use drover cut for recovering a fouled first feed cast.",
         "trigger_category": "One-shot lure recovery after the first feed cast fails.",
-        "preview": "Only after the first lure cast fails, the route opens one Streetwise check (DC 12). Success turns the yearling down a service cut and lowers cattle alarm by 1. Failure sends it across the herd's sightline and raises alarm by 1; the route retires, but the existing split-rail bind or fight remains available. Streetwise training improves the attempt without class-locking it.",
+      "preview": "Only after the first lure cast fails, the route opens one Streetwise check (DC 12). Success turns the yearling down a service cut and lowers cattle alarm by 1. Failure spends the route without raising alarm; the existing split-rail bind or fight remains available at the same pressure as declining it. Streetwise training improves the attempt without class-locking it.",
+      "tradeoff": "Only follows a failed first lure cast; the one-use route is spent even on failure.",
+      "check_disclosure": {
+          "skill_id": "skill:streetwise",
+          "skill_label": "Streetwise",
+          "difficulty": 12,
+          "consumer": {
+            "object_id": "drover_route_marks",
+            "verb": "USE",
+            "command_verb": "run"
+          }
+        },
         "consequence": "Emery fixes one snowed service cut between Cade's breach and the high-wood scent line. Only this drover route enters the packet; Emery records who accepted it and arranges one Albany Campus recovery cot if the byre is truthfully returned held.",
         "terms": { "minutes": 20, "money": 4 },
         "sponsor": {
@@ -617,12 +649,23 @@
         ]
       },
       {
-        "id": "albany:prep_relief_protocol",
+      "id": "albany:prep_relief_protocol",
         "title": "Jamie's Relief Protocol",
         "provider_npc_id": "albany:jamie_tanner",
         "summary": "Carry Jamie Tanner's witnessed cadence for settling the herd after a rough rail recovery.",
         "trigger_category": "Herd calming after the public-rail lure recovery.",
-        "preview": "Commit to the lure, foul its first feed cast, fail the public wedge, then bind and spend the split-rail guard to redirect the yearling alive. Return to Cade before the loft cast to open one Mediation check (DC 12). A clean cast, braced rail, or any other recovery does not qualify. Success lowers cattle alarm by 1; failure raises it by 1. The protocol retires either way without blocking the lure, and Mediation training improves the check.",
+      "preview": "Commit to the lure, foul its first feed cast, fail the public wedge, then bind and spend the split-rail guard to redirect the yearling alive. Return to Cade before the loft cast to open one Mediation check (DC 12). A clean cast, braced rail, or any other recovery does not qualify. Success lowers cattle alarm by 1; failure raises it by 1. The protocol retires either way without blocking the lure, and Mediation training improves the check.",
+      "tradeoff": "Requires the narrow rail-recovery line; failure raises alarm and retires the protocol.",
+      "check_disclosure": {
+          "skill_id": "skill:mediation",
+          "skill_label": "Mediation",
+          "difficulty": 12,
+          "consumer": {
+            "object_id": "relief_protocol_docket",
+            "verb": "USE",
+            "command_verb": "call"
+          }
+        },
         "consequence": "Jamie seals a named-call relief order beside Cade's herd tally. Only this protocol enters the packet; Jamie records who accepted it and reserves one Civic relief-counter resupply claim if the byre is truthfully returned held.",
         "terms": { "minutes": 30, "money": 4 },
         "sponsor": {
@@ -750,11 +793,12 @@
     "condition": "June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
     "options": [
       {
-        "id": "albany:ally_june_cattle_first",
+      "id": "albany:ally_june_cattle_first",
         "title": "Grant June Cattle-First Authority",
         "summary": "Ask June Pike to ride as an independent Road-Warden ally.",
-        "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
-        "consequence": "June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
+      "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
+      "tradeoff": "June controls the one cattle-pressure intervention; any wolf death ends the agreement.",
+      "consequence": "June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
         "terms": { "minutes": 15 },
         "effects": [
           {
@@ -776,11 +820,12 @@
         ]
       },
       {
-        "id": "albany:ally_june_relay_only",
+      "id": "albany:ally_june_relay_only",
         "title": "Negotiate for a Subordinate Relay",
         "summary": "Ask June to relay your orders without retaining cattle-first authority.",
-        "preview": "The exchange takes 5 minutes. June refuses the reduced role: no unchanged retry, no companion, no field promise, and no Wolf-Winter pressure action. She remains at the Station desk while the solo route stays fully viable.",
-        "consequence": "June records that you asked for a relay rather than an ally and declined the condition under which she would ride.",
+      "preview": "The exchange takes 5 minutes. June refuses the reduced role: no unchanged retry, no companion, no field promise, and no Wolf-Winter pressure action. She remains at the Station desk while the solo route stays fully viable.",
+      "tradeoff": "June refuses: no companion, field promise, pressure action, or unchanged retry.",
+      "consequence": "June records that you asked for a relay rather than an ally and declined the condition under which she would ride.",
         "terms": { "minutes": 5 },
         "effects": [
           {
@@ -793,11 +838,12 @@
         ]
       },
       {
-        "id": "albany:ally_travel_solo",
+      "id": "albany:ally_travel_solo",
         "title": "Leave with a Solo Field Team",
         "summary": "Keep the existing one-rider Wolf-Winter dispatch.",
-        "preview": "No time is added. June remains with Albany's Road-Warden reserve; Wolf-Winter keeps every established route and receives no companion flag or ally action.",
-        "consequence": "June records the clean refusal and does not reopen the same field seat after departure.",
+      "preview": "No time is added. June remains with Albany's Road-Warden reserve; Wolf-Winter keeps every established route and receives no companion flag or ally action.",
+      "tradeoff": "No ally or pressure action; June will not reopen the field seat after departure.",
+      "consequence": "June records the clean refusal and does not reopen the same field seat after departure.",
         "terms": { "minutes": 0 },
         "effects": [
           {
@@ -1042,6 +1088,10 @@
         {
           "job_id": "albany_city__campus__job",
           "option_id": "prepare_traceable_field_archive"
+        },
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "index_traceable_route_digest"
         }
       ]
     },
@@ -1134,6 +1184,94 @@
       ]
     },
     {
+      "id": "albany:campus_clinic_threshold_card_rest",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "rest",
+      "title": "Take Blair's Frost-Exposure Recovery Cot",
+      "summary": "Because you issued the clinic threshold card from the returned frost-exposure evidence, Blair clears one Campus clinic recovery cot. It restores fatigue only; it neither supplies a field cache nor turns the evidence mandate into a Civic legal finding.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "issue_clinic_threshold_card"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_drover_route"
+        }
+      ]
+    },
+    {
+      "id": "albany:campus_clinic_threshold_card_drover_rest",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "rest",
+      "title": "Consolidate the Threshold Card and Drover Recovery Cot",
+      "summary": "The drover packet and Blair's clinic threshold card share one Campus clinic counter. The threshold card releases this 15-minute recovery cot after the Wolf-Winter return; if the held-byre drover claim also exists, both claims consolidate instead of duplicating recovery.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_preparation",
+          "choice_id": "albany:prep_drover_route"
+        }
+      ],
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "issue_clinic_threshold_card"
+        }
+      ]
+    },
+    {
+      "id": "albany:campus_traceable_route_digest_resupply",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "resupply",
+      "title": "Claim Blair's Traceable Route Digest Cache",
+      "summary": "Because you indexed the returned route's provenance into a traceable digest, Blair releases one Survey College cache of road food, lamp oil, tally paper, and archive sleeves. It refills supplies only; it does not certify the route evidence as a Civic legal finding.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "index_traceable_route_digest"
+        }
+      ],
+      "forbids_any_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_allocation",
+          "choice_id": "albany:relief_mobile_reserve"
+        }
+      ]
+    },
+    {
+      "id": "albany:campus_traceable_route_digest_mobile_resupply",
+      "home": "albany_city",
+      "area": "albany_city__campus",
+      "action": "resupply",
+      "title": "Consolidate the Route Digest and Mobile Field Cache",
+      "summary": "The mobile-allocation docket and Blair's traceable route digest share one Campus stores counter. The digest releases this 15-minute cache after the Wolf-Winter return; if the held-byre mobile-reserve claim also exists, both claims consolidate instead of duplicating supplies.",
+      "provider_character_id": "albany_city__campus__contact",
+      "minutes": 15,
+      "requires_all_story_choices": [
+        {
+          "story_choice_id": "albany:wolf_relief_allocation",
+          "choice_id": "albany:relief_mobile_reserve"
+        }
+      ],
+      "requires_all_local_job_options": [
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "index_traceable_route_digest"
+        }
+      ]
+    },
+    {
       "id": "albany:wolf_works_fortification_return_resupply",
       "home": "albany_city",
       "area": "albany_city__industrial",
@@ -1170,6 +1308,10 @@
         {
           "job_id": "albany_city__campus__job",
           "option_id": "issue_calibrated_road_warning"
+        },
+        {
+          "job_id": "albany_city__campus__job",
+          "option_id": "issue_clinic_threshold_card"
         }
       ]
     },
@@ -32000,10 +32142,45 @@
       "id": "albany_city__transport_hub__event",
       "home": "albany_city",
       "area": "albany_city__transport_hub",
-      "title": "Albany Station Quarter: winter relief packet",
+      "title": "Hayden Hale's Cade Return Filing Standard",
       "pressure": "conflict",
       "intensity": 3,
-      "summary": "A northbound relief packet sits open at the route desk: Rowan's docket mark, Hayden's route pin, no team back from the hill road, Old Cade's cattle penned at a byre, and the weather report worsening. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "The truthful Wolf-Winter return has reached Hayden's route desk, but Cade's packet has no lawful closing standard. Bind either a quick operational abstract or a slower named-witness record; both preserve every physical loss instead of pretending a relief crew was sent.",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:cade-return-filing-standard",
+        "prompt": "The return supports two honest filing standards. Binding one does not close the packet or dispatch a crew. At Hayden's Return Packet, you later choose a physical dispatch or the matching administrative closure. The route abstract adds a 30-minute/+3-standing closure. The witnessed record adds a 45-minute/+4 closure and can reach Rowan's existing 13-standing Civic cot from the lowest 8-standing held return. Both cost 20 minutes/+1 now; neither repairs a loss or creates a recovery claim.",
+        "required_poi_id": "albany_city__transport_hub__poi",
+        "required_contact_id": "albany_city__transport_hub__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "forbids_completed_jobs": [
+          "albany_city__transport_hub__job"
+        ],
+        "options": [
+          {
+            "id": "bind_operational_route_abstract",
+            "title": "Bind an operational route abstract",
+            "preview": "Spend 20 minutes binding Hayden's route marks into a provisional action abstract. Earn 1 Capital / Mohawk renown; the Cade Return Packet later adds a 30-minute, 3-renown desk closure with no recovery claim.",
+            "consequence": "Hayden records a concise operational abstract that can complete the administrative record quickly without pretending a repair, evacuation-line crew, or pasture search occurred. This filing does not close the packet now; every certified physical loss stays deferred unless you later choose one of its physical dispatches.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            }
+          },
+          {
+            "id": "bind_witnessed_return_record",
+            "title": "Bind a witnessed return record",
+            "preview": "Spend 20 minutes reconciling Cade's account with the returning crew's named testimony. Earn 1 Capital / Mohawk renown; the Cade Return Packet later adds a 45-minute, 4-renown witnessed closure with no recovery claim.",
+            "consequence": "Hayden records the named witness chain as an audited way to complete the administrative record without pretending a repair, evacuation-line crew, or pasture search occurred. This filing does not close the packet now; every certified physical loss stays deferred unless you later choose one of its physical dispatches.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            }
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__industrial__event",
@@ -32091,10 +32268,42 @@
       "id": "albany_city__campus__event",
       "home": "albany_city",
       "area": "albany_city__campus",
-      "title": "Albany Campus Row: missing research request",
+      "title": "Albany Campus Row: Return Evidence Mandate",
       "pressure": "rumor",
       "intensity": 3,
-      "summary": "Albany Campus Row is under rumor pressure around old maps, clinic notes, and experts with narrow hours. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "After The Wolf-Winter, Blair can set one bounded evidence mandate: clinic frost-exposure thresholds for the next cold watch, or traceable route provenance for the next field team. Both preserve uncertainty and neither is a Civic legal finding.",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:campus-return-evidence-mandate",
+        "prompt": "Blair has the Wolf-Winter clinic notes and route marks, but neither record can be converted into a Civic legal finding. Set one evidence mandate for the next field response: explicit frost-exposure thresholds for the clinic, or a traceable provenance chain for the route.",
+        "required_poi_id": "albany_city__campus__poi",
+        "required_contact_id": "albany_city__campus__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "options": [
+          {
+            "id": "prioritize_clinic_exposure_thresholds",
+            "title": "Prioritize clinic frost-exposure thresholds",
+            "preview": "Spend 20 minutes setting explicit clinic thresholds from the Wolf-Winter frost-exposure evidence. Earn 1 Capital / Mohawk renown. This authorizes a later 20-minute clinic threshold card for 2 renown and one 15-minute Campus recovery cot; the route digest remains unavailable.",
+            "consequence": "Blair records the clinic threshold mandate with its frost-exposure limits and uncertainty notes. The mandate supports a later threshold card; it is not a Civic legal finding.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            }
+          },
+          {
+            "id": "preserve_traceable_route_provenance",
+            "title": "Preserve traceable route provenance",
+            "preview": "Spend 20 minutes preserving the Wolf-Winter route marks, custody notes, and provenance chain. Earn 1 Capital / Mohawk renown. This authorizes a later 45-minute route digest for 3 renown and one 15-minute Campus resupply cache; the clinic threshold card remains unavailable.",
+            "consequence": "Blair records the route provenance mandate with its custody gaps and uncertainty notes. The mandate supports a later route digest; it is not a Civic legal finding.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            }
+          }
+        ]
+      }
     },
     {
       "id": "greenburgh_town__civic_core__event",
@@ -52455,16 +52664,16 @@
       "area": "albany_city__transport_hub",
       "kind": "courier",
       "title": "Hayden's Cade Return Packet",
-      "summary": "Cade's field dispatch is closed, but Hayden's return packet still carries the exact repair, abandoned-line, or missing-cattle claim certified by the Wolf-Winter return.",
-      "objective": "Commit Albany's one immediate follow-up crew to one loss the certified Cade return actually left behind.",
-      "reward": "Earn 2-4 Capital / Mohawk renown and create one exact downstream recovery or create/consolidate one stores line; any other simultaneous loss remains deferred.",
+      "summary": "Cade's field dispatch is closed, but Hayden's return packet still carries every exact repair, abandoned-line, or missing-cattle claim certified by the Wolf-Winter return. A bound Station filing standard can close the record without pretending a physical follow-up occurred.",
+      "objective": "Commit Albany's one immediate follow-up crew to one certified loss, or complete the administrative record under the exact Station filing standard you bound while leaving every physical loss deferred.",
+      "reward": "Earn 2-4 Capital / Mohawk renown. A physical dispatch creates one exact downstream recovery or creates/consolidates one stores line; an administrative closure creates no service and leaves every physical loss deferred.",
       "minutes": 79,
       "difficulty": 4,
       "visibility": "local_job_board",
       "authored_scene": {
         "version": 1,
         "id": "albany:cade-return-packet",
-        "prompt": "Hayden can release one immediate follow-up crew before the next snow closes the hill road. Every available option below comes from the certified Cade return. If two losses remain, choosing one retires this packet and leaves the other honestly deferred.",
+        "prompt": "Hayden can release one immediate follow-up crew before the next snow closes the hill road, or use a Station filing standard you already bound to complete the administrative record without dispatching anyone. Every physical option below comes from the certified Cade return. Choosing any one method completes this packet's active decision; all other certified losses remain honestly deferred.",
         "required_poi_id": "albany_city__transport_hub__poi",
         "required_contact_id": "albany_city__transport_hub__contact",
         "requires_completed_quests": [
@@ -52532,6 +52741,38 @@
             },
             "requires_all_world_facts": [
               "fact:wolf_winter_cattle_scattered"
+            ]
+          },
+          {
+            "id": "close_packet_under_route_abstract",
+            "title": "Close the packet under Hayden's route abstract",
+            "preview": "Spend 30 minutes completing the provisional route abstract against the certified return. Earn 3 Capital / Mohawk renown. This completes the administrative record without dispatching a physical crew or creating a rest or resupply claim.",
+            "consequence": "Hayden completes the operational record under the route abstract you bound. No repair, evacuation-line crew, or cattle search is entered as completed; every certified physical loss remains deferred.",
+            "terms": {
+              "minutes": 30,
+              "renown": 3
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__transport_hub__event",
+                "option_id": "bind_operational_route_abstract"
+              }
+            ]
+          },
+          {
+            "id": "close_packet_under_witnessed_record",
+            "title": "Close the packet under the witnessed return",
+            "preview": "Spend 45 minutes auditing Cade's return through the named witness chain. Earn 4 Capital / Mohawk renown. This completes the administrative record without dispatching a physical crew or creating a rest or resupply claim.",
+            "consequence": "Hayden completes the audited record under the witnessed return you bound. No repair, evacuation-line crew, or cattle search is entered as completed; every certified physical loss remains deferred.",
+            "terms": {
+              "minutes": 45,
+              "renown": 4
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__transport_hub__event",
+                "option_id": "bind_witnessed_return_record"
+              }
             ]
           }
         ]
@@ -52712,9 +52953,9 @@
       "area": "albany_city__campus",
       "kind": "research",
       "title": "Albany Campus Row: Archive Query",
-      "summary": "After Wolf-Winter closes, Blair can either send a fast confidence-labelled warning to road crews or preserve the uncertain route evidence as a traceable field archive. The choice is operational, not a Civic public-versus-protected policy.",
+      "summary": "After Wolf-Winter closes, Blair can send a fast confidence-labelled warning, preserve a traceable field archive, issue a clinic threshold card under the clinic mandate, or index a route digest under the provenance mandate. Every method remains operational evidence, not a Civic legal finding.",
       "objective": "Read the surviving maps, clinic notes, and return marks with Blair, then commit one bounded form of road knowledge for Albany's next travelers.",
-      "reward": "Choose either 2 Capital / Mohawk renown for a 35-minute calibrated warning or 5 renown for a 75-minute traceable archive, with one exclusive 15-minute Campus service after each exact proof.",
+      "reward": "Choose one of four operational methods: the two base road records or an event-mandated clinic threshold card or route digest, each reserving the matching exclusive 15-minute Campus service.",
       "minutes": 91,
       "difficulty": 4,
       "visibility": "local_job_board",
@@ -52747,6 +52988,38 @@
               "minutes": 75,
               "renown": 5
             }
+          },
+          {
+            "id": "issue_clinic_threshold_card",
+            "title": "Issue a Clinic Threshold Card",
+            "preview": "Spend 20 minutes turning the clinic frost-exposure mandate into an explicit threshold card for the next cold watch. Earn 2 Capital / Mohawk renown.",
+            "consequence": "Blair issues a clinic threshold card with the recorded exposure limits and uncertainty notes. It earns 2 Capital / Mohawk renown and reserves one 15-minute Campus recovery cot, not a cache or Civic legal finding.",
+            "terms": {
+              "minutes": 20,
+              "renown": 2
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__campus__event",
+                "option_id": "prioritize_clinic_exposure_thresholds"
+              }
+            ]
+          },
+          {
+            "id": "index_traceable_route_digest",
+            "title": "Index a Traceable Route Digest",
+            "preview": "Spend 45 minutes indexing the route provenance mandate into a field digest the next team can audit. Earn 3 Capital / Mohawk renown.",
+            "consequence": "Blair indexes the route digest with its provenance chain and custody gaps intact. It earns 3 Capital / Mohawk renown and reserves one 15-minute Campus resupply cache, not a recovery cot or Civic legal finding.",
+            "terms": {
+              "minutes": 45,
+              "renown": 3
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__campus__event",
+                "option_id": "preserve_traceable_route_provenance"
+              }
+            ]
           }
         ]
       }

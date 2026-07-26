@@ -40,7 +40,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 29 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 30 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -359,6 +359,7 @@ export type OverworldCompactView = {
   departure_contact_leads?: OverworldCompactDepartureContactLead[];
   opportunity_guidance?: string;
   opportunity_leads?: OverworldCompactOpportunityLead[];
+  opportunity_leads_deferred?: number;
   opportunity_leads_truncated?: true;
   hidden: OverworldCompactHiddenCounts;
   roads: OverworldCompactRoad[];
@@ -420,9 +421,11 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_contact_leads:
     "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; requires_preparation has no available action, ready may be pursued with talk_overworld_session_contact(character_id: contact_id), and either status leaves quest_id launch legal as the explicitly disclosed solo default",
   opportunity_guidance:
-    "player-facing pursuit guidance for opportunity_leads; shown beside those leads on every compact response where they exist",
+    "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
     "[[kind, root_id, title, district, access], ...] optional authored aftermath; access is here|mapped|route_unmapped, leads do not create, replace, or activate a journey objective, and no choices, rewards, or outcomes are disclosed",
+  opportunity_leads_deferred:
+    "positive count of optional aftermath leads whose details return after the current journey decision; opportunity_leads is omitted while deferred",
   opportunity_leads_truncated: "true when more optional aftermath leads exist than listed",
   hidden:
     "[areas, jobs, sites, quests] counts not currently listed at this town; jobs include undiscovered jobs plus discovered, incomplete authored job scenes with no legal options currently available. Scout, talk, or explore can reveal more.",
@@ -1227,6 +1230,9 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.opportunity_guidance) clone.opportunity_guidance = view.opportunity_guidance;
   if (view.opportunity_leads) {
     clone.opportunity_leads = cloneTupleList(view.opportunity_leads);
+  }
+  if (view.opportunity_leads_deferred !== undefined) {
+    clone.opportunity_leads_deferred = view.opportunity_leads_deferred;
   }
   if (view.opportunity_leads_truncated) clone.opportunity_leads_truncated = true;
   if (view.roads_truncated) clone.roads_truncated = true;

@@ -165,7 +165,8 @@ export type JourneyStoryChoiceSummary = Readonly<{
   fieldTrigger: string;
   /** Present only when fieldTrigger is a broad comparison category, not exact terms. */
   fieldTriggerScope?: "category";
-  immediateCost?: string;
+  immediateCost: string;
+  tradeoff: string;
 }>;
 
 export type JourneyStoryChoiceOption = Readonly<{
@@ -315,6 +316,7 @@ export type JourneyOpportunityLeadPresentation = Readonly<{
 export type JourneyOpportunityPresentation = Readonly<{
   guidance: string;
   leads: readonly JourneyOpportunityLeadPresentation[];
+  deferredLeadCount?: number;
 }>;
 
 export type JourneyPresentationContext = Readonly<{
@@ -1088,6 +1090,7 @@ function freezeStoryChoice(
   }
   const requiresStructuredSummary =
     presentationKind === "registration" ||
+    presentationKind === "ally" ||
     presentationKind === "relief_oath" ||
     presentationKind === "lead_source" ||
     presentationKind === "preparation" ||
@@ -1102,12 +1105,14 @@ function freezeStoryChoice(
     }
     if (
       option.summary &&
-      (option.summary.commitment.length === 0 || option.summary.fieldTrigger.length === 0)
+      (option.summary.commitment.length === 0 ||
+        option.summary.fieldTrigger.length === 0 ||
+        typeof option.summary.immediateCost !== "string" ||
+        option.summary.immediateCost.length === 0 ||
+        typeof option.summary.tradeoff !== "string" ||
+        option.summary.tradeoff.length === 0)
     ) {
       throw new Error("Journey story choice summary fields cannot be empty.");
-    }
-    if (option.summary?.immediateCost !== undefined && option.summary.immediateCost.length === 0) {
-      throw new Error("Journey story choice immediate cost cannot be empty when provided.");
     }
     if (
       option.summary?.fieldTriggerScope !== undefined &&
@@ -1189,6 +1194,9 @@ export function cloneJourneyOpportunityPresentation(
   return {
     guidance: opportunities.guidance,
     leads: opportunities.leads.map((lead) => ({ ...lead })),
+    ...(opportunities.deferredLeadCount === undefined
+      ? {}
+      : { deferredLeadCount: opportunities.deferredLeadCount }),
   };
 }
 
@@ -1199,8 +1207,18 @@ function freezeJourneyOpportunities(
   if (opportunities.guidance.trim().length === 0) {
     throw new Error("Journey opportunity guidance cannot be empty.");
   }
-  if (opportunities.leads.length === 0) {
-    throw new Error("Journey opportunities require at least one lead.");
+  const deferredLeadCount = opportunities.deferredLeadCount;
+  if (
+    deferredLeadCount !== undefined &&
+    (!Number.isSafeInteger(deferredLeadCount) || deferredLeadCount <= 0)
+  ) {
+    throw new Error("Deferred journey opportunity count must be a positive safe integer.");
+  }
+  if (deferredLeadCount === undefined && opportunities.leads.length === 0) {
+    throw new Error("Detailed journey opportunities require at least one lead.");
+  }
+  if (deferredLeadCount !== undefined && opportunities.leads.length > 0) {
+    throw new Error("Deferred journey opportunities cannot disclose detailed leads.");
   }
   const keys = new Set<string>();
   const leads = opportunities.leads.map((lead) => {
@@ -1225,6 +1243,7 @@ function freezeJourneyOpportunities(
   return Object.freeze({
     guidance: opportunities.guidance,
     leads: Object.freeze(leads),
+    ...(deferredLeadCount === undefined ? {} : { deferredLeadCount }),
   });
 }
 

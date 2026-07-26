@@ -2737,15 +2737,16 @@ objects:
               jaw or barred the cattle gate.
 
   # Emery's preparation is a one-shot recovery, not a second lure roll. It exists only
-  # after the public first cast has failed. Failure adds pressure and retires the route
-  # while the existing split-rail and combat recoveries remain legal.
+  # after the public first cast has failed. Failure retires the route without adding
+  # pressure beyond the public recovery while the existing split-rail and combat
+  # recoveries remain legal.
   - id: drover_route_marks
     name: "Emery's drover-route marks"
     aliases: [drover route, route marks, service cut, drover cut, emery's route]
     description: >
       Three charcoal cuts on the relief packet match a snowed livestock service path
-      above the breach. It can turn one fouled yearling toward the high-wood scent, but
-      crossing the herd's sightline badly will make the cattle press harder.
+      above the breach. It can turn one fouled yearling toward the high-wood scent; a
+      missed route spends the packet but leaves the public recovery pressure unchanged.
     visible_when:
       - { has_flag: drover_route_prepared }
       - { has_flag: lure_trail_fouled }
@@ -2781,13 +2782,12 @@ objects:
                 yearling turns onto the high-wood scent. Cade answers with one low call;
                 hooves ease back from the slats as the cattle alarm falls.
           on_failure:
-            - inc_var: { name: cattle_alarm, by: 1 }
-            - add_journal: "Emery's drover cut crosses the herd's sightline. Alarm rises by 1; the route is spent, but rail or spear recovery remains."
+            - add_journal: "Emery's drover cut misses its service turn. Alarm holds; the route is spent, but rail or spear recovery remains."
             - narrate: >
                 You mistake charcoal for a gate. The yearling wheels across the cattle's
-                sightline and stops in the breach; the herd surges harder. Emery's route
-                is spent. Bind a failed rail onto the remaining scent or fight the wolf,
-                then carry the lure deeper.
+                sightline and stops in the breach. Emery's route is spent, but the herd
+                gains no new pressure beyond the fouled cast. Bind a failed rail onto the
+                remaining scent or fight the wolf, then carry the lure deeper.
 
   # Jamie's protocol waits for the specific public rail recovery: the first cast fouled,
   # the ordinary wedge split, and its bound guard was spent redirecting the yearling.

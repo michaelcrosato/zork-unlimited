@@ -31,6 +31,7 @@ export function presentOpeningReliefAllocation(
             fieldTrigger: triggerCategory ?? option.preview,
             ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
             immediateCost: cost,
+            tradeoff: `Leaves exposed: ${option.leaves_exposed}`,
           }),
           consequence: triggerCategory
             ? `${option.summary} ${triggerCategory} Full field terms: ${option.preview} Protects: ${option.protects} ` +

@@ -11,7 +11,9 @@ import type { McpObservation } from "./types.js";
 
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 1 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 2 as const;
+export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
+  "Complete terms are staged; inspect this exact option before choosing if you need them." as const;
 
 export type JourneyStoryChoiceComparisonOption = Readonly<{
   id: string;
@@ -66,12 +68,12 @@ function compactJourneyStoryChoiceOption(
   if (!option.consequence.startsWith(repeatedLead)) return option;
 
   const withoutRepeatedLead = option.consequence.slice(repeatedLead.length);
-  if (summary.immediateCost === undefined) {
+  const repeatedCost = `Actual cost: ${summary.immediateCost}.`;
+  const repeatedCostCount = countExactOccurrences(withoutRepeatedLead, repeatedCost);
+  if (repeatedCostCount === 0) {
     return Object.freeze({ ...option, consequence: withoutRepeatedLead });
   }
-
-  const repeatedCost = `Actual cost: ${summary.immediateCost}.`;
-  if (countExactOccurrences(withoutRepeatedLead, repeatedCost) !== 1) return option;
+  if (repeatedCostCount !== 1) return option;
 
   const costIndex = withoutRepeatedLead.indexOf(repeatedCost);
   if (costIndex === -1) return option;
@@ -92,14 +94,18 @@ export function journeyStoryChoiceOptionById(
   return option;
 }
 
-/**
- * Remove only setup-card prose already represented by the structured summary.
- * Authored text that does not match the exact expected shape is returned intact.
- */
+/** Stage active compact consequences behind exact, read-only option inspection. */
 export function compactJourneyStoryChoicePrompt(
   prompt: JourneyStoryChoicePrompt,
 ): JourneyStoryChoicePrompt {
-  const options = prompt.options.map(compactJourneyStoryChoiceOption);
+  const options = prompt.options.map((option) =>
+    option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE
+      ? option
+      : Object.freeze({
+          ...option,
+          consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+        }),
+  );
   if (options.every((option, index) => option === prompt.options[index])) return prompt;
   return Object.freeze({
     ...prompt,
@@ -112,9 +118,10 @@ export function compactJourneyStoryChoiceComparison(
   prompt: JourneyStoryChoicePrompt,
   optionId?: string,
 ): JourneyStoryChoiceComparison {
-  const compactPrompt = compactJourneyStoryChoicePrompt(prompt);
   const inspectedSource =
-    optionId === undefined ? null : journeyStoryChoiceOptionById(compactPrompt, optionId);
+    optionId === undefined
+      ? null
+      : compactJourneyStoryChoiceOption(journeyStoryChoiceOptionById(prompt, optionId));
   const inspectedOption = inspectedSource
     ? Object.freeze({
         ...inspectedSource,
@@ -123,7 +130,7 @@ export function compactJourneyStoryChoiceComparison(
           : {}),
       })
     : null;
-  const options = compactPrompt.options.map((option) =>
+  const options = prompt.options.map((option) =>
     Object.freeze({
       id: option.id,
       label: option.label,
@@ -132,9 +139,9 @@ export function compactJourneyStoryChoiceComparison(
   );
   return Object.freeze({
     comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
-    id: compactPrompt.id,
-    ...(compactPrompt.kind === undefined ? {} : { kind: compactPrompt.kind }),
-    message: compactPrompt.message,
+    id: prompt.id,
+    ...(prompt.kind === undefined ? {} : { kind: prompt.kind }),
+    message: prompt.message,
     options: Object.freeze(options),
     inspectedOption,
   });

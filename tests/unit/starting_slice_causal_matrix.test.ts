@@ -10,10 +10,10 @@ describe("starting-slice causal matrix", () => {
     const matrix = loadStartingSliceCausalMatrix();
 
     expect(matrix.status).toBe("active_unproven");
-    expect(matrix.forks).toHaveLength(16);
-    expect(new Set(matrix.forks.map((fork) => fork.id)).size).toBe(16);
+    expect(matrix.forks).toHaveLength(18);
+    expect(new Set(matrix.forks.map((fork) => fork.id)).size).toBe(18);
     expect(matrix.forks.at(-1)).toMatchObject({
-      id: "SS-F16-works-hazard-charter",
+      id: "SS-F18-station-return-filing-standard",
       implementation_status: "implemented",
       proof_status: "proven",
       counts_toward_contract: false,

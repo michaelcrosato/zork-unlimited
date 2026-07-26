@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 641 -->
+<!-- historical_cycle_count: 646 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,54 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - comparison_first_albany_departure
+
+- Evidence choice: three exact-build players repeated one Wolf-Winter route and named dense Albany setup; fresh pure Spark seed 72634 judges the comparison-first candidate.
+- Surface: all six opening decisions now expose commitment, trigger, immediate cost, and tradeoff while compact active choices stage exact terms behind read-only one-option inspection.
+- Measured effect: the six always-visible payloads fall 4,191→3,558 `o200k_base` tokens (-15.1%); the observed one-inspection path falls 4,992→4,308 (-13.7%).
+- Counterfactual: all legal choices and mechanics remain; direct/inspected choices hash identically, sibling terms do not leak, and the exact presentation-only predecessor restores without state changes.
+- Pure evidence: exact-clean Spark seed 72634 completes The Wolf-Winter bloodlessly in 22 decisions, ends voluntarily, rates clarity/enjoyment 4/4, remains unstuck, reports no bugs, and chooses replay-yes.
+- Self-critique/follow-through: the player skipped optional Station setup and noted mild anchor-area relocation friction; selected-detail responses still repeat comparison context and are the next bounded efficiency candidate.
+- Guard: independent review is clean; post-crawl `20260726T024526Z` is zero-finding and full health passes 424 files/3,450 tests plus both typechecks and all packs.
+
+### Cycle result - journey_boundary_opportunity_deferral
+
+- Evidence choice: repeated blind players found the post-Wolf Albany return stack dense; exact-clean Terra seed 72633 follows this commit through The Wolf-Winter.
+- Surface: Continue/End and an immediate journey consequence now show only the number of optional aftermath leads; unchanged district details return when active play resumes.
+- Contract: compact v30 names deferral separately from truncation, while full journey, compact MCP, and UI share one derived, button-free presentation with no root identity leak.
+- Counterfactual: the same five roots become count 5 at both Wolf completion boundaries and return exactly after dawn dispatch; reads preserve snapshot, hash, proof, legal choices, and decision count.
+- Self-critique/follow-through: this removes post-goal competition for attention, not the still-dense mandatory Albany departure sequence; fresh blind evidence must judge whether the transition now reads cleanly.
+- Guard: independent Terra review corrected compact semantics; post-crawl `20260726T004455Z` is zero-finding and full health passes 423 files/3,447 tests plus both typechecks and all packs.
+
+### Cycle result - station_return_filing_standard
+
+- Evidence choice: Depth #11 left Station as Albany's sixth generic checklist event; exact-clean Terra seed 72632 is this cycle's fresh pure journey through The Wolf-Winter.
+- Surface: after the Wolf return, Hayden binds a route abstract or witnessed record without closing Cade's packet, revealing only the matching no-service administrative closure.
+- Counterfactual: from the same 8-standing return, route costs 50 minutes/+4 and ends at 12; witnessed costs 65/+5, reaches 13, and opens the existing Civic cot.
+- Ordering/compatibility: completing any packet method expires the filing; an unresolved exact-predecessor investigation retains trusted provenance without inventing a choice, and forged proof/hash/chronology fail closed.
+- Self-critique/follow-through: all 6/6 Albany jobs and events are authored, but organic return uptake and the dense post-goal lead surface remain unproven.
+- Guard: review blockers are fixed; post-crawl `20260725T234919Z` is zero-finding and full health passes 423 files/3,447 tests plus both typechecks and all packs.
+
+### Cycle result - campus_return_evidence_mandate
+
+- Evidence choice: Depth #11 left Campus as Albany's fifth generic checklist event; exact-clean Terra seed 72631 is this cycle's fresh pure journey through The Wolf-Winter.
+- Surface: after the Wolf return, Blair irreversibly records clinic thresholds or route provenance, revealing only the matching third Archive Query method and one consolidated rest/resupply service.
+- Counterfactual: both base methods remain; clinic is 40 minutes/+3 versus warning 35/+2, while provenance is 65/+4 versus archive 75/+5, so neither event path is a free upgrade.
+- Compatibility: exact predecessor saves gain one neutral marker, native base-job proof survives, later manifests avoid stale copy normalizers, and forged proof/hash/chronology fail closed.
+- Pure evidence: seed 72631 is retained as a verifier-valid canonical journey rather than a coverage target; targeted proofs establish the Campus behavior.
+- Self-critique/follow-through: Campus is now event 5/6, but organic return uptake remains unproven and Station is still the last generic Albany event.
+- Guard: independent review is clean; pre/post crawls `20260725T194113Z` / `20260725T203808Z` are zero-finding.
+
+### Cycle result - drover_route_fail_forward_truth
+
+- Evidence choice: pure seeds 72568/72621 found Emery's untrained recovery trap and hidden dependency; Terra 72630 then chose the Drover route organically in The Wolf-Winter.
+- Surface: a failed route now spends itself without extra cattle alarm, while expanded terms derive the character's exact modifier and d20 odds through generic profile data bound to the real quest import and check.
+- Counterfactual: success still lowers alarm; across 24 route/oath/ally contexts failure matches declining except for its spent audit state, and rail or fight recovery remains legal.
+- Compatibility: a generic exact-copy registry migrates selected historical preparation journals, rejects tampering and unknown hashes, and composes with completed-Wolf registration-promise closure.
+- Pure evidence: exact mechanical candidate Terra 72630 completed The Wolf-Winter bloodlessly and The Gallowmere, ended voluntarily at 53 decisions, rated clarity/enjoyment 4/4, remained unstuck, and chose replay-yes.
+- Self-critique/follow-through: this closes one real rational-choice/truth defect, not Albany's dense setup or Depth #11; authored Campus and Station events remain next.
+- Guard: independent review is clean, 73 focused checks pass, and pre/post crawls `20260725T182544Z` / `20260725T191805Z` are zero-finding.
 
 ### Cycle result - plain_game_task_handoffs
 
@@ -105,52 +153,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Rebased check: exact-clean native Terra human-terminal seed 72517 on `90f1d93f` organically finds June, chooses cattle-first, recovers a failed first cast, diverts every wolf alive with the herd whole, and ends voluntarily at first-goal completion in 10 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
 - Feedback/follow-through: two native terminal sessions now cluster opaque active-dialogue scope/help discovery; the false first-cast whole-sack claim observed on this pre-fix content is separately corrected and locked in prepared commit `0866db3d`.
 - Guard: independent review is clean, post-integration crawl `20260724T151511Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 187 focused tests pass, and full health passes 418 files/3,380 tests plus both typechecks and all packs.
-
-### Cycle result - staged_terminal_story_choices
-
-- Evidence choice: the human terminal flattened structured Station decisions into a dense commitment screen even though compact MCP and UI already supported noncommitting comparison and one-option detail.
-- Surface: one shared controller now renders purpose/trigger/cost comparisons, inspects exactly one option, returns hash-neutrally, and commits by exact id; direct and inspected choices reach identical state, while departure interactions reuse the same grammar.
-- Counterfactual: Continue/End and unstructured authored choices remain direct, malformed or unavailable detail fails without mutation or stack output, cancel/back preserves the hash, and the CLI's final hash matches direct session execution.
-- Pure evidence: exact-clean canonical Terra `887f7b20` seed 72513 completes The Wolf-Winter under Cade's terms and The Gallowmere, continues twice, then ends voluntarily at 45 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Rebased check: exact-clean native Sol human-terminal seed 72516 on `206be452` completes The Wolf-Winter (`ending_fortified_cade_terms`), continues into The Gallowmere (`ending_hunt_won`), and ends voluntarily; clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
-- Feedback/follow-through: active-dialogue scope is visually opaque and permanent setup remains dense; both stay separate focused candidates, while the queued June contact removes the already-compiled missing-seat hotspot.
-- Guard: independent review is clean, post-rebase crawl `20260724T144243Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 59 combined terminal/Registration tests pass, and full health passes 418 files/3,376 tests plus both typechecks and all packs.
-
-### Cycle result - witnessed_registration_foldback
-
-- Evidence choice: the selected Albany registration obligation could close mechanically after The Wolf-Winter without immediate player-visible proof tying that closure to the actual dispatch and return.
-- Surface: one witnessed profile-specific receipt now follows the exact return summary in terminal, compact MCP, and the durable journal; it names the correct recipient/witness or Reese's exact 100/100 roll while changing only the selected active promise to kept.
-- Counterfactual: all four profiles across eleven non-death endings prove exact export facts and character transitions; unrelated/death paths add no receipt, missing planner evidence fails closed, and current or legacy replay rejects altered equipment, dispatch proof, source hashes, duplicate receipts, or adjacent manifests.
-- Pure evidence: exact-clean Terra `750b8633` seed 72511 completes The Wolf-Winter bloodlessly with the herd whole, visibly receives Hayden's receipt, continues twice, wins The Gallowmere, and ends voluntarily at 50 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Feedback/follow-through: setup density and the advertised-but-unavailable June seat recur; the already-green staged terminal controller and queued June increment address those separately rather than broadening Registration.
-- Guard: independent re-review is clean, exact post-rebase crawl `20260724T125355Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, and full health passes 418 files/3,371 tests plus both typechecks and all packs.
-
-### Cycle result - relief_allocation_trigger_categories
-
-- Evidence choice: the staged Station cohort still received all three Relief Allocation preview paragraphs in its first comparison, recreating the consequence wall that preparation had removed.
-- Surface: Relief Allocation now leads with one bounded trigger category plus exact cost; noncommitting detail reveals only the requested option's complete preview, protected/exposed needs, consequence, and mechanics, while verbose mode remains canonical.
-- Counterfactual: categories are all-present or all-absent for exact legacy manifests, comparison reads preserve hash/time/money/decisions, other options never leak, allocation outcomes and costs are unchanged, and only exact predecessor `42357dc…` migrates to world `a37f9fc6…`.
-- Pure evidence: exact clean `547f80c9` accepts Terra at 49 decisions (clarity/enjoyment 3/4, replay-yes) and Sol at 55 (4/4, replay-yes); Sol organically compares, inspects, and chooses resident shelter, while Terra truthfully skips optional setup and launches directly.
-- Diagnostics: Luna's unpublished 29-decision run failed the strict evidence audit; valid game feedback remains unchanged, and no rejected run is counted or compiled.
-- Measured result/follow-through: the new Relief summary works when used without becoming mandatory; opening density, the Relief Protocol's narrow multi-failure summary, June discoverability, and stale promise/action copy remain separate ranked follow-ups, with two valid reports held below the three-report compile threshold.
-- Guard: post-change crawl `ai-runs\crawl\20260724T032033Z` is zero-finding; independent review is clean, focused coverage passes 55 tests plus UI, and full health passes 416 files/3,337 tests plus UI typecheck and all packs.
-
-### Cycle result - staged_station_choice_disclosure
-
-- Evidence choice: five earlier pure exits repeatedly found Albany's all-at-once preparation comparison dense, while the first progressive-copy cohort proved compact UI prose alone did not change the pure MCP surface.
-- Surface: Station preparation now leads with purpose, trigger category, and cost; optional-departure story inspection returns short consequence-free comparisons by default and reveals the complete truthful terms for exactly one requested option, without committing or changing state.
-- Counterfactual: invalid or already-presented story ids fail closed, full verbose inspection remains canonical, reads preserve snapshot hash/time/money/decision count, legacy manifests remain byte-compatible, and the content hash change has an explicit predecessor migration.
-- Pure evidence: exact clean `aea2e896` accepts fresh Terra, Sol, and independent Terra sessions across The Wolf-Winter at 40–56 decisions; all three continue at least once, two are replay-yes, clarity averages 3.33/5, enjoyment 4/5, and one malformed Luna wrapper is excluded without recovery or substitution.
-- Measured result: staged comparison is used organically and leaks no full consequence wall; the replay-no report is retained and, with the other two, localizes residual friction to judging future field conditions before seeing the field, long relief trigger summaries, and the Gallowmere checkpoint transition.
-- Feedback/follow-through: compile `ai-runs\feedback\20260724T0247Z-staged-three-report` accepts 3/3 pure reports with zero rejected; concise relief categories plus review of the intended option's full terms are the next focused increment, not removal of consequence truth.
-- Guard: final-tip crawl `ai-runs\crawl\20260724T025839Z` is zero-finding; focused coverage passes 75 independent tests, independent re-review is clean, and full health passes 415 files/3,332 tests plus UI typecheck and all packs.
-
-### Cycle result - checkpoint_safe_scene_boundaries
-
-- Evidence choice: fixed journey thresholds could pause verified Gallowmere combat or active dialogue instead of waiting for the scene to resolve.
-- Surface: a due checkpoint now waits through unsafe accepted decisions, then materializes at terminal state or a room with neither a live enemy nor active dialogue; an overdue threshold merges into goal completion or death, and Continue schedules the first fixed multiple after the surfaced decision.
-- Counterfactual: an already-safe threshold still pauses immediately, combat/dialogue actions remain live while unsafe, non-counting scene closure can surface the checkpoint without changing decision proof, and save/restore plus compact/full MCP and UI projections preserve the deferred boundary.
-- Pure evidence: exact clean `85269681` passes fresh strict-v2 Terra 4666 and Luna 4667; both divert Wolf-Winter, win Gallowmere, complete two goals, choose replay-yes, and report no rejected action or loop.
-- Measured result: Terra rates clarity/enjoyment 4/4 with no checkpoint complaint; Luna rates 4/5 and says the safe point resumed correctly, while still disliking the room-transition pause during a broader investigation.
-- Feedback/follow-through: Albany setup density and the Rowan collision remain separate queued increments; Luna's broader transition-pacing critique is retained rather than treated as a regression in safe-boundary scheduling.
-- Guard: final crawl `ai-runs\crawl\20260723T151536Z` is zero-finding across 6,000 steps, 247/247 nodes, 344/344 edges, and 12/12 quests; combined focused coverage passes 17 files/218 tests.

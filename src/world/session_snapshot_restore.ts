@@ -82,7 +82,11 @@ import {
 } from "./journey_campaign.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
-import { describeOverworldContactAction, describeOverworldJobAction } from "./local_actions.js";
+import {
+  describeOverworldContactAction,
+  describeOverworldEventAction,
+  describeOverworldJobAction,
+} from "./local_actions.js";
 import {
   localJobSceneOptionRequirementsMet,
   localJobSceneRequirementsMet,
@@ -114,6 +118,7 @@ import {
   AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
   AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
+  AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
   WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
   WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   authoredLocalEventLegacyCompletion,
@@ -153,6 +158,10 @@ import {
   proveOpeningPreparationJournal,
   type OpeningPreparationJournalProof,
 } from "./opening_preparation_journal.js";
+import {
+  normalizeOpeningPreparationJournalCopies,
+  openingPreparationJournalCopyMigrationsForSourceWorldHash,
+} from "./opening_preparation_copy_migrations.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "./frost_jamb_signpost_legacy.js";
 import {
   RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW,
@@ -405,8 +414,11 @@ export const OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH
 /** Exact manifest before Wolf-Winter closed every selected registration obligation. */
 export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
   "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f";
+/** Exact manifest immediately before journey choices gained structured comparison cards. */
+export const OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH =
+  "3b7ccae1235ee3dd0fad5202594faf1d18e9c3f3d162bb214008d911cb2082d5";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "1d8ed584e39c462a7eb5132c23796ea39b8f76a545add86a88080ecf926b9f9c";
+  "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -452,6 +464,57 @@ const OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES: Re
     ...WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
     AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
   ]);
+
+type ExactSnapshotMigrationId =
+  | "campus_archive_contact"
+  | "frost_jamb_signpost"
+  | "june_return"
+  | "registration_promise_closure"
+  | "relief_protocol_trigger";
+
+/**
+ * Exact historical normalizers must be fenced by the manifests that actually
+ * shipped their predecessor state. Authored-scene registries are cumulative by
+ * design, so using their broad migration booleans here would replay stale
+ * changes for later conversions.
+ */
+const EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES: Readonly<
+  Record<ExactSnapshotMigrationId, ReadonlySet<string>>
+> = Object.freeze({
+  campus_archive_contact: OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES,
+  frost_jamb_signpost: new Set([
+    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
+  ]),
+  june_return: new Set([
+    OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
+  ]),
+  registration_promise_closure: new Set([
+    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH,
+  ]),
+  relief_protocol_trigger: new Set([
+    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH,
+  ]),
+});
+
+function exactSnapshotMigrationAppliesToSource(
+  migrationId: ExactSnapshotMigrationId,
+  sourceWorldHash: string,
+): boolean {
+  return EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES[migrationId].has(sourceWorldHash);
+}
 /** @deprecated Relief-oath-era current-target name retained for existing callers. */
 export const OVERWORLD_RELIEF_OATH_WORLD_HASH = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
 /** @deprecated Current-target alias retained for earlier migration callers. */
@@ -2363,12 +2426,45 @@ export function migrateAuthoredLocalEventPredecessorJournal(args: {
       continue;
     }
     const completed = args.snapshot.resolvedEventIds.includes(definition.eventId);
+    const investigationEntries = journalEntries.filter(
+      (entry) => entry.id === `investigate:${definition.eventId}`,
+    );
+    if (investigationEntries.length > 1) {
+      throw new Error(
+        `The authored-local-event predecessor has duplicate investigation evidence for "${definition.eventId}".`,
+      );
+    }
     const matchingEntries = journalEntries.filter(
       (entry) => entry.id === `resolve:${definition.eventId}`,
     );
     if (completed !== (matchingEntries.length === 1)) {
       throw new Error(
         `The authored-local-event predecessor has inconsistent resolution evidence for "${definition.eventId}".`,
+      );
+    }
+    if (!completed && investigationEntries.length === 1) {
+      const event = args.indexes.eventsById.get(definition.eventId);
+      const entry = investigationEntries[0]!;
+      const expected = describeOverworldEventAction(definition.legacyEvent);
+      const townName = event ? args.indexes.townNameForSource(event.home) : "";
+      if (
+        !event?.authored_scene ||
+        event.authored_scene.id !== definition.sceneId ||
+        entry.kind !== "event" ||
+        entry.title !== expected.title ||
+        entry.text !== expected.text ||
+        entry.town !== townName ||
+        entry.localSceneProof !== undefined ||
+        entry.sourceWorldHash !== undefined
+      ) {
+        throw new Error(
+          `Authored local-event predecessor investigation for "${definition.eventId}" does not match its exact trusted copy.`,
+        );
+      }
+      journalEntries = journalEntries.map((candidate) =>
+        candidate === entry
+          ? Object.freeze({ ...entry, sourceWorldHash: args.snapshot.worldHash })
+          : candidate,
       );
     }
     if (!completed) continue;
@@ -2567,11 +2663,17 @@ export function planOverworldSessionSnapshotRestore(args: {
     );
   }
   const migrationTargetsCurrentManifest = worldHash === OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
+  const openingPreparationCopyMigrations = migrationTargetsCurrentManifest
+    ? openingPreparationJournalCopyMigrationsForSourceWorldHash(sourceSnapshot.worldHash)
+    : [];
+  const migratesOpeningPreparationCopy = openingPreparationCopyMigrations.length > 0;
   const migratesAuthoredLocalJob =
     migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
     authoredLocalJobLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;
   const migratesAuthoredLocalEvent =
     migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
     authoredLocalEventLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;
   const migratesJuneReturnCopy =
     migrationTargetsCurrentManifest &&
@@ -2586,6 +2688,9 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesCadeStoryPredicate =
     migrationTargetsCurrentManifest &&
     AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash);
+  const migratesComparisonCardContract =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
@@ -2629,14 +2734,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesRegistrationPromiseClosure =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
-    (sourceSnapshot.worldHash === OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH ||
-      migrationEra !== null ||
-      migratesReliefProtocolTriggerCopy ||
-      migratesReliefAllocationTriggerCategory ||
-      migratesJuneReturnCopy ||
-      migratesCadeStoryPredicate ||
-      migratesAuthoredLocalJob ||
-      migratesAuthoredLocalEvent);
+    exactSnapshotMigrationAppliesToSource("registration_promise_closure", sourceSnapshot.worldHash);
   const migratesLegacyLocalJobSemantics =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
@@ -2650,40 +2748,43 @@ export function planOverworldSessionSnapshotRestore(args: {
     migrationEra === null &&
     !migratesReliefProtocolTriggerCopy &&
     !migratesReliefAllocationTriggerCategory &&
+    !migratesOpeningPreparationCopy &&
     !migratesRegistrationPromiseClosure &&
     !migratesJuneReturnCopy &&
     !migratesCadeStoryPredicate &&
+    !migratesComparisonCardContract &&
     !migratesAuthoredLocalJob &&
     !migratesAuthoredLocalEvent
   ) {
     throw new Error("Overworld session snapshot was made against a different world manifest.");
   }
-  const normalizesReliefProtocolTriggerCopy =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    (migratesReliefProtocolTriggerCopy ||
-      migrationEra !== null ||
-      migratesJuneReturnCopy ||
-      migratesCadeStoryPredicate ||
-      migratesAuthoredLocalJob ||
-      migratesAuthoredLocalEvent);
-  const snapshotWithReliefProtocolTriggerCopy = normalizesReliefProtocolTriggerCopy
+  const snapshotWithOpeningPreparationCopy = migratesOpeningPreparationCopy
     ? Object.freeze({
         ...sourceSnapshot,
-        journalEntries: normalizeReliefProtocolTriggerCopyPredecessorJournal({
-          indexes,
+        journalEntries: normalizeOpeningPreparationJournalCopies({
+          preparation: indexes.openingPreparation,
           journalEntries: sourceSnapshot.journalEntries,
+          migrations: openingPreparationCopyMigrations,
         }),
       })
     : sourceSnapshot;
+  const normalizesReliefProtocolTriggerCopy =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    exactSnapshotMigrationAppliesToSource("relief_protocol_trigger", sourceSnapshot.worldHash);
+  const snapshotWithReliefProtocolTriggerCopy = normalizesReliefProtocolTriggerCopy
+    ? Object.freeze({
+        ...snapshotWithOpeningPreparationCopy,
+        journalEntries: normalizeReliefProtocolTriggerCopyPredecessorJournal({
+          indexes,
+          journalEntries: snapshotWithOpeningPreparationCopy.journalEntries,
+        }),
+      })
+    : snapshotWithOpeningPreparationCopy;
   const normalizesFrostJambCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
-    (migrationEra !== null ||
-      migratesJuneReturnCopy ||
-      migratesCadeStoryPredicate ||
-      migratesAuthoredLocalJob ||
-      migratesAuthoredLocalEvent);
+    exactSnapshotMigrationAppliesToSource("frost_jamb_signpost", sourceSnapshot.worldHash);
   const snapshotWithFrostJambCopy = normalizesFrostJambCopy
     ? Object.freeze({
         ...snapshotWithReliefProtocolTriggerCopy,
@@ -2694,10 +2795,9 @@ export function planOverworldSessionSnapshotRestore(args: {
       })
     : snapshotWithReliefProtocolTriggerCopy;
   const normalizesJuneReturnCopy =
-    migratesJuneReturnCopy ||
-    migrationEra === "relief_oath" ||
-    migrationEra === "relief_allocation" ||
-    migrationEra === "hill_approach";
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    exactSnapshotMigrationAppliesToSource("june_return", sourceSnapshot.worldHash);
   const snapshotWithJuneReturnCopy = normalizesJuneReturnCopy
     ? (() => {
         const presentation = indexes.contactPresentationsByJournalId.get(
@@ -2721,31 +2821,31 @@ export function planOverworldSessionSnapshotRestore(args: {
         });
       })()
     : snapshotWithFrostJambCopy;
-  const snapshotWithCampusContact =
-    OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
-      sourceSnapshot.worldHash,
-    )
-      ? (() => {
-          const presentation = indexes.contactPresentationsByJournalId.get(
-            OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id,
+  const snapshotWithCampusContact = exactSnapshotMigrationAppliesToSource(
+    "campus_archive_contact",
+    sourceSnapshot.worldHash,
+  )
+    ? (() => {
+        const presentation = indexes.contactPresentationsByJournalId.get(
+          OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id,
+        );
+        if (!presentation) {
+          throw new Error(
+            `Campus-archive migration target has no contact presentation "${OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id}".`,
           );
-          if (!presentation) {
-            throw new Error(
-              `Campus-archive migration target has no contact presentation "${OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id}".`,
-            );
-          }
-          return Object.freeze({
-            ...snapshotWithJuneReturnCopy,
-            journalEntries: normalizeCampusArchivePredecessorContactJournal({
-              currentContact: describeOverworldContactAction(
-                presentation.contact,
-                presentation.presentationId,
-              ),
-              journalEntries: snapshotWithJuneReturnCopy.journalEntries,
-            }),
-          });
-        })()
-      : snapshotWithJuneReturnCopy;
+        }
+        return Object.freeze({
+          ...snapshotWithJuneReturnCopy,
+          journalEntries: normalizeCampusArchivePredecessorContactJournal({
+            currentContact: describeOverworldContactAction(
+              presentation.contact,
+              presentation.presentationId,
+            ),
+            journalEntries: snapshotWithJuneReturnCopy.journalEntries,
+          }),
+        });
+      })()
+    : snapshotWithJuneReturnCopy;
   const snapshotWithCampaignCopy =
     usesCurrentCampaignSchema ||
     migrationEra === "relief_oath" ||
@@ -4757,10 +4857,38 @@ function assertSnapshotLocalEventSceneProofs(args: {
     const eventId = investigation.id.slice("investigate:".length);
     const event = args.indexes.eventsById.get(eventId);
     const scene = event?.authored_scene;
-    if (!scene) continue;
+    if (!scene) {
+      if (investigation.sourceWorldHash !== undefined) {
+        throw new Error(
+          `Overworld session snapshot generic event "${eventId}" cannot carry legacy investigation provenance.`,
+        );
+      }
+      continue;
+    }
     const resolutionProof = args.journalEntries.find(
       (candidate) => candidate.id === `resolve:${eventId}`,
     )?.localSceneProof;
+    if (investigation.sourceWorldHash !== undefined) {
+      const definition = authoredLocalEventLegacyDefinitionsForSourceWorldHash(
+        investigation.sourceWorldHash,
+      ).find(
+        (candidate) =>
+          candidate.eventId === eventId && candidate.sceneId === event.authored_scene?.id,
+      );
+      const expected = definition ? describeOverworldEventAction(definition.legacyEvent) : null;
+      if (
+        !definition ||
+        resolutionProof !== undefined ||
+        investigation.title !== expected?.title ||
+        investigation.text !== expected.text ||
+        investigation.town !== args.indexes.townNameForSource(event.home)
+      ) {
+        throw new Error(
+          `Overworld session snapshot authored event "${eventId}" has untrusted legacy investigation evidence.`,
+        );
+      }
+      continue;
+    }
     if (event && authoredLocalEventLegacyCompletion(eventId, resolutionProof)) continue;
     for (const questId of scene.requires_completed_quests ?? []) {
       const questCompletion = args.journalEntries.find(
@@ -4815,9 +4943,23 @@ function assertSnapshotLocalEventSceneProofs(args: {
               : [],
           ),
       );
-      if (!localEventSceneRequirementsMet(scene, { completedQuestIds: earlierCompletedQuestIds })) {
+      const earlierCompletedJobIds = new Set(
+        args.journalEntries
+          .slice(entryIndex + 1)
+          .flatMap((candidate) =>
+            candidate.kind === "job" && candidate.id.startsWith("job:")
+              ? [candidate.id.slice("job:".length)]
+              : [],
+          ),
+      );
+      if (
+        !localEventSceneRequirementsMet(scene, {
+          completedQuestIds: earlierCompletedQuestIds,
+          completedJobIds: earlierCompletedJobIds,
+        })
+      ) {
         throw new Error(
-          `Overworld session snapshot authored event "${event.id}" violates its required or forbidden quest chronology.`,
+          `Overworld session snapshot authored event "${event.id}" violates its required quest or forbidden job chronology.`,
         );
       }
     }

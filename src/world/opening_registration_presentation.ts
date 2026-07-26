@@ -14,17 +14,22 @@ export function presentOpeningRegistration(
     kind: "registration" as const,
     message: `${parsed.title}. ${parsed.message}`,
     options: Object.freeze(
-      parsed.profiles.map((profile) =>
-        Object.freeze({
+      parsed.profiles.map((profile) => {
+        const immediateCost = `No added time or fee; starting funds $${String(
+          profile.character.money,
+        )}`;
+        return Object.freeze({
           id: profile.id,
           label: profile.title,
           summary: Object.freeze({
             commitment: profile.summary,
             fieldTrigger: profile.preview,
+            immediateCost,
+            tradeoff: profile.tradeoff,
           }),
           consequence: `${profile.summary} ${profile.preview} ${profile.consequence}`,
-        }),
-      ),
+        });
+      }),
     ) as JourneyRegistrationStoryChoiceOptions,
   });
 }

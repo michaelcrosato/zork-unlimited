@@ -24,6 +24,7 @@ export function presentOpeningReliefOath(
           commitment: option.summary,
           fieldTrigger: option.preview,
           immediateCost: formatOpeningReliefOathCost(option.terms),
+          tradeoff: option.tradeoff,
         }),
         consequence:
           `${option.summary} ${option.preview} Access: ${option.access} Duty: ${option.duty} ` +
