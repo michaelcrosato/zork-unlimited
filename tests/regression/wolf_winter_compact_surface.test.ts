@@ -289,6 +289,22 @@ describe("Wolf-Winter compact authored prose", () => {
     expect(counsel).toMatch(/fast[^]*guard opens/i);
     expect(counsel).toMatch(/jerkin/i);
     expect(counsel).toMatch(/both[^]*no wolf[^]*pull you down/i);
+    // The irreversible lure commitment is commonly read through this compact
+    // dialogue field. Its missed +5 cannot be hidden below a truncation boundary.
+    const lureWarning = cade?.dialogue.nodes
+      .find((node) => node.id === "cade_lure")
+      ?.variants?.find((variant) =>
+        variant.when.some(
+          (condition) => "not_flag" in condition && condition.not_flag === "heard_counsel",
+        ),
+      )?.text;
+    expect(lureWarning).toBeDefined();
+    const lure = compactText(lureWarning?.trimEnd() ?? "", COMPACT_DIALOGUE_CHAR_LIMIT);
+    expect(lure).toMatch(
+      /quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*commitment closes it/i,
+    );
+    expect(lure).toMatch(/choose quick lesson first/i);
+    expect(lure).not.toMatch(TRUNCATION_MARKER);
     const plan = compactNode("cade_byre");
     expect(plan).toMatch(/guarded/i);
     expect(plan).toMatch(/wedge/i);

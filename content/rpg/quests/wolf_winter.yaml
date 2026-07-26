@@ -3709,6 +3709,23 @@ npcs:
           variants:
             - when:
                 - { has_flag: relief_oath_limited_duty }
+                - { not_flag: heard_counsel }
+                - { not_flag: strategy_lure_committed }
+              text: >
+                AID-ONLY MATCH: FEED LURE can save pack/herd; spends last feed, leaves paling
+                broken. Three casts; first foul risks two cattle; no retry, rail recovery.
+                Fieldcraft/fodder help. Choose QUICK LESSON first: +2 attack, +5 final tally;
+                commitment closes it. Cross uncommitted chooses HUNT; other plans close.
+            - when:
+                - { not_flag: heard_counsel }
+                - { not_flag: strategy_lure_committed }
+              text: >
+                FEED LURE can save pack/herd; spends last feed, leaves paling broken. Three casts;
+                first foul risks two cattle; no retry, rail recovery. Supports: Fieldcraft,
+                fodder, aid-only. Choose QUICK LESSON first: +2 attack, +5 final tally;
+                commitment closes it. Cross uncommitted chooses HUNT, closing lure/drive/fortify.
+            - when:
+                - { has_flag: relief_oath_limited_duty }
                 - { not_flag: strategy_lure_committed }
               text: >
                 AID-ONLY MATCH: FEED LURE can save pack/herd; spends last feed, leaves paling
@@ -3716,6 +3733,16 @@ npcs:
                 Fieldcraft/fodder help. Commit here. Cross uncommitted chooses HUNT; other plans
                 close.
           topics:
+            - id: quick_lesson
+              aliases: [wolves, ask_wolves]
+              prompt: "Ask for Cade's quick lesson first (+2 attack; +5 final tally)."
+              conditions:
+                - { not_flag: heard_counsel }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_wolves
             - id: commit_lure
               aliases: [commit_feed, commit_alive]
               prompt: "Commit to the finite feed-and-hounds line now."

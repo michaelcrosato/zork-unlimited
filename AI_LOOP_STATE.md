@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 651 -->
+<!-- historical_cycle_count: 652 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_lure_quick_lesson_choice
+
+- Evidence choice: verified pure Terra seed 72687 completed The Wolf-Winter bloodlessly in 28 decisions, ended voluntarily, rated clarity/enjoyment 4/4, remained unstuck, chose replay-yes, and found Cade's quick lesson easy to bypass at the lure commitment.
+- Surface: while the lesson is unheard, Cade now names its exact +2 attack/+5 final-tally value beside the irreversible choice and exposes the self-describing compact action `ask_quick_lesson`.
+- Action truth: `wolves` and `ask_wolves` remain unambiguous input aliases; the choice reaches Cade's existing one-shot lesson, then returns through the existing lure follow-up without a new reward or strategy.
+- Counterfactual: after the lesson, its warning and action retire while lure commitment remains legal; skipping it preserves the old commitment, score, attack, route, and decision count.
+- Pure follow-through: final-label Terra seed 72688 failed closed at call 35 on an invalid exec pragma, published no report, and was not retried; deterministic action/compact proofs carry the label correction.
+- Self-critique/follow-through: seed 72687 ended at the first goal and did not test later consequences; first-read mechanical density remains a separate presentation concern.
+- Guard: independent review is clean, zero-finding post-crawl `20260726T184508Z` covers the consolidated world, and full health passes 431 files/3,560 tests plus both typechecks and all 12 packs.
 
 ### Cycle result - wolf_bloodied_byre_evacuation
 
@@ -147,12 +157,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact dirty-candidate Luna seed 72564 started under the same load, completed The Wolf-Winter, The Gallowmere, and The Tanner's Fever, continued four times, then ended at 80 decisions; clarity 4/5, enjoyment 5/5, unstuck, replay-yes, with no observed bug.
 - Feedback/follow-through: compact responses and long-distance resource planning remain separate usability signals; this increment changes only launch resilience and the dirty run remains qualitative rather than actionable retention evidence.
 - Guard: independent review is clean, 31 runner-contract tests pass, pre/post crawls `20260725T000712Z` / `20260725T001223Z` are zero-finding, and full health passes 419 files/3,393 tests plus both typechecks and all packs.
-
-### Cycle result - resolved_story_choice_inspection_truth
-
-- Evidence choice: re-inspecting a consumed Station preparation or Relief Allocation id produced a generic "no exact match" rejection even though the game could prove that specific optional choice had already been resolved.
-- Surface: the terminal now identifies only exact current/legacy resolved optional-choice ids and directs the player to `look`; unknown ids, unresolved-away choices, mandatory gates, and ordinary unavailable options retain the generic rejection.
-- Counterfactual: classification is read-only and exact, legacy-aware without fuzzy matching, preserves snapshot hashes, and changes no parser, story state, choice legality, or direct/inspected commitment parity.
-- Blind evidence: exact-build native Sol seed 72521 completes The Wolf-Winter bloodlessly under Albany authority with the herd, property, and all wolves alive, ends voluntarily, rates clarity/enjoyment 4/4, remains unstuck, and chooses replay-yes; targeted regression remains the direct proof because the player did not organically retry a consumed id.
-- Feedback/follow-through: terminal comparison density and irrelevant alternatives in some blocked messages remain broader copy work; the corrected resolved-id message stays one bounded truthfulness fix.
-- Guard: independent review is clean, 44 rebased CLI/departure tests pass, pre/post crawl are zero-finding, and full health passes 419 files/3,394 tests plus both typechecks and all packs.
