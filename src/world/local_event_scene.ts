@@ -28,8 +28,43 @@ export const LocalEventSceneOptionSchema = z
     preview: NON_BLANK_TEXT,
     consequence: NON_BLANK_TEXT,
     terms: LocalEventSceneTermsSchema,
+    requires_all_world_facts: z
+      .array(NON_BLANK_TEXT)
+      .min(1)
+      .max(LOCAL_EVENT_SCENE_MAX_REQUIREMENTS)
+      .optional(),
+    forbids_any_world_facts: z
+      .array(NON_BLANK_TEXT)
+      .min(1)
+      .max(LOCAL_EVENT_SCENE_MAX_REQUIREMENTS)
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((option, context) => {
+    for (const field of ["requires_all_world_facts", "forbids_any_world_facts"] as const) {
+      const seen = new Set<string>();
+      (option[field] ?? []).forEach((factId, index) => {
+        if (seen.has(factId)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field, index],
+            message: `Duplicate local-event world-fact requirement "${factId}".`,
+          });
+        }
+        seen.add(factId);
+      });
+    }
+    const required = new Set(option.requires_all_world_facts ?? []);
+    option.forbids_any_world_facts?.forEach((factId, index) => {
+      if (required.has(factId)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["forbids_any_world_facts", index],
+          message: `Local-event option cannot both require and forbid world fact "${factId}".`,
+        });
+      }
+    });
+  });
 
 export const LocalEventSceneSchema = z
   .object({
@@ -112,6 +147,7 @@ export type LocalEventSceneTerms = z.infer<typeof LocalEventSceneTermsSchema>;
 export type LocalEventSceneConditionState = Readonly<{
   completedQuestIds: ReadonlySet<string>;
   completedJobIds?: ReadonlySet<string> | undefined;
+  worldFactIds?: ReadonlySet<string> | undefined;
 }>;
 
 export type LocalEventSceneLegalTuple = readonly [
@@ -181,13 +217,47 @@ export function resolveLocalEventSceneOption(
   return LocalEventSceneOptionSchema.parse(option);
 }
 
-/** Canonical player-facing choices in authored order, with their exact executable terms. */
+/** Whether an authored option is legal for the campaign facts proven in this journey. */
+export function localEventSceneOptionRequirementsMet(
+  option: LocalEventSceneOption,
+  state: Pick<LocalEventSceneConditionState, "worldFactIds">,
+): boolean {
+  const parsed = LocalEventSceneOptionSchema.parse(option);
+  const worldFactIds = state.worldFactIds ?? new Set<string>();
+  return (
+    (parsed.requires_all_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
+    !(parsed.forbids_any_world_facts ?? []).some((factId) => worldFactIds.has(factId))
+  );
+}
+
+/** Authored options available now, retaining canonical authored order. */
+export function availableLocalEventSceneOptions(
+  scene: LocalEventScene,
+  state: LocalEventSceneConditionState,
+): LocalEventSceneOption[] {
+  const parsed = parseLocalEventScene(scene);
+  if (!localEventSceneRequirementsMet(parsed, state)) return [];
+  return parsed.options.filter((option) => localEventSceneOptionRequirementsMet(option, state));
+}
+
+/**
+ * Canonical player-facing choices in authored order, with their exact executable terms.
+ * Conditional options fail closed when no live condition state is supplied.
+ */
 export function localEventSceneLegalTuples(
   scene: LocalEventScene,
+  state?: LocalEventSceneConditionState,
 ): readonly LocalEventSceneLegalTuple[] {
   const parsed = parseLocalEventScene(scene);
+  const options = state
+    ? availableLocalEventSceneOptions(parsed, state)
+    : parsed.options.filter(
+        (option) =>
+          option.requires_all_world_facts === undefined &&
+          option.forbids_any_world_facts === undefined,
+      );
   return Object.freeze(
-    parsed.options.map((option) =>
+    options.map((option) =>
       Object.freeze([
         option.id,
         option.title,

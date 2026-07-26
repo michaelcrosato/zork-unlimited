@@ -333,6 +333,7 @@ describe("New York overworld graph", () => {
         "fact:wolf_winter_byre_held",
         "fact:wolf_winter_outer_paling_broken",
         "fact:wolf_winter_yearling_killed",
+        "fact:wolf_winter_bloodshed",
         "fact:wolf_winter_two_wolves_diverted_alive",
         "fact:wolf_winter_winter_feed_spent",
         "fact:wolf_winter_cattle_scattered",
@@ -398,17 +399,20 @@ describe("New York overworld graph", () => {
       ],
       ending_held_gate_barred: [
         "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_bloodshed",
         "fact:wolf_winter_outer_paling_broken",
         "fact:wolf_winter_inner_gate_barred_at_dawn",
         "fact:wolf_winter_guard_wood_committed",
       ],
       ending_held_timber_saved: [
         "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_bloodshed",
         "fact:wolf_winter_outer_paling_broken",
         "fact:wolf_winter_repair_timber_available",
       ],
       ending_held: [
         "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_bloodshed",
         "fact:wolf_winter_outer_paling_broken",
         "fact:wolf_winter_repair_timber_spent",
       ],
@@ -448,11 +452,16 @@ describe("New York overworld graph", () => {
       ],
       ending_held_gate_barred: [
         ["npc:old_cade", "memory:wolf_winter_inner_gate_barred", 10, 10, 1],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_full_combat_bloodshed", 4, 5, 0],
       ],
       ending_held_timber_saved: [
         ["npc:old_cade", "memory:wolf_winter_repair_timber_saved", 10, 10, 1],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_full_combat_bloodshed", 4, 5, 0],
       ],
-      ending_held: [["npc:old_cade", "memory:wolf_winter_guard_wood_spent", 10, 10, 1]],
+      ending_held: [
+        ["npc:old_cade", "memory:wolf_winter_guard_wood_spent", 10, 10, 1],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_full_combat_bloodshed", 4, 5, 0],
+      ],
     } as const;
 
     for (const [endingId, facts] of Object.entries(expectedOutcomeFacts)) {

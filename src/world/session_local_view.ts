@@ -109,12 +109,31 @@ export function projectOverworldSessionLocalJob(
       journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
   });
   if (options.length === 0 && !retainUnavailable) return null;
-  if (options.length === job.authored_scene.options.length) return job;
+  const projectedOptions = options.map(
+    ({
+      requires_event_options: _eventOptions,
+      requires_all_world_facts: _requiredFacts,
+      forbids_any_world_facts: _forbiddenFacts,
+      requires_all_story_choices: _requiredChoices,
+      forbids_any_story_choices: _forbiddenChoices,
+      ...option
+    }) => option,
+  );
+  const hasPlayerHiddenPredicates = options.some(
+    (option) =>
+      option.requires_event_options !== undefined ||
+      option.requires_all_world_facts !== undefined ||
+      option.forbids_any_world_facts !== undefined ||
+      option.requires_all_story_choices !== undefined ||
+      option.forbids_any_story_choices !== undefined,
+  );
+  if (!hasPlayerHiddenPredicates && options.length === job.authored_scene.options.length)
+    return job;
   return {
     ...job,
     authored_scene: {
       ...job.authored_scene,
-      options,
+      options: projectedOptions,
     },
   };
 }

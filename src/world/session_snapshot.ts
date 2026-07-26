@@ -16,9 +16,11 @@ import {
   OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
   type OverworldRoadEncounterOption,
 } from "./travel_mechanics.js";
+import { isEmeryFullCombatMemoryPredecessorWorldHash } from "./emery_evidence_custody_legacy.js";
 
 export const OVERWORLD_SESSION_LEGACY_SAVE_VERSION = 8 as const;
 export const OVERWORLD_SESSION_SAVE_VERSION = 9 as const;
+const EMERY_EVIDENCE_CUSTODY_CONTACT_PREFIX = "talk:albany_city__greenway__contact";
 
 export type TravelLogEntry = {
   edgeId: string;
@@ -331,16 +333,22 @@ const OverworldJournalEntrySchema = z
       });
     }
     const hasServiceProof = hasRuleId || hasAreaId;
+    const isEmeryEvidenceCustodyGrandfatherContact =
+      entry.kind === "contact" &&
+      entry.id.startsWith(EMERY_EVIDENCE_CUSTODY_CONTACT_PREFIX) &&
+      entry.sourceWorldHash !== undefined &&
+      isEmeryFullCombatMemoryPredecessorWorldHash(entry.sourceWorldHash);
     if (
       entry.sourceWorldHash !== undefined &&
       entry.kind !== "preparation" &&
       entry.kind !== "preparation_offer" &&
-      entry.kind !== "event"
+      entry.kind !== "event" &&
+      !isEmeryEvidenceCustodyGrandfatherContact
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          "Source-world provenance is only valid on migrated preparation or event-investigation evidence.",
+          "Source-world provenance is only valid on migrated preparation, event-investigation, or exact predecessor contact evidence.",
       });
     }
     if (hasServiceProof && entry.kind !== "service") {

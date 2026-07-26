@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 646 -->
+<!-- historical_cycle_count: 647 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - emery_evidence_custody_agenda
+
+- Evidence choice: the strict third independent-NPC-agenda floor lacked mechanical proof; fresh pure Spark seed 72640 tests the candidate through The Wolf-Winter.
+- Surface: Wolf bloodshed now removes Emery's quiet-conservation policy and opens an evidence-custody record with its own fast/minimal or slow/high-standing survey frontier; public access remains lawful.
+- Counterfactual: bloodless, hybrid, and full-combat returns expose different legal Greenway pairs, time/standing outcomes, Emery memories, and later Civic access without lengthening first-goal completion.
+- Compatibility/truth: every supported save era replays source-era Emery precedence; only post-Greenway quiet choices are grandfathered, impossible-era authored choices fail closed, and the exposed-ridge alarm journal now reports its actual +2.
+- Pure evidence: dirty-candidate Spark completes The Wolf-Winter by full combat in 20 decisions, continues, later ends after Gallowmere, rates clarity/enjoyment 4/4, and chooses replay-yes; it does not organically sample Greenway custody.
+- Self-critique/follow-through: Gallowmere exit telegraphing is a separate S2 report; the next starting-slice depth target is the unused persistent wound lifecycle, not more Emery branching.
+- Guard: independent review is clean; post-crawl `20260726T063644Z` is zero-finding and full health passes 425 files/3,482 tests plus both typechecks and all packs.
 
 ### Cycle result - comparison_first_albany_departure
 
@@ -143,13 +153,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Exact-build evidence: native Sol human-terminal seed 72518 on `36bc6562` completes The Wolf-Winter nonlethally and The Gallowmere in 18 accepted decisions, continues once, then ends voluntarily; dialogue is understandable without help, clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
 - Feedback/follow-through: the same run reproduced proper-possessive TAKE grammar and resolved-choice error-copy defects; both are diagnosed P3, isolated from this prompt, and prepared as separate bounded fixes.
 - Guard: independent review is clean, post-change crawl `20260724T155155Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 62 focused tests pass, and full health passes 418 files/3,382 tests plus both typechecks and all packs.
-
-### Cycle result - june_departure_contact_lead
-
-- Evidence choice: repeated pure players were told June Pike could join the Wolf-Winter field team but received no visible action for finding her, so the advertised ally branch was functionally hidden.
-- Surface: one derived read-only Station lead names June and the preparation prerequisite, becomes the exact talk action after preparation, and keeps immediate solo launch explicit; full, compact-v29, MCP/pure, UI, and terminal consume the same tuple.
-- Counterfactual: deriving, cloning, rendering, and restoring the lead preserve snapshot hash and decision count; no ally offer exists before contact, and the lead disappears after contact, quest start, departure, a gameplay pause, or any resolved opening state.
-- Pure evidence: exact-clean Sol `4302e726` seed 72514 organically finds June, grants cattle-first authority, receives her failed-lure intervention, completes The Wolf-Winter and The Gallowmere, continues twice, and ends voluntarily; clarity/enjoyment 3/4, unstuck, replay-yes.
-- Rebased check: exact-clean native Terra human-terminal seed 72517 on `90f1d93f` organically finds June, chooses cattle-first, recovers a failed first cast, diverts every wolf alive with the herd whole, and ends voluntarily at first-goal completion in 10 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes, explicitly qualitative rather than signed retention evidence.
-- Feedback/follow-through: two native terminal sessions now cluster opaque active-dialogue scope/help discovery; the false first-cast whole-sack claim observed on this pre-fix content is separately corrected and locked in prepared commit `0866db3d`.
-- Guard: independent review is clean, post-integration crawl `20260724T151511Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, 187 focused tests pass, and full health passes 418 files/3,380 tests plus both typechecks and all packs.

@@ -2632,7 +2632,7 @@ objects:
           on_failure:
             - set_flag: lure_trail_fouled
             - inc_var: { name: cattle_alarm, by: 1 }
-            - add_journal: "Ridge crosswind cannot save the cast: it fouls. No retry; alarm rises by 1. Bind a rail to redirect the yearling or fight."
+            - add_journal: "Ridge crosswind cannot save the cast: it fouls. No retry; alarm rises by 2. Bind a rail to redirect the yearling or fight."
             - narrate: >
                 The crosswind is plain, but the cast clips the paling and folds into
                 churned snow. The yearling smells it but stays; cattle hammer the slats.

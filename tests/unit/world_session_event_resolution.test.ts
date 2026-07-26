@@ -20,6 +20,7 @@ import type {
   OverworldRegionalArc,
 } from "../../src/world/overworld.js";
 import type { OverworldJournalEntry } from "../../src/world/session_snapshot.js";
+import { planOverworldSessionEventInvestigation } from "../../src/world/session_local_lifecycle.js";
 
 function event(id: string, home: string, area: string): OverworldLocalEvent {
   return {
@@ -428,6 +429,81 @@ describe("overworld event and regional arc proof replay", () => {
         ),
       ).toThrow(/earlier exact/i);
     }
+  });
+
+  it("rejects an exact authored option when its campaign fact condition is unavailable", () => {
+    const localEvent = authoredEvent("event_a", "town_a", "area_a");
+    localEvent.authored_scene!.options[0]!.requires_all_world_facts = ["fact:record_recovered"];
+    localEvent.authored_scene!.options[1]!.forbids_any_world_facts = ["fact:record_recovered"];
+    const baseState = {
+      eventId: localEvent.id,
+      eventsById: new Map([[localEvent.id, localEvent]]),
+      currentTownId: "town_a",
+      currentTownName: "Alden",
+      currentRegion: "North",
+      currentAreaId: "area_a",
+      completedQuestIds: new Set<string>(),
+      resolvedEventIds: new Set<string>(),
+      journalEntries: new Map([
+        ["scout:poi_exact", journalEntry("scout:poi_exact", "poi")],
+        ["talk:character_exact", journalEntry("talk:character_exact", "contact")],
+        ["investigate:event_a", journalEntry("investigate:event_a", "event")],
+      ]),
+      poisByArea: new Map([["area_a", [poi("poi_exact")]]]),
+      charactersByArea: new Map([["area_a", [character("character_exact")]]]),
+    };
+
+    expect(() =>
+      planOverworldEventResolution({
+        ...baseState,
+        optionId: "open",
+        campaignWorldFactIds: new Set<string>(),
+      }),
+    ).toThrow(/not available in this journey/i);
+    expect(() =>
+      planOverworldEventResolution({
+        ...baseState,
+        optionId: "seal",
+        campaignWorldFactIds: new Set(["fact:record_recovered"]),
+      }),
+    ).toThrow(/not available in this journey/i);
+    expect(
+      planOverworldEventResolution({
+        ...baseState,
+        optionId: "open",
+        campaignWorldFactIds: new Set(["fact:record_recovered"]),
+      }),
+    ).toMatchObject({
+      alreadyKnown: false,
+      localScene: { option: { id: "open" } },
+    });
+  });
+
+  it("does not investigate an authored event with no currently available option", () => {
+    const localEvent = authoredEvent("event_a", "town_a", "area_a");
+    for (const option of localEvent.authored_scene!.options) {
+      option.requires_all_world_facts = ["fact:record_recovered"];
+    }
+    const state = {
+      eventId: localEvent.id,
+      eventsById: new Map([[localEvent.id, localEvent]]),
+      completedQuestIds: new Set<string>(),
+      currentTownId: "town_a",
+      currentAreaId: () => "area_a",
+    };
+
+    expect(() =>
+      planOverworldSessionEventInvestigation({
+        ...state,
+        campaignWorldFactIds: new Set<string>(),
+      }),
+    ).toThrow(/No authored option .* available in this journey/i);
+    expect(() =>
+      planOverworldSessionEventInvestigation({
+        ...state,
+        campaignWorldFactIds: new Set(["fact:record_recovered"]),
+      }),
+    ).not.toThrow();
   });
 
   it("computes regional arc completion proof time from the required earliest anchors", () => {

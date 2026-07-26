@@ -128,7 +128,7 @@ describe("overworld session snapshots", () => {
     ).toThrow(/only valid on service entries/i);
   });
 
-  it("allows source-world provenance only on migrated preparation or event investigations", () => {
+  it("allows source-world provenance only on migrated preparation, event, or contact evidence", () => {
     const provenance = "b".repeat(64);
     const eventInvestigation = {
       id: "investigate:albany_city__transport_hub__event",
@@ -157,8 +157,33 @@ describe("overworld session snapshots", () => {
         ],
       }),
     ).not.toThrow();
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [
+          {
+            ...eventInvestigation,
+            id: "talk:albany_city__greenway__contact@relief_cade_fodder_allocated",
+            kind: "contact",
+            sourceWorldHash: "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3",
+          },
+        ],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [
+          {
+            ...eventInvestigation,
+            id: "talk:albany_city__greenway__contact@relief_cade_fodder_allocated",
+            kind: "contact",
+          },
+        ],
+      }),
+    ).toThrow(/exact predecessor contact evidence/i);
 
-    for (const kind of ["area", "contact", "job", "resolution"] as const) {
+    for (const kind of ["area", "job", "resolution"] as const) {
       expect(() =>
         OverworldSessionSnapshotSchema.parse({
           ...baseSnapshot(),
@@ -170,7 +195,9 @@ describe("overworld session snapshots", () => {
             },
           ],
         }),
-      ).toThrow(/only valid on migrated preparation or event-investigation evidence/i);
+      ).toThrow(
+        /only valid on migrated preparation, event-investigation, or exact predecessor contact evidence/i,
+      );
     }
   });
 

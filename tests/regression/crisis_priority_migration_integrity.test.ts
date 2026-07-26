@@ -13,6 +13,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import {
   exactF11World,
   exactF12World,
+  fullCombatEmeryMemoryCurrentCharacter,
   registrationPromiseClosureCurrentCharacter,
 } from "./fixtures/historical_overworlds.js";
 
@@ -242,7 +243,10 @@ describe("crisis-priority predecessor migration integrity", () => {
       questOutcomes: current.questOutcomes,
     });
     expect(restored.character).toEqual(
-      registrationPromiseClosureCurrentCharacter(current.character),
+      fullCombatEmeryMemoryCurrentCharacter(
+        registrationPromiseClosureCurrentCharacter(current.character),
+        current.questOutcomes,
+      ),
     );
     expect(
       restored.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`)?.questStartProof,
@@ -282,7 +286,10 @@ describe("crisis-priority predecessor migration integrity", () => {
       questOutcomes: current.questOutcomes,
     });
     expect(restored.character).toEqual(
-      registrationPromiseClosureCurrentCharacter(current.character),
+      fullCombatEmeryMemoryCurrentCharacter(
+        registrationPromiseClosureCurrentCharacter(current.character),
+        current.questOutcomes,
+      ),
     );
     expect(
       restored.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`)?.questStartProof,

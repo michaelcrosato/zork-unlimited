@@ -107,6 +107,23 @@ function snapshotAsPredecessor(
 
       return entry;
     });
+  predecessor.character.relationships = predecessor.character.relationships
+    .map((relationship) =>
+      relationship.npcId === "albany:emery_sloane"
+        ? {
+            ...relationship,
+            memories: relationship.memories.filter(
+              (memoryId) => memoryId !== "albany:memory_emery_wolf_full_combat_bloodshed",
+            ),
+            trust: Math.min(relationship.trust, 3),
+            regard: Math.min(relationship.regard, 3),
+          }
+        : relationship,
+    )
+    .filter(
+      (relationship) =>
+        relationship.npcId !== "albany:emery_sloane" || relationship.memories.length > 0,
+    );
   return exactRegistrationPromiseClosurePredecessorSnapshot(
     exactFrostJambSignpostPredecessorSnapshot(WORLD, predecessor),
   );

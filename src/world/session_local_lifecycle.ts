@@ -40,6 +40,7 @@ import {
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import {
+  availableLocalEventSceneOptions,
   localEventSceneRequirementError,
   localEventSceneRequirementsMet,
 } from "./local_event_scene.js";
@@ -125,6 +126,7 @@ export type OverworldSessionEventInvestigationPlanState = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   completedQuestIds: ReadonlySet<string>;
   completedJobIds?: ReadonlySet<string> | undefined;
+  campaignWorldFactIds?: ReadonlySet<string> | undefined;
   currentTownId: string;
   currentAreaId: () => string;
 };
@@ -274,6 +276,7 @@ export function planOverworldSessionEventInvestigation(
     !localEventSceneRequirementsMet(event.authored_scene, {
       completedQuestIds: state.completedQuestIds,
       completedJobIds: state.completedJobIds,
+      worldFactIds: state.campaignWorldFactIds,
     })
   ) {
     throw new Error(
@@ -281,9 +284,20 @@ export function planOverworldSessionEventInvestigation(
         localEventSceneRequirementError(event.authored_scene, {
           completedQuestIds: state.completedQuestIds,
           completedJobIds: state.completedJobIds,
+          worldFactIds: state.campaignWorldFactIds,
         }) ?? "Its authored requirements are not met."
       }`,
     );
+  }
+  if (
+    event.authored_scene &&
+    availableLocalEventSceneOptions(event.authored_scene, {
+      completedQuestIds: state.completedQuestIds,
+      completedJobIds: state.completedJobIds,
+      worldFactIds: state.campaignWorldFactIds,
+    }).length === 0
+  ) {
+    throw new Error(`No authored option for ${event.title} is available in this journey.`);
   }
   return { action: describeOverworldEventAction(event) };
 }
