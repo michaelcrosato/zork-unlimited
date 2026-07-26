@@ -33,6 +33,7 @@ const OVERWORLD_SCHEMA_TOOLS = [
   "travel_overworld_session",
   "follow_overworld_session_goal",
   "resolve_overworld_session_road_encounter",
+  "care_overworld_session",
   "resupply_overworld_session",
   "rest_overworld_session",
   "plan_overworld_session_route",
@@ -301,7 +302,7 @@ describe("MCP server registration", () => {
 
     // The game-native passage action, optional quest approach, and exact authored
     // job option add bounded schema blocks; retain a tight ceiling around them.
-    expect(overworldSchemaSource.length).toBeLessThanOrEqual(9000);
+    expect(overworldSchemaSource.length).toBeLessThanOrEqual(9250);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
@@ -330,6 +331,7 @@ describe("MCP server registration", () => {
       "travel_overworld_session",
       "follow_overworld_session_goal",
       "resolve_overworld_session_road_encounter",
+      "care_overworld_session",
       "resupply_overworld_session",
       "rest_overworld_session",
       "plan_overworld_session_route",

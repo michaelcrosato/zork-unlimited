@@ -594,7 +594,7 @@ describe("overworld snapshot resource replay", () => {
     };
 
     expect(replayAt(660)).not.toThrow();
-    expect(replayAt(720)).toThrow(/companion and promise conditions.*service boundary/i);
+    expect(replayAt(720)).toThrow(/campaign character conditions.*service boundary/i);
   });
 
   it("rejects forged campaign service identity, action, area, town, duration, and reuse", () => {

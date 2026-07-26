@@ -105,18 +105,58 @@ export const SufferWoundConsequenceSchema = z
   })
   .strict();
 
-export const CampaignConsequenceEffectSchema = z.discriminatedUnion("type", [
-  AddCompanionConsequenceSchema,
-  AffirmValueConsequenceSchema,
-  LearnKnowledgeConsequenceSchema,
-  RaiseFactionStandingConsequenceSchema,
-  RecordPromiseConsequenceSchema,
-  RememberRelationshipConsequenceSchema,
-  RemoveCompanionConsequenceSchema,
-  ResolvePromiseConsequenceSchema,
-  SetWorldFactConsequenceSchema,
-  SufferWoundConsequenceSchema,
-]);
+const CAMPAIGN_WOUND_TREATMENT_ORDER = Object.freeze({
+  untreated: 0,
+  stabilized: 1,
+  treated: 2,
+} as const);
+
+const TreatWoundConsequenceBaseSchema = z
+  .object({
+    type: z.literal("treat_wound"),
+    wound_id: CampaignCharacterIdSchema,
+    from_treatment: CampaignWoundTreatmentSchema,
+    to_treatment: CampaignWoundTreatmentSchema,
+    health_restore: z.number().int().min(1).max(CAMPAIGN_CHARACTER_MAX_HEALTH),
+  })
+  .strict();
+
+function assertTreatmentAdvances(
+  effect: z.infer<typeof TreatWoundConsequenceBaseSchema>,
+  ctx: z.RefinementCtx,
+): void {
+  if (
+    CAMPAIGN_WOUND_TREATMENT_ORDER[effect.to_treatment] <=
+    CAMPAIGN_WOUND_TREATMENT_ORDER[effect.from_treatment]
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["to_treatment"],
+      message: `Wound treatment must advance from "${effect.from_treatment}" to a later treatment state.`,
+    });
+  }
+}
+
+export const TreatWoundConsequenceSchema =
+  TreatWoundConsequenceBaseSchema.superRefine(assertTreatmentAdvances);
+
+export const CampaignConsequenceEffectSchema = z
+  .discriminatedUnion("type", [
+    AddCompanionConsequenceSchema,
+    AffirmValueConsequenceSchema,
+    LearnKnowledgeConsequenceSchema,
+    RaiseFactionStandingConsequenceSchema,
+    RecordPromiseConsequenceSchema,
+    RememberRelationshipConsequenceSchema,
+    RemoveCompanionConsequenceSchema,
+    ResolvePromiseConsequenceSchema,
+    SetWorldFactConsequenceSchema,
+    SufferWoundConsequenceSchema,
+    TreatWoundConsequenceBaseSchema,
+  ])
+  .superRefine((effect, ctx) => {
+    if (effect.type === "treat_wound") assertTreatmentAdvances(effect, ctx);
+  });
 
 export type AddCompanionConsequence = z.infer<typeof AddCompanionConsequenceSchema>;
 export type AffirmValueConsequence = z.infer<typeof AffirmValueConsequenceSchema>;
@@ -128,6 +168,7 @@ export type RemoveCompanionConsequence = z.infer<typeof RemoveCompanionConsequen
 export type ResolvePromiseConsequence = z.infer<typeof ResolvePromiseConsequenceSchema>;
 export type SetWorldFactConsequence = z.infer<typeof SetWorldFactConsequenceSchema>;
 export type SufferWoundConsequence = z.infer<typeof SufferWoundConsequenceSchema>;
+export type TreatWoundConsequence = z.infer<typeof TreatWoundConsequenceSchema>;
 export type CampaignConsequenceEffect = z.infer<typeof CampaignConsequenceEffectSchema>;
 
 export const CampaignCharacterConditionIdsSchema = z
@@ -171,18 +212,105 @@ export const CampaignPromiseConditionsSchema = z
     });
   });
 
+export const CampaignRelationshipMemoryConditionSchema = z
+  .object({
+    npc_id: CampaignCharacterIdSchema,
+    memory_id: CampaignCharacterIdSchema,
+  })
+  .strict();
+
+export const CampaignRelationshipMemoryConditionsSchema = z
+  .array(CampaignRelationshipMemoryConditionSchema)
+  .min(1)
+  .superRefine((memories, ctx) => {
+    const seen = new Set<string>();
+    memories.forEach((memory, index) => {
+      const key = JSON.stringify([memory.npc_id, memory.memory_id]);
+      if (seen.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message: `Campaign character conditions repeat relationship memory ${key}.`,
+        });
+      }
+      seen.add(key);
+    });
+  });
+
+export const CampaignWoundConditionSchema = z
+  .object({
+    wound_id: CampaignCharacterIdSchema,
+    treatment: CampaignWoundTreatmentSchema,
+  })
+  .strict();
+
+export const CampaignWoundConditionsSchema = z
+  .array(CampaignWoundConditionSchema)
+  .min(1)
+  .superRefine((wounds, ctx) => {
+    const treatmentByWoundId = new Map<string, string>();
+    wounds.forEach((wound, index) => {
+      const prior = treatmentByWoundId.get(wound.wound_id);
+      if (prior !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message:
+            prior === wound.treatment
+              ? `Campaign character conditions repeat wound "${wound.wound_id}" with treatment "${wound.treatment}".`
+              : `Campaign character conditions require mutually exclusive treatments "${prior}" and "${wound.treatment}" for wound "${wound.wound_id}".`,
+        });
+      }
+      treatmentByWoundId.set(wound.wound_id, wound.treatment);
+    });
+  });
+
+export const CampaignForbiddenWoundConditionsSchema = z
+  .array(CampaignWoundConditionSchema)
+  .min(1)
+  .superRefine((wounds, ctx) => {
+    const seen = new Set<string>();
+    wounds.forEach((wound, index) => {
+      const key = woundConditionKey(wound);
+      if (seen.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [index],
+          message: `Campaign character conditions repeat forbidden wound ${key}.`,
+        });
+      }
+      seen.add(key);
+    });
+  });
+
+function relationshipMemoryConditionKey(condition: { npc_id: string; memory_id: string }): string {
+  return JSON.stringify([condition.npc_id, condition.memory_id]);
+}
+
+function woundConditionKey(condition: { wound_id: string; treatment: string }): string {
+  return JSON.stringify([condition.wound_id, condition.treatment]);
+}
+
 export const CampaignCharacterConditionsSchema = z
   .object({
     requires_all_companions: CampaignCharacterConditionIdsSchema.optional(),
     forbids_any_companions: CampaignCharacterConditionIdsSchema.optional(),
     requires_all_promises: CampaignPromiseConditionsSchema.optional(),
+    requires_all_relationship_memories: CampaignRelationshipMemoryConditionsSchema.optional(),
+    forbids_any_relationship_memories: CampaignRelationshipMemoryConditionsSchema.optional(),
+    requires_all_wounds: CampaignWoundConditionsSchema.optional(),
+    forbids_any_wounds: CampaignForbiddenWoundConditionsSchema.optional(),
   })
   .strict()
   .superRefine((conditions, ctx) => {
     if (
       conditions.requires_all_companions === undefined &&
       conditions.forbids_any_companions === undefined &&
-      conditions.requires_all_promises === undefined
+      conditions.requires_all_promises === undefined &&
+      conditions.requires_all_relationship_memories === undefined &&
+      conditions.forbids_any_relationship_memories === undefined &&
+      conditions.requires_all_wounds === undefined &&
+      conditions.forbids_any_wounds === undefined
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -196,6 +324,28 @@ export const CampaignCharacterConditionsSchema = z
           code: z.ZodIssueCode.custom,
           path: ["forbids_any_companions", index],
           message: `Campaign character conditions cannot require and forbid companion "${companionId}".`,
+        });
+      }
+    });
+    const requiredMemories = new Set(
+      (conditions.requires_all_relationship_memories ?? []).map(relationshipMemoryConditionKey),
+    );
+    conditions.forbids_any_relationship_memories?.forEach((memory, index) => {
+      if (requiredMemories.has(relationshipMemoryConditionKey(memory))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["forbids_any_relationship_memories", index],
+          message: `Campaign character conditions cannot require and forbid relationship memory ${relationshipMemoryConditionKey(memory)}.`,
+        });
+      }
+    });
+    const requiredWounds = new Set((conditions.requires_all_wounds ?? []).map(woundConditionKey));
+    conditions.forbids_any_wounds?.forEach((wound, index) => {
+      if (requiredWounds.has(woundConditionKey(wound))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["forbids_any_wounds", index],
+          message: `Campaign character conditions cannot require and forbid wound ${woundConditionKey(wound)}.`,
         });
       }
     });
@@ -213,13 +363,112 @@ export function campaignCharacterMatchesConditions(
   const promises = new Map(
     character.promises.map((promise) => [promise.promiseId, promise.status] as const),
   );
+  const relationshipMemories = new Set(
+    character.relationships.flatMap((relationship) =>
+      relationship.memories.map((memoryId) =>
+        relationshipMemoryConditionKey({
+          npc_id: relationship.npcId,
+          memory_id: memoryId,
+        }),
+      ),
+    ),
+  );
+  const wounds = new Set(
+    character.wounds.map((wound) =>
+      woundConditionKey({
+        wound_id: wound.woundId,
+        treatment: wound.treatment,
+      }),
+    ),
+  );
   return (
     (conditions.requires_all_companions ?? []).every((id) => companions.has(id)) &&
     !(conditions.forbids_any_companions ?? []).some((id) => companions.has(id)) &&
     (conditions.requires_all_promises ?? []).every(
       (promise) => promises.get(promise.promise_id) === promise.status,
-    )
+    ) &&
+    (conditions.requires_all_relationship_memories ?? []).every((memory) =>
+      relationshipMemories.has(relationshipMemoryConditionKey(memory)),
+    ) &&
+    !(conditions.forbids_any_relationship_memories ?? []).some((memory) =>
+      relationshipMemories.has(relationshipMemoryConditionKey(memory)),
+    ) &&
+    (conditions.requires_all_wounds ?? []).every((wound) => wounds.has(woundConditionKey(wound))) &&
+    !(conditions.forbids_any_wounds ?? []).some((wound) => wounds.has(woundConditionKey(wound)))
   );
+}
+
+/** True when no canonical campaign character can satisfy both predicate groups. */
+export function campaignCharacterConditionsAreMutuallyExclusive(
+  left: CampaignCharacterConditions,
+  right: CampaignCharacterConditions,
+): boolean {
+  const parsedLeft = CampaignCharacterConditionsSchema.parse(left);
+  const parsedRight = CampaignCharacterConditionsSchema.parse(right);
+  const leftRequiredCompanions = new Set(parsedLeft.requires_all_companions ?? []);
+  const rightRequiredCompanions = new Set(parsedRight.requires_all_companions ?? []);
+  if (
+    (parsedLeft.forbids_any_companions ?? []).some((id) => rightRequiredCompanions.has(id)) ||
+    (parsedRight.forbids_any_companions ?? []).some((id) => leftRequiredCompanions.has(id))
+  ) {
+    return true;
+  }
+
+  const leftPromises = new Map(
+    (parsedLeft.requires_all_promises ?? []).map((promise) => [promise.promise_id, promise.status]),
+  );
+  if (
+    (parsedRight.requires_all_promises ?? []).some(
+      (promise) =>
+        leftPromises.has(promise.promise_id) &&
+        leftPromises.get(promise.promise_id) !== promise.status,
+    )
+  ) {
+    return true;
+  }
+
+  const leftRequiredMemories = new Set(
+    (parsedLeft.requires_all_relationship_memories ?? []).map(relationshipMemoryConditionKey),
+  );
+  const rightRequiredMemories = new Set(
+    (parsedRight.requires_all_relationship_memories ?? []).map(relationshipMemoryConditionKey),
+  );
+  if (
+    (parsedLeft.forbids_any_relationship_memories ?? []).some((memory) =>
+      rightRequiredMemories.has(relationshipMemoryConditionKey(memory)),
+    ) ||
+    (parsedRight.forbids_any_relationship_memories ?? []).some((memory) =>
+      leftRequiredMemories.has(relationshipMemoryConditionKey(memory)),
+    )
+  ) {
+    return true;
+  }
+
+  const leftRequiredWounds = new Map(
+    (parsedLeft.requires_all_wounds ?? []).map((wound) => [wound.wound_id, wound.treatment]),
+  );
+  const rightRequiredWounds = new Map(
+    (parsedRight.requires_all_wounds ?? []).map((wound) => [wound.wound_id, wound.treatment]),
+  );
+  if (
+    [...rightRequiredWounds].some(
+      ([woundId, treatment]) =>
+        leftRequiredWounds.has(woundId) && leftRequiredWounds.get(woundId) !== treatment,
+    )
+  ) {
+    return true;
+  }
+  if (
+    (parsedLeft.forbids_any_wounds ?? []).some(
+      (wound) => rightRequiredWounds.get(wound.wound_id) === wound.treatment,
+    ) ||
+    (parsedRight.forbids_any_wounds ?? []).some(
+      (wound) => leftRequiredWounds.get(wound.wound_id) === wound.treatment,
+    )
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /** Stable semantic identity used by authoring validators to reject repeated effects. */
@@ -242,6 +491,7 @@ export function campaignConsequenceEffectKey(effect: CampaignConsequenceEffect):
     case "set_world_fact":
       return JSON.stringify([effect.type, effect.fact_id]);
     case "suffer_wound":
+    case "treat_wound":
       return JSON.stringify([effect.type, effect.wound_id]);
   }
 }
@@ -410,6 +660,28 @@ function sufferWound(character: CampaignCharacterState, effect: SufferWoundConse
     character.health.current === 0 ? 0 : Math.max(1, character.health.current - effect.health_loss);
 }
 
+function treatWound(character: CampaignCharacterState, effect: TreatWoundConsequence): void {
+  const existing = character.wounds.find((wound) => wound.woundId === effect.wound_id);
+  if (existing === undefined) {
+    throw new Error(`Cannot treat unknown wound "${effect.wound_id}".`);
+  }
+  if (existing.treatment === effect.to_treatment) {
+    // The destination treatment is the replay marker. Exact re-application
+    // cannot restore health a second time.
+    return;
+  }
+  if (existing.treatment !== effect.from_treatment) {
+    throw new Error(
+      `Wound "${effect.wound_id}" has treatment "${existing.treatment}", not required source treatment "${effect.from_treatment}".`,
+    );
+  }
+  existing.treatment = effect.to_treatment;
+  character.health.current = Math.min(
+    character.health.max,
+    character.health.current + effect.health_restore,
+  );
+}
+
 /**
  * Apply one trusted outcome atomically. Parsing occurs before evolution, and
  * evolution works on a detached draft, so rejection never partially commits.
@@ -458,6 +730,9 @@ export function applyCampaignConsequences(args: {
           break;
         case "suffer_wound":
           sufferWound(draft, effect);
+          break;
+        case "treat_wound":
+          treatWound(draft, effect);
           break;
       }
     }

@@ -106,6 +106,24 @@ export function selectCrawlQuestApproach(quest: OverworldQuestView): string | un
   throw new Error(`No available launch approach for quest "${quest.id}". ${reasons.join(" ")}`);
 }
 
+/** Use exact player-visible service terms; never infer care from hidden campaign state. */
+export function shouldCrawlCampaignCare(
+  actions: readonly {
+    action: string;
+    source: string;
+    available: boolean;
+    changed: boolean;
+  }[],
+): boolean {
+  return actions.some(
+    (action) =>
+      action.action === "care" &&
+      action.source === "campaign_override" &&
+      action.available &&
+      action.changed,
+  );
+}
+
 /** Per-area drain cursor: how far the crawler has gotten through that area's
  *  always-available (no discovery gate) local actions. Tracked by the crawler
  *  itself — it drives every call, so it always knows what it has already done. */
@@ -665,6 +683,10 @@ export function crawlOverworld(opts: OverworldCrawlOptions): OverworldCrawlResul
         death: false,
       });
       record({ op: "completeQuest", questId: quest.id, endingId: solved.endingId });
+      if (shouldCrawlCampaignCare(session.view().serviceActions)) {
+        const care = session.careAtTown();
+        record({ op: "careAtTown", questId: quest.id, changed: care.changed });
+      }
 
       const hashAfter = session.snapshotHash();
       if (hashAfter === hashBefore) {

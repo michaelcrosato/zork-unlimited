@@ -1,5 +1,6 @@
 import type { CampaignServiceRule } from "./campaign_service_rules.js";
 import {
+  planOverworldSessionTownCare,
   planOverworldSessionTownRest,
   planOverworldSessionTownResupply,
   resolveOverworldSessionTownServiceRules,
@@ -95,6 +96,7 @@ export function presentOverworldServiceActions(
   const rules = resolveOverworldSessionTownServiceRules(state);
   const resupplyRule = ruleForAction(rules, "resupply");
   const restRule = ruleForAction(rules, "rest");
+  const careRule = ruleForAction(rules, "care");
   const resupply =
     resupplyRule || canResupplyAtOverworldTown(state.currentTown.services)
       ? plannedServiceAction(planOverworldSessionTownResupply(state), resupplyRule)
@@ -103,7 +105,10 @@ export function presentOverworldServiceActions(
     restRule || canRestAtOverworldTown(state.currentTown.services)
       ? plannedServiceAction(planOverworldSessionTownRest(state), restRule)
       : unavailableServiceAction("rest", state, OVERWORLD_REST_UNAVAILABLE_MESSAGE);
-  return [resupply, rest];
+  const care = careRule
+    ? [plannedServiceAction(planOverworldSessionTownCare(state), careRule)]
+    : [];
+  return [resupply, rest, ...care];
 }
 
 export function cloneOverworldServiceActionPresentation(

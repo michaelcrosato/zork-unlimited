@@ -558,33 +558,41 @@ function campaignServiceRuleForReplay(
       `Overworld session snapshot service journal "${service.entry.id}" is bound to town "${service.entry.town}", expected "${expectedTown}".`,
     );
   }
-  const expectedCopy = campaignServiceJournalCopy(rule, state);
+  const hasCharacterConditions =
+    rule.requires_all_companions !== undefined ||
+    rule.requires_all_promises !== undefined ||
+    rule.character_conditions !== undefined;
+  const character =
+    rule.action === "care" || hasCharacterConditions
+      ? campaignCharacterAt?.(service.entry, service.recordedAt)
+      : undefined;
+  if ((rule.action === "care" || hasCharacterConditions) && !character) {
+    throw new Error(
+      `Overworld session snapshot campaign service rule "${rule.id}" has no character-state replay boundary.`,
+    );
+  }
+  const expectedCopy = campaignServiceJournalCopy(rule, state, character);
   if (service.entry.title !== expectedCopy.title || service.entry.text !== expectedCopy.text) {
     throw new Error(
       `Overworld session snapshot service journal "${service.entry.id}" does not match its canonical authored copy.`,
     );
   }
-  const hasCharacterConditions =
-    rule.requires_all_companions !== undefined || rule.requires_all_promises !== undefined;
   if (hasCharacterConditions) {
-    if (!campaignCharacterAt) {
-      throw new Error(
-        `Overworld session snapshot campaign service rule "${rule.id}" has no character-state replay boundary.`,
-      );
-    }
-    const character = campaignCharacterAt(service.entry, service.recordedAt);
     if (
-      !campaignCharacterMatchesConditions(character, {
-        ...(rule.requires_all_companions
-          ? { requires_all_companions: rule.requires_all_companions }
-          : {}),
-        ...(rule.requires_all_promises
-          ? { requires_all_promises: rule.requires_all_promises }
-          : {}),
-      })
+      !character ||
+      (rule.requires_all_companions !== undefined &&
+        !campaignCharacterMatchesConditions(character, {
+          requires_all_companions: rule.requires_all_companions,
+        })) ||
+      (rule.requires_all_promises !== undefined &&
+        !campaignCharacterMatchesConditions(character, {
+          requires_all_promises: rule.requires_all_promises,
+        })) ||
+      (rule.character_conditions !== undefined &&
+        !campaignCharacterMatchesConditions(character, rule.character_conditions))
     ) {
       throw new Error(
-        `Overworld session snapshot campaign service rule "${rule.id}" does not satisfy its companion and promise conditions at the service boundary.`,
+        `Overworld session snapshot campaign service rule "${rule.id}" does not satisfy its campaign character conditions at the service boundary.`,
       );
     }
   }
@@ -786,7 +794,19 @@ export function assertSnapshotResourceReplay(
       state,
       campaignCharacterAt,
     );
-    if (event.service.parsed.action === "rest") {
+    if (event.service.parsed.action === "care") {
+      if (!campaignRule) {
+        throw new Error(
+          `Overworld session snapshot service journal "${event.service.entry.id}" cannot perform ordinary campaign care.`,
+        );
+      }
+      assertReplayClock(
+        `service journal "${event.service.entry.id}"`,
+        event.recordedAt,
+        campaignRule.minutes,
+        state,
+      );
+    } else if (event.service.parsed.action === "rest") {
       if (state.fatigue === 0) {
         throw new Error(
           `Overworld session snapshot service journal "${event.service.entry.id}" rests with no fatigue to recover.`,

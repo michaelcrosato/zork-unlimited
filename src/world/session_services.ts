@@ -3,6 +3,11 @@ import {
   type OverworldActionJournalState,
 } from "./session_action_recording.js";
 import type { CampaignServiceAction, CampaignServiceRule } from "./campaign_service_rules.js";
+import {
+  applyCampaignConsequences,
+  type CampaignConsequenceEffects,
+} from "./campaign_consequences.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES } from "./travel_mechanics.js";
 
@@ -27,17 +32,20 @@ export type OverworldServiceJournalEntryDraft = Omit<OverworldJournalEntry, "rec
 
 export type OverworldServicePlan = Omit<OverworldServiceResult, "entry"> & {
   entryDraft: OverworldServiceJournalEntryDraft | null;
+  characterAfter?: CampaignCharacterState;
 };
 
 export type OverworldAppliedServicePlan = OverworldServiceResult & {
   minutesAfter: number;
   stateChanged: boolean;
+  characterAfter?: CampaignCharacterState;
 };
 
 export type OverworldServiceState = {
   townName: string;
   services: readonly string[];
   activeCampaignServiceRules?: readonly CampaignServiceRule[];
+  character?: CampaignCharacterState;
   supplies: number;
   fatigue: number;
 };
@@ -45,6 +53,8 @@ export type OverworldServiceState = {
 export const OVERWORLD_REST_UNAVAILABLE_MESSAGE = "There is no inn or healer here to rest safely.";
 export const OVERWORLD_RESUPPLY_UNAVAILABLE_MESSAGE =
   "There is no market, inn, or stable here to resupply.";
+export const OVERWORLD_CARE_UNAVAILABLE_MESSAGE =
+  "There is no active campaign wound-care offer here.";
 
 function campaignServiceRule(
   state: OverworldServiceState,
@@ -77,11 +87,32 @@ export function campaignServiceJourneyActionId(
 export function campaignServiceJournalCopy(
   rule: CampaignServiceRule,
   resources: Pick<OverworldServiceState, "supplies" | "fatigue">,
+  character?: CampaignCharacterState,
 ): CampaignServiceJournalCopy {
   const consequence =
     rule.action === "rest"
       ? `The service takes ${rule.minutes} minutes; fatigue falls from ${resources.fatigue} to 0.`
-      : `The service takes ${rule.minutes} minutes; supplies rise from ${resources.supplies} to ${MAX_SUPPLIES}.`;
+      : rule.action === "resupply"
+        ? `The service takes ${rule.minutes} minutes; supplies rise from ${resources.supplies} to ${MAX_SUPPLIES}.`
+        : (() => {
+            if (!character || !rule.effects) {
+              throw new Error(
+                `Campaign care rule "${rule.id}" is missing character state or treatment effects.`,
+              );
+            }
+            const after = applyCampaignConsequences({
+              character,
+              effects: rule.effects,
+            }).characterAfter;
+            const treatment = (rule.effects as CampaignConsequenceEffects)
+              .filter((effect) => effect.type === "treat_wound")
+              .map(
+                (effect) =>
+                  `the witnessed wound advances from ${effect.from_treatment} to ${effect.to_treatment}`,
+              )
+              .join("; ");
+            return `The service takes ${rule.minutes} minutes; ${treatment}, and health rises from ${character.health.current} to ${after.health.current}.`;
+          })();
   return {
     title: rule.title,
     text: authoredServiceText(rule.summary, consequence),
@@ -204,6 +235,41 @@ export function planOverworldTownResupply(state: OverworldServiceState): Overwor
       title: authoredCopy?.title ?? `Resupplied in ${state.townName}`,
       text,
       ...(rule ? { serviceRuleId: rule.id, serviceAreaId: rule.area } : {}),
+    },
+  };
+}
+
+export function planOverworldTownCare(state: OverworldServiceState): OverworldServicePlan {
+  const rule = campaignServiceRule(state, "care");
+  if (!rule) {
+    throw new Error(OVERWORLD_CARE_UNAVAILABLE_MESSAGE);
+  }
+  if (!state.character || !rule.effects) {
+    throw new Error(`Campaign care rule "${rule.id}" is missing treatment state.`);
+  }
+  const characterAfter = applyCampaignConsequences({
+    character: state.character,
+    effects: rule.effects,
+  }).characterAfter;
+  const authoredCopy = campaignServiceJournalCopy(rule, state, state.character);
+  return {
+    action: "care",
+    minutes: rule.minutes,
+    changed: true,
+    suppliesBefore: state.supplies,
+    suppliesAfter: state.supplies,
+    fatigueBefore: state.fatigue,
+    fatigueAfter: state.fatigue,
+    message: authoredCopy.text,
+    characterAfter,
+    entryDraft: {
+      id: "service:care",
+      kind: "service",
+      town: state.townName,
+      title: authoredCopy.title,
+      text: authoredCopy.text,
+      serviceRuleId: rule.id,
+      serviceAreaId: rule.area,
     },
   };
 }

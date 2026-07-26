@@ -73,6 +73,7 @@ import {
 } from "./session_quest_lifecycle.js";
 import { type OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
+  applyOverworldSessionTownCareFromState,
   applyOverworldSessionTownRestFromState,
   applyOverworldSessionTownResupplyFromState,
   type OverworldServiceResult,
@@ -1969,6 +1970,7 @@ export class OverworldSession {
       campaignStoryChoiceKeys: new Set(
         this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
       ),
+      campaignCharacter: this.characterState,
       journalEntries: this.journalEntriesById,
     };
   }
@@ -2045,6 +2047,9 @@ export class OverworldSession {
   ): OverworldJourneyServiceResult {
     if (applied.stateChanged) {
       this.applyResourceClockState(applied);
+      if (applied.characterAfter) {
+        this.characterState = cloneCampaignCharacterState(applied.characterAfter);
+      }
     }
     const serviceEntry = applied.result.entry;
     const serviceRuleId = serviceEntry?.serviceRuleId;
@@ -2118,6 +2123,7 @@ export class OverworldSession {
       storyChoiceKeys: new Set(
         this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
       ),
+      character: this.characterState,
       eventOptionIdFor: (eventId) =>
         this.journalEntriesById.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
     });
@@ -2254,6 +2260,7 @@ export class OverworldSession {
             campaignStoryChoiceKeys: new Set(
               this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
             ),
+            campaignCharacter: this.characterState,
             journalEntries: this.journalEntriesById,
           });
           if (!plan.alreadyKnown) choices.push([job.id, option.id]);
@@ -2615,6 +2622,7 @@ export class OverworldSession {
         campaignStoryChoiceKeys: new Set(
           this.selectedCampaignStoryChoiceRefs().map(campaignStoryChoiceRefKey),
         ),
+        campaignCharacter: this.characterState,
         journalEntriesById: this.journalEntriesById,
         regionRenown: this.regionRenown,
         currentTownName: current.name,
@@ -2743,6 +2751,18 @@ export class OverworldSession {
         ...this.townServicePlanState(this.currentAreaIdOrThrow()),
       }),
       "rest",
+    );
+  }
+
+  careAtTown(): OverworldJourneyServiceResult {
+    this.assertJourneyAcceptingDecision();
+    this.assertNoPendingRoadEncounter("receiving care at town");
+    return this.applyServiceApplication(
+      applyOverworldSessionTownCareFromState({
+        ...this.actionJournalState(),
+        ...this.townServicePlanState(this.currentAreaIdOrThrow()),
+      }),
+      "care",
     );
   }
 

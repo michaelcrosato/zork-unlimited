@@ -12,6 +12,7 @@ import {
   type OverworldSessionServiceApplication,
 } from "./session_action_application.js";
 import {
+  planOverworldTownCare,
   planOverworldTownRest,
   planOverworldTownResupply,
   type OverworldServicePlan,
@@ -65,6 +66,7 @@ function overworldSessionTownServiceState(
     townName: state.currentTown.name,
     services: state.currentTown.services,
     activeCampaignServiceRules: resolveOverworldSessionTownServiceRules(state),
+    ...(state.campaignCharacter ? { character: state.campaignCharacter } : {}),
     supplies: state.supplies,
     fatigue: state.fatigue,
   };
@@ -74,6 +76,12 @@ export function planOverworldSessionTownRest(
   state: OverworldSessionTownServicePlanState,
 ): OverworldServicePlan {
   return planOverworldTownRest(overworldSessionTownServiceState(state));
+}
+
+export function planOverworldSessionTownCare(
+  state: OverworldSessionTownServicePlanState,
+): OverworldServicePlan {
+  return planOverworldTownCare(overworldSessionTownServiceState(state));
 }
 
 export function planOverworldSessionTownResupply(
@@ -93,6 +101,12 @@ export function applyOverworldSessionTownRestFromState(
   state: OverworldSessionTownServiceState,
 ): OverworldSessionServiceApplication {
   return applyOverworldSessionTownServicePlan(state, planOverworldSessionTownRest(state));
+}
+
+export function applyOverworldSessionTownCareFromState(
+  state: OverworldSessionTownServiceState,
+): OverworldSessionServiceApplication {
+  return applyOverworldSessionTownServicePlan(state, planOverworldSessionTownCare(state));
 }
 
 export function applyOverworldSessionTownResupplyFromState(

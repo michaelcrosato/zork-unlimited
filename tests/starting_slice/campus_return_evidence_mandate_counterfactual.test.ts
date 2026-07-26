@@ -455,7 +455,7 @@ describe("Albany Campus return-evidence mandate", () => {
     if (!eventProof) throw new Error("Expected Campus event proof.");
     eventProof.optionId = PROVENANCE;
     expect(() => OverworldSession.restore(WORLD, alteredEvent)).toThrow(
-      /accepted decision proof|earlier event|requirements/i,
+      /canonical option copy|accepted decision proof|earlier event|requirements/i,
     );
 
     const alteredJob = structuredClone(snapshot);

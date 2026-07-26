@@ -252,8 +252,23 @@ function pickOverworldAction(ctx, rng) {
   return null;
 }
 
-/** Nothing discoverable left this turn — rest or resupply are always legal
- * town services (no id argument), so they make a safe, honest fallback. */
+/** Accept explicit one-time care from the same compact service tuple a player sees. */
+function activeCareStep(ctx) {
+  const care = (ctx?.service_actions ?? []).find(
+    (action) =>
+      Array.isArray(action) &&
+      action[0] === "care" &&
+      action[1] === "campaign_override" &&
+      action[3] === true &&
+      action[4] === true,
+  );
+  return care
+    ? { tool: "care_overworld_session", args: {}, gist: "care_overworld_session()" }
+    : null;
+}
+
+/** Nothing discoverable or treatable left this turn — rest or resupply are
+ * ordinary town services (no id argument), so they make a safe fallback. */
 function fallbackStep(rng) {
   const tool = rng.int(0, 1) === 0 ? "rest_overworld_session" : "resupply_overworld_session";
   return { tool, args: {}, gist: `${tool}()` };
@@ -324,7 +339,7 @@ async function playOverworld(client, seed, sycophancySeed) {
     const turnNo = i + 1;
     const step = ctx.pending_road
       ? pendingRoadStep(ctx, rng)
-      : (pickOverworldAction(ctx, rng) ?? fallbackStep(rng));
+      : (activeCareStep(ctx) ?? pickOverworldAction(ctx, rng) ?? fallbackStep(rng));
     try {
       const raw = await client.callTool({
         name: step.tool,

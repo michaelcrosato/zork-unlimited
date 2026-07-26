@@ -423,8 +423,11 @@ export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before journey choices gained structured comparison cards. */
 export const OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH =
   "3b7ccae1235ee3dd0fad5202594faf1d18e9c3f3d162bb214008d911cb2082d5";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before persistent Station wound care and Greenway recovery gates. */
+export const OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH =
   "0770c6e8349923d1ed0c025d8b7e2e12323c53c457b7801667ea0574d90003ed";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "5757ef201328662d8145b1e4fbad87907996fc1d9dad10170c3c2f8d422d2077";
 /** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
 export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
@@ -2693,6 +2696,88 @@ const EMERY_FULL_COMBAT_MEMORY_ID = "albany:memory_emery_wolf_full_combat_bloods
 const EMERY_FULL_COMBAT_NPC_ID = "albany:emery_sloane";
 const EMERY_CONTACT_PREFIX = "talk:albany_city__greenway__contact";
 const EMERY_FULL_COMBAT_CONTACT_ID = `${EMERY_CONTACT_PREFIX}@wolf_full_combat_bloodshed`;
+const WOUND_CARE_GREENWAY_DEEP_OPTION_IDS: ReadonlySet<string> = new Set([
+  "map_all_weather_public_loop",
+  "trace_winter_wildlife_corridor_with_witness_points",
+]);
+
+function isWoundCareGreenwayGrandfatherProof(entry: OverworldJournalEntry): boolean {
+  const proof = entry.localSceneProof;
+  return (
+    entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}` &&
+    proof?.sceneId === EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID &&
+    proof.sourceWorldHash === OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH &&
+    WOUND_CARE_GREENWAY_DEEP_OPTION_IDS.has(proof.optionId)
+  );
+}
+
+/**
+ * Preserve an exact deep Greenway action completed before wound treatment
+ * became a prerequisite. Provenance is the only migration effect: the player
+ * receives no synthetic care, health, or wound-state change.
+ */
+function migrateWoundCareGreenwayPredecessorSnapshot(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  snapshot: OverworldSessionSnapshot;
+}): OverworldSessionSnapshot {
+  if (args.snapshot.worldHash !== OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH) {
+    return args.snapshot;
+  }
+  const job = args.indexes.jobsById.get(EMERY_EVIDENCE_CUSTODY_JOB_ID);
+  const scene = job?.authored_scene;
+  if (!job || scene?.id !== EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID) {
+    throw new Error("Wound-care migration target is missing the Greenway corridor survey.");
+  }
+  return Object.freeze({
+    ...args.snapshot,
+    journalEntries: args.snapshot.journalEntries.map((entry) => {
+      if (entry.id !== `job:${job.id}`) return entry;
+      const proof = entry.localSceneProof;
+      if (
+        !proof ||
+        proof.sceneId !== scene.id ||
+        !WOUND_CARE_GREENWAY_DEEP_OPTION_IDS.has(proof.optionId)
+      ) {
+        return entry;
+      }
+      if (
+        !proof.boundary ||
+        (proof.sourceWorldHash !== undefined &&
+          !(
+            proof.optionId === "trace_winter_wildlife_corridor_with_witness_points" &&
+            isEmeryEvidenceCustodyPredecessorWorldHash(proof.sourceWorldHash)
+          ))
+      ) {
+        throw new Error(
+          "Wound-care predecessor deep Greenway completion lacks its exact option boundary and trusted provenance.",
+        );
+      }
+      const option = resolveLocalJobSceneOption(scene, proof.optionId);
+      const expected = describeOverworldJobAction(
+        job,
+        args.indexes.areasById.get(job.area) ?? null,
+        option,
+      );
+      if (
+        entry.kind !== expected.kind ||
+        entry.title !== expected.title ||
+        entry.text !== expected.text ||
+        entry.town !== args.indexes.townNameForSource(job.home)
+      ) {
+        throw new Error(
+          "Wound-care predecessor deep Greenway completion does not match its exact trusted copy.",
+        );
+      }
+      return {
+        ...entry,
+        localSceneProof: {
+          ...proof,
+          sourceWorldHash: OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH,
+        },
+      };
+    }),
+  });
+}
 
 function isEmeryEvidenceCustodyGrandfatherProof(entry: OverworldJournalEntry): boolean {
   const proof = entry.localSceneProof;
@@ -2894,6 +2979,9 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesEmeryContactPrecedence =
     migrationTargetsCurrentManifest &&
     isEmeryFullCombatMemoryPredecessorWorldHash(sourceSnapshot.worldHash);
+  const migratesWoundCare =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH;
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
@@ -2957,6 +3045,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesCadeStoryPredicate &&
     !migratesComparisonCardContract &&
     !migratesEmeryEvidenceCustody &&
+    !migratesWoundCare &&
     !migratesAuthoredLocalJob &&
     !migratesAuthoredLocalEvent
   ) {
@@ -3117,6 +3206,9 @@ export function planOverworldSessionSnapshotRestore(args: {
       sourceWorldHash: sourceSnapshot.worldHash,
       migrateQuietEvidence: migratesEmeryEvidenceCustody,
     });
+  }
+  if (migratesWoundCare) {
+    snapshot = migrateWoundCareGreenwayPredecessorSnapshot({ indexes, snapshot });
   }
   const normalizesCivicPreparationEvidence =
     sourceSnapshot.worldHash !== worldHash &&
@@ -4169,11 +4261,6 @@ export function planOverworldSessionSnapshotRestore(args: {
       travelLogTownByArrival: travelTimeline.townByArrival,
     });
   }
-  assertSnapshotLocalJobSceneProofs({
-    campaignBoundaries,
-    indexes,
-    journalEntries: snapshot.journalEntries,
-  });
   const serviceCampaignBoundaries: OverworldCampaignBoundaryReplayIndex = {
     ...campaignBoundaries,
     localJobOptionProofOrdinalByKey: deriveLocalJobOptionProofOrdinals({
@@ -4305,54 +4392,92 @@ export function planOverworldSessionSnapshotRestore(args: {
     allowMissingRegistrationReceipt: migratesRegistrationPromiseClosure,
     trustedLegacyRegistrationReceiptSourceWorldHash,
   });
-  const consequenceReplay = replayQuestCampaignConsequences({
-    character: questStartReplay.characterAfter,
-    questsById: indexes.questsById,
-    questOutcomeIds,
-    questOutcomeOrder,
-  });
   const journalIndexById = new Map(
     questStartReplay.journalEntries.map((entry, index) => [entry.id, index] as const),
   );
-  const characterAtCache = new Map<string, CampaignCharacterState>();
-  const characterAt = (
-    entry: OverworldJournalEntry,
-    _recordedAt: number,
-  ): CampaignCharacterState => {
-    const cached = characterAtCache.get(entry.id);
-    if (cached) return cached;
-    const contactIndex = journalIndexById.get(entry.id);
-    if (contactIndex === undefined) {
+  type CharacterReplayMutation =
+    | Readonly<{
+        kind: "quest_start";
+        journalIndex: number;
+        effects: readonly CampaignConsequenceEffect[];
+      }>
+    | Readonly<{
+        kind: "quest_completion";
+        journalIndex: number;
+        quest: OverworldQuest;
+        endingId: string;
+      }>
+    | Readonly<{
+        kind: "care";
+        journalIndex: number;
+        ruleId: string;
+        effects: readonly CampaignConsequenceEffect[];
+      }>;
+  const characterReplayMutations: CharacterReplayMutation[] = [];
+  for (const start of questStartReplay.starts) {
+    if (start.effects.length > 0) {
+      characterReplayMutations.push({
+        kind: "quest_start",
+        journalIndex: start.journalIndex,
+        effects: start.effects,
+      });
+    }
+  }
+  for (const [questId, endingId] of questOutcomeIds) {
+    const journalIndex = journalIndexById.get(`quest_done:${questId}`);
+    const quest = indexes.questsById.get(questId);
+    if (!quest) {
       throw new Error(
-        `Overworld session snapshot cannot replay character state for unknown journal entry "${entry.id}".`,
+        `Overworld session snapshot cannot replay character state for unknown quest "${questId}".`,
       );
     }
+    if (journalIndex !== undefined && questCampaignExportForEnding(quest, endingId) !== null) {
+      characterReplayMutations.push({
+        kind: "quest_completion",
+        journalIndex,
+        quest,
+        endingId,
+      });
+    }
+  }
+  questStartReplay.journalEntries.forEach((entry, journalIndex) => {
+    if (entry.kind !== "service" || !entry.serviceRuleId) return;
+    const rule = indexes.campaignServiceRulesById.get(entry.serviceRuleId);
+    if (rule?.action !== "care") return;
+    if (!rule.effects) {
+      throw new Error(`Campaign care rule "${rule.id}" has no replayable treatment effect.`);
+    }
+    characterReplayMutations.push({
+      kind: "care",
+      journalIndex,
+      ruleId: rule.id,
+      effects: rule.effects,
+    });
+  });
+  // Journal entries are newest-first. Descending index is therefore the exact
+  // oldest-to-newest mutation order, including care between quest boundaries.
+  characterReplayMutations.sort((left, right) => right.journalIndex - left.journalIndex);
+
+  const openingCharacterBeforeJournalIndex = (journalIndex: number): CampaignCharacterState => {
     const registrationActive =
-      registrationProof.journalIndex !== null && registrationProof.journalIndex > contactIndex;
+      registrationProof.journalIndex !== null && registrationProof.journalIndex > journalIndex;
     const reliefOathActive =
-      reliefOathProof.journalIndex !== null && reliefOathProof.journalIndex > contactIndex;
+      reliefOathProof.journalIndex !== null && reliefOathProof.journalIndex > journalIndex;
     const leadSourceActive =
-      leadSourceProof.journalIndex !== null && leadSourceProof.journalIndex > contactIndex;
+      leadSourceProof.journalIndex !== null && leadSourceProof.journalIndex > journalIndex;
     const preparationActive =
       preparationProof.profile !== null &&
       preparationProof.journalIndex !== null &&
-      preparationProof.journalIndex > contactIndex;
+      preparationProof.journalIndex > journalIndex;
     const reliefAllocationActive =
       reliefAllocationProof.option !== null &&
       reliefAllocationProof.journalIndex !== null &&
-      reliefAllocationProof.journalIndex > contactIndex;
+      reliefAllocationProof.journalIndex > journalIndex;
     const allyActive =
       allyProof.option !== null &&
       allyProof.journalIndex !== null &&
-      allyProof.journalIndex > contactIndex;
-    const questOutcomeIdsAt = new Map<string, string>();
-    for (const [questId, endingId] of questOutcomeIds) {
-      const completedIndex = journalIndexById.get(`quest_done:${questId}`);
-      if (completedIndex !== undefined && completedIndex > contactIndex) {
-        questOutcomeIdsAt.set(questId, endingId);
-      }
-    }
-    let characterBeforeQuestOutcomes = registrationActive
+      allyProof.journalIndex > journalIndex;
+    return registrationActive
       ? leadSourceActive
         ? preparationActive
           ? allyActive && reliefAllocationActive
@@ -4367,24 +4492,55 @@ export function planOverworldSessionSnapshotRestore(args: {
           ? characterAfterOath
           : initialCharacter
       : neutralCharacter;
-    for (const start of questStartReplay.starts) {
-      if (start.journalIndex <= contactIndex || start.effects.length === 0) continue;
-      characterBeforeQuestOutcomes = applyCampaignConsequences({
-        character: characterBeforeQuestOutcomes,
-        effects: start.effects,
-      }).characterAfter;
+  };
+
+  const replayCharacterBeforeJournalIndex = (journalIndex: number): CampaignCharacterState => {
+    let character = cloneCampaignCharacterState(openingCharacterBeforeJournalIndex(journalIndex));
+    for (const mutation of characterReplayMutations) {
+      if (mutation.journalIndex <= journalIndex) continue;
+      if (mutation.kind === "quest_completion") {
+        const campaignExport = questCampaignExportForEnding(mutation.quest, mutation.endingId);
+        if (!campaignExport) continue;
+        character = applyCampaignConsequences({
+          character,
+          effects: overworldQuestCampaignEffectsForCharacter(campaignExport, character),
+        }).characterAfter;
+      } else {
+        character = applyCampaignConsequences({
+          character,
+          effects: mutation.effects,
+        }).characterAfter;
+      }
     }
-    const replayed = replayQuestCampaignConsequences({
-      character: characterBeforeQuestOutcomes,
-      questsById: indexes.questsById,
-      questOutcomeIds: questOutcomeIdsAt,
-      questOutcomeOrder: questOutcomeOrder.filter((questId) => questOutcomeIdsAt.has(questId)),
-    }).characterAfter;
+    return character;
+  };
+
+  const characterAtCache = new Map<string, CampaignCharacterState>();
+  const characterAt = (
+    entry: OverworldJournalEntry,
+    _recordedAt: number,
+  ): CampaignCharacterState => {
+    const cached = characterAtCache.get(entry.id);
+    if (cached) return cached;
+    const journalIndex = journalIndexById.get(entry.id);
+    if (journalIndex === undefined) {
+      throw new Error(
+        `Overworld session snapshot cannot replay character state for unknown journal entry "${entry.id}".`,
+      );
+    }
+    const replayed = replayCharacterBeforeJournalIndex(journalIndex);
     characterAtCache.set(entry.id, replayed);
     return replayed;
   };
+  const chronologicalCharacterAfter = replayCharacterBeforeJournalIndex(-1);
+  assertSnapshotLocalJobSceneProofs({
+    campaignBoundaries,
+    indexes,
+    journalEntries: snapshot.journalEntries,
+    characterAt,
+  });
   const storedCharacter = serializeCampaignCharacterState(snapshot.character);
-  const expectedCharacter = serializeCampaignCharacterState(consequenceReplay.characterAfter);
+  const expectedCharacter = serializeCampaignCharacterState(chronologicalCharacterAfter);
   const sourcePredatesEmeryFullCombatMemory =
     migrationTargetsCurrentManifest &&
     isEmeryFullCombatMemoryPredecessorWorldHash(sourceSnapshot.worldHash) &&
@@ -4400,7 +4556,7 @@ export function planOverworldSessionSnapshotRestore(args: {
         questOutcomeIds,
         questOutcomeOrder,
       })
-    : consequenceReplay.characterAfter;
+    : chronologicalCharacterAfter;
   const sourceEraExpectedCharacter = migratesRegistrationPromiseClosure
     ? registrationPromiseClosurePredecessorCharacter(sourceEraCharacter, questOutcomeIds)
     : sourceEraCharacter;
@@ -4420,7 +4576,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     }
   } else if (storedCharacter !== expectedCharacter) {
     throw new Error(
-      "Overworld session snapshot campaign character does not match replayed quest consequences.",
+      "Overworld session snapshot campaign character does not match replayed quest consequences or care services.",
     );
   }
   assertJourneyCampaignJournalProof({
@@ -4855,7 +5011,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   const journalEntriesAfter = Object.freeze(migratedJournalEntries);
 
   return {
-    characterAfter: consequenceReplay.characterAfter,
+    characterAfter: chronologicalCharacterAfter,
     currentAreaByTown,
     discoveredAreaIdsAfter,
     discoveredQuestIdsAfter,
@@ -4919,6 +5075,7 @@ function assertSnapshotLocalJobSceneProofs(args: {
   campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
   indexes: OverworldSnapshotManifestIndex;
   journalEntries: readonly OverworldJournalEntry[];
+  characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState;
 }): void {
   args.journalEntries.forEach((entry, entryIndex) => {
     if (entry.kind !== "job") return;
@@ -4946,6 +5103,7 @@ function assertSnapshotLocalJobSceneProofs(args: {
       proof,
     );
     const emeryEvidenceCustodyGrandfather = isEmeryEvidenceCustodyGrandfatherProof(entry);
+    const woundCareGrandfather = isWoundCareGreenwayGrandfatherProof(entry);
     let selectedOption: LocalJobSceneOption | null = null;
     if (legacyCompletion) {
       const expected = describeAuthoredLocalJobLegacyAction(
@@ -4966,7 +5124,8 @@ function assertSnapshotLocalJobSceneProofs(args: {
       if (
         proof.sourceWorldHash !== undefined &&
         !predicatePredecessorCompletion &&
-        !emeryEvidenceCustodyGrandfather
+        !emeryEvidenceCustodyGrandfather &&
+        !woundCareGrandfather
       ) {
         throw new Error(
           `Overworld session snapshot authored job "${job.id}" names an untrusted legacy source.`,
@@ -5056,6 +5215,7 @@ function assertSnapshotLocalJobSceneProofs(args: {
         args.campaignBoundaries,
         boundary.acceptedDecisions,
       ),
+      character: args.characterAt(entry, parseTimeLabel(entry.recordedAt)),
       eventOptionIdFor: (eventId: string) =>
         earlierEntries.find((candidate) => candidate.id === `resolve:${eventId}`)?.localSceneProof
           ?.optionId ?? null,
@@ -5067,7 +5227,12 @@ function assertSnapshotLocalJobSceneProofs(args: {
             requires_all_story_choices: undefined,
             forbids_any_story_choices: undefined,
           }
-        : selectedOption;
+        : woundCareGrandfather && selectedOption
+          ? {
+              ...selectedOption,
+              character_conditions: undefined,
+            }
+          : selectedOption;
     if (
       !selectedOption ||
       !localJobSceneRequirementsMet(scene, conditionState) ||

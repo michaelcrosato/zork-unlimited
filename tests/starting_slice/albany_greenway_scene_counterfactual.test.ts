@@ -177,6 +177,7 @@ function assertOnlyProjectedGreenwayOptions(
     "forbids_any_world_facts",
     "requires_all_story_choices",
     "forbids_any_story_choices",
+    "character_conditions",
   ]) {
     expect(serialized).not.toContain(predicateKey);
   }

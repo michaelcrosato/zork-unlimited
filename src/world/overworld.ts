@@ -4,6 +4,7 @@ import { CampaignCharacterImportsSchema } from "../rpg/campaign_character_import
 import {
   CampaignCharacterConditionsSchema,
   CampaignConsequenceEffectsSchema,
+  campaignCharacterConditionsAreMutuallyExclusive,
   campaignCharacterMatchesConditions,
   campaignConsequenceEffectKey,
   applyCampaignConsequences,
@@ -299,22 +300,7 @@ function campaignConditionsAreMutuallyExclusive(
   left: CampaignCharacterConditions,
   right: CampaignCharacterConditions,
 ): boolean {
-  const leftRequiredCompanions = new Set(left.requires_all_companions ?? []);
-  const rightRequiredCompanions = new Set(right.requires_all_companions ?? []);
-  if (
-    (left.forbids_any_companions ?? []).some((id) => rightRequiredCompanions.has(id)) ||
-    (right.forbids_any_companions ?? []).some((id) => leftRequiredCompanions.has(id))
-  ) {
-    return true;
-  }
-  const leftPromises = new Map(
-    (left.requires_all_promises ?? []).map((promise) => [promise.promise_id, promise.status]),
-  );
-  return (right.requires_all_promises ?? []).some(
-    (promise) =>
-      leftPromises.has(promise.promise_id) &&
-      leftPromises.get(promise.promise_id) !== promise.status,
-  );
+  return campaignCharacterConditionsAreMutuallyExclusive(left, right);
 }
 
 export const OverworldQuestCampaignConditionalEffectsSchema = z
@@ -1071,6 +1057,129 @@ function authoredCampaignStoryChoiceRefExists(
   }
 }
 
+function authoredCampaignCharacterPredicateIndex(world: OverworldManifest): Readonly<{
+  companionIds: ReadonlySet<string>;
+  promiseIds: ReadonlySet<string>;
+  relationshipMemoryKeys: ReadonlySet<string>;
+  woundTreatmentKeys: ReadonlySet<string>;
+  woundSourceKeys: ReadonlySet<string>;
+}> {
+  const companionIds = new Set<string>();
+  const promiseIds = new Set<string>();
+  const relationshipMemoryKeys = new Set<string>();
+  const woundTreatmentKeys = new Set<string>();
+  const woundSourceKeys = new Set<string>();
+  const rememberCharacter = (character: CampaignCharacterState): void => {
+    character.companions.forEach((companionId) => companionIds.add(companionId));
+    character.promises.forEach((promise) => promiseIds.add(promise.promiseId));
+    character.relationships.forEach((relationship) =>
+      relationship.memories.forEach((memoryId) =>
+        relationshipMemoryKeys.add(JSON.stringify([relationship.npcId, memoryId])),
+      ),
+    );
+    character.wounds.forEach((wound) => {
+      const key = JSON.stringify([wound.woundId, wound.treatment]);
+      woundTreatmentKeys.add(key);
+      woundSourceKeys.add(key);
+    });
+  };
+  world.opening_registration?.profiles.forEach((profile) => rememberCharacter(profile.character));
+  const effects: CampaignConsequenceEffect[] = [
+    ...(world.opening_relief_oath?.options.flatMap((option) => option.effects) ?? []),
+    ...(world.opening_lead_source?.options.flatMap((option) => option.effects) ?? []),
+    ...(world.opening_preparation?.profiles.flatMap((profile) => profile.effects) ?? []),
+    ...(world.opening_relief_allocation?.options.flatMap((option) => option.effects) ?? []),
+    ...(world.opening_ally?.options.flatMap((option) => option.effects) ?? []),
+    ...world.quests.flatMap((quest) => [
+      ...(quest.launch?.options.flatMap((option) => option.effects) ?? []),
+      ...(quest.campaign_exports ?? []).flatMap((campaignExport) => [
+        ...campaignExport.effects,
+        ...(campaignExport.conditional_effects ?? []).flatMap((group) => group.effects),
+      ]),
+    ]),
+  ];
+  for (const effect of effects) {
+    switch (effect.type) {
+      case "add_companion":
+      case "remove_companion":
+        companionIds.add(effect.npc_id);
+        break;
+      case "record_promise":
+      case "resolve_promise":
+        promiseIds.add(effect.promise_id);
+        break;
+      case "remember_relationship":
+        relationshipMemoryKeys.add(JSON.stringify([effect.npc_id, effect.memory_id]));
+        break;
+      case "suffer_wound": {
+        const key = JSON.stringify([effect.wound_id, effect.treatment]);
+        woundTreatmentKeys.add(key);
+        woundSourceKeys.add(key);
+        break;
+      }
+      case "treat_wound":
+        woundTreatmentKeys.add(JSON.stringify([effect.wound_id, effect.from_treatment]));
+        woundTreatmentKeys.add(JSON.stringify([effect.wound_id, effect.to_treatment]));
+        break;
+    }
+  }
+  for (const effect of (world.campaign_service_rules ?? []).flatMap((rule) => rule.effects ?? [])) {
+    if (effect.type !== "treat_wound") continue;
+    woundTreatmentKeys.add(JSON.stringify([effect.wound_id, effect.from_treatment]));
+    woundTreatmentKeys.add(JSON.stringify([effect.wound_id, effect.to_treatment]));
+  }
+  return {
+    companionIds,
+    promiseIds,
+    relationshipMemoryKeys,
+    woundTreatmentKeys,
+    woundSourceKeys,
+  };
+}
+
+function assertAuthoredCampaignCharacterConditions(
+  owner: string,
+  conditions: CampaignCharacterConditions | undefined,
+  index: ReturnType<typeof authoredCampaignCharacterPredicateIndex>,
+): void {
+  if (!conditions) return;
+  for (const companionId of [
+    ...(conditions.requires_all_companions ?? []),
+    ...(conditions.forbids_any_companions ?? []),
+  ]) {
+    if (!index.companionIds.has(companionId)) {
+      throw new Error(`${owner} references unauthored companion "${companionId}".`);
+    }
+  }
+  for (const promise of conditions.requires_all_promises ?? []) {
+    if (!index.promiseIds.has(promise.promise_id)) {
+      throw new Error(`${owner} references unauthored promise "${promise.promise_id}".`);
+    }
+  }
+  for (const memory of [
+    ...(conditions.requires_all_relationship_memories ?? []),
+    ...(conditions.forbids_any_relationship_memories ?? []),
+  ]) {
+    const key = JSON.stringify([memory.npc_id, memory.memory_id]);
+    if (!index.relationshipMemoryKeys.has(key)) {
+      throw new Error(
+        `${owner} references unauthored relationship memory "${memory.npc_id}:${memory.memory_id}".`,
+      );
+    }
+  }
+  for (const wound of [
+    ...(conditions.requires_all_wounds ?? []),
+    ...(conditions.forbids_any_wounds ?? []),
+  ]) {
+    const key = JSON.stringify([wound.wound_id, wound.treatment]);
+    if (!index.woundTreatmentKeys.has(key)) {
+      throw new Error(
+        `${owner} references unauthored wound treatment "${wound.wound_id}:${wound.treatment}".`,
+      );
+    }
+  }
+}
+
 function assertEntitiesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
@@ -1088,6 +1197,7 @@ function assertEntitiesIntegrity(
       ),
     ),
   );
+  const authoredCharacterPredicates = authoredCampaignCharacterPredicateIndex(world);
   const seenPoi = new Set<string>();
   const poiAreas = new Set<string>();
   for (const poi of world.points_of_interest) {
@@ -1379,6 +1489,11 @@ function assertEntitiesIntegrity(
         }
       }
       for (const [optionIndex, option] of scene.options.entries()) {
+        assertAuthoredCampaignCharacterConditions(
+          `Authored local-job scene "${scene.id}" option "${option.id}"`,
+          option.character_conditions,
+          authoredCharacterPredicates,
+        );
         for (const requirement of option.requires_event_options ?? []) {
           const event = world.local_events.find(
             (candidate) => candidate.id === requirement.event_id,
@@ -2327,6 +2442,14 @@ function canonicalCampaignServiceIntegrityStateKey(
     promises: state.character.promises
       .map((promise) => `${promise.promiseId}\u0000${promise.status}`)
       .sort(),
+    relationshipMemories: state.character.relationships
+      .flatMap((relationship) =>
+        relationship.memories.map((memoryId) => `${relationship.npcId}\u0000${memoryId}`),
+      )
+      .sort(),
+    wounds: state.character.wounds
+      .map((wound) => `${wound.woundId}\u0000${wound.treatment}`)
+      .sort(),
     completedQuestIds: [...state.completedQuestIds].sort(),
     worldFactIds: [...state.worldFactIds].sort(),
     selectedStoryChoices: state.selectedStoryChoices
@@ -2360,7 +2483,18 @@ type CanonicalCampaignServiceLocationStateProjection = Readonly<{
   worldFactIds: ReadonlySet<string>;
   companionIds: ReadonlySet<string>;
   promiseIds: ReadonlySet<string>;
+  relationshipMemoryKeys: ReadonlySet<string>;
+  woundIds: ReadonlySet<string>;
   storyChoiceKeys: ReadonlySet<string>;
+}>;
+
+type CanonicalCampaignServiceRelevantQuestClosure = Readonly<{
+  questIds: readonly string[];
+  worldFactIds: ReadonlySet<string>;
+  companionIds: ReadonlySet<string>;
+  promiseIds: ReadonlySet<string>;
+  relationshipMemoryKeys: ReadonlySet<string>;
+  woundIds: ReadonlySet<string>;
 }>;
 
 function canonicalCampaignServiceLocationStateProjection(
@@ -2371,6 +2505,8 @@ function canonicalCampaignServiceLocationStateProjection(
   const worldFactIds = new Set<string>();
   const companionIds = new Set<string>();
   const promiseIds = new Set<string>();
+  const relationshipMemoryKeys = new Set<string>();
+  const woundIds = new Set<string>();
   const storyChoiceKeys = new Set<string>();
   const rememberFacts = (requires?: readonly string[], forbids?: readonly string[]): void => {
     requires?.forEach((factId) => worldFactIds.add(factId));
@@ -2381,6 +2517,27 @@ function canonicalCampaignServiceLocationStateProjection(
     rememberFacts(rule.requires_all_world_facts, rule.forbids_any_world_facts);
     rule.requires_all_companions?.forEach((companionId) => companionIds.add(companionId));
     rule.requires_all_promises?.forEach((promise) => promiseIds.add(promise.promise_id));
+    for (const companionId of [
+      ...(rule.character_conditions?.requires_all_companions ?? []),
+      ...(rule.character_conditions?.forbids_any_companions ?? []),
+    ]) {
+      companionIds.add(companionId);
+    }
+    rule.character_conditions?.requires_all_promises?.forEach((promise) =>
+      promiseIds.add(promise.promise_id),
+    );
+    for (const memory of [
+      ...(rule.character_conditions?.requires_all_relationship_memories ?? []),
+      ...(rule.character_conditions?.forbids_any_relationship_memories ?? []),
+    ]) {
+      relationshipMemoryKeys.add(`${memory.npc_id}\u0000${memory.memory_id}`);
+    }
+    for (const wound of [
+      ...(rule.character_conditions?.requires_all_wounds ?? []),
+      ...(rule.character_conditions?.forbids_any_wounds ?? []),
+    ]) {
+      woundIds.add(wound.wound_id);
+    }
     for (const choice of [
       ...(rule.requires_all_story_choices ?? []),
       ...(rule.forbids_any_story_choices ?? []),
@@ -2401,8 +2558,37 @@ function canonicalCampaignServiceLocationStateProjection(
     ]) {
       storyChoiceKeys.add(campaignStoryChoiceRefKey(choice));
     }
+    for (const companionId of [
+      ...(option.character_conditions?.requires_all_companions ?? []),
+      ...(option.character_conditions?.forbids_any_companions ?? []),
+    ]) {
+      companionIds.add(companionId);
+    }
+    option.character_conditions?.requires_all_promises?.forEach((promise) =>
+      promiseIds.add(promise.promise_id),
+    );
+    for (const memory of [
+      ...(option.character_conditions?.requires_all_relationship_memories ?? []),
+      ...(option.character_conditions?.forbids_any_relationship_memories ?? []),
+    ]) {
+      relationshipMemoryKeys.add(`${memory.npc_id}\u0000${memory.memory_id}`);
+    }
+    for (const wound of [
+      ...(option.character_conditions?.requires_all_wounds ?? []),
+      ...(option.character_conditions?.forbids_any_wounds ?? []),
+    ]) {
+      woundIds.add(wound.wound_id);
+    }
   }
-  return { completedQuestIds, worldFactIds, companionIds, promiseIds, storyChoiceKeys };
+  return {
+    completedQuestIds,
+    worldFactIds,
+    companionIds,
+    promiseIds,
+    relationshipMemoryKeys,
+    woundIds,
+    storyChoiceKeys,
+  };
 }
 
 /** Service-observable state only; transitive quest dependencies have already run. */
@@ -2417,6 +2603,16 @@ function canonicalCampaignServiceLocationStateKey(
     promises: state.character.promises
       .filter((promise) => projection.promiseIds.has(promise.promiseId))
       .map((promise) => `${promise.promiseId}\u0000${promise.status}`)
+      .sort(),
+    relationshipMemories: state.character.relationships
+      .flatMap((relationship) =>
+        relationship.memories.map((memoryId) => `${relationship.npcId}\u0000${memoryId}`),
+      )
+      .filter((memoryKey) => projection.relationshipMemoryKeys.has(memoryKey))
+      .sort(),
+    wounds: state.character.wounds
+      .filter((wound) => projection.woundIds.has(wound.woundId))
+      .map((wound) => `${wound.woundId}\u0000${wound.treatment}`)
       .sort(),
     completedQuestIds: state.completedQuestIds
       .filter((questId) => projection.completedQuestIds.has(questId))
@@ -2437,11 +2633,13 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
   world: OverworldManifest,
   rules: readonly CampaignServiceRule[],
   targetQuestId: string,
-): readonly string[] {
+): CanonicalCampaignServiceRelevantQuestClosure {
   const relevantQuestIds = new Set<string>();
   const relevantFactIds = new Set<string>();
   const relevantCompanionIds = new Set<string>();
   const relevantPromiseIds = new Set<string>();
+  const relevantRelationshipMemoryKeys = new Set<string>();
+  const relevantWoundIds = new Set<string>();
   const rememberFacts = (requires?: readonly string[], forbids?: readonly string[]): void => {
     requires?.forEach((factId) => relevantFactIds.add(factId));
     forbids?.forEach((factId) => relevantFactIds.add(factId));
@@ -2451,6 +2649,27 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
     rememberFacts(rule.requires_all_world_facts, rule.forbids_any_world_facts);
     rule.requires_all_companions?.forEach((companionId) => relevantCompanionIds.add(companionId));
     rule.requires_all_promises?.forEach((promise) => relevantPromiseIds.add(promise.promise_id));
+    for (const companionId of [
+      ...(rule.character_conditions?.requires_all_companions ?? []),
+      ...(rule.character_conditions?.forbids_any_companions ?? []),
+    ]) {
+      relevantCompanionIds.add(companionId);
+    }
+    rule.character_conditions?.requires_all_promises?.forEach((promise) =>
+      relevantPromiseIds.add(promise.promise_id),
+    );
+    for (const memory of [
+      ...(rule.character_conditions?.requires_all_relationship_memories ?? []),
+      ...(rule.character_conditions?.forbids_any_relationship_memories ?? []),
+    ]) {
+      relevantRelationshipMemoryKeys.add(`${memory.npc_id}\u0000${memory.memory_id}`);
+    }
+    for (const wound of [
+      ...(rule.character_conditions?.requires_all_wounds ?? []),
+      ...(rule.character_conditions?.forbids_any_wounds ?? []),
+    ]) {
+      relevantWoundIds.add(wound.wound_id);
+    }
   }
   for (const ref of canonicalCampaignServiceLocalJobRefsForLocation(rules)) {
     const job = world.local_jobs.find((candidate) => candidate.id === ref.job_id);
@@ -2460,6 +2679,27 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
     scene.requires_completed_quests.forEach((questId) => relevantQuestIds.add(questId));
     rememberFacts(scene.requires_all_world_facts, scene.forbids_any_world_facts);
     rememberFacts(option.requires_all_world_facts, option.forbids_any_world_facts);
+    for (const companionId of [
+      ...(option.character_conditions?.requires_all_companions ?? []),
+      ...(option.character_conditions?.forbids_any_companions ?? []),
+    ]) {
+      relevantCompanionIds.add(companionId);
+    }
+    option.character_conditions?.requires_all_promises?.forEach((promise) =>
+      relevantPromiseIds.add(promise.promise_id),
+    );
+    for (const memory of [
+      ...(option.character_conditions?.requires_all_relationship_memories ?? []),
+      ...(option.character_conditions?.forbids_any_relationship_memories ?? []),
+    ]) {
+      relevantRelationshipMemoryKeys.add(`${memory.npc_id}\u0000${memory.memory_id}`);
+    }
+    for (const wound of [
+      ...(option.character_conditions?.requires_all_wounds ?? []),
+      ...(option.character_conditions?.forbids_any_wounds ?? []),
+    ]) {
+      relevantWoundIds.add(wound.wound_id);
+    }
   }
 
   const mutatesRelevantCharacterPredicate = (effect: CampaignConsequenceEffect): boolean => {
@@ -2470,10 +2710,18 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
       case "record_promise":
       case "resolve_promise":
         return relevantPromiseIds.has(effect.promise_id);
+      case "remember_relationship":
+        return relevantRelationshipMemoryKeys.has(`${effect.npc_id}\u0000${effect.memory_id}`);
+      case "suffer_wound":
+      case "treat_wound":
+        return relevantWoundIds.has(effect.wound_id);
       default:
         return false;
     }
   };
+  const producesRelevantOutput = (effect: CampaignConsequenceEffect): boolean =>
+    (effect.type === "set_world_fact" && relevantFactIds.has(effect.fact_id)) ||
+    mutatesRelevantCharacterPredicate(effect);
   const addRelevantCompanion = (companionId: string): boolean => {
     if (relevantCompanionIds.has(companionId)) return false;
     relevantCompanionIds.add(companionId);
@@ -2484,23 +2732,30 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
     relevantPromiseIds.add(promiseId);
     return true;
   };
+  const addRelevantRelationshipMemory = (npcId: string, memoryId: string): boolean => {
+    const key = `${npcId}\u0000${memoryId}`;
+    if (relevantRelationshipMemoryKeys.has(key)) return false;
+    relevantRelationshipMemoryKeys.add(key);
+    return true;
+  };
+  const addRelevantWound = (woundId: string): boolean => {
+    if (relevantWoundIds.has(woundId)) return false;
+    relevantWoundIds.add(woundId);
+    return true;
+  };
 
   let changed = true;
   while (changed) {
     changed = false;
     for (const quest of world.quests) {
       const exports = quest.campaign_exports ?? [];
-      const producesRelevantOutput = exports.some((campaignExport) =>
+      const questProducesRelevantOutput = exports.some((campaignExport) =>
         [
           ...campaignExport.effects,
           ...(campaignExport.conditional_effects ?? []).flatMap((group) => group.effects),
-        ].some(
-          (effect) =>
-            (effect.type === "set_world_fact" && relevantFactIds.has(effect.fact_id)) ||
-            mutatesRelevantCharacterPredicate(effect),
-        ),
+        ].some(producesRelevantOutput),
       );
-      if (producesRelevantOutput && !relevantQuestIds.has(quest.id)) {
+      if (questProducesRelevantOutput && !relevantQuestIds.has(quest.id)) {
         relevantQuestIds.add(quest.id);
         changed = true;
       }
@@ -2508,7 +2763,7 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
 
       for (const campaignExport of exports) {
         for (const group of campaignExport.conditional_effects ?? []) {
-          if (!group.effects.some(mutatesRelevantCharacterPredicate)) continue;
+          if (!group.effects.some(producesRelevantOutput)) continue;
           for (const companionId of [
             ...(group.when.requires_all_companions ?? []),
             ...(group.when.forbids_any_companions ?? []),
@@ -2517,6 +2772,18 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
           }
           for (const promise of group.when.requires_all_promises ?? []) {
             changed = addRelevantPromise(promise.promise_id) || changed;
+          }
+          for (const memory of [
+            ...(group.when.requires_all_relationship_memories ?? []),
+            ...(group.when.forbids_any_relationship_memories ?? []),
+          ]) {
+            changed = addRelevantRelationshipMemory(memory.npc_id, memory.memory_id) || changed;
+          }
+          for (const wound of [
+            ...(group.when.requires_all_wounds ?? []),
+            ...(group.when.forbids_any_wounds ?? []),
+          ]) {
+            changed = addRelevantWound(wound.wound_id) || changed;
           }
         }
       }
@@ -2535,7 +2802,14 @@ function canonicalCampaignServiceRelevantQuestIdsForLocation(
   });
   if (!hasNonTargetCharacterOrderingInteraction) relevantQuestIds.delete(targetQuestId);
 
-  return [...relevantQuestIds].sort();
+  return {
+    questIds: [...relevantQuestIds].sort(),
+    worldFactIds: relevantFactIds,
+    companionIds: relevantCompanionIds,
+    promiseIds: relevantPromiseIds,
+    relationshipMemoryKeys: relevantRelationshipMemoryKeys,
+    woundIds: relevantWoundIds,
+  };
 }
 
 /**
@@ -2549,10 +2823,11 @@ function canonicalCampaignServiceRelevantQuestStatesForLocation(
   baseState: CanonicalCampaignServiceIntegrityState,
   relevantQuestIds: readonly string[],
   targetQuestId: string,
+  stateProjection: CanonicalCampaignServiceLocationStateProjection,
 ): readonly CanonicalCampaignServiceIntegrityState[] {
   const statesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
   const visit = (state: CanonicalCampaignServiceIntegrityState): void => {
-    const key = canonicalCampaignServiceIntegrityStateKey(state);
+    const key = canonicalCampaignServiceLocationStateKey(state, stateProjection);
     if (statesByKey.has(key)) return;
     statesByKey.set(key, state);
     if (statesByKey.size > MAX_CANONICAL_CAMPAIGN_SERVICE_COMBINATIONS_PER_LOCATION) {
@@ -2647,7 +2922,9 @@ function canonicalCampaignServiceLocalJobSelectionIsReachable(
       ) &&
       !(option.forbids_any_story_choices ?? []).some((ref) =>
         storyChoiceKeys.has(campaignStoryChoiceRefKey(ref)),
-      )
+      ) &&
+      (option.character_conditions === undefined ||
+        campaignCharacterMatchesConditions(state.character, option.character_conditions))
     );
   });
 }
@@ -2852,8 +3129,26 @@ function assertCampaignServiceRulesIntegrity(
       ),
     ),
   );
+  const authoredCharacterPredicates = authoredCampaignCharacterPredicateIndex(world);
 
   for (const rule of rules) {
+    assertAuthoredCampaignCharacterConditions(
+      `Campaign service rule "${rule.id}"`,
+      rule.character_conditions,
+      authoredCharacterPredicates,
+    );
+    for (const effect of rule.effects ?? []) {
+      if (
+        effect.type === "treat_wound" &&
+        !authoredCharacterPredicates.woundSourceKeys.has(
+          JSON.stringify([effect.wound_id, effect.from_treatment]),
+        )
+      ) {
+        throw new Error(
+          `Campaign service rule "${rule.id}" treats unauthored source wound "${effect.wound_id}:${effect.from_treatment}".`,
+        );
+      }
+    }
     if (!nodes.has(rule.home)) {
       throw new Error(`Campaign service rule "${rule.id}" has missing home node "${rule.home}".`);
     }
@@ -2975,15 +3270,39 @@ function assertCampaignServiceRulesIntegrity(
       });
     }
   }
-  const scopedLocations = [...locations.values()].map((location) => ({
-    ...location,
-    relevantQuestIds: canonicalCampaignServiceRelevantQuestIdsForLocation(
+  const scopedLocations = [...locations.values()].map((location) => {
+    const relevantQuestClosure = canonicalCampaignServiceRelevantQuestIdsForLocation(
       world,
       location.rules,
       bounded.targetQuestId,
-    ),
-    stateProjection: canonicalCampaignServiceLocationStateProjection(world, location.rules),
-  }));
+    );
+    const directProjection = canonicalCampaignServiceLocationStateProjection(world, location.rules);
+    return {
+      ...location,
+      relevantQuestIds: relevantQuestClosure.questIds,
+      stateProjection: {
+        completedQuestIds: new Set([
+          ...directProjection.completedQuestIds,
+          ...relevantQuestClosure.questIds,
+        ]),
+        worldFactIds: new Set([
+          ...directProjection.worldFactIds,
+          ...relevantQuestClosure.worldFactIds,
+        ]),
+        companionIds: new Set([
+          ...directProjection.companionIds,
+          ...relevantQuestClosure.companionIds,
+        ]),
+        promiseIds: new Set([...directProjection.promiseIds, ...relevantQuestClosure.promiseIds]),
+        relationshipMemoryKeys: new Set([
+          ...directProjection.relationshipMemoryKeys,
+          ...relevantQuestClosure.relationshipMemoryKeys,
+        ]),
+        woundIds: new Set([...directProjection.woundIds, ...relevantQuestClosure.woundIds]),
+        storyChoiceKeys: directProjection.storyChoiceKeys,
+      },
+    };
+  });
   const canonicallyReachableRuleIds = new Set<string>();
   const maximumRequiredRenownByRegion = new Map<string, number>();
   for (const rule of rules) {
@@ -2996,13 +3315,21 @@ function assertCampaignServiceRulesIntegrity(
   }
   for (const location of scopedLocations) {
     const relevantQuestStatesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
+    const baseStatesByKey = new Map<string, CanonicalCampaignServiceIntegrityState>();
     for (const state of bounded.states) {
+      baseStatesByKey.set(
+        canonicalCampaignServiceLocationStateKey(state, location.stateProjection),
+        state,
+      );
+    }
+    for (const state of baseStatesByKey.values()) {
       for (const relevantQuestState of canonicalCampaignServiceRelevantQuestStatesForLocation(
         world,
         location.rules,
         state,
         location.relevantQuestIds,
         bounded.targetQuestId,
+        location.stateProjection,
       )) {
         relevantQuestStatesByKey.set(
           canonicalCampaignServiceLocationStateKey(relevantQuestState, location.stateProjection),

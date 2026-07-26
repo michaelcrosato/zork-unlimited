@@ -1,11 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { crawlOverworld, selectCrawlQuestApproach } from "../../src/crawl/overworld_crawler.js";
+import {
+  crawlOverworld,
+  selectCrawlQuestApproach,
+  shouldCrawlCampaignCare,
+} from "../../src/crawl/overworld_crawler.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import { describeSolveToEndingFailure, solveToEnding } from "../../src/crawl/quest_solver.js";
 import { prepareShippedQuest, preparePack, listShippedQuestIds } from "../../src/crawl/prepare.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
 describe("overworld crawler", () => {
+  it("accepts only an active player-visible campaign care action", () => {
+    expect(
+      shouldCrawlCampaignCare([
+        { action: "care", source: "campaign_override", available: true, changed: true },
+      ]),
+    ).toBe(true);
+    expect(
+      shouldCrawlCampaignCare([
+        { action: "care", source: "campaign_override", available: false, changed: true },
+        { action: "care", source: "ordinary", available: true, changed: true },
+        { action: "rest", source: "campaign_override", available: true, changed: true },
+      ]),
+    ).toBe(false);
+  });
+
   it("selects one stable unblocked quest approach and preserves optionless starts", () => {
     const base: OverworldQuestView = {
       id: "crawler_launch_fixture",

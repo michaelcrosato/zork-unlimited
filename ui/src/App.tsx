@@ -146,7 +146,7 @@ export function ServiceAction({
         aria-disabled={!serviceAction.available}
         onClick={serviceAction.available ? onActivate : undefined}
       >
-        {action === "rest" ? "Rest" : "Resupply"}
+        {action === "rest" ? "Rest" : action === "care" ? "Receive Care" : "Resupply"}
       </button>
       <small className="service-action-preview" id={previewId}>
         {serviceAction.message} {serviceAction.minutes} min · supplies {serviceAction.suppliesBefore}
@@ -729,7 +729,9 @@ export default function App(): JSX.Element {
                   runServiceAction(() =>
                     serviceAction.action === "rest"
                       ? worldSession.restAtTown()
-                      : worldSession.resupplyAtTown(),
+                      : serviceAction.action === "care"
+                        ? worldSession.careAtTown()
+                        : worldSession.resupplyAtTown(),
                   )
                 }
               />

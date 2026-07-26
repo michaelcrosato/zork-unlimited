@@ -498,7 +498,7 @@ describe("Albany Station return filing standard", () => {
     if (!eventProof) throw new Error("Expected Station event proof.");
     eventProof.optionId = WITNESS_STANDARD;
     expect(() => OverworldSession.restore(WORLD, alteredEvent)).toThrow(
-      /accepted decision proof|earlier event|requirements/i,
+      /canonical option copy|accepted decision proof|earlier event|requirements/i,
     );
 
     const alteredJob = structuredClone(snapshot);

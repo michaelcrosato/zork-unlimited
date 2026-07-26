@@ -19,6 +19,7 @@ import {
 } from "./local_job_scene.js";
 import { timeLabel } from "./session_journal_codec.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type OverworldJournalEntryLookup = {
   get(id: string): OverworldJournalEntry | undefined;
@@ -165,6 +166,7 @@ export type OverworldLocalJobCompletionState = {
   resolvedEventIds?: ReadonlySet<string> | undefined;
   campaignWorldFactIds?: ReadonlySet<string> | undefined;
   campaignStoryChoiceKeys?: ReadonlySet<string> | undefined;
+  campaignCharacter?: CampaignCharacterState | undefined;
   journalEntries: ReadonlyMap<string, OverworldJournalEntry>;
 };
 
@@ -384,6 +386,7 @@ export function planOverworldLocalJobCompletion(
       resolvedEventIds: state.resolvedEventIds ?? new Set<string>(),
       worldFactIds: state.campaignWorldFactIds ?? new Set<string>(),
       storyChoiceKeys: state.campaignStoryChoiceKeys ?? new Set<string>(),
+      ...(state.campaignCharacter ? { character: state.campaignCharacter } : {}),
       eventOptionIdFor: (eventId: string) =>
         state.journalEntries.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
     };

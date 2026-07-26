@@ -73,6 +73,7 @@ export const CODEX_PURE_PLAYER_TOOLS = new Set([
   "travel_overworld_session",
   "follow_overworld_session_goal",
   "resolve_overworld_session_road_encounter",
+  "care_overworld_session",
   "resupply_overworld_session",
   "rest_overworld_session",
   "scout_overworld_session_poi",

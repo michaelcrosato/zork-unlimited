@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import type {
   OverworldArea,
   OverworldExplorationSite,
@@ -220,6 +221,7 @@ describe("overworld local discovery planning", () => {
         completedQuestIds: new Set(["wolf_winter"]),
         resolvedEventIds: new Set([eventId]),
         campaignWorldFactIds: new Set(),
+        campaignCharacter: createInitialCampaignCharacterState(),
         journalEntries: new Map([
           [
             `resolve:${eventId}`,

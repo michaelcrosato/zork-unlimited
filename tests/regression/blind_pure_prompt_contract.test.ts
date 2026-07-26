@@ -189,6 +189,9 @@ describe("pure blind prompt + runner contract", () => {
     expect(mockAgent).toContain("optionId");
     expect(mockAgent).toContain("{ option_id: optionId }");
     expect(mockAgent).toContain("authoredJobIds");
+    expect(mockAgent).toContain("ctx?.service_actions");
+    expect(mockAgent).toContain('"care_overworld_session"');
+    expect(mockAgent).toMatch(/activeCareStep\(ctx\).*pickOverworldAction\(ctx, rng\)/s);
   });
 
   it("pins live mode to pure/default and treats the 1200-second failsafe as failure only", () => {

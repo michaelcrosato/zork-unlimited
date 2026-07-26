@@ -7,6 +7,7 @@ import {
 import { localEventSceneRequirementsMet } from "./local_event_scene.js";
 import { availableLocalJobSceneOptions } from "./local_job_scene.js";
 import type { OverworldArea, OverworldLocalEvent, OverworldLocalJob } from "./overworld.js";
+import type { CampaignCharacterState } from "./campaign_character_state.js";
 
 export type JourneyOpportunityProjectionState = Readonly<{
   currentAreaId: string | null;
@@ -21,6 +22,7 @@ export type JourneyOpportunityProjectionState = Readonly<{
   completedJobIds: ReadonlySet<string>;
   worldFactIds: ReadonlySet<string>;
   storyChoiceKeys?: ReadonlySet<string> | undefined;
+  character?: CampaignCharacterState | undefined;
   eventOptionIdFor: (eventId: string) => string | null;
 }>;
 

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice_id": "albany_winter_relief_v1",
   "status": "active_unproven",
-  "updated_local_date": "2026-07-25",
+  "updated_local_date": "2026-07-26",
   "contract": {
     "minimum_material_forks": 12,
     "minimum_delayed": 8,
@@ -540,7 +540,8 @@
       ],
       "delayed_consumers": [
         "The chosen priority makes exactly one distinct final evacuation action legal; all three pay the pre-disclosed outer-defense forfeiture and separate the living pack from the steading without relabeling a combat or failed-lure route.",
-        "Quest export records mutually exclusive persistent wound, cattle-scattered, or reserve-spent state. The cattle-first wound reduces campaign health 30→24 and remains untreated through full, compact, UI, and save/restore projections.",
+        "Quest export records mutually exclusive persistent wound, cattle-scattered, or reserve-spent state. The cattle-first wound reduces campaign health 30→24 and remains untreated through ordinary rest and resupply; full, compact, UI, and save/restore projections preserve its exact treatment state.",
+        "Cade's exact witness memory plus the exact untreated gate wound open one 45-minute Station care action. Care restores 6 health up to the existing maximum, advances only that wound to treated, spends no supplies, changes no fatigue, and reopens only the deep public or quiet Greenway survey matching the player's existing policy.",
         "A returned rig unlocks June Pike's one-time 15-minute Station rest; a whole herd unlocks Emery Sloane's one-time 15-minute Greenway resupply. The cattle-first result earns both offers, people-first only the rest, and reserve-spent only the resupply.",
         "June and Emery retain distinct memories and return testimony for the wound, cattle loss, or spent rig. If June accompanied the player, she first takes the lower cattle gate under her remembered authority and the cattle-first promise remains kept on every bloodless evacuation.",
         "The hard drive commitment withholds every wolf and combat action before the first signal, through failed-signal recovery, and at the threshold. The ordinary three-wolf spear route remains available only if the player declines before the cattle move, so combat cannot be sampled and folded back into a bloodless ending."
@@ -548,7 +549,8 @@
       "visible_feedback": [
         "Pack Drive is a visible pressure track with Moving, Crisis, and Cleared bands; the failed opening reaches crisis pressure early, cannot be retried, and exposes a one-shot loose-hurdle recovery.",
         "Cade states the universal outer-defense forfeiture before drive commitment; each crisis option then states its additional irreversible wound, cattle, or rig cost, and the journal names the sole evacuation action that remains legal afterward.",
-        "The ending, Albany character copy, persistent-character panel, and named service offers repeat exactly what survived and what was lost."
+        "The ending, Albany character copy, persistent-character panel, and named service offers repeat exactly what survived and what was lost.",
+        "Station care names Cade's witnessed wound, its exact 45-minute cost, treatment advance, and health change. Greenway's fast option remains visible before care while its deep option explains the Station treatment dependency and appears only after treatment."
       ],
       "systems": [
         "pressure",
@@ -873,6 +875,54 @@
         "tests/starting_slice/albany_return_opportunity_leads.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F19-witnessed-wound-care",
+      "title": "Treat Cade's witnessed gate wound before deep Greenway fieldwork",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "After the cattle-first drive return, Cade's witnessed byre-mouth gate wound remains untreated at 24/30 campaign health. At Albany Station the named provider offers one optional 45-minute treatment. The exact terms state that care advances only this wound to treated and restores 6 health up to the existing maximum; it spends no supplies, changes no fatigue, and is not required for first-goal completion.",
+      "immediate_state_delta": [
+        "character.wounds[].treatment",
+        "character.health.current",
+        "world.minutes",
+        "journal.campaign_service_proof"
+      ],
+      "delayed_consumers": [
+        "While the exact gate wound is untreated, the public-detour and quiet-corridor Greenway policies each retain their fast survey action but withhold only their deep witnessed field record. The bloodshed evidence-custody frontier is unchanged.",
+        "After exact Station care, only the selected policy's deep action reopens. Ordinary rest and resupply do not mutate wound treatment, health, or this legal-action frontier.",
+        "Care is one-shot and replayed chronologically from its exact service journal and accepted-decision boundary. Stored character state is never trusted; missing, duplicated, altered, backdated, or wrong-rule evidence fails closed.",
+        "The immediate predecessor's already-completed public or quiet deep survey is grandfathered only under the exact trusted source manifest and exact option proof. Migration adds no synthetic care, healing, or treatment."
+      ],
+      "visible_feedback": [
+        "The full, compact, UI, MCP, CLI, crawler, and pure-player tool surfaces expose care only when its exact campaign offer is active. The receipt names the 45-minute cost, untreated-to-treated advance, and 24→30 health change.",
+        "Before care, Greenway preview copy explains that fast work remains lawful and the deep witnessed record waits for Station treatment; after care the matching deep option appears through the same full, compact, UI, and MCP projections.",
+        "Save/restore preserves exact wound treatment and health without changing the original goal-completion decision count or timestamp."
+      ],
+      "systems": [
+        "injury",
+        "health",
+        "relationships",
+        "services",
+        "time",
+        "legal_actions",
+        "jobs",
+        "save_restore"
+      ],
+      "persistence_boundaries": ["quest_to_overworld", "overworld_save_restore"],
+      "contract_tags": ["delayed", "cross_system", "cross_phase", "failure_forward"],
+      "baseline_evidence": [
+        "tests/unit/world_campaign_consequences.test.ts",
+        "tests/unit/world_campaign_service_rules.test.ts",
+        "tests/unit/world_session_local_discovery.test.ts",
+        "tests/unit/crawl_overworld.test.ts",
+        "tests/regression/mcp_server_registration.test.ts",
+        "tests/regression/blind_pure_prompt_contract.test.ts",
+        "tests/starting_slice/drive_crisis_return_counterfactual.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/wolf_wound_care_counterfactual.test.ts"
     }
   ]
 }

@@ -434,6 +434,24 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       );
     },
 
+    care_overworld_session<Args extends { session_id: string } & OverworldResponseOptions>(
+      args: Args,
+    ): OverworldSessionResponse<
+      "result",
+      OverworldServiceResult,
+      DefaultCompactOverworldResponse<Args>,
+      OverworldCompactServiceResult
+    > {
+      const responseOptions = defaultCompactOverworldResponse(args);
+      return overworldSessions.run(
+        responseOptions,
+        args.session_id,
+        "result",
+        (session) => session.careAtTown(),
+        compactOverworldServiceResult,
+      );
+    },
+
     resupply_overworld_session<Args extends { session_id: string } & OverworldResponseOptions>(
       args: Args,
     ): OverworldSessionResponse<
