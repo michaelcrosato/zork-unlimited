@@ -205,6 +205,52 @@ describe("campaign service-rule authoring", () => {
       ]),
     ).toThrow(/same normalized activation predicate/i);
 
+    const nestedConditions: NonNullable<CampaignServiceRule["character_conditions"]> = {
+      requires_all_companions: ["npc:field_guide", "npc:station_medic"],
+      forbids_any_companions: ["npc:wolf_scout", "npc:winter_deserter"],
+      requires_all_promises: [
+        { promise_id: "promise:bring_medicine", status: "active" },
+        { promise_id: "promise:hold_the_line", status: "kept" },
+      ],
+      requires_all_relationship_memories: [
+        { npc_id: "npc:field_guide", memory_id: "memory:shared_map" },
+        { npc_id: "npc:station_medic", memory_id: "memory:witnessed_wound" },
+      ],
+      forbids_any_relationship_memories: [
+        { npc_id: "npc:wolf_scout", memory_id: "memory:betrayed_pack" },
+        { npc_id: "npc:winter_deserter", memory_id: "memory:refused_shelter" },
+      ],
+      requires_all_wounds: [
+        { wound_id: "wound:frostbite", treatment: "stabilized" },
+        { wound_id: "wound:wolf_bite", treatment: "untreated" },
+      ],
+      forbids_any_wounds: [
+        { wound_id: "wound:broken_arm", treatment: "untreated" },
+        { wound_id: "wound:old_burn", treatment: "treated" },
+      ],
+    };
+    const reorderedConditions = structuredClone(nestedConditions);
+    reorderedConditions.requires_all_companions?.reverse();
+    reorderedConditions.forbids_any_companions?.reverse();
+    reorderedConditions.requires_all_promises?.reverse();
+    reorderedConditions.requires_all_relationship_memories?.reverse();
+    reorderedConditions.forbids_any_relationship_memories?.reverse();
+    reorderedConditions.requires_all_wounds?.reverse();
+    reorderedConditions.forbids_any_wounds?.reverse();
+
+    expect(() =>
+      CampaignServiceRulesSchema.parse([
+        serviceRule({
+          id: "service:first_nested_predicate",
+          character_conditions: nestedConditions,
+        }),
+        serviceRule({
+          id: "service:second_nested_predicate",
+          character_conditions: reorderedConditions,
+        }),
+      ]),
+    ).toThrow(/same normalized activation predicate/i);
+
     expect(() =>
       CampaignServiceRuleSchema.parse(
         serviceRule({
@@ -313,6 +359,61 @@ describe("campaign service-rule authoring", () => {
         ),
       ),
     ).toThrow(/unauthored promise/i);
+  });
+
+  it("accepts staged care from an authored wound source and rejects disconnected stages", () => {
+    const stabilize = CampaignServiceRuleSchema.parse({
+      id: "service:test_wound_stabilize",
+      home: "albany_city",
+      area: "albany_city__transport_hub",
+      action: "care",
+      title: "Stabilize the courier wound",
+      summary: "The Station medic braces the witnessed bite before it worsens.",
+      minutes: 30,
+      requires_all_world_facts: ["fact:wolf_winter_courier_wounded"],
+      character_conditions: {
+        requires_all_wounds: [
+          { wound_id: "wound:wolf_winter_byre_mouth_gate", treatment: "untreated" },
+        ],
+      },
+      effects: [
+        {
+          type: "treat_wound",
+          wound_id: "wound:wolf_winter_byre_mouth_gate",
+          from_treatment: "untreated",
+          to_treatment: "stabilized",
+          health_restore: 3,
+        },
+      ],
+    });
+    const finish = CampaignServiceRuleSchema.parse({
+      ...stabilize,
+      id: "service:test_wound_finish",
+      title: "Finish the courier treatment",
+      summary: "The medic can finish care after the wound has been stabilized.",
+      character_conditions: {
+        requires_all_wounds: [
+          { wound_id: "wound:wolf_winter_byre_mouth_gate", treatment: "stabilized" },
+        ],
+      },
+      effects: [
+        {
+          type: "treat_wound",
+          wound_id: "wound:wolf_winter_byre_mouth_gate",
+          from_treatment: "stabilized",
+          to_treatment: "treated",
+          health_restore: 3,
+        },
+      ],
+    });
+
+    const staged = worldWithRule(stabilize);
+    staged.campaign_service_rules?.push(finish);
+    expect(() => assertOverworldIntegrity(staged)).not.toThrow();
+
+    expect(() => assertOverworldIntegrity(worldWithRule(finish))).toThrow(
+      /treats unauthored source wound.*wound:wolf_winter_byre_mouth_gate:stabilized/i,
+    );
   });
 
   it("binds story predicates and named providers to canonical campaign authoring", () => {

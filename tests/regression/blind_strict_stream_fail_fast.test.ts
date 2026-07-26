@@ -103,6 +103,7 @@ describe("Codex strict streaming fail-fast", () => {
       expect(providerExitCodeFor(43, null)).toBe(4);
       const result = launchFakeCodex(fixture, out, "73651");
       const output = combinedOutput(result);
+      expect(result.error, output).toBeUndefined();
       expect(result.status, output).toBe(4);
       expect(output).not.toMatch(/strict stream rejected/i);
       expectNoPublishedEvidence(out);
@@ -127,6 +128,30 @@ describe("Codex strict streaming fail-fast", () => {
     await expect(terminateOwnedProviderTree(anchor, "win32")).rejects.toThrow(
       /exited without its clean termination proof/i,
     );
+  });
+
+  it("releases termination-grace timers after immediate clean Windows exits", async () => {
+    const activeTimeoutCount = () =>
+      process.getActiveResourcesInfo().filter((resource) => resource === "Timeout").length;
+    const baseline = activeTimeoutCount();
+
+    for (let index = 0; index < 8; index += 1) {
+      const anchor = Object.assign(new EventEmitter(), {
+        pid: 424_300 + index,
+        exitCode: null as number | null,
+        signalCode: null as string | null,
+        connected: true,
+        send() {
+          queueMicrotask(() => {
+            anchor.exitCode = 0;
+            anchor.emit("exit", 0, null);
+          });
+        },
+      });
+      await expect(terminateOwnedProviderTree(anchor, "win32")).resolves.toBeUndefined();
+    }
+
+    expect(activeTimeoutCount()).toBe(baseline);
   });
 
   it("rejects a malformed private gameplay wrapper before the provider finishes", () => {
@@ -154,6 +179,7 @@ while :; do sleep 1; done
     try {
       const result = launchFakeCodex(fixture, out, "73652");
       const output = combinedOutput(result);
+      expect(result.error, output).toBeUndefined();
       expect(result.status, output).toBe(43);
       expect(output).toMatch(/strict stream rejected/i);
       expect(output).toMatch(/forbidden wrapper program/i);
@@ -184,6 +210,7 @@ exit 0
         FAKE_MCP_SURVIVED: bashPath(survived),
       });
       const output = combinedOutput(result);
+      expect(result.error, output).toBeUndefined();
       expect([4, 43], output).toContain(result.status);
       expectNoPublishedEvidence(out);
       await delay(2_500);
@@ -252,6 +279,7 @@ while :; do sleep 1; done
         },
       );
       const output = combinedOutput(result);
+      expect(result.error, output).toBeUndefined();
       expect(result.status, output).toBe(43);
       expect(output).toMatch(/strict stream rejected/i);
       expect(output).toMatch(/forbidden MCP server codex/i);

@@ -19,11 +19,11 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 
 - Evidence choice: the drive-cattle-first gate already inflicted a campaign wound, but that wound had no later mechanical consumer or recovery decision.
 - Surface: the wound now survives quest foldback and save/restore; one optional Albany Station treatment costs 45 minutes, restores up to 6 health, and changes the later Greenway service frontier from untreated to treated.
-- Reuse/counterfactual: data-driven character conditions and effects govern treatment, exact replay chronology, and predecessor migration; paired routes prove untreated quiet review remains withheld while public deep review stays legal.
+- Reuse/counterfactual: data-driven character conditions and effects govern treatment and exact replay; both deep Greenway routes migrate across all 12 supported pre-care manifests without inventing care or replacing older provenance.
 - Pure evidence: Spark seed 72663 completed The Wolf-Winter in 22 decisions, ended voluntarily, rated clarity/enjoyment 4/4, remained unstuck, reported no bug, and chose replay-yes.
 - Transport economy: seed 72662's malformed nineteenth wrapper was stopped in-flight with exit 43 and no published evidence; the one replacement canary verified normally.
 - Self-critique/follow-through: the valid player chose combat and ended at the first goal, so it did not organically see wound care; deterministic route, replay, MCP/UI, and migration proofs carry that claim.
-- Guard: independent lifecycle/performance review is clean; 142 integrated tests and zero-finding crawl `20260726T121920Z` are green, with no first-goal decision added.
+- Guard: all P1/P2 review findings are closed, including order-insensitive predicates, staged care, and fail-fast timer cleanup; 70 focused tests, 3,533-test health, and zero-finding crawl `20260726T151842Z` are green.
 
 ### Cycle result - blind_strict_stream_fail_fast
 

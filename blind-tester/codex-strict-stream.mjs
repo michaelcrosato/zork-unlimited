@@ -11,6 +11,7 @@ import {
   readSync,
   realpathSync,
 } from "node:fs";
+import { clearTimeout, setTimeout } from "node:timers";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL, URL } from "node:url";
 import {
@@ -154,12 +155,23 @@ export function providerExitCodeFor(code, signal) {
   return status === CODEX_STRICT_STREAM_REJECT_EXIT ? 4 : status;
 }
 
-async function awaitExit(child, milliseconds) {
+function awaitExit(child, milliseconds) {
   if (child.exitCode !== null || child.signalCode !== null) return true;
-  return Promise.race([
-    new Promise((resolve) => child.once("exit", () => resolve(true))),
-    delay(milliseconds).then(() => false),
-  ]);
+  return new Promise((resolve) => {
+    let timer;
+    let settled = false;
+    const settle = (exited) => {
+      if (settled) return;
+      settled = true;
+      child.off("exit", onExit);
+      if (timer !== undefined) clearTimeout(timer);
+      resolve(exited);
+    };
+    const onExit = () => settle(true);
+    child.once("exit", onExit);
+    timer = setTimeout(() => settle(false), milliseconds);
+    if (child.exitCode !== null || child.signalCode !== null) settle(true);
+  });
 }
 
 function processGroupExists(processGroupId) {
