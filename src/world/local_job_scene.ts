@@ -7,8 +7,8 @@ import {
 
 export const LOCAL_JOB_SCENE_VERSION = 1 as const;
 export const LOCAL_JOB_SCENE_MIN_OPTIONS = 2 as const;
-export const LOCAL_JOB_SCENE_MAX_OPTIONS = 4 as const;
-/** Keep prerequisite fan-out auditable alongside the scene's bounded 2-4 choices. */
+export const LOCAL_JOB_SCENE_MAX_OPTIONS = 5 as const;
+/** Keep prerequisite fan-out auditable alongside the scene's bounded 2-5 definitions. */
 export const LOCAL_JOB_SCENE_MAX_REQUIRED_QUESTS = 4 as const;
 export const LOCAL_JOB_SCENE_MAX_REQUIREMENTS = 8 as const;
 export const LOCAL_JOB_SCENE_MAX_MINUTES = 24 * 60;

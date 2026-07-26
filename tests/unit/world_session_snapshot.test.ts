@@ -128,6 +128,52 @@ describe("overworld session snapshots", () => {
     ).toThrow(/only valid on service entries/i);
   });
 
+  it("allows source-world provenance only on migrated preparation or event investigations", () => {
+    const provenance = "b".repeat(64);
+    const eventInvestigation = {
+      id: "investigate:albany_city__transport_hub__event",
+      kind: "event" as const,
+      town: "Albany City",
+      title: "Investigated Hayden Hale's filing standard",
+      text: "Hayden's generic predecessor filing was investigated.",
+      recordedAt: "Day 2, 10:20",
+      sourceWorldHash: provenance,
+    };
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [eventInvestigation],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      OverworldSessionSnapshotSchema.parse({
+        ...baseSnapshot(),
+        journalEntries: [
+          {
+            ...eventInvestigation,
+            id: "preparation:trusted-predecessor",
+            kind: "preparation",
+          },
+        ],
+      }),
+    ).not.toThrow();
+
+    for (const kind of ["area", "contact", "job", "resolution"] as const) {
+      expect(() =>
+        OverworldSessionSnapshotSchema.parse({
+          ...baseSnapshot(),
+          journalEntries: [
+            {
+              ...eventInvestigation,
+              id: `${kind}:untrusted-provenance`,
+              kind,
+            },
+          ],
+        }),
+      ).toThrow(/only valid on migrated preparation or event-investigation evidence/i);
+    }
+  });
+
   it("migrates strict version-8 snapshots to the canonical version-9 default", () => {
     const migrated = parseOverworldSessionSnapshot(legacySnapshot());
     const second = parseOverworldSessionSnapshot(legacySnapshot());

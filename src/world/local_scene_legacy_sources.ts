@@ -58,6 +58,9 @@ export const AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before Albany Campus gained its authored return-evidence event. */
 export const AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH =
   "772918ea2535fbc2bd55253180be22b618a33f0636cfe95ecb4259f73c3ea1c1";
+/** Exact manifest immediately before Albany Station gained its authored return-filing event. */
+export const AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH =
+  "8bedbbc1176dfa54e82546403d62d10f6527a4e93e6ec9f130e1b2d813031ce9";
 /**
  * Exact post-Station manifests that shipped the same three-option Cade packet
  * before its structural options honored the dawn dispatch. Migrations fence on
@@ -126,4 +129,10 @@ export const AUTHORED_ALBANY_CAMPUS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES: Read
     "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f",
     "1d8ed584e39c462a7eb5132c23796ea39b8f76a545add86a88080ecf926b9f9c",
     AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
+  ]);
+
+export const AUTHORED_ALBANY_STATION_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
+  new Set([
+    ...AUTHORED_ALBANY_CAMPUS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
   ]);

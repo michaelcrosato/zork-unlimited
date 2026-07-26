@@ -792,9 +792,9 @@ describe("SS-F01 — Albany character background counterfactual", () => {
 
     const selectedWithLaterPlay = registerSession("albany:road_warden");
     selectedWithLaterPlay.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
-    const event = selectedWithLaterPlay.view().events[0];
-    if (!event) throw new Error("expected Albany's opening event");
-    selectedWithLaterPlay.investigateEvent(event.id);
+    const stationPoi = selectedWithLaterPlay.view().pois[0];
+    if (!stationPoi) throw new Error("expected Albany's Station point of interest");
+    selectedWithLaterPlay.scoutPoi(stationPoi.id);
     const missingSelection = structuredClone(selectedWithLaterPlay.snapshot());
     missingSelection.journalEntries = missingSelection.journalEntries.filter(
       (entry) => entry.kind !== "registration",

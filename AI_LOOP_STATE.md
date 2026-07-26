@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 643 -->
+<!-- historical_cycle_count: 644 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - station_return_filing_standard
+
+- Evidence choice: Depth #11 left Station as Albany's sixth generic checklist event; exact-clean Terra seed 72632 is this cycle's fresh pure journey through The Wolf-Winter.
+- Surface: after the Wolf return, Hayden binds a route abstract or witnessed record without closing Cade's packet, revealing only the matching no-service administrative closure.
+- Counterfactual: from the same 8-standing return, route costs 50 minutes/+4 and ends at 12; witnessed costs 65/+5, reaches 13, and opens the existing Civic cot.
+- Ordering/compatibility: completing any packet method expires the filing; an unresolved exact-predecessor investigation retains trusted provenance without inventing a choice, and forged proof/hash/chronology fail closed.
+- Self-critique/follow-through: all 6/6 Albany jobs and events are authored, but organic return uptake and the dense post-goal lead surface remain unproven.
+- Guard: review blockers are fixed; post-crawl `20260725T234919Z` is zero-finding and full health passes 423 files/3,447 tests plus both typechecks and all packs.
 
 ### Cycle result - campus_return_evidence_mandate
 
@@ -144,13 +153,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra `750b8633` seed 72511 completes The Wolf-Winter bloodlessly with the herd whole, visibly receives Hayden's receipt, continues twice, wins The Gallowmere, and ends voluntarily at 50 accepted decisions; clarity/enjoyment 4/4, unstuck, replay-yes.
 - Feedback/follow-through: setup density and the advertised-but-unavailable June seat recur; the already-green staged terminal controller and queued June increment address those separately rather than broadening Registration.
 - Guard: independent re-review is clean, exact post-rebase crawl `20260724T125355Z` is zero-finding at 247/247 nodes, 344/344 edges, and 12/12 quests, and full health passes 418 files/3,371 tests plus both typechecks and all packs.
-
-### Cycle result - relief_allocation_trigger_categories
-
-- Evidence choice: the staged Station cohort still received all three Relief Allocation preview paragraphs in its first comparison, recreating the consequence wall that preparation had removed.
-- Surface: Relief Allocation now leads with one bounded trigger category plus exact cost; noncommitting detail reveals only the requested option's complete preview, protected/exposed needs, consequence, and mechanics, while verbose mode remains canonical.
-- Counterfactual: categories are all-present or all-absent for exact legacy manifests, comparison reads preserve hash/time/money/decisions, other options never leak, allocation outcomes and costs are unchanged, and only exact predecessor `42357dc…` migrates to world `a37f9fc6…`.
-- Pure evidence: exact clean `547f80c9` accepts Terra at 49 decisions (clarity/enjoyment 3/4, replay-yes) and Sol at 55 (4/4, replay-yes); Sol organically compares, inspects, and chooses resident shelter, while Terra truthfully skips optional setup and launches directly.
-- Diagnostics: Luna's unpublished 29-decision run failed the strict evidence audit; valid game feedback remains unchanged, and no rejected run is counted or compiled.
-- Measured result/follow-through: the new Relief summary works when used without becoming mandatory; opening density, the Relief Protocol's narrow multi-failure summary, June discoverability, and stale promise/action copy remain separate ranked follow-ups, with two valid reports held below the three-report compile threshold.
-- Guard: post-change crawl `ai-runs\crawl\20260724T032033Z` is zero-finding; independent review is clean, focused coverage passes 55 tests plus UI, and full health passes 416 files/3,337 tests plus UI typecheck and all packs.

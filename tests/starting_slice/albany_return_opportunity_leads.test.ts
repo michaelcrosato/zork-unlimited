@@ -14,6 +14,7 @@ const WORLD = loadOverworldManifest(process.cwd());
 const STATION = "albany_city__transport_hub";
 const STATION_POI = "albany_city__transport_hub__poi";
 const STATION_CONTACT = "albany_city__transport_hub__contact";
+const STATION_EVENT = "albany_city__transport_hub__event";
 const CADE_JOB = "albany_city__transport_hub__job";
 const CADE_OPTION = "dispatch_pasture_search";
 const MARKET = "albany_city__market";
@@ -29,6 +30,13 @@ const GREENWAY_EVENT = "albany_city__greenway__event";
 const FULL = { compact_context: false, compact_result: false } as const;
 
 const EXPECTED_LEADS: readonly JourneyOpportunityLeadPresentation[] = [
+  {
+    id: STATION_EVENT,
+    kind: "event",
+    title: "Hayden Hale's Cade Return Filing Standard",
+    area: "Albany Station Quarter",
+    access: "here",
+  },
   {
     id: CADE_JOB,
     kind: "job",
@@ -174,7 +182,7 @@ function expectExactAlbanyLeads(session: OverworldSession): void {
 }
 
 describe("optional return opportunity leads", () => {
-  it("shows no pre-Wolf lead, then the exact four roots across completion, dawn, and active play", () => {
+  it("shows no pre-Wolf lead, then the exact five roots across completion, dawn, and active play", () => {
     const untouched = new OverworldSession(WORLD);
     const untouchedSnapshot = untouched.snapshot();
     untouched.journey();
@@ -304,6 +312,7 @@ describe("optional return opportunity leads", () => {
     expect(cade.view().jobChoices).toContainEqual([CADE_JOB, CADE_OPTION]);
     cade.workLocalJob(CADE_JOB, CADE_OPTION);
     expect(cade.journey().opportunities?.leads.map((lead) => lead.id)).not.toContain(CADE_JOB);
+    expect(cade.journey().opportunities?.leads.map((lead) => lead.id)).not.toContain(STATION_EVENT);
   });
 
   it("survives cross-area travel, goal-follow departure, pending road, restore, and arrival", () => {
@@ -327,10 +336,11 @@ describe("optional return opportunity leads", () => {
     expect(restored.view().pendingRoadEncounter).not.toBeNull();
     expect(restored.journey().acceptedDecisions).toBe(beforeFollow + 1);
     expect(restored.journey().opportunities?.leads).toEqual([
-      { ...EXPECTED_LEADS[1], access: "mapped" },
+      { ...EXPECTED_LEADS[2], access: "mapped" },
       { ...EXPECTED_LEADS[0], access: "mapped" },
-      EXPECTED_LEADS[2],
+      { ...EXPECTED_LEADS[1], access: "mapped" },
       EXPECTED_LEADS[3],
+      EXPECTED_LEADS[4],
     ]);
     expect(restored.compactView().opportunity_leads).toEqual([
       [
@@ -338,6 +348,13 @@ describe("optional return opportunity leads", () => {
         MARKET_EVENT,
         "Jamie Tanner's Winter Price Policy",
         "Albany Market Streets",
+        "mapped",
+      ],
+      [
+        "event",
+        STATION_EVENT,
+        "Hayden Hale's Cade Return Filing Standard",
+        "Albany Station Quarter",
         "mapped",
       ],
       ["job", CADE_JOB, "Hayden's Cade Return Packet", "Albany Station Quarter", "mapped"],
@@ -370,6 +387,7 @@ describe("optional return opportunity leads", () => {
     expect(pending.journey().goal.id).toBe("carry_hedricks_packet_north");
     expect(pending.journey().opportunities?.leads.map((lead) => lead.id)).toEqual([
       MARKET_EVENT,
+      STATION_EVENT,
       CADE_JOB,
       CAMPUS_EVENT,
       GREENWAY_EVENT,

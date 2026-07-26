@@ -92,6 +92,11 @@ export function cloneOverworldLocalEvent(event: OverworldLocalEvent): OverworldL
                   forbids_completed_quests: [...event.authored_scene.forbids_completed_quests],
                 }
               : {}),
+            ...(event.authored_scene.forbids_completed_jobs
+              ? {
+                  forbids_completed_jobs: [...event.authored_scene.forbids_completed_jobs],
+                }
+              : {}),
             options: event.authored_scene.options.map((option) => ({
               ...option,
               terms: { ...option.terms },

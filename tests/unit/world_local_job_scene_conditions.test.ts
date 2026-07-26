@@ -318,5 +318,13 @@ describe("generic authored local-job conditions", () => {
     if (!event?.authored_scene) throw new Error("expected authored event scene");
     event.authored_scene.requires_completed_quests = ["quest:invented"];
     expect(() => assertOverworldIntegrity(missingQuest)).toThrow(/requires missing quest/i);
+
+    const missingJob = structuredClone(WORLD);
+    const jobBoundEvent = missingJob.local_events.find(
+      (candidate) => candidate.authored_scene?.forbids_completed_jobs,
+    );
+    if (!jobBoundEvent?.authored_scene) throw new Error("expected job-bound authored event scene");
+    jobBoundEvent.authored_scene.forbids_completed_jobs = ["job:invented"];
+    expect(() => assertOverworldIntegrity(missingJob)).toThrow(/forbids missing local job/i);
   });
 });

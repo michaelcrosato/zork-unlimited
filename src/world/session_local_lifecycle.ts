@@ -124,6 +124,7 @@ export type OverworldSessionEventInvestigationPlanState = {
   eventId: string;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   completedQuestIds: ReadonlySet<string>;
+  completedJobIds?: ReadonlySet<string> | undefined;
   currentTownId: string;
   currentAreaId: () => string;
 };
@@ -272,12 +273,14 @@ export function planOverworldSessionEventInvestigation(
     event.authored_scene &&
     !localEventSceneRequirementsMet(event.authored_scene, {
       completedQuestIds: state.completedQuestIds,
+      completedJobIds: state.completedJobIds,
     })
   ) {
     throw new Error(
       `${event.title}: ${
         localEventSceneRequirementError(event.authored_scene, {
           completedQuestIds: state.completedQuestIds,
+          completedJobIds: state.completedJobIds,
         }) ?? "Its authored requirements are not met."
       }`,
     );

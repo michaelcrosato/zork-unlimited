@@ -820,6 +820,44 @@
         "tests/unit/world_campaign_service_rules.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/campus_return_evidence_mandate_counterfactual.test.ts"
+    },
+    {
+      "id": "SS-F18-station-return-filing-standard",
+      "title": "Bind Hayden's Cade return filing standard",
+      "phase": "albany_return",
+      "implementation_status": "implemented",
+      "proof_status": "proven",
+      "counts_toward_contract": false,
+      "visible_choice": "After Wolf-Winter, Scout the Station POI, speak with Hayden Hale, and investigate the Cade Return Filing Standard. Bind either an operational route abstract or a named-witness return. Both cost 20 minutes and earn 1 Capital / Mohawk renown; each states its one matching administrative Cade Return Packet close before confirmation, neither closes the packet at filing time, and neither is required for first-goal completion. Completing any packet method first removes the filing event instead of leaving a dead choice.",
+      "immediate_state_delta": [
+        "world.resolved_event_ids",
+        "journal.local_scene_proof",
+        "world.minutes",
+        "world.region_renown"
+      ],
+      "delayed_consumers": [
+        "The operational route abstract adds only `close_packet_under_route_abstract`, a 30-minute/+3-standing packet close. The witnessed return adds only `close_packet_under_witnessed_record`, a 45-minute/+4-standing close. A neutral generic predecessor marker unlocks neither method.",
+        "Both administrative closes preserve the existing broken-paling, abandoned-line, and missing-cattle dispatches whenever their Wolf-Winter facts and dawn-dispatch predicates permit. Choosing a close completes the administrative record but records no physical work, creates no rest or resupply claim, and leaves every certified physical loss honestly deferred.",
+        "From the lowest 8-standing held return, either filing choice first reaches 9. The operational close ends at 12 and is 15 minutes faster when already rested; the witnessed close ends at 13 and opens Rowan's existing 15-minute Civic recovery cot, beating the quick line plus ordinary 180-minute recovery when fatigued.",
+        "Because the event requires completed Wolf-Winter and every action is optional, the filing standard adds no decision to the first-goal path."
+      ],
+      "visible_feedback": [
+        "Before Wolf-Winter the Station filing event is absent. After return it remains inaccessible until the player has scouted the Station POI, talked with Hayden, and investigated it; full, compact, UI, and MCP surfaces expose the same two exact choices and terms.",
+        "The Cade Return Packet board retains every currently lawful physical dispatch and appends only the close matching the resolved filing proof. Its copy states that administrative closure dispatches no crew, grants no recovery claim, and leaves physical losses deferred.",
+        "The unresolved event and eligible Cade job remain truthful optional opportunity leads until one packet method is complete. Event/job journals and save/restore retain exact proofs; an unresolved exact-predecessor investigation gains trusted source-world provenance without inventing a filing choice, a completed generic predecessor becomes a neutral source-hashed marker, current-copy migrations are excluded, and relabelled, reversed, or divergent evidence fails closed."
+      ],
+      "systems": ["events", "jobs", "journal", "region_renown", "services", "save_restore"],
+      "persistence_boundaries": ["overworld_save_restore", "quest_to_overworld"],
+      "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
+      "baseline_evidence": [
+        "tests/unit/world_local_event_scene.test.ts",
+        "tests/unit/world_local_event_scene_legacy.test.ts",
+        "tests/unit/world_local_job_scene_conditions.test.ts",
+        "tests/unit/world_session_snapshot.test.ts",
+        "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
+        "tests/starting_slice/albany_return_opportunity_leads.test.ts"
+      ],
+      "counterfactual_test": "tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts"
     }
   ]
 }

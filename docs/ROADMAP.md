@@ -75,11 +75,14 @@ until its contract in `docs/STARTING_SLICE.md` is proven.
   `wolf_winter` stay exercised before drawing content-quality conclusions.
 - Build the starting slice's reusable campaign-character and data-driven
   consequence boundary before adding more Wolf-specific branches.
-- Continue replacing the visible Albany slice's generic discovery/jobs/events
-  with authored scenes that consume persistent state across phases. All six
-  district jobs and five of six district events are authored; Campus now turns
-  one post-Wolf evidence mandate into an exclusive job method and consolidated
-  service. Only Station's checklist event remains generic.
+- Keep the visible Albany slice's authored boundary closed: all six district
+  jobs and all six district events now consume persistent state through
+  authored scenes. Station's optional post-Wolf filing standard completes the
+  set by adding one exact no-service Cade packet closure without closing the
+  packet at filing time, and it expires after any packet method is complete.
+  Every truthful physical-loss dispatch remains available until then. Depth
+  Contract #11 is closed; new generic district transactions must not re-enter
+  the slice.
 - Deepen Wolf-Winter into combat, fully noncombat, and hybrid resolution
   families with deterministic counterfactual and failure-forward proofs.
 - Tighten the remaining restore-time sequencing proofs beyond discovery prefixes.

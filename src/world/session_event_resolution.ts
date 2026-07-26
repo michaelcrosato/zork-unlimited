@@ -73,6 +73,7 @@ export type OverworldEventResolutionPlanState = {
   currentRegion: string;
   currentAreaId: string | null;
   completedQuestIds: ReadonlySet<string>;
+  completedJobIds?: ReadonlySet<string> | undefined;
   resolvedEventIds: ReadonlySet<string>;
   journalEntries: OverworldJournalEntryReadIndex;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;

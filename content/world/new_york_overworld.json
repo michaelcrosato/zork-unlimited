@@ -32126,10 +32126,45 @@
       "id": "albany_city__transport_hub__event",
       "home": "albany_city",
       "area": "albany_city__transport_hub",
-      "title": "Albany Station Quarter: winter relief packet",
+      "title": "Hayden Hale's Cade Return Filing Standard",
       "pressure": "conflict",
       "intensity": 3,
-      "summary": "A northbound relief packet sits open at the route desk: Rowan's docket mark, Hayden's route pin, no team back from the hill road, Old Cade's cattle penned at a byre, and the weather report worsening. Resolving it requires scouting this area, talking to its contact, and investigating on site."
+      "summary": "The truthful Wolf-Winter return has reached Hayden's route desk, but Cade's packet has no lawful closing standard. Bind either a quick operational abstract or a slower named-witness record; both preserve every physical loss instead of pretending a relief crew was sent.",
+      "authored_scene": {
+        "version": 1,
+        "id": "albany:cade-return-filing-standard",
+        "prompt": "The return supports two honest filing standards. Binding one does not close the packet or dispatch a crew. At Hayden's Return Packet, you later choose a physical dispatch or the matching administrative closure. The route abstract adds a 30-minute/+3-standing closure. The witnessed record adds a 45-minute/+4 closure and can reach Rowan's existing 13-standing Civic cot from the lowest 8-standing held return. Both cost 20 minutes/+1 now; neither repairs a loss or creates a recovery claim.",
+        "required_poi_id": "albany_city__transport_hub__poi",
+        "required_contact_id": "albany_city__transport_hub__contact",
+        "requires_completed_quests": [
+          "wolf_winter"
+        ],
+        "forbids_completed_jobs": [
+          "albany_city__transport_hub__job"
+        ],
+        "options": [
+          {
+            "id": "bind_operational_route_abstract",
+            "title": "Bind an operational route abstract",
+            "preview": "Spend 20 minutes binding Hayden's route marks into a provisional action abstract. Earn 1 Capital / Mohawk renown; the Cade Return Packet later adds a 30-minute, 3-renown desk closure with no recovery claim.",
+            "consequence": "Hayden records a concise operational abstract that can complete the administrative record quickly without pretending a repair, evacuation-line crew, or pasture search occurred. This filing does not close the packet now; every certified physical loss stays deferred unless you later choose one of its physical dispatches.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            }
+          },
+          {
+            "id": "bind_witnessed_return_record",
+            "title": "Bind a witnessed return record",
+            "preview": "Spend 20 minutes reconciling Cade's account with the returning crew's named testimony. Earn 1 Capital / Mohawk renown; the Cade Return Packet later adds a 45-minute, 4-renown witnessed closure with no recovery claim.",
+            "consequence": "Hayden records the named witness chain as an audited way to complete the administrative record without pretending a repair, evacuation-line crew, or pasture search occurred. This filing does not close the packet now; every certified physical loss stays deferred unless you later choose one of its physical dispatches.",
+            "terms": {
+              "minutes": 20,
+              "renown": 1
+            }
+          }
+        ]
+      }
     },
     {
       "id": "albany_city__industrial__event",
@@ -52613,16 +52648,16 @@
       "area": "albany_city__transport_hub",
       "kind": "courier",
       "title": "Hayden's Cade Return Packet",
-      "summary": "Cade's field dispatch is closed, but Hayden's return packet still carries the exact repair, abandoned-line, or missing-cattle claim certified by the Wolf-Winter return.",
-      "objective": "Commit Albany's one immediate follow-up crew to one loss the certified Cade return actually left behind.",
-      "reward": "Earn 2-4 Capital / Mohawk renown and create one exact downstream recovery or create/consolidate one stores line; any other simultaneous loss remains deferred.",
+      "summary": "Cade's field dispatch is closed, but Hayden's return packet still carries every exact repair, abandoned-line, or missing-cattle claim certified by the Wolf-Winter return. A bound Station filing standard can close the record without pretending a physical follow-up occurred.",
+      "objective": "Commit Albany's one immediate follow-up crew to one certified loss, or complete the administrative record under the exact Station filing standard you bound while leaving every physical loss deferred.",
+      "reward": "Earn 2-4 Capital / Mohawk renown. A physical dispatch creates one exact downstream recovery or creates/consolidates one stores line; an administrative closure creates no service and leaves every physical loss deferred.",
       "minutes": 79,
       "difficulty": 4,
       "visibility": "local_job_board",
       "authored_scene": {
         "version": 1,
         "id": "albany:cade-return-packet",
-        "prompt": "Hayden can release one immediate follow-up crew before the next snow closes the hill road. Every available option below comes from the certified Cade return. If two losses remain, choosing one retires this packet and leaves the other honestly deferred.",
+        "prompt": "Hayden can release one immediate follow-up crew before the next snow closes the hill road, or use a Station filing standard you already bound to complete the administrative record without dispatching anyone. Every physical option below comes from the certified Cade return. Choosing any one method completes this packet's active decision; all other certified losses remain honestly deferred.",
         "required_poi_id": "albany_city__transport_hub__poi",
         "required_contact_id": "albany_city__transport_hub__contact",
         "requires_completed_quests": [
@@ -52690,6 +52725,38 @@
             },
             "requires_all_world_facts": [
               "fact:wolf_winter_cattle_scattered"
+            ]
+          },
+          {
+            "id": "close_packet_under_route_abstract",
+            "title": "Close the packet under Hayden's route abstract",
+            "preview": "Spend 30 minutes completing the provisional route abstract against the certified return. Earn 3 Capital / Mohawk renown. This completes the administrative record without dispatching a physical crew or creating a rest or resupply claim.",
+            "consequence": "Hayden completes the operational record under the route abstract you bound. No repair, evacuation-line crew, or cattle search is entered as completed; every certified physical loss remains deferred.",
+            "terms": {
+              "minutes": 30,
+              "renown": 3
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__transport_hub__event",
+                "option_id": "bind_operational_route_abstract"
+              }
+            ]
+          },
+          {
+            "id": "close_packet_under_witnessed_record",
+            "title": "Close the packet under the witnessed return",
+            "preview": "Spend 45 minutes auditing Cade's return through the named witness chain. Earn 4 Capital / Mohawk renown. This completes the administrative record without dispatching a physical crew or creating a rest or resupply claim.",
+            "consequence": "Hayden completes the audited record under the witnessed return you bound. No repair, evacuation-line crew, or cattle search is entered as completed; every certified physical loss remains deferred.",
+            "terms": {
+              "minutes": 45,
+              "renown": 4
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__transport_hub__event",
+                "option_id": "bind_witnessed_return_record"
+              }
             ]
           }
         ]

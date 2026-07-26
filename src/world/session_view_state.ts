@@ -177,12 +177,16 @@ function activeOverworldEvents(
   events: readonly OverworldLocalEvent[],
   resolvedEventIds: ReadonlySet<string>,
   completedQuestIds: ReadonlySet<string>,
+  completedJobIds: ReadonlySet<string>,
 ): OverworldLocalEvent[] {
   return events.filter(
     (event) =>
       !resolvedEventIds.has(event.id) &&
       (!event.authored_scene ||
-        localEventSceneRequirementsMet(event.authored_scene, { completedQuestIds })),
+        localEventSceneRequirementsMet(event.authored_scene, {
+          completedQuestIds,
+          completedJobIds,
+        })),
   );
 }
 
@@ -231,6 +235,7 @@ export function buildOverworldSessionViewModelState(
     currentAreaContent.events,
     source.ids.resolvedEventIds,
     source.completedQuestIds,
+    source.ids.completedJobIds,
   );
   const contacts = currentAreaContent.characters.map(
     (character) =>

@@ -776,8 +776,26 @@ describe("New York overworld graph", () => {
     expect(stationPoi?.summary).toContain("Old Cade waiting");
     expect(hayden?.agenda).toContain("controlling source certification");
     expect(hayden?.agenda).toContain("Old Cade's steading");
-    expect(stationEvent?.summary).toContain("Hayden's route pin");
-    expect(stationEvent?.summary).toContain("Old Cade's cattle");
+    expect(stationEvent?.title).toBe("Hayden Hale's Cade Return Filing Standard");
+    expect(stationEvent?.summary).toContain("truthful Wolf-Winter return");
+    expect(stationEvent?.summary).toContain("physical loss");
+    expect(stationEvent?.authored_scene).toMatchObject({
+      id: "albany:cade-return-filing-standard",
+      required_poi_id: "albany_city__transport_hub__poi",
+      required_contact_id: "albany_city__transport_hub__contact",
+      requires_completed_quests: ["wolf_winter"],
+      forbids_completed_jobs: ["albany_city__transport_hub__job"],
+      options: [
+        {
+          id: "bind_operational_route_abstract",
+          terms: { minutes: 20, renown: 1 },
+        },
+        {
+          id: "bind_witnessed_return_record",
+          terms: { minutes: 20, renown: 1 },
+        },
+      ],
+    });
     expect(stationJob?.summary).toMatch(/wolf-winter/i);
     expect(stationSite?.discovery).toContain("Rowan's docket mark");
     expect(stationSite?.discovery).toContain("Old Cade's byre tag");
@@ -958,6 +976,26 @@ describe("New York overworld graph", () => {
         id: "dispatch_pasture_search",
         terms: { minutes: 60, renown: 4 },
         requires_all_world_facts: ["fact:wolf_winter_cattle_scattered"],
+      }),
+      expect.objectContaining({
+        id: "close_packet_under_route_abstract",
+        terms: { minutes: 30, renown: 3 },
+        requires_event_options: [
+          {
+            event_id: "albany_city__transport_hub__event",
+            option_id: "bind_operational_route_abstract",
+          },
+        ],
+      }),
+      expect.objectContaining({
+        id: "close_packet_under_witnessed_record",
+        terms: { minutes: 45, renown: 4 },
+        requires_event_options: [
+          {
+            event_id: "albany_city__transport_hub__event",
+            option_id: "bind_witnessed_return_record",
+          },
+        ],
       }),
     ]);
   });

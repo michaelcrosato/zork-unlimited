@@ -82,7 +82,11 @@ import {
 } from "./journey_campaign.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
-import { describeOverworldContactAction, describeOverworldJobAction } from "./local_actions.js";
+import {
+  describeOverworldContactAction,
+  describeOverworldEventAction,
+  describeOverworldJobAction,
+} from "./local_actions.js";
 import {
   localJobSceneOptionRequirementsMet,
   localJobSceneRequirementsMet,
@@ -411,7 +415,7 @@ export const OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH
 export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
   "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "8bedbbc1176dfa54e82546403d62d10f6527a4e93e6ec9f130e1b2d813031ce9";
+  "3b7ccae1235ee3dd0fad5202594faf1d18e9c3f3d162bb214008d911cb2082d5";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
  * Authored-job support itself is derived from the scene registry below, so this
@@ -2419,12 +2423,45 @@ export function migrateAuthoredLocalEventPredecessorJournal(args: {
       continue;
     }
     const completed = args.snapshot.resolvedEventIds.includes(definition.eventId);
+    const investigationEntries = journalEntries.filter(
+      (entry) => entry.id === `investigate:${definition.eventId}`,
+    );
+    if (investigationEntries.length > 1) {
+      throw new Error(
+        `The authored-local-event predecessor has duplicate investigation evidence for "${definition.eventId}".`,
+      );
+    }
     const matchingEntries = journalEntries.filter(
       (entry) => entry.id === `resolve:${definition.eventId}`,
     );
     if (completed !== (matchingEntries.length === 1)) {
       throw new Error(
         `The authored-local-event predecessor has inconsistent resolution evidence for "${definition.eventId}".`,
+      );
+    }
+    if (!completed && investigationEntries.length === 1) {
+      const event = args.indexes.eventsById.get(definition.eventId);
+      const entry = investigationEntries[0]!;
+      const expected = describeOverworldEventAction(definition.legacyEvent);
+      const townName = event ? args.indexes.townNameForSource(event.home) : "";
+      if (
+        !event?.authored_scene ||
+        event.authored_scene.id !== definition.sceneId ||
+        entry.kind !== "event" ||
+        entry.title !== expected.title ||
+        entry.text !== expected.text ||
+        entry.town !== townName ||
+        entry.localSceneProof !== undefined ||
+        entry.sourceWorldHash !== undefined
+      ) {
+        throw new Error(
+          `Authored local-event predecessor investigation for "${definition.eventId}" does not match its exact trusted copy.`,
+        );
+      }
+      journalEntries = journalEntries.map((candidate) =>
+        candidate === entry
+          ? Object.freeze({ ...entry, sourceWorldHash: args.snapshot.worldHash })
+          : candidate,
       );
     }
     if (!completed) continue;
@@ -4813,10 +4850,38 @@ function assertSnapshotLocalEventSceneProofs(args: {
     const eventId = investigation.id.slice("investigate:".length);
     const event = args.indexes.eventsById.get(eventId);
     const scene = event?.authored_scene;
-    if (!scene) continue;
+    if (!scene) {
+      if (investigation.sourceWorldHash !== undefined) {
+        throw new Error(
+          `Overworld session snapshot generic event "${eventId}" cannot carry legacy investigation provenance.`,
+        );
+      }
+      continue;
+    }
     const resolutionProof = args.journalEntries.find(
       (candidate) => candidate.id === `resolve:${eventId}`,
     )?.localSceneProof;
+    if (investigation.sourceWorldHash !== undefined) {
+      const definition = authoredLocalEventLegacyDefinitionsForSourceWorldHash(
+        investigation.sourceWorldHash,
+      ).find(
+        (candidate) =>
+          candidate.eventId === eventId && candidate.sceneId === event.authored_scene?.id,
+      );
+      const expected = definition ? describeOverworldEventAction(definition.legacyEvent) : null;
+      if (
+        !definition ||
+        resolutionProof !== undefined ||
+        investigation.title !== expected?.title ||
+        investigation.text !== expected.text ||
+        investigation.town !== args.indexes.townNameForSource(event.home)
+      ) {
+        throw new Error(
+          `Overworld session snapshot authored event "${eventId}" has untrusted legacy investigation evidence.`,
+        );
+      }
+      continue;
+    }
     if (event && authoredLocalEventLegacyCompletion(eventId, resolutionProof)) continue;
     for (const questId of scene.requires_completed_quests ?? []) {
       const questCompletion = args.journalEntries.find(
@@ -4871,9 +4936,23 @@ function assertSnapshotLocalEventSceneProofs(args: {
               : [],
           ),
       );
-      if (!localEventSceneRequirementsMet(scene, { completedQuestIds: earlierCompletedQuestIds })) {
+      const earlierCompletedJobIds = new Set(
+        args.journalEntries
+          .slice(entryIndex + 1)
+          .flatMap((candidate) =>
+            candidate.kind === "job" && candidate.id.startsWith("job:")
+              ? [candidate.id.slice("job:".length)]
+              : [],
+          ),
+      );
+      if (
+        !localEventSceneRequirementsMet(scene, {
+          completedQuestIds: earlierCompletedQuestIds,
+          completedJobIds: earlierCompletedJobIds,
+        })
+      ) {
         throw new Error(
-          `Overworld session snapshot authored event "${event.id}" violates its required or forbidden quest chronology.`,
+          `Overworld session snapshot authored event "${event.id}" violates its required quest or forbidden job chronology.`,
         );
       }
     }

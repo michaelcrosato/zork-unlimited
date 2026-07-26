@@ -444,9 +444,43 @@ export function exactAlbanyWorksHazardPredecessor(current: OverworldManifest): O
   return predecessor;
 }
 
+/** Reconstruct the exact manifest before Station gained its return-filing standard. */
+export function exactAlbanyStationEventPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const event = predecessor.local_events.find(
+    (candidate) => candidate.id === "albany_city__transport_hub__event",
+  );
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__transport_hub__job",
+  );
+  if (!event || !job?.authored_scene) {
+    throw new Error("Albany Station event and authored Cade return packet must exist");
+  }
+
+  event.title = "Albany Station Quarter: winter relief packet";
+  event.summary =
+    "A northbound relief packet sits open at the route desk: Rowan's docket mark, Hayden's route pin, no team back from the hill road, Old Cade's cattle penned at a byre, and the weather report worsening. Resolving it requires scouting this area, talking to its contact, and investigating on site.";
+  delete event.authored_scene;
+
+  job.summary =
+    "Cade's field dispatch is closed, but Hayden's return packet still carries the exact repair, abandoned-line, or missing-cattle claim certified by the Wolf-Winter return.";
+  job.objective =
+    "Commit Albany's one immediate follow-up crew to one loss the certified Cade return actually left behind.";
+  job.reward =
+    "Earn 2-4 Capital / Mohawk renown and create one exact downstream recovery or create/consolidate one stores line; any other simultaneous loss remains deferred.";
+  job.authored_scene.prompt =
+    "Hayden can release one immediate follow-up crew before the next snow closes the hill road. Every available option below comes from the certified Cade return. If two losses remain, choosing one retires this packet and leaves the other honestly deferred.";
+  job.authored_scene.options = job.authored_scene.options.filter(
+    (option) =>
+      option.id !== "close_packet_under_route_abstract" &&
+      option.id !== "close_packet_under_witnessed_record",
+  );
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before Campus gained its return-evidence mandate. */
 export function exactAlbanyCampusEventPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactAlbanyStationEventPredecessor(current);
   const event = predecessor.local_events.find(
     (candidate) => candidate.id === "albany_city__campus__event",
   );

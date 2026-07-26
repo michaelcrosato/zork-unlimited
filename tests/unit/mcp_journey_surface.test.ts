@@ -285,24 +285,20 @@ function mcpWolfWinterCheckpointInsideQuest() {
   }).journey;
   expect(journey.acceptedDecisions).toBe(13);
 
-  // Resolve the Station's visible dispatch event before leaving it. These are
-  // actual local actions (rather than a repeated scout), and retain an even
-  // movement count so the helper returns to the quest departure area.
+  // Talk with Hayden and map the Station before leaving it. These are actual
+  // local actions (rather than a repeated scout), and retain an even movement
+  // count so the helper returns to the quest departure area. The authored
+  // filing-standard event is intentionally post-Wolf and absent here.
   journey = a.talk_overworld_session_contact({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
     character_id: HAYDEN_ID,
   }).journey;
   expect(journey.acceptedDecisions).toBe(14);
-  const stationEvent = a.get_overworld_session({
-    session_id: overworldSessionId,
-    include_observation: true,
-  }).observation.events[0];
-  if (!stationEvent) throw new Error("expected the Station Quarter dispatch event");
-  journey = a.investigate_overworld_session_event({
+  journey = a.explore_overworld_session_area({
     ...FULL_OVERWORLD,
     session_id: overworldSessionId,
-    event_id: stationEvent.id,
+    area_id: quest.area,
   }).journey;
   expect(journey.acceptedDecisions).toBe(15);
 

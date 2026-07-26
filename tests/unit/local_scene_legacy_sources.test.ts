@@ -4,6 +4,7 @@ import {
   AUTHORED_ALBANY_CAMPUS_EVENT_ID,
   AUTHORED_ALBANY_GREENWAY_EVENT_ID,
   AUTHORED_ALBANY_MARKET_EVENT_ID,
+  AUTHORED_ALBANY_STATION_EVENT_ID,
   AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
   authoredLocalEventLegacyDefinitionsForSourceWorldHash,
 } from "../../src/world/local_event_scene_legacy.js";
@@ -27,6 +28,8 @@ import {
   AUTHORED_ALBANY_MARKET_GENERIC_PREDECESSOR_WORLD_HASHES,
   AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_STATION_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_STATION_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+  AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
   AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
@@ -84,6 +87,10 @@ const CAMPUS_EVENT_HASHES = [
   "1d8ed584e39c462a7eb5132c23796ea39b8f76a545add86a88080ecf926b9f9c",
   AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
 ];
+const STATION_EVENT_HASHES = [
+  ...CAMPUS_EVENT_HASHES,
+  AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
+];
 
 describe("authored local-scene legacy source epochs", () => {
   it("keeps every generic-copy lifetime cumulative and exact", () => {
@@ -98,6 +105,9 @@ describe("authored local-scene legacy source epochs", () => {
     );
     expect([...AUTHORED_ALBANY_CAMPUS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES]).toEqual(
       CAMPUS_EVENT_HASHES,
+    );
+    expect([...AUTHORED_ALBANY_STATION_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES]).toEqual(
+      STATION_EVENT_HASHES,
     );
   });
 
@@ -135,11 +145,19 @@ describe("authored local-scene legacy source epochs", () => {
     expect(eventDefinition(AUTHORED_ALBANY_CAMPUS_EVENT_ID)?.acceptedSourceWorldHashes).toBe(
       AUTHORED_ALBANY_CAMPUS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
     );
+    expect(eventDefinition(AUTHORED_ALBANY_STATION_EVENT_ID)?.acceptedSourceWorldHashes).toBe(
+      AUTHORED_ALBANY_STATION_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
+    );
     expect(
       authoredLocalEventLegacyDefinitionsForSourceWorldHash(
         AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
       ).map((definition) => definition.eventId),
-    ).toEqual([AUTHORED_ALBANY_CAMPUS_EVENT_ID]);
+    ).toEqual([AUTHORED_ALBANY_CAMPUS_EVENT_ID, AUTHORED_ALBANY_STATION_EVENT_ID]);
+    expect(
+      authoredLocalEventLegacyDefinitionsForSourceWorldHash(
+        AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
+      ).map((definition) => definition.eventId),
+    ).toEqual([AUTHORED_ALBANY_STATION_EVENT_ID]);
 
     expect(
       authoredLocalJobLegacyDefinitionsForSourceWorldHash(

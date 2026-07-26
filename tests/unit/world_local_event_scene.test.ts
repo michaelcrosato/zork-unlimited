@@ -17,6 +17,7 @@ const CHARTER_SCENE: LocalEventScene = {
   required_contact_id: "test:clerk",
   requires_completed_quests: ["test:prior_return"],
   forbids_completed_quests: ["test:field_return"],
+  forbids_completed_jobs: ["test:closed_packet"],
   options: [
     {
       id: "open_record",
@@ -55,11 +56,18 @@ describe("strict authored local-event scenes", () => {
     expect(
       localEventSceneRequirementsMet(CHARTER_SCENE, {
         completedQuestIds: new Set(["test:prior_return"]),
+        completedJobIds: new Set(),
       }),
     ).toBe(true);
     expect(
       localEventSceneRequirementsMet(CHARTER_SCENE, {
         completedQuestIds: new Set(["test:prior_return", "test:field_return"]),
+      }),
+    ).toBe(false);
+    expect(
+      localEventSceneRequirementsMet(CHARTER_SCENE, {
+        completedQuestIds: new Set(["test:prior_return"]),
+        completedJobIds: new Set(["test:closed_packet"]),
       }),
     ).toBe(false);
   });
@@ -120,6 +128,12 @@ describe("strict authored local-event scenes", () => {
         requires_completed_quests: ["test:prior_return", "test:prior_return"],
       }),
     ).toThrow(/Duplicate required completed quest/i);
+    expect(() =>
+      LocalEventSceneSchema.parse({
+        ...CHARTER_SCENE,
+        forbids_completed_jobs: ["test:closed_packet", "test:closed_packet"],
+      }),
+    ).toThrow(/Duplicate forbidden completed job/i);
     expect(() =>
       LocalEventSceneSchema.parse({
         ...CHARTER_SCENE,
