@@ -100,6 +100,7 @@ shell_path_arg() {
 }
 
 CODEX_ROLLOUT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-rollout.mjs")"
+CODEX_STRICT_STREAM_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-strict-stream.mjs")"
 
 is_absolute_output_prefix() {
   case "$1" in
@@ -351,6 +352,7 @@ process.stdout.write(matches.join("\n"));
 fi
 
 CODEX_PREFLIGHT_EXIT=42
+CODEX_STRICT_STREAM_REJECT_EXIT=43
 CODEX_VERSION_TIMEOUT_SECONDS=5
 CODEX_VERSION_MAX_BYTES=1024
 SELECTED_CODEX_BIN=""
@@ -364,12 +366,20 @@ EXPECTED_CODEX_CLI_VERSION="${BLIND_CODEX_EXPECTED_VERSION:-}"
 # shebang file under the operating-system temp directory; normal runs accept
 # only a native binary or one exact official npm launcher shape.
 CODEX_TEST_SCRIPT_ARGS=()
+CODEX_STREAM_TEST_SHELL_ARGS=()
 if [[ "${BLIND_CODEX_TEST_SCRIPT_CLIENT:-0}" == "1" ]]; then
   if [[ "${NODE_ENV:-}" != "test" ]]; then
     echo "BLIND_CODEX_TEST_SCRIPT_CLIENT is a test-only seam and requires NODE_ENV=test." >&2
     exit "$CODEX_PREFLIGHT_EXIT"
   fi
   CODEX_TEST_SCRIPT_ARGS=(--allow-test-script)
+  CODEX_TEST_SHELL="$(command -v bash)"
+  if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]] && command -v cygpath >/dev/null 2>&1; then
+    CODEX_TEST_SHELL="$(cygpath -m "$CODEX_TEST_SHELL")"
+  elif [[ "$OSTYPE" == linux* && "$NODE_CMD" == *.exe ]] && command -v wslpath >/dev/null 2>&1; then
+    CODEX_TEST_SHELL="$(wslpath -w "$CODEX_TEST_SHELL")"
+  fi
+  CODEX_STREAM_TEST_SHELL_ARGS=(--test-shell "$CODEX_TEST_SHELL")
 elif [[ "${BLIND_CODEX_TEST_SCRIPT_CLIENT:-0}" != "0" ]]; then
   echo "BLIND_CODEX_TEST_SCRIPT_CLIENT must be unset, 0, or the explicit test value 1." >&2
   exit "$CODEX_PREFLIGHT_EXIT"
@@ -908,6 +918,7 @@ record_playthrough_terminal() {
   CODEX_CAPTURE="$OUT.codex-capture.json"
   CODEX_CAPTURE_ARG="$(node_path_arg "$CODEX_CAPTURE")"
   CODEX_ENVELOPE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-pure-envelope.mjs")"
+  CODEX_PROVIDER_LOG_ARG="$(node_path_arg "$OUT.log")"
   CODEX_STARTED_AT_MS="$("$NODE_CMD" -e 'process.stdout.write(String(Date.now()))')"
   CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
   # Re-probe the same pinned executable immediately before the gameplay process
@@ -916,8 +927,17 @@ record_playthrough_terminal() {
     exit "$CODEX_PREFLIGHT_EXIT"
   fi
 set +e
-  printf "%s" "$PROMPT" | ( cd "$CODEX_PLAYER_CWD" && CODEX_HOME="$ACTIVE_CODEX_HOME_ARG" \
-    timeout "$TIMEOUT" "$SELECTED_CODEX_BIN" exec \
+  printf "%s" "$PROMPT" | "$NODE_CMD" "$CODEX_STRICT_STREAM_SCRIPT" \
+    --binary "$SELECTED_CODEX_BIN" \
+    --cwd "$CODEX_PLAYER_CWD_ARG" \
+    --home "$ACTIVE_CODEX_HOME_ARG" \
+    --events "$CODEX_EVENTS_ARG" \
+    --provider-stderr "$CODEX_PROVIDER_LOG_ARG" \
+    --model "$MODEL" \
+    --timeout-seconds "$TIMEOUT" \
+    "${CODEX_STREAM_TEST_SHELL_ARGS[@]}" \
+    -- \
+    exec \
     --model "$MODEL" \
     --sandbox read-only \
     --skip-git-repo-check \
@@ -954,8 +974,7 @@ set +e
     --config 'mcp_servers.adventureforge.startup_timeout_sec=60' \
     --config 'mcp_servers.adventureforge.tool_timeout_sec=60' \
     --config 'mcp_servers.adventureforge.required=true' \
-    - \
-  ) > "$CODEX_EVENTS" 2> "$OUT.log"
+    -
   STATUS=$?
   # Every member closes with the same bounded identity + semantic-version
   # probe used at launch. This runs even after an ordinary provider failure so
@@ -1006,6 +1025,9 @@ if [[ $STATUS -ne 0 ]]; then
   if [[ $STATUS -eq 124 || $STATUS -eq 137 ]]; then
     record_playthrough_terminal technical_timeout
     echo "✗ blind run hit the ${TIMEOUT}s technical timeout; no exit interview or retention result is accepted." >&2
+  elif [[ $STATUS -eq "$CODEX_STRICT_STREAM_REJECT_EXIT" ]]; then
+    record_playthrough_terminal strict_stream_rejected
+    echo "✗ blind run was stopped after an irreversible strict-stream violation; no report or evidence was published." >&2
   else
     record_playthrough_terminal cli_failed
   fi

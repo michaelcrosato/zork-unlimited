@@ -439,9 +439,8 @@ function hasOnlyExactLeadingYieldPragma(input) {
   );
 }
 
-function inspectExactGameplayWrapper(
+export function parseCodexGameplayWrapper(
   input,
-  invocation,
   { allowArgumentlessFreshStart = false, codeModeContract = null } = {},
 ) {
   const requireStrict = codeModeContract !== null;
@@ -492,14 +491,7 @@ function inspectExactGameplayWrapper(
         : call.arguments.length === 0 && allowArgumentlessFreshStart && tool === "start_overworld"
           ? { ok: true, value: {} }
           : { ok: false };
-    if (
-      !CODEX_PURE_PLAYER_TOOLS.has(tool) ||
-      !args.ok ||
-      !isRecord(args.value) ||
-      invocation.server !== "adventureforge" ||
-      invocation.tool !== tool ||
-      !sameJsonValue(invocation.arguments, args.value)
-    ) {
+    if (!CODEX_PURE_PLAYER_TOOLS.has(tool) || !args.ok || !isRecord(args.value)) {
       return null;
     }
     return { tool, arguments: args.value, emitter: "await_text" };
@@ -542,14 +534,7 @@ function inspectExactGameplayWrapper(
       : call.arguments.length === 0 && allowArgumentlessFreshStart && tool === "start_overworld"
         ? { ok: true, value: {} }
         : { ok: false };
-  if (
-    !CODEX_PURE_PLAYER_TOOLS.has(tool) ||
-    !args.ok ||
-    !isRecord(args.value) ||
-    invocation.server !== "adventureforge" ||
-    invocation.tool !== tool ||
-    !sameJsonValue(invocation.arguments, args.value)
-  ) {
+  if (!CODEX_PURE_PLAYER_TOOLS.has(tool) || !args.ok || !isRecord(args.value)) {
     return null;
   }
   const emitter = exactResultEmitter(source.statements[1], declaration.name.text);
@@ -1031,9 +1016,14 @@ function inspectCodexRolloutStructure(rows, expectedModel) {
  * the two call-id namespaces differ, so adjacency is the binding. This audit
  * deliberately never include game-response bytes in a rejection reason.
  */
-export function inspectCodexGameplayResultForwarding(rows, { codeModeContract = null } = {}) {
+function scanCodexGameplayResultForwarding(
+  rows,
+  { codeModeContract = null, allowIncompletePrefix = false } = {},
+) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return rolloutReject("rollout is empty");
+    return allowIncompletePrefix
+      ? { ok: true, completedGameplayCalls: 0, gameplayCalls: [], pending: null }
+      : rolloutReject("rollout is empty");
   }
 
   const gameplayCalls = [];
@@ -1084,11 +1074,26 @@ export function inspectCodexGameplayResultForwarding(rows, { codeModeContract = 
     ) {
       return rolloutReject(`gameplay call ${ordinal} has an invalid or duplicate wrapper start`);
     }
+    const wrapper = parseCodexGameplayWrapper(rowPayload.input, {
+      allowArgumentlessFreshStart: gameplayCalls.length === 0,
+      codeModeContract,
+    });
+    if (!wrapper) {
+      return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`);
+    }
     wrapperCallIds.add(rowPayload.call_id);
     wrapperItemIds.add(rowPayload.id);
 
     const completion = rows[index + 1];
     const payload = completion?.payload;
+    if (completion === undefined && allowIncompletePrefix) {
+      return {
+        ok: true,
+        completedGameplayCalls: gameplayCalls.length,
+        gameplayCalls,
+        pending: "mcp_completion",
+      };
+    }
     if (completion?.type !== "event_msg" || payload?.type !== "mcp_tool_call_end") {
       return rolloutReject(`gameplay call ${ordinal} has no immediate MCP completion`);
     }
@@ -1103,11 +1108,11 @@ export function inspectCodexGameplayResultForwarding(rows, { codeModeContract = 
       return rolloutReject(`gameplay call ${ordinal} has an invalid or duplicate MCP call id`);
     }
     gameplayCallIds.add(payload.call_id);
-    const wrapper = inspectExactGameplayWrapper(rowPayload.input, payload.invocation, {
-      allowArgumentlessFreshStart: gameplayCalls.length === 0,
-      codeModeContract,
-    });
-    if (!wrapper) {
+    if (
+      payload.invocation.server !== "adventureforge" ||
+      payload.invocation.tool !== wrapper.tool ||
+      !sameJsonValue(payload.invocation.arguments, wrapper.arguments)
+    ) {
       return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`);
     }
     const result = gameplayResult(payload);
@@ -1115,6 +1120,14 @@ export function inspectCodexGameplayResultForwarding(rows, { codeModeContract = 
       return rolloutReject(`gameplay call ${ordinal} has no auditable immediate result`);
     }
     const forwarded = rows[index + 2];
+    if (forwarded === undefined && allowIncompletePrefix) {
+      return {
+        ok: true,
+        completedGameplayCalls: gameplayCalls.length,
+        gameplayCalls,
+        pending: "visible_result",
+      };
+    }
     if (
       forwarded?.type !== "response_item" ||
       forwarded?.payload?.type !== "custom_tool_call_output"
@@ -1133,9 +1146,39 @@ export function inspectCodexGameplayResultForwarding(rows, { codeModeContract = 
     index += 2;
   }
 
-  if (gameplayCalls.length === 0)
+  if (gameplayCalls.length === 0 && !allowIncompletePrefix)
     return rolloutReject("rollout contains no AdventureForge gameplay result");
-  return { ok: true, completedGameplayCalls: gameplayCalls.length, gameplayCalls };
+  return {
+    ok: true,
+    completedGameplayCalls: gameplayCalls.length,
+    gameplayCalls,
+    pending: null,
+  };
+}
+
+/**
+ * Reject only defects already proven by complete private JSONL rows. A missing
+ * adjacent completion/output at the current end of the stream remains pending;
+ * the unchanged terminal audit below is still the sole acceptance authority.
+ */
+export function inspectCodexGameplayResultForwardingPrefix(rows, { codeModeContract = null } = {}) {
+  return scanCodexGameplayResultForwarding(rows, {
+    codeModeContract,
+    allowIncompletePrefix: true,
+  });
+}
+
+export function inspectCodexGameplayResultForwarding(rows, { codeModeContract = null } = {}) {
+  const inspected = scanCodexGameplayResultForwarding(rows, {
+    codeModeContract,
+    allowIncompletePrefix: false,
+  });
+  if (!inspected.ok) return inspected;
+  return {
+    ok: true,
+    completedGameplayCalls: inspected.completedGameplayCalls,
+    gameplayCalls: inspected.gameplayCalls,
+  };
 }
 
 function validGameplayCallStart(item) {
@@ -1235,6 +1278,67 @@ function codeModePrelude(rows, expectedModel) {
     return [];
   }
   return [rows[1], rows[2]];
+}
+
+/**
+ * Inspect only irreversible defects in complete public JSONL rows. This is a
+ * rejection-only streaming gate: absent future prelude, lifecycle-completion,
+ * and turn-completion rows stay pending and can never make a prefix pass.
+ */
+export function inspectCodexPureEventPrefix(
+  rows,
+  expectedModel = undefined,
+  { codeModeContract = null } = {},
+) {
+  if (!Array.isArray(rows)) return reject("Codex event stream prefix must be an array");
+  if (rows.length === 0) return { ok: true, threadId: null, completedMcpCalls: 0 };
+  if (
+    codeModeContract === CODEX_STRICT_CURRENT_CONTRACT &&
+    !SUPPORTED_CODEX_MODELS.has(expectedModel)
+  ) {
+    return reject("Codex strict-current run has an unsupported requested model");
+  }
+  const threadId = rows[0]?.thread_id;
+  if (rows[0]?.type !== "thread.started" || !THREAD_ID_RE.test(threadId ?? "")) {
+    return reject("Codex pure run must begin with one valid thread.started identity");
+  }
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    if (row === null || typeof row !== "object" || Array.isArray(row)) {
+      return reject("Codex event stream contains a non-object row");
+    }
+    if (!ALLOWED_EVENT_TYPES.has(row.type)) {
+      return reject(`Codex event stream contains forbidden event type ${String(row.type)}`);
+    }
+    if (
+      row.type !== "item.started" &&
+      row.type !== "item.updated" &&
+      row.type !== "item.completed"
+    ) {
+      continue;
+    }
+    const item = row.item;
+    if (item === null || typeof item !== "object" || Array.isArray(item)) {
+      return reject("Codex item event is missing its item object");
+    }
+    if (row.type === "item.updated") {
+      return reject(`Codex pure run used an unexpected item.updated lifecycle for ${item.type}`);
+    }
+    // Strict-current startup notices are public `error` items. Their exact
+    // count/order remains terminal-audit authority; they carry no tool action.
+    if (item.type === "error") continue;
+    if (!ALLOWED_ITEM_TYPES.has(item.type)) {
+      return reject(`Codex pure run used forbidden item type ${String(item.type)}`);
+    }
+    if (item.type !== "mcp_tool_call") continue;
+    if (item.server !== "adventureforge") {
+      return reject(`Codex pure run called forbidden MCP server ${String(item.server)}`);
+    }
+    if (typeof item.tool !== "string" || !CODEX_PURE_PLAYER_TOOLS.has(item.tool)) {
+      return reject(`Codex pure run called forbidden AdventureForge tool ${String(item.tool)}`);
+    }
+  }
+  return { ok: true, threadId, completedMcpCalls: 0 };
 }
 
 /**

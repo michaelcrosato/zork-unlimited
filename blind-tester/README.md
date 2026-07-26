@@ -153,6 +153,15 @@ lifecycle are bound independently of requested-model and synthesized usage
 fields. This is durable Codex CLI provenance, not a provider-signed snapshot of
 the remote backend.
 
+During the live turn, a negative-only stream guard reads newline-complete public
+events and only the UUID/cwd/file-identity-bound private rollout. It stops token
+spend once a complete row proves a forbidden public server/tool or an invalid
+private wrapper/lifecycle, but treats missing future completion/output rows as
+in flight. It never accepts evidence: normal Codex exit still goes through the
+same stable rollout copy and full strict audit. Stream rejection exits 43,
+terminates the runner-owned Codex/MCP process tree, leaves no report/evidence
+publication, and appears in fleet history as `strict_stream_rejected`.
+
 ## Watching a playthrough live (spectate mode)
 
 To see what the LLM is doing while it plays — and verify it with your own eyes —

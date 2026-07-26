@@ -1486,6 +1486,7 @@ function firstErrorLine(text) {
 
 export const FLEET_ATTEMPT_CLASSIFICATIONS = Object.freeze([
   "technical_timeout",
+  "strict_stream_rejected",
   "launcher_or_run_failure",
   "verifier_failure",
   "verified",
@@ -1497,6 +1498,7 @@ export const FLEET_ATTEMPT_CLASSIFICATIONS = Object.freeze([
 export function classifyFleetAttempt({ runnerExit, verifierAttempted, verified }) {
   if (verified) return "verified";
   if (runnerExit === 124 || runnerExit === 137) return "technical_timeout";
+  if (runnerExit === 43) return "strict_stream_rejected";
   if (runnerExit === 0 || verifierAttempted) return "verifier_failure";
   return "launcher_or_run_failure";
 }
@@ -1847,7 +1849,11 @@ async function executeRun(
     report_recovered: false,
     report_receipt_bound: false,
     failure_reason:
-      lastExit === 124 || lastExit === 137 ? "technical_timeout" : "run_or_verification_failed",
+      lastExit === 124 || lastExit === 137
+        ? "technical_timeout"
+        : lastExit === 43
+          ? "strict_stream_rejected"
+          : "run_or_verification_failed",
   };
 }
 

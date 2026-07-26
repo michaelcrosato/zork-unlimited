@@ -20,10 +20,15 @@ import * as codexRollout from "../../blind-tester/codex-rollout.mjs";
 
 const {
   canonicalCodexHome,
+  bindThreadBoundCodexRolloutRows,
   captureThreadBoundCodexRollout,
+  closeThreadBoundCodexRollout,
+  createCodexRolloutWatchAuthority,
   parseCodexCliVersionOutput,
   publicCodexThreadId,
+  readThreadBoundCodexRolloutChunk,
   resolveCodexClientBinary,
+  tryOpenThreadBoundCodexRollout,
   validateCodexClientPreflight,
   validateOutputPrefix,
   validateWindowsOutputPrefixShape,
@@ -486,6 +491,125 @@ describe("thread-bound Codex rollout capture", () => {
     expect(receipt.expected_directory_identity).toEqual(receipt.session_directory_identity);
     expect(receipt.expected_directory_identity).toEqual(receipt.turn_directory_identity);
     expect(() => capture(home, paths, player)).toThrow(/EEXIST/i);
+  });
+
+  it("pins the exact thread rollout descriptor and binds both recorded cwd values", () => {
+    const root = temporaryRoot("af-codex-stream-watch-");
+    const home = join(root, "home");
+    const player = join(root, "player");
+    mkdirSync(home);
+    mkdirSync(player);
+    const body =
+      `${JSON.stringify({ type: "session_meta", payload: { id: THREAD_ID, cwd: player } })}\n` +
+      `${JSON.stringify({
+        type: "turn_context",
+        payload: { cwd: player, model: "gpt-5.3-codex-spark" },
+      })}\n`;
+    const rollout = writeRollout(home, THREAD_ID, body);
+    const authority = createCodexRolloutWatchAuthority(home, player);
+    const watch = tryOpenThreadBoundCodexRollout(authority, THREAD_ID);
+    expect(watch).not.toBeNull();
+    if (watch === null) throw new Error("matching rollout was not opened");
+    try {
+      const rows = readThreadBoundCodexRolloutChunk(watch)
+        .toString("utf8")
+        .trim()
+        .split("\n")
+        .map((line: string) => JSON.parse(line));
+      expect(bindThreadBoundCodexRolloutRows(watch, rows, "gpt-5.3-codex-spark")).toEqual({
+        sessionBound: true,
+        turnBound: true,
+      });
+
+      linkSync(rollout, join(root, "late-hard-link.jsonl"));
+      expect(() => readThreadBoundCodexRolloutChunk(watch)).toThrow(/identity|non-linked/i);
+    } finally {
+      closeThreadBoundCodexRollout(watch);
+    }
+  });
+
+  it("fails closed on wrong private identity, cwd, model, or changed turn replay", () => {
+    const root = temporaryRoot("af-codex-stream-binding-");
+    const home = join(root, "home");
+    const player = join(root, "player");
+    const otherCwd = join(root, "other-player");
+    mkdirSync(home);
+    mkdirSync(player);
+    mkdirSync(otherCwd);
+    writeRollout(
+      home,
+      THREAD_ID,
+      `${JSON.stringify({
+        type: "session_meta",
+        payload: { id: THREAD_ID, cwd: player },
+      })}\n`,
+    );
+    const authority = createCodexRolloutWatchAuthority(home, player);
+    const watch = tryOpenThreadBoundCodexRollout(authority, THREAD_ID);
+    expect(watch).not.toBeNull();
+    if (watch === null) throw new Error("matching rollout was not opened");
+    const turn = {
+      type: "turn_context",
+      payload: { cwd: player, model: "gpt-5.3-codex-spark", effort: "xhigh" },
+    };
+    try {
+      expect(() =>
+        bindThreadBoundCodexRolloutRows(
+          watch,
+          [{ type: "session_meta", payload: { id: OTHER_THREAD_ID, cwd: player } }, turn],
+          "gpt-5.3-codex-spark",
+        ),
+      ).toThrow(/session id differs/i);
+      expect(() =>
+        bindThreadBoundCodexRolloutRows(
+          watch,
+          [{ type: "session_meta", payload: { id: THREAD_ID, cwd: otherCwd } }, turn],
+          "gpt-5.3-codex-spark",
+        ),
+      ).toThrow(/session.*cwd/i);
+      expect(() =>
+        bindThreadBoundCodexRolloutRows(
+          watch,
+          [
+            { type: "session_meta", payload: { id: THREAD_ID, cwd: player } },
+            {
+              type: "turn_context",
+              payload: { ...turn.payload, model: "gpt-5.6-sol" },
+            },
+          ],
+          "gpt-5.3-codex-spark",
+        ),
+      ).toThrow(/model differs/i);
+      expect(() =>
+        bindThreadBoundCodexRolloutRows(
+          watch,
+          [
+            { type: "session_meta", payload: { id: THREAD_ID, cwd: player } },
+            turn,
+            { type: "compacted", payload: {} },
+            { type: "world_state", payload: {} },
+            {
+              ...structuredClone(turn),
+              payload: { ...turn.payload, effort: "low" },
+            },
+          ],
+          "gpt-5.3-codex-spark",
+        ),
+      ).toThrow(/exact compacted duplicate turn_context/i);
+    } finally {
+      closeThreadBoundCodexRollout(watch);
+    }
+  });
+
+  it("keeps a not-yet-created matching rollout pending without accepting another thread", () => {
+    const root = temporaryRoot("af-codex-stream-pending-");
+    const home = join(root, "home");
+    const player = join(root, "player");
+    mkdirSync(join(home, "sessions"), { recursive: true });
+    mkdirSync(player);
+    writeRollout(home, OTHER_THREAD_ID, cwdRollout(player, OTHER_THREAD_ID));
+    const authority = createCodexRolloutWatchAuthority(home, player);
+    expect(tryOpenThreadBoundCodexRollout(authority, THREAD_ID)).toBeNull();
   });
 
   it("requires exactly one valid leading public thread identity", () => {

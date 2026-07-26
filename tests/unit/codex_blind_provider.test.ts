@@ -12,8 +12,11 @@ const {
   buildCodexPureEnvelope,
   CODEX_PURE_PLAYER_TOOLS,
   inspectCodexGameplayResultForwarding,
+  inspectCodexGameplayResultForwardingPrefix,
   inspectCodexPureEvidence,
+  inspectCodexPureEventPrefix,
   inspectCodexPureEvents,
+  parseCodexGameplayWrapper,
 } = codexProvider;
 
 const THREAD_ID = "019f7250-1ed0-7102-be6c-4f1d5513d91e";
@@ -682,6 +685,82 @@ describe("Codex pure blind provider envelope", () => {
     );
     expect(inspectCodexGameplayResultForwarding(secondMissing, strict)).toMatchObject({
       ok: false,
+    });
+  });
+
+  it("uses the exact terminal wrapper parser while leaving in-flight adjacency pending", () => {
+    const strict = { codeModeContract: "strict-code-mode-v2" };
+    const rows = forwardingRollout();
+    expect(parseCodexGameplayWrapper(String(rolloutPayload(rows, 0).input), strict)).toEqual({
+      tool: "start_overworld",
+      arguments: {},
+      emitter: "await_text",
+    });
+    expect(inspectCodexGameplayResultForwardingPrefix(rows.slice(0, 1), strict)).toMatchObject({
+      ok: true,
+      completedGameplayCalls: 0,
+      pending: "mcp_completion",
+    });
+    expect(inspectCodexGameplayResultForwarding(rows.slice(0, 1), strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/no immediate MCP completion/i),
+    });
+    expect(inspectCodexGameplayResultForwardingPrefix(rows.slice(0, 2), strict)).toMatchObject({
+      ok: true,
+      completedGameplayCalls: 0,
+      pending: "visible_result",
+    });
+    expect(inspectCodexGameplayResultForwarding(rows.slice(0, 2), strict)).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/no paired visible result output/i),
+    });
+
+    const malformed = structuredClone(rows);
+    rolloutPayload(malformed, 0).input =
+      `// @exec: {"yield_time_ms":120000}\n` +
+      "text(await tools.mcp__adventureforge__start_overworld({}));\n";
+    expect(inspectCodexGameplayResultForwardingPrefix(malformed.slice(0, 1), strict)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden wrapper program/i),
+    });
+  });
+
+  it("differentially rejects complete malformed wrappers exactly as the terminal audit does", () => {
+    const strict = { codeModeContract: "strict-code-mode-v2" };
+    const cases = [
+      forwardingRollout(),
+      ...[
+        `${CODEX_EXEC_YIELD_PRAGMA}\ntext(await tools.mcp__adventureforge__start_overworld({});\n`,
+        `${CODEX_EXEC_YIELD_PRAGMA}\ntext(await tools.mcp__adventureforge__start_overworld(({})));\n`,
+        `// @exec: {"yield_time_ms":120000}\ntext(await tools.mcp__adventureforge__start_overworld({}));\n`,
+      ].map((input) => {
+        const rows = forwardingRollout();
+        rolloutPayload(rows, 0).input = input;
+        return rows;
+      }),
+    ];
+    for (const rows of cases) {
+      const streamed = inspectCodexGameplayResultForwardingPrefix(rows, strict);
+      const terminal = inspectCodexGameplayResultForwarding(rows, strict);
+      expect(streamed.ok).toBe(terminal.ok);
+      if (!streamed.ok && !terminal.ok) expect(streamed.reason).toBe(terminal.reason);
+    }
+  });
+
+  it("rejects a forbidden public MCP server from its complete start row", () => {
+    const rows = sparkCodeModeRows();
+    const started = rows.findIndex(
+      (row) => row.type === "item.started" && row.item?.type === "mcp_tool_call",
+    );
+    if (started < 0) throw new Error("fixture is missing its gameplay start");
+    rows[started]!.item!.server = "codex";
+    expect(
+      inspectCodexPureEventPrefix(rows.slice(0, started + 1), SPARK_MODEL, {
+        codeModeContract: "strict-code-mode-v2",
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/forbidden MCP server codex/i),
     });
   });
 

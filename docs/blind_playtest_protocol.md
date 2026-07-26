@@ -214,6 +214,18 @@ paired AdventureForge gameplay calls. Resource discovery, task planning, another
 MCP server, a non-game tool, and every unexpected lifecycle event reject the run.
 Every AdventureForge call is separately paired by id, tool, arguments, status,
 and result; the first pair must be a successful argument-free `start_overworld`.
+While that provider process is live, a rejection-only guard reads only
+newline-complete public JSONL and the exact UUID-matched private rollout. It can
+stop an already-invalid run for a forbidden public server/tool or a complete
+private wrapper/lifecycle defect, but never accepts evidence and never rejects
+for a missing future row or an in-flight adjacency. The private reader first
+binds the rollout filename, open file identity, session id, session cwd, and
+turn cwd to the public thread and isolated player directory. A rejection
+terminates the runner-owned detached Codex/MCP process tree and publishes no
+report, capture receipt, or evidence; fleets classify exit 43 as
+`strict_stream_rejected`. If Codex exits first, the guard stops and the
+unchanged stable capture plus full strict audit below remain the sole acceptance
+authority.
 The copied rollout then independently requires one adjacent three-row lifecycle
 for every public gameplay call: an `exec` wrapper, its MCP completion, and the
 player-visible wrapper output. For current live runs, every Codex `functions.exec`
