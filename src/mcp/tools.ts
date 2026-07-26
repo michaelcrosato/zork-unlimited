@@ -486,11 +486,16 @@ export function createToolApi(opts: { root: string; embeddedQuestSeed?: number }
         const seed = startArgs.seed ?? opts.embeddedQuestSeed ?? 1;
         const initialState =
           source.campaignImports === undefined
-            ? initStateForRpgPack(index, seed)
-            : initStateForRpgPack(index, seed, {
-                character: context.character,
-                imports: source.campaignImports,
-              });
+            ? initStateForRpgPack(index, seed, undefined, context.launchOverlay)
+            : initStateForRpgPack(
+                index,
+                seed,
+                {
+                  character: context.character,
+                  imports: source.campaignImports,
+                },
+                context.launchOverlay,
+              );
         const embeddedCharacterContinuity = buildEmbeddedQuestCharacterContinuity({
           character: context.character,
           pack: source.compiled.pack,

@@ -1,7 +1,10 @@
 import type { OverworldArea, OverworldNode, OverworldQuest } from "./overworld.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import type { OpeningLeadSource } from "./opening_lead_source.js";
+import type { OpeningAlly } from "./opening_ally.js";
+import type { OpeningPreparation } from "./opening_preparation.js";
 import type { OpeningRegistration } from "./opening_registration.js";
+import type { OpeningReliefAllocation } from "./opening_relief_allocation.js";
 import type { OpeningReliefOath } from "./opening_relief_oath.js";
 import {
   recordOverworldSessionAction,
@@ -30,6 +33,14 @@ export type OverworldSessionQuestStartPlanState = {
   supplies: number;
   fatigue: number;
   character: CampaignCharacterState;
+  journalEntries?: readonly OverworldJournalEntry[];
+  openingRegistration?: OpeningRegistration | null;
+  openingReliefOath?: OpeningReliefOath | null;
+  openingLeadSource?: OpeningLeadSource | null;
+  openingPreparation?: OpeningPreparation | null;
+  openingReliefAllocation?: OpeningReliefAllocation | null;
+  openingAlly?: OpeningAlly | null;
+  trustedLegacySourceWorldHash?: string | null;
   questsById: ReadonlyMap<string, OverworldQuest>;
   areasById: ReadonlyMap<string, OverworldArea>;
   currentTownId: string;

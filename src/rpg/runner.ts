@@ -37,6 +37,7 @@ import { endGameEffects } from "./terminal_effects.js";
 import { maneuverActionId } from "./action_ids.js";
 import { maneuverPhase, maneuverSequenceConditions } from "./maneuver_sequence.js";
 import type { CampaignCharacterImportInput } from "./campaign_character_import.js";
+import type { EmbeddedLaunchOverlay } from "../core/embedded_launch_overlay_receipt.js";
 
 export type { CampaignCharacterImportInput } from "./campaign_character_import.js";
 
@@ -269,6 +270,7 @@ export function initStateForRpgPack(
   index: RpgIndex,
   seed: number,
   campaignImport?: CampaignCharacterImportInput,
+  launchOverlay?: EmbeddedLaunchOverlay,
 ): GameState {
-  return initStateForRpgModel(index, seed, campaignImport);
+  return initStateForRpgModel(index, seed, campaignImport, launchOverlay);
 }

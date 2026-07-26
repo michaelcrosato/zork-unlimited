@@ -1681,6 +1681,15 @@ objects:
                 Even on the marked ash line, wind folds the shutter's crack into the wall.
                 The charge is gone, cattle alarm rises, and the unaffiliated term creates no
                 retry. Drop the loose hurdle for the same living recovery.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: cattle_alarm, by: 1 }
+                - add_journal: "The delayed dispatch adds one more cattle-alarm step to the failed opening."
+                - narrate: >
+                    The late opening leaves the herd one beat less settled; its alarm rises once more.
+
       - verb: USE
         item: drive_signal_rope_kit
         target: drive_breach_signal
@@ -1721,6 +1730,15 @@ objects:
                 does not turn; the herd hears it. That charge is gone, with no retry. Drop
                 the hurdle behind the wolf for the sole nonlethal recovery. Cattle are
                 moving; there is no switch to spear combat.
+
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: cattle_alarm, by: 1 }
+                - add_journal: "The delayed dispatch adds one more cattle-alarm step to the failed opening."
+                - narrate: >
+                    The late opening leaves the herd one beat less settled; its alarm rises once more.
 
   - id: drive_hurdle_recovery
     name: "loose drive hurdle"
@@ -2117,6 +2135,15 @@ objects:
                 Hidden frost rolls the lower peg and the shutter slips. The one Repair
                 attempt is spent; pressure reaches Hammering. Cade accepted these terms,
                 so his offered shoulder can seat this same shutter without another roll.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: fortification_pressure, by: 1 }
+                - add_journal: "The delayed dispatch adds one more fortification-pressure step to the slipped opening."
+                - narrate: >
+                    The late opening leaves the seal under one extra hammering step.
+
       - verb: USE
         item: cade_household_shutters
         target: fortify_outer_seal
@@ -2148,6 +2175,15 @@ objects:
                 Hidden frost rolls the lower peg and the shutter slips. The one Repair
                 attempt is spent; pressure reaches Hammering. Cade accepted these terms,
                 so his offered shoulder can seat this same shutter without another roll.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: fortification_pressure, by: 1 }
+                - add_journal: "The delayed dispatch adds one more fortification-pressure step to the slipped opening."
+                - narrate: >
+                    The late opening leaves the seal under one extra hammering step.
+
       - verb: USE
         item: albany_relief_seals
         target: fortify_outer_seal
@@ -2180,6 +2216,15 @@ objects:
                 The registered lower fastening rolls despite both sets of marks. The one
                 Repair attempt is spent and pressure reaches Hammering. Full duty changes
                 the opening, not Cade's refusal or Albany's sole emergency-strip recovery.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: fortification_pressure, by: 1 }
+                - add_journal: "The delayed dispatch adds one more fortification-pressure step to the slipped opening."
+                - narrate: >
+                    The late opening leaves the seal under one extra hammering step.
+
       - verb: USE
         item: albany_relief_seals
         target: fortify_outer_seal
@@ -2212,6 +2257,15 @@ objects:
                 The registered lower fastening rolls under the band. The one Repair attempt
                 is spent and pressure reaches Hammering. Full duty changes the opening, not
                 Cade's refusal or Albany's sole emergency-strip recovery.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: fortification_pressure, by: 1 }
+                - add_journal: "The delayed dispatch adds one more fortification-pressure step to the slipped opening."
+                - narrate: >
+                    The late opening leaves the seal under one extra hammering step.
+
       - verb: USE
         item: albany_relief_seals
         target: fortify_outer_seal
@@ -2244,6 +2298,15 @@ objects:
                 Hidden frost rolls the lower fastening and the public band slips. The one
                 Repair attempt is spent; pressure reaches Hammering. Cade refuses aid under
                 your authority. Albany's emergency binding strip is the sole recovery.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: fortification_pressure, by: 1 }
+                - add_journal: "The delayed dispatch adds one more fortification-pressure step to the slipped opening."
+                - narrate: >
+                    The late opening leaves the seal under one extra hammering step.
+
       - verb: USE
         item: albany_relief_seals
         target: fortify_outer_seal
@@ -2276,6 +2339,15 @@ objects:
                 Hidden frost rolls the lower fastening and the public band slips. The one
                 Repair attempt is spent; pressure reaches Hammering. Cade refuses aid under
                 your authority. Albany's emergency binding strip is the sole recovery.
+
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: fortification_pressure, by: 1 }
+                - add_journal: "The delayed dispatch adds one more fortification-pressure step to the slipped opening."
+                - narrate: >
+                    The late opening leaves the seal under one extra hammering step.
 
   - id: cade_failed_seal_help
     name: "Cade's offered bracing hand"
@@ -2633,6 +2705,15 @@ objects:
                 into churned snow. The yearling stays, the herd hammers the slats, and the
                 full failed-cast pressure lands. The feed is spent: bind a split rail or
                 fight and carry the lure deeper.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: cattle_alarm, by: 1 }
+                - add_journal: "The delayed dispatch adds one more cattle-alarm step to the failed opening."
+                - narrate: >
+                    The late opening leaves the herd one beat less settled; its alarm rises once more.
+
       - verb: USE
         item: winter_feed_sack
         target: downwind_feed_line
@@ -2671,6 +2752,15 @@ objects:
                 churned snow. The yearling smells it but stays; cattle hammer the slats.
                 The feed is spent: bind a split rail to force the wolf onto the remaining
                 scent, or fight and carry the lure deeper.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: cattle_alarm, by: 1 }
+                - add_journal: "The delayed dispatch adds one more cattle-alarm step to the failed opening."
+                - narrate: >
+                    The late opening leaves the herd one beat less settled; its alarm rises once more.
+
       - verb: USE
         item: winter_feed_sack
         target: downwind_feed_line
@@ -2708,6 +2798,15 @@ objects:
                 yearling smells it but stays; cattle hammer the slats. The feed is spent:
                 bind a split rail to force the wolf onto the remaining scent, or fight
                 and carry the lure deeper.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: cattle_alarm, by: 1 }
+                - add_journal: "The delayed dispatch adds one more cattle-alarm step to the failed opening."
+                - narrate: >
+                    The late opening leaves the herd one beat less settled; its alarm rises once more.
+
       - verb: USE
         item: winter_feed_sack
         target: downwind_feed_line
@@ -2745,6 +2844,15 @@ objects:
                 it but does not leave, and the cattle hammer the inner slats. The finite
                 feed is committed: bind a failed rail to force the wolf onto the remaining
                 scent, or clear this one fight and carry the lure deeper.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+              effects:
+                - inc_var: { name: cattle_alarm, by: 1 }
+                - add_journal: "The delayed dispatch adds one more cattle-alarm step to the failed opening."
+                - narrate: >
+                    The late opening leaves the herd one beat less settled; its alarm rises once more.
+
       - verb: USE
         item: split_rail_guard
         target: downwind_feed_line
@@ -3330,6 +3438,17 @@ objects:
                 joined grain. Reese marked this failure too: overlap the inked lengths
                 and cold-set the splice. It will hold, but the extra hammering will carry
                 into the byre.
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+              effects:
+                - inc_var: { name: cattle_alarm, by: 1 }
+                - add_journal: "The delayed dispatch adds one more cattle-alarm step to the failed opening."
+                - narrate: >
+                    The late opening leaves the herd one beat less settled; its alarm rises once more.
       # Target-only USE: the rail is visible scenery already lying in the breach, so
       # "wedge rail" means lifting and setting it in place without a TAKE/drop cycle.
       # This prevents a wedged or split rail from being immediately re-taken into the
@@ -3363,6 +3482,18 @@ objects:
             - set_flag: rail_split
             - add_journal: "Frozen ground splits the rail. The funnel is lost; its joined lengths remain unbound until you choose whether to make a guard."
             - narrate: "Frozen ground kicks the splintered end aside with a crack. The rail splits but holds together. The guarded funnel is lost; the joined lengths can still make a rough spear-guard, but binding them commits the spear to that recovery. Decide at the rail before going north."
+          on_failure_when:
+            - conditions:
+                - { has_flag: dispatch_opening_delayed }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+              effects:
+                - inc_var: { name: cattle_alarm, by: 1 }
+                - add_journal: "The delayed dispatch adds one more cattle-alarm step to the failed opening."
+                - narrate: >
+                    The late opening leaves the herd one beat less settled; its alarm rises once more.
+
       - verb: USE
         target: paling_rail
         command_verb: splice

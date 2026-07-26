@@ -586,6 +586,13 @@ export function validateRpgFoundation(
     }
     for (const it of o.interactions) {
       checkConds(it.conditions, [`object:${o.id}`, `verb:${it.verb}`]);
+      for (const [index, branch] of (it.skill_check?.on_failure_when ?? []).entries()) {
+        checkConds(branch.conditions, [
+          `object:${o.id}`,
+          `verb:${it.verb}`,
+          `on_failure_when:${String(index)}`,
+        ]);
+      }
       if (it.blocked_hint)
         checkConds(it.blocked_hint.visible_when, [
           `object:${o.id}`,
@@ -1521,13 +1528,23 @@ function effectLists(pack: RpgPack): Effect[][] {
 
 function interactionEffects(it: Interaction): Effect[] {
   return it.skill_check
-    ? [...it.effects, ...it.skill_check.on_success, ...it.skill_check.on_failure]
+    ? [
+        ...it.effects,
+        ...it.skill_check.on_success,
+        ...it.skill_check.on_failure,
+        ...(it.skill_check.on_failure_when ?? []).flatMap((branch) => branch.effects),
+      ]
     : it.effects;
 }
 
 function interactionEffectLists(it: Interaction): Effect[][] {
   return it.skill_check
-    ? [it.effects, it.skill_check.on_success, it.skill_check.on_failure]
+    ? [
+        it.effects,
+        it.skill_check.on_success,
+        it.skill_check.on_failure,
+        ...(it.skill_check.on_failure_when ?? []).map((branch) => branch.effects),
+      ]
     : [it.effects];
 }
 
@@ -1843,6 +1860,7 @@ function collectFlagReads(pack: RpgPack): Set<string> {
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) {
       walkAll(it.conditions);
+      for (const branch of it.skill_check?.on_failure_when ?? []) walkAll(branch.conditions);
       walkAll(it.blocked_hint?.visible_when);
     }
   }
@@ -1890,6 +1908,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) {
       walkAll(it.conditions);
+      for (const branch of it.skill_check?.on_failure_when ?? []) walkAll(branch.conditions);
       walkAll(it.blocked_hint?.visible_when);
     }
   }
@@ -1940,6 +1959,7 @@ function collectRoomRefs(pack: RpgPack, extraEffects: readonly Effect[] = []): S
     for (const v of o.variants ?? []) walkAll(v.when);
     for (const it of o.interactions) {
       walkAll(it.conditions);
+      for (const branch of it.skill_check?.on_failure_when ?? []) walkAll(branch.conditions);
       walkAll(it.blocked_hint?.visible_when);
     }
   }

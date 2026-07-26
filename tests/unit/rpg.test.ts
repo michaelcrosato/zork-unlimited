@@ -12,6 +12,7 @@ import { makeStep } from "../../src/core/engine.js";
 import { evalCondition } from "../../src/core/conditions.js";
 import { initState, type GameState } from "../../src/core/state.js";
 import { resolveSkillCheck } from "../../src/core/skill_check.js";
+import type { Rng } from "../../src/core/rng.js";
 import { resolveAttack, enemyHp, enemyAlive } from "../../src/rpg/combat.js";
 import { enemyHpVar, RpgPackSchema, type Enemy } from "../../src/rpg/schema.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -130,6 +131,34 @@ describe("seeded skill checks (§8.5)", () => {
       if (res.effects.some((e) => "set_flag" in e && e.set_flag === "moved")) succeeded = true;
     }
     expect(succeeded).toBe(true);
+  });
+
+  it("applies matching conditional failure consequences only after a failed roll", () => {
+    const conditional = {
+      ...check,
+      difficulty: 20,
+      on_failure_when: [
+        {
+          conditions: [{ has_flag: "opening_delayed" } as const],
+          effects: [{ inc_var: { name: "pressure", by: 1 } } as const],
+        },
+      ],
+    };
+    const roll = (value: number): Rng => ({ next: () => 0, int: () => value });
+    const delayed = {
+      ...baseState(),
+      flags: { opening_delayed: true },
+    };
+
+    expect(resolveSkillCheck(delayed, conditional, roll(1)).effects).toContainEqual({
+      inc_var: { name: "pressure", by: 1 },
+    });
+    expect(resolveSkillCheck(baseState(), conditional, roll(1)).effects).not.toContainEqual({
+      inc_var: { name: "pressure", by: 1 },
+    });
+    expect(resolveSkillCheck(delayed, conditional, roll(20)).effects).not.toContainEqual({
+      inc_var: { name: "pressure", by: 1 },
+    });
   });
 });
 

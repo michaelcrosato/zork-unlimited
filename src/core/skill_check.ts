@@ -5,10 +5,18 @@
  * roll d20 + a named state var and route through ordinary core effects.
  */
 import { z } from "zod";
+import { ConditionSchema, evalConditions } from "./conditions.js";
 import { EffectSchema, type Effect } from "./effects.js";
 import { rngForStep, type Rng } from "./rng.js";
 import type { GameState } from "./state.js";
 import type { Resolution } from "./engine.js";
+
+const ConditionalSkillCheckEffectsSchema = z
+  .object({
+    conditions: z.array(ConditionSchema).min(1),
+    effects: z.array(EffectSchema).min(1),
+  })
+  .strict();
 
 export const SkillCheckSchema = z
   .object({
@@ -16,6 +24,7 @@ export const SkillCheckSchema = z
     difficulty: z.number().int(),
     on_success: z.array(EffectSchema).default([]),
     on_failure: z.array(EffectSchema).default([]),
+    on_failure_when: z.array(ConditionalSkillCheckEffectsSchema).min(1).optional(),
   })
   .strict();
 
@@ -37,5 +46,17 @@ export function resolveSkillCheck(
   const lead: Effect = {
     narrate: `${check.skill} check: d20 ${roll} + ${state.vars[check.skill] ?? 0} = ${total} vs ${check.difficulty} — ${success ? "success" : "failure"}.`,
   };
-  return { conditions: [], effects: [lead, ...(success ? check.on_success : check.on_failure)] };
+  const conditionalFailureEffects = success
+    ? []
+    : (check.on_failure_when ?? []).flatMap((branch) =>
+        evalConditions(branch.conditions, state) ? branch.effects : [],
+      );
+  return {
+    conditions: [],
+    effects: [
+      lead,
+      ...(success ? check.on_success : check.on_failure),
+      ...conditionalFailureEffects,
+    ],
+  };
 }

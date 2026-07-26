@@ -9,6 +9,10 @@
  */
 import { z } from "zod";
 import { CampaignImportReceiptSchema } from "../core/campaign_import_receipt.js";
+import {
+  EmbeddedLaunchOverlayReceiptSchema,
+  assertEmbeddedLaunchOverlayWorldQuest,
+} from "../core/embedded_launch_overlay_receipt.js";
 import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "../core/state.js";
 import { canonicalize } from "../core/hash.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
@@ -91,6 +95,7 @@ const GameStateSchema = z
     ended: z.boolean(),
     endingId: z.string().nullable(),
     campaignImportReceipt: CampaignImportReceiptSchema.optional(),
+    embeddedLaunchOverlayReceipt: EmbeddedLaunchOverlayReceiptSchema.optional(),
   })
   .strict();
 
@@ -222,6 +227,7 @@ export function save(
   assertNonEmptyString(contentHash, "Save contentHash");
   assertWellFormedState(state);
   const sourceRef = saveSourceRef(metadata);
+  assertSaveLaunchOverlaySource(state, sourceRef);
   const continuity = metadata.embeddedCharacterContinuity ?? undefined;
   if (continuity !== undefined) {
     if (sourceRef[0] !== "wq") {
@@ -301,6 +307,14 @@ function saveSourceRef(metadata: SaveMetadata): SaveSourceRef {
   const sourceRef = compactSourceRefFromMetadata(metadata, SAVE_SOURCE_LABELS);
   if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
   return sourceRef.sourceRef;
+}
+
+function assertSaveLaunchOverlaySource(state: GameState, sourceRef: SaveSourceRef): void {
+  try {
+    assertEmbeddedLaunchOverlayWorldQuest(state, sourceRef[0] === "wq" ? sourceRef[1] : null);
+  } catch (error) {
+    throw new SaveIntegrityError((error as Error).message);
+  }
 }
 
 function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {
@@ -397,6 +411,7 @@ export function load(
       `Save state is malformed or non-finite: ${parsedState.error.message}`,
     );
   }
+  assertSaveLaunchOverlaySource(bundle.state, bundle.source_ref);
   const rawContinuity = (bundle as { embedded_character_continuity?: unknown })
     .embedded_character_continuity;
   if (rawContinuity !== undefined) {

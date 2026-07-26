@@ -152,6 +152,12 @@ function moveToArea(session: OverworldSession, areaId: string): void {
 function routeCard(
   oathChoiceId: string,
   reliefChoiceId: string,
+  choices: Readonly<{
+    registrationId?: string;
+    sourceId?: string;
+    preparationId?: string;
+    allyId?: string;
+  }> = {},
 ): {
   session: OverworldSession;
   quest: OverworldQuestView;
@@ -160,16 +166,45 @@ function routeCard(
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(WORLD.opening_registration!.contact);
-  session.chooseJourneyStory("albany:ledger_advocate");
+  session.chooseJourneyStory(choices.registrationId ?? "albany:ledger_advocate");
   session.chooseJourneyStory(oathChoiceId);
-  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  session.chooseJourneyStory(choices.sourceId ?? "albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);
-  session.chooseJourneyStory("albany:prep_works_fortification");
+  session.chooseJourneyStory(choices.preparationId ?? "albany:prep_works_fortification");
   session.chooseJourneyStory(reliefChoiceId);
+  if (choices.allyId) {
+    session.talkToCharacter(WORLD.opening_ally!.contact);
+    session.chooseJourneyStory(choices.allyId);
+  }
 
   const quest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
   if (!quest?.launch) throw new Error("Expected the pre-commitment Wolf-Winter route card.");
   return { session, quest };
+}
+
+function dispatchBriefing(session: OverworldSession): string {
+  const ridge = session.prepareQuestStart(WOLF_ID, RIDGE_ID).dispatchWindow;
+  const stockway = session.prepareQuestStart(WOLF_ID, STOCKWAY_ID).dispatchWindow;
+  expect(stockway).toEqual(ridge);
+  if (ridge.status === "delayed" && ridge.ledgerMinutes !== undefined) {
+    return (
+      `Dispatch ledger: ${String(ridge.ledgerMinutes)} minutes—delayed. ` +
+      "Road choice changes arrival conditions, not this status. " +
+      "First local failure adds cattle alarm +1 for lure, drive, or hunt; fortify pressure +1."
+    );
+  }
+  if (ridge.status === "on_time" && ridge.ledgerMinutes !== undefined) {
+    return (
+      `Dispatch ledger: ${String(ridge.ledgerMinutes)} minutes—on time. ` +
+      "Road choice changes arrival conditions, not this status. " +
+      "Opening delay adds no failure pressure."
+    );
+  }
+  return (
+    "Dispatch ledger: unverified—neutral. " +
+    "Road choice changes arrival conditions, not this status. " +
+    "Opening delay adds no failure pressure."
+  );
 }
 
 function fullSummaries(quest: OverworldQuestView): Record<string, string | undefined> {
@@ -299,6 +334,9 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     "keeps decisive full, compact, UI, and CLI terms exact $label",
     ({ oathId, reliefId, expected }) => {
       const { session, quest } = routeCard(oathId, reliefId);
+      const briefing = dispatchBriefing(session);
+      const expectedRidgeSummary = `${briefing} ${expected.ridge.summary}`;
+      const expectedStockwaySummary = `${briefing} ${expected.stockway.summary}`;
       const snapshotBeforeProjection = session.snapshot();
       const full = fullSummaries(quest);
       const compact = compactSummaries(session);
@@ -317,31 +355,31 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       if (!mcpQuest?.launch) throw new Error("Expected the full MCP Wolf-Winter route card.");
 
       expect(full).toMatchObject({
-        [RIDGE_ID]: expected.ridge.summary,
-        [STOCKWAY_ID]: expected.stockway.summary,
+        [RIDGE_ID]: expectedRidgeSummary,
+        [STOCKWAY_ID]: expectedStockwaySummary,
       });
       expect(compact).toEqual({
-        [RIDGE_ID]: expected.ridge.summary,
-        [STOCKWAY_ID]: expected.stockway.summary,
+        [RIDGE_ID]: expectedRidgeSummary,
+        [STOCKWAY_ID]: expectedStockwaySummary,
       });
       expect(fullSummaries(mcpQuest)).toMatchObject({
-        [RIDGE_ID]: expected.ridge.summary,
-        [STOCKWAY_ID]: expected.stockway.summary,
+        [RIDGE_ID]: expectedRidgeSummary,
+        [STOCKWAY_ID]: expectedStockwaySummary,
       });
-      for (const summary of [expected.ridge.summary, expected.stockway.summary]) {
+      for (const summary of [expectedRidgeSummary, expectedStockwaySummary]) {
         expect(summary.length).toBeLessThanOrEqual(WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT);
       }
 
       const markup = renderQuestNotice(quest);
       expect(markup.match(/Route tradeoff:/g)).toHaveLength(2);
-      expect(markup).toContain(expected.ridge.summary);
-      expect(markup).toContain(expected.stockway.summary);
+      expect(markup).toContain(expectedRidgeSummary);
+      expect(markup).toContain(expectedStockwaySummary);
       expect(markup).not.toContain("...");
 
       const cli = renderQuestLaunch(quest);
       expect(cli.match(/Route tradeoff:/g)).toHaveLength(2);
-      expect(cli).toContain(expected.ridge.summary);
-      expect(cli).toContain(expected.stockway.summary);
+      expect(cli).toContain(expectedRidgeSummary);
+      expect(cli).toContain(expectedStockwaySummary);
 
       const ridgePreview = quest.launch?.options.find((option) => option.id === RIDGE_ID)?.preview;
       const stockwayPreview = quest.launch?.options.find(
@@ -410,4 +448,71 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       expect(session.snapshot()).toEqual(snapshotBeforeProjection);
     },
   );
+
+  it("shows a delayed certified dispatch identically before either road commitment", () => {
+    const { session, quest } = routeCard(
+      "albany:oath_full_compact_duty",
+      "albany:relief_resident_shelter",
+      {
+        registrationId: "albany:road_warden",
+        sourceId: "albany:source_jamie_market_testimony",
+        allyId: "albany:ally_june_cattle_first",
+      },
+    );
+    const expectedBriefing =
+      "Dispatch ledger: 90 minutes—delayed. " +
+      "Road choice changes arrival conditions, not this status. " +
+      "First local failure adds cattle alarm +1 for lure, drive, or hunt; fortify pressure +1.";
+    expect(dispatchBriefing(session)).toBe(expectedBriefing);
+
+    const full = fullSummaries(quest);
+    const compact = compactSummaries(session);
+    for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
+      expect(full[optionId]?.startsWith(expectedBriefing)).toBe(true);
+      expect(compact[optionId]).toBe(full[optionId]);
+    }
+
+    const api = createToolApi({ root: ROOT });
+    const restored = api.restore_overworld_session({
+      compact_context: false,
+      compact_result: false,
+      snapshot: session.snapshot(),
+    });
+    const mcpQuest = api
+      .get_overworld_session({
+        session_id: restored.session_id,
+        include_observation: true,
+      })
+      .observation.quests.find((candidate) => candidate.id === WOLF_ID);
+    if (!mcpQuest?.launch) throw new Error("Expected the full MCP Wolf-Winter route card.");
+    expect(fullSummaries(mcpQuest)).toEqual(full);
+
+    const launched = api.start_overworld_session_quest({
+      compact_context: false,
+      compact_result: false,
+      compact_observation: false,
+      compact_actions: false,
+      include_actions: true,
+      session_id: restored.session_id,
+      quest_id: WOLF_ID,
+      approach_id: RIDGE_ID,
+      seed: 726,
+    });
+    const launchedState = api.get_state({
+      session_id: launched.rpg_session_id,
+      include_state: true,
+    }).state;
+    expect(launchedState.flags.dispatch_opening_delayed).toBe(true);
+    expect(launchedState.embeddedLaunchOverlayReceipt).toMatchObject({
+      world_quest_id: WOLF_ID,
+      status: "delayed",
+      ledger_minutes: 90,
+      applied_flag: "dispatch_opening_delayed",
+    });
+
+    const markup = renderQuestNotice(quest);
+    const cli = renderQuestLaunch(quest);
+    expect(markup.split(expectedBriefing)).toHaveLength(3);
+    expect(cli.split(expectedBriefing)).toHaveLength(3);
+  });
 });

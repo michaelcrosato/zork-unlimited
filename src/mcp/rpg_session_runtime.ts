@@ -28,6 +28,7 @@ import { RPG_COMPACT_LEGEND, type RpgCompactLegend } from "./compact_rpg_observa
 import { publicRpgStateHash } from "./rpg_state_guards.js";
 import { SessionStore, type RpgStep, type Session } from "./sessions.js";
 import type { EmbeddedQuestCharacterContinuity } from "../rpg/embedded_quest_character_continuity.js";
+import { assertEmbeddedLaunchOverlayWorldQuest } from "../core/embedded_launch_overlay_receipt.js";
 import {
   embeddedQuestCharacterContinuityField,
   type EmbeddedQuestCharacterContinuityField,
@@ -176,7 +177,10 @@ export class RpgMcpSessionRuntime {
   ): Session {
     const { index, rules, step } = this.runtimeFor(compiled.pack);
     const initialState = state ?? initStateForRpgPack(index, opts.seed ?? 1);
-    if (state !== undefined) assertRpgStateReferences(index, initialState);
+    if (state !== undefined) {
+      assertRpgStateReferences(index, initialState);
+      assertEmbeddedLaunchOverlayWorldQuest(initialState, opts.worldQuestId);
+    }
     const session = this.sessions.create({
       contentHash: compiled.contentHash,
       ...(opts.worldQuestId ? { worldQuestId: opts.worldQuestId } : {}),

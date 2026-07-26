@@ -6,6 +6,7 @@ import type { RpgIndex } from "./runner.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR, enemyHpVar } from "./schema.js";
 import { maneuverChildren, maneuverParent, rootManeuvers } from "./maneuver_sequence.js";
 import { campaignImportReceiptTargetIssues } from "./campaign_character_import.js";
+import { wolfWinterDispatchOverlayFlagForPack } from "../core/embedded_launch_overlay_receipt.js";
 
 /**
  * Collect item ids that can legitimately enter inventory through authored effects.
@@ -232,6 +233,21 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
         addBooleanRuntimeTarget(flags, effect.target_flag, true);
       }
     }
+  }
+  if (state.embeddedLaunchOverlayReceipt !== undefined) {
+    const receipt = state.embeddedLaunchOverlayReceipt;
+    const packOverlayFlag = wolfWinterDispatchOverlayFlagForPack(index.pack.meta.id);
+    if (packOverlayFlag !== receipt.applied_flag) {
+      throw new SaveIntegrityError(
+        `Save launch overlay is incompatible with RPG pack "${index.pack.meta.id}".`,
+      );
+    }
+    if (state.flags[receipt.applied_flag] !== true) {
+      throw new SaveIntegrityError(
+        `Save launch overlay is missing its applied flag "${receipt.applied_flag}".`,
+      );
+    }
+    addBooleanRuntimeTarget(flags, packOverlayFlag, true);
   }
   for (const id of index.pack.meta.flags_init) addBooleanRuntimeTarget(flags, id, true);
   // Built-in OPEN/UNLOCK actions write sparse runtime state; static defaults do not.
