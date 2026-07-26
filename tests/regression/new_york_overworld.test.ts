@@ -301,6 +301,7 @@ describe("New York overworld graph", () => {
 
     expect(legacyQuests.every((quest) => !("campaign_exports" in quest))).toBe(true);
     expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_id)).toEqual([
+      "ending_bloodied_byre_evacuated",
       "ending_pack_diverted_after_blood",
       "ending_pack_diverted_cattle_scattered",
       "ending_pack_diverted",
@@ -314,6 +315,7 @@ describe("New York overworld graph", () => {
       "ending_held",
     ]);
     expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_title)).toEqual([
+      "The Bloodied Byre Evacuated",
       "The Pack Broken After Blood",
       "The Pack Diverted, Cattle Scattered",
       "The Pack Diverted Alive",
@@ -329,6 +331,17 @@ describe("New York overworld graph", () => {
     expect(overworldQuestCampaignExportForEnding(wolfWinter, "ending_pulled_down")).toBeNull();
 
     const expectedOutcomeFacts = {
+      ending_bloodied_byre_evacuated: [
+        "fact:wolf_winter_bloodshed",
+        "fact:wolf_winter_yearling_killed",
+        "fact:wolf_winter_flank_wolf_killed",
+        "fact:wolf_winter_old_grey_leader_remains",
+        "fact:wolf_winter_steading_evacuated",
+        "fact:wolf_winter_outer_line_abandoned",
+        "fact:wolf_winter_people_safe",
+        "fact:wolf_winter_cattle_scattered",
+        "fact:wolf_winter_bloodied_byre_evacuated",
+      ],
       ending_pack_diverted_after_blood: [
         "fact:wolf_winter_byre_held",
         "fact:wolf_winter_outer_paling_broken",
@@ -418,6 +431,10 @@ describe("New York overworld graph", () => {
       ],
     } as const;
     const expectedMemories = {
+      ending_bloodied_byre_evacuated: [
+        ["npc:old_cade", "memory:wolf_winter_bloodied_byre_evacuated", 3, 4, 0],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_bloodied_byre_evacuated", 2, 3, 0],
+      ],
       ending_pack_diverted_after_blood: [
         ["npc:old_cade", "memory:wolf_winter_mixed_line_after_blood", 7, 7, 0],
         ["albany:emery_sloane", "albany:memory_emery_wolf_pack_diverted_after_blood", 4, 5, 0],
@@ -498,6 +515,63 @@ describe("New York overworld graph", () => {
           : [],
       );
     }
+  });
+
+  it("exports the bloodied-byre evacuation as an honest loss and exposes Emery's exact count", () => {
+    const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
+    const campaignExport = overworldQuestCampaignExportForEnding(
+      wolfWinter,
+      "ending_bloodied_byre_evacuated",
+    );
+    const factIds = campaignExport?.effects
+      .filter((effect) => effect.type === "set_world_fact")
+      .map((effect) => effect.fact_id);
+
+    expect(factIds).not.toContain("fact:wolf_winter_byre_held");
+    expect(factIds).not.toContain("fact:wolf_winter_pack_diverted_alive");
+    expect(factIds).not.toContain("fact:wolf_winter_pack_driven_alive");
+    expect(factIds).not.toContain("fact:wolf_winter_winter_feed_spent");
+    expect(factIds).not.toContain("fact:wolf_winter_drive_reserve_spent");
+    expect(factIds).not.toContain("fact:wolf_winter_cattle_whole");
+
+    const juneDeparture = campaignExport?.conditional_effects?.find(
+      (group) => group.id === "albany:june_departed_after_bloodied_byre",
+    );
+    expect(juneDeparture).toEqual({
+      id: "albany:june_departed_after_bloodied_byre",
+      when: {
+        requires_all_companions: ["albany:june_pike"],
+        requires_all_promises: [
+          { promise_id: "albany:promise_june_cattle_first", status: "active" },
+        ],
+      },
+      effects: [
+        {
+          type: "resolve_promise",
+          promise_id: "albany:promise_june_cattle_first",
+          status: "broken",
+        },
+        { type: "remove_companion", npc_id: "albany:june_pike" },
+        {
+          type: "remember_relationship",
+          npc_id: "albany:june_pike",
+          memory_id: "albany:memory_june_left_after_blood",
+        },
+      ],
+    });
+
+    const emery = world.characters.find(
+      (character) => character.id === "albany_city__greenway__contact",
+    );
+    const variant = emery?.variants?.find(
+      (candidate) => candidate.id === "wolf_bloodied_byre_evacuated",
+    );
+    expect(variant).toMatchObject({
+      after_relationship_memories: ["albany:memory_emery_wolf_bloodied_byre_evacuated"],
+      summary:
+        "Emery has the bloodied-byre count: exactly two wolves are dead, old grey remains in the abandoned byre, two cattle are missing, and the people are safe.",
+    });
+    expect(`${variant?.summary} ${variant?.agenda}`).not.toMatch(/high wood/i);
   });
 
   it("requires every Wolf-Winter return to close each selected registration obligation", () => {

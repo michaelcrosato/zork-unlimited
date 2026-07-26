@@ -127,9 +127,9 @@ function complete(
 }
 
 describe("SS-F01 — registration obligations close on truthful Wolf-Winter return", () => {
-  it("closes exactly one selected background obligation across all 4 × 11 counterfactuals", () => {
+  it("closes exactly one selected background obligation across all 4 × 12 counterfactuals", () => {
     expect(REGISTRATION.profiles).toHaveLength(4);
-    expect(WOLF.campaign_exports).toHaveLength(11);
+    expect(WOLF.campaign_exports).toHaveLength(12);
 
     for (const profile of REGISTRATION.profiles) {
       const selectedPromiseId = BACKGROUND_PROMISES.get(profile.id);

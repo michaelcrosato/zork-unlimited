@@ -75,6 +75,12 @@ const EXPECTED_CONSEQUENCES: Readonly<
     send_wardens_north:
       "The wagon follows Hedrick's report; Cade remains with a broken outer line and two cattle still missing down the lower pasture; the yearling is dead and the other two wolves remain alive in the high wood. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
   },
+  bloodied_byre_evacuated: {
+    send_wagon_to_cade:
+      "The wagon returns for Cade and every evacuated person, all safe on the road, then begins the search for two missing cattle and a safe line around the abandoned byre; the yearling and flank wolf remain dead, and the old grey still holds the byre when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
+    send_wardens_north:
+      "The wagon follows Hedrick's report; Cade and every other person remain safe on the evacuation road, but two cattle are still missing, the yearling and flank wolf are dead, and the old grey remains in the abandoned byre. Emery Sloane sets aside a one-time Greenway watch-shelter claim for joining the wardens' northbound dispatch: a 15-minute rest whenever you claim it.",
+  },
   drive_cattle_wounded: {
     send_wagon_to_cade:
       "The wagon takes Cade's whole herd from the evacuation road back to repair the abandoned outer line while all three wolves remain alive beyond it; your gate wound remains untreated and the spent signal-and-rope rig remains in Albany for repair when you take Hedrick's packet north alone. Jamie Tanner enters a one-time Market road-store credit for carrying Hedrick's packet alone: a 15-minute resupply whenever you claim it.",
@@ -191,7 +197,7 @@ const COMPLETED_THROUGH_BREAKING_WEIR = new Set([
 ]);
 
 describe("journey campaign", () => {
-  it("maps the eleven supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
+  it("maps the twelve supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
     const expected = [
       {
         endingId: "ending_pack_diverted",
@@ -207,6 +213,11 @@ describe("journey campaign", () => {
         endingId: "ending_pack_diverted_after_blood",
         id: "pack_diverted_after_blood",
         phrase: "The yearling is dead",
+      },
+      {
+        endingId: "ending_bloodied_byre_evacuated",
+        id: "bloodied_byre_evacuated",
+        phrase: "old grey remains in Cade's abandoned byre",
       },
       {
         endingId: "ending_drive_cattle_wounded",
@@ -257,7 +268,7 @@ describe("journey campaign", () => {
       expect(outcome?.albanyReturnContext).toContain(row.phrase);
       returnContexts.add(outcome!.albanyReturnContext);
     }
-    expect(returnContexts.size).toBe(11);
+    expect(returnContexts.size).toBe(12);
     expect(wolfWinterCampaignOutcome(new Map())).toBeNull();
     expect(wolfWinterCampaignOutcome(outcomeIds("ending_pulled_down"))).toBeNull();
     expect(() =>
@@ -317,6 +328,35 @@ describe("journey campaign", () => {
         }
         expect(option.consequence).not.toMatch(row.forbidden);
       }
+    }
+  });
+
+  it("carries the bloodied byre evacuation through continue without rewriting it as a win", () => {
+    const questOutcomeIds = outcomeIds("ending_bloodied_byre_evacuated");
+    expect(() =>
+      assertJourneyCampaignQuestOutcome("wolf_winter", "ending_bloodied_byre_evacuated"),
+    ).not.toThrow();
+
+    const beforeContinue = journeyCampaignPresentationContext({
+      journey: awaitingInitialGoalChoice(),
+      questOutcomeIds,
+    });
+    expect(beforeContinue?.completionContext).toMatch(/yearling and flank wolf are dead/i);
+    expect(beforeContinue?.completionContext).toMatch(/old grey remains/i);
+    expect(beforeContinue?.completionContext).toMatch(/two cattle are still missing/i);
+    expect(beforeContinue?.completionContext).not.toMatch(
+      /byre (?:was |is )?held|pack (?:was )?diverted|all three wolves/i,
+    );
+
+    const afterContinue = journeyCampaignPresentationContext({
+      journey: chooseJourney(awaitingInitialGoalChoice(), "continue").state,
+      questOutcomeIds,
+    });
+    for (const option of afterContinue?.storyChoice?.options ?? []) {
+      expect(option.consequence).toMatch(/yearling and flank wolf (?:remain |are )?dead/i);
+      expect(option.consequence).toMatch(/old grey/i);
+      expect(option.consequence).toMatch(/two missing cattle|two cattle are still missing/i);
+      expect(option.consequence).not.toMatch(/byre (?:was |is )?held|pack (?:was )?diverted/i);
     }
   });
 

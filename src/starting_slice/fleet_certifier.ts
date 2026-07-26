@@ -59,6 +59,7 @@ export type WolfStrategyVariant =
   | "clean_diversion"
   | "cattle_scattered"
   | "hybrid_recovery"
+  | "bloodied_evacuation"
   | "cattle_wounded"
   | "people_saved_cattle_lost"
   | "reserve_spent"
@@ -86,6 +87,10 @@ export const WOLF_WINTER_STRATEGY_BY_ENDING = Object.freeze({
   ending_pack_diverted_after_blood: {
     strategy: "lure_and_divert",
     variant: "hybrid_recovery",
+  },
+  ending_bloodied_byre_evacuated: {
+    strategy: "hunt_and_hold",
+    variant: "bloodied_evacuation",
   },
   ending_drive_cattle_wounded: {
     strategy: "drive_and_evacuate",

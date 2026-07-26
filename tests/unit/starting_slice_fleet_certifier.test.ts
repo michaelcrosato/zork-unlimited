@@ -152,7 +152,7 @@ function withStrategyCounts(counts: Record<WolfStrategy, number>): StartingSlice
 }
 
 describe("Wolf-Winter strategy taxonomy", () => {
-  it("exhaustively classifies all eleven non-death outcomes", () => {
+  it("exhaustively classifies all twelve non-death outcomes", () => {
     expect(WOLF_WINTER_STRATEGY_BY_ENDING).toEqual({
       ending_pack_diverted: {
         strategy: "lure_and_divert",
@@ -165,6 +165,10 @@ describe("Wolf-Winter strategy taxonomy", () => {
       ending_pack_diverted_after_blood: {
         strategy: "lure_and_divert",
         variant: "hybrid_recovery",
+      },
+      ending_bloodied_byre_evacuated: {
+        strategy: "hunt_and_hold",
+        variant: "bloodied_evacuation",
       },
       ending_drive_cattle_wounded: {
         strategy: "drive_and_evacuate",

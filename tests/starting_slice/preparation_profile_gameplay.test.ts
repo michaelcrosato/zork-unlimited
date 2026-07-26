@@ -770,8 +770,9 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(actionIds(braced)).not.toContain("use_relief_protocol_docket");
   });
 
-  it("adds two fortify outcomes while preserving every prior nondeath and death identity", () => {
+  it("includes the evacuation and fortify outcomes while preserving every ending identity", () => {
     expect(pack.endings.map((ending) => ending.id)).toEqual([
+      "ending_bloodied_byre_evacuated",
       "ending_fortified_cade_terms",
       "ending_fortified_albany_authority",
       "ending_drive_cattle_wounded",

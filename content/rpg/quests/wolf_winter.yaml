@@ -1190,6 +1190,7 @@ rooms:
         cattle_first_evacuation,
         person_first_evacuation,
         reserve_spent_evacuation,
+        bloodied_byre_evacuation,
         fortify_dawn_watch,
       ]
     variants:
@@ -3032,6 +3033,58 @@ objects:
   # straight into cattle_stand, whose existing on_enter awards the capstone and ends the
   # quest; there is no new backtrackable flag lattice. Walking north instead retains the
   # wood for daylight repair at the broken paling.
+  - id: bloodied_byre_evacuation
+    name: "bloodied byre evacuation"
+    aliases: [evacuate byre, leave old grey, clear the people]
+    description: >
+      Call Cade and every rider through the south door while old grey still owns the
+      straw. The people escape, but old grey remains in the byre; two cattle go missing as
+      the outer line and the byre itself are abandoned.
+    visible_when:
+      - { has_flag: yearling_down }
+      - { has_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+      - { not_flag: leader_redirected }
+      - { var_lte: { name: hp, value: 12 } }
+      - { not_flag: strategy_lure_committed }
+      - { not_flag: strategy_drive_committed }
+      - { not_flag: strategy_fortify_committed }
+      - { not_flag: leader_stake_crossbraced }
+      - { not_flag: leader_turned_over_crossbrace }
+      - { not_flag: leader_split_guard_set }
+      - { not_flag: leader_waited_out }
+      - { not_flag: leader_true_rush_taken }
+      - { not_flag: leader_closed_on }
+      - { not_flag: leader_driven_before_recovery }
+    interactions:
+      - verb: USE
+        target: bloodied_byre_evacuation
+        command_verb: evacuate
+        conditions:
+          - { has_flag: yearling_down }
+          - { has_flag: flank_wolf_down }
+          - { not_flag: leader_down }
+          - { not_flag: leader_redirected }
+          - { var_lte: { name: hp, value: 12 } }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_flag: leader_stake_crossbraced }
+          - { not_flag: leader_turned_over_crossbrace }
+          - { not_flag: leader_split_guard_set }
+          - { not_flag: leader_waited_out }
+          - { not_flag: leader_true_rush_taken }
+          - { not_flag: leader_closed_on }
+          - { not_flag: leader_driven_before_recovery }
+        effects:
+          - set_flag: bloodied_byre_evacuated
+          - add_journal: "Bloodied byre evacuation: Cade and every rider escape while old grey remains; two cattle are missing and the outer line and byre are abandoned."
+          - narrate: >
+              You call Cade and every rider through the south door, then leave old grey
+              in the straw rather than risk another exchange. The people escape, but two
+              cattle vanish in the confusion. The outer line and the byre are abandoned
+              behind her.
+
   - id: inner_cattle_gate
     name: "inner cattle-gate"
     aliases: [inner gate, cattle gate, gate, slatted gate, iron loops]
@@ -4469,6 +4522,14 @@ win_conditions:
   # Specific terminal consequences precede the generic mission result. All award the
   # same score and remain nondeath; their ids/titles let the overworld completion journal
   # remember whether saved wood barred the herd now or was carried into dawn for repair.
+  - id: bloodied_byre_evacuated
+    conditions:
+      - { has_flag: bloodied_byre_evacuated }
+      - { has_flag: yearling_down }
+      - { has_flag: flank_wolf_down }
+      - { not_flag: leader_down }
+      - { not_flag: leader_redirected }
+    ending: ending_bloodied_byre_evacuated
   - id: fortify_outlast_cade_terms
     conditions:
       - { visited: cattle_stand }
@@ -4570,6 +4631,13 @@ win_conditions:
     ending: ending_held
 
 endings:
+  - id: ending_bloodied_byre_evacuated
+    title: "The Bloodied Byre Evacuated"
+    text: >
+      Cade and every rider escape the byre, but old grey remains in its straw-dark
+      heart. Two cattle are missing in the lower pasture. The outer defense line and
+      the byre are abandoned to keep the people clear. Albany receives the living count
+      and the cost. *** You have won, by evacuation and with loss. ***
   - id: ending_fortified_cade_terms
     title: "Dawn Behind Cade's Shutters"
     text: >
