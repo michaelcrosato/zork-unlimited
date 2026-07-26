@@ -577,6 +577,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         returnText: "behind the inner gate you barred",
         memoryId: "memory:wolf_winter_inner_gate_barred",
         worldFactIds: [
+          "fact:wolf_winter_bloodshed",
           "fact:wolf_winter_byre_held",
           "fact:wolf_winter_guard_wood_committed",
           "fact:wolf_winter_inner_gate_barred_at_dawn",
@@ -590,6 +591,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         returnText: "sound timber you carried out",
         memoryId: "memory:wolf_winter_repair_timber_saved",
         worldFactIds: [
+          "fact:wolf_winter_bloodshed",
           "fact:wolf_winter_byre_held",
           "fact:wolf_winter_outer_paling_broken",
           "fact:wolf_winter_repair_timber_available",
@@ -602,6 +604,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
         returnText: "guard wood was spent in the fighting",
         memoryId: "memory:wolf_winter_guard_wood_spent",
         worldFactIds: [
+          "fact:wolf_winter_bloodshed",
           "fact:wolf_winter_byre_held",
           "fact:wolf_winter_outer_paling_broken",
           "fact:wolf_winter_repair_timber_spent",
@@ -618,7 +621,15 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       expect(final.journey.storyChoice).toBeNull();
       const snapshot = api.export_overworld_session({ session_id: overworldSessionId }).snapshot;
       expect(snapshot.questOutcomes).toContainEqual(["wolf_winter", expected.endingId]);
-      expect(snapshot.character.relationships).toHaveLength(5);
+      expect(snapshot.character.relationships).toHaveLength(6);
+      expect(snapshot.character.relationships).toContainEqual({
+        npcId: "albany:emery_sloane",
+        trust: 4,
+        regard: 5,
+        owesPlayer: 0,
+        playerOwes: 0,
+        memories: ["albany:memory_emery_wolf_full_combat_bloodshed"],
+      });
       expect(snapshot.character.relationships).toContainEqual(
         expect.objectContaining({
           npcId: "albany:hayden_hale",

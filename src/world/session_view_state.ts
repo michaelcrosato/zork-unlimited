@@ -27,7 +27,7 @@ import {
   type OverworldSessionAreaContent,
 } from "./session_local_state.js";
 import type { OverworldSessionLocalView } from "./session_local_view.js";
-import { localEventSceneRequirementsMet } from "./local_event_scene.js";
+import { availableLocalEventSceneOptions } from "./local_event_scene.js";
 import type { OverworldRegionalArcProgress } from "./session_regional_arcs.js";
 import {
   cachedOverworldSessionDiscoveredRouteOptions,
@@ -123,6 +123,7 @@ export type OverworldSessionViewModelSourceState = {
   routePlannerIndex: OverworldRoutePlannerIndex;
   roadEventState?: OverworldRouteRoadEventState;
   completedQuestIds: ReadonlySet<string>;
+  campaignWorldFactIds: ReadonlySet<string>;
   journalEntries: readonly OverworldJournalEntry[];
   travelLog: readonly TravelLogEntry[];
   visitedCount: number;
@@ -173,21 +174,59 @@ function pendingRoadLocationNode(
   };
 }
 
+export function projectActiveOverworldEvent(
+  event: OverworldLocalEvent,
+  state: Readonly<{
+    resolvedEventIds: ReadonlySet<string>;
+    completedQuestIds: ReadonlySet<string>;
+    completedJobIds: ReadonlySet<string>;
+    campaignWorldFactIds: ReadonlySet<string>;
+  }>,
+): OverworldLocalEvent | null {
+  if (state.resolvedEventIds.has(event.id)) return null;
+  if (!event.authored_scene) return event;
+  const options = availableLocalEventSceneOptions(event.authored_scene, {
+    completedQuestIds: state.completedQuestIds,
+    completedJobIds: state.completedJobIds,
+    worldFactIds: state.campaignWorldFactIds,
+  });
+  if (options.length === 0) return null;
+  const projectedOptions = options.map(
+    ({ requires_all_world_facts: _requires, forbids_any_world_facts: _forbids, ...option }) =>
+      option,
+  );
+  const hasPlayerHiddenPredicates = options.some(
+    (option) =>
+      option.requires_all_world_facts !== undefined || option.forbids_any_world_facts !== undefined,
+  );
+  if (!hasPlayerHiddenPredicates && options.length === event.authored_scene.options.length) {
+    return event;
+  }
+  return {
+    ...event,
+    authored_scene: {
+      ...event.authored_scene,
+      options: projectedOptions,
+    },
+  };
+}
+
 function activeOverworldEvents(
   events: readonly OverworldLocalEvent[],
   resolvedEventIds: ReadonlySet<string>,
   completedQuestIds: ReadonlySet<string>,
   completedJobIds: ReadonlySet<string>,
+  campaignWorldFactIds: ReadonlySet<string>,
 ): OverworldLocalEvent[] {
-  return events.filter(
-    (event) =>
-      !resolvedEventIds.has(event.id) &&
-      (!event.authored_scene ||
-        localEventSceneRequirementsMet(event.authored_scene, {
-          completedQuestIds,
-          completedJobIds,
-        })),
-  );
+  return events.flatMap((event) => {
+    const projected = projectActiveOverworldEvent(event, {
+      resolvedEventIds,
+      completedQuestIds,
+      completedJobIds,
+      campaignWorldFactIds,
+    });
+    return projected ? [projected] : [];
+  });
 }
 
 export function buildOverworldSessionViewModelState(
@@ -236,6 +275,7 @@ export function buildOverworldSessionViewModelState(
     source.ids.resolvedEventIds,
     source.completedQuestIds,
     source.ids.completedJobIds,
+    source.campaignWorldFactIds,
   );
   const contacts = currentAreaContent.characters.map(
     (character) =>

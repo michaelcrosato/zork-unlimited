@@ -14,6 +14,7 @@ import { OVERWORLD_STARTING_MINUTES as STARTING_MINUTES } from "./travel_mechani
 import {
   localEventSceneRequirementError,
   localEventSceneRequirementsMet,
+  localEventSceneOptionRequirementsMet,
   resolveLocalEventSceneOption,
   type LocalEventScene,
   type LocalEventSceneOption,
@@ -74,6 +75,7 @@ export type OverworldEventResolutionPlanState = {
   currentAreaId: string | null;
   completedQuestIds: ReadonlySet<string>;
   completedJobIds?: ReadonlySet<string> | undefined;
+  campaignWorldFactIds?: ReadonlySet<string> | undefined;
   resolvedEventIds: ReadonlySet<string>;
   journalEntries: OverworldJournalEntryReadIndex;
   poisByArea: ReadonlyMap<string, readonly Pick<OverworldPoi, "id">[]>;
@@ -259,6 +261,14 @@ export function planOverworldEventResolution(
   }
   if (scene && !sceneOption) {
     throw new Error(`Choose one authored option for ${event.title}.`);
+  }
+  if (
+    sceneOption &&
+    !localEventSceneOptionRequirementsMet(sceneOption, {
+      worldFactIds: state.campaignWorldFactIds,
+    })
+  ) {
+    throw new Error(`That authored option for ${event.title} is not available in this journey.`);
   }
 
   const action = describeOverworldEventResolution(

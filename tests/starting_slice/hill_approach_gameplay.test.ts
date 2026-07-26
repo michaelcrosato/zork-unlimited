@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { makeStep } from "../../src/core/engine.js";
+import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
@@ -92,6 +93,22 @@ function action(state: GameState, id: string) {
 
 function act(state: GameState, id: string): GameState {
   const result = step(state, action(state, id).action);
+  expect(result.ok, result.rejectionReason).toBe(true);
+  return result.state;
+}
+
+function fixedRng(face: "best" | "worst"): Rng {
+  return {
+    next: () => (face === "best" ? 0.999999 : 0),
+    int: (min, max) => (face === "best" ? max : min),
+  };
+}
+
+function actWithRoll(state: GameState, id: string, face: "best" | "worst"): GameState {
+  const result = makeStep(buildRpgRules(index, () => fixedRng(face)))(
+    state,
+    action(state, id).action,
+  );
   expect(result.ok, result.rejectionReason).toBe(true);
   return result.state;
 }
@@ -262,6 +279,21 @@ describe("SS-F07 — Wolf-Winter hill-approach gameplay", () => {
       yearling_redirected_with_split_guard: true,
     });
     expect(stockway.inventory).not.toContain("split_rail_guard");
+  });
+
+  it("reports the exposed-ridge failed first cast's full +2 alarm while retaining recovery", () => {
+    const failed = actWithRoll(
+      commitLure("ridge", 9),
+      "use_winter_feed_sack_on_downwind_feed_line",
+      "worst",
+    );
+    expect(failed).toMatchObject({
+      flags: { lure_trail_fouled: true },
+      vars: { cattle_alarm: 3 }, // ridge arrival 1 + failed cast 2
+    });
+    expect(failed.journal.join("\n")).toMatch(/no retry; alarm rises by 2/i);
+    expect(actionIds(failed)).not.toContain("use_winter_feed_sack_on_downwind_feed_line");
+    expect(actionIds(failed)).toContain("wedge_paling_rail");
   });
 
   it("uses seed 26 to make both casts pass while the ridge scatters cattle and the stockway keeps the herd whole", () => {

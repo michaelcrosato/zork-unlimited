@@ -128,6 +128,7 @@ import {
 } from "./local_event_scene_legacy.js";
 import {
   localEventSceneRequirementsMet,
+  localEventSceneOptionRequirementsMet,
   resolveLocalEventSceneOption,
 } from "./local_event_scene.js";
 import {
@@ -189,6 +190,11 @@ import {
 } from "./opening_registration_journal.js";
 import { parseTimeLabel, timeLabel } from "./session_journal_codec.js";
 import { parseGoalPassageJourneyActionId } from "./session_goal_passage.js";
+import {
+  isEmeryEvidenceCustodyPredecessorWorldHash,
+  EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES,
+  isEmeryFullCombatMemoryPredecessorWorldHash,
+} from "./emery_evidence_custody_legacy.js";
 
 export const OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH =
   "39d32c027d2e826f476dd299bb95cc3911994ec92b4fbf297be8d1216e5b6151";
@@ -418,6 +424,9 @@ export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
 export const OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH =
   "3b7ccae1235ee3dd0fad5202594faf1d18e9c3f3d162bb214008d911cb2082d5";
 export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "0770c6e8349923d1ed0c025d8b7e2e12323c53c457b7801667ea0574d90003ed";
+/** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
+export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
 /**
  * Exact post-Works manifests retained for the older preparation migration.
@@ -2345,9 +2354,9 @@ function migrateAuthoredLocalJobPredecessorJournal(args: {
 
     const entry = matchingEntries[0]!;
     if (entry.localSceneProof !== undefined) {
-      // Stacked conversions retain already-authored choices and older trusted
-      // generic markers; only the newly converted proofless job is normalized.
-      continue;
+      throw new Error(
+        `The generic local-job predecessor "${definition.jobId}" cannot carry an authored-scene proof.`,
+      );
     }
     const job = args.indexes.jobsById.get(definition.jobId);
     if (!job?.authored_scene || job.authored_scene.id !== definition.sceneId) {
@@ -2469,7 +2478,11 @@ export function migrateAuthoredLocalEventPredecessorJournal(args: {
     }
     if (!completed) continue;
     const entry = matchingEntries[0]!;
-    if (entry.localSceneProof !== undefined) continue;
+    if (entry.localSceneProof !== undefined) {
+      throw new Error(
+        `The generic local-event predecessor "${definition.eventId}" cannot carry an authored-scene proof.`,
+      );
+    }
     const event = args.indexes.eventsById.get(definition.eventId);
     const node = event ? args.indexes.nodesById.get(event.home) : undefined;
     if (!event?.authored_scene || event.authored_scene.id !== definition.sceneId || !node) {
@@ -2649,6 +2662,190 @@ function registrationPromiseClosurePredecessorCharacter(
   });
 }
 
+const EMERY_EVIDENCE_CUSTODY_EVENT_ID = "albany_city__greenway__event";
+const EMERY_EVIDENCE_CUSTODY_JOB_ID = "albany_city__greenway__job";
+const EMERY_EVIDENCE_CUSTODY_EVENT_SCENE_ID = "albany:greenway-trail-policy";
+const EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID = "albany:greenway-corridor-survey";
+const EMERY_QUIET_CORRIDOR_OPTION_ID = "place_quiet_corridor_markers";
+const EMERY_CUSTODY_EVENT_OPTION_ID = "open_bloodshed_evidence_custody";
+const EMERY_QUIET_JOB_OPTION_IDS: ReadonlyMap<string, string> = new Map([
+  ["reset_steward_markers", "secure_minimum_bloodshed_custody_marks"],
+  [
+    "trace_winter_wildlife_corridor_with_witness_points",
+    "trace_bloodshed_chain_of_custody_with_witness_points",
+  ],
+]);
+const EMERY_CUSTODY_JOB_OPTION_IDS: ReadonlySet<string> = new Set(
+  EMERY_QUIET_JOB_OPTION_IDS.values(),
+);
+const EMERY_BLOODSHED_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
+  "ending_pack_diverted_after_blood",
+  "ending_held",
+  "ending_held_gate_barred",
+  "ending_held_timber_saved",
+]);
+const EMERY_FULL_COMBAT_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
+  "ending_held",
+  "ending_held_gate_barred",
+  "ending_held_timber_saved",
+]);
+const EMERY_FULL_COMBAT_MEMORY_ID = "albany:memory_emery_wolf_full_combat_bloodshed";
+const EMERY_FULL_COMBAT_NPC_ID = "albany:emery_sloane";
+const EMERY_CONTACT_PREFIX = "talk:albany_city__greenway__contact";
+const EMERY_FULL_COMBAT_CONTACT_ID = `${EMERY_CONTACT_PREFIX}@wolf_full_combat_bloodshed`;
+
+function isEmeryEvidenceCustodyGrandfatherProof(entry: OverworldJournalEntry): boolean {
+  const proof = entry.localSceneProof;
+  return (
+    proof?.sourceWorldHash !== undefined &&
+    isEmeryEvidenceCustodyPredecessorWorldHash(proof.sourceWorldHash) &&
+    ((entry.id === `resolve:${EMERY_EVIDENCE_CUSTODY_EVENT_ID}` &&
+      proof.sceneId === EMERY_EVIDENCE_CUSTODY_EVENT_SCENE_ID &&
+      proof.optionId === EMERY_QUIET_CORRIDOR_OPTION_ID) ||
+      (entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}` &&
+        proof.sceneId === EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID &&
+        EMERY_QUIET_JOB_OPTION_IDS.has(proof.optionId)))
+  );
+}
+
+/** Preserve exact predecessor quiet choices without relabeling the player's policy. */
+function migrateEmeryEvidenceCustodyPredecessorSnapshot(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  snapshot: OverworldSessionSnapshot;
+  sourceWorldHash: string;
+  migrateQuietEvidence: boolean;
+}): OverworldSessionSnapshot {
+  const bloodshedOutcome = new Map(args.snapshot.questOutcomes).get("wolf_winter");
+  const isBloodshed =
+    bloodshedOutcome !== undefined && EMERY_BLOODSHED_WOLF_OUTCOME_IDS.has(bloodshedOutcome);
+  const event = args.indexes.eventsById.get(EMERY_EVIDENCE_CUSTODY_EVENT_ID);
+  const job = args.indexes.jobsById.get(EMERY_EVIDENCE_CUSTODY_JOB_ID);
+  const eventScene = event?.authored_scene;
+  const jobScene = job?.authored_scene;
+  if (
+    !event ||
+    !job ||
+    eventScene?.id !== EMERY_EVIDENCE_CUSTODY_EVENT_SCENE_ID ||
+    jobScene?.id !== EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID
+  ) {
+    throw new Error(
+      "Emery evidence-custody migration target is missing the current Greenway scenes.",
+    );
+  }
+  const wolfCompletion = args.snapshot.journalEntries.find(
+    (entry) => entry.id === "quest_done:wolf_winter",
+  );
+  const wolfCompletionMinutes = wolfCompletion ? parseTimeLabel(wolfCompletion.recordedAt) : null;
+  return Object.freeze({
+    ...args.snapshot,
+    journalEntries: args.snapshot.journalEntries.map((entry) => {
+      const proof = entry.localSceneProof;
+      const isPostWolfEmeryContact =
+        isBloodshed &&
+        wolfCompletionMinutes !== null &&
+        entry.kind === "contact" &&
+        (entry.id === EMERY_CONTACT_PREFIX || entry.id.startsWith(`${EMERY_CONTACT_PREFIX}@`)) &&
+        parseTimeLabel(entry.recordedAt) >= wolfCompletionMinutes;
+      if (isPostWolfEmeryContact) {
+        if (entry.id === EMERY_FULL_COMBAT_CONTACT_ID) {
+          throw new Error(
+            "Emery evidence-custody predecessor snapshot contains a contact presentation introduced by the current manifest.",
+          );
+        }
+        // The current contact precedence may shadow this historical line. Preserve the
+        // player's exact text and action ID; provenance is the only migration marker.
+        return {
+          ...entry,
+          sourceWorldHash: args.sourceWorldHash,
+        };
+      }
+      if (!proof || !args.migrateQuietEvidence) return entry;
+      if (
+        (entry.id === `resolve:${EMERY_EVIDENCE_CUSTODY_EVENT_ID}` &&
+          proof.optionId === EMERY_CUSTODY_EVENT_OPTION_ID) ||
+        (entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}` &&
+          EMERY_CUSTODY_JOB_OPTION_IDS.has(proof.optionId))
+      ) {
+        throw new Error(
+          "Emery evidence-custody predecessor snapshot contains a custody option introduced by the current manifest.",
+        );
+      }
+      if (
+        entry.id === `resolve:${EMERY_EVIDENCE_CUSTODY_EVENT_ID}` &&
+        proof.optionId === EMERY_QUIET_CORRIDOR_OPTION_ID
+      ) {
+        return isBloodshed
+          ? {
+              ...entry,
+              localSceneProof: {
+                ...proof,
+                sourceWorldHash: args.sourceWorldHash,
+              },
+            }
+          : entry;
+      }
+      if (entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}`) {
+        return isBloodshed && EMERY_QUIET_JOB_OPTION_IDS.has(proof.optionId)
+          ? {
+              ...entry,
+              localSceneProof: {
+                ...proof,
+                sourceWorldHash: args.sourceWorldHash,
+              },
+            }
+          : entry;
+      }
+      return entry;
+    }),
+  });
+}
+
+function emeryEvidenceCustodyPredecessorCharacter(args: {
+  characterBeforeQuestOutcomes: CampaignCharacterState;
+  indexes: OverworldSnapshotManifestIndex;
+  questOutcomeIds: ReadonlyMap<string, string>;
+  questOutcomeOrder: readonly string[];
+}): CampaignCharacterState {
+  const outcome = args.questOutcomeIds.get("wolf_winter");
+  if (!outcome || !EMERY_FULL_COMBAT_WOLF_OUTCOME_IDS.has(outcome)) {
+    return replayQuestCampaignConsequences({
+      character: args.characterBeforeQuestOutcomes,
+      questsById: args.indexes.questsById,
+      questOutcomeIds: args.questOutcomeIds,
+      questOutcomeOrder: args.questOutcomeOrder,
+    }).characterAfter;
+  }
+  const wolf = args.indexes.questsById.get("wolf_winter");
+  if (!wolf?.campaign_exports) {
+    throw new Error("Emery evidence-custody migration target has no Wolf-Winter exports.");
+  }
+  const wolfCampaignExports = wolf.campaign_exports;
+  const predecessorWolf = structuredClone(wolf);
+  predecessorWolf.campaign_exports = wolfCampaignExports.map((campaignExport) =>
+    EMERY_FULL_COMBAT_WOLF_OUTCOME_IDS.has(campaignExport.ending_id)
+      ? {
+          ...campaignExport,
+          effects: campaignExport.effects.filter(
+            (effect) =>
+              !(
+                effect.type === "remember_relationship" &&
+                effect.npc_id === EMERY_FULL_COMBAT_NPC_ID &&
+                effect.memory_id === EMERY_FULL_COMBAT_MEMORY_ID
+              ),
+          ),
+        }
+      : campaignExport,
+  );
+  const predecessorQuests = new Map(args.indexes.questsById);
+  predecessorQuests.set(predecessorWolf.id, predecessorWolf);
+  return replayQuestCampaignConsequences({
+    character: args.characterBeforeQuestOutcomes,
+    questsById: predecessorQuests,
+    questOutcomeIds: args.questOutcomeIds,
+    questOutcomeOrder: args.questOutcomeOrder,
+  }).characterAfter;
+}
+
 export function planOverworldSessionSnapshotRestore(args: {
   indexes: OverworldSnapshotManifestIndex;
   snapshot: OverworldSessionSnapshot;
@@ -2691,6 +2888,12 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesComparisonCardContract =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH;
+  const migratesEmeryEvidenceCustody =
+    migrationTargetsCurrentManifest &&
+    EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES.has(sourceSnapshot.worldHash);
+  const migratesEmeryContactPrecedence =
+    migrationTargetsCurrentManifest &&
+    isEmeryFullCombatMemoryPredecessorWorldHash(sourceSnapshot.worldHash);
   const migrationEra: TrustedMigrationEra =
     !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
       ? null
@@ -2753,6 +2956,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesJuneReturnCopy &&
     !migratesCadeStoryPredicate &&
     !migratesComparisonCardContract &&
+    !migratesEmeryEvidenceCustody &&
     !migratesAuthoredLocalJob &&
     !migratesAuthoredLocalEvent
   ) {
@@ -2906,6 +3110,14 @@ export function planOverworldSessionSnapshotRestore(args: {
           return Object.freeze({ ...snapshotWithCampaignCopy, journalEntries });
         })()
       : snapshotWithCampaignCopy;
+  if (migratesEmeryEvidenceCustody || migratesEmeryContactPrecedence) {
+    snapshot = migrateEmeryEvidenceCustodyPredecessorSnapshot({
+      indexes,
+      snapshot,
+      sourceWorldHash: sourceSnapshot.worldHash,
+      migrateQuietEvidence: migratesEmeryEvidenceCustody,
+    });
+  }
   const normalizesCivicPreparationEvidence =
     sourceSnapshot.worldHash !== worldHash &&
     indexes.openingPreparation !== null &&
@@ -4173,20 +4385,37 @@ export function planOverworldSessionSnapshotRestore(args: {
   };
   const storedCharacter = serializeCampaignCharacterState(snapshot.character);
   const expectedCharacter = serializeCampaignCharacterState(consequenceReplay.characterAfter);
+  const sourcePredatesEmeryFullCombatMemory =
+    migrationTargetsCurrentManifest &&
+    isEmeryFullCombatMemoryPredecessorWorldHash(sourceSnapshot.worldHash) &&
+    !snapshot.character.relationships.some(
+      (relationship) =>
+        relationship.npcId === EMERY_FULL_COMBAT_NPC_ID &&
+        relationship.memories.includes(EMERY_FULL_COMBAT_MEMORY_ID),
+    );
+  const sourceEraCharacter = sourcePredatesEmeryFullCombatMemory
+    ? emeryEvidenceCustodyPredecessorCharacter({
+        characterBeforeQuestOutcomes: questStartReplay.characterAfter,
+        indexes,
+        questOutcomeIds,
+        questOutcomeOrder,
+      })
+    : consequenceReplay.characterAfter;
+  const sourceEraExpectedCharacter = migratesRegistrationPromiseClosure
+    ? registrationPromiseClosurePredecessorCharacter(sourceEraCharacter, questOutcomeIds)
+    : sourceEraCharacter;
   if (migratesPreCampaignExportsWorldHash) {
     if (storedCharacter !== serializeCampaignCharacterState(neutralCharacter)) {
       throw new Error(
         "Legacy overworld session snapshot has campaign character state without replayable consequence proof.",
       );
     }
-  } else if (migratesRegistrationPromiseClosure) {
-    const predecessorExpected = registrationPromiseClosurePredecessorCharacter(
-      consequenceReplay.characterAfter,
-      questOutcomeIds,
-    );
-    if (storedCharacter !== serializeCampaignCharacterState(predecessorExpected)) {
+  } else if (sourcePredatesEmeryFullCombatMemory) {
+    if (storedCharacter !== serializeCampaignCharacterState(sourceEraExpectedCharacter)) {
       throw new Error(
-        "Registration-promise predecessor campaign character does not match replayed quest consequences.",
+        migratesRegistrationPromiseClosure
+          ? "Registration-promise predecessor campaign character does not match replayed source-era Wolf-Winter consequences."
+          : "Predecessor campaign character does not match its source-era Wolf-Winter consequences.",
       );
     }
   } else if (storedCharacter !== expectedCharacter) {
@@ -4716,6 +4945,7 @@ function assertSnapshotLocalJobSceneProofs(args: {
       job.id,
       proof,
     );
+    const emeryEvidenceCustodyGrandfather = isEmeryEvidenceCustodyGrandfatherProof(entry);
     let selectedOption: LocalJobSceneOption | null = null;
     if (legacyCompletion) {
       const expected = describeAuthoredLocalJobLegacyAction(
@@ -4733,7 +4963,11 @@ function assertSnapshotLocalJobSceneProofs(args: {
       }
       if (!proof.boundary) return;
     } else {
-      if (proof.sourceWorldHash !== undefined && !predicatePredecessorCompletion) {
+      if (
+        proof.sourceWorldHash !== undefined &&
+        !predicatePredecessorCompletion &&
+        !emeryEvidenceCustodyGrandfather
+      ) {
         throw new Error(
           `Overworld session snapshot authored job "${job.id}" names an untrusted legacy source.`,
         );
@@ -4927,7 +5161,8 @@ function assertSnapshotLocalEventSceneProofs(args: {
     const node = args.indexes.nodesById.get(event.home);
     if (!node) return;
     const legacy = authoredLocalEventLegacyCompletion(event.id, proof);
-    if (!legacy && proof.sourceWorldHash !== undefined) {
+    const emeryEvidenceCustodyGrandfather = isEmeryEvidenceCustodyGrandfatherProof(entry);
+    if (!legacy && proof.sourceWorldHash !== undefined && !emeryEvidenceCustodyGrandfather) {
       throw new Error(
         `Overworld session snapshot authored event "${event.id}" names an untrusted legacy source.`,
       );
@@ -5010,6 +5245,21 @@ function assertSnapshotLocalEventSceneProofs(args: {
     ) {
       throw new Error(
         `Overworld session snapshot authored event "${event.id}" does not match its location and clock boundary.`,
+      );
+    }
+    if (
+      !legacy &&
+      !emeryEvidenceCustodyGrandfather &&
+      (!option ||
+        !localEventSceneOptionRequirementsMet(option, {
+          worldFactIds: campaignWorldFactsProvenBeforeDecision(
+            args.campaignBoundaries,
+            boundary.acceptedDecisions,
+          ),
+        }))
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" violates its earlier world-fact requirements.`,
       );
     }
   });

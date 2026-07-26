@@ -215,6 +215,87 @@ export function exactRegistrationPromiseClosurePredecessor(
   return predecessor;
 }
 
+/** Reconstruct the exact manifest before Emery split bloodshed custody from quiet corridor work. */
+export function exactEmeryEvidenceCustodyPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const emery = predecessor.characters.find(
+    (candidate) => candidate.id === "albany_city__greenway__contact",
+  );
+  const event = predecessor.local_events.find(
+    (candidate) => candidate.id === "albany_city__greenway__event",
+  );
+  const job = predecessor.local_jobs.find(
+    (candidate) => candidate.id === "albany_city__greenway__job",
+  );
+  const wolf = predecessor.quests.find((candidate) => candidate.id === "wolf_winter");
+  if (!emery || !event?.authored_scene || !job?.authored_scene || !wolf?.campaign_exports) {
+    throw new Error("Emery evidence-custody predecessor requires the Greenway and Wolf-Winter.");
+  }
+
+  emery.variants = emery.variants?.filter((variant) => variant.id !== "wolf_full_combat_bloodshed");
+  const hybridIndex = emery.variants?.findIndex(
+    (variant) => variant.id === "wolf_pack_diverted_after_blood",
+  );
+  if (hybridIndex === undefined || hybridIndex < 0 || !emery.variants) {
+    throw new Error("Emery must retain the hybrid after-blood variant.");
+  }
+  const [hybrid] = emery.variants.splice(hybridIndex, 1);
+  const droverIndex = emery.variants.findIndex(
+    (variant) => variant.id === "wolf_drover_route_allocated",
+  );
+  if (!hybrid || droverIndex < 0) {
+    throw new Error("Emery predecessor requires the hybrid and drover variants.");
+  }
+  hybrid.agenda =
+    "Emery will not call the result clean or useless; recovering the missing cattle and watching the two surviving wolves now outrank either reward or reprisal.";
+  emery.variants.splice(droverIndex + 1, 0, hybrid);
+  event.authored_scene.prompt =
+    "Emery can post an obvious accessible public detour that any traveler can follow, or keep the crossing low-profile with quiet steward markers that preserve the wildlife corridor. Both make today's damaged junction safe, but the policy is public and irreversible: the later corridor survey must carry the same access promise into the field.";
+  event.authored_scene.options = event.authored_scene.options.filter(
+    (option) => option.id !== "open_bloodshed_evidence_custody",
+  );
+  const quiet = event.authored_scene.options.find(
+    (option) => option.id === "place_quiet_corridor_markers",
+  );
+  if (!quiet) throw new Error("Emery must retain the quiet corridor option.");
+  delete quiet.forbids_any_world_facts;
+
+  job.summary =
+    "Emery must carry the Greenway's irreversible trail policy from the damaged crossing into a finished corridor survey. Public-detour and quiet-corridor records authorize different field work; neither can be relabeled at the board.";
+  job.objective =
+    "Complete one survey action that honors the exact Greenway trail policy already entered with Emery.";
+  job.reward =
+    "Choose a faster field mark or a slower, higher-standing survey record under the policy you actually authored. Public work takes longer but earns more standing than the corresponding quiet-corridor work.";
+  job.authored_scene.prompt =
+    "Emery opens the permanent trail-policy entry beside the field board. The policy fixes which two survey actions are lawful; within that policy, you may finish a fast practical mark for modest standing or spend longer on a publicly useful record for greater standing.";
+  job.authored_scene.options = job.authored_scene.options.filter(
+    (option) =>
+      option.id !== "secure_minimum_bloodshed_custody_marks" &&
+      option.id !== "trace_bloodshed_chain_of_custody_with_witness_points",
+  );
+
+  const bloodshedEndings = new Set([
+    "ending_pack_diverted_after_blood",
+    "ending_held",
+    "ending_held_gate_barred",
+    "ending_held_timber_saved",
+  ]);
+  for (const campaignExport of wolf.campaign_exports) {
+    if (!bloodshedEndings.has(campaignExport.ending_id)) continue;
+    campaignExport.effects = campaignExport.effects.filter(
+      (effect) =>
+        !(
+          (effect.type === "set_world_fact" && effect.fact_id === "fact:wolf_winter_bloodshed") ||
+          (effect.type === "remember_relationship" &&
+            effect.memory_id === "albany:memory_emery_wolf_full_combat_bloodshed")
+        ),
+    );
+  }
+  return predecessor;
+}
+
 /** Expected current character after migrating an older completed Wolf return. */
 export function registrationPromiseClosureCurrentCharacter(
   historical: CampaignCharacterState,
@@ -224,6 +305,43 @@ export function registrationPromiseClosureCurrentCharacter(
   const promiseId = REGISTRATION_PROMISE_CLOSURE_BY_BACKGROUND.get(current.background);
   const promise = current.promises.find((candidate) => candidate.promiseId === promiseId);
   if (promise?.status === "active") promise.status = "kept";
+  return current;
+}
+
+/** Apply the current full-combat Emery consequence to an older replay expectation. */
+export function fullCombatEmeryMemoryCurrentCharacter(
+  historical: CampaignCharacterState,
+  questOutcomes: readonly (readonly [string, string])[],
+): CampaignCharacterState {
+  const endingId = new Map(questOutcomes).get("wolf_winter");
+  if (
+    endingId !== "ending_held" &&
+    endingId !== "ending_held_gate_barred" &&
+    endingId !== "ending_held_timber_saved"
+  ) {
+    return structuredClone(historical);
+  }
+  const current = structuredClone(historical);
+  let emery = current.relationships.find(
+    (relationship) => relationship.npcId === "albany:emery_sloane",
+  );
+  if (!emery) {
+    emery = {
+      npcId: "albany:emery_sloane",
+      trust: 0,
+      regard: 0,
+      owesPlayer: 0,
+      playerOwes: 0,
+      memories: [],
+    };
+    current.relationships.push(emery);
+  }
+  emery.trust = Math.max(emery.trust, 4);
+  emery.regard = Math.max(emery.regard, 5);
+  if (!emery.memories.includes("albany:memory_emery_wolf_full_combat_bloodshed")) {
+    emery.memories.push("albany:memory_emery_wolf_full_combat_bloodshed");
+  }
+  current.relationships.sort((left, right) => left.npcId.localeCompare(right.npcId));
   return current;
 }
 
@@ -501,7 +619,7 @@ export function exactAlbanyWorksHazardPredecessor(current: OverworldManifest): O
 
 /** Reconstruct the exact manifest before Station gained its return-filing standard. */
 export function exactAlbanyStationEventPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = historicalManifestClone(current);
+  const predecessor = historicalManifestClone(exactEmeryEvidenceCustodyPredecessor(current));
   const event = predecessor.local_events.find(
     (candidate) => candidate.id === "albany_city__transport_hub__event",
   );

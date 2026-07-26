@@ -47,6 +47,20 @@ import { resolveLocalJobSceneOption } from "./local_job_scene.js";
 import { resolveLocalEventSceneOption } from "./local_event_scene.js";
 import { authoredLocalJobLegacyCompletion } from "./local_job_scene_legacy.js";
 import { authoredLocalEventLegacyCompletion } from "./local_event_scene_legacy.js";
+import { isEmeryEvidenceCustodyPredecessorWorldHash } from "./emery_evidence_custody_legacy.js";
+
+function isEmeryEvidenceCustodyGrandfatherEventProof(
+  event: OverworldLocalEvent,
+  proof: NonNullable<OverworldJournalEntry["localSceneProof"]>,
+): boolean {
+  return (
+    event.id === "albany_city__greenway__event" &&
+    proof.sceneId === "albany:greenway-trail-policy" &&
+    proof.optionId === "place_quiet_corridor_markers" &&
+    proof.sourceWorldHash !== undefined &&
+    isEmeryEvidenceCustodyPredecessorWorldHash(proof.sourceWorldHash)
+  );
+}
 import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 
 export type OverworldResourceReplaySourceIndex = {
@@ -395,7 +409,10 @@ function replayLocalRegionRenown(
         );
         if (legacyCompletion) {
           amount = legacyCompletion.definition.legacyEvent.intensity;
-        } else if (entry.localSceneProof.sourceWorldHash === undefined) {
+        } else if (
+          entry.localSceneProof.sourceWorldHash === undefined ||
+          isEmeryEvidenceCustodyGrandfatherEventProof(event, entry.localSceneProof)
+        ) {
           amount = resolveLocalEventSceneOption(
             event.authored_scene,
             entry.localSceneProof.optionId,

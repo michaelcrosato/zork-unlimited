@@ -52,7 +52,7 @@ describe("Relief Allocation trigger-category snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3",
+      "0770c6e8349923d1ed0c025d8b7e2e12323c53c457b7801667ea0574d90003ed",
     );
     expect(
       WORLD.opening_relief_allocation?.options.map((option) => option.trigger_category),

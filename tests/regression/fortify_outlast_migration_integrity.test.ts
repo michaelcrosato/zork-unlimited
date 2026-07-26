@@ -12,6 +12,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import {
   exactF11World,
   exactF12World,
+  fullCombatEmeryMemoryCurrentCharacter,
   registrationPromiseClosureCurrentCharacter,
 } from "./fixtures/historical_overworlds.js";
 
@@ -225,7 +226,12 @@ function expectNeutralF10Migration(
     completedQuestIds: source.completedQuestIds,
     questOutcomes: source.questOutcomes,
   });
-  expect(restored.character).toEqual(registrationPromiseClosureCurrentCharacter(source.character));
+  expect(restored.character).toEqual(
+    fullCombatEmeryMemoryCurrentCharacter(
+      registrationPromiseClosureCurrentCharacter(source.character),
+      source.questOutcomes,
+    ),
+  );
   expect(
     restored.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`)?.questStartProof,
   ).toMatchObject({

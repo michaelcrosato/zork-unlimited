@@ -1303,6 +1303,18 @@ function assertEntitiesIntegrity(
           );
         }
       }
+      for (const option of scene.options) {
+        for (const factId of [
+          ...(option.requires_all_world_facts ?? []),
+          ...(option.forbids_any_world_facts ?? []),
+        ]) {
+          if (!authoredWorldFactIds.has(factId)) {
+            throw new Error(
+              `Authored local-event scene "${scene.id}" option "${option.id}" references unauthored world fact "${factId}".`,
+            );
+          }
+        }
+      }
     }
     eventAreas.add(event.area);
   }

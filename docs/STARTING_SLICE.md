@@ -158,11 +158,16 @@ it is **not yet milestone-certified**:
   Unaffiliated Courier, and Ledger Advocate now also have distinct Repair,
   Streetwise, and Mediation preparation consumers; broader balance across all
   four completed resolution families remains unproven;
-- June Pike now supplies the first persistent ally grammar: her visible
-  cattle-first contract, subordinate-role refusal, independent Wolf action,
-  first-wolf-death departure, promise state, testimony, and Station opportunity all
-  replay across the Albany/quest boundary. The wider cast still needs more
-  independent agendas and mechanically changed availability;
+- June Pike supplies the persistent ally grammar: her visible cattle-first
+  contract, subordinate-role refusal, independent Wolf action, first-wolf-death
+  departure, promise state, testimony, and Station opportunity all replay
+  across the Albany/quest boundary. Old Cade independently refuses Albany's
+  recovery authority. Emery Sloane now supplies the third mechanically distinct
+  agenda: a bloodless return permits quiet wildlife-corridor policy, while
+  hybrid or full-combat bloodshed removes that legal option and opens an
+  evidence-custody line with its own later survey work. The strict three-agenda
+  floor is structurally proven; further independent agendas across the wider
+  cast remain future depth;
 - Wolf-Winter's saved-wood and clean living-pack facts now change Albany
   services, while its broken-paling, abandoned-line, and scattered-cattle facts
   feed distinct Station dispatches; broader Cade memory consumers remain future
@@ -798,20 +803,31 @@ Its exact policy predicate, Civic-cot counterfactual, neutral generic migration,
 replay, and full/compact/UI/MCP proof live
 in [`albany_market_scene_counterfactual.test.ts`](../tests/starting_slice/albany_market_scene_counterfactual.test.ts).
 Greenway adds a third authored event and completes the six-job district set
-after Wolf-Winter. Emery Sloane irreversibly records either an obvious
-accessible public detour or quiet
-low-profile markers that preserve the winter wildlife corridor. The later
-corridor survey reads that exact event proof and exposes only its matching two
-actions. Quiet marking is faster for less standing: 20 minutes/+1 for the
-minimum marks or 60/+4 for the witnessed corridor trace. The corresponding
-public work takes 30/+3 or 75/+5; on the reachable 10-standing post-Wolf state,
-the short public detour reaches Rowan's existing 13-standing Civic recovery
-threshold while the short quiet line ends at 11. The paired policies therefore
-change legal action, copy, time, standing, and a delayed existing service
-without adding a new rest/resupply coupon or delaying first-goal completion.
-Full/compact/UI/MCP projection, current replay, exact neutral
-generic migration, and chronology/tamper guards live in
-[`albany_greenway_scene_counterfactual.test.ts`](../tests/starting_slice/albany_greenway_scene_counterfactual.test.ts).
+after Wolf-Winter. Emery Sloane always permits an obvious accessible public
+detour. A bloodless return also permits quiet low-profile markers that preserve
+the winter wildlife corridor; a hybrid or full-combat return instead permits an
+evidence-custody policy and forbids relabeling bloodshed as quiet conservation.
+The later corridor survey reads that exact event proof and exposes only its
+matching two actions. Public and quiet policy each take 35 minutes/+2 standing
+to record; internal custody takes 30/+1. Quiet follow-up offers 20/+1 or 60/+4,
+while custody creates a distinct 15/+1 minimum seal or 70/+5 witnessed chain.
+Public work remains 30/+3 or 75/+5. From the reachable 8-standing post-Wolf
+state, short public work totals 65 minutes and reaches Rowan's existing
+13-standing Civic recovery threshold; short quiet work totals 55 minutes and
+ends at 11; short custody totals 45 minutes and ends at 10. The deep custody
+record instead totals 100 minutes and reaches 14. Wolf strategy therefore
+changes Emery's legal policy and its time/standing frontier, not just her
+dialogue. The policies change legal action, copy, time, standing, and a delayed
+existing service without adding a new rest/resupply coupon or delaying
+first-goal completion. Full/compact/UI/MCP
+projection, current replay, exact predecessor migration, and chronology/tamper
+guards live in the paired proofs below. Exact-predecessor bloodshed saves retain
+their actually selected quiet policy as a provenance-bound grandfathered
+record; migration never relabels that historical choice as custody, while new
+bloodshed decisions cannot select quiet policy.
+[`albany_greenway_scene_counterfactual.test.ts`](../tests/starting_slice/albany_greenway_scene_counterfactual.test.ts)
+and
+[`emery_evidence_custody_snapshot_integrity.test.ts`](../tests/regression/emery_evidence_custody_snapshot_integrity.test.ts).
 Works adds the fourth authored district event without gating departure or
 lengthening the mandatory path. Reese's witnessed-count and cold-set-bypass
 charters each cost 20 minutes and earn 1 standing before Wolf-Winter, then add

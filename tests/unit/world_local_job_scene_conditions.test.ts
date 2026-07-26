@@ -7,9 +7,10 @@ import {
   type LocalJobSceneConditionState,
 } from "../../src/world/local_job_scene.js";
 import { campaignStoryChoiceRefKey } from "../../src/world/campaign_story_choices.js";
-import { assertOverworldIntegrity } from "../../src/world/overworld.js";
+import { assertOverworldIntegrity, type OverworldLocalJob } from "../../src/world/overworld.js";
 import { cloneOverworldLocalJob } from "../../src/world/overworld_clone.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { projectOverworldSessionLocalJob } from "../../src/world/session_local_view.js";
 import {
   campaignStoryChoiceKeysProvenBeforeDecision,
   campaignWorldFactsProvenBeforeDecision,
@@ -79,6 +80,79 @@ describe("generic authored local-job conditions", () => {
         conditionState({ eventOption: "sealed", facts: ["fact:evacuated"] }),
       ).map((option) => option.id),
     ).toEqual(["sealed_evacuated"]);
+  });
+
+  it("projects exact legal cards without exposing any option predicate metadata", () => {
+    const scene = structuredClone(SYNTHETIC_SCENE);
+    scene.options[0]!.requires_all_story_choices = [
+      { story_choice_id: "test:dispatch", choice_id: "north" },
+    ];
+    scene.options[0]!.forbids_any_story_choices = [
+      { story_choice_id: "test:dispatch", choice_id: "south" },
+    ];
+    const job: OverworldLocalJob = {
+      id: "test:job",
+      home: "test:town",
+      area: "test:area",
+      kind: "survey",
+      title: "Test job",
+      summary: "Test summary.",
+      objective: "Test objective.",
+      reward: "Test reward.",
+      minutes: 70,
+      difficulty: 3,
+      visibility: "local_job_board",
+      authored_scene: scene,
+    };
+    const projected = projectOverworldSessionLocalJob(job, {
+      completedQuestIds: new Set(["test:quest"]),
+      resolvedEventIds: new Set([EVENT_ID]),
+      campaignWorldFactIds: new Set(["fact:held"]),
+      campaignStoryChoiceKeys: new Set([
+        campaignStoryChoiceRefKey({
+          story_choice_id: "test:dispatch",
+          choice_id: "north",
+        }),
+      ]),
+      journalEntries: new Map([
+        [
+          `resolve:${EVENT_ID}`,
+          {
+            id: `resolve:${EVENT_ID}`,
+            kind: "resolution",
+            town: "Test",
+            title: "Resolved",
+            text: "Resolved.",
+            recordedAt: "Day 1, 08:00",
+            localSceneProof: { sceneId: "test:event-scene", optionId: "open" },
+          },
+        ],
+      ]),
+    });
+
+    expect(projected?.authored_scene?.options).toEqual([
+      {
+        id: "open_held",
+        title: "Close the open held record",
+        preview: "Publish the held result.",
+        consequence: "The open held record closes.",
+        terms: { minutes: 70, renown: 3 },
+      },
+    ]);
+    const serialized = JSON.stringify(projected);
+    for (const hidden of [
+      "requires_event_options",
+      "requires_all_world_facts",
+      "forbids_any_world_facts",
+      "requires_all_story_choices",
+      "forbids_any_story_choices",
+      "fact:held",
+      "test:dispatch",
+    ]) {
+      expect(serialized).not.toContain(hidden);
+    }
+    expect(job.authored_scene?.options[0]?.requires_event_options).toBeDefined();
+    expect(job.authored_scene?.options[0]?.requires_all_story_choices).toBeDefined();
   });
 
   it("keeps event-choice gating local to an option instead of forcing the whole scene", () => {
@@ -300,6 +374,14 @@ describe("generic authored local-job conditions", () => {
     if (!secondCivic?.authored_scene) throw new Error("expected Civic scene");
     secondCivic.authored_scene.options[0]!.requires_all_world_facts = ["fact:invented"];
     expect(() => assertOverworldIntegrity(missingFact)).toThrow(/unauthored world fact/i);
+
+    const missingEventFact = structuredClone(WORLD);
+    const authoredEvent = missingEventFact.local_events.find(
+      (candidate) => candidate.authored_scene,
+    );
+    if (!authoredEvent?.authored_scene) throw new Error("expected authored event scene");
+    authoredEvent.authored_scene.options[0]!.requires_all_world_facts = ["fact:invented"];
+    expect(() => assertOverworldIntegrity(missingEventFact)).toThrow(/unauthored world fact/i);
 
     const missingStoryChoice = structuredClone(WORLD);
     const station = missingStoryChoice.local_jobs.find(

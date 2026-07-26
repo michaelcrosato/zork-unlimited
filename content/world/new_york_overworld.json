@@ -25137,6 +25137,22 @@
       "campaign_npc_id": "albany:emery_sloane",
       "variants": [
         {
+          "id": "wolf_full_combat_bloodshed",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_full_combat_bloodshed"
+          ],
+          "summary": "Emery has the full combat count: Cade's cattle reached dawn, but the wolf line ended in blood and the Greenway now needs an accountable custody record rather than a quiet corridor claim.",
+          "agenda": "Emery keeps the public detour open to everyone. The bloodshed record can support a chain-of-custody survey, but it cannot be relabeled as a low-profile wildlife-corridor policy."
+        },
+        {
+          "id": "wolf_pack_diverted_after_blood",
+          "after_relationship_memories": [
+            "albany:memory_emery_wolf_pack_diverted_after_blood"
+          ],
+          "summary": "Emery has Cade's exact mixed-line tally: the yearling died at the breach, two wolves returned alive to the high wood, and two cattle remain missing down the lower pasture.",
+          "agenda": "Emery will not call the result clean or useless. The bloodshed record can support an accountable custody survey while the missing cattle and two surviving wolves remain live recovery and watch lines; it cannot be relabeled as a quiet wildlife-corridor policy."
+        },
+        {
           "id": "relief_cade_fodder_allocated",
           "after_relationship_memories": [
             "albany:memory_emery_relief_cade_fodder_allocated"
@@ -25175,14 +25191,6 @@
           ],
           "summary": "Emery remembers fixing the snowed drover cut into your Wolf-Winter packet and marking the single turn where it can peel a fouled yearling away.",
           "agenda": "The route is one recovery attempt, not another feed cast. Emery expects the return to count both the living wolf's direction and any alarm raised across the herd's sightline."
-        },
-        {
-          "id": "wolf_pack_diverted_after_blood",
-          "after_relationship_memories": [
-            "albany:memory_emery_wolf_pack_diverted_after_blood"
-          ],
-          "summary": "Emery has Cade's exact mixed-line tally: the yearling died at the breach, two wolves returned alive to the high wood, and two cattle remain missing down the lower pasture.",
-          "agenda": "Emery will not call the result clean or useless; recovering the missing cattle and watching the two surviving wolves now outrank either reward or reprisal."
         },
         {
           "id": "wolf_pack_diverted_alive",
@@ -32234,7 +32242,7 @@
       "authored_scene": {
         "version": 1,
         "id": "albany:greenway-trail-policy",
-        "prompt": "Emery can post an obvious accessible public detour that any traveler can follow, or keep the crossing low-profile with quiet steward markers that preserve the wildlife corridor. Both make today's damaged junction safe, but the policy is public and irreversible: the later corridor survey must carry the same access promise into the field.",
+        "prompt": "Emery offers two lawful permanent records for the damaged crossing. Choose one irreversible record; the later corridor survey must match the access promise and account entered here.",
         "required_poi_id": "albany_city__greenway__poi",
         "required_contact_id": "albany_city__greenway__contact",
         "requires_completed_quests": [
@@ -32259,7 +32267,23 @@
             "terms": {
               "minutes": 35,
               "renown": 2
-            }
+            },
+            "forbids_any_world_facts": [
+              "fact:wolf_winter_bloodshed"
+            ]
+          },
+          {
+            "id": "open_bloodshed_evidence_custody",
+            "title": "Open the bloodshed evidence-custody line",
+            "preview": "Spend 30 minutes sealing the blood and track record into Emery's internal custody ledger. Earn 1 Capital / Mohawk renown; this is quicker and less publicly credited than posting the accessible detour.",
+            "consequence": "Emery records the wolf blood, broken line, and witnessed track custody without calling the return clean. The internal record earns less public standing than a posted detour and cannot be withdrawn later: the follow-up survey must either secure a rapid minimum seal or spend much longer tracing a high-standing witnessed chain of custody.",
+            "terms": {
+              "minutes": 30,
+              "renown": 1
+            },
+            "requires_all_world_facts": [
+              "fact:wolf_winter_bloodshed"
+            ]
           }
         ]
       }
@@ -48806,6 +48830,10 @@
             },
             {
               "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_bloodshed"
+            },
+            {
+              "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_two_wolves_diverted_alive"
             },
             {
@@ -50512,8 +50540,20 @@
               "owes_player_at_least": 1
             },
             {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_full_combat_bloodshed",
+              "trust_at_least": 4,
+              "regard_at_least": 5,
+              "owes_player_at_least": 0
+            },
+            {
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_bloodshed"
             },
             {
               "type": "set_world_fact",
@@ -50713,8 +50753,20 @@
               "owes_player_at_least": 1
             },
             {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_full_combat_bloodshed",
+              "trust_at_least": 4,
+              "regard_at_least": 5,
+              "owes_player_at_least": 0
+            },
+            {
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_bloodshed"
             },
             {
               "type": "set_world_fact",
@@ -50910,8 +50962,20 @@
               "owes_player_at_least": 1
             },
             {
+              "type": "remember_relationship",
+              "npc_id": "albany:emery_sloane",
+              "memory_id": "albany:memory_emery_wolf_full_combat_bloodshed",
+              "trust_at_least": 4,
+              "regard_at_least": 5,
+              "owes_player_at_least": 0
+            },
+            {
               "type": "set_world_fact",
               "fact_id": "fact:wolf_winter_byre_held"
+            },
+            {
+              "type": "set_world_fact",
+              "fact_id": "fact:wolf_winter_bloodshed"
             },
             {
               "type": "set_world_fact",
@@ -52861,16 +52925,16 @@
       "area": "albany_city__greenway",
       "kind": "survey",
       "title": "Emery's Corridor Survey",
-      "summary": "Emery must carry the Greenway's irreversible trail policy from the damaged crossing into a finished corridor survey. Public-detour and quiet-corridor records authorize different field work; neither can be relabeled at the board.",
-      "objective": "Complete one survey action that honors the exact Greenway trail policy already entered with Emery.",
-      "reward": "Choose a faster field mark or a slower, higher-standing survey record under the policy you actually authored. Public work takes longer but earns more standing than the corresponding quiet-corridor work.",
+      "summary": "Emery must carry the Greenway's irreversible crossing record into a finished corridor survey. The active record authorizes exactly two field actions and cannot be relabeled at the board.",
+      "objective": "Complete one survey action that honors the exact Greenway record already entered with Emery.",
+      "reward": "Choose between the faster practical field mark and the slower durable record using the exact time and standing terms on the two lawful action cards.",
       "minutes": 87,
       "difficulty": 4,
       "visibility": "local_job_board",
       "authored_scene": {
         "version": 1,
         "id": "albany:greenway-corridor-survey",
-        "prompt": "Emery opens the permanent trail-policy entry beside the field board. The policy fixes which two survey actions are lawful; within that policy, you may finish a fast practical mark for modest standing or spend longer on a publicly useful record for greater standing.",
+        "prompt": "Emery opens the permanent crossing record beside the field board. That record fixes which two survey actions are lawful; within its line, you may finish a fast practical mark for modest standing or spend longer on a durable record for greater standing.",
         "required_poi_id": "albany_city__greenway__poi",
         "required_contact_id": "albany_city__greenway__contact",
         "requires_completed_quests": [
@@ -52942,6 +53006,44 @@
                 "event_id": "albany_city__greenway__event",
                 "option_id": "place_quiet_corridor_markers"
               }
+            ]
+          },
+          {
+            "id": "secure_minimum_bloodshed_custody_marks",
+            "title": "Secure the minimum bloodshed custody marks",
+            "preview": "Spend 15 minutes sealing the minimum evidence markers and witness initials. Earn 1 Capital / Mohawk renown.",
+            "consequence": "You secure the blood and track record with the minimum custody marks. Emery can preserve the exact return for the next steward, but the file remains a seasonal field line.",
+            "terms": {
+              "minutes": 15,
+              "renown": 1
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__greenway__event",
+                "option_id": "open_bloodshed_evidence_custody"
+              }
+            ],
+            "requires_all_world_facts": [
+              "fact:wolf_winter_bloodshed"
+            ]
+          },
+          {
+            "id": "trace_bloodshed_chain_of_custody_with_witness_points",
+            "title": "Trace the bloodshed chain of custody with witness points",
+            "preview": "Spend 70 minutes tracing the blood, tracks, and witnessed custody chain. Earn 5 Capital / Mohawk renown.",
+            "consequence": "You trace the bloodshed record through witnessed custody points. Emery files a durable accountability record without pretending the wolf line was either clean or invisible.",
+            "terms": {
+              "minutes": 70,
+              "renown": 5
+            },
+            "requires_event_options": [
+              {
+                "event_id": "albany_city__greenway__event",
+                "option_id": "open_bloodshed_evidence_custody"
+              }
+            ],
+            "requires_all_world_facts": [
+              "fact:wolf_winter_bloodshed"
             ]
           }
         ]

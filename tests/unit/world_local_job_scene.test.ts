@@ -184,6 +184,7 @@ describe("authored local-job scenes", () => {
       ...WORKS_SCENE.options,
       { ...WORKS_SCENE.options[0], id: "fourth" },
       { ...WORKS_SCENE.options[0], id: "fifth" },
+      { ...WORKS_SCENE.options[0], id: "sixth" },
     ];
     expect(maximumOptions).toHaveLength(LOCAL_JOB_SCENE_MAX_OPTIONS);
     expect(() =>
@@ -192,7 +193,7 @@ describe("authored local-job scenes", () => {
     expect(() =>
       LocalJobSceneSchema.parse({
         ...WORKS_SCENE,
-        options: [...maximumOptions, { ...WORKS_SCENE.options[0], id: "sixth" }],
+        options: [...maximumOptions, { ...WORKS_SCENE.options[0], id: "seventh" }],
       }),
     ).toThrow();
     expect(() =>

@@ -1,0 +1,28 @@
+id: bug_0531
+title: "The exposed-ridge failed first cast reported one alarm while applying two"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: starting-slice causal audit
+severity: S2
+symptom: >
+  On the ordinary exposed-ridge lure route, a failed first feed cast correctly
+  added two cattle-alarm steps to the state, but its player journal reported
+  only one. The player therefore received false pressure feedback precisely at
+  the irreversible failure-forward boundary where the split-rail recovery or
+  combat choice must be made honestly.
+root_cause: >
+  The failure effect retained the intended +2 pressure consequence while an
+  earlier journal sentence still described the obsolete +1 amount.
+fix: >
+  Keep the authored failure consequence unchanged and correct the route-specific
+  journal copy to say alarm rises by 2. This preserves the one-use cast,
+  retired retry, and existing split-rail-or-combat recovery while making the
+  visible consequence match the exact campaign state.
+deterministic_witnesses:
+  - route: "exposed ridge, ordinary first feed cast, forced failed Fieldcraft check"
+    result: "arrival alarm 1 becomes alarm 3; the journal says alarm rises by 2; the feed action retires and the rail/combat recovery remains legal"
+  - counterfactual: "same forced failed cast on sheltered stockway"
+    result: "the stockway's separate failure copy and pressure behavior remain unchanged"
+tests:
+  - tests/starting_slice/hill_approach_gameplay.test.ts
+verification:
+  - "targeted exposed-ridge failure-forward regression run after integration hash migration"

@@ -29,6 +29,76 @@ import {
   describeAuthoredLocalJobLegacyAction,
 } from "./local_job_scene_legacy.js";
 import { authoredLocalEventLegacyCompletion } from "./local_event_scene_legacy.js";
+import {
+  isEmeryEvidenceCustodyPredecessorWorldHash,
+  isEmeryFullCombatMemoryPredecessorWorldHash,
+} from "./emery_evidence_custody_legacy.js";
+
+function isEmeryEvidenceCustodyGrandfatherEventProof(
+  event: OverworldLocalEvent,
+  proof: NonNullable<OverworldJournalEntry["localSceneProof"]>,
+): boolean {
+  return (
+    event.id === "albany_city__greenway__event" &&
+    proof.sceneId === "albany:greenway-trail-policy" &&
+    proof.optionId === "place_quiet_corridor_markers" &&
+    proof.sourceWorldHash !== undefined &&
+    isEmeryEvidenceCustodyPredecessorWorldHash(proof.sourceWorldHash)
+  );
+}
+
+function emeryEvidenceCustodyGrandfatherContactPresentation(
+  entry: OverworldJournalEntry,
+  presentation: OverworldContactPresentation,
+  character: CampaignCharacterState,
+  completedQuestIds: ReadonlySet<string>,
+): OverworldContactPresentation | null {
+  if (
+    entry.kind !== "contact" ||
+    entry.sourceWorldHash === undefined ||
+    !isEmeryFullCombatMemoryPredecessorWorldHash(entry.sourceWorldHash) ||
+    presentation.character.id !== "albany_city__greenway__contact" ||
+    entry.id === "talk:albany_city__greenway__contact@wolf_full_combat_bloodshed"
+  ) {
+    return null;
+  }
+  const predecessorCharacter = structuredClone(presentation.character);
+  const variants = predecessorCharacter.variants ?? [];
+  predecessorCharacter.variants = variants.filter(
+    (variant) => variant.id !== "wolf_full_combat_bloodshed",
+  );
+  const hybridIndex = predecessorCharacter.variants.findIndex(
+    (variant) => variant.id === "wolf_pack_diverted_after_blood",
+  );
+  const droverIndex = predecessorCharacter.variants.findIndex(
+    (variant) => variant.id === "wolf_drover_route_allocated",
+  );
+  if (hybridIndex >= 0 && droverIndex >= 0) {
+    const [hybrid] = predecessorCharacter.variants.splice(hybridIndex, 1);
+    if (hybrid) {
+      hybrid.agenda =
+        "Emery will not call the result clean or useless; recovering the missing cattle and watching the two surviving wolves now outrank either reward or reprisal.";
+      const predecessorDroverIndex = predecessorCharacter.variants.findIndex(
+        (variant) => variant.id === "wolf_drover_route_allocated",
+      );
+      predecessorCharacter.variants.splice(predecessorDroverIndex + 1, 0, hybrid);
+    }
+  }
+  const predecessorCampaignCharacter = structuredClone(character);
+  const relationship = predecessorCampaignCharacter.relationships.find(
+    (candidate) => candidate.npcId === "albany:emery_sloane",
+  );
+  if (relationship) {
+    relationship.memories = relationship.memories.filter(
+      (memoryId) => memoryId !== "albany:memory_emery_wolf_full_combat_bloodshed",
+    );
+  }
+  const expected = presentOverworldContact(predecessorCharacter, {
+    character: predecessorCampaignCharacter,
+    completedQuestIds,
+  });
+  return expected.journalId === entry.id ? expected : null;
+}
 
 export type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
@@ -184,7 +254,10 @@ function localJournalActionDuration(
         // The generic formula remains the exact duration contract for legacy events.
         return 30 + legacyCompletion.definition.legacyEvent.intensity * 10;
       }
-      if (proof.sourceWorldHash !== undefined) {
+      if (
+        proof.sourceWorldHash !== undefined &&
+        !isEmeryEvidenceCustodyGrandfatherEventProof(event, proof)
+      ) {
         throw new Error(
           `Overworld session snapshot authored event "${event.id}" names an untrusted legacy source.`,
         );
@@ -433,6 +506,15 @@ export function assertSnapshotContactPresentationProofs(
     if (entry.kind !== "contact") continue;
     const stored = sources.contactPresentationsByJournalId.get(entry.id);
     if (!stored) continue; // The timeline source gate reports the precise unknown-id error.
+    if (
+      entry.sourceWorldHash !== undefined &&
+      isEmeryFullCombatMemoryPredecessorWorldHash(entry.sourceWorldHash) &&
+      entry.id === "talk:albany_city__greenway__contact@wolf_full_combat_bloodshed"
+    ) {
+      throw new Error(
+        "Overworld session snapshot current-only Emery contact cannot claim predecessor provenance.",
+      );
+    }
 
     const completedQuestIds = new Set<string>();
     for (const questId of sources.questsById.keys()) {
@@ -447,13 +529,24 @@ export function assertSnapshotContactPresentationProofs(
       character: characterAt(entry, recordedAt),
       completedQuestIds,
     });
-    if (expected.journalId !== entry.id) {
+    const emeryEvidenceCustodyGrandfather = emeryEvidenceCustodyGrandfatherContactPresentation(
+      entry,
+      stored,
+      characterAt(entry, recordedAt),
+      completedQuestIds,
+    );
+    if (emeryEvidenceCustodyGrandfather === null && expected.journalId !== entry.id) {
       throw new Error(
         `Overworld session snapshot contact presentation "${entry.id}" was not active at ${entry.recordedAt}.`,
       );
     }
 
-    const action = describeOverworldContactAction(expected.contact, expected.presentationId);
+    const action = emeryEvidenceCustodyGrandfather
+      ? describeOverworldContactAction(
+          emeryEvidenceCustodyGrandfather.contact,
+          emeryEvidenceCustodyGrandfather.presentationId,
+        )
+      : describeOverworldContactAction(expected.contact, expected.presentationId);
     if (entry.title !== action.title || entry.text !== action.text) {
       throw new Error(
         `Overworld session snapshot contact presentation "${entry.id}" does not match its authored copy.`,

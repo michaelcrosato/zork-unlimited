@@ -18,6 +18,7 @@ import {
   exactF06World,
   exactF12World,
   exactFrostJambSignpostPredecessorSnapshot,
+  fullCombatEmeryMemoryCurrentCharacter,
   registrationPromiseClosureCurrentCharacter,
 } from "./fixtures/historical_overworlds.js";
 
@@ -252,7 +253,10 @@ describe("F06 to F02 relief-oath migration integrity", () => {
     ).toHaveLength(1);
     expect(serializeCampaignCharacterState(restored.character)).toBe(
       serializeCampaignCharacterState(
-        registrationPromiseClosureCurrentCharacter(predecessor.character),
+        fullCombatEmeryMemoryCurrentCharacter(
+          registrationPromiseClosureCurrentCharacter(predecessor.character),
+          predecessor.questOutcomes,
+        ),
       ),
     );
     expect(restored.minutes).toBe(predecessor.minutes);

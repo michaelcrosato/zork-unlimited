@@ -99,6 +99,12 @@ export function cloneOverworldLocalEvent(event: OverworldLocalEvent): OverworldL
               : {}),
             options: event.authored_scene.options.map((option) => ({
               ...option,
+              ...(option.requires_all_world_facts
+                ? { requires_all_world_facts: [...option.requires_all_world_facts] }
+                : {}),
+              ...(option.forbids_any_world_facts
+                ? { forbids_any_world_facts: [...option.forbids_any_world_facts] }
+                : {}),
               terms: { ...option.terms },
             })),
           },
