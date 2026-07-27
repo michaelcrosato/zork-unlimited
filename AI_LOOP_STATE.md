@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 657 -->
+<!-- historical_cycle_count: 658 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - byreyard_route_briefing
+
+- Evidence choice: exact-clean Terra seed 72745 found the first Cade read dense with simultaneous route, tactic, and conditional vocabulary; all four authored strategies already had detailed follow-up topics.
+- Surface: Cade now opens with a four-route map, identifies HUNT as combat, and keeps the irreversible uncommitted crossing rule; LURE, DRIVE, and FORTIFY costs remain staged behind their existing questions.
+- Counterfactual: no mechanics, flags, RNG, action ids, legal choices, or route consequences change; full/compact text remains identical and all six Cade topic actions retain parity.
+- Pure evidence: exact-clean Terra seed 72746 organically read the changed briefing, selected `ask_lure`, completed The Wolf-Winter nonlethally, continued to Queensbury, ended at decision 40, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Feedback compile: 23 newer verified pure exits keep Albany Station setup density hot; the higher-ranked seed-72659 post-lure loop predates and is closed by the merged northbound closure.
+- Self-critique/follow-through: the canary still found Station's interlocking permanent departure cards mentally demanding, so the next re-aim is structural staging rather than another prose-only reduction.
+- Guard: independent review is clean; pre/post crawls `20260727T042240Z` / `20260727T042435Z` are zero-finding and final health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - quest_launch_checkpoint_handoff
 
@@ -148,13 +158,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Ordering/compatibility: completing any packet method expires the filing; an unresolved exact-predecessor investigation retains trusted provenance without inventing a choice, and forged proof/hash/chronology fail closed.
 - Self-critique/follow-through: all 6/6 Albany jobs and events are authored, but organic return uptake and the dense post-goal lead surface remain unproven.
 - Guard: review blockers are fixed; post-crawl `20260725T234919Z` is zero-finding and full health passes 423 files/3,447 tests plus both typechecks and all packs.
-
-### Cycle result - campus_return_evidence_mandate
-
-- Evidence choice: Depth #11 left Campus as Albany's fifth generic checklist event; exact-clean Terra seed 72631 is this cycle's fresh pure journey through The Wolf-Winter.
-- Surface: after the Wolf return, Blair irreversibly records clinic thresholds or route provenance, revealing only the matching third Archive Query method and one consolidated rest/resupply service.
-- Counterfactual: both base methods remain; clinic is 40 minutes/+3 versus warning 35/+2, while provenance is 65/+4 versus archive 75/+5, so neither event path is a free upgrade.
-- Compatibility: exact predecessor saves gain one neutral marker, native base-job proof survives, later manifests avoid stale copy normalizers, and forged proof/hash/chronology fail closed.
-- Pure evidence: seed 72631 is retained as a verifier-valid canonical journey rather than a coverage target; targeted proofs establish the Campus behavior.
-- Self-critique/follow-through: Campus is now event 5/6, but organic return uptake remains unproven and Station is still the last generic Albany event.
-- Guard: independent review is clean; pre/post crawls `20260725T194113Z` / `20260725T203808Z` are zero-finding.
