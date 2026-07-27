@@ -4,7 +4,7 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-26 — Read-Only Story Inspection Delta
+## Cycle: 2026-07-27 — Quest-Launch Checkpoint Handoff
 
 ## Synthesis
 
@@ -13,47 +13,56 @@ resolution families, and authored jobs and events in all six Albany districts.
 Its remaining work is experiential consolidation: the opening must make those
 systems legible without flattening their consequences.
 
-Comparison-first cards reduced the Albany opening's always-visible prose, but
-their read-only MCP inspection still repeated unchanged journey and world state.
-On the same Station preparation/allocation pair, those responses totalled
-16,857 JSON characters. The exact registration-detail response repeated 12,181
-characters even though only 597 characters were new selected terms and receipt.
+The read-only inspection delta and authenticated six-row Albany departure recap
+are merged through `main` commit `541ae528`; compact MCP is version 31. The
+recap consolidates role, duty, evidence, preparation, relief allocation, and
+field team without exposing alternatives or adding a decision.
 
-Compact inspection is now a true read-only delta. The initial call returns the
-same versioned comparison plus an unchanged session/hash receipt; exact-option
-inspection returns only that option's new authored detail. It repeats no world
-context, prior comparison, sibling terms, or already-seen structured summary.
-The Station pair now totals 5,039 characters, down 70.1%; exact registration
-detail is 597, down 95.1%. Full developer output, UI, terminal, legal choices,
-state, hashes, decisions, and canonical prose remain unchanged.
+Verified seed 72744 then repeated a separate long-standing pacing defect:
+starting Gallowmere as accepted decision 40 created its embedded opening scene
+and immediately hid all quest actions behind the checkpoint choice. The cause
+was narrow: every overworld action was treated as checkpoint-safe, including
+`quest_start:*`.
 
-Fresh pure Terra seed 72743 exercised the minimal Station comparison responses,
-completed The Wolf-Winter bloodlessly in 32 decisions, and ended voluntarily
-with no rejected action or mechanical defect. Its clarity/enjoyment 3/4 and
-repeated request for a concise accumulated dispatch recap show that transport
-de-duplication does not solve the still-dense opening sequence.
+Code candidate `c3982ac3` keeps launch as a counted, proof-bearing decision but
+treats the handoff itself as unsafe. The first genuinely safe embedded boundary
+surfaces the overdue prompt. Exact MCP regression proves the opening action menu
+is live at decision 40 and checkpoint 40 appears after the first safe quest
+action at decision 41. Both new active-overdue snapshots and older
+already-pending snapshots restore unchanged.
+
+Fresh pure Terra seed 72745 completed Wolf-Winter bloodlessly in 31 decisions,
+rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes. It ended at
+the first goal and did not sample Gallowmere, so it is integration/retention
+evidence rather than proof of the changed boundary.
 
 ## Chosen Move
 
-Land the read-only inspection delta. Treat the player's concise-recap request as
-the next distinct gameplay increment: summarize the accumulated role, duty,
-evidence, preparation, relief, and ally commitments at the departure boundary
-without removing decisions or revealing outcomes.
+Land the quest-launch checkpoint handoff. The next presentation candidate is
+progressive disclosure for the Wolf-Winter Byre-Yard opening briefing: seed
+72745 again found its first-pass routes, tactics, and conditional vocabulary too
+dense. Preserve authored consequences and tactical choice; reduce simultaneous
+new terminology rather than deleting mechanics.
 
-Keep cohorts gated behind one healthy live canary. Spark seed 72742 repeated the
-known forbidden-wrapper/model-cache transport fingerprint and published no
-report, so do not retry or multiply that fingerprint until the client or model
-metadata changes.
+Evidence debt: the fresh canary did not reach the changed Gallowmere boundary;
+the deterministic decision-40 MCP replay carries that claim. Do not claim an
+organic post-fix sample until a future player naturally reaches it.
+
+Transport circuit: Spark remains quarantined after matching
+forbidden-wrapper/model-cache failures. Probe with at most two runs only after
+the client/model fingerprint changes; stop on two matching infrastructure
+failures. Until then, use one fresh Terra canary per normal increment and larger
+cohorts only for milestone re-aims.
 
 ## Acceptance for this increment
 
-1. Compact comparison and detail responses contain only their versioned story
-   projection plus `session_id`, `snapshot_hash`, and `unchanged: true`.
-2. Exact detail contains only id, label, and canonical residual consequence;
-   it leaks no sibling term or repeated summary.
-3. Optional `option_id` typing is honestly summary-or-detail, and stale snapshot
-   guards fail before either inspection through the pure server.
-4. Full developer output and human terminal/UI behavior remain canonical;
-   inspection is read-only and direct/inspected choices remain state-identical.
-5. Focused and pure-server proofs, post-change crawl, full health, and one
-   verifier-valid fresh blind pass before the increment is recorded and committed.
+1. A quest launch accepted as decision 40 keeps the embedded opening action menu
+   live and leaves checkpoint 40 overdue.
+2. The first later safe embedded boundary materializes checkpoint 40 without
+   changing the launch decision number, action id, reason, or proof hash.
+3. Unsafe combat and active dialogue remain uninterrupted; ordinary safe
+   overworld actions retain immediate checkpoint behavior.
+4. New active-overdue and older already-pending snapshots both restore exactly.
+5. Focused MCP/restore regressions, post-change crawl, one full health run, one
+   independent review, and one verifier-valid fresh blind pass are green before
+   publication.
