@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 661 -->
+<!-- historical_cycle_count: 662 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - relief_protocol_braced_divergence_reminder
+
+- Evidence choice: exact-clean seed 72750 lost Jamie's narrow Relief Protocol trigger after choosing the mutually exclusive braced-rail recovery.
+- Surface: a Relief-prepared braced recovery at the Broken Paling now says the protocol required the failed wedge and spent split-rail guard, leaves its docket sealed, and retains the route to the second cast.
+- Counterfactual: flags, actions, alarms, costs, recoveries, routes, and endings are unchanged; full/compact parity, the exact combined-import liveness witness, split-guard control, and non-Relief negative are locked.
+- Pure evidence: exact-clean Terra seed 72751 chose Drover rather than Relief, diverted all wolves alive with the herd whole, completed Wolf-Winter at decision 30, continued, then died in Gallowmere at 48; clarity/enjoyment 4/4, unstuck, replay-yes.
+- Self-critique/follow-through: the canary did not exercise the reminder, so deterministic proofs carry it; the trace exposed a real 65m delayed → pending-June unverified → 80m delayed card flip, which is the next starting-slice fix.
+- Economy: one canary used 4.61M raw / 157k uncached input and 9.8k output tokens; no coverage replacement or sub-threshold feedback compile was launched.
+- Guard: independent review is clean; pre/final crawls `20260727T112123Z` / `20260727T115517Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - wolf_first_cast_failure_forecast
 
@@ -150,13 +160,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Cohort/economy: a clean 10-Spark cohort yielded 2/10 verified reports at 96.1% input-cache reuse; 40.9M raw-input tokens continued after first protocol violations, motivating the parallel negative-only fail-fast guard rather than weaker reasoning.
 - Self-critique/follow-through: the canary did not deliberately test reverse exits, so four-route full/compact deterministic proofs carry that claim; seed 72652's earlier recovery opacity remains open, and wound lifecycle depth is next.
 - Guard: review blockers are fixed; zero-finding crawls `20260726T080313Z` / `20260726T085759Z`, exact source-hash replay, pack validation, and focused route/liveness proofs are green.
-
-### Cycle result - emery_evidence_custody_agenda
-
-- Evidence choice: the strict third independent-NPC-agenda floor lacked mechanical proof; fresh pure Spark seed 72640 tests the candidate through The Wolf-Winter.
-- Surface: Wolf bloodshed now removes Emery's quiet-conservation policy and opens an evidence-custody record with its own fast/minimal or slow/high-standing survey frontier; public access remains lawful.
-- Counterfactual: bloodless, hybrid, and full-combat returns expose different legal Greenway pairs, time/standing outcomes, Emery memories, and later Civic access without lengthening first-goal completion.
-- Compatibility/truth: every supported save era replays source-era Emery precedence; only post-Greenway quiet choices are grandfathered, impossible-era authored choices fail closed, and the exposed-ridge alarm journal now reports its actual +2.
-- Pure evidence: dirty-candidate Spark completes The Wolf-Winter by full combat in 20 decisions, continues, later ends after Gallowmere, rates clarity/enjoyment 4/4, and chooses replay-yes; it does not organically sample Greenway custody.
-- Self-critique/follow-through: Gallowmere exit telegraphing is a separate S2 report; the next starting-slice depth target is the unused persistent wound lifecycle, not more Emery branching.
-- Guard: independent review is clean; post-crawl `20260726T063644Z` is zero-finding and full health passes 425 files/3,482 tests plus both typechecks and all packs.
