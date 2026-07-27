@@ -117,6 +117,11 @@ export function JourneyStoryChoiceScreen({
               <div key={option.id} className="journey-choice-card">
                 <button type="button" onClick={() => onChoose(option.id)}>
                   <strong>{option.label}</strong>
+                  {option.dispatchImpact && (
+                    <small className="journey-choice-dispatch-impact">
+                      {option.dispatchImpact.line}
+                    </small>
+                  )}
                   {conciseSummary ? (
                     <span className="journey-choice-summary">
                       <b>{usesTriggerCategory ? "Purpose:" : "Commitment:"}</b>{" "}

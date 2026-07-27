@@ -149,6 +149,11 @@ function neutralWindow(questId: string): QuestDispatchWindow {
   });
 }
 
+/** The one dispatch threshold used by launch authority and read-only card projections. */
+export function classifyQuestDispatchMinutes(ledgerMinutes: number): "on_time" | "delayed" {
+  return ledgerMinutes <= WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES ? "on_time" : "delayed";
+}
+
 function currentScenesForQuest(args: QuestDispatchWindowInputs): boolean {
   return (
     args.openingRegistration !== null &&
@@ -376,8 +381,7 @@ function deriveQuestDispatchWindowState(
       juneCommitment,
     });
     const ledgerMinutes = committedMinutes + receipt.juneCommitment.minutes;
-    const status =
-      ledgerMinutes <= WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES ? "on_time" : "delayed";
+    const status = classifyQuestDispatchMinutes(ledgerMinutes);
     const proofHash = hashState({
       schemaVersion: QUEST_DISPATCH_WINDOW_SCHEMA_VERSION,
       questId: args.questId,

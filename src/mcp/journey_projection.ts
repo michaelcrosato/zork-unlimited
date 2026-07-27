@@ -1,5 +1,6 @@
 import type {
   JourneyPresentation,
+  JourneyStoryChoiceDispatchImpact,
   JourneyStoryChoiceDispatchForecast,
   JourneyStoryChoiceOption,
   JourneyStoryChoicePrompt,
@@ -26,6 +27,7 @@ export type JourneyStoryChoiceComparisonOption = Readonly<{
   label: string;
   summary?: JourneyStoryChoiceSummary;
   dispatchForecast?: JourneyStoryChoiceDispatchForecast;
+  dispatchImpact?: JourneyStoryChoiceDispatchImpact;
 }>;
 
 export type JourneyStoryChoiceDetailOption = Readonly<{
@@ -191,6 +193,9 @@ export function compactJourneyStoryChoiceComparison(
               finalMinutes: Object.freeze({ ...option.dispatchForecast.finalMinutes }),
             }),
           }
+        : {}),
+      ...(option.dispatchImpact
+        ? { dispatchImpact: Object.freeze({ ...option.dispatchImpact }) }
         : {}),
     }),
   );
