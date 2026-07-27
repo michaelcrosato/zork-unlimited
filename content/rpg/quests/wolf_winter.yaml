@@ -3601,9 +3601,9 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came from Albany awake. HUNT kills pack; holds herd/byre; risk death. LURE spares
-            all if fed; foul risks herd. DRIVE spares pack/people; defense lost; crisis cost.
-            FORTIFY spares all; property/seals; no retreat. Cross uncommitted=HUNT; others shut.
+            You came from Albany awake. Four ways through: HUNT, LURE, DRIVE, or FORTIFY.
+            HUNT means fighting. Ask me about the other three before deciding. Cross north
+            uncommitted and you choose HUNT-and-hold; the other plans close.
           variants:
             - when: [{ has_flag: pack_diverted }]
               text: >

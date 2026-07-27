@@ -88,7 +88,10 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       )?.text ?? "";
 
     expect(root?.npc_text).toMatch(
-      /You came from Albany awake[^]*hunt kills pack[^]*holds herd\/byre[^]*risk death[^]*lure spares all if fed[^]*foul risks herd[^]*drive spares pack\/people[^]*defense lost[^]*crisis cost[^]*fortify spares all[^]*property\/seals[^]*no retreat/i,
+      /You came from Albany awake[^]*four ways through[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*hunt means fighting[^]*ask me about the other three before deciding[^]*cross north uncommitted[^]*hunt-and-hold[^]*other plans close/i,
+    );
+    expect(root?.npc_text).not.toMatch(
+      /kills pack|holds herd\/byre|risk death|spares all if fed|foul risks herd|spares pack\/people|defense lost|crisis cost|property\/seals|no retreat/i,
     );
     expect(root?.npc_text).not.toMatch(/foul\s*=\s*(?:2|two) cattle/i);
     expect(root?.npc_text).not.toMatch(/two roads/i);
