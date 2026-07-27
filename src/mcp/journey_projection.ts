@@ -5,13 +5,18 @@ import type {
   JourneyStoryChoicePresentationKind,
   JourneyStoryChoiceSummary,
 } from "../world/journey_contract.js";
+import {
+  INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+  OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+  type OverworldDepartureInteractionArguments,
+} from "../world/session_departure_interactions.js";
 import type { RpgCompactMore, RpgCompactObservation } from "./compact_rpg_observation.js";
 import { compactTrailingOmissionCounts } from "./compact_truncation.js";
 import type { McpObservation } from "./types.js";
 
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 3 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 4 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Complete terms are staged; inspect this exact option before choosing if you need them." as const;
 
@@ -25,6 +30,15 @@ export type JourneyStoryChoiceDetailOption = Readonly<{
   id: string;
   label: string;
   consequence: string;
+}>;
+
+export type JourneyStoryChoiceReviewAffordance = Readonly<{
+  tool: typeof INSPECT_OVERWORLD_SESSION_STORY_TOOL;
+  storyChoiceId: string;
+  arguments: OverworldDepartureInteractionArguments;
+  argument: "option_id";
+  valuesFrom: typeof OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM;
+  readOnly: true;
 }>;
 
 /**
@@ -42,6 +56,7 @@ export type JourneyStoryChoiceSummaryComparison = JourneyStoryChoiceProjectionBa
   Readonly<{
     message: string;
     options: readonly JourneyStoryChoiceComparisonOption[];
+    reviewOption: JourneyStoryChoiceReviewAffordance;
     inspectedOption: null;
   }>;
 
@@ -173,6 +188,14 @@ export function compactJourneyStoryChoiceComparison(
     ...base,
     message: prompt.message,
     options: Object.freeze(options),
+    reviewOption: Object.freeze({
+      tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+      storyChoiceId: prompt.id,
+      arguments: Object.freeze({ story_choice_id: prompt.id }),
+      argument: "option_id",
+      valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+      readOnly: true,
+    }),
     inspectedOption: null,
   });
 }

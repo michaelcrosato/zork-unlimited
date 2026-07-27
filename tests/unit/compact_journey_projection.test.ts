@@ -19,6 +19,10 @@ import type {
 } from "../../src/world/journey_contract.js";
 import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
 import { presentOpeningReliefAllocation } from "../../src/world/opening_relief_allocation_presentation.js";
+import {
+  INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+  OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+} from "../../src/world/session_departure_interactions.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -80,6 +84,7 @@ describe("compact journey projection", () => {
     const before = JSON.stringify(prompt);
 
     const compact = compactJourneyStoryChoicePrompt(prompt);
+    const comparison = compactJourneyStoryChoiceComparison(prompt);
     const inspected = compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption;
 
     expect(compact).not.toBe(prompt);
@@ -90,6 +95,14 @@ describe("compact journey projection", () => {
     expect(compact.options[0]!.summary).toBe(option.summary);
     expect(compact.options[1]).not.toBe(prompt.options[1]);
     expect(compact.options[1]!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+    expect(comparison.reviewOption).toEqual({
+      tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+      storyChoiceId: prompt.id,
+      arguments: { story_choice_id: prompt.id },
+      argument: "option_id",
+      valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+      readOnly: true,
+    });
     expect(inspected).toEqual({
       id: option.id,
       label: option.label,

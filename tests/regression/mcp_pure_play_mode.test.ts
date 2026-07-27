@@ -25,6 +25,10 @@ import {
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
 } from "../../src/mcp/journey_projection.js";
 import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
+import {
+  INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+  OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+} from "../../src/world/session_departure_interactions.js";
 
 const ROOT = process.cwd();
 const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
@@ -2118,14 +2122,38 @@ describe("MCP pure play mode", () => {
           kind?: string;
           message?: string;
           options?: { id: string; consequence?: string }[];
+          reviewOption?: {
+            tool: string;
+            storyChoiceId: string;
+            arguments: { story_choice_id: string };
+            argument: string;
+            valuesFrom: string;
+            readOnly: boolean;
+          };
           inspectedOption?: { id: string; consequence: string } | null;
         };
         expect(Object.keys(preparationChoice).sort()).toEqual(
-          ["comparisonVersion", "id", "inspectedOption", "kind", "message", "options"].sort(),
+          [
+            "comparisonVersion",
+            "id",
+            "inspectedOption",
+            "kind",
+            "message",
+            "options",
+            "reviewOption",
+          ].sort(),
         );
         expect(preparationChoice?.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
         expect(preparationChoice?.kind).toBe("preparation");
         expect(preparationChoice?.inspectedOption).toBeNull();
+        expect(preparationChoice?.reviewOption).toEqual({
+          tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+          storyChoiceId: "albany:wolf_preparation",
+          arguments: { story_choice_id: "albany:wolf_preparation" },
+          argument: "option_id",
+          valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+          readOnly: true,
+        });
         expect(
           preparationChoice?.options?.every((option) => option.consequence === undefined),
         ).toBe(true);
