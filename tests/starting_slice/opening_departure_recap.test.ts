@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { render } from "../../bin/overworld_play.js";
 import { OVERWORLD_COMPACT_VIEW_VERSION } from "../../src/world/compact_view.js";
-import { deriveOpeningDepartureRecap } from "../../src/world/opening_departure_recap.js";
+import {
+  deriveOpeningDepartureRecap,
+  OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
+} from "../../src/world/opening_departure_recap.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -35,6 +38,24 @@ function selectedTitle(session: OverworldSession, slot: string): string | null |
 }
 
 describe("Albany opening departure recap", () => {
+  it("keeps every canonical selected term concise enough for cumulative recall", () => {
+    const candidateTerms = [
+      ...REGISTRATION.profiles.map((profile) => profile.tradeoff),
+      ...RELIEF_OATH.options.map((option) => option.tradeoff),
+      ...LEAD_SOURCE.options.map((option) => option.tradeoff),
+      ...PREPARATION.profiles.map((profile) => profile.trigger_category ?? profile.tradeoff),
+      ...RELIEF_ALLOCATION.options.map(
+        (option) => option.trigger_category ?? `Leaves exposed: ${option.leaves_exposed}`,
+      ),
+      ...ALLY.options.map((option) => option.tradeoff),
+    ];
+
+    for (const term of candidateTerms) {
+      expect(term.length).toBeGreaterThan(0);
+      expect(term.length).toBeLessThanOrEqual(OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT);
+    }
+  });
+
   it("summarizes the accumulated current plan without exposing alternatives or changing play", () => {
     const session = stationSession();
     const beforeSnapshot = session.snapshot();
@@ -44,7 +65,7 @@ describe("Albany opening departure recap", () => {
     const compact = session.compactView();
 
     expect(full.departureRecap).toEqual({
-      version: 1,
+      version: 2,
       questId: WOLF.id,
       questTitle: WOLF.title,
       entries: [
@@ -53,42 +74,48 @@ describe("Albany opening departure recap", () => {
           label: "Role",
           status: "selected",
           title: REGISTRATION.profiles[0]!.title,
+          activeFieldTerm: REGISTRATION.profiles[0]!.tradeoff,
         },
         {
           slot: "duty",
           label: "Duty",
           status: "selected",
           title: RELIEF_OATH.options[0]!.title,
+          activeFieldTerm: RELIEF_OATH.options[0]!.tradeoff,
         },
         {
           slot: "evidence",
           label: "Evidence",
           status: "selected",
           title: LEAD_SOURCE.options[0]!.title,
+          activeFieldTerm: LEAD_SOURCE.options[0]!.tradeoff,
         },
         {
           slot: "preparation",
           label: "Preparation",
           status: "open_optional",
           title: null,
+          activeFieldTerm: null,
         },
         {
           slot: "relief_allocation",
           label: "Relief allocation",
           status: "available_after_preparation",
           title: null,
+          activeFieldTerm: null,
         },
         {
           slot: "field_team",
           label: "Field team",
           status: "available_after_preparation",
           title: null,
+          activeFieldTerm: null,
         },
       ],
     });
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.departure_recap).toEqual([
-      1,
+      2,
       WOLF.id,
       WOLF.title,
       full.departureRecap!.entries.map((entry) => [
@@ -96,6 +123,7 @@ describe("Albany opening departure recap", () => {
         entry.label,
         entry.status,
         entry.title,
+        entry.activeFieldTerm,
       ]),
     ]);
 
@@ -111,6 +139,7 @@ describe("Albany opening departure recap", () => {
       expect(visible).not.toContain(alternative.title);
       if ("preview" in alternative) expect(visible).not.toContain(alternative.preview);
       if ("consequence" in alternative) expect(visible).not.toContain(alternative.consequence);
+      if ("tradeoff" in alternative) expect(visible).not.toContain(alternative.tradeoff);
     }
 
     expect(session.snapshot()).toEqual(beforeSnapshot);
@@ -132,21 +161,30 @@ describe("Albany opening departure recap", () => {
       }
     ).entries[0]!.title = "forged full title";
     (
+      full.departureRecap as unknown as {
+        entries: Array<{ activeFieldTerm: string | null }>;
+      }
+    ).entries[0]!.activeFieldTerm = "forged full field term";
+    (
       compact.departure_recap as unknown as [
         number,
         string,
         string,
-        Array<[string, string, string, string | null]>,
+        Array<[string, string, string, string | null, string | null]>,
       ]
     )[3][0]![3] = "forged compact title";
     expect(selectedTitle(session, "role")).toBe(REGISTRATION.profiles[0]!.title);
     expect(session.compactView().departure_recap?.[3][0]?.[3]).toBe(
       REGISTRATION.profiles[0]!.title,
     );
+    expect(session.compactView().departure_recap?.[3][0]?.[4]).toBe(
+      REGISTRATION.profiles[0]!.tradeoff,
+    );
 
     const terminal = render(session.view());
     expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
+    expect(terminal).toContain(`Active field term: ${REGISTRATION.profiles[0]!.tradeoff}`);
     expect(terminal).toContain("Preparation: Open (optional)");
   });
 
@@ -169,20 +207,24 @@ describe("Albany opening departure recap", () => {
     expect(first.view().departureRecap?.entries[3]).toMatchObject({
       status: "selected",
       title: PREPARATION.profiles[0]!.title,
+      activeFieldTerm: PREPARATION.profiles[0]!.trigger_category,
     });
     expect(first.view().departureRecap?.entries[4]).toMatchObject({
       status: "open_optional",
       title: null,
+      activeFieldTerm: null,
     });
     expect(first.view().departureRecap?.entries[5]).toMatchObject({
       status: "open_optional",
       title: null,
+      activeFieldTerm: null,
     });
 
     first.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
     expect(first.view().departureRecap?.entries[4]).toMatchObject({
       status: "selected",
       title: RELIEF_ALLOCATION.options[0]!.title,
+      activeFieldTerm: RELIEF_ALLOCATION.options[0]!.trigger_category,
     });
     first.talkToCharacter(ALLY.contact);
     expect(first.view().departureRecap).toBeNull();
@@ -190,7 +232,14 @@ describe("Albany opening departure recap", () => {
     expect(first.view().departureRecap?.entries[5]).toMatchObject({
       status: "selected",
       title: ALLY.options[0]!.title,
+      activeFieldTerm: ALLY.options[0]!.tradeoff,
     });
+    for (const entry of first.view().departureRecap!.entries) {
+      expect(entry.activeFieldTerm).not.toBeNull();
+      expect(entry.activeFieldTerm!.length).toBeLessThanOrEqual(
+        OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
+      );
+    }
 
     const questStart = first.view().questStarts.find(([questId]) => questId === WOLF.id);
     if (!questStart) throw new Error("Expected a legal Wolf-Winter launch.");

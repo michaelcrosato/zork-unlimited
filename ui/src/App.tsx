@@ -203,6 +203,14 @@ export function DepartureRecap({
                 (entry.status === "open_optional"
                   ? "Open (optional)"
                   : "Available after choosing preparation")}
+              {entry.activeFieldTerm && (
+                <>
+                  <br />
+                  <small className="departure-recap-field-term">
+                    Active field term: {entry.activeFieldTerm}
+                  </small>
+                </>
+              )}
             </dd>
           </div>
         ))}

@@ -44,7 +44,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 31 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 32 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -426,7 +426,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_contact_leads:
     "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; requires_preparation has no available action, ready may be pursued with talk_overworld_session_contact(character_id: contact_id), and either status leaves quest_id launch legal as the explicitly disclosed solo default",
   departure_recap:
-    "[version, quest_id, quest_title, [[slot, label, status, selected_title|null], ...]] read-only accumulated Station departure plan; slots are role, duty, evidence, preparation, relief_allocation, field_team. selected and legacy rows are resolved; open_optional may still be chosen or skipped; available_after_preparation opens only after preparation. It reveals no unselected option or outcome and adds no action",
+    "[version, quest_id, quest_title, [[slot, label, status, selected_title|null, active_field_term|null], ...]] read-only accumulated Station departure plan; slots are role, duty, evidence, preparation, relief_allocation, field_team. selected rows include one canonical active field term; legacy rows and unresolved rows use null. open_optional may still be chosen or skipped; available_after_preparation opens only after preparation. It reveals no unselected option or outcome and adds no action",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
