@@ -22,6 +22,14 @@ const AUTHORED_TEXT = z
     message: "Authored text cannot be blank.",
   });
 
+const RELIEF_OATH_TRIGGER_CATEGORY = z
+  .string()
+  .min(1)
+  .max(80)
+  .refine((value) => value.trim().length > 0, {
+    message: "Relief oath trigger category cannot be blank.",
+  });
+
 export const OpeningReliefOathTermsSchema = z
   .object({
     minutes: z
@@ -38,6 +46,7 @@ export const OpeningReliefOathOptionSchema = z
     kind: z.enum(RELIEF_OATH_KINDS),
     title: AUTHORED_TEXT,
     summary: AUTHORED_TEXT,
+    trigger_category: RELIEF_OATH_TRIGGER_CATEGORY.optional(),
     preview: AUTHORED_TEXT,
     tradeoff: AUTHORED_TEXT,
     consequence: AUTHORED_TEXT,
@@ -110,6 +119,17 @@ export const OpeningReliefOathSchema = z
   .strict()
   .superRefine((scene, ctx) => {
     const optionIds = new Set<string>();
+    const categorizedOptions = scene.options.filter(
+      (option) => option.trigger_category !== undefined,
+    );
+    if (categorizedOptions.length !== 0 && categorizedOptions.length !== scene.options.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["options"],
+        message:
+          "Opening relief-oath trigger categories must cover every option or remain absent on an exact legacy manifest.",
+      });
+    }
     const kinds = new Set<string>();
     const knowledgeIds = new Set<string>();
     const memoryIds = new Set<string>();

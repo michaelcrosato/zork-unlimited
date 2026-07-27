@@ -182,6 +182,34 @@ describe("opening relief oath authoring", () => {
     const duplicateKind = cloneOpeningReliefOath(scene);
     duplicateKind.options[2]!.kind = "limited";
     expect(() => parseOpeningReliefOath(duplicateKind)).toThrow(/duplicate.*kind|exactly one/i);
+
+    const categorized = cloneOpeningReliefOath(scene);
+    categorized.options.forEach((option, index) => {
+      option.trigger_category = `First use ${String(index + 1)}.`;
+    });
+    expect(parseOpeningReliefOath(categorized)).toEqual(categorized);
+    const categorizedPrompt = presentOpeningReliefOath(categorized, buildCampaignCharacterState());
+    expect(categorizedPrompt.options.map((option) => option.summary?.fieldTrigger)).toEqual(
+      categorized.options.map((option) => option.trigger_category),
+    );
+    expect(
+      categorizedPrompt.options.every((option) => option.summary?.fieldTriggerScope === "category"),
+    ).toBe(true);
+    expect(categorizedPrompt.options[0]!.consequence).toContain(categorized.options[0]!.preview);
+
+    const partialCategories = cloneOpeningReliefOath(categorized);
+    Reflect.deleteProperty(partialCategories.options[0]!, "trigger_category");
+    expect(() => parseOpeningReliefOath(partialCategories)).toThrow(
+      /trigger categories must cover every option/i,
+    );
+
+    const blankCategory = cloneOpeningReliefOath(categorized);
+    blankCategory.options[0]!.trigger_category = "   ";
+    expect(() => parseOpeningReliefOath(blankCategory)).toThrow(/cannot be blank/i);
+
+    const overlongCategory = cloneOpeningReliefOath(categorized);
+    overlongCategory.options[0]!.trigger_category = "x".repeat(81);
+    expect(() => parseOpeningReliefOath(overlongCategory)).toThrow(/80/i);
   });
 
   it("requires the four durable identities and only disclosed effect families", () => {

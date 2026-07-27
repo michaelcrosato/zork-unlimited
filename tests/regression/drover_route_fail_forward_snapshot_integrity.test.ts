@@ -99,7 +99,7 @@ describe("Drover route fail-forward snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "155ab48207c496c158dd5bb07fb9d44502d75fa456e219f25abf148118f40b31",
+      "294bfefa9d3b17b21e5e2a48ded532e7b4c9b995ad7149b1519b1b4e490a9435",
     );
     expect(OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_TRUSTED_PREDECESSOR_WORLD_HASHES.size).toBe(22);
     expect(

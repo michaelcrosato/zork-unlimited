@@ -173,6 +173,44 @@ describe("opening registration presentation", () => {
     expect(Object.isFrozen(prompt)).toBe(true);
     expect(Object.isFrozen(prompt.options)).toBe(true);
   });
+
+  it("uses all-or-none concise trigger categories while retaining the legacy preview fallback", () => {
+    const categorized = registration();
+    categorized.profiles.forEach((profile, index) => {
+      profile.trigger_category = `First use ${String(index + 1)}.`;
+    });
+    const prompt = presentOpeningRegistration(categorized);
+    expect(prompt.options.map((option) => option.summary)).toEqual(
+      categorized.profiles.map((profile) => ({
+        commitment: profile.summary,
+        fieldTrigger: profile.trigger_category,
+        fieldTriggerScope: "category",
+        immediateCost: `No added time or fee; starting funds $${String(profile.character.money)}`,
+        tradeoff: profile.tradeoff,
+      })),
+    );
+    expect(prompt.options[0]!.consequence).toContain(categorized.profiles[0]!.preview);
+
+    const exactLegacy = structuredClone(categorized);
+    for (const profile of exactLegacy.profiles) {
+      Reflect.deleteProperty(profile, "trigger_category");
+    }
+    expect(parseOpeningRegistration(exactLegacy)).toEqual(exactLegacy);
+
+    const partiallyCategorized = structuredClone(categorized);
+    Reflect.deleteProperty(partiallyCategorized.profiles[0]!, "trigger_category");
+    expect(() => parseOpeningRegistration(partiallyCategorized)).toThrow(
+      /trigger categories must cover every profile/i,
+    );
+
+    const blankCategory = structuredClone(categorized);
+    blankCategory.profiles[0]!.trigger_category = "   ";
+    expect(() => parseOpeningRegistration(blankCategory)).toThrow(/cannot be blank/i);
+
+    const overlongCategory = structuredClone(categorized);
+    overlongCategory.profiles[0]!.trigger_category = "x".repeat(81);
+    expect(() => parseOpeningRegistration(overlongCategory)).toThrow(/80/i);
+  });
 });
 
 describe("opening registration journal", () => {

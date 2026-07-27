@@ -236,8 +236,15 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         throw new Error("Expected a choice button beside a native details disclosure.");
       }
       const choiceButtonText = (choiceButton as { textContent?: string | null }).textContent;
+      const registrationSource = WORLD.opening_registration!;
+      const registrationDetailsText = (details as { textContent?: string | null }).textContent;
+      expect(choiceButtonText).toContain("Trigger category:");
       expect(choiceButtonText).toContain("Immediate cost:");
       expect(choiceButtonText).toContain("Tradeoff:");
+      expect(choiceButtonText).toContain(registrationSource.profiles[0]!.trigger_category);
+      expect(choiceButtonText).not.toContain(registrationSource.profiles[0]!.preview);
+      expect(registrationDetailsText).toContain(registrationSource.profiles[0]!.preview);
+      expect(registrationDetailsText).toContain(registrationSource.profiles[0]!.consequence);
 
       expect(details.parentElement).toBe(card);
       expect(choiceButton.contains(details)).toBe(false);
@@ -350,7 +357,10 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(allocationDetails.textContent).toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).toContain(allocation.options[0]!.consequence);
 
-      for (const comparedJourney of [reliefOathJourney(), leadSourceJourney(), allyJourney()]) {
+      for (const [comparedJourney, sourceOption] of [
+        [reliefOathJourney(), WORLD.opening_relief_oath!.options[0]!],
+        [leadSourceJourney(), WORLD.opening_lead_source!.options[0]!],
+      ] as const) {
         await act(async () => {
           root!.render(
             react.createElement(module.JourneyStoryChoiceScreen, {
@@ -362,13 +372,35 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         const comparedButton = rootElement.querySelector(".journey-choice-card button") as {
           textContent: string | null;
         } | null;
-        const comparedDetails = rootElement.querySelector(".journey-choice-card details");
+        const comparedDetails = rootElement.querySelector(".journey-choice-card details p") as {
+          textContent: string | null;
+        } | null;
         if (!comparedButton || !comparedDetails) {
           throw new Error("Expected every Albany setup kind to use the comparison-first card.");
         }
+        expect(comparedButton.textContent).toContain("Trigger category:");
+        expect(comparedButton.textContent).toContain(sourceOption.trigger_category);
+        expect(comparedButton.textContent).not.toContain(sourceOption.preview);
+        expect(comparedDetails.textContent).toContain(sourceOption.preview);
+        expect(comparedDetails.textContent).toContain(sourceOption.consequence);
         expect(comparedButton.textContent).toContain("Immediate cost:");
         expect(comparedButton.textContent).toContain("Tradeoff:");
       }
+
+      await act(async () => {
+        root!.render(
+          react.createElement(module.JourneyStoryChoiceScreen, {
+            journey: allyJourney(),
+            onChoose: (choiceId: string) => selected.push(choiceId),
+          }),
+        );
+      });
+      const allyButton = rootElement.querySelector(".journey-choice-card button") as {
+        textContent: string | null;
+      } | null;
+      if (!allyButton) throw new Error("Expected the ally comparison-first card.");
+      expect(allyButton.textContent).toContain("Immediate cost:");
+      expect(allyButton.textContent).toContain("Tradeoff:");
     } finally {
       if (root && act) {
         await act(async () => root!.unmount());

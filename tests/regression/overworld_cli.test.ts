@@ -422,9 +422,16 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const text = renderJourneyGate(journey);
     expect(text).toContain("! Story choice comparison");
     for (const option of story!.options) {
+      const usesTriggerCategory = option.summary!.fieldTriggerScope === "category";
       expect(text).toContain(option.label);
-      expect(text).toContain(`Commitment: ${option.summary!.commitment}`);
-      expect(text).toContain(`Field trigger: ${option.summary!.fieldTrigger}`);
+      expect(text).toContain(
+        `${usesTriggerCategory ? "Purpose" : "Commitment"}: ${option.summary!.commitment}`,
+      );
+      expect(text).toContain(
+        `${usesTriggerCategory ? "Trigger category" : "Field trigger"}: ${
+          option.summary!.fieldTrigger
+        }`,
+      );
       expect(text).toContain(`Immediate cost: ${option.summary!.immediateCost}`);
       expect(text).toContain(`Tradeoff: ${option.summary!.tradeoff}`);
       expect(text).toContain(`Inspect: \`inspect ${option.id}\``);

@@ -21,6 +21,14 @@ const AUTHORED_TEXT = z
     message: "Authored text cannot be blank.",
   });
 
+const REGISTRATION_TRIGGER_CATEGORY = z
+  .string()
+  .min(1)
+  .max(80)
+  .refine((value) => value.trim().length > 0, {
+    message: "Registration trigger category cannot be blank.",
+  });
+
 /**
  * One complete, canonical campaign-character package presented at registration.
  * The profile id is also the persistent background id; there is no second
@@ -31,6 +39,7 @@ export const OpeningRegistrationProfileSchema = z
     id: CampaignCharacterIdSchema,
     title: AUTHORED_TEXT,
     summary: AUTHORED_TEXT,
+    trigger_category: REGISTRATION_TRIGGER_CATEGORY.optional(),
     preview: AUTHORED_TEXT,
     tradeoff: AUTHORED_TEXT,
     consequence: AUTHORED_TEXT,
@@ -71,6 +80,20 @@ export const OpeningRegistrationSchema = z
   .strict()
   .superRefine((registration, ctx) => {
     const profileIds = new Set<string>();
+    const categorizedProfiles = registration.profiles.filter(
+      (profile) => profile.trigger_category !== undefined,
+    );
+    if (
+      categorizedProfiles.length !== 0 &&
+      categorizedProfiles.length !== registration.profiles.length
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["profiles"],
+        message:
+          "Opening registration trigger categories must cover every profile or remain absent on an exact legacy manifest.",
+      });
+    }
     registration.profiles.forEach((profile, index) => {
       if (profileIds.has(profile.id)) {
         ctx.addIssue({
