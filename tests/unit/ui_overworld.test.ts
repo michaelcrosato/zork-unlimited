@@ -914,6 +914,10 @@ describe("OverworldSession", () => {
     expect(app).toContain("worldView.departureRecap");
     expect(app).toContain("<DepartureRecap recap={worldView.departureRecap} />");
     expect(app).toContain("Active field term: {entry.activeFieldTerm}");
+    expect(app).toContain("Dispatch committed: {recap.dispatch.minutes}m");
+    expect(app).toContain("Direct launch now: {recap.dispatch.minutes}m");
+    expect(app).toContain("Dispatch sealed: {recap.dispatch.minutes}m");
+    expect(app).toContain("Direct-launch default; field-team contact remains optional.");
     expect(app).toContain("aria-disabled={!ready}");
     expect(app).toContain("onClick={ready ? onTalk : undefined}");
     expect(app).toContain("worldSession.talkToCharacter(lead.action.arguments.character_id)");

@@ -194,6 +194,30 @@ export function DepartureRecap({
   return (
     <section aria-label={`${recap.questTitle} dispatch recap`}>
       <h4>{recap.questTitle} dispatch recap</h4>
+      {recap.dispatch && (
+        <p className="departure-recap-dispatch">
+          {recap.dispatch.state === "sealed" ? (
+            <>
+              Dispatch sealed: {recap.dispatch.minutes}m — {" "}
+              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}.
+            </>
+          ) : recap.dispatch.state === "direct_launch" ? (
+            <>
+              Direct launch now: {recap.dispatch.minutes}m — {" "}
+              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}. Field-team
+              contact remains optional.
+            </>
+          ) : (
+            <>
+              Dispatch committed: {recap.dispatch.minutes}m. Optional before launch: {" "}
+              {recap.dispatch.remainingOptional
+                .map((slot) => (slot === "relief_allocation" ? "relief allocation" : "field team"))
+                .join(" and ")}
+              .
+            </>
+          )}
+        </p>
+      )}
       <dl className="departure-recap">
         {recap.entries.map((entry) => (
           <div key={entry.slot}>
@@ -208,6 +232,14 @@ export function DepartureRecap({
                   <br />
                   <small className="departure-recap-field-term">
                     Active field term: {entry.activeFieldTerm}
+                  </small>
+                </>
+              )}
+              {entry.status === "solo_default" && (
+                <>
+                  <br />
+                  <small className="departure-recap-field-term">
+                    Direct-launch default; field-team contact remains optional.
                   </small>
                 </>
               )}

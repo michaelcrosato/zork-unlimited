@@ -6,6 +6,7 @@ import {
   deriveOpeningDepartureRecap,
   OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
 } from "../../src/world/opening_departure_recap.js";
+import { deriveQuestDispatchPresentationWindow } from "../../src/world/quest_dispatch_window.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -17,6 +18,19 @@ const PREPARATION = WORLD.opening_preparation!;
 const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
+
+function canonicalWindow(session: OverworldSession) {
+  return deriveQuestDispatchPresentationWindow({
+    questId: WOLF.id,
+    journalEntries: session.snapshot().journalEntries,
+    openingRegistration: REGISTRATION,
+    openingReliefOath: RELIEF_OATH,
+    openingLeadSource: LEAD_SOURCE,
+    openingPreparation: PREPARATION,
+    openingReliefAllocation: RELIEF_ALLOCATION,
+    openingAlly: ALLY,
+  });
+}
 
 function stationSession(roleIndex = 0): OverworldSession {
   const session = new OverworldSession(WORLD);
@@ -65,7 +79,7 @@ describe("Albany opening departure recap", () => {
     const compact = session.compactView();
 
     expect(full.departureRecap).toEqual({
-      version: 2,
+      version: 3,
       questId: WOLF.id,
       questTitle: WOLF.title,
       entries: [
@@ -112,10 +126,11 @@ describe("Albany opening departure recap", () => {
           activeFieldTerm: null,
         },
       ],
+      dispatch: null,
     });
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.departure_recap).toEqual([
-      2,
+      3,
       WOLF.id,
       WOLF.title,
       full.departureRecap!.entries.map((entry) => [
@@ -125,6 +140,7 @@ describe("Albany opening departure recap", () => {
         entry.title,
         entry.activeFieldTerm,
       ]),
+      null,
     ]);
 
     const visible = JSON.stringify(full.departureRecap);
@@ -186,6 +202,7 @@ describe("Albany opening departure recap", () => {
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
     expect(terminal).toContain(`Active field term: ${REGISTRATION.profiles[0]!.trigger_category}`);
     expect(terminal).toContain("Preparation: Open (optional)");
+    expect(terminal).not.toContain("Dispatch committed:");
   });
 
   it("updates resolved optional rows, stays paired by choice, and respects the mission boundary", () => {
@@ -204,6 +221,8 @@ describe("Albany opening departure recap", () => {
     first.inspectJourneyStory(PREPARATION.id);
     expect(first.view().departureRecap).not.toBeNull();
     first.chooseJourneyStory(PREPARATION.profiles[0]!.id);
+    expect(canonicalWindow(first)).toMatchObject({ status: "legacy_neutral" });
+    expect(first.view().departureRecap?.dispatch).toBeNull();
     expect(first.view().departureRecap?.entries[3]).toMatchObject({
       status: "selected",
       title: PREPARATION.profiles[0]!.title,
@@ -221,14 +240,56 @@ describe("Albany opening departure recap", () => {
     });
 
     first.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    const soloWindow = canonicalWindow(first);
+    expect(soloWindow.status).toBe("on_time");
+    if (soloWindow.status !== "on_time" && soloWindow.status !== "delayed") {
+      throw new Error("Expected the canonical solo dispatch window.");
+    }
+    expect(first.view().departureRecap?.dispatch).toEqual({
+      state: "direct_launch",
+      minutes: soloWindow.ledgerMinutes,
+      timing: soloWindow.status,
+      remainingOptional: ["field_team"],
+    });
     expect(first.view().departureRecap?.entries[4]).toMatchObject({
       status: "selected",
       title: RELIEF_ALLOCATION.options[0]!.title,
       activeFieldTerm: RELIEF_ALLOCATION.options[0]!.trigger_category,
     });
+    expect(first.view().departureRecap?.entries[5]).toEqual({
+      slot: "field_team",
+      label: "Field team",
+      status: "solo_default",
+      title: "Solo departure",
+      activeFieldTerm: null,
+    });
+    expect(first.view().departureContactLeads).toMatchObject([
+      {
+        kind: "ally",
+        status: "ready",
+        action: { arguments: { character_id: ALLY.contact } },
+      },
+    ]);
+    expect(render(first.view())).toContain(
+      "Solo departure (direct-launch default; field-team contact remains optional)",
+    );
+    expect(render(first.view())).toContain(
+      `Direct launch now: ${String(soloWindow.ledgerMinutes)}m — on time. Field-team contact remains optional.`,
+    );
     first.talkToCharacter(ALLY.contact);
     expect(first.view().departureRecap).toBeNull();
     first.chooseJourneyStory(ALLY.options[0]!.id);
+    const teamWindow = canonicalWindow(first);
+    expect(teamWindow.status).toBe("on_time");
+    if (teamWindow.status !== "on_time" && teamWindow.status !== "delayed") {
+      throw new Error("Expected the canonical field-team dispatch window.");
+    }
+    expect(first.view().departureRecap?.dispatch).toEqual({
+      state: "sealed",
+      minutes: teamWindow.ledgerMinutes,
+      timing: teamWindow.status,
+      remainingOptional: [],
+    });
     expect(first.view().departureRecap?.entries[5]).toMatchObject({
       status: "selected",
       title: ALLY.options[0]!.title,
@@ -240,6 +301,30 @@ describe("Albany opening departure recap", () => {
         OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
       );
     }
+
+    const solo = stationSession();
+    solo.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    solo.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    solo.talkToCharacter(ALLY.contact);
+    const soloOption = ALLY.options.find((option) => option.id === ALLY.solo_option_id);
+    if (!soloOption) throw new Error("Expected the authored solo field-team option.");
+    solo.chooseJourneyStory(soloOption.id);
+    const explicitSoloWindow = canonicalWindow(solo);
+    expect(explicitSoloWindow.status).toBe("on_time");
+    if (explicitSoloWindow.status !== "on_time" && explicitSoloWindow.status !== "delayed") {
+      throw new Error("Expected the canonical explicit-solo dispatch window.");
+    }
+    expect(solo.view().departureRecap?.dispatch).toEqual({
+      state: "sealed",
+      minutes: explicitSoloWindow.ledgerMinutes,
+      timing: explicitSoloWindow.status,
+      remainingOptional: [],
+    });
+    expect(solo.view().departureRecap?.entries[5]).toMatchObject({
+      status: "selected",
+      title: soloOption.title,
+    });
+    expect(render(solo.view())).toContain("Dispatch sealed:");
 
     const questStart = first.view().questStarts.find(([questId]) => questId === WOLF.id);
     if (!questStart) throw new Error("Expected a legal Wolf-Winter launch.");
@@ -253,5 +338,117 @@ describe("Albany opening departure recap", () => {
     if (!away) throw new Error("Expected a local route away from Hayden's Station.");
     moved.moveArea(away.id);
     expect(moved.view().departureRecap).toBeNull();
+  });
+
+  it("shows no prep-only total, then changes an authenticated direct launch into pending June terms", () => {
+    const session = stationSession();
+    session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    expect(canonicalWindow(session)).toMatchObject({ status: "legacy_neutral" });
+    expect(session.view().departureRecap?.dispatch).toBeNull();
+    expect(render(session.view())).not.toContain("Dispatch committed:");
+    session.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    const directLaunchWindow = canonicalWindow(session);
+    expect(directLaunchWindow.status).toBe("on_time");
+    if (directLaunchWindow.status !== "on_time" && directLaunchWindow.status !== "delayed") {
+      throw new Error("Expected the canonical direct-launch dispatch receipt.");
+    }
+    expect(session.view().departureRecap?.dispatch).toEqual({
+      state: "direct_launch",
+      minutes: directLaunchWindow.ledgerMinutes,
+      timing: directLaunchWindow.status,
+      remainingOptional: ["field_team"],
+    });
+    session.talkToCharacter(ALLY.contact);
+    const pendingWindow = canonicalWindow(session);
+    expect(pendingWindow.status).toBe("june_commitment_pending");
+    if (pendingWindow.status !== "june_commitment_pending") {
+      throw new Error("Expected the canonical pending June dispatch receipt.");
+    }
+    const pendingRecap = deriveOpeningDepartureRecap({
+      world: WORLD,
+      journalEntries: session.snapshot().journalEntries,
+    });
+    expect(pendingRecap?.dispatch).toEqual({
+      state: "committed",
+      minutes: pendingWindow.committedMinutes,
+      timing: null,
+      remainingOptional: ["field_team"],
+    });
+    expect(session.view().departureRecap).toBeNull();
+    expect(JSON.stringify(pendingRecap)).not.toContain("forecast");
+    const compact = session.compactView();
+    expect(compact.departure_recap?.[4]).toBeUndefined();
+    session.chooseJourneyStory(ALLY.options[0]!.id);
+    const explicitWindow = canonicalWindow(session);
+    expect(explicitWindow.status).toBe("on_time");
+    if (explicitWindow.status !== "on_time" && explicitWindow.status !== "delayed") {
+      throw new Error("Expected the canonical explicit field-team dispatch receipt.");
+    }
+    expect(session.view().departureRecap?.dispatch).toEqual({
+      state: "sealed",
+      minutes: explicitWindow.ledgerMinutes,
+      timing: explicitWindow.status,
+      remainingOptional: [],
+    });
+
+    const sealed = stationSession();
+    sealed.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    sealed.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    const recap = sealed.view().departureRecap;
+    if (!recap?.dispatch) throw new Error("Expected a canonical sealed solo dispatch line.");
+    expect(sealed.compactView().departure_recap?.[4]).toEqual([
+      "direct_launch",
+      recap.dispatch.minutes,
+      recap.dispatch.timing,
+      ["field_team"],
+    ]);
+    const sealedCompact = sealed.compactView();
+    const sealedCompactDispatch = sealedCompact.departure_recap?.[4];
+    if (!sealedCompactDispatch) throw new Error("Expected a compact sealed dispatch line.");
+    (sealedCompactDispatch as unknown as [string, number, string, string[]])[1] = 999;
+    expect(sealed.compactView().departure_recap?.[4]?.[1]).toBe(recap.dispatch.minutes);
+
+    const forged = sealed.snapshot();
+    const preparation = forged.journalEntries.find((entry) => entry.kind === "preparation");
+    if (!preparation) throw new Error("Expected preparation evidence.");
+    preparation.text = "forged preparation receipt";
+    expect(
+      deriveOpeningDepartureRecap({ world: WORLD, journalEntries: forged.journalEntries }),
+    ).toBeNull();
+  });
+
+  it("classifies authenticated on-time and delayed plan totals without changing either plan", () => {
+    const onTime = stationSession();
+    onTime.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    onTime.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    expect(onTime.view().departureRecap?.dispatch).toMatchObject({
+      state: "direct_launch",
+      timing: "on_time",
+    });
+
+    const delayed = new OverworldSession(WORLD);
+    delayed.scoutPoi(delayed.view().pois[0]!.id);
+    delayed.talkToCharacter(REGISTRATION.contact);
+    delayed.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    delayed.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
+    delayed.chooseJourneyStory(LEAD_SOURCE.options[1]!.id);
+    const stationRoute = delayed
+      .view()
+      .areaExits.find((candidate) => candidate.destination.id === PREPARATION.area);
+    if (!stationRoute) throw new Error("Expected the authored route to Hayden's Station.");
+    delayed.moveArea(stationRoute.id);
+    delayed.chooseJourneyStory(PREPARATION.profiles[2]!.id, PREPARATION.id);
+    delayed.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    const beforeSnapshot = delayed.snapshot();
+    const beforeHash = delayed.snapshotHash();
+    expect(delayed.view().departureRecap?.dispatch).toMatchObject({
+      state: "direct_launch",
+      timing: "delayed",
+      remainingOptional: ["field_team"],
+    });
+    expect(render(delayed.view())).toContain("Direct launch now:");
+    expect(render(delayed.view())).toContain("delayed.");
+    expect(delayed.snapshot()).toEqual(beforeSnapshot);
+    expect(delayed.snapshotHash()).toBe(beforeHash);
   });
 });

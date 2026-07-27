@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 668 -->
+<!-- historical_cycle_count: 669 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - current_station_dispatch_status
+
+- Evidence choice: compiled feedback and consecutive verified players found the Station preparation forecast useful before commitment but the persistent selected-plan recap lacked authenticated running dispatch status.
+- Surface: recap v3 now derives committed, direct-launch, or explicitly sealed minutes/status from the canonical dispatch authority across full, compact/MCP, terminal, and UI; the unasked-June solo default remains visibly replaceable.
+- Counterfactual: no-preparation, incomplete, legacy, malformed, and tampered evidence stays neutral; choices, timing mechanics, launch legality, receipts, route pressure, RNG, and endings are unchanged.
+- Pure evidence: exact-clean Terra seed 72759 skipped optional preparation and June, so the new dispatch state truthfully remained neutral; it completed The Wolf-Winter nonlethally at decision 27, continued into The Gallowmere, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the canary is required retention evidence but coverage-neutral for the new non-null state; its staged/full-consequence complaint belongs to the unchanged post-quest dawn-wagon response, while its repeated density report keeps progressive event disclosure next.
+- Economy: the single 60-turn canary used 3.64M raw / 128k uncached input and 9.7k output tokens at 96.5% cache reuse; no exposure-chasing rerun was launched.
+- Guard: independent review is clean, stable patch id `0344bf7f` survived the rebase, crawl `20260727T205003Z` is zero-finding, and health passes 437 files/3,601 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - wolf_winter_goal_guidance
 
@@ -154,12 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: Spark seed 72742 repeated the forbidden-wrapper/model-cache fingerprint at call 67 and published nothing; changed-fingerprint Terra seed 72743 completed The Wolf-Winter bloodlessly in 32 decisions, ended voluntarily, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
 - Self-critique/follow-through: the verified player still requested a concise accumulated dispatch recap; transport de-duplication does not solve the opening's cognitive load, which remains the next gameplay increment.
 - Guard: review-found optional-id typing and pure stale-envelope gaps are fixed; final post-crawl `20260726T224415Z` is zero-finding and health passes 434 files/3,575 tests, both typechecks, and all 12 packs.
-
-### Cycle result - albany_goal_continue_invitation
-
-- Evidence choice: clean pre-change Spark seeds 72730/72738 both completed The Wolf-Winter in 20 decisions, rated clarity/enjoyment 4/4 and replay-yes, yet both ended at the first goal choice (0/2 continuation).
-- Surface: an optional goal-completion context now labels Continue with its immediate authored decision—“Continue to decide the dawn relief wagon”—while generic checkpoints keep their existing label.
-- Counterfactual: Continue/End ids, checkpoint and exit terms, retention evidence, state, hashes, legal actions, and decision count remain unchanged; empty authored labels fail closed.
-- Pure evidence: Spark seed 72740 failed closed at call 44 and published nothing; fresh Terra seed 72741 continued at Wolf decision 30, chose the dawn wagon, continued at 40, completed Gallowmere, and ended at 54 with clarity/enjoyment 4/4, unstuck, replay-yes.
-- Self-critique/follow-through: one post-change player validates reachability rather than the 70% fleet threshold; dense Albany setup remains a separate S1 follow-up.
-- Guard: independent review is clean, post-crawl `20260726T211742Z` is zero-finding, and full health passes 434 files/3,575 tests plus both typechecks and all 12 packs.

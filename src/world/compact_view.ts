@@ -426,7 +426,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_contact_leads:
     "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; requires_preparation has no available action, ready may be pursued with talk_overworld_session_contact(character_id: contact_id), and either status leaves quest_id launch legal as the explicitly disclosed solo default",
   departure_recap:
-    "[version, quest_id, quest_title, [[slot, label, status, selected_title|null, active_field_term|null], ...]] read-only accumulated Station departure plan; slots are role, duty, evidence, preparation, relief_allocation, field_team. selected rows include one canonical active field term; legacy rows and unresolved rows use null. open_optional may still be chosen or skipped; available_after_preparation opens only after preparation. It reveals no unselected option or outcome and adds no action",
+    "[version, quest_id, quest_title, [[slot, label, status, selected_title|null, active_field_term|null], ...], dispatch|null] read-only accumulated Station departure plan. dispatch is [state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]] from canonical dispatch authority only; committed names the remaining authenticated optional selection and has null timing, direct_launch gives the exact timing if leaving now while naming a replaceable optional field team, and sealed has exact on_time or delayed timing after an explicit field-team choice. Slots are role, duty, evidence, preparation, relief_allocation, field_team. selected rows include one canonical active field term; solo_default is the authenticated direct-launch solo receipt and does not remove the separate optional field-team contact; legacy rows and unresolved rows use null. open_optional may still be chosen or skipped; available_after_preparation opens only after preparation. It reveals no unselected option or outcome and adds no action",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
@@ -1240,6 +1240,14 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
       view.departure_recap[1],
       view.departure_recap[2],
       cloneTupleList(view.departure_recap[3]),
+      view.departure_recap[4]
+        ? [
+            view.departure_recap[4][0],
+            view.departure_recap[4][1],
+            view.departure_recap[4][2],
+            [...view.departure_recap[4][3]],
+          ]
+        : null,
     ];
   }
   if (view.opportunity_guidance) clone.opportunity_guidance = view.opportunity_guidance;

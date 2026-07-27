@@ -1,3 +1,7 @@
+import {
+  deriveQuestDispatchPresentationWindow,
+  type QuestDispatchPresentationWindow,
+} from "./quest_dispatch_window.js";
 import { resolveOpeningDispatchManifestChain } from "./opening_dispatch_briefing.js";
 import { proveOpeningAllyJournal } from "./opening_ally_journal.js";
 import { proveOpeningLeadSourceJournal } from "./opening_lead_source_journal.js";
@@ -15,7 +19,7 @@ import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
-export const OPENING_DEPARTURE_RECAP_VERSION = 2 as const;
+export const OPENING_DEPARTURE_RECAP_VERSION = 3 as const;
 export const OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT = 120;
 
 export type OpeningDepartureRecapSlot =
@@ -28,6 +32,7 @@ export type OpeningDepartureRecapSlot =
 
 export type OpeningDepartureRecapStatus =
   | "selected"
+  | "solo_default"
   | "legacy"
   | "open_optional"
   | "available_after_preparation";
@@ -40,11 +45,28 @@ export type OpeningDepartureRecapEntry = Readonly<{
   activeFieldTerm: string | null;
 }>;
 
+/**
+ * A read-only timing line for the authenticated plan currently shown at the
+ * Station. "committed" deliberately does not call the plan final: the named
+ * optional selections can still change it. Its minutes are exposed only when
+ * the canonical dispatch authority has authenticated that partial receipt.
+ */
+export type OpeningDepartureRecapDispatch = Readonly<{
+  state: "committed" | "direct_launch" | "sealed";
+  minutes: number;
+  timing: "on_time" | "delayed" | null;
+  remainingOptional: readonly Exclude<
+    OpeningDepartureRecapSlot,
+    "role" | "duty" | "evidence" | "preparation"
+  >[];
+}>;
+
 export type OpeningDepartureRecap = Readonly<{
   version: typeof OPENING_DEPARTURE_RECAP_VERSION;
   questId: string;
   questTitle: string;
   entries: readonly OpeningDepartureRecapEntry[];
+  dispatch: OpeningDepartureRecapDispatch | null;
 }>;
 
 export type OpeningCompactDepartureRecapEntry = readonly [
@@ -60,6 +82,14 @@ export type OpeningCompactDepartureRecap = readonly [
   questId: string,
   questTitle: string,
   entries: readonly OpeningCompactDepartureRecapEntry[],
+  dispatch:
+    | readonly [
+        state: OpeningDepartureRecapDispatch["state"],
+        minutes: number,
+        timing: OpeningDepartureRecapDispatch["timing"],
+        remainingOptional: readonly OpeningDepartureRecapDispatch["remainingOptional"][number][],
+      ]
+    | null,
 ];
 
 export type OpeningDepartureRecapInputs = Readonly<{
@@ -77,6 +107,39 @@ function recapEntry(
   activeFieldTerm: string | null = null,
 ): OpeningDepartureRecapEntry {
   return Object.freeze({ slot, label, status, title, activeFieldTerm });
+}
+
+function deriveDispatchRecap(
+  window: QuestDispatchPresentationWindow,
+): OpeningDepartureRecapDispatch | null {
+  if (window.status === "june_commitment_pending") {
+    return Object.freeze({
+      state: "committed",
+      minutes: window.committedMinutes,
+      timing: null,
+      remainingOptional: Object.freeze(["field_team"] as const),
+    });
+  }
+  if (
+    (window.status !== "on_time" && window.status !== "delayed") ||
+    window.ledgerMinutes === undefined
+  ) {
+    return null;
+  }
+  if (window.receipt?.juneCommitment.kind === "solo_unasked") {
+    return Object.freeze({
+      state: "direct_launch",
+      minutes: window.ledgerMinutes,
+      timing: window.status,
+      remainingOptional: Object.freeze(["field_team"] as const),
+    });
+  }
+  return Object.freeze({
+    state: "sealed",
+    minutes: window.ledgerMinutes,
+    timing: window.status,
+    remainingOptional: Object.freeze([]),
+  });
 }
 
 /**
@@ -165,6 +228,21 @@ export function deriveOpeningDepartureRecap(
       trustedLegacySourceWorldHash,
     });
     const preparationResolved = Boolean(preparationProof.profile || preparationProof.legacy);
+    const dispatchWindow = deriveQuestDispatchPresentationWindow({
+      questId: chain.quest.id,
+      journalEntries: args.journalEntries,
+      openingRegistration: chain.registration,
+      openingReliefOath: chain.reliefOath,
+      openingLeadSource: chain.leadSource,
+      openingPreparation: chain.preparation,
+      openingReliefAllocation: chain.reliefAllocation,
+      openingAlly: chain.ally,
+      trustedLegacySourceWorldHash,
+    });
+    const dispatch = deriveDispatchRecap(dispatchWindow);
+    const soloUnasked =
+      (dispatchWindow.status === "on_time" || dispatchWindow.status === "delayed") &&
+      dispatchWindow.receipt?.juneCommitment.kind === "solo_unasked";
 
     const entries = Object.freeze([
       recapEntry(
@@ -253,12 +331,14 @@ export function deriveOpeningDepartureRecap(
           )
         : allyProof.legacy
           ? recapEntry("field_team", "Field team", "legacy", "Legacy solo team preserved")
-          : recapEntry(
-              "field_team",
-              "Field team",
-              preparationResolved ? "open_optional" : "available_after_preparation",
-              null,
-            ),
+          : soloUnasked
+            ? recapEntry("field_team", "Field team", "solo_default", "Solo departure")
+            : recapEntry(
+                "field_team",
+                "Field team",
+                preparationResolved ? "open_optional" : "available_after_preparation",
+                null,
+              ),
     ]);
 
     return Object.freeze({
@@ -266,6 +346,7 @@ export function deriveOpeningDepartureRecap(
       questId: chain.quest.id,
       questTitle: chain.quest.title,
       entries,
+      dispatch,
     });
   } catch {
     return null;
@@ -276,6 +357,9 @@ export function cloneOpeningDepartureRecap(recap: OpeningDepartureRecap): Openin
   return {
     ...recap,
     entries: recap.entries.map((entry) => ({ ...entry })),
+    dispatch: recap.dispatch
+      ? { ...recap.dispatch, remainingOptional: [...recap.dispatch.remainingOptional] }
+      : null,
   };
 }
 
@@ -290,5 +374,13 @@ export function compactOpeningDepartureRecap(
       (entry) =>
         [entry.slot, entry.label, entry.status, entry.title, entry.activeFieldTerm] as const,
     ),
+    recap.dispatch
+      ? [
+          recap.dispatch.state,
+          recap.dispatch.minutes,
+          recap.dispatch.timing,
+          [...recap.dispatch.remainingOptional],
+        ]
+      : null,
   ];
 }
