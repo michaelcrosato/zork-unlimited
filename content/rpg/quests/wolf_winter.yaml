@@ -632,6 +632,15 @@ rooms:
           cast fouls, a braced or bound rail can pen the yearling alive; a spear stroke
           commits the hybrid fight. The byre-yard is south.
       - when:
+          - { has_flag: relief_protocol_prepared }
+          - { has_flag: yearling_redirected_with_braced_rail }
+          - { not_flag: flank_redirected }
+        text: >
+          The braced rail turned the yearling alive into the high wood without a spear
+          stroke. Jamie's protocol required the failed wedge and spent split-rail guard;
+          this braced recovery leaves its docket sealed. The ground line north is not this
+          plan. Return south, then west and up to the loft for the second cast.
+      - when:
           - { has_flag: strategy_lure_committed }
           - { has_flag: yearling_redirected_with_braced_rail }
           - { not_flag: flank_redirected }

@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import { cloneGameState, type GameState } from "../../src/core/state.js";
+import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -752,9 +753,19 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     splitGuard = recoverWithSplitRail(splitGuard);
     expect(splitGuard.current).toBe("paling_gap");
     expect(actionIds(splitGuard)).not.toContain("use_relief_protocol_docket");
+    expect(buildRpgObservation(index, splitGuard).description).not.toMatch(
+      /braced recovery leaves its docket sealed/i,
+    );
     splitGuard = act(splitGuard, "go_south");
     expect(splitGuard.current).toBe("byre_yard");
     expect(actionIds(splitGuard)).toContain("use_relief_protocol_docket");
+    const splitGuardObservation = buildRpgObservation(index, splitGuard);
+    expect(splitGuardObservation.description).toMatch(
+      /Cade holds Jamie's sealed docket[^]*call its named sequence here/i,
+    );
+    expect(compactRpgObservation(splitGuardObservation, []).text).toMatch(
+      /Cade holds Jamie's sealed docket[^]*call its named sequence here/i,
+    );
 
     let braced = foulFirstCast(profileState(RELIEF, LEDGER));
     braced = act(braced, "wedge_paling_rail", 20);
@@ -765,9 +776,26 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       yearling_redirected: true,
       yearling_redirected_with_braced_rail: true,
     });
+    const bracedObservation = buildRpgObservation(index, braced);
+    expect(bracedObservation.description).toMatch(
+      /Jamie's protocol required the failed wedge and spent split-rail guard[^]*braced recovery leaves its docket sealed/i,
+    );
+    expect(compactRpgObservation(bracedObservation, []).text).toBe(
+      bracedObservation.description.trimEnd(),
+    );
     braced = act(braced, "go_south");
     expect(braced.current).toBe("byre_yard");
     expect(actionIds(braced)).not.toContain("use_relief_protocol_docket");
+    expect(buildRpgObservation(index, braced).description).not.toMatch(
+      /braced recovery leaves its docket sealed/i,
+    );
+
+    let unrelated = foulFirstCast(profileState(DROVER, LEDGER));
+    unrelated = act(unrelated, "wedge_paling_rail", 20);
+    unrelated = act(unrelated, "turn_paling_rail");
+    expect(buildRpgObservation(index, unrelated).description).not.toMatch(
+      /Jamie's protocol|required the failed wedge/i,
+    );
   });
 
   it("includes the evacuation and fortify outcomes while preserving every ending identity", () => {
