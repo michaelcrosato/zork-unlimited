@@ -68,28 +68,43 @@ function dispatchBriefing(window: QuestDispatchWindow | undefined): string | nul
   if (!window) return null;
   if (window.status === "delayed" && window.ledgerMinutes !== undefined) {
     return (
-      `Dispatch ledger: ${String(window.ledgerMinutes)} minutes—delayed. ` +
-      "Road choice changes arrival conditions, not this status. " +
-      "First local failure adds cattle alarm +1 for lure, drive, or hunt; fortify pressure +1."
+      `Dispatch ${String(window.ledgerMinutes)}m—delayed; roads change arrival, not delay. ` +
+      "First failure: lure/drive/hunt alarm +1; fortify +1."
     );
   }
   if (window.status === "on_time" && window.ledgerMinutes !== undefined) {
     return (
-      `Dispatch ledger: ${String(window.ledgerMinutes)} minutes—on time. ` +
-      "Road choice changes arrival conditions, not this status. " +
-      "Opening delay adds no failure pressure."
+      `Dispatch ${String(window.ledgerMinutes)}m—on time; roads change arrival, not dispatch. ` +
+      "No opening-delay failure pressure."
     );
   }
   return (
-    "Dispatch ledger: unverified—neutral. " +
-    "Road choice changes arrival conditions, not this status. " +
-    "Opening delay adds no failure pressure."
+    "Dispatch unverified—neutral; roads change arrival, not dispatch. " +
+    "No opening-delay failure pressure."
   );
 }
 
-function withDispatchBriefing(summary: string, window: QuestDispatchWindow | undefined): string {
+function firstCastFailureForecast(
+  arrivalAlarm: number,
+  window: QuestDispatchWindow | undefined,
+): string {
+  const delayed = window?.status === "delayed";
+  const failedCastAlarm = arrivalAlarm + 2 + (delayed ? 1 : 0);
+  return (
+    `Fouled first cast: cattle alarm ${String(failedCastAlarm)}` +
+    `${delayed ? " (includes delayed +1)" : ""}; ` +
+    "feed spent, no retry; recovery remains."
+  );
+}
+
+function withDispatchBriefing(
+  summary: string,
+  window: QuestDispatchWindow | undefined,
+  arrivalAlarm: number,
+): string {
   const briefing = dispatchBriefing(window);
-  return briefing ? `${briefing} ${summary}` : summary;
+  const failureForecast = firstCastFailureForecast(arrivalAlarm, window);
+  return briefing ? `${briefing} ${summary} ${failureForecast}` : `${summary} ${failureForecast}`;
 }
 
 export function wolfHillRoutePresentation(args: {
@@ -116,7 +131,9 @@ export function wolfHillRoutePresentation(args: {
       previewOverride = EXPOSED_RIDGE_WITH_AID_ONLY_PREVIEW;
     }
     return Object.freeze({
-      tradeoffSummary: boundedSummary(withDispatchBriefing(tradeoffSummary, args.dispatchWindow)),
+      tradeoffSummary: boundedSummary(
+        withDispatchBriefing(tradeoffSummary, args.dispatchWindow, 1),
+      ),
       ...(previewOverride ? { previewOverride } : {}),
     });
   }
@@ -134,7 +151,9 @@ export function wolfHillRoutePresentation(args: {
       previewOverride = SHELTERED_STOCKWAY_WITH_AID_ONLY_PREVIEW;
     }
     return Object.freeze({
-      tradeoffSummary: boundedSummary(withDispatchBriefing(tradeoffSummary, args.dispatchWindow)),
+      tradeoffSummary: boundedSummary(
+        withDispatchBriefing(tradeoffSummary, args.dispatchWindow, 0),
+      ),
       ...(previewOverride ? { previewOverride } : {}),
     });
   }
