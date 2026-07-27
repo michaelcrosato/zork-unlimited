@@ -11,17 +11,43 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer, type ViteDevServer } from "vite";
 
 import { renderQuestLaunch } from "../../bin/overworld_play.js";
+import { makeStep } from "../../src/core/engine.js";
+import type { Rng } from "../../src/core/rng.js";
+import type { GameState } from "../../src/core/state.js";
 import { createToolApi } from "../../src/mcp/tools.js";
+import {
+  buildRpgRules,
+  enumerateRpgActions,
+  indexRpgPack,
+  initStateForRpgPack,
+} from "../../src/rpg/runner.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { OverworldSession } from "../../src/world/session.js";
-import { WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT } from "../../src/world/wolf_hill_route_presentation.js";
+import {
+  WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
+  wolfHillRoutePresentation,
+} from "../../src/world/wolf_hill_route_presentation.js";
 
 const ROOT = process.cwd();
 const WORLD = loadOverworldManifest(ROOT);
 const WOLF_ID = "wolf_winter";
 const RIDGE_ID = "albany:wolf_approach_exposed_ridge";
 const STOCKWAY_ID = "albany:wolf_approach_sheltered_stockway";
+const WOLF_QUEST =
+  WORLD.quests.find((quest) => quest.id === WOLF_ID) ??
+  (() => {
+    throw new Error("The Albany starting slice requires Wolf-Winter.");
+  })();
+const WOLF_IMPORTS =
+  WOLF_QUEST.campaign_imports ??
+  (() => {
+    throw new Error("Wolf-Winter requires campaign imports.");
+  })();
+const WOLF_SOURCE = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
+if (!WOLF_SOURCE.ok) throw new Error("Wolf-Winter must compile.");
+const WOLF_INDEX = indexRpgPack(WOLF_SOURCE.compiled.pack);
 const STALE_ABSOLUTE_RIDGE_RESULT =
   "A clean three-cast lure line therefore reaches alarm 4 (Breaking) and scatters cattle.";
 const STALE_ABSOLUTE_STOCKWAY_RESULT =
@@ -188,22 +214,27 @@ function dispatchBriefing(session: OverworldSession): string {
   expect(stockway).toEqual(ridge);
   if (ridge.status === "delayed" && ridge.ledgerMinutes !== undefined) {
     return (
-      `Dispatch ledger: ${String(ridge.ledgerMinutes)} minutes—delayed. ` +
-      "Road choice changes arrival conditions, not this status. " +
-      "First local failure adds cattle alarm +1 for lure, drive, or hunt; fortify pressure +1."
+      `Dispatch ${String(ridge.ledgerMinutes)}m—delayed; roads change arrival, not delay. ` +
+      "First failure: lure/drive/hunt alarm +1; fortify +1."
     );
   }
   if (ridge.status === "on_time" && ridge.ledgerMinutes !== undefined) {
     return (
-      `Dispatch ledger: ${String(ridge.ledgerMinutes)} minutes—on time. ` +
-      "Road choice changes arrival conditions, not this status. " +
-      "Opening delay adds no failure pressure."
+      `Dispatch ${String(ridge.ledgerMinutes)}m—on time; roads change arrival, not dispatch. ` +
+      "No opening-delay failure pressure."
     );
   }
   return (
-    "Dispatch ledger: unverified—neutral. " +
-    "Road choice changes arrival conditions, not this status. " +
-    "Opening delay adds no failure pressure."
+    "Dispatch unverified—neutral; roads change arrival, not dispatch. " +
+    "No opening-delay failure pressure."
+  );
+}
+
+function expectedFirstCastFailureForecast(alarm: number, delayed: boolean): string {
+  return (
+    `Fouled first cast: cattle alarm ${String(alarm)}` +
+    `${delayed ? " (includes delayed +1)" : ""}; ` +
+    "feed spent, no retry; recovery remains."
   );
 }
 
@@ -250,6 +281,65 @@ const CLEAN_LURE_TAIL = [
   "use_winter_feed_sack_on_outer_scent_gate",
   "go_north",
 ] as const;
+
+function fixedRng(face: "best" | "worst"): Rng {
+  return {
+    next: () => (face === "best" ? 0.999999 : 0),
+    int: (min, max) => (face === "best" ? max : min),
+  };
+}
+
+function actRpg(state: GameState, actionId: string, face: "best" | "worst" = "best"): GameState {
+  const actions = enumerateRpgActions(WOLF_INDEX, state);
+  const option = actions.find((candidate) => candidate.id === actionId);
+  expect(
+    option,
+    `${actionId} must be legal in ${state.current}; legal: ${actions
+      .map((candidate) => candidate.id)
+      .join(", ")}`,
+  ).toBeDefined();
+  if (!option) throw new Error(`Missing action ${actionId}.`);
+  const result = makeStep(buildRpgRules(WOLF_INDEX, () => fixedRng(face)))(state, option.action);
+  expect(result.ok, result.rejectionReason).toBe(true);
+  return result.state;
+}
+
+function playForecastedFailedFirstCast(
+  parent: OverworldSession,
+  approachId: typeof RIDGE_ID | typeof STOCKWAY_ID,
+): { alarm: number; recoveryAction: string | null } {
+  const plan = parent.prepareQuestStart(WOLF_ID, approachId);
+  let state = initStateForRpgPack(WOLF_INDEX, 72748, {
+    character: plan.characterAfter,
+    imports: WOLF_IMPORTS,
+  });
+  if (plan.dispatchWindow.status === "delayed") {
+    state.flags.dispatch_opening_delayed = true;
+  }
+  const lastMile =
+    approachId === RIDGE_ID ? "use_exposed_ridge_last_mile" : "use_sheltered_stockway_last_mile";
+  for (const actionId of [
+    lastMile,
+    "talk_houndsman",
+    "ask_lure",
+    "ask_commit_lure",
+    "ask_leave",
+    "go_west",
+    "take_winter_feed_sack",
+    "go_east",
+    "go_north",
+  ]) {
+    state = actRpg(state, actionId);
+  }
+  state = actRpg(state, "use_winter_feed_sack_on_downwind_feed_line", "worst");
+  const recovery = enumerateRpgActions(WOLF_INDEX, state).find((option) =>
+    ["set_paling_rail", "wedge_paling_rail"].includes(option.id),
+  );
+  return {
+    alarm: state.vars.cattle_alarm ?? -1,
+    recoveryAction: recovery?.id ?? null,
+  };
+}
 
 function playForecastedCleanLure(
   parent: OverworldSession,
@@ -335,8 +425,16 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     ({ oathId, reliefId, expected }) => {
       const { session, quest } = routeCard(oathId, reliefId);
       const briefing = dispatchBriefing(session);
-      const expectedRidgeSummary = `${briefing} ${expected.ridge.summary}`;
-      const expectedStockwaySummary = `${briefing} ${expected.stockway.summary}`;
+      const ridgeFailure = playForecastedFailedFirstCast(session, RIDGE_ID);
+      const stockwayFailure = playForecastedFailedFirstCast(session, STOCKWAY_ID);
+      expect(ridgeFailure).toEqual({ alarm: 3, recoveryAction: "set_paling_rail" });
+      expect(stockwayFailure).toEqual({ alarm: 2, recoveryAction: "set_paling_rail" });
+      const expectedRidgeSummary =
+        `${briefing} ${expected.ridge.summary} ` +
+        expectedFirstCastFailureForecast(ridgeFailure.alarm, false);
+      const expectedStockwaySummary =
+        `${briefing} ${expected.stockway.summary} ` +
+        expectedFirstCastFailureForecast(stockwayFailure.alarm, false);
       const snapshotBeforeProjection = session.snapshot();
       const full = fullSummaries(quest);
       const compact = compactSummaries(session);
@@ -460,13 +558,45 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       },
     );
     const expectedBriefing =
-      "Dispatch ledger: 90 minutes—delayed. " +
-      "Road choice changes arrival conditions, not this status. " +
-      "First local failure adds cattle alarm +1 for lure, drive, or hunt; fortify pressure +1.";
+      "Dispatch 90m—delayed; roads change arrival, not delay. " +
+      "First failure: lure/drive/hunt alarm +1; fortify +1.";
     expect(dispatchBriefing(session)).toBe(expectedBriefing);
 
     const full = fullSummaries(quest);
     const compact = compactSummaries(session);
+    const ridgeFailure = playForecastedFailedFirstCast(session, RIDGE_ID);
+    const stockwayFailure = playForecastedFailedFirstCast(session, STOCKWAY_ID);
+    expect(ridgeFailure).toEqual({ alarm: 4, recoveryAction: "set_paling_rail" });
+    expect(stockwayFailure).toEqual({ alarm: 3, recoveryAction: "set_paling_rail" });
+    expect(full[RIDGE_ID]).toContain(expectedFirstCastFailureForecast(ridgeFailure.alarm, true));
+    expect(full[STOCKWAY_ID]).toContain(
+      expectedFirstCastFailureForecast(stockwayFailure.alarm, true),
+    );
+    const delayedWindow = session.prepareQuestStart(WOLF_ID, RIDGE_ID).dispatchWindow;
+    for (const knowledgeIds of [
+      [],
+      ["albany:knowledge_relief_cade_fodder"],
+      ["albany:knowledge_wolf_limited_aid_only"],
+      ["albany:knowledge_relief_cade_fodder", "albany:knowledge_wolf_limited_aid_only"],
+    ]) {
+      for (const [optionId, alarm] of [
+        [RIDGE_ID, ridgeFailure.alarm],
+        [STOCKWAY_ID, stockwayFailure.alarm],
+      ] as const) {
+        const projection = wolfHillRoutePresentation({
+          launchId: "albany:wolf_hill_approach",
+          optionId,
+          knowledgeIds,
+          dispatchWindow: delayedWindow,
+        });
+        expect(projection?.tradeoffSummary).toContain(
+          expectedFirstCastFailureForecast(alarm, true),
+        );
+        expect(projection?.tradeoffSummary.length).toBeLessThanOrEqual(
+          WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
+        );
+      }
+    }
     for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
       expect(full[optionId]?.startsWith(expectedBriefing)).toBe(true);
       expect(compact[optionId]).toBe(full[optionId]);
