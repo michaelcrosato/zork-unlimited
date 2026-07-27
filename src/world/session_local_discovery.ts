@@ -10,7 +10,7 @@ import {
   type OverworldQuestLaunchResources,
   type OverworldQuestLaunchView,
 } from "./quest_launch.js";
-import type { QuestDispatchWindow } from "./quest_dispatch_window.js";
+import type { QuestDispatchPresentationWindow } from "./quest_dispatch_window.js";
 import { wolfHillRoutePresentation } from "./wolf_hill_route_presentation.js";
 
 export type OverworldQuestView = {
@@ -81,7 +81,7 @@ export function questView(
   resources?: OverworldQuestLaunchResources,
   selectedApproachId?: string,
   knowledgeIds?: readonly string[],
-  dispatchWindow?: QuestDispatchWindow,
+  dispatchWindow?: QuestDispatchPresentationWindow,
 ): OverworldQuestView {
   return {
     id: quest.id,
@@ -108,7 +108,7 @@ export function projectOverworldQuestView(
   quest: OverworldQuestView,
   resources: OverworldQuestLaunchResources,
   knowledgeIds?: readonly string[],
-  dispatchWindow?: QuestDispatchWindow,
+  dispatchWindow?: QuestDispatchPresentationWindow,
 ): OverworldQuestView {
   const launch = quest.launch;
   if (!launch) return { ...quest };

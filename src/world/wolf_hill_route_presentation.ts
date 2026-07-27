@@ -8,7 +8,8 @@
  * fodder allocation and Aid-Only's final-cast suppression.
  */
 
-import type { QuestDispatchWindow } from "./quest_dispatch_window.js";
+import { WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES } from "../core/embedded_launch_overlay_receipt.js";
+import type { QuestDispatchPresentationWindow } from "./quest_dispatch_window.js";
 
 export const WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT = 360;
 
@@ -64,8 +65,23 @@ function boundedSummary(summary: string): string {
   return summary;
 }
 
-function dispatchBriefing(window: QuestDispatchWindow | undefined): string | null {
+function dispatchBriefing(window: QuestDispatchPresentationWindow | undefined): string | null {
   if (!window) return null;
+  if (window.status === "june_commitment_pending") {
+    const { minimum, maximum } = window.finalMinutes;
+    const finalRange =
+      minimum === maximum ? `${String(minimum)}m` : `${String(minimum)}–${String(maximum)}m`;
+    const pressure =
+      minimum > WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES
+        ? "Delay is already certain; choose or decline to seal the final total and pressure."
+        : maximum <= WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES
+          ? "It stays on time; choose or decline to seal the final total."
+          : "Choose or decline to set the final total and delay pressure.";
+    return (
+      `Dispatch ${String(window.committedMinutes)}m committed; June's field team is pending ` +
+      `(final ${finalRange}). ${pressure}`
+    );
+  }
   if (window.status === "delayed" && window.ledgerMinutes !== undefined) {
     return (
       `Dispatch ${String(window.ledgerMinutes)}m—delayed; roads change arrival, not delay. ` +
@@ -86,7 +102,7 @@ function dispatchBriefing(window: QuestDispatchWindow | undefined): string | nul
 
 function firstCastFailureForecast(
   arrivalAlarm: number,
-  window: QuestDispatchWindow | undefined,
+  window: QuestDispatchPresentationWindow | undefined,
 ): string {
   const delayed = window?.status === "delayed";
   const failedCastAlarm = arrivalAlarm + 2 + (delayed ? 1 : 0);
@@ -99,10 +115,13 @@ function firstCastFailureForecast(
 
 function withDispatchBriefing(
   summary: string,
-  window: QuestDispatchWindow | undefined,
+  window: QuestDispatchPresentationWindow | undefined,
   arrivalAlarm: number,
 ): string {
   const briefing = dispatchBriefing(window);
+  if (window?.status === "june_commitment_pending") {
+    return `${briefing} ${summary}`;
+  }
   const failureForecast = firstCastFailureForecast(arrivalAlarm, window);
   return briefing ? `${briefing} ${summary} ${failureForecast}` : `${summary} ${failureForecast}`;
 }
@@ -111,7 +130,7 @@ export function wolfHillRoutePresentation(args: {
   launchId: string;
   optionId: string;
   knowledgeIds?: readonly string[];
-  dispatchWindow?: QuestDispatchWindow;
+  dispatchWindow?: QuestDispatchPresentationWindow;
 }): WolfHillRoutePresentation | null {
   if (args.launchId !== WOLF_HILL_APPROACH_LAUNCH_ID) return null;
   const hasCadeFodder = args.knowledgeIds?.includes(CADE_FODDER_KNOWLEDGE_ID) === true;
