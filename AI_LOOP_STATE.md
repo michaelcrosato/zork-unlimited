@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 660 -->
+<!-- historical_cycle_count: 661 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_first_cast_failure_forecast
+
+- Evidence choice: exact-clean Terra seed 72748 understood the clean hill-road projection but only reconstructed cumulative cattle pressure after its first lure cast failed.
+- Surface: both pre-commitment hill cards now forecast the actual fouled-first-cast alarm total (ridge/stockway 3/2 on time, 4/3 delayed), spent feed, no retry, and a remaining recovery.
+- Counterfactual: compiled worst-cast traces prove both roads and every Cade-fodder/Aid-Only/delay presentation; RNG, alarms, actions, costs, recoveries, routes, and endings are unchanged, and the longest card is 354/360 characters.
+- Pure evidence: exact-clean Terra seed 72750 chose the exposed DC 10 road, suffered the forecasted failure, braced the rail, saved every wolf and cattle, completed The Wolf-Winter at decision 30 and Gallowmere at 54, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the player still found compact payloads dense and lost Jamie's narrow Relief Protocol trigger after choosing a different recovery; triage that field reminder against payload focus rather than adding route copy.
+- Economy: a premature dirty-tree canary was compiler-rejected; the exact-clean replacement used 5.93M raw / 177k uncached input and 12k output tokens, so commit the frozen candidate before future canaries.
+- Guard: independent re-review is clean; pre/final crawls `20260727T100808Z` / `20260727T103942Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - compact_read_only_option_review
 
@@ -150,13 +160,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: dirty-candidate Spark completes The Wolf-Winter by full combat in 20 decisions, continues, later ends after Gallowmere, rates clarity/enjoyment 4/4, and chooses replay-yes; it does not organically sample Greenway custody.
 - Self-critique/follow-through: Gallowmere exit telegraphing is a separate S2 report; the next starting-slice depth target is the unused persistent wound lifecycle, not more Emery branching.
 - Guard: independent review is clean; post-crawl `20260726T063644Z` is zero-finding and full health passes 425 files/3,482 tests plus both typechecks and all packs.
-
-### Cycle result - comparison_first_albany_departure
-
-- Evidence choice: three exact-build players repeated one Wolf-Winter route and named dense Albany setup; fresh pure Spark seed 72634 judges the comparison-first candidate.
-- Surface: all six opening decisions now expose commitment, trigger, immediate cost, and tradeoff while compact active choices stage exact terms behind read-only one-option inspection.
-- Measured effect: the six always-visible payloads fall 4,191→3,558 `o200k_base` tokens (-15.1%); the observed one-inspection path falls 4,992→4,308 (-13.7%).
-- Counterfactual: all legal choices and mechanics remain; direct/inspected choices hash identically, sibling terms do not leak, and the exact presentation-only predecessor restores without state changes.
-- Pure evidence: exact-clean Spark seed 72634 completes The Wolf-Winter bloodlessly in 22 decisions, ends voluntarily, rates clarity/enjoyment 4/4, remains unstuck, reports no bugs, and chooses replay-yes.
-- Self-critique/follow-through: the player skipped optional Station setup and noted mild anchor-area relocation friction; selected-detail responses still repeat comparison context and are the next bounded efficiency candidate.
-- Guard: independent review is clean; post-crawl `20260726T024526Z` is zero-finding and full health passes 424 files/3,450 tests plus both typechecks and all packs.
