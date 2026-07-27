@@ -83,6 +83,9 @@ describe("journey contract v3 goals", () => {
     const state = createInitialJourneyContractSnapshot();
     const view = journeyPresentation(state);
 
+    expect(INITIAL_JOURNEY_GOAL_GUIDANCE).toBe(
+      "Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves.",
+    );
     expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
     expect(view).toMatchObject({
       contractVersion: JOURNEY_CONTRACT_VERSION,

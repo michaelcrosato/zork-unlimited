@@ -13,7 +13,7 @@ export const INITIAL_JOURNEY_GOAL = Object.freeze({
 } as const);
 
 export const INITIAL_JOURNEY_GOAL_GUIDANCE =
-  "Complete one Albany quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves." as const;
+  "Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves." as const;
 
 export type JourneyChoice = "continue" | "end";
 export type JourneyChoiceReason = "checkpoint" | "goal_completed" | "character_died";

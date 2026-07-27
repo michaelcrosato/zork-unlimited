@@ -415,6 +415,21 @@ describe("OverworldSession", () => {
     ]);
   });
 
+  it("restores an initial snapshot without changing its goal proof while presenting current guidance", () => {
+    const source = new OverworldSession(world);
+    const snapshot = structuredClone(source.snapshot());
+    const restored = OverworldSession.restore(world, snapshot);
+
+    expect(restored.snapshot()).toEqual(snapshot);
+    expect(restored.journey()).toMatchObject({
+      goal: {
+        text: "Find one local lead in Albany and see it through.",
+        status: "active",
+      },
+      goalGuidance: INITIAL_JOURNEY_GOAL_GUIDANCE,
+    });
+  });
+
   it("renders state-neutral return-opportunity guidance at the first-goal pause and dawn story", async () => {
     const session = new OverworldSession(world);
     completeAlbanyFirstGoal(session);

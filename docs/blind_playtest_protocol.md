@@ -42,10 +42,10 @@ identically in UI and MCP:
 
 > Find one local lead in Albany and see it through.
 
-The proof-hashed goal text stays exactly that short. Its shared UI/MCP
-`goalGuidance` explains the completion rule separately: completing one Albany
-quest satisfies the goal; jobs, events, and sites may reveal leads, but do not
-finish it themselves.
+The proof-hashed goal text stays exactly that short. Its shared terminal/UI/MCP
+`goalGuidance` explains the completion rule separately: completing Albany's
+Wolf-Winter quest satisfies the goal; jobs, events, and sites may reveal leads,
+but do not finish the goal themselves.
 
 The baseline is 40 meaningful accepted gameplay decisions. Fixed checkpoint
 thresholds remain 40, 80, 120, 160, and every additional 40. The game offers
