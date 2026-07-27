@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
@@ -7,6 +7,8 @@ import {
   compactJourneyStoryChoicePrompt,
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  type JourneyStoryChoiceDetail,
+  type JourneyStoryChoiceSummaryComparison,
 } from "../../src/mcp/journey_projection.js";
 import {
   INITIAL_JOURNEY_GOAL,
@@ -938,24 +940,44 @@ describe("MCP journey surface", () => {
       session_id: started.session_id,
       story_choice_id: registration.id,
     });
-    expect(comparison.snapshot_hash).toBe(before.snapshot_hash);
-    expect(comparison.story).toEqual(compactJourneyStoryChoiceComparison(canonical));
+    expect(comparison).toEqual({
+      ok: true,
+      session_id: started.session_id,
+      snapshot_hash: before.snapshot_hash,
+      unchanged: true,
+      story: compactJourneyStoryChoiceComparison(canonical),
+    });
     const detail = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: registration.id,
       option_id: selected.id,
     });
-    expect(detail.snapshot_hash).toBe(before.snapshot_hash);
-    expect(detail.story).toEqual(compactJourneyStoryChoiceComparison(canonical, selected.id));
-    expect(
-      detail.journey.storyChoice?.options.every(
-        (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
-      ),
-    ).toBe(true);
-    const detailJson = JSON.stringify({
-      journey: detail.journey,
-      story: detail.story,
+    expect(detail).toEqual({
+      ok: true,
+      session_id: started.session_id,
+      snapshot_hash: before.snapshot_hash,
+      unchanged: true,
+      story: compactJourneyStoryChoiceComparison(canonical, selected.id),
     });
+    expect(detail.story).not.toHaveProperty("message");
+    expect(detail.story).not.toHaveProperty("options");
+    expect(detail.story.inspectedOption).not.toHaveProperty("summary");
+    const optionalArgs: {
+      session_id: string;
+      story_choice_id: string;
+      option_id?: string;
+    } = {
+      session_id: started.session_id,
+      story_choice_id: registration.id,
+      option_id: selected.id,
+    };
+    const optionalDetail = a.inspect_overworld_session_story(optionalArgs);
+    expectTypeOf(optionalDetail.story).toEqualTypeOf<
+      JourneyStoryChoiceSummaryComparison | JourneyStoryChoiceDetail
+    >();
+    expect(optionalDetail.story).not.toHaveProperty("message");
+    expect(optionalDetail.story).not.toHaveProperty("options");
+    const detailJson = JSON.stringify(detail.story);
     for (const sibling of canonical.options.filter((option) => option.id !== selected.id)) {
       expect(detailJson).not.toContain(sibling.consequence);
     }
@@ -1068,8 +1090,10 @@ describe("MCP journey surface", () => {
     const afterOne = a.export_overworld_session({ session_id: oneInspectionId });
     expect(afterOne).toEqual(beforeOne);
     expect(comparisonResponse).toMatchObject({
+      ok: true,
+      session_id: oneInspectionId,
       snapshot_hash: beforeOne.snapshot_hash,
-      journey: beforeOne.journey,
+      unchanged: true,
       story: {
         comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
         id: preparation.id,
@@ -1077,6 +1101,9 @@ describe("MCP journey surface", () => {
         inspectedOption: null,
       },
     });
+    expect(Object.keys(comparisonResponse).sort()).toEqual(
+      ["ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
+    );
     expect(comparisonResponse.story.options).toHaveLength(preparation.profiles.length);
     for (const option of comparisonResponse.story.options) {
       expect(option).not.toHaveProperty("consequence");
@@ -1105,6 +1132,15 @@ describe("MCP journey surface", () => {
       id: optionId,
       consequence: expect.stringContaining(preparation.profiles[0]!.preview),
     });
+    expect(Object.keys(firstDetail).sort()).toEqual(
+      ["ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
+    );
+    expect(Object.keys(firstDetail.story).sort()).toEqual(
+      ["comparisonVersion", "id", "inspectedOption", "kind"].sort(),
+    );
+    expect(Object.keys(firstDetail.story.inspectedOption).sort()).toEqual(
+      ["consequence", "id", "label"].sort(),
+    );
     expect(secondDetail.story.inspectedOption).toMatchObject({
       id: otherOptionId,
       consequence: expect.stringContaining(preparation.profiles[1]!.preview),
@@ -1156,8 +1192,10 @@ describe("MCP journey surface", () => {
     });
     expect(a.export_overworld_session({ session_id: oneInspectionId })).toEqual(beforeAllocation);
     expect(allocationComparison).toMatchObject({
+      ok: true,
+      session_id: oneInspectionId,
       snapshot_hash: beforeAllocation.snapshot_hash,
-      journey: beforeAllocation.journey,
+      unchanged: true,
       story: {
         comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
         id: allocation.id,

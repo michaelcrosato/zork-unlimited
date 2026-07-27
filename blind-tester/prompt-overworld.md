@@ -109,8 +109,10 @@ WHEN TO CONTINUE OR END
   consequence line stages rather than repeats the complete terms. You may call
   `mcp__adventureforge__inspect_overworld_session_story` with the visible
   `journey.storyChoice.id` for the comparison, then call it again with one exact
-  option `id` as `option_id` to read only that option's complete terms. Reading
-  either view does not change the game, and you need not expand every option.
+  option `id` as `option_id` to read only that option's new detail. Reading
+  either view does not change the game; its compact unchanged receipt
+  deliberately does not repeat the world context or prior comparison. Retain
+  the current state and comparison already shown, and do not expand every option.
   Then call
   `mcp__adventureforge__choose_overworld_session_story` with the same overworld
   `session_id` and that option's visible `id`. This is a normal gameplay
@@ -125,10 +127,11 @@ WHEN TO CONTINUE OR END
   You may leave without choosing one. To consider one, first call
   `mcp__adventureforge__inspect_overworld_session_story` with its visible
   `story_choice_id`; the versioned comparison contains short option summaries
-  and inspection does not change the game. To read one option's complete terms,
+  and inspection does not change the game. To read one option's new detail,
   call the same inspection tool again with that exact option `id` as
-  `option_id`. It reveals only that option and still does not change the game.
-  You need not expand every option. If you choose an option, call
+  `option_id`. It reveals only that option and an unchanged receipt, without
+  repeating the world context or comparison. Retain the already shown state;
+  you need not expand every option. If you choose an option, call
   `mcp__adventureforge__choose_overworld_session_story` with both that
   `story_choice_id` and the option's visible `id` as `choice`.
 - The context may separately list read-only `departure_contact_leads`. These

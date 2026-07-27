@@ -81,6 +81,8 @@ import {
   suppressRpgGameplayActions,
   type EmbeddedJourneyField,
   type JourneyStoryChoiceComparison,
+  type JourneyStoryChoiceDetail,
+  type JourneyStoryChoiceSummaryComparison,
 } from "./journey_projection.js";
 import type {
   JourneyDecisionClassification,
@@ -235,6 +237,32 @@ type ResumedEmbeddedRpgField<Args extends RpgViewOptions> = {
 type OverworldJourneyChoiceResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
   OverworldSessionResponse<"result", JourneyChoiceResult, Args> &
     Partial<ResumedEmbeddedRpgField<Args>>;
+
+type OverworldCompactJourneyStoryInspection<Story extends JourneyStoryChoiceComparison> = Readonly<{
+  ok: true;
+  session_id: string;
+  snapshot_hash: string;
+  unchanged: true;
+  story: Story;
+}>;
+
+type JourneyStoryInspectionForArgs<Args> = Args extends { option_id: string }
+  ? JourneyStoryChoiceDetail
+  : "option_id" extends keyof Args
+    ? JourneyStoryChoiceSummaryComparison | JourneyStoryChoiceDetail
+    : JourneyStoryChoiceSummaryComparison;
+
+type OverworldJourneyStoryInspectionResponse<Args extends OverworldResponseOptions> =
+  DefaultCompactOverworldResponse<Args> extends { compact_result: false }
+    ? OverworldSessionResponse<
+        "story",
+        JourneyStoryChoicePrompt,
+        DefaultCompactOverworldResponse<Args>,
+        JourneyStoryChoiceComparison
+      >
+    :
+        | OverworldCompactJourneyStoryInspection<JourneyStoryInspectionForArgs<Args>>
+        | OverworldGuardedRejection<DefaultCompactOverworldResponse<Args>>;
 
 type JourneyChoice = Parameters<OverworldSession["chooseJourney"]>[0];
 type JourneyChoiceResult = ReturnType<OverworldSession["chooseJourney"]>;
@@ -780,28 +808,35 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         story_choice_id: string;
         option_id?: string;
       } & OverworldResponseOptions,
-    >(
-      args: Args,
-    ): OverworldSessionResponse<
-      "story",
-      JourneyStoryChoicePrompt,
-      DefaultCompactOverworldResponse<Args>,
-      JourneyStoryChoiceComparison
-    > {
+    >(args: Args): OverworldJourneyStoryInspectionResponse<Args> {
       const responseOptions = defaultCompactOverworldResponse(args);
-      return overworldSessions.run(
-        responseOptions,
-        args.session_id,
-        "story",
-        (session) => {
-          const story = session.inspectJourneyStory(args.story_choice_id);
+      const inspectStory = (session: OverworldSession): JourneyStoryChoicePrompt => {
+        return session.inspectJourneyStory(args.story_choice_id);
+      };
+      if (args.compact_result === false) {
+        return overworldSessions.run(responseOptions, args.session_id, "story", (session) => {
+          const story = inspectStory(session);
           if (args.option_id !== undefined) {
             journeyStoryChoiceOptionById(story, args.option_id);
           }
           return story;
-        },
-        (story) => compactJourneyStoryChoiceComparison(story, args.option_id),
-      );
+        }) as OverworldJourneyStoryInspectionResponse<Args>;
+      }
+      const guarded = overworldSessions.guardedSession(responseOptions, args.session_id);
+      if (isOverworldMcpRejectedSessionPayload(guarded)) {
+        return guarded as OverworldJourneyStoryInspectionResponse<Args>;
+      }
+      const story = inspectStory(guarded.session);
+      return {
+        ok: true,
+        session_id: args.session_id,
+        snapshot_hash: overworldSessions.snapshotHash(guarded.session),
+        unchanged: true,
+        story:
+          args.option_id === undefined
+            ? compactJourneyStoryChoiceComparison(story)
+            : compactJourneyStoryChoiceComparison(story, args.option_id),
+      } as OverworldJourneyStoryInspectionResponse<Args>;
     },
 
     complete_overworld_session_quest<

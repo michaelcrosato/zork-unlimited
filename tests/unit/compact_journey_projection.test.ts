@@ -91,9 +91,11 @@ describe("compact journey projection", () => {
     expect(compact.options[1]).not.toBe(prompt.options[1]);
     expect(compact.options[1]!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
     expect(inspected).toEqual({
-      ...option,
+      id: option.id,
+      label: option.label,
       consequence: "Sponsor concession remains. The Works will remember it.",
     });
+    expect(inspected).not.toHaveProperty("summary");
     expect(JSON.stringify(prompt)).toBe(before);
     expect(prompt.options[0]).toBe(option);
   });
@@ -225,7 +227,11 @@ describe("compact journey projection", () => {
     });
     const prompt = twoOptionPrompt(option);
 
-    expect(compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption).toEqual(option);
+    expect(compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption).toEqual({
+      id: option.id,
+      label: option.label,
+      consequence: option.consequence,
+    });
   });
 
   it("keeps a cost sentence visible in the structured lead without repeating it in detail", () => {
@@ -246,7 +252,8 @@ describe("compact journey projection", () => {
     const prompt = twoOptionPrompt(option);
 
     expect(compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption).toEqual({
-      ...option,
+      id: option.id,
+      label: option.label,
       consequence: "Remaining consequence.",
     });
   });

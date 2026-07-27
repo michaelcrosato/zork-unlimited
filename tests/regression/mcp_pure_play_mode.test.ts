@@ -93,6 +93,26 @@ function textResult(result: Awaited<ReturnType<Client["callTool"]>>): string {
   return first.text ?? "";
 }
 
+function expectPureStoryInspectionEnvelope(
+  payload: Record<string, unknown>,
+  sessionId: string,
+): void {
+  expect(payload).toMatchObject({
+    ok: true,
+    session_id: sessionId,
+    overworld_session_id: sessionId,
+    snapshot_hash: expect.any(String),
+    unchanged: true,
+    story: expect.any(Object),
+  });
+  expect(Object.keys(payload).sort()).toEqual(
+    ["ok", "overworld_session_id", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
+  );
+  expect(payload).not.toHaveProperty("journey");
+  expect(payload).not.toHaveProperty("context");
+  expect(payload).not.toHaveProperty("observation");
+}
+
 function expectAliasedToolSchema(
   listed: Awaited<ReturnType<Client["listTools"]>>,
   name: string,
@@ -1909,6 +1929,26 @@ describe("MCP pure play mode", () => {
           (option) => option.id === "albany:ledger_advocate",
         );
         if (!ledgerAdvocate) throw new Error("expected visible Ledger Advocate profile");
+        for (const optionId of [undefined, ledgerAdvocate.id] as const) {
+          const staleInspection = textPayload(
+            await client.callTool({
+              name: "inspect_overworld_session_story",
+              arguments: {
+                session_id: sessionId,
+                story_choice_id: "albany:relief_registration",
+                ...(optionId === undefined ? {} : { option_id: optionId }),
+                expected_snapshot_hash: "0".repeat(24),
+              },
+            }),
+          );
+          expect(staleInspection).toMatchObject({
+            ok: false,
+            snapshot_hash: registration.snapshot_hash,
+            rejection_reason: expect.stringMatching(/snapshot hash mismatch/i),
+            overworld_session_id: sessionId,
+          });
+          expect(staleInspection).not.toHaveProperty("story");
+        }
         const registrationInspection = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -1921,13 +1961,21 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        expectPureStoryInspectionEnvelope(registrationInspection, sessionId);
         expect(registrationInspection.snapshot_hash).toBe(registration.snapshot_hash);
-        expect(
-          (registrationInspection.story as { comparisonVersion?: number }).comparisonVersion,
-        ).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
-        expect(
-          (registrationInspection.story as { inspectedOption?: { id?: string } }).inspectedOption,
-        ).toMatchObject({ id: ledgerAdvocate.id });
+        const registrationDetail = registrationInspection.story as Record<string, unknown> & {
+          inspectedOption?: Record<string, unknown>;
+        };
+        expect(Object.keys(registrationDetail).sort()).toEqual(
+          ["comparisonVersion", "id", "inspectedOption", "kind"].sort(),
+        );
+        expect(registrationDetail.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
+        expect(registrationDetail).not.toHaveProperty("message");
+        expect(registrationDetail).not.toHaveProperty("options");
+        expect(registrationDetail.inspectedOption).toMatchObject({ id: ledgerAdvocate.id });
+        expect(Object.keys(registrationDetail.inspectedOption ?? {}).sort()).toEqual(
+          ["consequence", "id", "label"].sort(),
+        );
         const wolfBeforeSource = areaView(registration).quests.find(
           (quest) => quest.id === "wolf_winter",
         );
@@ -2064,12 +2112,17 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        expectPureStoryInspectionEnvelope(inspected, sessionId);
         const preparationChoice = inspected.story as {
           comparisonVersion?: number;
           kind?: string;
+          message?: string;
           options?: { id: string; consequence?: string }[];
           inspectedOption?: { id: string; consequence: string } | null;
         };
+        expect(Object.keys(preparationChoice).sort()).toEqual(
+          ["comparisonVersion", "id", "inspectedOption", "kind", "message", "options"].sort(),
+        );
         expect(preparationChoice?.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
         expect(preparationChoice?.kind).toBe("preparation");
         expect(preparationChoice?.inspectedOption).toBeNull();
@@ -2091,18 +2144,23 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        expectPureStoryInspectionEnvelope(detailed, sessionId);
         expect(detailed.snapshot_hash).toBe(inspected.snapshot_hash);
-        const detailedPreparation = detailed.story as {
-          options?: { id: string; consequence?: string }[];
-          inspectedOption?: { id: string; consequence: string } | null;
+        const detailedPreparation = detailed.story as Record<string, unknown> & {
+          inspectedOption?: Record<string, unknown> & { id?: string; consequence?: string };
         };
+        expect(Object.keys(detailedPreparation).sort()).toEqual(
+          ["comparisonVersion", "id", "inspectedOption", "kind"].sort(),
+        );
+        expect(detailedPreparation).not.toHaveProperty("message");
+        expect(detailedPreparation).not.toHaveProperty("options");
         expect(detailedPreparation.inspectedOption).toMatchObject({
           id: worksFortification.id,
           consequence: expect.stringContaining("Full field terms:"),
         });
-        expect(
-          detailedPreparation.options?.every((option) => option.consequence === undefined),
-        ).toBe(true);
+        expect(Object.keys(detailedPreparation.inspectedOption ?? {}).sort()).toEqual(
+          ["consequence", "id", "label"].sort(),
+        );
         const prepared = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   compactJourneyStoryChoiceComparison,
-  type JourneyStoryChoiceComparison,
+  type JourneyStoryChoiceSummaryComparison,
 } from "../../src/mcp/journey_projection.js";
 import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -77,7 +77,7 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
   }
 }
 
-function expectCompactSummaryOptions(storyChoice: JourneyStoryChoiceComparison): void {
+function expectCompactSummaryOptions(storyChoice: JourneyStoryChoiceSummaryComparison): void {
   for (const option of storyChoice.options) {
     expect(option.summary).toMatchObject({
       commitment: expect.any(String),
@@ -110,7 +110,9 @@ function expectProgressivePreparationOptions(storyChoice: JourneyStoryChoiceProm
   }
 }
 
-function expectProgressivePreparationComparison(storyChoice: JourneyStoryChoiceComparison): void {
+function expectProgressivePreparationComparison(
+  storyChoice: JourneyStoryChoiceSummaryComparison,
+): void {
   for (const profile of PREPARATION.profiles) {
     const triggerCategory = profile.trigger_category;
     if (!triggerCategory) throw new Error(`Preparation ${profile.id} needs a trigger category.`);
@@ -146,7 +148,7 @@ function expectProgressiveReliefAllocationOptions(storyChoice: JourneyStoryChoic
 }
 
 function expectProgressiveReliefAllocationComparison(
-  storyChoice: JourneyStoryChoiceComparison,
+  storyChoice: JourneyStoryChoiceSummaryComparison,
 ): void {
   for (const allocationOption of RELIEF_ALLOCATION.options) {
     const triggerCategory = allocationOption.trigger_category;

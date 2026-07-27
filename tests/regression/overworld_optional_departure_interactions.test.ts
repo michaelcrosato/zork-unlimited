@@ -102,7 +102,12 @@ describe("optional Station departure interactions", () => {
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain("versioned short comparison");
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain("option_id");
-    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain("only its complete terms");
+    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
+      "only that option's new detail",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
+      "does not repeat world context",
+    );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
       "choose_overworld_session_story(story_choice_id, choice)",
     );

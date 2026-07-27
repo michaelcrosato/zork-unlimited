@@ -88,12 +88,12 @@ export function renderTerminalStoryChoiceDetail(
     throw new Error(`Story choice "${prompt.id}" could not inspect option "${option.id}".`);
   }
   const lines = [`\n! Story choice detail — ${projected.label}`];
-  if (projected.summary) {
-    const labels = summaryLabels(projected.summary);
-    lines.push(`  ${labels.commitment}: ${projected.summary.commitment}`);
-    lines.push(`  ${labels.trigger}: ${projected.summary.fieldTrigger}`);
-    lines.push(`  Immediate cost: ${projected.summary.immediateCost}`);
-    lines.push(`  Tradeoff: ${projected.summary.tradeoff}`);
+  if (option.summary) {
+    const labels = summaryLabels(option.summary);
+    lines.push(`  ${labels.commitment}: ${option.summary.commitment}`);
+    lines.push(`  ${labels.trigger}: ${option.summary.fieldTrigger}`);
+    lines.push(`  Immediate cost: ${option.summary.immediateCost}`);
+    lines.push(`  Tradeoff: ${option.summary.tradeoff}`);
   }
   lines.push(`  Consequence: ${projected.consequence}`);
   lines.push(`  Choose: \`choose ${projected.id}\``);
