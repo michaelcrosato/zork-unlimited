@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 656 -->
+<!-- historical_cycle_count: 657 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - quest_launch_checkpoint_handoff
+
+- Evidence choice: verified pure seed 72744 repeated the long-standing Gallowmere defect where a decision-40 quest launch created the opening scene and immediately suppressed its actions behind the checkpoint choice.
+- Root cause/surface: `quest_start:*` still counts and retains its normal proof/hash, but the launch handoff is no longer itself checkpoint-safe; the first genuinely safe embedded-quest boundary surfaces any overdue prompt.
+- Counterfactual: decision 40 now returns the live opening menu, the first safe action materializes checkpoint 40 at decision 41, unsafe combat/dialogue remains uninterrupted, and non-launch overworld boundaries keep immediate behavior.
+- Compatibility: active overdue launch snapshots and older already-pending launch snapshots both restore without rewriting their proof, choice, or next checkpoint.
+- Pure evidence: exact-clean Terra seed 72745 completed The Wolf-Winter bloodlessly in 31 decisions, ended voluntarily, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes; it did not sample Gallowmere, so deterministic MCP replay carries the boundary claim.
+- Self-critique/follow-through: the canary repeated dense first-pass Byre-Yard tactical vocabulary; progressive disclosure there is the next evidence-backed presentation candidate, not another checkpoint change.
+- Guard: independent review is clean; post-crawl `20260727T023807Z` is zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - albany_departure_plan_recap
 
@@ -148,13 +158,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: seed 72631 is retained as a verifier-valid canonical journey rather than a coverage target; targeted proofs establish the Campus behavior.
 - Self-critique/follow-through: Campus is now event 5/6, but organic return uptake remains unproven and Station is still the last generic Albany event.
 - Guard: independent review is clean; pre/post crawls `20260725T194113Z` / `20260725T203808Z` are zero-finding.
-
-### Cycle result - drover_route_fail_forward_truth
-
-- Evidence choice: pure seeds 72568/72621 found Emery's untrained recovery trap and hidden dependency; Terra 72630 then chose the Drover route organically in The Wolf-Winter.
-- Surface: a failed route now spends itself without extra cattle alarm, while expanded terms derive the character's exact modifier and d20 odds through generic profile data bound to the real quest import and check.
-- Counterfactual: success still lowers alarm; across 24 route/oath/ally contexts failure matches declining except for its spent audit state, and rail or fight recovery remains legal.
-- Compatibility: a generic exact-copy registry migrates selected historical preparation journals, rejects tampering and unknown hashes, and composes with completed-Wolf registration-promise closure.
-- Pure evidence: exact mechanical candidate Terra 72630 completed The Wolf-Winter bloodlessly and The Gallowmere, ended voluntarily at 53 decisions, rated clarity/enjoyment 4/4, remained unstuck, and chose replay-yes.
-- Self-critique/follow-through: this closes one real rational-choice/truth defect, not Albany's dense setup or Depth #11; authored Campus and Station events remain next.
-- Guard: independent review is clean, 73 focused checks pass, and pre/post crawls `20260725T182544Z` / `20260725T191805Z` are zero-finding.

@@ -309,6 +309,102 @@ describe("journey checkpoints wait for embedded RPG safe boundaries", () => {
     );
   });
 
+  it("does not start Gallowmere and immediately suppress its opening actions at decision 40", () => {
+    const parent = registeredQueensburyMarketSession();
+    while (parent.journey().acceptedDecisions < 39) {
+      parent.recordQuestDecision(
+        `test:quest-launch-setup:${String(parent.journey().acceptedDecisions + 1)}`,
+        { countsTowardJourney: true, reason: "situation_changed" },
+        false,
+      );
+    }
+
+    const api = createToolApi({ root: process.cwd(), embeddedQuestSeed: 7 });
+    const restored = api.restore_overworld_session({
+      snapshot: parent.snapshot(),
+      compact_context: true,
+    });
+    const started = api.start_overworld_session_quest({
+      session_id: restored.session_id,
+      quest_id: "gallowmere",
+      seed: 7,
+      compact_context: true,
+      compact_actions: true,
+      compact_observation: true,
+      include_actions: true,
+    });
+
+    expect(started.journey).toMatchObject({
+      status: "active",
+      acceptedDecisions: 40,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+    });
+    expect(started.rpg_session.context.actions).toContain("go_west");
+
+    const firstQuestAction = api.step_action({
+      session_id: started.rpg_session_id,
+      action_id: "go_west",
+      expected_state_hash: started.rpg_session.state_hash,
+      compact_actions: true,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(firstQuestAction).toMatchObject({
+      ok: true,
+      journey: {
+        status: "awaiting_choice",
+        acceptedDecisions: 41,
+        pendingChoice: { atDecision: 41, checkpoint: 40 },
+      },
+    });
+    if (firstQuestAction.ok !== true)
+      throw new Error("Expected the first quest action to succeed.");
+    expect(firstQuestAction.context?.actions).toBeUndefined();
+  });
+
+  it("restores both the deferred launch boundary and an older immediate launch checkpoint", () => {
+    const parent = registeredQueensburyMarketSession();
+    while (parent.journey().acceptedDecisions < 39) {
+      parent.recordQuestDecision(
+        `test:quest-launch-restore:${String(parent.journey().acceptedDecisions + 1)}`,
+        { countsTowardJourney: true, reason: "situation_changed" },
+        false,
+      );
+    }
+    parent.startQuest("gallowmere");
+    expect(parent.snapshot().journey.decisionProof.last).toEqual({
+      number: 40,
+      surface: "overworld",
+      actionId: "quest_start:gallowmere",
+      reason: "situation_changed",
+    });
+
+    const deferred = OverworldSession.restore(world, parent.snapshot());
+    expect(deferred.journey()).toMatchObject({
+      status: "active",
+      acceptedDecisions: 40,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+    });
+
+    const immediateSnapshot = structuredClone(parent.snapshot());
+    immediateSnapshot.journey.status = "awaiting_choice";
+    immediateSnapshot.journey.pendingChoice = {
+      atDecision: 40,
+      reasons: ["checkpoint"],
+      checkpoint: 40,
+      goalVersion: null,
+      goalId: null,
+    };
+    const immediate = OverworldSession.restore(world, immediateSnapshot);
+    expect(immediate.journey()).toMatchObject({
+      status: "awaiting_choice",
+      acceptedDecisions: 40,
+      pendingChoice: { atDecision: 40, checkpoint: 40 },
+    });
+  });
+
   it("replays the verified seed-4664 decision-40 Gallowmere incident through legal actions", () => {
     // Exact player path from verified pure Terra run
     // 20260723T120939Z_overworld_seed4664 on clean build 0890ee96. This starts
