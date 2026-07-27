@@ -669,6 +669,11 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "use_split_rail_guard_on_downwind_feed_line",
     "go_south",
   ]);
+  run("relief_protocol_prepared", [
+    ...startFouled,
+    ["wedge_paling_rail", "best"],
+    "turn_paling_rail",
+  ]);
   run(
     ["relief_cade_fodder_allocated", "approach_exposed_ridge"],
     [
@@ -793,6 +798,13 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
       "paling_gap",
       "unfouled committed lure",
       "Cast Cade's feed first",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "Relief Protocol sealed after braced recovery",
+      "braced recovery leaves its docket sealed",
     ),
     semanticVariantKeyByText(
       index,
