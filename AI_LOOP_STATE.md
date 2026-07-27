@@ -158,3 +158,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact mechanical candidate Terra 72630 completed The Wolf-Winter bloodlessly and The Gallowmere, ended voluntarily at 53 decisions, rated clarity/enjoyment 4/4, remained unstuck, and chose replay-yes.
 - Self-critique/follow-through: this closes one real rational-choice/truth defect, not Albany's dense setup or Depth #11; authored Campus and Station events remain next.
 - Guard: independent review is clean, 73 focused checks pass, and pre/post crawls `20260725T182544Z` / `20260725T191805Z` are zero-finding.
+## AFK Cycle 2026-07-27T02-29-33-198Z — ULTRAPLAN (saturation re-aim)
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Mode: ultraplan re-aim; plan docs/CURRENT_PLAN.md.
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

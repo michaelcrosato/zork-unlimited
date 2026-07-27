@@ -2057,6 +2057,7 @@ export class OverworldSession {
     actionId: string,
     kind: OverworldJourneyActionKind,
     stateChanged: boolean,
+    checkpointSafeBoundary = true,
   ): JourneyDecisionClassification {
     const classification = classifyOverworldJourneyDecision(kind, stateChanged);
     const before = this.journeyState;
@@ -2064,7 +2065,7 @@ export class OverworldSession {
       before,
       { surface: "overworld", actionId },
       classification,
-      true,
+      checkpointSafeBoundary,
     );
     this.appendOpeningLeadSourceDecisionTrail(before, after);
     this.journeyState = after;
@@ -2549,6 +2550,9 @@ export class OverworldSession {
       canonicalPlan.journeyActionId,
       "progress",
       applied.stateChanged,
+      // Launch hands control to the embedded opening scene. Let the first
+      // genuinely safe in-quest boundary surface an overdue checkpoint.
+      false,
     );
     if (canonicalPlan.approachId !== null) {
       applied.result.entry.questStartProof = {
