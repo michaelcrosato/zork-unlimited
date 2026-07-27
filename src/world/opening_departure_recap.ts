@@ -5,10 +5,18 @@ import { proveOpeningPreparationJournal } from "./opening_preparation_journal.js
 import { proveOpeningRegistrationJournal } from "./opening_registration_journal.js";
 import { proveOpeningReliefAllocationJournal } from "./opening_relief_allocation_journal.js";
 import { proveOpeningReliefOathJournal } from "./opening_relief_oath_journal.js";
+import { presentOpeningAlly } from "./opening_ally_presentation.js";
+import { presentOpeningLeadSource } from "./opening_lead_source_presentation.js";
+import { presentOpeningPreparation } from "./opening_preparation_presentation.js";
+import { presentOpeningRegistration } from "./opening_registration_presentation.js";
+import { presentOpeningReliefAllocation } from "./opening_relief_allocation_presentation.js";
+import { presentOpeningReliefOath } from "./opening_relief_oath_presentation.js";
+import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
-export const OPENING_DEPARTURE_RECAP_VERSION = 1 as const;
+export const OPENING_DEPARTURE_RECAP_VERSION = 2 as const;
+export const OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT = 120;
 
 export type OpeningDepartureRecapSlot =
   | "role"
@@ -29,6 +37,7 @@ export type OpeningDepartureRecapEntry = Readonly<{
   label: string;
   status: OpeningDepartureRecapStatus;
   title: string | null;
+  activeFieldTerm: string | null;
 }>;
 
 export type OpeningDepartureRecap = Readonly<{
@@ -43,6 +52,7 @@ export type OpeningCompactDepartureRecapEntry = readonly [
   label: string,
   status: OpeningDepartureRecapStatus,
   title: string | null,
+  activeFieldTerm: string | null,
 ];
 
 export type OpeningCompactDepartureRecap = readonly [
@@ -64,8 +74,33 @@ function recapEntry(
   label: string,
   status: OpeningDepartureRecapStatus,
   title: string | null,
+  activeFieldTerm: string | null = null,
 ): OpeningDepartureRecapEntry {
-  return Object.freeze({ slot, label, status, title });
+  return Object.freeze({ slot, label, status, title, activeFieldTerm });
+}
+
+/**
+ * Reuse one concise term from the canonical selected-choice presentation.
+ * Broad field-trigger prose can be several hundred characters, so only authored
+ * trigger categories qualify directly; other choices use their scannable tradeoff.
+ */
+function selectedFieldTerm(prompt: JourneyStoryChoicePrompt, selectedId: string): string {
+  const selected = prompt.options.find((option) => option.id === selectedId);
+  if (!selected?.summary) {
+    throw new Error(`Opening departure recap cannot resolve selected field term "${selectedId}".`);
+  }
+  const value =
+    selected.summary.fieldTriggerScope === "category"
+      ? selected.summary.fieldTrigger
+      : selected.summary.tradeoff;
+  if (value.length > OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT) {
+    throw new Error(
+      `Opening departure recap field term exceeds ${String(
+        OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
+      )} characters.`,
+    );
+  }
+  return value;
 }
 
 /**
@@ -132,13 +167,49 @@ export function deriveOpeningDepartureRecap(
     const preparationResolved = Boolean(preparationProof.profile || preparationProof.legacy);
 
     const entries = Object.freeze([
-      recapEntry("role", "Role", "selected", registrationProof.profile.title),
+      recapEntry(
+        "role",
+        "Role",
+        "selected",
+        registrationProof.profile.title,
+        selectedFieldTerm(
+          presentOpeningRegistration(chain.registration),
+          registrationProof.profile.id,
+        ),
+      ),
       reliefOathProof.option
-        ? recapEntry("duty", "Duty", "selected", reliefOathProof.option.title)
+        ? recapEntry(
+            "duty",
+            "Duty",
+            "selected",
+            reliefOathProof.option.title,
+            selectedFieldTerm(
+              presentOpeningReliefOath(chain.reliefOath, registrationProof.profile.character),
+              reliefOathProof.option.id,
+            ),
+          )
         : recapEntry("duty", "Duty", "legacy", "Legacy duty preserved"),
-      recapEntry("evidence", "Evidence", "selected", leadSourceProof.option.title),
+      recapEntry(
+        "evidence",
+        "Evidence",
+        "selected",
+        leadSourceProof.option.title,
+        selectedFieldTerm(
+          presentOpeningLeadSource(chain.leadSource, reliefOathProof.characterAfterOath),
+          leadSourceProof.option.id,
+        ),
+      ),
       preparationProof.profile
-        ? recapEntry("preparation", "Preparation", "selected", preparationProof.profile.title)
+        ? recapEntry(
+            "preparation",
+            "Preparation",
+            "selected",
+            preparationProof.profile.title,
+            selectedFieldTerm(
+              presentOpeningPreparation(chain.preparation, leadSourceProof.characterAfterSource),
+              preparationProof.profile.id,
+            ),
+          )
         : preparationProof.legacy
           ? recapEntry("preparation", "Preparation", "legacy", "Legacy preparation preserved")
           : recapEntry("preparation", "Preparation", "open_optional", null),
@@ -148,6 +219,13 @@ export function deriveOpeningDepartureRecap(
             "Relief allocation",
             "selected",
             reliefAllocationProof.option.title,
+            selectedFieldTerm(
+              presentOpeningReliefAllocation(
+                chain.reliefAllocation,
+                preparationProof.characterAfterPreparation,
+              ),
+              reliefAllocationProof.option.id,
+            ),
           )
         : reliefAllocationProof.legacy
           ? recapEntry(
@@ -163,7 +241,16 @@ export function deriveOpeningDepartureRecap(
               null,
             ),
       allyProof.option
-        ? recapEntry("field_team", "Field team", "selected", allyProof.option.title)
+        ? recapEntry(
+            "field_team",
+            "Field team",
+            "selected",
+            allyProof.option.title,
+            selectedFieldTerm(
+              presentOpeningAlly(chain.ally, reliefAllocationProof.characterAfterAllocation),
+              allyProof.option.id,
+            ),
+          )
         : allyProof.legacy
           ? recapEntry("field_team", "Field team", "legacy", "Legacy solo team preserved")
           : recapEntry(
@@ -199,6 +286,9 @@ export function compactOpeningDepartureRecap(
     recap.version,
     recap.questId,
     recap.questTitle,
-    recap.entries.map((entry) => [entry.slot, entry.label, entry.status, entry.title] as const),
+    recap.entries.map(
+      (entry) =>
+        [entry.slot, entry.label, entry.status, entry.title, entry.activeFieldTerm] as const,
+    ),
   ];
 }

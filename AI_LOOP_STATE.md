@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 664 -->
+<!-- historical_cycle_count: 665 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -15,12 +15,23 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+### Cycle result - albany_selected_field_term_recall
+
+- Evidence choice: consecutive verified players still described Albany's permanent departure terms as dense, and seed 72750 specifically lost a selected conditional preparation effect before the field.
+- Surface: Station's authenticated six-row recap now adds one concise active field term for each selected role, duty, evidence source, preparation, allocation, and field team; unresolved and legacy rows expose no invented term.
+- Counterfactual: the recap remains selected-only and read-only across full/compact MCP, terminal, and UI; choices, availability, costs, time, character effects, receipts, launch legality, routes, RNG, and endings are unchanged.
+- Pure evidence: exact-clean Terra seed 72754 completed The Wolf-Winter bloodlessly at decision 29, continued through checkpoint 40, completed Gallowmere at 52, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Feedback compile: three new verified pure exits produced zero rejected reports; the Albany cluster supports this recall layer and the queued timing forecast, while Gallowmere lethality and Queensbury identity remain outside the fixed starting slice.
+- Self-critique/follow-through: the canary did not explicitly cite the recap and repeated that cumulative optional time became clear too late, so do not claim the density issue closed; publish the already-proven preparation forecast next.
+- Economy: one canary used 5.59M raw / 172k uncached input and 13.2k output tokens; no exposure-chasing rerun or partial fleet was launched.
+- Guard: independent review is clean; pre/final crawls `20260727T132159Z` / `20260727T161038Z` are zero-finding and health passes 435 files/3,589 tests, both typechecks, and all 12 packs.
+
 ### Cycle result - ci_vitest_two_shard_pilot
 
 - Evidence choice: recent feature PRs spent 65–79 minutes in `verify`, with Vitest alone consuming 64–78; dependency caching or more in-run workers cannot materially shorten that bottleneck safely.
 - Surface: CI now runs unchanged Vitest coverage as `1/2` and `2/2` on separate runners, keeps static/UI/pack checks in a parallel prerequisite job, and preserves one lightweight required check named `verify`.
 - Counterfactual: test files, max workers, timeouts, integrity, typecheck, lint, format, pack validation, UI type/build, crawl, permissions, and branch-protection semantics are unchanged; failed/cancelled prerequisites make final `verify` fail.
-- Probe: `actionlint` and YAML parse are clean; a four-file execution probe partitioned 2/2 files (11/8 tests) across the two real shard forms without `passWithNoTests`.
+- Measured pilot: shards covered 218 files/1,914 tests and 217 files/1,673 passed + 1 skipped in 30m07s/45m13s; final required `verify` passed at 45m21s versus the recent 70m05s average (35.3% faster).
 - Pure evidence: exact-clean Terra seed 72753 completed The Wolf-Winter bloodlessly at decision 33, continued to decision 40, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
 - Self-critique/follow-through: the canary cannot validate CI orchestration; its repeated opening-density finding reinforces the queued selected-term recap, while the Queensbury Rowan duplication stays outside the starting slice.
 - Economy/guard: the canary used 3.02M raw / 140k uncached input and 10.1k output; pre/post crawls `20260727T144857Z` / `20260727T145517Z` are zero-finding and health passes 435 files/3,588 tests, both typechecks, and all 12 packs.
@@ -151,13 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Proof: all 13 endings are reachable from real starts, and shared exhaustive guards accept only a safely crossed player-HP upper bound while still rejecting equality, lower-bound, enemy-HP, unsafe-threshold, and non-guaranteed predicates.
 - Self-critique/follow-through: this is failure-forward, not forgiveness—the player permanently yields the holding, old grey, and cattle; a clean-commit Spark canary remains the landing gate rather than implementation evidence.
 - Guard: 502 historical migration/counterfactual checks preserve every older hash, 84 focused behavior/proof checks are green, and zero-finding post-crawl `20260726T164135Z` covers the consolidated world.
-
-### Cycle result - wolf_wound_care_lifecycle
-
-- Evidence choice: the drive-cattle-first gate already inflicted a campaign wound, but that wound had no later mechanical consumer or recovery decision.
-- Surface: the wound now survives quest foldback and save/restore; one optional Albany Station treatment costs 45 minutes, restores up to 6 health, and changes the later Greenway service frontier from untreated to treated.
-- Reuse/counterfactual: data-driven character conditions and effects govern treatment and exact replay; both deep Greenway routes migrate across all 12 supported pre-care manifests without inventing care or replacing older provenance.
-- Pure evidence: Spark seed 72663 completed The Wolf-Winter in 22 decisions, ended voluntarily, rated clarity/enjoyment 4/4, remained unstuck, reported no bug, and chose replay-yes.
-- Transport economy: seed 72662's malformed nineteenth wrapper was stopped in-flight with exit 43 and no published evidence; the one replacement canary verified normally.
-- Self-critique/follow-through: the valid player chose combat and ended at the first goal, so it did not organically see wound care; deterministic route, replay, MCP/UI, and migration proofs carry that claim.
-- Guard: all P1/P2 review findings are closed, including order-insensitive predicates, staged care, and fail-fast timer cleanup; 70 focused tests, 3,533-test health, and zero-finding crawl `20260726T151842Z` are green.

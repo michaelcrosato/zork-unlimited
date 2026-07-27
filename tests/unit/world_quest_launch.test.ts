@@ -366,7 +366,7 @@ describe("overworld quest launch", () => {
         "test:exposed_ridge",
       ],
     ]);
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(31);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(32);
 
     const blocked = compactOverworldQuestRef({
       id: "test_quest",

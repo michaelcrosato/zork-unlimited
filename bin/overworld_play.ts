@@ -114,6 +114,9 @@ export function render(view: OverworldView): string {
           ? "Open (optional)"
           : "Available after choosing preparation");
       lines.push(`  ${entry.label}: ${value}`);
+      if (entry.activeFieldTerm) {
+        lines.push(`    Active field term: ${entry.activeFieldTerm}`);
+      }
     }
   }
   if (view.departureInteractions.length) {

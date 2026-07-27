@@ -898,6 +898,7 @@ describe("OverworldSession", () => {
     expect(app).toContain("worldView.departureContactLeads.length > 0");
     expect(app).toContain("worldView.departureRecap");
     expect(app).toContain("<DepartureRecap recap={worldView.departureRecap} />");
+    expect(app).toContain("Active field term: {entry.activeFieldTerm}");
     expect(app).toContain("aria-disabled={!ready}");
     expect(app).toContain("onClick={ready ? onTalk : undefined}");
     expect(app).toContain("worldSession.talkToCharacter(lead.action.arguments.character_id)");
