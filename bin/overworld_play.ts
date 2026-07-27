@@ -105,6 +105,17 @@ export function render(view: OverworldView): string {
   if (view.pois.length) lines.push(`Scoutable: ${view.pois.map((p) => p.title).join(" · ")}`);
   if (view.characters.length)
     lines.push(`Contacts: ${view.characters.map((c) => `${c.name} (${c.role})`).join(" · ")}`);
+  if (view.departureRecap) {
+    lines.push(`${view.departureRecap.questTitle} dispatch recap:`);
+    for (const entry of view.departureRecap.entries) {
+      const value =
+        entry.title ??
+        (entry.status === "open_optional"
+          ? "Open (optional)"
+          : "Available after choosing preparation");
+      lines.push(`  ${entry.label}: ${value}`);
+    }
+  }
   if (view.departureInteractions.length) {
     lines.push("Optional departure decisions:");
     for (const interaction of view.departureInteractions) {

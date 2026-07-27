@@ -342,14 +342,17 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       .areaExits.find((candidate) => candidate.destination.id === RELIEF_ALLOCATION.area);
     if (!stationRoute) throw new Error("Expected a UI route to the departure board.");
     ui.moveArea(stationRoute.id);
-    compactJourney = api.move_overworld_session_area({
+    const mcpStation = api.move_overworld_session_area({
       session_id: started.session_id,
       area_route_id: stationRoute.id,
       compact_context: true,
       compact_result: true,
-    }).journey;
+    });
+    compactJourney = mcpStation.journey;
     expect(compactJourney.storyChoice).toEqual(ui.journey().storyChoice);
     expect(compactJourney.storyChoice).toBeNull();
+    expect(mcpStation.context.departure_recap).toEqual(ui.compactView().departure_recap);
+    expect(mcpStation.context.departure_recap?.[3]).toHaveLength(6);
     expect(ui.view().departureInteractions[0]?.id).toBe(PREPARATION.id);
     const uiPreparation = ui.inspectJourneyStory(PREPARATION.id);
     const mcpPreparation = api.inspect_overworld_session_story({
