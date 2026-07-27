@@ -7,6 +7,7 @@ import {
   compactCampaignCharacterView,
   compactJourneyOpportunityLeads,
   compactOverworldEventChoices,
+  compactOverworldBlockedEventLeads,
   compactOverworldEventScenes,
   compactLocalRefTruncation,
   compactOverworldAreaRoutes,
@@ -148,10 +149,19 @@ export function buildOverworldSessionCompactView(
   const events = compactOverworldTitleRefs(state.events);
   const visibleEvents = state.events.slice(0, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
   const visibleEventIds = new Set(visibleEvents.map((event) => event.id));
-  const eventScenes = compactOverworldEventScenes(visibleEvents);
   const eventChoices = compactOverworldEventChoices(
     (state.eventChoices ?? []).filter(([eventId]) => visibleEventIds.has(eventId)),
   );
+  const eventSceneIds = new Set(eventChoices.map(([eventId]) => eventId));
+  const eventScenes = compactOverworldEventScenes(
+    visibleEvents.filter((event) => eventSceneIds.has(event.id)),
+  );
+  const eventLeads = compactOverworldBlockedEventLeads(visibleEvents, {
+    eventChoices,
+    journalEntryIds: new Set(state.journalEntries.map((entry) => entry.id)),
+    poiTitlesById: new Map(state.poi.map((poi) => [poi.id, poi.title])),
+    contactNamesById: new Map(state.contacts.map((contact) => [contact.id, contact.name])),
+  });
   const serviceOffers = compactCampaignServiceOffers(state.serviceOffers);
   const serviceActions = compactOverworldServiceActions(state.serviceActions);
   const departureInteractions = compactOverworldDepartureInteractions(
@@ -230,6 +240,7 @@ export function buildOverworldSessionCompactView(
     poi,
     contacts,
     events,
+    ...(eventLeads.length > 0 ? { event_leads: eventLeads } : {}),
     ...(eventScenes.length > 0 ? { event_scenes: eventScenes } : {}),
     ...(eventChoices.length > 0 ? { event_choices: eventChoices } : {}),
     ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),

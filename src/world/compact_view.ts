@@ -44,7 +44,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 32 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 33 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -73,6 +73,11 @@ export type OverworldCompactEventScene = readonly [
   options: readonly OverworldCompactEventSceneOption[],
 ];
 export type OverworldCompactEventChoice = readonly [eventId: string, optionId: string];
+export type OverworldCompactEventLead = readonly [
+  eventId: string,
+  summary: string,
+  nextPrerequisite: string,
+];
 export type OverworldCompactJobLeadRef = readonly [id: string, title: string, areaId: string];
 export type OverworldCompactJobSceneOption = readonly [
   optionId: string,
@@ -378,6 +383,7 @@ export type OverworldCompactView = {
   poi: OverworldCompactRef[];
   contacts: OverworldCompactRef[];
   events: OverworldCompactRef[];
+  event_leads?: OverworldCompactEventLead[];
   event_scenes?: OverworldCompactEventScene[];
   event_choices?: OverworldCompactEventChoice[];
   local_refs_truncated?: OverworldCompactLocalRefTruncation;
@@ -450,6 +456,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
   poi: "[[poi_id, title], ...] points of interest (scout_overworld_session_poi)",
   contacts: "[[character_id, name], ...] people here (talk_overworld_session_contact)",
   events: "[[event_id, title], ...] local events (investigate/resolve_overworld_session_event)",
+  event_leads:
+    "[[event_id, summary, next_prerequisite], ...] blocked authored local events; events supplies each title. Read the concise summary and take the named prerequisite before detailed scene terms and choices appear",
   event_scenes:
     "[[event_id, scene_id, prompt, required_poi_id, required_contact_id, [required_quest_ids], [forbidden_quest_ids], [[option_id, title, minutes, renown, preview, consequence]]], ...] authored event scenes; complete the named setup and requirements, then investigate before choosing",
   event_choices:
@@ -630,6 +638,52 @@ export function compactOverworldEventScenes(
     ]);
   }
   return scenes;
+}
+
+export type CompactOverworldBlockedEventLeadContext = {
+  eventChoices: readonly OverworldCompactEventChoice[];
+  journalEntryIds: ReadonlySet<string>;
+  poiTitlesById: ReadonlyMap<string, string>;
+  contactNamesById: ReadonlyMap<string, string>;
+};
+
+/**
+ * A blocked authored event needs enough context to tell a player what to do next,
+ * but not its future scene prose, option terms, or consequences. Scene detail is
+ * deliberately released only when the canonical live-choice projection says the
+ * event can be resolved now.
+ */
+export function compactOverworldBlockedEventLeads(
+  values: readonly OverworldLocalEvent[],
+  context: CompactOverworldBlockedEventLeadContext,
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+): OverworldCompactEventLead[] {
+  const liveEventIds = new Set(context.eventChoices.map(([eventId]) => eventId));
+  const leads: OverworldCompactEventLead[] = [];
+  for (const event of values.slice(0, limit)) {
+    const scene = event.authored_scene;
+    if (!scene || liveEventIds.has(event.id)) continue;
+
+    const scoutedPoi = context.journalEntryIds.has(`scout:${scene.required_poi_id}`);
+    const contactPrefix = `talk:${scene.required_contact_id}`;
+    const talkedContact = [...context.journalEntryIds].some(
+      (entryId) => entryId === contactPrefix || entryId.startsWith(`${contactPrefix}@`),
+    );
+    const investigated = context.journalEntryIds.has(`investigate:${event.id}`);
+    const nextPrerequisite = !scoutedPoi
+      ? `Required first: scout ${context.poiTitlesById.get(scene.required_poi_id) ?? scene.required_poi_id}.`
+      : !talkedContact
+        ? `Required first: talk to ${context.contactNamesById.get(scene.required_contact_id) ?? scene.required_contact_id}.`
+        : !investigated
+          ? "Required first: investigate this event."
+          : "No authored choice is currently available in this journey state.";
+    leads.push([
+      event.id,
+      compactText(event.summary, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+      nextPrerequisite,
+    ]);
+  }
+  return leads;
 }
 
 export function compactOverworldEventChoices(
@@ -1212,6 +1266,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
       cloneTupleList(scene[7]),
     ]);
   }
+  if (view.event_leads) clone.event_leads = cloneTupleList(view.event_leads);
   if (view.event_choices) clone.event_choices = cloneTupleList(view.event_choices);
   if (view.service_offers) clone.service_offers = cloneTupleList(view.service_offers);
   if (view.service_actions) {
@@ -1325,10 +1380,19 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const areaRoutesTruncated = compactOverworldMovementTruncated(view.areaExits);
   const visibleEvents = view.events.slice(0, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
   const visibleEventIds = new Set(visibleEvents.map((event) => event.id));
-  const eventScenes = compactOverworldEventScenes(visibleEvents);
   const eventChoices = compactOverworldEventChoices(
     view.eventChoices.filter(([eventId]) => visibleEventIds.has(eventId)),
   );
+  const eventSceneIds = new Set(eventChoices.map(([eventId]) => eventId));
+  const eventScenes = compactOverworldEventScenes(
+    visibleEvents.filter((event) => eventSceneIds.has(event.id)),
+  );
+  const eventLeads = compactOverworldBlockedEventLeads(visibleEvents, {
+    eventChoices,
+    journalEntryIds: new Set(view.journal.map((entry) => entry.id)),
+    poiTitlesById: new Map(view.pois.map((poi) => [poi.id, poi.title])),
+    contactNamesById: new Map(view.characters.map((character) => [character.id, character.name])),
+  });
   const visibleJobs = view.jobs.slice(0, OVERWORLD_COMPACT_LOCAL_REF_LIMIT);
   const visibleJobIds = new Set(visibleJobs.map((job) => job.id));
   const jobs = compactOverworldTitleRefs(visibleJobs);
@@ -1415,6 +1479,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     poi: compactOverworldTitleRefs(view.pois),
     contacts: compactOverworldRefs(view.characters),
     events: compactOverworldTitleRefs(visibleEvents),
+    ...(eventLeads.length > 0 ? { event_leads: eventLeads } : {}),
     ...(eventScenes.length > 0 ? { event_scenes: eventScenes } : {}),
     ...(eventChoices.length > 0 ? { event_choices: eventChoices } : {}),
     ...(localRefsTruncated.length > 0 ? { local_refs_truncated: localRefsTruncated } : {}),

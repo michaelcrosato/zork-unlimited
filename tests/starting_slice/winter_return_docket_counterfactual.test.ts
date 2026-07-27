@@ -510,7 +510,8 @@ describe("Winter Return Docket", () => {
       after.view().events.find((candidate) => candidate.id === EVENT_ID)?.authored_scene
         ?.requires_completed_quests,
     ).toEqual(["wolf_winter"]);
-    expect(after.compactView().event_scenes?.[0]?.[5]).toEqual(["wolf_winter"]);
+    expect(after.compactView().event_scenes).toBeUndefined();
+    expect(after.compactView().event_leads?.[0]?.[0]).toBe(EVENT_ID);
     after.investigateEvent(EVENT_ID);
     const unresolvedBackdated = after.snapshot();
     const unresolvedInvestigationIndex = unresolvedBackdated.journalEntries.findIndex(
