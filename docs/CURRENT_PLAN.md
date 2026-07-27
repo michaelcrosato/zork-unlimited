@@ -4,7 +4,7 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-27 — Two-Shard CI Pilot
+## Cycle: 2026-07-27 — Selected Albany Field-Term Recall
 
 ## Synthesis
 
@@ -13,48 +13,51 @@ resolution families, and authored jobs and events in all six Albany districts.
 The remaining work is experiential consolidation: make that depth legible
 without flattening choices, consequences, or counterfactuals.
 
-`main` is merged through `3b78f510`, including the authenticated pending-June
-dispatch range. The selected-term recap and pre-preparation timing forecast are
-locally health-green in ordered worktrees, but the current 65–79-minute required
-verify makes every landing the dominant wall-clock cost.
+`main` is merged through `15757105`. The two-shard CI pilot retained the exact
+435-file / 3,588-test baseline and cut required-check wall time from a recent
+70m05s average to 45m21s. Keep the pilot for feature landings; the 30m07s /
+45m13s imbalance is measurement for a later duration-aware or four-shard
+experiment, not a reason to delay the game queue.
 
-The workflow candidate keeps every existing gate while moving unchanged Vitest
-coverage onto two independent runners. Static, UI, and pack checks run in
-parallel; a final job still named `verify` succeeds only when both prerequisite
-jobs succeed. Crawl remains independent.
+Three new Terra reports compiled as verified pure evidence with zero rejection.
+They retain 100% replay intent and no stuck players, while isolating Albany
+choice density, cumulative Station timing, one later Gallowmere lethal check,
+and one later Queensbury identity ambiguity. The latter two are outside this
+fixed starting slice.
 
-`actionlint`, YAML parse, and a small execution probe are green. Exact-clean
-Terra seed 72753 confirms the unchanged game build still completes Wolf-Winter
-bloodlessly, continues, and reaches decision 40 without a stuck state.
+The selected-term recap rebased with an identical patch id. It remains
+authenticated, selected-only, and read-only, adds one concise field term to
+each resolved Station recap row, and changes no choice or consequence.
+Exact-clean seed 72754 completed Wolf-Winter at decision 29, continued twice,
+completed Gallowmere at 52, and rated clarity/enjoyment 4/4 without getting
+stuck.
 
 ## Chosen Move
 
-Publish the two-shard workflow as the first live pilot. Measure both shard
-durations and total required-check wall time; accept it only if unchanged
-coverage stays green and the final `verify` gate behaves correctly.
+Publish the selected-term recap as one green increment. Do not rerun the blind
+player merely because it did not name the recap; its repeated cumulative-time
+finding is already addressed by the separately health-green preparation
+forecast.
 
-After the pilot merges, rebase and blind-test the already-health-green
-selected-term recap. Two consecutive canaries describe Albany's permanent
-terms as dense, and seed 72750 explicitly lost track of conditional preparation
-effects. Keep that work read-only and Station-local.
-
-The preparation timing forecast remains queued immediately behind the recap. It
-answers seed 72752 on the comparison card itself without turning hypothetical
-options into launch authority.
+After this merges, rebase that forecast directly onto `main`, run one fresh
+Terra canary, and land it independently. The concise Civic first-use-category
+increment is implemented in the next stacked worktree and remains unpublished
+until its final health, rebase, and blind evidence are clean. Exact
+Wolf-Winter completion guidance follows those presentation changes.
 
 Transport circuit: Spark remains quarantined after matching
 forbidden-wrapper/model-cache failures. Probe with at most two runs only after
-the client/model fingerprint changes; stop on two matching infrastructure
-failures. Until then, use one fresh Terra canary per normal increment and
-larger cohorts only for milestone re-aims.
+the client/model fingerprint changes. Until then, use one fresh Terra canary
+per normal increment and the complete configured cohort only at the milestone.
 
 ## Acceptance for the next increment
 
-1. Both Vitest shards execute successfully with no skipped coverage and retain
-   the existing worker and timeout configuration.
-2. Static/UI/pack prerequisites and both shards are required; failed, skipped,
-   or cancelled work cannot yield a successful final `verify`.
-3. The required check remains named `verify`, crawl remains independent, and no
-   game, test, verifier, permission, or branch-protection behavior is weakened.
-4. Record actual shard and end-to-end timings before deciding whether to retain
-   or rebalance the pilot.
+1. Preparation cards show an authenticated final dispatch range for each option,
+   including every remaining optional allocation and field-team time.
+2. The pre-selection route card stays neutral and no hypothetical range becomes
+   launch authority; pending-June and final receipts remain unchanged.
+3. Full terminal, UI, compact, and MCP comparisons expose the same concise
+   forecast, while tampered or stale offers fail closed.
+4. Choices, costs, effects, availability, decision order, RNG, routes, and
+   endings remain unchanged; crawl, health, one fresh pure report, review, and
+   GitHub `verify` must be green.
