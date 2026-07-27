@@ -251,9 +251,18 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
     const preparation = session.inspectJourneyStory(PREPARATION.id);
     expect(preparation).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
-    expect(preparation.message).toContain(`${WOLF.title} Departure plan · 1/2 — preparation.`);
+    expect(preparation.message).toContain(`${WOLF.title} Optional field packet — preparation.`);
     expect(preparation.message).toContain(`${PREPARATION.title}. ${PREPARATION.message}`);
-    expect(preparation.message).toContain("Still ahead: relief allocation.");
+    expect(preparation.message).toContain(
+      `This field-packet choice is optional: choose one preparation, or close it and launch ${WOLF.title} now without a field packet.`,
+    );
+    expect(preparation.message).toContain(
+      "Choosing a packet reveals a separate optional relief-capacity choice at this Station.",
+    );
+    expect(preparation.message).toContain(
+      `${ALLY_CONTACT.name}'s field-team terms are another separate optional conversation.`,
+    );
+    expect(preparation.message).not.toMatch(/Departure plan|1\/2|Still ahead/i);
     expectLaunchDetailsDeferred(preparation);
     expectSummaryFirstOptions(preparation);
     expectProgressivePreparationOptions(preparation);
@@ -273,14 +282,16 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       id: RELIEF_ALLOCATION.id,
       kind: "relief_allocation",
     });
-    expect(allocation.message).toContain(`${WOLF.title} Departure plan · 2/2 — relief allocation.`);
+    expect(allocation.message).toContain(
+      `${WOLF.title} Optional relief capacity — relief allocation.`,
+    );
     expect(allocation.message).toContain(
       `${RELIEF_ALLOCATION.title}. ${RELIEF_ALLOCATION.message}`,
     );
-    expect(allocation.message).not.toContain("Still ahead: none.");
+    expect(allocation.message).not.toMatch(/Departure plan|2\/2|Still ahead|Chosen for departure/i);
     expect(allocation.message).not.toContain("Optional field-team choice follows");
     expect(allocation.message).toContain(
-      "This departure-board choice is optional: choose one allocation, or close it to leave the relief capacity unassigned.",
+      "This relief-capacity choice is separate and optional: choose one allocation, or close it to leave the capacity unassigned.",
     );
     expect(allocation.message).not.toMatch(/\b(?:required|mandatory)\b/i);
     expect(allocation.message).toContain(

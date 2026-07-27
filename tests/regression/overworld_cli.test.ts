@@ -800,7 +800,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       }
       expect(run.output.match(/Back to the story choice comparison/g)?.length ?? 0).toBe(2);
       expect(run.output).toContain(
-        "This departure-board choice is optional: choose one allocation, or close it to leave the relief capacity unassigned.",
+        "This relief-capacity choice is separate and optional: choose one allocation, or close it to leave the capacity unassigned.",
       );
       expect(run.output).not.toContain("final required departure-board choice");
       expect(run.output).toContain("After choosing or closing it, return to the Station actions.");

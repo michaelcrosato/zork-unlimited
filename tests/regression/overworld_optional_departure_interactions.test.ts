@@ -241,6 +241,12 @@ describe("optional Station departure interactions", () => {
       ...preparationInteraction.inspect.arguments,
     });
     expect(inspected.story).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
+    expect(inspected.story.message).toContain(`${WOLF.title} Optional field packet — preparation.`);
+    expect(inspected.story.message).toContain(`launch ${WOLF.title} now without a field packet`);
+    expect(inspected.story.message).toContain(
+      "separate optional relief-capacity choice at this Station",
+    );
+    expect(inspected.story.message).not.toMatch(/Departure plan|1\/2|Still ahead/i);
     expect(inspected.snapshot_hash).toBe(before.snapshot_hash);
     const afterInspection = api.export_overworld_session({ session_id: sessionId });
     if (!afterInspection.ok) throw new Error("Expected an export after inspection.");
@@ -298,6 +304,15 @@ describe("optional Station departure interactions", () => {
       session_id: sessionId,
       ...allocationInteraction.inspect.arguments,
     });
+    expect(allocationStory.story.message).toContain(
+      `${WOLF.title} Optional relief capacity — relief allocation.`,
+    );
+    expect(allocationStory.story.message).toContain(
+      "This relief-capacity choice is separate and optional",
+    );
+    expect(allocationStory.story.message).not.toMatch(
+      /Departure plan|2\/2|Still ahead|Chosen for departure/i,
+    );
     expect(allocationInteraction.choose.valuesFrom).toBe("story.options[*].id");
     const afterAllocationInspection = api.export_overworld_session({
       session_id: sessionId,

@@ -20,9 +20,9 @@ export type OpeningDispatchManifestChain = Readonly<{
 type OpeningDispatchPlan = Readonly<{
   questTitle: string;
   questDiscovery: string;
-  optionalFollowup: string | null;
+  allyContactName: string | null;
   civicStages: readonly OpeningDispatchStage[];
-  departureStages: readonly OpeningDispatchStage[];
+  departureChoices: readonly OpeningDispatchStage[];
 }>;
 
 /** Resolve the one authored Albany dispatch chain shared by its read-only projections. */
@@ -85,10 +85,7 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
   return {
     questTitle: quest.title,
     questDiscovery: quest.discovery,
-    optionalFollowup:
-      ally && allyContact
-        ? `After choosing or closing it, return to the Station actions. ${allyContact.name}'s field-team terms are a separate optional conversation; launching ${quest.title} without that conversation keeps the disclosed solo rider.`
-        : null,
+    allyContactName: ally && allyContact ? allyContact.name : null,
     civicStages: Object.freeze([
       Object.freeze({
         id: registration.id,
@@ -102,7 +99,7 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
       }),
       Object.freeze({ id: leadSource.id, kind: "lead_source", label: "evidence" }),
     ]),
-    departureStages: Object.freeze([
+    departureChoices: Object.freeze([
       Object.freeze({
         id: preparation.id,
         kind: "preparation",
@@ -135,33 +132,40 @@ export function withOpeningDispatchBriefing(
   const civicStageIndex = plan.civicStages.findIndex(
     (stage) => stage.id === prompt.id && stage.kind === prompt.kind,
   );
-  const departureStageIndex = plan.departureStages.findIndex(
+  const departureChoice = plan.departureChoices.find(
     (stage) => stage.id === prompt.id && stage.kind === prompt.kind,
   );
-  const stages = civicStageIndex >= 0 ? plan.civicStages : plan.departureStages;
-  const stageIndex = civicStageIndex >= 0 ? civicStageIndex : departureStageIndex;
-  if (stageIndex < 0) return prompt;
-  const stage = stages[stageIndex]!;
-  const completed = stages.slice(0, stageIndex).map((candidate) => candidate.label);
-  const remaining = stages.slice(stageIndex + 1).map((candidate) => candidate.label);
-  const phase = civicStageIndex >= 0 ? "Civic docket" : "Departure plan";
-  const progress = `${plan.questTitle} ${phase} · ${stageIndex + 1}/${stages.length} — ${stage.label}.`;
-  const planningContext =
-    civicStageIndex >= 0
-      ? stageIndex === 0
+  if (civicStageIndex < 0 && !departureChoice) return prompt;
+  if (civicStageIndex >= 0) {
+    const stage = plan.civicStages[civicStageIndex]!;
+    const completed = plan.civicStages
+      .slice(0, civicStageIndex)
+      .map((candidate) => candidate.label);
+    const remaining = plan.civicStages
+      .slice(civicStageIndex + 1)
+      .map((candidate) => candidate.label);
+    const progress = `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
+    const planningContext =
+      civicStageIndex === 0
         ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; two docket decisions stay open. Each changes field conditions or consequences; none locks your solution.`
-        : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Still ahead here: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station departure board for field preparation and relief capacity."}`
-      : `Chosen for departure: ${listLabels(completed)}. Now choose: ${stage.label}.${
-          remaining.length > 0
-            ? ` Still ahead: ${listLabels(remaining)}.`
-            : ` This departure-board choice is optional: choose one allocation, or close it to leave the relief capacity unassigned.${plan.optionalFollowup ? ` ${plan.optionalFollowup}` : ""}`
-        }`;
-  const missionCard =
-    departureStageIndex >= 0
-      ? `Mission: ${plan.questTitle}. Last-mile route costs and field tradeoffs remain on its launch card.`
-      : null;
+        : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Still ahead here: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station departure board for field preparation and relief capacity."}`;
+    return {
+      ...prompt,
+      message: `${progress} ${planningContext} ${prompt.message}`,
+    };
+  }
+  const choice = departureChoice!;
+  const progress =
+    choice.kind === "preparation"
+      ? `${plan.questTitle} Optional field packet — ${choice.label}.`
+      : `${plan.questTitle} Optional relief capacity — ${choice.label}.`;
+  const planningContext =
+    choice.kind === "preparation"
+      ? `This field-packet choice is optional: choose one preparation, or close it and launch ${plan.questTitle} now without a field packet. Choosing a packet reveals a separate optional relief-capacity choice at this Station.${plan.allyContactName ? ` ${plan.allyContactName}'s field-team terms are another separate optional conversation.` : ""}`
+      : `This relief-capacity choice is separate and optional: choose one allocation, or close it to leave the capacity unassigned.${plan.allyContactName ? ` After choosing or closing it, return to the Station actions. ${plan.allyContactName}'s field-team terms are a separate optional conversation; launching ${plan.questTitle} without that conversation keeps the disclosed solo rider.` : ""}`;
+  const missionCard = `Mission: ${plan.questTitle}. Last-mile route costs and field tradeoffs remain on its launch card.`;
   return {
     ...prompt,
-    message: `${progress} ${missionCard ? `${missionCard} ` : ""}${planningContext} ${prompt.message}`,
+    message: `${progress} ${missionCard} ${planningContext} ${prompt.message}`,
   };
 }
