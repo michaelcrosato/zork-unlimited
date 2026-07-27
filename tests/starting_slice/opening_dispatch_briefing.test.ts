@@ -383,12 +383,16 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expectProgressivePreparationOptions(uiPreparation);
 
     ui.chooseJourneyStory(PREPARATION.profiles[0]!.id);
-    api.choose_overworld_session_story({
+    const mcpPreparationSelected = api.choose_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: PREPARATION.id,
       choice: PREPARATION.profiles[0]!.id,
       compact_context: true,
     });
+    expect(mcpPreparationSelected.context.departure_recap).toEqual(
+      ui.compactView().departure_recap,
+    );
+    expect(mcpPreparationSelected.context.departure_recap?.[4]).toBeNull();
     const uiAllocation = ui.inspectJourneyStory(RELIEF_ALLOCATION.id);
     const mcpAllocation = api.inspect_overworld_session_story({
       session_id: started.session_id,
