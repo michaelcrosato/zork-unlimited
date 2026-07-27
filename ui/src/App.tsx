@@ -15,6 +15,7 @@ import {
   type OverworldServiceResult,
   type OverworldSessionSnapshot,
   type OverworldView,
+  hasLiveOverworldEventChoice,
 } from "./overworld.js";
 import { PACKS } from "./packs.js";
 import { OVERWORLD } from "./worldData.js";
@@ -1212,6 +1213,10 @@ export default function App(): JSX.Element {
                   )
                 : true;
               const hasInvestigation = journalIds.has(`investigate:${event.id}`);
+              const hasLegalSceneChoice = hasLiveOverworldEventChoice(
+                event.id,
+                worldView.eventChoices,
+              );
               const missing: string[] = [];
               if (scene && !hasPoi) {
                 missing.push(
@@ -1236,46 +1241,51 @@ export default function App(): JSX.Element {
                     <small className="resolved-label">Resolved</small>
                   ) : scene ? (
                     <div className="event-scene">
-                      <p>{scene.prompt}</p>
-                      {missing.length > 0 && (
+                      {!hasLegalSceneChoice && missing.length > 0 && (
                         <small className="empty">Required first: {missing.join(", ")}.</small>
                       )}
-                      <button
-                        className="mini-command"
-                        onClick={() =>
-                          runWorldAction(() => worldSession.investigateEvent(event.id))
-                        }
-                      >
-                        Investigate
-                      </button>
-                      {scene.options.map((option) => {
-                        const optionAvailable = legalEventChoiceKeys.has(
-                          eventChoiceKey(event.id, option.id),
-                        );
-                        return (
-                          <div key={option.id} className="event-scene-option">
-                            <strong>{option.title}</strong>
-                            <span>
-                              {option.terms.minutes} min - {option.terms.renown} renown
-                            </span>
-                            <p>{option.preview}</p>
-                            <p>
-                              <b>Commitment:</b> {option.consequence}
-                            </p>
-                            <button
-                              className="mini-command"
-                              disabled={!optionAvailable}
-                              onClick={() =>
-                                runWorldAction(() =>
-                                  worldSession.resolveEvent(event.id, option.id),
-                                )
-                              }
-                            >
-                              Choose {option.title}
-                            </button>
-                          </div>
-                        );
-                      })}
+                      {!hasLegalSceneChoice ? (
+                        <button
+                          className="mini-command"
+                          onClick={() =>
+                            runWorldAction(() => worldSession.investigateEvent(event.id))
+                          }
+                        >
+                          Investigate
+                        </button>
+                      ) : (
+                        <>
+                          <p>{scene.prompt}</p>
+                          {scene.options.map((option) => {
+                            const optionAvailable = legalEventChoiceKeys.has(
+                              eventChoiceKey(event.id, option.id),
+                            );
+                            return (
+                              <div key={option.id} className="event-scene-option">
+                                <strong>{option.title}</strong>
+                                <span>
+                                  {option.terms.minutes} min - {option.terms.renown} renown
+                                </span>
+                                <p>{option.preview}</p>
+                                <p>
+                                  <b>Commitment:</b> {option.consequence}
+                                </p>
+                                <button
+                                  className="mini-command"
+                                  disabled={!optionAvailable}
+                                  onClick={() =>
+                                    runWorldAction(() =>
+                                      worldSession.resolveEvent(event.id, option.id),
+                                    )
+                                  }
+                                >
+                                  Choose {option.title}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div className="inline-actions">
