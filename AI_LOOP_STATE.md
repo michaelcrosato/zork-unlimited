@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 669 -->
+<!-- historical_cycle_count: 670 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - progressive_event_disclosure
+
+- Evidence choice: verified players repeatedly found the compact overworld dense, while blocked authored events front-loaded prompts and complete option terms before any event choice was legal.
+- Surface: compact v33 and UI now show a concise event lead plus its exact next prerequisite while blocked, withholding prompt/options/consequences until canonical `event_choices` are live; clone and checkpoint boundaries preserve the distinction.
+- Counterfactual: event availability, setup requirements, choices, costs, effects, receipts, decisions, RNG, and outcomes are unchanged; only the timing and shape of read-only disclosure changes.
+- Pure evidence: exact-clean Terra seed 72760 received the charter-backlog lead, scouted and talked without investigating, and never received its blocked terms; it completed The Wolf-Winter through a failed-cast nonlethal recovery at decision 33, rated clarity/enjoyment 4/4, stayed unstuck, ended voluntarily, and chose replay-yes.
+- Self-critique/follow-through: the canary proves safe withholding rather than lead-to-live conversion; a fresh 3-report compile still finds repeated Station delay-term density, so land measured CI balancing then the focused canonical option-impact summary before the pilot.
+- Economy: the single 47-turn canary used 2.48M raw / 101k uncached input and 7.0k output tokens at 95.9% cache reuse; no exposure-chasing rerun was launched.
+- Guard: independent review is clean, stable patch id `a3f9506a` survived the rebase, crawl `20260727T220117Z` is zero-finding, and health passes 438 files/3,605 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - current_station_dispatch_status
 
@@ -155,12 +165,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 72744 completed The Wolf-Winter bloodlessly, continued to Gallowmere, ended voluntarily at decision 40, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
 - Self-critique/follow-through: dense conditional setup remains noticeable, while the player independently repeated the Gallowmere checkpoint-after-launch pacing flaw; that boundary is the next focused candidate.
 - Guard: independent review found and closed Civic migration provenance; post-crawl `20260727T003546Z` is zero-finding and health passes 435 files/3,577 tests, both typechecks, and all 12 packs.
-
-### Cycle result - compact_story_inspection_delta
-
-- Evidence choice: repeated blind feedback names Albany's pre-field stack as dense; the existing comparison-first response still repeated unchanged journey/world context during read-only inspection.
-- Surface: compact story comparison now returns only the versioned comparison and unchanged receipt; exact-option inspection returns only id, label, and new authored consequence, while full developer output and human UI/terminal terms stay canonical.
-- Measured effect: the same Station preparation/allocation responses fall from 16,857 to 5,039 JSON characters (−70.1%); exact registration detail falls from 12,181 to 597 (−95.1%) with no state, hash, decision, legality, or sibling-term change.
-- Pure evidence: Spark seed 72742 repeated the forbidden-wrapper/model-cache fingerprint at call 67 and published nothing; changed-fingerprint Terra seed 72743 completed The Wolf-Winter bloodlessly in 32 decisions, ended voluntarily, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: the verified player still requested a concise accumulated dispatch recap; transport de-duplication does not solve the opening's cognitive load, which remains the next gameplay increment.
-- Guard: review-found optional-id typing and pure stale-envelope gaps are fixed; final post-crawl `20260726T224415Z` is zero-finding and health passes 434 files/3,575 tests, both typechecks, and all 12 packs.

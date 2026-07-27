@@ -4,7 +4,7 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-27 — Current Station Dispatch Status
+## Cycle: 2026-07-27 — Progressive Event Disclosure
 
 ## Synthesis
 
@@ -13,42 +13,43 @@ resolution families, and authored jobs and events in all six Albany districts.
 The remaining work is experiential consolidation: make that depth legible
 without flattening choices, consequences, or counterfactuals.
 
-`main` is merged through exact Wolf-Winter goal guidance. Measured two-shard CI
-retains every gate but splits by file count rather than cost: shard 1 completed
-in 28 minutes while shard 2 took about 47. A separately focused-green dynamic
-allocator now predicts two 4.03M-ms groups while discovering every current and
-future test; review and land it independently after the player-facing sequence.
+`main` is merged through current Station dispatch status. PR 193 completed in
+about 45 minutes, with shard 1 green at 29 minutes and the file-count-heavy
+second shard determining the wall. A separately reviewed dynamic allocator
+discovers every current/future test exactly once and predicts two 4.03M-ms
+groups; land it next so the remaining PRs benefit.
 
-The dispatch-status increment rebased with an identical patch id. Recap v3 now
-uses the canonical dispatch authority to distinguish authenticated committed
-minutes, a direct launch with June still optional, and an explicitly sealed
-solo/team result. Incomplete, legacy, malformed, or tampered evidence remains
-neutral.
+The progressive-event increment rebased with an identical patch id. Compact v33
+and UI now expose a blocked event's concise lead and exact next prerequisite,
+while prompt, options, previews, and consequences stay hidden until canonical
+event choices are actually live. Availability, mechanics, and outcomes are
+untouched.
 
-Exact-clean seed 72759 skipped optional preparation and June, so its dispatch
-recap correctly remained neutral. It completed Wolf-Winter nonlethally at
-decision 27, continued into Gallowmere, stayed unstuck, rated clarity/enjoyment
-3/4, and chose replay-yes. Treat that report as retention evidence but neutral
-coverage of the new non-null dispatch states.
+Exact-clean seed 72760 received the Civic event lead, naturally scouted and
+talked without investigating, and never received the blocked event's complete
+terms. It completed Wolf-Winter through a failed-cast nonlethal recovery at
+decision 33, stayed unstuck, rated clarity/enjoyment 4/4, ended voluntarily, and
+chose replay-yes. This validates safe withholding, not live-event conversion.
 
 ## Chosen Move
 
-Publish the authenticated current-plan dispatch status as one green increment.
-Do not rerun the player merely to force preparation exposure: focused proofs
-cover committed, direct-launch, sealed, restore, malformed, compact, terminal,
-and UI states, and natural pure play must not become a coverage script.
+Publish progressive event disclosure as one green increment. Do not rerun the
+player to force event completion: deterministic proofs cover blocked, live,
+checkpoint, compact/MCP, UI, and clone boundaries, and natural pure play is not
+a coverage script.
 
-The canary's claimed staged/full-consequence duplication occurs on the unchanged
-post-quest dawn-wagon response and is not caused by this recap. Its broader
-density complaint does reinforce the already-focused-green progressive event
-disclosure: blocked authored events should show their lead and exact next
-prerequisite without front-loading an unavailable prompt and full option terms.
-Land that next, then compile once its report brings the new verified cohort to
-three. Keep the dawn-wagon attribution as a later focused triage item.
+The fresh three-report compile has no mechanical blocker: all three finished,
+none got stuck, and all chose replay. It is not certification quality—mean
+clarity 3.33, enjoyment 4.0, and only one player continued. Two independent
+players lost dispatch delay effects across staged Station choices. The now-clean
+`concise-station-delay-impact` candidate answers that exact S1 by leading live
+relief and June cards with canonical `+Xm → Ym, on time/delayed` summaries.
 
-Land the two loop-efficiency increments and measured CI balancing independently
-after the player-facing sequence stabilizes. Do not combine them with gameplay
-or weaken the authoritative health bar.
+Land measured CI balancing first, then rebase and land that final Station
+clarity increment. Afterward land the reviewed single-health and fresh-feedback
+loop efficiencies independently. The old field-timed setup and useful Wolf
+comparison are already merged; abandon the stale all-plan monologue rather than
+reviving it. Then freeze for the strict pilot, deep crawl, and authority fleet.
 
 Transport circuit: Spark remains quarantined after matching
 forbidden-wrapper/model-cache failures. Probe with at most two runs only after
@@ -57,14 +58,11 @@ per normal increment and the complete configured cohort only at the milestone.
 
 ## Acceptance for the next increment
 
-1. A blocked authored event exposes only its concise lead and exact next
-   prerequisite; its prompt, options, previews, and consequences remain hidden
-   until canonical `event_choices` are live.
-2. Once the event is playable, full authored choice information remains
-   available across compact/MCP and UI, and checkpoint boundaries do not leak
-   or lose it.
-3. The compact schema/version and clone path authenticate the new lead surface;
-   event availability, choices, costs, effects, receipts, and outcomes are
-   unchanged.
+1. Both CI test jobs dynamically discover the configured suite and assign every
+   test file exactly once, with no duplicates or silent future-file omission.
+2. Measured costly files produce materially balanced deterministic groups; a
+   stale cost table may affect balance only, never coverage.
+3. The required `verify` aggregate, prerequisites, UI/pack validation, crawl,
+   failure attribution, and branch-protection check name remain unchanged.
 4. Crawl, health, one fresh pure report, independent review, and GitHub
    `verify` must be green.
