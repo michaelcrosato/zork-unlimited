@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 658 -->
+<!-- historical_cycle_count: 659 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - station_optional_departure_staging
+
+- Evidence choice: a 23-report verified-pure compile and seed 72746 both kept Albany Station's optional preparation, allocation, and June terms hot; the visible `1/2` → `2/2` itinerary made separate decisions look mandatory.
+- Surface: Civic's actual three-step docket stays numbered, while Station preparation now permits immediate launch and names relief capacity and June as separate optional choices; allocation permits leaving capacity unassigned and returning to Station.
+- Counterfactual: availability, effects, costs, ids, actions, snapshots, and the legal no-prep / prep-only / prep-plus-allocation launch permutations are unchanged.
+- Pure evidence: exact-clean Terra seed 72747 read both changed cards, chose drover preparation, Cade fodder, and June cattle-first, completed The Wolf-Winter nonlethally at decision 30 and The Gallowmere at 56, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the player still found the conditional terms dense and requested a lighter review surface, so de-sequencing solved false obligation rather than the whole cognitive-load problem.
+- Boundary triage: its decision-40 Hedrick checkpoint appeared at the first safe post-launch action with the bothy context already visible; treat that as expected #181 behavior unless repeated evidence shows interruption harm.
+- Guard: independent review is clean; pre/post crawls `20260727T064000Z` / `20260727T064649Z` are zero-finding and final health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - byreyard_route_briefing
 
@@ -149,12 +159,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Counterfactual: the same five roots become count 5 at both Wolf completion boundaries and return exactly after dawn dispatch; reads preserve snapshot, hash, proof, legal choices, and decision count.
 - Self-critique/follow-through: this removes post-goal competition for attention, not the still-dense mandatory Albany departure sequence; fresh blind evidence must judge whether the transition now reads cleanly.
 - Guard: independent Terra review corrected compact semantics; post-crawl `20260726T004455Z` is zero-finding and full health passes 423 files/3,447 tests plus both typechecks and all packs.
-
-### Cycle result - station_return_filing_standard
-
-- Evidence choice: Depth #11 left Station as Albany's sixth generic checklist event; exact-clean Terra seed 72632 is this cycle's fresh pure journey through The Wolf-Winter.
-- Surface: after the Wolf return, Hayden binds a route abstract or witnessed record without closing Cade's packet, revealing only the matching no-service administrative closure.
-- Counterfactual: from the same 8-standing return, route costs 50 minutes/+4 and ends at 12; witnessed costs 65/+5, reaches 13, and opens the existing Civic cot.
-- Ordering/compatibility: completing any packet method expires the filing; an unresolved exact-predecessor investigation retains trusted provenance without inventing a choice, and forged proof/hash/chronology fail closed.
-- Self-critique/follow-through: all 6/6 Albany jobs and events are authored, but organic return uptake and the dense post-goal lead surface remain unproven.
-- Guard: review blockers are fixed; post-crawl `20260725T234919Z` is zero-finding and full health passes 423 files/3,447 tests plus both typechecks and all packs.

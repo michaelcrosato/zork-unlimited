@@ -4,7 +4,7 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-27 — Byre-Yard Route Briefing
+## Cycle: 2026-07-27 — Optional Station Departure Staging
 
 ## Synthesis
 
@@ -13,47 +13,43 @@ resolution families, and authored jobs and events in all six Albany districts.
 The remaining work is experiential consolidation: make that depth legible
 without flattening choices, consequences, or counterfactuals.
 
-`main` is merged through `33d5161e`, including the authenticated Albany
-departure recap and the quest-launch checkpoint handoff. Candidate `c91b40de`
-addresses the next verified presentation issue: Cade's first Byre-Yard read
-previously introduced four strategies, their failure modes, tactical resources,
-and the irreversible crossing boundary in one compressed paragraph.
+`main` is merged through `5f71784b`, including Cade's progressive route
+briefing. Candidate `930dbddd` addresses the next repeated presentation issue:
+Station described separate optional preparation and relief decisions as
+`Departure plan 1/2` and `2/2`, making the allocation look required before
+launch.
 
-Cade now gives a four-route map, identifies HUNT as combat, and keeps the
-uncommitted-crossing consequence visible. Exact LURE, DRIVE, and FORTIFY costs
-remain behind their existing questions. No action, flag, RNG path, route
-consequence, or legal choice changed.
+Civic's actual three-step docket remains numbered. At Station, preparation is
+now an optional field packet and explicitly permits launching without one.
+Choosing it reveals a separate optional relief-capacity choice; allocation can
+be closed with capacity unassigned, and June remains another separate optional
+conversation. Availability, effects, costs, ids, actions, snapshots, and all
+three legal launch permutations are unchanged.
 
-Fresh pure Terra seed 72746 organically read the changed briefing, selected
-`ask_lure`, completed The Wolf-Winter nonlethally, continued to Queensbury, and
-ended cleanly at decision 40. It rated clarity/enjoyment 4/4, stayed unstuck,
-and chose replay-yes.
+Fresh pure Terra seed 72747 read both changed cards, chose drover preparation,
+Cade fodder, and June cattle-first, recovered from a natural-1 lure with the
+prepared route, completed The Wolf-Winter nonlethally at decision 30, continued
+through The Gallowmere, and ended cleanly at decision 56. It rated
+clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
 
-A deterministic compile of the 52 newer report candidates admitted 23 verified
-pure v3 exits: mean clarity 3.70, enjoyment 3.87, replay-yes 95.7%, and 10/23
-players continued at least once. Albany Station's permanent setup remains the
-meaningful repeated friction. The compile's higher-ranked seed-72659 post-lure
-loop predates and is closed by the merged northbound closure; do not reopen it.
+The de-sequencing was legible but not sufficient: the player still found the
+interdependent terms difficult to retain and asked for a lighter way to review
+conditional effects before committing.
 
 ## Chosen Move
 
-Land `c91b40de` with its evidence note. Then de-sequence optional relief
-allocation from the Station's mandatory-looking departure itinerary:
+Land `930dbddd` with this evidence note. Then inspect exactly which Station
+surfaces a fresh player must consult before commitment and add the smallest
+read-only review that compares durable consequences without repeating mission
+context or full option prose. Reuse the existing comparison-first transport and
+authenticated six-row recap; do not create another mandatory screen, hide
+costs, or flatten counterfactuals.
 
-- preparation becomes a standalone optional field-packet decision;
-- its completion explicitly says the player may launch now;
-- relief allocation and June remain separate optional follow-ups at Station;
-- allocation availability, effects, costs, ids, and all direct-launch
-  permutations remain unchanged.
-
-This is structural staging rather than another prose compression. The existing
-comparison-first cards, detail-on-demand responses, and six-row recap already
-reduce payload; the remaining problem is the implied `1/2` → `2/2` required
-sequence.
-
-Evidence debt: seed 72746 reached Queensbury but did not organically sample the
-new Gallowmere decision-40 launch boundary. Exact deterministic replay still
-carries that claim.
+Seed 72747 also reported that the decision-40 checkpoint appeared after entering
+Hedrick's bothy. Trace review shows launch at 39, bothy entry at 40, full bothy
+context visible, no active dialogue or combat, and normal continuation
+afterward. That is the intended first-safe-boundary behavior from #181, not a
+confirmed regression; do not reopen it without repeated evidence.
 
 Transport circuit: Spark remains quarantined after matching
 forbidden-wrapper/model-cache failures. Probe with at most two runs only after
@@ -61,14 +57,14 @@ the client/model fingerprint changes; stop on two matching infrastructure
 failures. Until then, use one fresh Terra canary per normal increment and
 larger cohorts only for milestone re-aims.
 
-## Acceptance for this increment
+## Acceptance for the landed increment
 
-1. Cade's first read names HUNT, LURE, DRIVE, and FORTIFY, explains HUNT at a
-   glance, and keeps the irreversible uncommitted-crossing rule visible.
-2. Route-specific resources, failure modes, and conditional costs are absent
-   from the root but remain truthful in their existing route topics.
-3. All six Cade dialogue actions and all four strategy families retain their
-   existing mechanics and full/compact availability.
+1. Civic retains its truthful three-stage order while Station no longer calls
+   its optional choices `1/2` and `2/2`.
+2. Preparation says launch-now is legal; allocation says leaving capacity
+   unassigned is legal; June remains visibly separate.
+3. No-preparation, preparation-only, and preparation-plus-allocation launches
+   retain their existing mechanics and full/compact availability.
 4. Source-hash save/load and replay fixtures move honestly with the content.
 5. Focused regressions, both crawl gates, final full health, independent review,
    and one verifier-valid fresh blind pass are green before publication.
