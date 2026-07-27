@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { OverworldSession } from "../../src/world/session.js";
-import { deriveQuestDispatchWindow } from "../../src/world/quest_dispatch_window.js";
+import {
+  deriveQuestDispatchPresentationWindow,
+  deriveQuestDispatchWindow,
+} from "../../src/world/quest_dispatch_window.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -48,8 +51,10 @@ function moveToArea(session: OverworldSession, targetAreaId: string): void {
 function preparedDispatch(
   args: {
     registrationId?: string;
+    oathId?: string;
     sourceId?: string;
     preparationId?: string;
+    reliefAllocationId?: string;
     allyId?: string | null;
   } = {},
 ): OverworldSession {
@@ -57,16 +62,29 @@ function preparedDispatch(
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(args.registrationId ?? REGISTRATION.profiles[0]!.id);
-  session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
+  session.chooseJourneyStory(args.oathId ?? RELIEF_OATH.options[0]!.id);
   session.chooseJourneyStory(args.sourceId ?? LEAD_SOURCE.options[0]!.id);
   moveToArea(session, PREPARATION.area);
   session.chooseJourneyStory(args.preparationId ?? PREPARATION.profiles[0]!.id);
-  session.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id);
+  session.chooseJourneyStory(args.reliefAllocationId ?? RELIEF_ALLOCATION.options[0]!.id);
   if (args.allyId !== null) {
     session.talkToCharacter(ALLY.contact);
     session.chooseJourneyStory(args.allyId ?? ALLY.options[0]!.id);
   }
   return session;
+}
+
+function presentationWindow(session: OverworldSession) {
+  return deriveQuestDispatchPresentationWindow({
+    questId: WOLF.id,
+    journalEntries: session.snapshot().journalEntries,
+    openingRegistration: REGISTRATION,
+    openingReliefOath: RELIEF_OATH,
+    openingLeadSource: LEAD_SOURCE,
+    openingPreparation: PREPARATION,
+    openingReliefAllocation: RELIEF_ALLOCATION,
+    openingAlly: ALLY,
+  });
 }
 
 describe("Wolf-Winter quest dispatch window", () => {
@@ -146,6 +164,108 @@ describe("Wolf-Winter quest dispatch window", () => {
 
     expect(ridge).toMatchObject({ status: "delayed", ledgerMinutes: 65 });
     expect(stockway).toEqual(ridge);
+  });
+
+  it("proves the exact 65m pending-June presentation without granting launch authority", () => {
+    const session = preparedDispatch({
+      registrationId: "albany:road_warden",
+      oathId: "albany:oath_limited_aid_only",
+      sourceId: "albany:source_jamie_market_testimony",
+      preparationId: "albany:prep_drover_route",
+      reliefAllocationId: "albany:relief_resident_shelter",
+      allyId: null,
+    });
+    expect(
+      session.prepareQuestStart(WOLF.id, WOLF.launch!.options[0]!.id).dispatchWindow,
+    ).toMatchObject({
+      status: "delayed",
+      ledgerMinutes: 65,
+    });
+
+    session.talkToCharacter(ALLY.contact);
+    const pending = presentationWindow(session);
+    expect(pending).toMatchObject({
+      schemaVersion: 1,
+      questId: WOLF.id,
+      status: "june_commitment_pending",
+      committedMinutes: 65,
+      finalMinutes: { minimum: 65, maximum: 80 },
+      receipt: {
+        juneCommitment: {
+          kind: "pending",
+          journalId: `ally_offer:${ALLY.id}`,
+          optionMinutes: [0, 5, 15],
+        },
+      },
+    });
+    expect(pending.proofHash).toMatch(/^[0-9a-f]{64}$/);
+    if (pending.status !== "june_commitment_pending") {
+      throw new Error("Expected the pending June presentation proof.");
+    }
+    expect(Object.isFrozen(pending)).toBe(true);
+    expect(Object.isFrozen(pending.receipt)).toBe(true);
+    expect(Object.isFrozen(pending.receipt.juneCommitment.optionMinutes)).toBe(true);
+
+    const launchWindow = session.prepareQuestStart(
+      WOLF.id,
+      WOLF.launch!.options[0]!.id,
+    ).dispatchWindow;
+    expect(launchWindow).toMatchObject({ status: "legacy_neutral" });
+    expect(launchWindow).not.toHaveProperty("ledgerMinutes");
+
+    const restored = OverworldSession.restore(WORLD, structuredClone(session.snapshot()));
+    expect(presentationWindow(restored)).toEqual(pending);
+  });
+
+  it.each([
+    ["albany:ally_travel_solo", 65],
+    ["albany:ally_june_relay_only", 70],
+    ["albany:ally_june_cattle_first", 80],
+  ] as const)("replaces the pending proof with a final %s receipt", (allyId, ledgerMinutes) => {
+    const session = preparedDispatch({
+      registrationId: "albany:road_warden",
+      oathId: "albany:oath_limited_aid_only",
+      sourceId: "albany:source_jamie_market_testimony",
+      preparationId: "albany:prep_drover_route",
+      reliefAllocationId: "albany:relief_resident_shelter",
+      allyId,
+    });
+    const window = presentationWindow(session);
+    expect(window).toMatchObject({
+      status: "delayed",
+      ledgerMinutes,
+      receipt: { juneCommitment: { kind: "selected", optionId: allyId } },
+    });
+    expect(window.status).not.toBe("june_commitment_pending");
+  });
+
+  it("rejects a tampered pending June boundary instead of inventing provisional timing", () => {
+    const session = preparedDispatch({
+      oathId: "albany:oath_limited_aid_only",
+      sourceId: "albany:source_jamie_market_testimony",
+      preparationId: "albany:prep_drover_route",
+      reliefAllocationId: "albany:relief_resident_shelter",
+      allyId: null,
+    });
+    session.talkToCharacter(ALLY.contact);
+    const snapshot = structuredClone(session.snapshot());
+    const offer = snapshot.journalEntries.find((entry) => entry.kind === "ally_offer");
+    if (!offer?.storyChoiceBoundary) throw new Error("Expected an authenticated June offer.");
+    offer.storyChoiceBoundary.minutes += 1;
+
+    const presentation = deriveQuestDispatchPresentationWindow({
+      questId: WOLF.id,
+      journalEntries: snapshot.journalEntries,
+      openingRegistration: REGISTRATION,
+      openingReliefOath: RELIEF_OATH,
+      openingLeadSource: LEAD_SOURCE,
+      openingPreparation: PREPARATION,
+      openingReliefAllocation: RELIEF_ALLOCATION,
+      openingAlly: ALLY,
+    });
+    expect(presentation).toMatchObject({ status: "legacy_neutral" });
+    expect(presentation).not.toHaveProperty("committedMinutes");
+    expect(() => OverworldSession.restore(WORLD, snapshot)).toThrow();
   });
 
   it("records a direct post-preparation departure as the proven solo/unasked zero", () => {

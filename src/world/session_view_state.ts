@@ -57,7 +57,7 @@ import type {
   OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
 import type { JourneyOpportunityPresentation } from "./journey_contract.js";
-import type { QuestDispatchWindow } from "./quest_dispatch_window.js";
+import type { QuestDispatchPresentationWindow } from "./quest_dispatch_window.js";
 import type { OpeningDepartureRecap } from "./opening_departure_recap.js";
 
 type OverworldSessionViewLocalContentState = Pick<
@@ -137,7 +137,7 @@ export type OverworldSessionViewModelSourceState = {
   jobChoices: readonly OverworldCompactJobChoice[];
   eventChoices: readonly OverworldCompactEventChoice[];
   questStarts: readonly OverworldCompactQuestStart[];
-  questDispatchWindows?: ReadonlyMap<string, QuestDispatchWindow>;
+  questDispatchWindows?: ReadonlyMap<string, QuestDispatchPresentationWindow>;
   ids: OverworldCompactSessionIdState;
 };
 

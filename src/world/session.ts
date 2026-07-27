@@ -56,7 +56,7 @@ import {
   type OverworldQuestCompletionResult,
   type OverworldQuestStartPreparation,
 } from "./session_quests.js";
-import { deriveQuestDispatchWindow } from "./quest_dispatch_window.js";
+import { deriveQuestDispatchPresentationWindow } from "./quest_dispatch_window.js";
 import { deriveCampaignWorldFactIds } from "./campaign_consequences.js";
 import {
   resolveCampaignServiceRules,
@@ -2249,7 +2249,7 @@ export class OverworldSession {
         (quest) =>
           [
             quest.id,
-            deriveQuestDispatchWindow({
+            deriveQuestDispatchPresentationWindow({
               questId: quest.id,
               journalEntries: this.journalEntries,
               openingRegistration: this.world.opening_registration ?? null,

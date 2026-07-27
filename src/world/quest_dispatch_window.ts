@@ -1,7 +1,7 @@
 import { hashState } from "../core/hash.js";
 import { WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES } from "../core/embedded_launch_overlay_receipt.js";
 import type { OpeningAlly } from "./opening_ally.js";
-import { proveOpeningAllyJournal } from "./opening_ally_journal.js";
+import { openingAllyOfferJournalId, proveOpeningAllyJournal } from "./opening_ally_journal.js";
 import type { OpeningLeadSource } from "./opening_lead_source.js";
 import { proveOpeningLeadSourceJournal } from "./opening_lead_source_journal.js";
 import type { OpeningPreparation } from "./opening_preparation.js";
@@ -91,6 +91,34 @@ export type QuestDispatchWindow = Readonly<{
   proofHash: string;
 }>;
 
+type QuestDispatchPrefixReceipt = Readonly<
+  Pick<QuestDispatchWindowReceipt, "reliefOath" | "leadSource" | "preparation" | "reliefAllocation">
+>;
+
+export type PendingJuneDispatchPresentation = Readonly<{
+  schemaVersion: typeof QUEST_DISPATCH_WINDOW_SCHEMA_VERSION;
+  questId: string;
+  status: "june_commitment_pending";
+  committedMinutes: number;
+  finalMinutes: Readonly<{
+    minimum: number;
+    maximum: number;
+  }>;
+  receipt: Readonly<
+    QuestDispatchPrefixReceipt & {
+      juneCommitment: Readonly<{
+        kind: "pending";
+        journalId: string;
+        optionMinutes: readonly number[];
+        boundary: QuestDispatchWindowBoundary;
+      }>;
+    }
+  >;
+  proofHash: string;
+}>;
+
+export type QuestDispatchPresentationWindow = QuestDispatchWindow | PendingJuneDispatchPresentation;
+
 export type QuestDispatchWindowInputs = Readonly<{
   questId: string;
   journalEntries?: readonly OverworldJournalEntry[];
@@ -145,11 +173,13 @@ function hasJuneContactAfterPreparation(args: {
 }
 
 /**
- * Derive the Wolf-Winter dispatch window from the authenticated departure
- * journal. Any legacy, direct, incomplete, or contradictory current proof is
- * intentionally neutral rather than inferred from character state or facts.
+ * Derive authenticated Wolf-Winter dispatch state from the departure journal.
+ * Legacy, direct, malformed, and incomplete prefix proofs remain neutral; the
+ * one current offered June decision may become a presentation-only pending proof.
  */
-export function deriveQuestDispatchWindow(args: QuestDispatchWindowInputs): QuestDispatchWindow {
+function deriveQuestDispatchWindowState(
+  args: QuestDispatchWindowInputs,
+): QuestDispatchPresentationWindow {
   if (
     args.questId !== WOLF_WINTER_DISPATCH_WINDOW_QUEST_ID ||
     !args.journalEntries ||
@@ -245,6 +275,33 @@ export function deriveQuestDispatchWindow(args: QuestDispatchWindowInputs): Ques
         : null;
     if (!reliefAllocation) return neutralWindow(args.questId);
 
+    const prefixReceipt: QuestDispatchPrefixReceipt = Object.freeze({
+      reliefOath: Object.freeze({
+        optionId: reliefOathProof.option.id,
+        journalId: args.journalEntries[reliefOathProof.journalIndex]!.id,
+        minutes: reliefOathProof.terms.minutes,
+        boundary: freezeBoundary(reliefOathProof.selectionBoundary),
+      }),
+      leadSource: Object.freeze({
+        optionId: leadSourceProof.option.id,
+        journalId: args.journalEntries[leadSourceProof.journalIndex]!.id,
+        minutes: leadSourceProof.terms.minutes,
+        boundary: freezeBoundary(leadSourceProof.selectionBoundary),
+      }),
+      preparation: Object.freeze({
+        profileId: preparationProof.profile.id,
+        journalId: args.journalEntries[preparationProof.journalIndex]!.id,
+        minutes: preparationProof.terms.minutes,
+        boundary: freezeBoundary(preparationProof.selectionBoundary),
+      }),
+      reliefAllocation,
+    });
+    const committedMinutes =
+      prefixReceipt.reliefOath.minutes +
+      prefixReceipt.leadSource.minutes +
+      prefixReceipt.preparation.minutes +
+      prefixReceipt.reliefAllocation.minutes;
+
     const allyProof = proveOpeningAllyJournal({
       scene: args.openingAlly!,
       preparationProof,
@@ -254,6 +311,42 @@ export function deriveQuestDispatchWindow(args: QuestDispatchWindowInputs): Ques
       trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
     });
     if (allyProof.legacy) return neutralWindow(args.questId);
+    if (allyProof.offered && !allyProof.option && allyProof.offerBoundary && args.openingAlly) {
+      const optionMinutes = Object.freeze(
+        [...new Set(args.openingAlly.options.map((option) => option.terms.minutes))].sort(
+          (left, right) => left - right,
+        ),
+      );
+      const minimum = committedMinutes + optionMinutes[0]!;
+      const maximum = committedMinutes + optionMinutes.at(-1)!;
+      const finalMinutes = Object.freeze({ minimum, maximum });
+      const receipt = Object.freeze({
+        ...prefixReceipt,
+        juneCommitment: Object.freeze({
+          kind: "pending" as const,
+          journalId: openingAllyOfferJournalId(args.openingAlly.id),
+          optionMinutes,
+          boundary: freezeBoundary(allyProof.offerBoundary),
+        }),
+      });
+      const proofHash = hashState({
+        schemaVersion: QUEST_DISPATCH_WINDOW_SCHEMA_VERSION,
+        questId: args.questId,
+        status: "june_commitment_pending" as const,
+        committedMinutes,
+        finalMinutes,
+        receipt,
+      });
+      return Object.freeze({
+        schemaVersion: QUEST_DISPATCH_WINDOW_SCHEMA_VERSION,
+        questId: args.questId,
+        status: "june_commitment_pending",
+        committedMinutes,
+        finalMinutes,
+        receipt,
+        proofHash,
+      });
+    }
     const juneCommitment = allyProof.option
       ? allyProof.terms && allyProof.selectionBoundary && allyProof.journalIndex !== null
         ? Object.freeze({
@@ -279,33 +372,10 @@ export function deriveQuestDispatchWindow(args: QuestDispatchWindowInputs): Ques
     if (!juneCommitment) return neutralWindow(args.questId);
 
     const receipt: QuestDispatchWindowReceipt = Object.freeze({
-      reliefOath: Object.freeze({
-        optionId: reliefOathProof.option.id,
-        journalId: args.journalEntries[reliefOathProof.journalIndex]!.id,
-        minutes: reliefOathProof.terms.minutes,
-        boundary: freezeBoundary(reliefOathProof.selectionBoundary),
-      }),
-      leadSource: Object.freeze({
-        optionId: leadSourceProof.option.id,
-        journalId: args.journalEntries[leadSourceProof.journalIndex]!.id,
-        minutes: leadSourceProof.terms.minutes,
-        boundary: freezeBoundary(leadSourceProof.selectionBoundary),
-      }),
-      preparation: Object.freeze({
-        profileId: preparationProof.profile.id,
-        journalId: args.journalEntries[preparationProof.journalIndex]!.id,
-        minutes: preparationProof.terms.minutes,
-        boundary: freezeBoundary(preparationProof.selectionBoundary),
-      }),
-      reliefAllocation,
+      ...prefixReceipt,
       juneCommitment,
     });
-    const ledgerMinutes =
-      receipt.reliefOath.minutes +
-      receipt.leadSource.minutes +
-      receipt.preparation.minutes +
-      receipt.reliefAllocation.minutes +
-      receipt.juneCommitment.minutes;
+    const ledgerMinutes = committedMinutes + receipt.juneCommitment.minutes;
     const status =
       ledgerMinutes <= WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES ? "on_time" : "delayed";
     const proofHash = hashState({
@@ -328,4 +398,23 @@ export function deriveQuestDispatchWindow(args: QuestDispatchWindowInputs): Ques
     // claim. Preserve the public legacy-neutral result instead.
     return neutralWindow(args.questId);
   }
+}
+
+/**
+ * Player-facing timing may expose one authenticated, current June decision as
+ * provisional. It remains structurally separate from the final launch window.
+ */
+export function deriveQuestDispatchPresentationWindow(
+  args: QuestDispatchWindowInputs,
+): QuestDispatchPresentationWindow {
+  return deriveQuestDispatchWindowState(args);
+}
+
+/**
+ * Final quest-launch authority. An offered-but-unselected field team remains
+ * neutral here until the player seals one complete departure receipt.
+ */
+export function deriveQuestDispatchWindow(args: QuestDispatchWindowInputs): QuestDispatchWindow {
+  const window = deriveQuestDispatchWindowState(args);
+  return window.status === "june_commitment_pending" ? neutralWindow(args.questId) : window;
 }

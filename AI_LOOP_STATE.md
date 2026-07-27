@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 662 -->
+<!-- historical_cycle_count: 663 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - pending_june_dispatch_truth
+
+- Evidence choice: exact-clean Terra seed 72751 exposed a truthful `65m delayed` card collapsing to `unverified—neutral` only while June's current field-team choice was open.
+- Surface: view presentation now authenticates a provisional receipt with committed minutes and June's final range; final launch authority remains the strict sealed receipt and maps pending state to legacy-neutral internally.
+- Counterfactual: elapsed time, decision order, option costs, launch legality, final dispatch totals, failure pressure, routes, RNG, and endings are unchanged; tampered offer boundaries fail closed.
+- Pure evidence: exact-clean Terra seed 72752 organically saw `70m delayed` → `70–85m pending` → `85m delayed`, completed The Wolf-Winter fortified at decision 21, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the canary validated the pending card but still could not forecast cumulative delay before choosing preparation; retain that upstream finding while selected-term recall is the already-evidenced next density fix.
+- Economy: one canary used 2.02M raw / 116k uncached input and 7k output tokens; no replacement run, fleet, or sub-threshold feedback compile was launched.
+- Guard: independent review is clean; pre/post crawls `20260727T124134Z` / `20260727T125505Z` are zero-finding and health passes 435 files/3,588 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - relief_protocol_braced_divergence_reminder
 
@@ -150,13 +160,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: dirty-candidate Spark seed 72661 completed The Wolf-Winter, continued through The Gallowmere, ended voluntarily at checkpoint 40 after 42 decisions, rated clarity/enjoyment 4/4, and chose replay-yes with verified evidence.
 - Self-critique/follow-through: one valid canary proves no false rejection on that route, while synthetic adverse streams carry rejection coverage; no further fleet launches precede a clean merge.
 - Guard: all review blockers are closed; 217 focused tests, typecheck, lint, format, and zero-finding post-crawl `20260726T112309Z` are green.
-
-### Cycle result - wolf_post_lure_northbound_closure
-
-- Evidence choice: verified Spark seed 72659 completed all three The Wolf-Winter lure casts, then backtracked into stale wolf prose and ended at checkpoint 40 with Albany's goal active; seed 72652 separately found earlier first-cast recovery friction.
-- Surface: the final diversion is now a one-way northbound boundary; every current and predecessor-save room plus Cade truthfully names the empty wolf line and exact cattle-count route.
-- Counterfactual: all four lure outcomes retain distinct endings; hunt, drive, and fortify behavior is unchanged, the cattle capstone remains one legal locomotion action, and no decision was added.
-- Pure evidence: dirty-candidate Terra seed 72660 completed The Wolf-Winter at decision 29 and The Gallowmere at 54 with no rejection, loop, or broken state; clarity/enjoyment 4/4 and replay-yes.
-- Cohort/economy: a clean 10-Spark cohort yielded 2/10 verified reports at 96.1% input-cache reuse; 40.9M raw-input tokens continued after first protocol violations, motivating the parallel negative-only fail-fast guard rather than weaker reasoning.
-- Self-critique/follow-through: the canary did not deliberately test reverse exits, so four-route full/compact deterministic proofs carry that claim; seed 72652's earlier recovery opacity remains open, and wound lifecycle depth is next.
-- Guard: review blockers are fixed; zero-finding crawls `20260726T080313Z` / `20260726T085759Z`, exact source-hash replay, pack validation, and focused route/liveness proofs are green.

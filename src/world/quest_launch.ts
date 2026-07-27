@@ -16,7 +16,7 @@ import {
   OVERWORLD_MAX_SUPPLIES,
   travelCondition,
 } from "./travel_mechanics.js";
-import type { QuestDispatchWindow } from "./quest_dispatch_window.js";
+import type { QuestDispatchPresentationWindow } from "./quest_dispatch_window.js";
 import { wolfHillRoutePresentation } from "./wolf_hill_route_presentation.js";
 
 export const OVERWORLD_QUEST_LAUNCH_VERSION = 1 as const;
@@ -223,7 +223,7 @@ export function presentOverworldQuestLaunch(
   resources?: OverworldQuestLaunchResources,
   selectedOptionId?: string,
   knowledgeIds?: readonly string[],
-  dispatchWindow?: QuestDispatchWindow,
+  dispatchWindow?: QuestDispatchPresentationWindow,
 ): OverworldQuestLaunchView {
   const parsed = OverworldQuestLaunchSchema.parse(launch);
   const options = parsed.options.map((option) => {

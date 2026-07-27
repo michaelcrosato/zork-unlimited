@@ -22,6 +22,7 @@ import {
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { deriveQuestDispatchPresentationWindow } from "../../src/world/quest_dispatch_window.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -645,4 +646,179 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     expect(markup.split(expectedBriefing)).toHaveLength(3);
     expect(cli.split(expectedBriefing)).toHaveLength(3);
   });
+
+  it("keeps the exact 65m → pending June → 80m dispatch trace truthful on every surface", () => {
+    const { session, quest: beforeJune } = routeCard(
+      "albany:oath_limited_aid_only",
+      "albany:relief_resident_shelter",
+      {
+        registrationId: "albany:road_warden",
+        sourceId: "albany:source_jamie_market_testimony",
+        preparationId: "albany:prep_drover_route",
+      },
+    );
+    const beforeBriefing =
+      "Dispatch 65m—delayed; roads change arrival, not delay. " +
+      "First failure: lure/drive/hunt alarm +1; fortify +1.";
+    for (const summary of Object.values(fullSummaries(beforeJune))) {
+      expect(summary?.startsWith(beforeBriefing)).toBe(true);
+    }
+
+    session.talkToCharacter(WORLD.opening_ally!.contact);
+    expect(session.view().questStarts).toEqual([]);
+    expect(session.compactView().quest_starts).toBeUndefined();
+    const pendingQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
+    if (!pendingQuest?.launch) throw new Error("Expected the pending-June Wolf route card.");
+    const pendingBriefing =
+      "Dispatch 65m committed; June's field team is pending (final 65–80m). " +
+      "Delay is already certain; choose or decline to seal the final total and pressure.";
+    const pendingFull = fullSummaries(pendingQuest);
+    const pendingCompact = compactSummaries(session);
+    for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
+      expect(pendingFull[optionId]?.startsWith(pendingBriefing)).toBe(true);
+      expect(pendingCompact[optionId]).toBe(pendingFull[optionId]);
+      expect(pendingFull[optionId]).not.toMatch(
+        /unverified|neutral|no opening-delay failure pressure|fouled first cast/i,
+      );
+      expect(pendingFull[optionId]?.length).toBeLessThanOrEqual(
+        WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
+      );
+    }
+
+    const pendingWindow = deriveQuestDispatchPresentationWindow({
+      questId: WOLF_ID,
+      journalEntries: session.snapshot().journalEntries,
+      openingRegistration: WORLD.opening_registration!,
+      openingReliefOath: WORLD.opening_relief_oath!,
+      openingLeadSource: WORLD.opening_lead_source!,
+      openingPreparation: WORLD.opening_preparation!,
+      openingReliefAllocation: WORLD.opening_relief_allocation!,
+      openingAlly: WORLD.opening_ally!,
+    });
+    expect(pendingWindow).toMatchObject({
+      status: "june_commitment_pending",
+      committedMinutes: 65,
+      finalMinutes: { minimum: 65, maximum: 80 },
+    });
+    for (const knowledgeIds of [
+      [],
+      ["albany:knowledge_relief_cade_fodder"],
+      ["albany:knowledge_wolf_limited_aid_only"],
+      ["albany:knowledge_relief_cade_fodder", "albany:knowledge_wolf_limited_aid_only"],
+    ]) {
+      for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
+        const projection = wolfHillRoutePresentation({
+          launchId: "albany:wolf_hill_approach",
+          optionId,
+          knowledgeIds,
+          dispatchWindow: pendingWindow,
+        });
+        expect(projection?.tradeoffSummary.startsWith(pendingBriefing)).toBe(true);
+        expect(projection?.tradeoffSummary).not.toMatch(/unverified|fouled first cast/i);
+        expect(projection?.tradeoffSummary.length).toBeLessThanOrEqual(
+          WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
+        );
+      }
+    }
+
+    const pendingMarkup = renderQuestNotice(pendingQuest);
+    const pendingCli = renderQuestLaunch(pendingQuest);
+    expect(pendingMarkup.match(/Dispatch 65m committed; June/g)).toHaveLength(2);
+    expect(pendingCli.split(pendingBriefing)).toHaveLength(3);
+    const api = createToolApi({ root: ROOT });
+    const restored = api.restore_overworld_session({
+      compact_context: false,
+      compact_result: false,
+      snapshot: session.snapshot(),
+    });
+    const restoredQuest = api
+      .get_overworld_session({
+        session_id: restored.session_id,
+        include_observation: true,
+      })
+      .observation.quests.find((candidate) => candidate.id === WOLF_ID);
+    if (!restoredQuest?.launch) throw new Error("Expected restored pending-June route card.");
+    expect(fullSummaries(restoredQuest)).toEqual(pendingFull);
+
+    const strictWindow = session.prepareQuestStart(WOLF_ID, RIDGE_ID).dispatchWindow;
+    expect(strictWindow).toMatchObject({ status: "legacy_neutral" });
+    expect(strictWindow).not.toHaveProperty("ledgerMinutes");
+
+    session.chooseJourneyStory("albany:ally_june_cattle_first");
+    const afterJune = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
+    if (!afterJune?.launch) throw new Error("Expected the final June route card.");
+    const afterBriefing =
+      "Dispatch 80m—delayed; roads change arrival, not delay. " +
+      "First failure: lure/drive/hunt alarm +1; fortify +1.";
+    for (const summary of Object.values(fullSummaries(afterJune))) {
+      expect(summary?.startsWith(afterBriefing)).toBe(true);
+      expect(summary).not.toContain(pendingBriefing);
+    }
+  });
+
+  it.each([
+    {
+      label: "guaranteed on time",
+      oathId: "albany:oath_full_compact_duty",
+      sourceId: "albany:source_rowan_civic_docket",
+      preparationId: "albany:prep_works_fortification",
+      committedMinutes: 40,
+      maximumMinutes: 55,
+      pressureCopy: "It stays on time; choose or decline to seal the final total.",
+    },
+    {
+      label: "threshold crossing",
+      oathId: "albany:oath_unaffiliated_personal_bond",
+      sourceId: "albany:source_jamie_market_testimony",
+      preparationId: "albany:prep_drover_route",
+      committedMinutes: 60,
+      maximumMinutes: 75,
+      pressureCopy: "Choose or decline to set the final total and delay pressure.",
+    },
+    {
+      label: "guaranteed delayed",
+      oathId: "albany:oath_limited_aid_only",
+      sourceId: "albany:source_jamie_market_testimony",
+      preparationId: "albany:prep_drover_route",
+      committedMinutes: 65,
+      maximumMinutes: 80,
+      pressureCopy:
+        "Delay is already certain; choose or decline to seal the final total and pressure.",
+    },
+  ])(
+    "classifies a pending field-team range that is $label without inventing a final forecast",
+    ({ oathId, sourceId, preparationId, committedMinutes, maximumMinutes, pressureCopy }) => {
+      const { session } = routeCard(oathId, "albany:relief_resident_shelter", {
+        registrationId: "albany:road_warden",
+        sourceId,
+        preparationId,
+      });
+      session.talkToCharacter(WORLD.opening_ally!.contact);
+      const pendingWindow = deriveQuestDispatchPresentationWindow({
+        questId: WOLF_ID,
+        journalEntries: session.snapshot().journalEntries,
+        openingRegistration: WORLD.opening_registration!,
+        openingReliefOath: WORLD.opening_relief_oath!,
+        openingLeadSource: WORLD.opening_lead_source!,
+        openingPreparation: WORLD.opening_preparation!,
+        openingReliefAllocation: WORLD.opening_relief_allocation!,
+        openingAlly: WORLD.opening_ally!,
+      });
+      expect(pendingWindow).toMatchObject({
+        status: "june_commitment_pending",
+        committedMinutes,
+        finalMinutes: { minimum: committedMinutes, maximum: maximumMinutes },
+      });
+      for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
+        const summary = wolfHillRoutePresentation({
+          launchId: "albany:wolf_hill_approach",
+          optionId,
+          dispatchWindow: pendingWindow,
+        })?.tradeoffSummary;
+        expect(summary).toContain(pressureCopy);
+        expect(summary).not.toMatch(/unverified|fouled first cast/i);
+        expect(summary?.length).toBeLessThanOrEqual(WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT);
+      }
+    },
+  );
 });
