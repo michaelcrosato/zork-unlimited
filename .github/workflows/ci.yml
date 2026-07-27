@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  verify-prerequisites:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,20 +39,6 @@ jobs:
         run: npm run lint
       - name: Format check (Prettier)
         run: npm run format:check
-      # Root tests SSR-load UI modules through the real Vite config, so its
-      # package-local React/Vite dependencies must exist before `npm test`.
-      - name: Install UI deps
-        run: npm --prefix ui ci
-      - name: Tests (unit + property + determinism)
-        # Keep hosted failures attributable: the dot reporter can end with only
-        # an exit code when a worker dies late in this hour-long suite.
-        run: npm exec -- vitest run --reporter=verbose
-      # The granular steps above are exactly `npm run health` minus pack
-      # validation, so only the validate step remains — running health here
-      # would double-execute the entire pipeline (~2x CI time, doubled flake
-      # surface, zero added signal).
-      - name: Validate every shipped quest
-        run: npm run validate
       # The web UI is a separate package under ui/ that bundles the headless
       # engine (ui/src imports ../src, which pulls root deps like zod/yaml —
       # installed by `npm ci` above). The vite build resolves every import and
@@ -60,10 +46,56 @@ jobs:
       # build can't (esbuild strips types without checking — exactly how six
       # real App.tsx type errors against a changed engine API shipped green
       # before this gate existed).
+      - name: Install UI deps
+        run: npm --prefix ui ci
+      # The granular steps above are exactly `npm run health` minus pack
+      # validation and tests, so running health here would double-execute the
+      # entire pipeline (~2x CI time, doubled flake surface, zero added signal).
+      - name: Validate every shipped quest
+        run: npm run validate
       - name: Typecheck UI
         run: npx tsc -p ui/tsconfig.json --noEmit
       - name: Build UI (catch UI rot)
         run: npm run ui:build
+
+  test-shards:
+    name: Tests (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/2", "2/2"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Root tests SSR-load UI modules through the real Vite config, so its
+      # package-local React/Vite dependencies must exist in every test shard.
+      - name: Install UI deps
+        run: npm --prefix ui ci
+      - name: Tests (unit + property + determinism)
+        # Keep hosted failures attributable: the dot reporter can end with only
+        # an exit code when a worker dies late in this hour-long suite. Vitest
+        # accepts this exact `--shard=<index>/<count>` form.
+        run: npm exec -- vitest run --reporter=verbose --shard=${{ matrix.shard }}
+
+  # Branch protection requires this exact check name. It runs even when a prerequisite
+  # fails, then fails explicitly instead of being skipped or succeeding accidentally.
+  verify:
+    if: ${{ always() }}
+    needs: [verify-prerequisites, test-shards]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all verification prerequisites
+        env:
+          PRECHECK_RESULT: ${{ needs.verify-prerequisites.result }}
+          TEST_SHARDS_RESULT: ${{ needs.test-shards.result }}
+        run: |
+          test "$PRECHECK_RESULT" = success
+          test "$TEST_SHARDS_RESULT" = success
 
   crawl-smoke:
     runs-on: ubuntu-latest

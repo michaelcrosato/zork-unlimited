@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 663 -->
+<!-- historical_cycle_count: 664 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - ci_vitest_two_shard_pilot
+
+- Evidence choice: recent feature PRs spent 65–79 minutes in `verify`, with Vitest alone consuming 64–78; dependency caching or more in-run workers cannot materially shorten that bottleneck safely.
+- Surface: CI now runs unchanged Vitest coverage as `1/2` and `2/2` on separate runners, keeps static/UI/pack checks in a parallel prerequisite job, and preserves one lightweight required check named `verify`.
+- Counterfactual: test files, max workers, timeouts, integrity, typecheck, lint, format, pack validation, UI type/build, crawl, permissions, and branch-protection semantics are unchanged; failed/cancelled prerequisites make final `verify` fail.
+- Probe: `actionlint` and YAML parse are clean; a four-file execution probe partitioned 2/2 files (11/8 tests) across the two real shard forms without `passWithNoTests`.
+- Pure evidence: exact-clean Terra seed 72753 completed The Wolf-Winter bloodlessly at decision 33, continued to decision 40, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the canary cannot validate CI orchestration; its repeated opening-density finding reinforces the queued selected-term recap, while the Queensbury Rowan duplication stays outside the starting slice.
+- Economy/guard: the canary used 3.02M raw / 140k uncached input and 10.1k output; pre/post crawls `20260727T144857Z` / `20260727T145517Z` are zero-finding and health passes 435 files/3,588 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - pending_june_dispatch_truth
 
@@ -151,12 +161,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Transport economy: seed 72662's malformed nineteenth wrapper was stopped in-flight with exit 43 and no published evidence; the one replacement canary verified normally.
 - Self-critique/follow-through: the valid player chose combat and ended at the first goal, so it did not organically see wound care; deterministic route, replay, MCP/UI, and migration proofs carry that claim.
 - Guard: all P1/P2 review findings are closed, including order-insensitive predicates, staged care, and fail-fast timer cleanup; 70 focused tests, 3,533-test health, and zero-finding crawl `20260726T151842Z` are green.
-
-### Cycle result - blind_strict_stream_fail_fast
-
-- Evidence choice: the clean 10-Spark cohort yielded only 2/10 verified reports, with 95.0% of its raw tokens attached to eight inadmissible transport runs.
-- Surface: a negative-only live guard now stops complete forbidden server/tool and bound malformed-wrapper/lifecycle rows without accepting evidence or treating absent future rows as failure.
-- Custody: Windows uses a suspended Codex process inside a kill-on-close Job Object before resuming it; POSIX uses a runner-owned process group, and only verified descendant termination can prove fail-fast cleanup.
-- Pure evidence: dirty-candidate Spark seed 72661 completed The Wolf-Winter, continued through The Gallowmere, ended voluntarily at checkpoint 40 after 42 decisions, rated clarity/enjoyment 4/4, and chose replay-yes with verified evidence.
-- Self-critique/follow-through: one valid canary proves no false rejection on that route, while synthetic adverse streams carry rejection coverage; no further fleet launches precede a clean merge.
-- Guard: all review blockers are closed; 217 focused tests, typecheck, lint, format, and zero-finding post-crawl `20260726T112309Z` are green.

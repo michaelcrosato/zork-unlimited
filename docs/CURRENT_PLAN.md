@@ -4,7 +4,7 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-27 — Pending Dispatch Truth
+## Cycle: 2026-07-27 — Two-Shard CI Pilot
 
 ## Synthesis
 
@@ -13,37 +13,34 @@ resolution families, and authored jobs and events in all six Albany districts.
 The remaining work is experiential consolidation: make that depth legible
 without flattening choices, consequences, or counterfactuals.
 
-`main` is merged through `5597ee41`, including the Relief Protocol divergence
-reminder. Candidate `59922e8d` fixes its canary's exact presentation trace:
-talking to June no longer collapses a proven delayed dispatch into
-`unverified—neutral` while her field-team choice is open.
+`main` is merged through `3b78f510`, including the authenticated pending-June
+dispatch range. The selected-term recap and pre-preparation timing forecast are
+locally health-green in ordered worktrees, but the current 65–79-minute required
+verify makes every landing the dominant wall-clock cost.
 
-The view now carries an authenticated provisional receipt with committed
-minutes and June's final range. Final quest-launch authority deliberately keeps
-the sealed `on_time | delayed | legacy_neutral` contract; pending presentation
-cannot launch, add pressure, or masquerade as a final receipt.
+The workflow candidate keeps every existing gate while moving unchanged Vitest
+coverage onto two independent runners. Static, UI, and pack checks run in
+parallel; a final job still named `verify` succeeds only when both prerequisite
+jobs succeed. Crawl remains independent.
 
-Exact-clean pure Terra seed 72752 organically exercised the change:
-`70m delayed` → `70–85m pending` → `85m delayed`. It completed Wolf-Winter
-fortified at decision 21, rated clarity/enjoyment 4/4, stayed unstuck, and chose
-replay-yes.
+`actionlint`, YAML parse, and a small execution probe are green. Exact-clean
+Terra seed 72753 confirms the unchanged game build still completes Wolf-Winter
+bloodlessly, continues, and reaches decision 40 without a stuck state.
 
 ## Chosen Move
 
-Land `59922e8d` with its exact-clean evidence note.
+Publish the two-shard workflow as the first live pilot. Measure both shard
+durations and total required-check wall time; accept it only if unchanged
+coverage stays green and the final `verify` gate behaves correctly.
 
-Next, continue the already-built selected-term recap increment. Two consecutive
-canaries describe Albany's permanent terms as dense, and seed 72750 explicitly
-lost track of conditional preparation effects. The Station recap should show
-one selected-only active term beneath each resolved title, bounded to a concise
-length and derived from canonical option presentation. It must remain
-read-only, Station-local memory support rather than another action or mechanics
-layer.
+After the pilot merges, rebase and blind-test the already-health-green
+selected-term recap. Two consecutive canaries describe Albany's permanent
+terms as dense, and seed 72750 explicitly lost track of conditional preparation
+effects. Keep that work read-only and Station-local.
 
-Seed 72752 also found a distinct upstream urgency gap: before preparation is
-chosen, the route card remains unverified, so cumulative delay is hard to
-forecast while comparing the optional choice. Preserve that finding for the
-following increment; do not conflate it with selected-term recall.
+The preparation timing forecast remains queued immediately behind the recap. It
+answers seed 72752 on the comparison card itself without turning hypothetical
+options into launch authority.
 
 Transport circuit: Spark remains quarantined after matching
 forbidden-wrapper/model-cache failures. Probe with at most two runs only after
@@ -53,11 +50,11 @@ larger cohorts only for milestone re-aims.
 
 ## Acceptance for the next increment
 
-1. Every resolved recap row shows only its selected title and one canonical,
-   concise active term; unresolved and legacy rows expose no invented term.
-2. No unselected option, complete consequence, new action, decision, cost,
-   effect, dispatch minute, launch rule, or quest mechanic is exposed or changed.
-3. Full, compact, UI, CLI, snapshot, tamper, and Station-boundary behavior stay
-   paired, with the compact schema versioned honestly.
-4. Both crawl gates, full health, independent review, and one exact-clean pure
-   blind pass are green before landing.
+1. Both Vitest shards execute successfully with no skipped coverage and retain
+   the existing worker and timeout configuration.
+2. Static/UI/pack prerequisites and both shards are required; failed, skipped,
+   or cancelled work cannot yield a successful final `verify`.
+3. The required check remains named `verify`, crawl remains independent, and no
+   game, test, verifier, permission, or branch-protection behavior is weakened.
+4. Record actual shard and end-to-end timings before deciding whether to retain
+   or rebalance the pilot.
