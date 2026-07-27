@@ -64,6 +64,7 @@ export function renderTerminalStoryChoiceComparison(
     lines.push(`       ${labels.trigger}: ${option.summary.fieldTrigger}`);
     lines.push(`       Immediate cost: ${option.summary.immediateCost}`);
     lines.push(`       Tradeoff: ${option.summary.tradeoff}`);
+    if (option.dispatchForecast) lines.push(`       ${option.dispatchForecast.line}`);
     lines.push(`       Inspect: \`inspect ${option.id}\``);
     lines.push(`       Choose: \`choose ${option.id}\``);
   });
@@ -94,6 +95,7 @@ export function renderTerminalStoryChoiceDetail(
     lines.push(`  ${labels.trigger}: ${option.summary.fieldTrigger}`);
     lines.push(`  Immediate cost: ${option.summary.immediateCost}`);
     lines.push(`  Tradeoff: ${option.summary.tradeoff}`);
+    if (option.dispatchForecast) lines.push(`  ${option.dispatchForecast.line}`);
   }
   lines.push(`  Consequence: ${projected.consequence}`);
   lines.push(`  Choose: \`choose ${projected.id}\``);

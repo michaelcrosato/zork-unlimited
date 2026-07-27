@@ -295,6 +295,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.tradeoff);
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.summary);
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.trigger_category);
+      const forecastLine = stationJourney.storyChoice?.options[0]?.dispatchForecast?.line;
+      if (!forecastLine) throw new Error("Expected the authenticated Station timing forecast.");
+      expect(stationButton.textContent).toContain(forecastLine);
       expect(stationButton.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).toContain(stationPreparation.profiles[0]!.consequence);
