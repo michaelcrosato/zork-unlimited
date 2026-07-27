@@ -3,7 +3,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createServer } from "vite";
 
-import { JOURNEY_OPPORTUNITY_GUIDANCE } from "../../src/world/journey_contract.js";
+import {
+  INITIAL_JOURNEY_GOAL_GUIDANCE,
+  JOURNEY_OPPORTUNITY_GUIDANCE,
+} from "../../src/world/journey_contract.js";
 import { deferJourneyOpportunityDetails } from "../../src/world/journey_opportunity_leads.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
@@ -132,6 +135,7 @@ describe("journey opportunity UI", () => {
         expect(markup).not.toMatch(/albany_city__|dispatch_|option_id|reward|renown/i);
       }
       expect(statusMarkup).toContain("Optional aftermath");
+      expect(statusMarkup).toContain(INITIAL_JOURNEY_GOAL_GUIDANCE.replaceAll("'", "&#x27;"));
       expect(statusMarkup).toContain("Return opportunities");
       expect(statusMarkup).toContain(JOURNEY_OPPORTUNITY_GUIDANCE);
       expect(statusMarkup).toContain("When town actions are available");

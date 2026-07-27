@@ -52,8 +52,8 @@ mandatory length does not.
 
 The proof-hashed opening goal remains “Find one local lead in Albany and see it
 through.” Shared player guidance states the mechanical boundary separately:
-completing one Albany quest satisfies the goal, while jobs, events, and sites
-may reveal leads but do not finish it themselves.
+completing Albany's Wolf-Winter quest satisfies the goal, while jobs, events,
+and sites may reveal leads but do not finish it themselves.
 
 ## Local canon and player role
 

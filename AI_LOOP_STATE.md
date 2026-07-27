@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 667 -->
+<!-- historical_cycle_count: 668 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_winter_goal_guidance
+
+- Evidence choice: the opening goal named a local lead without stating which authored quest completes it or whether smaller jobs, events, and sites can satisfy it.
+- Surface: every shared journey presentation now says to complete Albany's Wolf-Winter quest and truthfully identifies jobs, events, and sites as lead sources rather than goal completion.
+- Counterfactual: goal id/text/version, completion predicate, proof inputs, snapshots, receipts, choices, mechanics, RNG, routes, and endings are unchanged; terminal, UI, compact, MCP, and restore consume one shared guidance value.
+- Pure evidence: exact-clean Terra seed 72758 received the guidance at start, marked goal-understood, completed The Wolf-Winter nonlethally at decision 31, rated clarity/enjoyment 3/4, stayed unstuck, ended at the first goal choice, and chose replay-yes.
+- Self-critique/follow-through: the player called the basic objective clear but repeated the compiled S1 that the persistent Station recap lacks a running selected-plan dispatch total; preempt the generic compact-event reduction with that narrower fix.
+- Economy: the single 42-turn canary used 2.12M raw / 101k uncached input and 6.6k output tokens at 95.2% cache reuse; no replacement or exposure-chasing run was launched.
+- Guard: independent review is clean, stable patch id `e253ce50` survived the rebase, crawl `20260727T194232Z` is zero-finding, and health passes 437 files/3,599 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - civic_first_use_categories
 
@@ -153,12 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: Spark seed 72740 failed closed at call 44 and published nothing; fresh Terra seed 72741 continued at Wolf decision 30, chose the dawn wagon, continued at 40, completed Gallowmere, and ended at 54 with clarity/enjoyment 4/4, unstuck, replay-yes.
 - Self-critique/follow-through: one post-change player validates reachability rather than the 70% fleet threshold; dense Albany setup remains a separate S1 follow-up.
 - Guard: independent review is clean, post-crawl `20260726T211742Z` is zero-finding, and full health passes 434 files/3,575 tests plus both typechecks and all 12 packs.
-
-### Cycle result - wolf_dispatch_window_failure_pressure
-
-- Evidence choice: verified pure Spark seed 72721 completed The Wolf-Winter in 19 decisions, ended voluntarily, rated clarity/enjoyment 4/4, remained unstuck, reported no bug, and chose replay-yes.
-- Surface: an authenticated departure ledger now classifies ≤60 minutes on time and >60 delayed, names that status at both hill approaches, and keeps road choice from rewriting departure history.
-- Failure-forward: a delayed opening adds exactly one first-local-failure pressure step across lure, drive, fortify, and the uncommitted hunt rail while preserving every authored recovery.
-- Counterfactual: on-time behavior, successful checks, rail skips, legal actions, and other-strategy rail recoveries remain unchanged; one reusable conditional-failure primitive carries all four consumers.
-- Provenance/self-critique: a session-bound opaque preparation capability rejects forged or mutated launch overlays; the pure player sampled combat, so deterministic paired routes carry the other strategy claims.
-- Guard: independent review is clean; zero-finding post-crawl `20260726T201536Z` covers the consolidated world and full health passes 434 files/3,575 tests plus both typechecks and all 12 packs.

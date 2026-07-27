@@ -1022,6 +1022,12 @@ describe("journey campaign", () => {
   });
 
   it("matches goal completion by target quest, including both shared-target branches", () => {
+    expect(
+      journeyCampaignGoalIsComplete(INITIAL_JOURNEY_CAMPAIGN_GOAL, new Set(["gallowmere"])),
+    ).toBe(false);
+    expect(
+      journeyCampaignGoalIsComplete(INITIAL_JOURNEY_CAMPAIGN_GOAL, new Set(["wolf_winter"])),
+    ).toBe(true);
     const completed = new Set(["wolf_winter", "gallowmere"]);
     expect(
       journeyCampaignGoalIsComplete(ALBANY_DAWN_DISPATCH_GOALS.send_wagon_to_cade, completed),

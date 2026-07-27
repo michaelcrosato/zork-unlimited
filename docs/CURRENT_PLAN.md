@@ -4,7 +4,7 @@ Token-small AFK-loop handoff. The durable milestone and evidence rules live in
 [`STARTING_SLICE.md`](STARTING_SLICE.md); do not replace that contract during an
 ultraplan.
 
-## Cycle: 2026-07-27 — Civic First-Use Categories
+## Cycle: 2026-07-27 — Exact Wolf-Winter Goal Guidance
 
 ## Synthesis
 
@@ -13,34 +13,34 @@ resolution families, and authored jobs and events in all six Albany districts.
 The remaining work is experiential consolidation: make that depth legible
 without flattening choices, consequences, or counterfactuals.
 
-`main` is merged through the preparation forecast. The two-shard CI pilot has
-now cut two feature landings to roughly 45–47 minutes from a recent 70m05s
+`main` is merged through Civic's first-use categories. Three measured
+two-shard landings now complete in roughly 45–48 minutes from a recent 70m05s
 average without dropping a test or gate. Keep the pilot and gather timings
 before changing shard count or balancing.
 
-The Civic increment rebased with an identical patch id. All ten permanent
-opening choices now lead with an authenticated first-use category, while exact
-terms remain inspectable and legacy all-omitted manifests retain their prior
-fallback. Exact-clean seed 72757 saw every category, completed Wolf-Winter
-nonviolently at decision 25, continued twice, completed Gallowmere at 51, rated
-clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+The goal-guidance increment rebased with an identical patch id. One shared
+journey value now says that completing Albany's Wolf-Winter satisfies the goal
+and that jobs, events, and sites reveal leads without completing it. Goal
+identity, predicate, proof, snapshots, receipts, and gameplay are untouched.
 
-One earlier seed failed closed before publishing evidence because the strict
-blind transport rejected a wrapper call. A single fresh replacement succeeded;
-do not spend another run on the same build.
+Exact-clean seed 72758 received the guidance at start, marked goal-understood,
+completed Wolf-Winter nonlethally at decision 31, stayed unstuck, rated
+clarity/enjoyment 3/4, ended voluntarily, and chose replay-yes.
 
 ## Chosen Move
 
-Publish the Civic first-use categories as one green increment. Do not rerun the
-blind player merely because it still described the larger opening as staged;
-deterministic proofs cover every category and the report confirms all ten were
-seen without a mechanical regression.
+Publish the exact Wolf-Winter completion guidance as one green increment. Do
+not rerun the player merely because it did not quote the copy; its rollout
+received it repeatedly, it marked the goal understood, and deterministic proofs
+cover every shared surface and restore path.
 
-After this merges, rebase and land the already-green exact Wolf-Winter
-completion guidance independently. Then land the loop-efficiency increments:
-retain one authoritative outer health run and compile fresh verified feedback
-before assessment. Use the accumulated reports to re-aim the next gameplay
-change rather than adding another presentation layer by instinct.
+The canary independently repeated the compiled top hotspot: the preparation
+card truthfully forecasts a range before commitment, but the persistent
+six-row Station recap never states the currently selected plan's running
+dispatch minutes/status. Land that focused recap projection next. The
+already-focused-green blocked-event progressive disclosure remains queued, not
+discarded. Land the two loop-efficiency increments independently after the
+player-facing sequence stabilizes.
 
 Transport circuit: Spark remains quarantined after matching
 forbidden-wrapper/model-cache failures. Probe with at most two runs only after
@@ -49,11 +49,13 @@ per normal increment and the complete configured cohort only at the milestone.
 
 ## Acceptance for the next increment
 
-1. Every active starting-slice goal surface states that completing Albany's
-   Wolf-Winter quest satisfies the goal and that jobs, events, and sites may
-   reveal leads but do not finish it themselves.
-2. Terminal, UI, compact, MCP, restore, and predicate behavior stay in parity.
-3. The guidance changes no goal id, headline, completion predicate, proof,
-   receipt, mechanics, choice, RNG, route, or ending.
+1. The authenticated Station recap shows exact selected-plan dispatch minutes
+   across full, compact/MCP, terminal, and UI.
+2. While relief allocation or field team remains open, it names committed
+   minutes and the remaining optional choices without claiming a final result;
+   sealed solo/team plans state exact on-time/delayed status.
+3. No-preparation, legacy, malformed, or tampered evidence exposes no invented
+   total, and the projection changes no choice, time, launch rule, receipt,
+   route pressure, RNG, or ending.
 4. Crawl, health, one fresh pure report, independent review, and GitHub
    `verify` must be green.
