@@ -142,6 +142,7 @@ import {
   openingPreparationOfferJournalId,
 } from "./opening_preparation_journal.js";
 import { presentOpeningPreparation } from "./opening_preparation_presentation.js";
+import { withOpeningPreparationDispatchForecast } from "./opening_preparation_dispatch_forecast.js";
 import { applyOpeningReliefAllocationOption } from "./opening_relief_allocation.js";
 import {
   openingReliefAllocationJournalEntry,
@@ -990,6 +991,27 @@ export class OverworldSession {
     });
   }
 
+  private presentOpeningPreparationAtCurrentBoundary(
+    preparation: NonNullable<OverworldManifest["opening_preparation"]>,
+  ): JourneyStoryChoicePrompt {
+    return withOpeningPreparationDispatchForecast({
+      prompt: presentOpeningPreparation(preparation, this.characterState),
+      inputs: {
+        world: this.world,
+        journalEntries: this.journalEntries,
+        currentTownId: this.currentId,
+        currentAreaId: this.currentAreaId,
+        journeyActive: this.journeyState.status === "active",
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        currentMinutes: this.minutes,
+        targetQuestStarted: this.startedQuestIds.has(preparation.target_quest),
+        targetQuestCompleted: this.completedQuestIds.has(preparation.target_quest),
+        trustedLegacySourceWorldHash: this.trustedLegacyRegistrationReceiptSourceWorldHash,
+      },
+    });
+  }
+
   inspectJourneyStory(storyChoiceId: string): JourneyStoryChoicePrompt {
     assertJourneyContractAcceptingDecision(this.journeyState);
     const presented = this.journey().storyChoice;
@@ -1005,7 +1027,7 @@ export class OverworldSession {
     if (preparation?.id === storyChoiceId) {
       return withOpeningDispatchBriefing(
         this.world,
-        presentOpeningPreparation(preparation, this.characterState),
+        this.presentOpeningPreparationAtCurrentBoundary(preparation),
       )!;
     }
     const allocation = this.openingReliefAllocationDepartureInteractionAvailable();
@@ -1028,7 +1050,7 @@ export class OverworldSession {
     const storyChoice = preparation
       ? withOpeningDispatchBriefing(
           this.world,
-          presentOpeningPreparation(preparation, this.characterState),
+          this.presentOpeningPreparationAtCurrentBoundary(preparation),
         )
       : allocation
         ? withOpeningDispatchBriefing(
@@ -1355,7 +1377,7 @@ export class OverworldSession {
         : leadSource
           ? presentOpeningLeadSource(leadSource, this.characterState)
           : preparation
-            ? presentOpeningPreparation(preparation, this.characterState)
+            ? this.presentOpeningPreparationAtCurrentBoundary(preparation)
             : reliefAllocation
               ? presentOpeningReliefAllocation(reliefAllocation, this.characterState)
               : ally

@@ -1,5 +1,6 @@
 import type {
   JourneyPresentation,
+  JourneyStoryChoiceDispatchForecast,
   JourneyStoryChoiceOption,
   JourneyStoryChoicePrompt,
   JourneyStoryChoicePresentationKind,
@@ -16,7 +17,7 @@ import type { McpObservation } from "./types.js";
 
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 4 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 5 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Complete terms are staged; inspect this exact option before choosing if you need them." as const;
 
@@ -24,6 +25,7 @@ export type JourneyStoryChoiceComparisonOption = Readonly<{
   id: string;
   label: string;
   summary?: JourneyStoryChoiceSummary;
+  dispatchForecast?: JourneyStoryChoiceDispatchForecast;
 }>;
 
 export type JourneyStoryChoiceDetailOption = Readonly<{
@@ -182,6 +184,14 @@ export function compactJourneyStoryChoiceComparison(
       id: option.id,
       label: option.label,
       ...(option.summary ? { summary: Object.freeze({ ...option.summary }) } : {}),
+      ...(option.dispatchForecast
+        ? {
+            dispatchForecast: Object.freeze({
+              ...option.dispatchForecast,
+              finalMinutes: Object.freeze({ ...option.dispatchForecast.finalMinutes }),
+            }),
+          }
+        : {}),
     }),
   );
   return Object.freeze({

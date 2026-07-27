@@ -145,6 +145,11 @@ export function JourneyStoryChoiceScreen({
                       <b>Tradeoff:</b> {conciseSummary.tradeoff}
                     </small>
                   )}
+                  {option.dispatchForecast && (
+                    <small className="journey-choice-dispatch-forecast">
+                      {option.dispatchForecast.line}
+                    </small>
+                  )}
                 </button>
                 {conciseSummary && (
                   <details className="journey-choice-details">

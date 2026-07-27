@@ -169,10 +169,22 @@ export type JourneyStoryChoiceSummary = Readonly<{
   tradeoff: string;
 }>;
 
+/** Read-only timing comparison attached only to an authenticated preparation offer. */
+export type JourneyStoryChoiceDispatchForecast = Readonly<{
+  schemaVersion: 1;
+  finalMinutes: Readonly<{ minimum: number; maximum: number }>;
+  classification: "on_time_guaranteed" | "threshold_crossing" | "delayed_guaranteed";
+  thresholdMinutes: number;
+  line: string;
+  proofHash: string;
+}>;
+
 export type JourneyStoryChoiceOption = Readonly<{
   id: string;
   label: string;
   summary?: JourneyStoryChoiceSummary;
+  /** Present only on the current authenticated Albany preparation comparison. */
+  dispatchForecast?: JourneyStoryChoiceDispatchForecast;
   consequence: string;
 }>;
 
