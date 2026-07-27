@@ -186,6 +186,31 @@ export function DepartureContactLead({
   );
 }
 
+export function DepartureRecap({
+  recap,
+}: {
+  recap: NonNullable<OverworldView["departureRecap"]>;
+}): JSX.Element {
+  return (
+    <section aria-label={`${recap.questTitle} dispatch recap`}>
+      <h4>{recap.questTitle} dispatch recap</h4>
+      <dl className="departure-recap">
+        {recap.entries.map((entry) => (
+          <div key={entry.slot}>
+            <dt>{entry.label}</dt>
+            <dd>
+              {entry.title ??
+                (entry.status === "open_optional"
+                  ? "Open (optional)"
+                  : "Available after choosing preparation")}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 function suppliesLabel(value: number): string {
   return `${String(value)} ${value === 1 ? "supply" : "supplies"}`;
 }
@@ -740,14 +765,17 @@ export default function App(): JSX.Element {
               New Journey
             </button>
           </div>
-          {(worldView.departureInteractions.length > 0 ||
+          {(worldView.departureRecap ||
+            worldView.departureInteractions.length > 0 ||
             worldView.departureContactLeads.length > 0) && (
             <div className="departure-interactions">
               <h3>Before you depart</h3>
               <p>
-                Optional Station decisions; you may inspect one or leave without choosing.
-                Optional contacts are listed alongside them.
+                Your accumulated dispatch plan and any optional Station decisions still open;
+                {" you may inspect one or leave without choosing."} Optional contacts are listed
+                alongside them.
               </p>
+              {worldView.departureRecap && <DepartureRecap recap={worldView.departureRecap} />}
               {worldView.departureInteractions.map((interaction) => (
                 <button
                   className="mini-command"

@@ -167,6 +167,10 @@ import {
 import { presentOpeningRegistration } from "./opening_registration_presentation.js";
 import { withOpeningDispatchBriefing } from "./opening_dispatch_briefing.js";
 import {
+  deriveOpeningDepartureRecap,
+  type OpeningDepartureRecap,
+} from "./opening_departure_recap.js";
+import {
   clearOverworldSessionCaches,
   type OverworldSessionCaches,
   type OverworldSessionSnapshotCache,
@@ -318,6 +322,7 @@ export type {
   OverworldDepartureContactLead,
   OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
+export type { OpeningDepartureRecap } from "./opening_departure_recap.js";
 export type {
   JourneyChoice,
   JourneyChoiceResult,
@@ -468,6 +473,7 @@ export class OverworldSession {
   private journeyState: JourneyContractSnapshot = createInitialJourneyContractSnapshot();
   private openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null = null;
   private questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundary | null = null;
+  private trustedCivicPreparationSourceWorldHash: string | null = null;
   private trustedLegacyRegistrationReceiptSourceWorldHash: string | null = null;
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
@@ -956,6 +962,32 @@ export class OverworldSession {
         status: this.openingPreparationResolved() ? "ready" : "requires_preparation",
       }),
     ];
+  }
+
+  private departureRecap(): OpeningDepartureRecap | null {
+    const preparation = this.world.opening_preparation;
+    if (
+      !preparation ||
+      this.journeyState.status !== "active" ||
+      this.journeyState.pendingChoice !== null ||
+      this.pendingRoadEncounter !== null ||
+      this.currentId !== preparation.home ||
+      this.currentAreaId !== preparation.area ||
+      !this.discoveredQuestIds.has(preparation.target_quest) ||
+      this.startedQuestIds.has(preparation.target_quest) ||
+      this.completedQuestIds.has(preparation.target_quest) ||
+      this.openingPreparationAvailable() !== null ||
+      this.openingReliefAllocationAvailable() !== null ||
+      this.openingAllyAvailable() !== null
+    ) {
+      return null;
+    }
+    return deriveOpeningDepartureRecap({
+      world: this.world,
+      journalEntries: this.journalEntries,
+      trustedLegacySourceWorldHash: this.trustedLegacyRegistrationReceiptSourceWorldHash,
+      trustedCivicSourceWorldHash: this.trustedCivicPreparationSourceWorldHash,
+    });
   }
 
   inspectJourneyStory(storyChoiceId: string): JourneyStoryChoicePrompt {
@@ -1906,6 +1938,8 @@ export class OverworldSession {
     this.openingLeadSourceDecisionTrail = applied.openingLeadSourceDecisionTrailAfter
       ? cloneOpeningLeadSourceDecisionTrail(applied.openingLeadSourceDecisionTrailAfter)
       : null;
+    this.trustedCivicPreparationSourceWorldHash =
+      applied.trustedCivicPreparationSourceWorldHashAfter;
     this.trustedLegacyRegistrationReceiptSourceWorldHash =
       applied.trustedLegacyRegistrationReceiptSourceWorldHashAfter;
     this.clearSessionCaches();
@@ -2245,6 +2279,7 @@ export class OverworldSession {
       serviceActions: this.currentServiceActions(currentAreaId),
       departureInteractions: this.departureInteractions(),
       departureContactLeads: this.departureContactLeads(),
+      departureRecap: this.departureRecap(),
       roads: this.roadsFrom(this.currentId),
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
       localState,

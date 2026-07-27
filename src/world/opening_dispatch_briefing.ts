@@ -7,6 +7,16 @@ type OpeningDispatchStage = Readonly<{
   label: string;
 }>;
 
+export type OpeningDispatchManifestChain = Readonly<{
+  quest: OverworldManifest["quests"][number];
+  registration: NonNullable<OverworldManifest["opening_registration"]>;
+  reliefOath: NonNullable<OverworldManifest["opening_relief_oath"]>;
+  leadSource: NonNullable<OverworldManifest["opening_lead_source"]>;
+  preparation: NonNullable<OverworldManifest["opening_preparation"]>;
+  reliefAllocation: NonNullable<OverworldManifest["opening_relief_allocation"]>;
+  ally: NonNullable<OverworldManifest["opening_ally"]> | null;
+}>;
+
 type OpeningDispatchPlan = Readonly<{
   questTitle: string;
   questDiscovery: string;
@@ -15,12 +25,10 @@ type OpeningDispatchPlan = Readonly<{
   departureStages: readonly OpeningDispatchStage[];
 }>;
 
-/**
- * Resolve the authored five-card Albany dispatch without adding a second
- * content source. The briefing deliberately reuses the quest's discovery copy
- * so the player learns the actual crisis before making a permanent choice.
- */
-function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | null {
+/** Resolve the one authored Albany dispatch chain shared by its read-only projections. */
+export function resolveOpeningDispatchManifestChain(
+  world: OverworldManifest,
+): OpeningDispatchManifestChain | null {
   const registration = world.opening_registration;
   const reliefOath = world.opening_relief_oath;
   const leadSource = world.opening_lead_source;
@@ -43,7 +51,34 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
   }
   const quest = world.quests.find((candidate) => candidate.id === targetQuestId);
   if (!quest) return null;
-  const ally = world.opening_ally;
+  const authoredAlly = world.opening_ally;
+  const ally =
+    authoredAlly?.target_quest === targetQuestId &&
+    authoredAlly.after_preparation === preparation.id &&
+    world.characters.some((candidate) => candidate.id === authoredAlly.contact)
+      ? authoredAlly
+      : null;
+  return {
+    quest,
+    registration,
+    reliefOath,
+    leadSource,
+    preparation,
+    reliefAllocation,
+    ally,
+  };
+}
+
+/**
+ * Resolve the authored five-card Albany dispatch without adding a second
+ * content source. The briefing deliberately reuses the quest's discovery copy
+ * so the player learns the actual crisis before making a permanent choice.
+ */
+function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | null {
+  const chain = resolveOpeningDispatchManifestChain(world);
+  if (!chain) return null;
+  const { quest, registration, reliefOath, leadSource, preparation, reliefAllocation, ally } =
+    chain;
   const allyContact = ally
     ? world.characters.find((candidate) => candidate.id === ally.contact)
     : null;
@@ -51,9 +86,7 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
     questTitle: quest.title,
     questDiscovery: quest.discovery,
     optionalFollowup:
-      ally?.target_quest === targetQuestId &&
-      ally.after_preparation === preparation.id &&
-      allyContact
+      ally && allyContact
         ? `After choosing or closing it, return to the Station actions. ${allyContact.name}'s field-team terms are a separate optional conversation; launching ${quest.title} without that conversation keeps the disclosed solo rider.`
         : null,
     civicStages: Object.freeze([

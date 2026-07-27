@@ -45,6 +45,10 @@ import {
   type OverworldDepartureContactLead,
   type OverworldDepartureInteraction,
 } from "./session_departure_interactions.js";
+import {
+  cloneOpeningDepartureRecap,
+  type OpeningDepartureRecap,
+} from "./opening_departure_recap.js";
 
 export type OverworldPendingRoadEncounterView = OverworldPendingRoadEncounter & {
   nextAction: OverworldRoadEncounterNextAction;
@@ -84,6 +88,7 @@ export type OverworldView = {
   serviceActions: OverworldServiceActionPresentation[];
   departureInteractions: OverworldDepartureInteraction[];
   departureContactLeads: OverworldDepartureContactLead[];
+  departureRecap: OpeningDepartureRecap | null;
   journal: OverworldJournalEntry[];
   discoveredSiteIds: string[];
   discoveredAreaIds: string[];
@@ -116,6 +121,7 @@ export type OverworldSessionViewState = {
   serviceActions: readonly OverworldServiceActionPresentation[];
   departureInteractions: readonly OverworldDepartureInteraction[];
   departureContactLeads: readonly OverworldDepartureContactLead[];
+  departureRecap: OpeningDepartureRecap | null;
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   areas: readonly OverworldArea[];
@@ -228,6 +234,7 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     serviceActions: state.serviceActions.map(cloneOverworldServiceActionPresentation),
     departureInteractions: state.departureInteractions.map(cloneOverworldDepartureInteraction),
     departureContactLeads: state.departureContactLeads.map(cloneOverworldDepartureContactLead),
+    departureRecap: state.departureRecap ? cloneOpeningDepartureRecap(state.departureRecap) : null,
     journal: state.journalEntries.map(redactOverworldJournalEntryForPresentation),
     discoveredAreaIds: [...state.discoveredAreaIds].sort(),
     discoveredJobIds: [...state.discoveredJobIds].sort(),

@@ -22,6 +22,10 @@ import type {
   OverworldServiceActionPresentation,
   OverworldServiceActionSource,
 } from "./session_service_presentation.js";
+import {
+  compactOpeningDepartureRecap,
+  type OpeningCompactDepartureRecap,
+} from "./opening_departure_recap.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -40,7 +44,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 30 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 31 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -357,6 +361,7 @@ export type OverworldCompactView = {
   service_actions?: OverworldCompactServiceAction[];
   departure_interactions?: OverworldCompactDepartureInteraction[];
   departure_contact_leads?: OverworldCompactDepartureContactLead[];
+  departure_recap?: OpeningCompactDepartureRecap;
   opportunity_guidance?: string;
   opportunity_leads?: OverworldCompactOpportunityLead[];
   opportunity_leads_deferred?: number;
@@ -420,6 +425,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id) for a versioned short comparison and unchanged receipt, then optionally inspect one story.options[*].id as option_id for only that option's new detail; compact inspection does not repeat world context. Choose with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
   departure_contact_leads:
     "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; requires_preparation has no available action, ready may be pursued with talk_overworld_session_contact(character_id: contact_id), and either status leaves quest_id launch legal as the explicitly disclosed solo default",
+  departure_recap:
+    "[version, quest_id, quest_title, [[slot, label, status, selected_title|null], ...]] read-only accumulated Station departure plan; slots are role, duty, evidence, preparation, relief_allocation, field_team. selected and legacy rows are resolved; open_optional may still be chosen or skipped; available_after_preparation opens only after preparation. It reveals no unselected option or outcome and adds no action",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
@@ -1227,6 +1234,14 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
   if (view.departure_contact_leads) {
     clone.departure_contact_leads = cloneTupleList(view.departure_contact_leads);
   }
+  if (view.departure_recap) {
+    clone.departure_recap = [
+      view.departure_recap[0],
+      view.departure_recap[1],
+      view.departure_recap[2],
+      cloneTupleList(view.departure_recap[3]),
+    ];
+  }
   if (view.opportunity_guidance) clone.opportunity_guidance = view.opportunity_guidance;
   if (view.opportunity_leads) {
     clone.opportunity_leads = cloneTupleList(view.opportunity_leads);
@@ -1321,6 +1336,9 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const serviceActions = compactOverworldServiceActions(view.serviceActions);
   const departureInteractions = compactOverworldDepartureInteractions(view.departureInteractions);
   const departureContactLeads = compactOverworldDepartureContactLeads(view.departureContactLeads);
+  const departureRecap = view.departureRecap
+    ? compactOpeningDepartureRecap(view.departureRecap)
+    : null;
   const localRefsTruncated = compactLocalRefTruncation({
     areas: view.areas.length,
     poi: view.pois.length,
@@ -1369,6 +1387,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
     ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
     ...(departureContactLeads.length > 0 ? { departure_contact_leads: departureContactLeads } : {}),
+    ...(departureRecap ? { departure_recap: departureRecap } : {}),
     hidden: [
       view.hiddenAreaCount,
       view.hiddenJobCount,

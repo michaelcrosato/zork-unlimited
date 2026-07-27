@@ -31,6 +31,9 @@ const REGISTRATION_PROFILE = "albany:ledger_advocate";
 const LEAD_SOURCE = "albany:source_jamie_market_testimony";
 const RELIEF_OATH = "albany:oath_limited_aid_only";
 const PREPARATION_PROFILE = "albany:prep_relief_protocol";
+const PREPARATION_TITLE = PREPARATION.profiles.find(
+  (profile) => profile.id === PREPARATION_PROFILE,
+)!.title;
 
 function expectDepartureInteraction(
   session: OverworldSession,
@@ -202,6 +205,17 @@ describe("opening preparation snapshot integrity", () => {
     expect(selectedMigrated.character.knowledge).toContain("albany:knowledge_wolf_relief_protocol");
     expect(OverworldSession.restore(WORLD, selectedMigrated).snapshot()).toEqual(selectedMigrated);
     moveToArea(selectedSession, PREPARATION.area);
+    expect(selectedSession.view().departureRecap?.entries[3]).toMatchObject({
+      slot: "preparation",
+      status: "selected",
+      title: PREPARATION_TITLE,
+    });
+    expect(selectedSession.compactView().departure_recap?.[3][3]).toEqual([
+      "preparation",
+      "Preparation",
+      "selected",
+      PREPARATION_TITLE,
+    ]);
     expectDepartureInteraction(
       selectedSession,
       WORLD.opening_relief_allocation!,

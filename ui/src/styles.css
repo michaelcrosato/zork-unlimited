@@ -886,6 +886,7 @@ h3 {
 }
 
 .departure-interactions h3,
+.departure-interactions h4,
 .departure-interactions p {
   margin: 0;
 }
@@ -896,6 +897,20 @@ h3 {
 
 .departure-interactions .mini-command {
   justify-self: start;
+}
+
+.departure-recap {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  margin: 0;
+}
+
+.departure-recap > div {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  padding: 0.55rem 0.65rem;
 }
 
 .service-offer-terms {

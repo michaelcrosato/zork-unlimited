@@ -882,6 +882,8 @@ describe("OverworldSession", () => {
     session.chooseJourneyStory(world.opening_relief_oath!.options[0]!.id);
     session.chooseJourneyStory(world.opening_lead_source!.options[0]!.id);
     moveToOpeningPreparation(session);
+    const recap = session.view().departureRecap;
+    if (!recap) throw new Error("expected the accumulated departure recap");
     const requiresPreparation = session.view().departureContactLeads[0];
     if (!requiresPreparation) throw new Error("expected June's departure contact lead");
     session.chooseJourneyStory(
@@ -894,6 +896,8 @@ describe("OverworldSession", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
     expect(app).toContain("worldView.departureContactLeads.map");
     expect(app).toContain("worldView.departureContactLeads.length > 0");
+    expect(app).toContain("worldView.departureRecap");
+    expect(app).toContain("<DepartureRecap recap={worldView.departureRecap} />");
     expect(app).toContain("aria-disabled={!ready}");
     expect(app).toContain("onClick={ready ? onTalk : undefined}");
     expect(app).toContain("worldSession.talkToCharacter(lead.action.arguments.character_id)");
@@ -910,6 +914,7 @@ describe("OverworldSession", () => {
     try {
       const module = (await server.ssrLoadModule("/src/App.tsx")) as {
         DepartureContactLead: unknown;
+        DepartureRecap: unknown;
       };
       const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
       const react = requireFromUi("react") as {
@@ -932,6 +937,18 @@ describe("OverworldSession", () => {
       expect(unavailableMarkup).toContain("choose a Station preparation first");
       expect(unavailableMarkup).toContain("may start The Wolf-Winter now as a solo rider");
       expect(unavailableMarkup).toContain("Talk to June Pike after choosing preparation");
+
+      const recapMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.DepartureRecap, { recap }),
+      );
+      expect(recapMarkup).toContain("The Wolf-Winter dispatch recap");
+      expect(recapMarkup).toContain(world.opening_registration!.profiles[0]!.title);
+      expect(recapMarkup).toContain(world.opening_relief_oath!.options[0]!.title);
+      expect(recapMarkup).toContain(
+        world.opening_lead_source!.options[0]!.title.replace("'", "&#x27;"),
+      );
+      expect(recapMarkup).toContain("Open (optional)");
+      expect(recapMarkup).toContain("Available after choosing preparation");
 
       const readyMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.DepartureContactLead, {

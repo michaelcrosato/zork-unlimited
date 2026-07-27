@@ -2233,6 +2233,7 @@ export type OverworldSessionSnapshotRestorePlan = {
   questOutcomeIds: ReadonlyMap<string, string>;
   regionRenown: ReadonlyMap<string, number>;
   resolvedEventHomeIds: ReadonlySet<string>;
+  trustedCivicPreparationSourceWorldHashAfter: string | null;
   trustedLegacyRegistrationReceiptSourceWorldHashAfter: string | null;
   travelLog: readonly TravelLogEntry[];
 };
@@ -2269,6 +2270,7 @@ export type OverworldAppliedSessionSnapshotRestore = {
   fatigueAfter: number;
   openingLeadSourceDecisionTrailAfter: OverworldOpeningLeadSourceDecisionTrail | null;
   pendingRoadEncounterAfter: OverworldPendingRoadEncounter | null;
+  trustedCivicPreparationSourceWorldHashAfter: string | null;
   trustedLegacyRegistrationReceiptSourceWorldHashAfter: string | null;
   journeyAfter: JourneyContractSnapshot;
 };
@@ -2328,6 +2330,7 @@ export function applyOverworldSessionSnapshotRestore(
       ? cloneOpeningLeadSourceDecisionTrail(plan.openingLeadSourceDecisionTrailAfter)
       : null,
     pendingRoadEncounterAfter: plan.pendingRoadEncounter,
+    trustedCivicPreparationSourceWorldHashAfter: plan.trustedCivicPreparationSourceWorldHashAfter,
     trustedLegacyRegistrationReceiptSourceWorldHashAfter:
       plan.trustedLegacyRegistrationReceiptSourceWorldHashAfter,
     journeyAfter: cloneJourneyContractSnapshot(snapshot.journey),
@@ -5044,6 +5047,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     questOutcomeIds,
     regionRenown,
     resolvedEventHomeIds,
+    trustedCivicPreparationSourceWorldHashAfter: storedCivicPreparationSourceWorldHash ?? null,
     trustedLegacyRegistrationReceiptSourceWorldHashAfter:
       durableLegacyRegistrationReceiptSourceWorldHash,
     travelLog: restoreOverworldTravelLogEntries(snapshot.travelLog, {

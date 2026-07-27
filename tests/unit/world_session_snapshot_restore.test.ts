@@ -93,6 +93,7 @@ function restorePlan(
     questOutcomeIds: new Map([["quest_b", "ending_b"]]),
     regionRenown: new Map([["Region", 3]]),
     resolvedEventHomeIds: new Set(["town_b"]),
+    trustedCivicPreparationSourceWorldHashAfter: null,
     trustedLegacyRegistrationReceiptSourceWorldHashAfter: null,
     travelLog: [travelEntry()],
     ...overrides,
@@ -152,6 +153,7 @@ describe("overworld session snapshot restore application", () => {
       fatigueAfter: 7,
       openingLeadSourceDecisionTrailAfter: null,
       pendingRoadEncounterAfter: null,
+      trustedCivicPreparationSourceWorldHashAfter: null,
       trustedLegacyRegistrationReceiptSourceWorldHashAfter: null,
       journeyAfter: createInitialJourneyContractSnapshot(),
     });
