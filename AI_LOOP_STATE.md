@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 665 -->
+<!-- historical_cycle_count: 666 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - preparation_dispatch_forecast
+
+- Evidence choice: consecutive verified players understood final dispatch status but could not predict cumulative Station delay before committing preparation.
+- Surface: every authenticated preparation card now forecasts its final dispatch-minute range and guaranteed on-time/delayed status across all still-optional allocation and field-team choices, including zero allocation and solo departure.
+- Counterfactual: the route card stays neutral and forecast ranges never become launch authority; choices, costs, effects, availability, decision order, final receipts, RNG, routes, and endings are unchanged.
+- Pure evidence: exact-clean Terra seed 72755 saw all three delayed ranges, chose Reese's fortification, recovered a failed first Repair cast through its prepared strip and reserve crew, completed The Wolf-Winter at decision 21, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the player did not cite the forecast and still called the preparation stack dense, so timing is clarified rather than density closed; land the already-green concise Civic categories next.
+- Economy: one 49-turn canary used 2.55M raw / 109k uncached input and 7.8k output tokens with a 95.7% cache hit; no exposure-chasing rerun or partial fleet was launched.
+- Guard: independent review is clean, patch identity survived the rebase, crawl `20260727T170457Z` is zero-finding, and health passes 436 files/3,592 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - albany_selected_field_term_recall
 
@@ -152,13 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure follow-through: final-label Terra seed 72688 failed closed at call 35 on an invalid exec pragma, published no report, and was not retried; deterministic action/compact proofs carry the label correction.
 - Self-critique/follow-through: seed 72687 ended at the first goal and did not test later consequences; first-read mechanical density remains a separate presentation concern.
 - Guard: independent review is clean, zero-finding post-crawl `20260726T184508Z` covers the consolidated world, and full health passes 431 files/3,560 tests plus both typechecks and all 12 packs.
-
-### Cycle result - wolf_bloodied_byre_evacuation
-
-- Evidence choice: verified pure Spark seed 72672 killed both younger wolves, found only repeated attacks at the old grey, died at decision 18, and reported stuck=true, clarity 3/5, enjoyment 2/5, and an S2 unrecoverable-combat finding.
-- Surface: after those two kills, a courier at 12 HP or less may evacuate the people before engaging the old grey; the attack remains legal, while the costly exit leaves the byre abandoned, old grey alive, and two cattle missing.
-- Campaign truth: Cade and Emery remember the exact bloodshed and losses; Albany receives an evacuation docket, and June breaks her cattle-first promise and leaves if she witnessed the choice.
-- Counterfactual: evacuation is absent at 13 HP, before either kill, after any lure/drive/fortify route, and after beginning an old-grey maneuver; it awards no score and remains hunt-and-hold rather than inventing a fifth strategy.
-- Proof: all 13 endings are reachable from real starts, and shared exhaustive guards accept only a safely crossed player-HP upper bound while still rejecting equality, lower-bound, enemy-HP, unsafe-threshold, and non-guaranteed predicates.
-- Self-critique/follow-through: this is failure-forward, not forgiveness—the player permanently yields the holding, old grey, and cattle; a clean-commit Spark canary remains the landing gate rather than implementation evidence.
-- Guard: 502 historical migration/counterfactual checks preserve every older hash, 84 focused behavior/proof checks are green, and zero-finding post-crawl `20260726T164135Z` covers the consolidated world.
