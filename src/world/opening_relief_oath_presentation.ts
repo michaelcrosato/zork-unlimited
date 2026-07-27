@@ -16,21 +16,23 @@ export function presentOpeningReliefOath(
 ): JourneyStoryChoicePrompt {
   const parsed = parseOpeningReliefOath(scene);
   const options = Object.freeze(
-    parsed.options.map((option) =>
-      Object.freeze({
+    parsed.options.map((option) => {
+      const triggerCategory = option.trigger_category;
+      return Object.freeze({
         id: option.id,
         label: option.title,
         summary: Object.freeze({
           commitment: option.summary,
-          fieldTrigger: option.preview,
+          fieldTrigger: triggerCategory ?? option.preview,
+          ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
           immediateCost: formatOpeningReliefOathCost(option.terms),
           tradeoff: option.tradeoff,
         }),
         consequence:
           `${option.summary} ${option.preview} Access: ${option.access} Duty: ${option.duty} ` +
           `Actual cost: ${formatOpeningReliefOathCost(option.terms)}. ${option.consequence}`,
-      }),
-    ),
+      });
+    }),
   ) as JourneyReliefOathStoryChoiceOptions;
 
   return Object.freeze({

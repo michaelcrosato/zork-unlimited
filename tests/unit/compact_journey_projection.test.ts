@@ -18,7 +18,10 @@ import type {
   JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
 import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
+import { presentOpeningLeadSource } from "../../src/world/opening_lead_source_presentation.js";
+import { presentOpeningRegistration } from "../../src/world/opening_registration_presentation.js";
 import { presentOpeningReliefAllocation } from "../../src/world/opening_relief_allocation_presentation.js";
+import { presentOpeningReliefOath } from "../../src/world/opening_relief_oath_presentation.js";
 import {
   INSPECT_OVERWORLD_SESSION_STORY_TOOL,
   OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
@@ -212,6 +215,50 @@ describe("compact journey projection", () => {
       expect(detail?.consequence).toContain(allocationOption.consequence);
       expect(detail?.consequence).not.toContain(allocationOption.summary);
       expect(detail?.consequence).not.toContain(triggerCategory);
+    }
+  });
+
+  it("keeps Civic category cards concise in compact projection with full terms inspectable", () => {
+    const registration = WORLD.opening_registration;
+    const oath = WORLD.opening_relief_oath;
+    const source = WORLD.opening_lead_source;
+    const character = registration?.profiles[0]?.character;
+    if (!registration || !oath || !source || !character) {
+      throw new Error("Albany must retain its Civic registration, oath, and source cards.");
+    }
+    const civicPrompts: ReadonlyArray<
+      readonly [
+        JourneyStoryChoicePrompt,
+        ReadonlyArray<{
+          id: string;
+          summary: string;
+          trigger_category?: string | undefined;
+          preview: string;
+          consequence: string;
+        }>,
+      ]
+    > = [
+      [presentOpeningRegistration(registration), registration.profiles],
+      [presentOpeningReliefOath(oath, character), oath.options],
+      [presentOpeningLeadSource(source, character), source.options],
+    ];
+
+    for (const [full, sourceOptions] of civicPrompts) {
+      const compact = compactJourneyStoryChoicePrompt(full);
+      for (const sourceOption of sourceOptions) {
+        const category = sourceOption.trigger_category;
+        if (!category) throw new Error(`Civic option ${sourceOption.id} needs a trigger category.`);
+        const option = compact.options.find((candidate) => candidate.id === sourceOption.id);
+        expect(option?.summary).toMatchObject({
+          commitment: sourceOption.summary,
+          fieldTrigger: category,
+          fieldTriggerScope: "category",
+        });
+        expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+        const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
+        expect(detail?.consequence).toContain(sourceOption.preview);
+        expect(detail?.consequence).toContain(sourceOption.consequence);
+      }
     }
   });
 

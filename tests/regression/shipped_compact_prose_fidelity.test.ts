@@ -248,7 +248,7 @@ function expectOpeningPromptExact(
           sourceOption.trigger_category!,
           projectedOption!.summary!.fieldTrigger,
         );
-        expect(inspectedOption!.consequence).toContain(`Full field terms: ${sourceOption.preview}`);
+        expect(inspectedOption!.consequence).toContain(sourceOption.preview);
       } else if (prompt.kind === "ally") {
         expectExact(
           `opening:${source.id}.${sourceOption.id}.field_trigger`,

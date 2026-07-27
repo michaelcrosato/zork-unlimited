@@ -73,7 +73,9 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
     expect(option.summary?.immediateCost.length).toBeGreaterThan(0);
     expect(option.summary?.tradeoff.length).toBeGreaterThan(0);
     expect(option.consequence).toContain(option.summary!.commitment);
-    expect(option.consequence).toContain(option.summary!.fieldTrigger);
+    if (option.summary?.fieldTriggerScope !== "category") {
+      expect(option.consequence).toContain(option.summary!.fieldTrigger);
+    }
   }
 }
 

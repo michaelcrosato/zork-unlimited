@@ -429,8 +429,11 @@ export const OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before the bloodied byre gained a costly evacuation ending. */
 export const OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH =
   "5757ef201328662d8145b1e4fbad87907996fc1d9dad10170c3c2f8d422d2077";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before Civic choice cards gained concise trigger categories. */
+export const OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH =
   "155ab48207c496c158dd5bb07fb9d44502d75fa456e219f25abf148118f40b31";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "294bfefa9d3b17b21e5e2a48ded532e7b4c9b995ad7149b1519b1b4e490a9435";
 /** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
 export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
@@ -482,6 +485,7 @@ const OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES: Re
 
 type ExactSnapshotMigrationId =
   | "campus_archive_contact"
+  | "civic_trigger_category"
   | "frost_jamb_signpost"
   | "june_return"
   | "registration_promise_closure"
@@ -497,6 +501,7 @@ const EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES: Readonly<
   Record<ExactSnapshotMigrationId, ReadonlySet<string>>
 > = Object.freeze({
   campus_archive_contact: OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES,
+  civic_trigger_category: new Set([OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH]),
   frost_jamb_signpost: new Set([
     ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
     AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
@@ -2981,6 +2986,9 @@ export function planOverworldSessionSnapshotRestore(args: {
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash ===
       OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH;
+  const migratesCivicTriggerCategory =
+    migrationTargetsCurrentManifest &&
+    exactSnapshotMigrationAppliesToSource("civic_trigger_category", sourceSnapshot.worldHash);
   const migratesCadeStoryPredicate =
     migrationTargetsCurrentManifest &&
     AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash);
@@ -3056,6 +3064,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     migrationEra === null &&
     !migratesReliefProtocolTriggerCopy &&
     !migratesReliefAllocationTriggerCategory &&
+    !migratesCivicTriggerCategory &&
     !migratesOpeningPreparationCopy &&
     !migratesRegistrationPromiseClosure &&
     !migratesJuneReturnCopy &&

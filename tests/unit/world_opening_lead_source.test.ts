@@ -129,6 +129,9 @@ describe("Albany opening lead-source authoring", () => {
         option.effects.some((effect) => effect.type === "learn_knowledge"),
       ),
     ).toHaveLength(2);
+    expect(openingLeadSource.options.every((option) => option.trigger_category !== undefined)).toBe(
+      true,
+    );
 
     expect(OpeningLeadSourceSchema.parse(openingLeadSource)).toEqual(openingLeadSource);
     expect(parseOpeningLeadSource(openingLeadSource)).toEqual(openingLeadSource);
@@ -153,6 +156,26 @@ describe("Albany opening lead-source authoring", () => {
     const duplicateIds = cloneOpeningLeadSource(openingLeadSource);
     duplicateIds.options[1]!.id = duplicateIds.options[0]!.id;
     expect(() => parseOpeningLeadSource(duplicateIds)).toThrow(/duplicate.*option id/i);
+
+    const exactLegacy = cloneOpeningLeadSource(openingLeadSource);
+    for (const option of exactLegacy.options) {
+      Reflect.deleteProperty(option, "trigger_category");
+    }
+    expect(parseOpeningLeadSource(exactLegacy)).toEqual(exactLegacy);
+
+    const partialCategories = cloneOpeningLeadSource(openingLeadSource);
+    Reflect.deleteProperty(partialCategories.options[0]!, "trigger_category");
+    expect(() => parseOpeningLeadSource(partialCategories)).toThrow(
+      /trigger categories must cover every option/i,
+    );
+
+    const blankCategory = cloneOpeningLeadSource(openingLeadSource);
+    blankCategory.options[0]!.trigger_category = "   ";
+    expect(() => parseOpeningLeadSource(blankCategory)).toThrow(/cannot be blank/i);
+
+    const overlongCategory = cloneOpeningLeadSource(openingLeadSource);
+    overlongCategory.options[0]!.trigger_category = "x".repeat(81);
+    expect(() => parseOpeningLeadSource(overlongCategory)).toThrow(/80/i);
 
     expect(() =>
       parseOpeningLeadSource({

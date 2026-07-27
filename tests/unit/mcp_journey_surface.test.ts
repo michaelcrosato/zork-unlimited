@@ -766,7 +766,9 @@ describe("MCP journey surface", () => {
         });
         expect(compactOption.consequence.length).toBeLessThan(fullOption.consequence.length);
         expect(fullOption.consequence).toContain(fullOption.summary.commitment);
-        expect(fullOption.consequence).toContain(fullOption.summary.fieldTrigger);
+        if (fullOption.summary.fieldTriggerScope !== "category") {
+          expect(fullOption.consequence).toContain(fullOption.summary.fieldTrigger);
+        }
         expect(compactOption.consequence).not.toContain(fullOption.summary.commitment);
         expect(compactOption.consequence).not.toContain(fullOption.summary.fieldTrigger);
         expect(compactOption.consequence).not.toContain(fullOption.summary.immediateCost);

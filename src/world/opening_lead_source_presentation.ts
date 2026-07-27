@@ -23,13 +23,15 @@ export function presentOpeningLeadSource(
     options: Object.freeze(
       parsed.options.map((option) => {
         const terms = openingLeadSourceTerms(option, character);
+        const triggerCategory = option.trigger_category;
         const sponsorship = terms.sponsorNote ? ` ${terms.sponsorNote}` : "";
         return Object.freeze({
           id: option.id,
           label: option.title,
           summary: Object.freeze({
             commitment: option.summary,
-            fieldTrigger: option.preview,
+            fieldTrigger: triggerCategory ?? option.preview,
+            ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
             immediateCost: formatOpeningLeadSourceCost(terms),
             tradeoff: option.tradeoff,
           }),

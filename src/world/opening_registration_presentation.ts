@@ -15,6 +15,7 @@ export function presentOpeningRegistration(
     message: `${parsed.title}. ${parsed.message}`,
     options: Object.freeze(
       parsed.profiles.map((profile) => {
+        const triggerCategory = profile.trigger_category;
         const immediateCost = `No added time or fee; starting funds $${String(
           profile.character.money,
         )}`;
@@ -23,7 +24,8 @@ export function presentOpeningRegistration(
           label: profile.title,
           summary: Object.freeze({
             commitment: profile.summary,
-            fieldTrigger: profile.preview,
+            fieldTrigger: triggerCategory ?? profile.preview,
+            ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
             immediateCost,
             tradeoff: profile.tradeoff,
           }),

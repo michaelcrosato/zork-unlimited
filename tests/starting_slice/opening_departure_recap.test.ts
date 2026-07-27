@@ -40,9 +40,9 @@ function selectedTitle(session: OverworldSession, slot: string): string | null |
 describe("Albany opening departure recap", () => {
   it("keeps every canonical selected term concise enough for cumulative recall", () => {
     const candidateTerms = [
-      ...REGISTRATION.profiles.map((profile) => profile.tradeoff),
-      ...RELIEF_OATH.options.map((option) => option.tradeoff),
-      ...LEAD_SOURCE.options.map((option) => option.tradeoff),
+      ...REGISTRATION.profiles.map((profile) => profile.trigger_category ?? profile.tradeoff),
+      ...RELIEF_OATH.options.map((option) => option.trigger_category ?? option.tradeoff),
+      ...LEAD_SOURCE.options.map((option) => option.trigger_category ?? option.tradeoff),
       ...PREPARATION.profiles.map((profile) => profile.trigger_category ?? profile.tradeoff),
       ...RELIEF_ALLOCATION.options.map(
         (option) => option.trigger_category ?? `Leaves exposed: ${option.leaves_exposed}`,
@@ -74,21 +74,21 @@ describe("Albany opening departure recap", () => {
           label: "Role",
           status: "selected",
           title: REGISTRATION.profiles[0]!.title,
-          activeFieldTerm: REGISTRATION.profiles[0]!.tradeoff,
+          activeFieldTerm: REGISTRATION.profiles[0]!.trigger_category,
         },
         {
           slot: "duty",
           label: "Duty",
           status: "selected",
           title: RELIEF_OATH.options[0]!.title,
-          activeFieldTerm: RELIEF_OATH.options[0]!.tradeoff,
+          activeFieldTerm: RELIEF_OATH.options[0]!.trigger_category,
         },
         {
           slot: "evidence",
           label: "Evidence",
           status: "selected",
           title: LEAD_SOURCE.options[0]!.title,
-          activeFieldTerm: LEAD_SOURCE.options[0]!.tradeoff,
+          activeFieldTerm: LEAD_SOURCE.options[0]!.trigger_category,
         },
         {
           slot: "preparation",
@@ -178,13 +178,13 @@ describe("Albany opening departure recap", () => {
       REGISTRATION.profiles[0]!.title,
     );
     expect(session.compactView().departure_recap?.[3][0]?.[4]).toBe(
-      REGISTRATION.profiles[0]!.tradeoff,
+      REGISTRATION.profiles[0]!.trigger_category,
     );
 
     const terminal = render(session.view());
     expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
-    expect(terminal).toContain(`Active field term: ${REGISTRATION.profiles[0]!.tradeoff}`);
+    expect(terminal).toContain(`Active field term: ${REGISTRATION.profiles[0]!.trigger_category}`);
     expect(terminal).toContain("Preparation: Open (optional)");
   });
 

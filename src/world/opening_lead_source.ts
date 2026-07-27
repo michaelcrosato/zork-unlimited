@@ -23,6 +23,14 @@ const AUTHORED_TEXT = z
     message: "Authored text cannot be blank.",
   });
 
+const LEAD_SOURCE_TRIGGER_CATEGORY = z
+  .string()
+  .min(1)
+  .max(80)
+  .refine((value) => value.trim().length > 0, {
+    message: "Lead-source trigger category cannot be blank.",
+  });
+
 const OpeningLeadSourceTermsSchema = z
   .object({
     minutes: z
@@ -53,6 +61,7 @@ export const OpeningLeadSourceOptionSchema = z
     title: AUTHORED_TEXT,
     source_npc_id: CampaignCharacterIdSchema,
     summary: AUTHORED_TEXT,
+    trigger_category: LEAD_SOURCE_TRIGGER_CATEGORY.optional(),
     preview: AUTHORED_TEXT,
     tradeoff: AUTHORED_TEXT,
     consequence: AUTHORED_TEXT,
@@ -115,6 +124,17 @@ export const OpeningLeadSourceSchema = z
   .strict()
   .superRefine((scene, ctx) => {
     const ids = new Set<string>();
+    const categorizedOptions = scene.options.filter(
+      (option) => option.trigger_category !== undefined,
+    );
+    if (categorizedOptions.length !== 0 && categorizedOptions.length !== scene.options.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["options"],
+        message:
+          "Opening lead-source trigger categories must cover every option or remain absent on an exact legacy manifest.",
+      });
+    }
     scene.options.forEach((option, index) => {
       if (ids.has(option.id)) {
         ctx.addIssue({

@@ -21,6 +21,21 @@ function comparisonCardOptionGroups(world: OverworldManifest): ComparisonCardOpt
   ];
 }
 
+/** Reconstruct the exact manifest before Civic choice cards gained trigger categories. */
+export function exactCivicTriggerCategoryPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  for (const option of [
+    ...(predecessor.opening_registration?.profiles ?? []),
+    ...(predecessor.opening_relief_oath?.options ?? []),
+    ...(predecessor.opening_lead_source?.options ?? []),
+  ]) {
+    delete option.trigger_category;
+  }
+  return predecessor;
+}
+
 /**
  * Remove the presentation-only fields that did not exist in historical
  * manifests reconstructed from the current world.
@@ -61,7 +76,10 @@ export function withRuntimeJourneyComparisonCards(
 }
 
 function historicalManifestClone(current: OverworldManifest): OverworldManifest {
-  return withRuntimeJourneyComparisonCards(withoutJourneyComparisonCards(current), current);
+  return withRuntimeJourneyComparisonCards(
+    withoutJourneyComparisonCards(exactCivicTriggerCategoryPredecessor(current)),
+    current,
+  );
 }
 
 const RELIEF_OATH_SERVICE_IDS: ReadonlySet<string> = new Set([
@@ -140,7 +158,7 @@ const CAMPUS_EVIDENCE_MANDATE_SERVICE_IDS: ReadonlySet<string> = new Set([
 export function exactBloodiedByreEvacuationPredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactCivicTriggerCategoryPredecessor(current);
   const emery = predecessor.characters.find(
     (candidate) => candidate.id === "albany_city__greenway__contact",
   );
