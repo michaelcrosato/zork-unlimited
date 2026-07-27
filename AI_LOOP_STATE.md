@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 666 -->
+<!-- historical_cycle_count: 667 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - civic_first_use_categories
+
+- Evidence choice: repeated verified players found Civic's ten permanent opening choices dense even when exact read-only inspection was available.
+- Surface: all four roles, three duties, and three evidence sources now lead with one concise authenticated first-use category while preserving the complete purpose, cost, tradeoff, and exact consequence.
+- Counterfactual: categories are optional presentation only; all-omitted legacy manifests retain their preview fallback, partial or tampered category data fails closed, and mechanics, choices, receipts, RNG, routes, and endings are unchanged.
+- Pure evidence: exact-clean Terra seed 72757 saw all ten categories, completed The Wolf-Winter nonviolently at decision 25, continued twice, completed Gallowmere at 51, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the player still called the staged opening and compact overworld summary dense, so this improves first-use orientation rather than closing density; exact Wolf-Winter goal guidance is next.
+- Economy: seed 72756 failed closed on a strict transport-wrapper rejection and published no evidence; its single fresh replacement used 4.27M raw / 143k uncached input and 12.2k output tokens, with no further rerun.
+- Guard: independent review is clean, patch identity survived the rebase, crawl `20260727T183200Z` is zero-finding, and health passes 437 files/3,598 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - preparation_dispatch_forecast
 
@@ -152,13 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Counterfactual: on-time behavior, successful checks, rail skips, legal actions, and other-strategy rail recoveries remain unchanged; one reusable conditional-failure primitive carries all four consumers.
 - Provenance/self-critique: a session-bound opaque preparation capability rejects forged or mutated launch overlays; the pure player sampled combat, so deterministic paired routes carry the other strategy claims.
 - Guard: independent review is clean; zero-finding post-crawl `20260726T201536Z` covers the consolidated world and full health passes 434 files/3,575 tests plus both typechecks and all 12 packs.
-
-### Cycle result - wolf_lure_quick_lesson_choice
-
-- Evidence choice: verified pure Terra seed 72687 completed The Wolf-Winter bloodlessly in 28 decisions, ended voluntarily, rated clarity/enjoyment 4/4, remained unstuck, chose replay-yes, and found Cade's quick lesson easy to bypass at the lure commitment.
-- Surface: while the lesson is unheard, Cade now names its exact +2 attack/+5 final-tally value beside the irreversible choice and exposes the self-describing compact action `ask_quick_lesson`.
-- Action truth: `wolves` and `ask_wolves` remain unambiguous input aliases; the choice reaches Cade's existing one-shot lesson, then returns through the existing lure follow-up without a new reward or strategy.
-- Counterfactual: after the lesson, its warning and action retire while lure commitment remains legal; skipping it preserves the old commitment, score, attack, route, and decision count.
-- Pure follow-through: final-label Terra seed 72688 failed closed at call 35 on an invalid exec pragma, published no report, and was not retried; deterministic action/compact proofs carry the label correction.
-- Self-critique/follow-through: seed 72687 ended at the first goal and did not test later consequences; first-read mechanical density remains a separate presentation concern.
-- Guard: independent review is clean, zero-finding post-crawl `20260726T184508Z` covers the consolidated world, and full health passes 431 files/3,560 tests plus both typechecks and all 12 packs.
