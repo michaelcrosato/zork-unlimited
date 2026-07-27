@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 659 -->
+<!-- historical_cycle_count: 660 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - compact_read_only_option_review
+
+- Evidence choice: 5/23 newer verified pure reports plus seed 72747 still found Station comparison dense, while its trace showed the exact `option_id` review path was buried and unused.
+- Surface: compact comparison v4 now returns one executable `reviewOption` contract with the exact story id, `option_id` value source, and `readOnly: true`; full/UI terms and exact-detail payloads are unchanged.
+- Counterfactual: constructing the detail call from that returned contract preserves snapshot hash, exported save, accepted decisions, time, money, and sibling-term isolation; choosing without review remains legal.
+- Pure evidence: exact-clean Terra seed 72748 received v4 on both Station cards, did not use either review action, completed The Wolf-Winter nonlethally with two cattle lost at decision 33, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: discoverability is now truthful but did not reduce this player's perceived front-loading; do not add another review hint, and re-aim between optional setup flow and the newly observed cumulative first-lure risk forecast.
+- Economy: one canary used 2.35M raw / 108k uncached input tokens and 9.5k output tokens; no replacement run or cohort was launched.
+- Guard: reviewer-found non-executable camel-case metadata is fixed; pre/post crawls `20260727T082007Z` / `20260727T082730Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - station_optional_departure_staging
 
@@ -150,12 +160,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 72634 completes The Wolf-Winter bloodlessly in 22 decisions, ends voluntarily, rates clarity/enjoyment 4/4, remains unstuck, reports no bugs, and chooses replay-yes.
 - Self-critique/follow-through: the player skipped optional Station setup and noted mild anchor-area relocation friction; selected-detail responses still repeat comparison context and are the next bounded efficiency candidate.
 - Guard: independent review is clean; post-crawl `20260726T024526Z` is zero-finding and full health passes 424 files/3,450 tests plus both typechecks and all packs.
-
-### Cycle result - journey_boundary_opportunity_deferral
-
-- Evidence choice: repeated blind players found the post-Wolf Albany return stack dense; exact-clean Terra seed 72633 follows this commit through The Wolf-Winter.
-- Surface: Continue/End and an immediate journey consequence now show only the number of optional aftermath leads; unchanged district details return when active play resumes.
-- Contract: compact v30 names deferral separately from truncation, while full journey, compact MCP, and UI share one derived, button-free presentation with no root identity leak.
-- Counterfactual: the same five roots become count 5 at both Wolf completion boundaries and return exactly after dawn dispatch; reads preserve snapshot, hash, proof, legal choices, and decision count.
-- Self-critique/follow-through: this removes post-goal competition for attention, not the still-dense mandatory Albany departure sequence; fresh blind evidence must judge whether the transition now reads cleanly.
-- Guard: independent Terra review corrected compact semantics; post-crawl `20260726T004455Z` is zero-finding and full health passes 423 files/3,447 tests plus both typechecks and all packs.

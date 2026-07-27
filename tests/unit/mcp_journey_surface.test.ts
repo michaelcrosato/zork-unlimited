@@ -20,6 +20,10 @@ import {
   TANNERS_FEVER_ACCOUNTABILITY_ID,
 } from "../../src/world/journey_campaign.js";
 import { planOverworldRoute } from "../../src/world/overworld.js";
+import {
+  INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+  OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+} from "../../src/world/session_departure_interactions.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
@@ -1098,6 +1102,14 @@ describe("MCP journey surface", () => {
         comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
         id: preparation.id,
         kind: "preparation",
+        reviewOption: {
+          tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+          storyChoiceId: preparation.id,
+          arguments: { story_choice_id: preparation.id },
+          argument: "option_id",
+          valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+          readOnly: true,
+        },
         inspectedOption: null,
       },
     });
@@ -1113,6 +1125,27 @@ describe("MCP journey surface", () => {
       expect(comparisonJson).not.toContain(profile.preview);
       expect(comparisonJson).not.toContain(profile.consequence);
     }
+
+    const affordanceSessionId = reachPreparation();
+    const beforeAffordance = a.export_overworld_session({ session_id: affordanceSessionId });
+    if (!beforeAffordance.ok) throw new Error("expected an exportable affordance session");
+    const affordanceComparison = a.inspect_overworld_session_story({
+      session_id: affordanceSessionId,
+      story_choice_id: preparation.id,
+    });
+    const reviewOption = affordanceComparison.story.reviewOption;
+    const reviewedOptionId = affordanceComparison.story.options[0]!.id;
+    expect(reviewOption.tool).toBe(INSPECT_OVERWORLD_SESSION_STORY_TOOL);
+    const reviewedFromAffordance = a.inspect_overworld_session_story({
+      session_id: affordanceSessionId,
+      ...reviewOption.arguments,
+      [reviewOption.argument]: reviewedOptionId,
+    });
+    expect(reviewedFromAffordance.story.inspectedOption?.id).toBe(reviewedOptionId);
+    expect(reviewedFromAffordance.snapshot_hash).toBe(beforeAffordance.snapshot_hash);
+    expect(a.export_overworld_session({ session_id: affordanceSessionId })).toEqual(
+      beforeAffordance,
+    );
 
     const beforeMultiple = a.export_overworld_session({ session_id: multipleInspectionId });
     if (!beforeMultiple.ok) throw new Error("expected an exportable detail session");
@@ -1200,6 +1233,14 @@ describe("MCP journey surface", () => {
         comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
         id: allocation.id,
         kind: "relief_allocation",
+        reviewOption: {
+          tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+          storyChoiceId: allocation.id,
+          arguments: { story_choice_id: allocation.id },
+          argument: "option_id",
+          valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+          readOnly: true,
+        },
         inspectedOption: null,
       },
     });
