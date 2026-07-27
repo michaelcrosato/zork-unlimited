@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 655 -->
+<!-- historical_cycle_count: 656 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_departure_plan_recap
+
+- Evidence choice: verified Terra seed 72743 still requested a concise accumulated dispatch recap after the comparison-first response delta.
+- Surface: Hayden's Station now shows one authenticated six-row plan—role, duty, evidence, preparation, relief allocation, and field team—across full/compact MCP, CLI, and UI without exposing unchosen terms or adding an action.
+- Counterfactual: read-only inspection preserves time, decisions, receipts, hashes, legality, and snapshots; paired role choices change only the role row, optional choices fill only their row, and the recap retires away from Station or after launch.
+- Compatibility: exact Civic-preparation and legacy-registration restores retain authenticated source-era selections; malformed or contradictory evidence fails closed.
+- Pure evidence: exact-clean Terra seed 72744 completed The Wolf-Winter bloodlessly, continued to Gallowmere, ended voluntarily at decision 40, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: dense conditional setup remains noticeable, while the player independently repeated the Gallowmere checkpoint-after-launch pacing flaw; that boundary is the next focused candidate.
+- Guard: independent review found and closed Civic migration provenance; post-crawl `20260727T003546Z` is zero-finding and health passes 435 files/3,577 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - compact_story_inspection_delta
 
@@ -148,12 +158,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact mechanical candidate Terra 72630 completed The Wolf-Winter bloodlessly and The Gallowmere, ended voluntarily at 53 decisions, rated clarity/enjoyment 4/4, remained unstuck, and chose replay-yes.
 - Self-critique/follow-through: this closes one real rational-choice/truth defect, not Albany's dense setup or Depth #11; authored Campus and Station events remain next.
 - Guard: independent review is clean, 73 focused checks pass, and pre/post crawls `20260725T182544Z` / `20260725T191805Z` are zero-finding.
-
-### Cycle result - plain_game_task_handoffs
-
-- Evidence choice: a recurring Codex task notice coincided with broad blind-runner wording, and Sol seed 72624 chose `tool_search` before the game; neither represented AdventureForge play.
-- Surface: contributor guidance and the pure-player prompt now use direct game-development language, route every game call through `functions.exec` with exactly one AdventureForge action, and state that `tool_search` is not gameplay.
-- Counterfactual: fresh pure starts, visible-only information, one legal action at a time, fail-closed receipts, report verification, no-report/no-commit, and the health bar remain unchanged.
-- Pure evidence: exact clean consolidated `8f17a561` Terra seed 72628 completed The Wolf-Winter bloodlessly with the herd whole and all three wolves alive in 29 accepted decisions, ended voluntarily, remained unstuck, chose replay-yes, and rated clarity/enjoyment 3/4 without a rejected action or player-visible bug.
-- Diagnostics/follow-through: Sol 72624 was rejected before report and is not counted; Albany's dense consecutive planning remains a repeated S1 queued for progressive disclosure.
-- Guard: independent review is clean, 59 rebased focused tests pass, pre/post crawls `20260725T063818Z` / `20260725T080733Z` are zero-finding, and consolidated full health passes 420 files/3,401 tests plus both typechecks and all packs.
