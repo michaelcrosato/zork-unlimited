@@ -1061,7 +1061,16 @@ describe("OverworldSession", () => {
     });
     try {
       const module = (await server.ssrLoadModule("/src/App.tsx")) as {
+        DepartureLaunchPanel: unknown;
         QuestNotice: unknown;
+        splitQuestNotices: (view: {
+          departureRecap: { questId: string } | null;
+          quests: readonly OverworldQuestView[];
+          questStarts: readonly (readonly [string, string | null])[];
+        }) => {
+          departureQuest: OverworldQuestView | null;
+          noticeBoardQuests: readonly OverworldQuestView[];
+        };
       };
       const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
       const react = requireFromUi("react") as {
@@ -1155,6 +1164,44 @@ describe("OverworldSession", () => {
       );
       expect(optionlessMarkup.match(/<button/g)).toHaveLength(1);
       expect(optionlessMarkup).not.toContain("Which road do you commit to?");
+
+      const departureMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.DepartureLaunchPanel, {
+          quest,
+          areaName: "Station Quarter",
+          onStart: () => undefined,
+        }),
+      );
+      expect(departureMarkup.indexOf("Depart now")).toBeLessThan(
+        departureMarkup.indexOf("Which road do you commit to?"),
+      );
+      expect(departureMarkup).toContain(
+        "Choose an available road to depart now; planning is optional.",
+      );
+      expect(departureMarkup.match(/<button/g)).toHaveLength(2);
+
+      const otherQuest: OverworldQuestView = {
+        ...quest,
+        id: "test_other_quest",
+        title: "Another Notice",
+      };
+      const split = module.splitQuestNotices({
+        departureRecap: { questId: quest.id },
+        quests: [quest, otherQuest],
+        questStarts: [[quest.id, quest.launch!.options[0]!.id]],
+      });
+      expect(split.departureQuest?.id).toBe(quest.id);
+      expect(split.noticeBoardQuests.map((candidate) => candidate.id)).toEqual([otherQuest.id]);
+      const gatedSplit = module.splitQuestNotices({
+        departureRecap: { questId: quest.id },
+        quests: [quest, otherQuest],
+        questStarts: [],
+      });
+      expect(gatedSplit.departureQuest).toBeNull();
+      expect(gatedSplit.noticeBoardQuests.map((candidate) => candidate.id)).toEqual([
+        quest.id,
+        otherQuest.id,
+      ]);
     } finally {
       await server.close();
     }

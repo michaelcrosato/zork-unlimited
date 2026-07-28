@@ -395,6 +395,23 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(compactJourney.storyChoice).toBeNull();
     expect(mcpStation.context.departure_recap).toEqual(ui.compactView().departure_recap);
     expect(mcpStation.context.departure_recap?.[3]).toHaveLength(6);
+    expect(
+      Object.keys(mcpStation.context).filter((key) =>
+        [
+          "quests",
+          "quest_starts",
+          "departure_recap",
+          "departure_interactions",
+          "departure_contact_leads",
+        ].includes(key),
+      ),
+    ).toEqual([
+      "quests",
+      "quest_starts",
+      "departure_recap",
+      "departure_interactions",
+      "departure_contact_leads",
+    ]);
     expect(ui.view().departureInteractions[0]?.id).toBe(PREPARATION.id);
     const uiPreparation = ui.inspectJourneyStory(PREPARATION.id);
     const mcpPreparation = api.inspect_overworld_session_story({

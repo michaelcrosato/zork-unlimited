@@ -290,6 +290,45 @@ export function QuestNotice({
   );
 }
 
+export function splitQuestNotices(
+  view: Pick<OverworldView, "departureRecap" | "quests" | "questStarts">,
+): Readonly<{
+  departureQuest: OverworldQuestView | null;
+  noticeBoardQuests: readonly OverworldQuestView[];
+}> {
+  const departureQuestId = view.departureRecap?.questId;
+  const departureQuest =
+    departureQuestId && view.questStarts.some(([questId]) => questId === departureQuestId)
+      ? (view.quests.find((quest) => quest.id === departureQuestId) ?? null)
+      : null;
+  return {
+    departureQuest,
+    noticeBoardQuests: departureQuest
+      ? view.quests.filter((quest) => quest.id !== departureQuest.id)
+      : view.quests,
+  };
+}
+
+export function DepartureLaunchPanel({
+  quest,
+  areaName,
+  onStart,
+}: {
+  quest: OverworldQuestView;
+  areaName: string;
+  onStart: (approachId?: string) => void;
+}): JSX.Element {
+  return (
+    <div className="departure-launch">
+      <h3>Depart now</h3>
+      <p>Choose an available road to depart now; planning is optional.</p>
+      <ul className="quest-list">
+        <QuestNotice quest={quest} areaName={areaName} isCurrentArea={true} onStart={onStart} />
+      </ul>
+    </div>
+  );
+}
+
 export default function App(): JSX.Element {
   const [worldState, setWorldState] = useState(loadInitialWorldSession);
   const worldSession = worldState.session;
@@ -337,6 +376,7 @@ export default function App(): JSX.Element {
       ),
     [worldView.eventChoices],
   );
+  const { departureQuest, noticeBoardQuests } = splitQuestNotices(worldView);
   function questAreaName(quest: OverworldQuestView): string {
     return OVERWORLD.areas.find((area) => area.id === quest.area)?.name ?? quest.area;
   }
@@ -745,11 +785,18 @@ export default function App(): JSX.Element {
               New Journey
             </button>
           </div>
+          {departureQuest && (
+            <DepartureLaunchPanel
+              quest={departureQuest}
+              areaName={questAreaName(departureQuest)}
+              onStart={(approachId) => startQuest(departureQuest, approachId)}
+            />
+          )}
           {(worldView.departureRecap ||
             worldView.departureInteractions.length > 0 ||
             worldView.departureContactLeads.length > 0) && (
             <div className="departure-interactions">
-              <h3>Before you depart</h3>
+              <h3>{departureQuest ? "Plan the dispatch (optional)" : "Before you depart"}</h3>
               <p>
                 Your accumulated dispatch plan and any optional Station decisions still open;
                 {" you may inspect one or leave without choosing."} Optional contacts are listed
@@ -1250,15 +1297,17 @@ export default function App(): JSX.Element {
           </div>
 
           <h3>Notice Board</h3>
-          {worldView.quests.length === 0 ? (
+          {noticeBoardQuests.length === 0 ? (
             <p className="empty">
-              {worldView.hiddenQuestCount > 0
+              {departureQuest
+                ? "No other posted work is known here."
+                : worldView.hiddenQuestCount > 0
                 ? "No posted work discovered yet. Scout, talk, or investigate to surface local leads."
                 : "No posted work is known here. Travel the road network to find more."}
             </p>
           ) : (
             <ul className="quest-list">
-              {worldView.quests.map((quest) => (
+              {noticeBoardQuests.map((quest) => (
                 <QuestNotice
                   key={quest.id}
                   quest={quest}
