@@ -13,6 +13,7 @@ reports:
   - blind-tester/reports/20260728T014138Z_overworld_seed72827.md
   - blind-tester/reports/20260728T014138Z_overworld_seed72828.md
   - blind-tester/reports/20260728T014138Z_overworld_seed72829.md
+  - blind-tester/reports/20260728T025915Z_overworld_seed72830.md
 severity: S2
 symptom: >
   All ten verified fresh players completed Wolf-Winter through lure-and-divert.
@@ -25,16 +26,19 @@ root_cause: >
   to ask about the other three. The first emotionally complete living option promised
   a saved pack and herd, while DRIVE and FORTIFY exposed their irreversible costs only
   after separate inspection. The legal branches were mechanically available but not
-  comparable at the decision surface.
+  comparable at the decision surface. A label-only first fix also failed the default
+  pure surface: compact action-bearing turns expose stable ids, so its detailed topic
+  prompts remained behind an optional legal-action read.
 fix: >
-  Make Cade's first spoken line explicitly ask for a goal/protection/cost comparison,
-  then make every root plan prompt use that same scan-first structure. HUNT names its
-  cattle-and-reserve protection and wolf cost; LURE names feed, paling, and cattle risk;
-  DRIVE names people-and-wolf protection plus outer-line and crisis costs; FORTIFY names
-  its byre-and-lives protection plus the property-versus-public-support trade. Preserve
-  every action id, commitment boundary, resolver, outcome, and detailed opt-in lesson.
+  Put the four-way save/cost comparison in Cade's first spoken line, which every default
+  compact and full surface carries, then mirror it in every root plan prompt. HUNT names
+  its herd-and-reserve protection and wolf cost; LURE names feed, paling, and cattle risk;
+  DRIVE names people-and-wolf protection plus outer-line loss and the later
+  wound/two-cattle/rig crisis; FORTIFY names its byre-and-lives protection plus the
+  property-versus-public-support trade. Preserve every action id, commitment boundary,
+  resolver, outcome, and detailed opt-in lesson.
 deterministic_witnesses:
-  - invariant: "the first Cade surface names a goal, protected interest, and irreversible cost for HUNT, LURE, DRIVE, and FORTIFY before commitment"
+  - invariant: "Cade's first compact spoken line names the protected interest and irreversible cost for HUNT, LURE, DRIVE, and FORTIFY before commitment"
   - invariant: "the comparison contains no exact DC, maneuver sequence, or outcome guarantee"
   - invariant: "human and MCP surfaces retain the same authored action ids and order"
   - invariant: "crossing north uncommitted still chooses hunt-and-hold and permanently closes all living plans"

@@ -94,7 +94,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     ].join("\n");
 
     expect(root?.npc_text).toMatch(
-      /four plans[^]*compare each goal[^]*what it protects[^]*irreversible cost[^]*cross north uncommitted[^]*hunt-and-hold[^]*other plans close/i,
+      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*cross uncommitted=HUNT[^]*others close/i,
     );
     expect(rootPrompt("wolves")).toMatch(
       /hunt[^]*hold the breach[^]*protects cattle and relief reserves[^]*wolves may die[^]*quick\/open/i,
@@ -182,7 +182,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /four plans[^]*goal[^]*protects[^]*irreversible cost[^]*hunt-and-hold/i,
+      /Albany sent you[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*cross uncommitted=HUNT/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",

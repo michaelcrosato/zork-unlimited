@@ -3610,9 +3610,10 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came from Albany awake. Four plans. Compare each goal, what it protects,
-            and its irreversible cost. Cross north uncommitted and HUNT-and-hold begins;
-            the other plans close.
+            Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE:
+            herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line;
+            crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help.
+            Cross uncommitted=HUNT; others close.
           variants:
             - when: [{ has_flag: pack_diverted }]
               text: >
