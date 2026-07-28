@@ -24,6 +24,7 @@ import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
 import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
 import { JourneyStatus } from "./JourneyStatus.js";
+import { DepartureRecap } from "./DepartureRecap.js";
 import { CampaignCharacterPanel } from "./CampaignCharacterPanel.js";
 import { QuestCharacterContinuityPanel } from "./QuestCharacterContinuityPanel.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
@@ -187,70 +188,7 @@ export function DepartureContactLead({
   );
 }
 
-export function DepartureRecap({
-  recap,
-}: {
-  recap: NonNullable<OverworldView["departureRecap"]>;
-}): JSX.Element {
-  return (
-    <section aria-label={`${recap.questTitle} dispatch recap`}>
-      <h4>{recap.questTitle} dispatch recap</h4>
-      {recap.dispatch && (
-        <p className="departure-recap-dispatch">
-          {recap.dispatch.state === "sealed" ? (
-            <>
-              Dispatch sealed: {recap.dispatch.minutes}m — {" "}
-              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}.
-            </>
-          ) : recap.dispatch.state === "direct_launch" ? (
-            <>
-              Direct launch now: {recap.dispatch.minutes}m — {" "}
-              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}. Field-team
-              contact remains optional.
-            </>
-          ) : (
-            <>
-              Dispatch committed: {recap.dispatch.minutes}m. Optional before launch: {" "}
-              {recap.dispatch.remainingOptional
-                .map((slot) => (slot === "relief_allocation" ? "relief allocation" : "field team"))
-                .join(" and ")}
-              .
-            </>
-          )}
-        </p>
-      )}
-      <dl className="departure-recap">
-        {recap.entries.map((entry) => (
-          <div key={entry.slot}>
-            <dt>{entry.label}</dt>
-            <dd>
-              {entry.title ??
-                (entry.status === "open_optional"
-                  ? "Open (optional)"
-                  : "Available after choosing preparation")}
-              {entry.activeFieldTerm && (
-                <>
-                  <br />
-                  <small className="departure-recap-field-term">
-                    Active field term: {entry.activeFieldTerm}
-                  </small>
-                </>
-              )}
-              {entry.status === "solo_default" && (
-                <>
-                  <br />
-                  <small className="departure-recap-field-term">
-                    Direct-launch default; field-team contact remains optional.
-                  </small>
-                </>
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
+export { DepartureRecap } from "./DepartureRecap.js";
 
 function suppliesLabel(value: number): string {
   return `${String(value)} ${value === 1 ? "supply" : "supplies"}`;
@@ -723,6 +661,7 @@ export default function App(): JSX.Element {
             ? { ...journey, storyChoice: inspectedDepartureStory }
             : journey
         }
+        departureRecap={worldView.departureRecap}
         onChoose={chooseJourneyStory}
         {...(inspectedDepartureStory
           ? { onDismiss: () => setInspectedDepartureStory(null) }

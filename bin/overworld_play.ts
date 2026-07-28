@@ -105,41 +105,7 @@ export function render(view: OverworldView): string {
   if (view.pois.length) lines.push(`Scoutable: ${view.pois.map((p) => p.title).join(" · ")}`);
   if (view.characters.length)
     lines.push(`Contacts: ${view.characters.map((c) => `${c.name} (${c.role})`).join(" · ")}`);
-  if (view.departureRecap) {
-    lines.push(`${view.departureRecap.questTitle} dispatch recap:`);
-    if (view.departureRecap.dispatch) {
-      const dispatch = view.departureRecap.dispatch;
-      if (dispatch.state === "sealed") {
-        const timing = dispatch.timing === "on_time" ? "on time" : "delayed";
-        lines.push(`  Dispatch sealed: ${String(dispatch.minutes)}m — ${timing}.`);
-      } else if (dispatch.state === "direct_launch") {
-        const timing = dispatch.timing === "on_time" ? "on time" : "delayed";
-        lines.push(
-          `  Direct launch now: ${String(dispatch.minutes)}m — ${timing}. Field-team contact remains optional.`,
-        );
-      } else {
-        const remaining = dispatch.remainingOptional
-          .map((slot) => (slot === "relief_allocation" ? "relief allocation" : "field team"))
-          .join(" and ");
-        lines.push(
-          `  Dispatch committed: ${String(dispatch.minutes)}m. Optional before launch: ${remaining}.`,
-        );
-      }
-    }
-    for (const entry of view.departureRecap.entries) {
-      const value =
-        entry.title ??
-        (entry.status === "open_optional"
-          ? "Open (optional)"
-          : "Available after choosing preparation");
-      lines.push(
-        `  ${entry.label}: ${value}${entry.status === "solo_default" ? " (direct-launch default; field-team contact remains optional)" : ""}`,
-      );
-      if (entry.activeFieldTerm) {
-        lines.push(`    Active field term: ${entry.activeFieldTerm}`);
-      }
-    }
-  }
+  if (view.departureRecap) lines.push(...renderDepartureRecap(view.departureRecap));
   if (view.departureInteractions.length) {
     lines.push("Optional departure decisions:");
     for (const interaction of view.departureInteractions) {
@@ -185,6 +151,46 @@ export function render(view: OverworldView): string {
     for (const quest of view.quests) lines.push(`  ${questLine(view, quest)}`);
   }
   return lines.join("\n");
+}
+
+/** Bounded authenticated recall shared by status and an active Station choice. */
+export function renderDepartureRecap(
+  recap: NonNullable<OverworldView["departureRecap"]>,
+): string[] {
+  const lines = [`${recap.questTitle} dispatch recap:`];
+  if (recap.dispatch) {
+    const dispatch = recap.dispatch;
+    if (dispatch.state === "sealed") {
+      const timing = dispatch.timing === "on_time" ? "on time" : "delayed";
+      lines.push(`  Dispatch sealed: ${String(dispatch.minutes)}m — ${timing}.`);
+    } else if (dispatch.state === "direct_launch") {
+      const timing = dispatch.timing === "on_time" ? "on time" : "delayed";
+      lines.push(
+        `  Direct launch now: ${String(dispatch.minutes)}m — ${timing}. Field-team contact remains optional.`,
+      );
+    } else {
+      const remaining = dispatch.remainingOptional
+        .map((slot) => (slot === "relief_allocation" ? "relief allocation" : "field team"))
+        .join(" and ");
+      lines.push(
+        `  Dispatch committed: ${String(dispatch.minutes)}m. Optional before launch: ${remaining}.`,
+      );
+    }
+  }
+  for (const entry of recap.entries) {
+    const value =
+      entry.title ??
+      (entry.status === "open_optional"
+        ? "Open (optional)"
+        : "Available after choosing preparation");
+    lines.push(
+      `  ${entry.label}: ${value}${entry.status === "solo_default" ? " (direct-launch default; field-team contact remains optional)" : ""}`,
+    );
+    if (entry.activeFieldTerm) {
+      lines.push(`    Active field term: ${entry.activeFieldTerm}`);
+    }
+  }
+  return lines;
 }
 
 function questLine(view: OverworldView, quest: OverworldQuestView): string {
@@ -676,6 +682,10 @@ async function main(): Promise<void> {
       };
       if (journey.storyChoice && isStructuredTerminalStoryChoice(journey.storyChoice)) {
         try {
+          // The Station choice is still mandatory, but the player should not
+          // have to leave its comparison to recall already-authenticated terms.
+          if (view.departureRecap)
+            console.log(renderDepartureRecap(view.departureRecap).join("\n"));
           const outcome = await controlTerminalStoryChoice({
             session,
             prompt: journey.storyChoice,

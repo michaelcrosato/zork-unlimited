@@ -960,6 +960,67 @@ describe("MCP journey surface", () => {
     });
   });
 
+  it("keeps the authenticated Albany recall beside preparation, allocation, and ally MCP choices", () => {
+    const a = api();
+    const source = new OverworldSession(WORLD);
+    source.scoutPoi("albany_city__civic_core__poi");
+    source.talkToCharacter("albany_city__civic_core__contact");
+    source.chooseJourneyStory("albany:ledger_advocate");
+    source.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
+    source.chooseJourneyStory("albany:source_rowan_civic_docket");
+    moveUiSessionToArea(source, "albany_city__transport_hub");
+
+    const assertMcpRecall = (storyChoiceId: string, kind: string): void => {
+      const expectedFull = source.view().departureRecap;
+      const expectedCompact = source.compactView().departure_recap;
+      if (!expectedFull || !expectedCompact) {
+        throw new Error(`expected authenticated recap before ${kind}`);
+      }
+      const snapshot = source.snapshot();
+      const full = a.restore_overworld_session({ ...FULL_OVERWORLD, snapshot });
+      const compact = a.restore_overworld_session({ compact_context: true, snapshot });
+      expect(full.observation.departureRecap).toEqual(expectedFull);
+      expect(compact.context.departure_recap).toEqual(expectedCompact);
+      expect(full.snapshot_hash).toBe(compact.snapshot_hash);
+      expect(
+        a.inspect_overworld_session_story({
+          session_id: full.session_id,
+          story_choice_id: storyChoiceId,
+          ...FULL_OVERWORLD,
+        }).story.kind,
+      ).toBe(kind);
+      expect(
+        a.inspect_overworld_session_story({
+          session_id: compact.session_id,
+          story_choice_id: storyChoiceId,
+          compact_context: true,
+          compact_result: true,
+        }).story.kind,
+      ).toBe(kind);
+      const recapText = JSON.stringify(full.observation.departureRecap);
+      const selectedTitles = new Set(
+        expectedFull.entries.flatMap((entry) => (entry.title ? [entry.title] : [])),
+      );
+      for (const alternative of [
+        ...WORLD.opening_preparation!.profiles,
+        ...WORLD.opening_relief_allocation!.options,
+        ...WORLD.opening_ally!.options,
+      ]) {
+        if (!selectedTitles.has(alternative.title)) {
+          expect(recapText).not.toContain(alternative.title);
+        }
+      }
+    };
+
+    assertMcpRecall(PREPARATION_STORY_ID, "preparation");
+    source.chooseJourneyStory("albany:prep_works_fortification", PREPARATION_STORY_ID);
+    assertMcpRecall(RELIEF_ALLOCATION_STORY_ID, "relief_allocation");
+    source.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID, RELIEF_ALLOCATION_STORY_ID);
+    source.talkToCharacter(WORLD.opening_ally!.contact);
+    expect(source.journey().storyChoice?.kind).toBe("ally");
+    assertMcpRecall(WORLD.opening_ally!.id, "ally");
+  });
+
   it("inspects one active option without mutation or sibling-term leakage", () => {
     const a = api();
     const started = a.start_overworld();

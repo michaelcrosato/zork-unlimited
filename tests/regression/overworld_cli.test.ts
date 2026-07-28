@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import {
   render,
+  renderDepartureRecap,
   renderEncounter,
   renderJourneyGate,
   renderJourneyStatus,
@@ -264,6 +265,20 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(ready).not.toContain("Available after choosing a Station preparation.");
     expect(session.snapshot()).toEqual(readySnapshot);
     expect(session.journey().acceptedDecisions).toBe(readyDecisions);
+  });
+
+  it("prints only the bounded dispatch recall beside an active Station choice", () => {
+    const session = sessionAtOpeningStation();
+    const recap = session.view().departureRecap;
+    if (!recap) throw new Error("Expected authenticated Station recall.");
+    const bounded = renderDepartureRecap(recap).join("\n");
+
+    expect(render(session.view())).toContain(bounded);
+    expect(bounded).toContain(`${recap.questTitle} dispatch recap:`);
+    expect(bounded).not.toContain("Roads:");
+    expect(bounded).not.toContain("Supplies ");
+    expect(bounded).not.toContain("Local routes:");
+    expect(bounded).not.toContain("Contacts:");
   });
 
   it("renders an authored pending road encounter with its strategy commands", () => {
