@@ -466,6 +466,23 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     }
   });
 
+  it("renders the dawn dispatch as a locked preview while Continue and End remain the only commands", () => {
+    const session = sessionAtCompletedWolfGoal();
+    const journey = session.journey();
+    const preview = journey.pendingChoice?.continuationPreview;
+    if (!preview) throw new Error("Expected locked Albany dawn dispatch preview.");
+
+    const text = renderJourneyGate(journey);
+    expect(text).toContain("Next decision preview — locked until you Continue:");
+    expect(text).toContain("These are not selectable yet; choose Continue or End below.");
+    for (const option of preview.options) {
+      expect(text).toContain(`[locked] ${option.label}`);
+      expect(text).toContain(option.consequence);
+      expect(text).not.toContain(`choose ${option.id}`);
+    }
+    expect(journey.pendingChoice?.options.map((option) => option.id)).toEqual(["continue", "end"]);
+  });
+
   it("labels categorized Station preparation summaries without changing legacy trigger labels", () => {
     const registration = WORLD.opening_registration;
     const oath = WORLD.opening_relief_oath;

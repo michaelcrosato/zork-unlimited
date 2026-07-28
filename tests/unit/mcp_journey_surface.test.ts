@@ -482,6 +482,53 @@ function mcpWolfWinterCheckpointInsideQuest() {
 }
 
 describe("MCP journey surface", () => {
+  it("keeps the completed Wolf dispatch preview identical in full and compact MCP until Continue", () => {
+    const source = uiSessionAtAlbanyGoalPause();
+    const snapshot = source.snapshot();
+    const a = api();
+    const full = a.restore_overworld_session({ ...FULL_OVERWORLD, snapshot });
+    const compact = a.restore_overworld_session({
+      snapshot,
+      compact_context: true,
+      compact_result: true,
+    });
+    const fullPreview = full.journey.pendingChoice?.continuationPreview;
+    if (!fullPreview) throw new Error("Expected a completed Wolf dawn dispatch preview.");
+
+    expect(full.journey.pendingChoice?.options.map((option) => option.id)).toEqual([
+      "continue",
+      "end",
+    ]);
+    expect(fullPreview.options).toHaveLength(2);
+    expect(compact.journey.pendingChoice?.continuationPreview).toEqual(fullPreview);
+    expect(compact.journey.pendingChoice?.options).toEqual(full.journey.pendingChoice?.options);
+
+    for (const [restored, responseOptions] of [
+      [full, FULL_OVERWORLD],
+      [compact, { compact_context: true, compact_result: true }],
+    ] as const) {
+      const beforeHash = restored.snapshot_hash;
+      const beforeDecisions = restored.journey.acceptedDecisions;
+      expect(() =>
+        a.choose_overworld_session_story({
+          ...responseOptions,
+          session_id: restored.session_id,
+          story_choice_id: fullPreview.id,
+          choice: fullPreview.options[0].id,
+        }),
+      ).toThrow(/choose whether to continue or end/i);
+
+      const after = a.get_overworld_session({
+        ...responseOptions,
+        session_id: restored.session_id,
+        include_observation: true,
+      });
+      expect(after.snapshot_hash).toBe(beforeHash);
+      expect(after.journey.acceptedDecisions).toBe(beforeDecisions);
+      expect(after.journey.pendingChoice?.continuationPreview).toEqual(fullPreview);
+    }
+  });
+
   it("keeps the human contact line in the default compact action result", () => {
     const a = api();
     const compactStart = a.start_overworld();

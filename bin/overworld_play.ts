@@ -323,7 +323,18 @@ export function renderJourneyGate(journey: JourneyPresentation): string {
     return renderTerminalStoryChoiceComparison(gate);
   }
   const kind = journey.pendingChoice ? "Journey decision" : "Story choice";
-  const lines = [`\n! ${kind}`, `  ${gate.message}`, "  Choose with `choose <number|label>`:"];
+  const lines = [`\n! ${kind}`, `  ${gate.message}`];
+  if (journey.pendingChoice?.continuationPreview) {
+    const preview = journey.pendingChoice.continuationPreview;
+    lines.push("  Next decision preview — locked until you Continue:");
+    lines.push(`    ${preview.message}`);
+    preview.options.forEach((option) => {
+      lines.push(`    [locked] ${option.label}`);
+      lines.push(`             Consequence: ${option.consequence}`);
+    });
+    lines.push("  These are not selectable yet; choose Continue or End below.");
+  }
+  lines.push("  Choose with `choose <number|label>`:");
   gate.options.forEach((option, index) => {
     lines.push(`    ${String(index + 1)}. ${option.label}`);
     const summary = "summary" in option ? option.summary : undefined;

@@ -450,6 +450,33 @@ describe("OverworldSession", () => {
         consequence: "This journey becomes read-only and its exit receipt is ready for review.",
       },
     ]);
+    expect(pendingJourney.pendingChoice?.continuationPreview).toEqual({
+      id: "albany_dawn_dispatch",
+      message:
+        "Hayden Hale can send Albany's only dawn relief wagon back to Cade or north with the wardens. Where should it go?",
+      options: [
+        {
+          id: "send_wagon_to_cade",
+          label: "Send the wagon back to Cade",
+          consequence: expect.stringContaining("sound wood the fight consumed"),
+        },
+        {
+          id: "send_wardens_north",
+          label: "Send the wagon and wardens north",
+          consequence: expect.stringContaining("wagon follows Hedrick's report"),
+        },
+      ],
+    });
+    const restoredPause = OverworldSession.restore(world, structuredClone(session.snapshot()));
+    expect(restoredPause.journey()).toEqual(pendingJourney);
+    const beforeRejectedDispatch = session.snapshotHash();
+    const beforeRejectedDispatchDecisions = pendingJourney.acceptedDecisions;
+    expect(() => session.chooseJourneyStory("send_wagon_to_cade", "albany_dawn_dispatch")).toThrow(
+      /choose whether to continue or end/i,
+    );
+    expect(session.snapshotHash()).toBe(beforeRejectedDispatch);
+    expect(session.journey().acceptedDecisions).toBe(beforeRejectedDispatchDecisions);
+    expect(session.journey().storyChoice).toBeNull();
     const deferredLeadCount = pendingJourney.opportunities?.deferredLeadCount;
     expect(deferredLeadCount).toBeGreaterThan(0);
     if (!deferredLeadCount) throw new Error("Expected deferred Albany opportunity leads.");
@@ -508,13 +535,22 @@ describe("OverworldSession", () => {
         expect(markup).not.toContain("journey-opportunity-list");
         expect(markup).not.toContain("keep your objective");
       }
-      expect(markups[0]).toContain(
+      const pendingMarkup = markups[0];
+      if (!pendingMarkup) throw new Error("Expected journey-pause markup.");
+      expect(pendingMarkup).toContain(
         "Continue: decide the dawn wagon, then take the Gallowmere lead",
       );
-      expect(markups[0]).toContain(
+      expect(pendingMarkup).toContain(
         "Choose where Albany&#x27;s only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through.",
       );
-      expect(markups[0]).toContain("End this journey");
+      expect(pendingMarkup).toContain("End this journey");
+      expect(pendingMarkup).toContain("After Continue: dawn relief dispatch");
+      expect(pendingMarkup).toContain("locked for review");
+      expect(pendingMarkup.match(/<button/g)).toHaveLength(2);
+      for (const option of pendingJourney.pendingChoice!.continuationPreview!.options) {
+        expect(pendingMarkup).toContain(option.label);
+        expect(pendingMarkup).toContain(option.consequence.replaceAll("'", "&#x27;"));
+      }
     } finally {
       await server.close();
     }

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 678 -->
+<!-- historical_cycle_count: 679 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - locked_albany_dispatch_preview
+
+- Evidence choice: three consecutive exact canaries ended at The Wolf-Winter's decision-30 goal pause, and a contract audit found that the boundary was honest but asked for retention before showing the concrete Albany-return fork.
+- Surface: the completed-goal panel now previews both exact outcome-specific dawn-wagon consequences as locked read-only cards across full/compact MCP, terminal, and UI before the unchanged Continue/End choice.
+- Counterfactual: the dispatch remains illegal until Continue; snapshots, facts, memories, journal, goals, accepted decisions, save/restore authority, and the one counted post-Continue dispatch selection are unchanged.
+- Pure evidence: exact-clean Terra seed 72883 continued at decision 30 without a rejected action, chose the real Cade dispatch afterward, completed The Gallowmere at 54, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: one clean continuation proves concrete reachability rather than a retention lift; the player repeated the Station-density S1, so freeze this layer and let the strict no-resume ten-player cohort decide.
+- Economy: the 73-turn canary used 5.498M raw / 170.3k uncached input and 12.4k output tokens at 96.9% cache reuse, or 3,382 useful tokens per accepted decision; no replacement was launched.
+- Guard: independent review added mobile stacking and full/compact MCP rejection proof, crawl `20260728T111047Z` is zero-finding, the local server booted but no browser surface could reach host loopback so no visual pass is claimed, and health passes 440 files/3,624 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - truthful_hunt_commitment_path
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the canary did not explicitly cite the recap and repeated that cumulative optional time became clear too late, so do not claim the density issue closed; publish the already-proven preparation forecast next.
 - Economy: one canary used 5.59M raw / 172k uncached input and 13.2k output tokens; no exposure-chasing rerun or partial fleet was launched.
 - Guard: independent review is clean; pre/final crawls `20260727T132159Z` / `20260727T161038Z` are zero-finding and health passes 435 files/3,589 tests, both typechecks, and all 12 packs.
-
-### Cycle result - ci_vitest_two_shard_pilot
-
-- Evidence choice: recent feature PRs spent 65–79 minutes in `verify`, with Vitest alone consuming 64–78; dependency caching or more in-run workers cannot materially shorten that bottleneck safely.
-- Surface: CI now runs unchanged Vitest coverage as `1/2` and `2/2` on separate runners, keeps static/UI/pack checks in a parallel prerequisite job, and preserves one lightweight required check named `verify`.
-- Counterfactual: test files, max workers, timeouts, integrity, typecheck, lint, format, pack validation, UI type/build, crawl, permissions, and branch-protection semantics are unchanged; failed/cancelled prerequisites make final `verify` fail.
-- Measured pilot: shards covered 218 files/1,914 tests and 217 files/1,673 passed + 1 skipped in 30m07s/45m13s; final required `verify` passed at 45m21s versus the recent 70m05s average (35.3% faster).
-- Pure evidence: exact-clean Terra seed 72753 completed The Wolf-Winter bloodlessly at decision 33, continued to decision 40, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: the canary cannot validate CI orchestration; its repeated opening-density finding reinforces the queued selected-term recap, while the Queensbury Rowan duplication stays outside the starting slice.
-- Economy/guard: the canary used 3.02M raw / 140k uncached input and 10.1k output; pre/post crawls `20260727T144857Z` / `20260727T145517Z` are zero-finding and health passes 435 files/3,588 tests, both typechecks, and all 12 packs.
