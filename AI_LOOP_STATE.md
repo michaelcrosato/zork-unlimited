@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 672 -->
+<!-- historical_cycle_count: 673 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - equal_wolf_plan_briefing
+
+- Evidence choice: the valid ten-Terra pilot completed 10/10 through LURE after every player took the first fully explained living plan without inspecting HUNT, DRIVE, or FORTIFY.
+- Surface: Cade's first compact/full spoken line now compares what HUNT, LURE, DRIVE, and FORTIFY save and cost—including DRIVE's wound/two-cattle/rig crisis—and states the uncommitted HUNT boundary; detailed prompts mirror it.
+- Counterfactual: action ids, plan gates, commitment, checks, resources, pressure, outcomes, and return consequences are unchanged; exact compact projection and no-truncation regressions pin the comparison.
+- Pure evidence: exact-clean Terra seed 72831 received the line verbatim, still chose LURE freely, completed The Wolf-Winter at decision 29, continued twice, completed The Gallowmere at 53, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: this proves default-surface reachability, not strategy balance; the 14-report compile still ranks source/preparation comparison density highest, so rerun the strict pilot before choosing between that fix and further strategy work.
+- Economy: the 78-turn canary used 6.535M raw / 184.0k uncached input and 11.8k output tokens at 97.2% cache reuse; seed 72830 exposed the label-only gap and was not rerun on that stale build.
+- Guard: independent rereview is clean, post-correction crawl `20260728T032120Z` is zero-finding, and health passes 440 files/3,612 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - concise_station_delay_impact
 
@@ -155,13 +165,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the player still found the conditional terms dense and requested a lighter review surface, so de-sequencing solved false obligation rather than the whole cognitive-load problem.
 - Boundary triage: its decision-40 Hedrick checkpoint appeared at the first safe post-launch action with the bothy context already visible; treat that as expected #181 behavior unless repeated evidence shows interruption harm.
 - Guard: independent review is clean; pre/post crawls `20260727T064000Z` / `20260727T064649Z` are zero-finding and final health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
-
-### Cycle result - byreyard_route_briefing
-
-- Evidence choice: exact-clean Terra seed 72745 found the first Cade read dense with simultaneous route, tactic, and conditional vocabulary; all four authored strategies already had detailed follow-up topics.
-- Surface: Cade now opens with a four-route map, identifies HUNT as combat, and keeps the irreversible uncommitted crossing rule; LURE, DRIVE, and FORTIFY costs remain staged behind their existing questions.
-- Counterfactual: no mechanics, flags, RNG, action ids, legal choices, or route consequences change; full/compact text remains identical and all six Cade topic actions retain parity.
-- Pure evidence: exact-clean Terra seed 72746 organically read the changed briefing, selected `ask_lure`, completed The Wolf-Winter nonlethally, continued to Queensbury, ended at decision 40, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Feedback compile: 23 newer verified pure exits keep Albany Station setup density hot; the higher-ranked seed-72659 post-lure loop predates and is closed by the merged northbound closure.
-- Self-critique/follow-through: the canary still found Station's interlocking permanent departure cards mentally demanding, so the next re-aim is structural staging rather than another prose-only reduction.
-- Guard: independent review is clean; pre/post crawls `20260727T042240Z` / `20260727T042435Z` are zero-finding and final health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
