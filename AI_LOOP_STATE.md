@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 681 -->
+<!-- historical_cycle_count: 682 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - explicit_hunt_commitment_affordance
+
+- Evidence choice: the closed nine-report diagnostic produced 7 LURE / 2 FORTIFY and no HUNT or DRIVE; HUNT alone still required players to infer a positive strategy from leaving Cade, acknowledging June's warning, and crossing north "uncommitted."
+- Surface: Cade now offers one explicit HUNT-for-north action beside the other strategy cards, and June exposes the same canonical action with her wolf-death consequence; crossing north remains the truthful irreversible boundary.
+- Counterfactual: the new Cade action is state-neutral, the legacy June MCP id still resolves, unannounced north crossing remains compatible, and strategy legality, bonuses, checks, resources, combat, outcomes, and return consequences are unchanged.
+- Pure evidence: exact-clean Terra seed 72931 saw the new action, freely chose LURE, recovered two failed checks, completed The Wolf-Winter at decision 33, continued twice, completed The Gallowmere at 57, then ended; clarity/enjoyment 4/5, unstuck, replay-yes, no bugs or rejected actions.
+- Self-critique/follow-through: visibility is proven but HUNT selection is not; the player again named dense Albany preparation, so strategy diversification awaits a fresh strict pilot and setup density remains a separate field-timed increment.
+- Economy: Terra used 6.722M input / 188.4k uncached input and 12.5k output tokens at 97.2% cache reuse, or 3,525 useful tokens per accepted decision; Spark 72930 yielded no valid report or terminal usage after a client model-cache schema failure, so its exact cost is unrecoverable and no retry was attempted.
+- Guard: independent gameplay/evidence review is clean, pre/post crawls `20260728T160242Z` / `20260728T162543Z` are zero-finding, and health passes 441 files/3,630 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - truthful_relief_oath_strategy_fit
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the player called the basic objective clear but repeated the compiled S1 that the persistent Station recap lacks a running selected-plan dispatch total; preempt the generic compact-event reduction with that narrower fix.
 - Economy: the single 42-turn canary used 2.12M raw / 101k uncached input and 6.6k output tokens at 95.2% cache reuse; no replacement or exposure-chasing run was launched.
 - Guard: independent review is clean, stable patch id `e253ce50` survived the rebase, crawl `20260727T194232Z` is zero-finding, and health passes 437 files/3,599 tests, both typechecks, and all 12 packs.
-
-### Cycle result - civic_first_use_categories
-
-- Evidence choice: repeated verified players found Civic's ten permanent opening choices dense even when exact read-only inspection was available.
-- Surface: all four roles, three duties, and three evidence sources now lead with one concise authenticated first-use category while preserving the complete purpose, cost, tradeoff, and exact consequence.
-- Counterfactual: categories are optional presentation only; all-omitted legacy manifests retain their preview fallback, partial or tampered category data fails closed, and mechanics, choices, receipts, RNG, routes, and endings are unchanged.
-- Pure evidence: exact-clean Terra seed 72757 saw all ten categories, completed The Wolf-Winter nonviolently at decision 25, continued twice, completed Gallowmere at 51, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: the player still called the staged opening and compact overworld summary dense, so this improves first-use orientation rather than closing density; exact Wolf-Winter goal guidance is next.
-- Economy: seed 72756 failed closed on a strict transport-wrapper rejection and published no evidence; its single fresh replacement used 4.27M raw / 143k uncached input and 12.2k output tokens, with no further rerun.
-- Guard: independent review is clean, patch identity survived the rebase, crawl `20260727T183200Z` is zero-finding, and health passes 437 files/3,598 tests, both typechecks, and all 12 packs.
