@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 673 -->
+<!-- historical_cycle_count: 674 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - concise_source_preparation_headers
+
+- Evidence choice: all ten valid strict-pilot players independently called Albany's pre-field source/preparation stack dense, making this the cohort's strongest repeated quality signal.
+- Surface: the two visible root descriptions are 71% shorter and tell players to compare each summary card first, then inspect only the exact trigger/check chain they need.
+- Counterfactual: the authored/persisted manifest copy and world hash remain unchanged; options, costs, odds, triggers, recoveries, dispatch time, choices, mechanics, RNG, outcomes, and full/compact projection contracts are unchanged.
+- Pure evidence: exact-clean Terra seed 72851 completed The Wolf-Winter nonlethally at decision 30, continued to checkpoint 41, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the player still rated the complete interacting dispatch web S1-dense, so this removes default repetition rather than closing the cluster; expose Cade's already-authored labeled strategy choices next.
+- Guard: independent review restored stronger prior contracts, migration sentinels keep the canonical hash exact, crawl `20260728T064229Z` is zero-finding, and health passes 440 files/3,612 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - equal_wolf_plan_briefing
 
@@ -155,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: discoverability is now truthful but did not reduce this player's perceived front-loading; do not add another review hint, and re-aim between optional setup flow and the newly observed cumulative first-lure risk forecast.
 - Economy: one canary used 2.35M raw / 108k uncached input tokens and 9.5k output tokens; no replacement run or cohort was launched.
 - Guard: reviewer-found non-executable camel-case metadata is fixed; pre/post crawls `20260727T082007Z` / `20260727T082730Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
-
-### Cycle result - station_optional_departure_staging
-
-- Evidence choice: a 23-report verified-pure compile and seed 72746 both kept Albany Station's optional preparation, allocation, and June terms hot; the visible `1/2` → `2/2` itinerary made separate decisions look mandatory.
-- Surface: Civic's actual three-step docket stays numbered, while Station preparation now permits immediate launch and names relief capacity and June as separate optional choices; allocation permits leaving capacity unassigned and returning to Station.
-- Counterfactual: availability, effects, costs, ids, actions, snapshots, and the legal no-prep / prep-only / prep-plus-allocation launch permutations are unchanged.
-- Pure evidence: exact-clean Terra seed 72747 read both changed cards, chose drover preparation, Cade fodder, and June cattle-first, completed The Wolf-Winter nonlethally at decision 30 and The Gallowmere at 56, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: the player still found the conditional terms dense and requested a lighter review surface, so de-sequencing solved false obligation rather than the whole cognitive-load problem.
-- Boundary triage: its decision-40 Hedrick checkpoint appeared at the first safe post-launch action with the bothy context already visible; treat that as expected #181 behavior unless repeated evidence shows interruption harm.
-- Guard: independent review is clean; pre/post crawls `20260727T064000Z` / `20260727T064649Z` are zero-finding and final health passes 435 files/3,579 tests, both typechecks, and all 12 packs.

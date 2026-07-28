@@ -199,12 +199,14 @@ function expectOpeningPromptExact(
   source: Readonly<{ id: string; title: string; message: string }>,
   sourceOptions: readonly OpeningSourceOption[],
   prompt: JourneyStoryChoicePrompt,
+  authoredMessageVisible: boolean = true,
 ): JourneyStoryChoicePrompt {
   expect(prompt.id).toBe(source.id);
   const projected = compactJourneyStoryChoicePrompt(prompt);
   expectExact(`opening:${source.id}.prompt`, prompt.message, projected.message);
   expect(projected.message).toContain(source.title);
-  expect(projected.message).toContain(source.message);
+  if (authoredMessageVisible) expect(projected.message).toContain(source.message);
+  else expect(projected.message).not.toContain(source.message);
 
   for (const sourceOption of sourceOptions) {
     const canonicalOption = prompt.options.find((option) => option.id === sourceOption.id);
@@ -484,8 +486,9 @@ describe("shipped compact prose fidelity", () => {
       source: Readonly<{ id: string; title: string; message: string }>,
       sourceOptions: readonly OpeningSourceOption[],
       prompt: JourneyStoryChoicePrompt,
+      authoredMessageVisible: boolean = true,
     ): void => {
-      expectOpeningPromptExact(source, sourceOptions, prompt);
+      expectOpeningPromptExact(source, sourceOptions, prompt, authoredMessageVisible);
       const sourceOption = sourceOptions[0]!;
       const canonicalOption = prompt.options.find((option) => option.id === sourceOption.id)!;
       const selected = session.chooseJourneyStory(sourceOption.id, source.id);
@@ -503,10 +506,10 @@ describe("shipped compact prose fidelity", () => {
     session.talkToCharacter(registration.contact);
     choose(registration, registration.profiles, currentStoryChoice(session));
     choose(oath, oath.options, currentStoryChoice(session));
-    choose(lead, lead.options, currentStoryChoice(session));
+    choose(lead, lead.options, currentStoryChoice(session), false);
 
     moveToArea(session, WORLD, preparation.area);
-    choose(preparation, preparation.profiles, session.inspectJourneyStory(preparation.id));
+    choose(preparation, preparation.profiles, session.inspectJourneyStory(preparation.id), false);
     choose(allocation, allocation.options, session.inspectJourneyStory(allocation.id));
 
     moveToArea(session, WORLD, ally.area);
