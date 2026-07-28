@@ -43,6 +43,27 @@ export function JourneyChoiceScreen({
           {pendingChoice.message}
         </p>
 
+        {pendingChoice.continuationPreview && (
+          <section
+            className="journey-continuation-preview"
+            aria-labelledby="journey-continuation-preview-title"
+          >
+            <h2 id="journey-continuation-preview-title">After Continue: dawn relief dispatch</h2>
+            <p>{pendingChoice.continuationPreview.message}</p>
+            <p className="journey-continuation-preview-lock">
+              These terms are locked for review. Continue opens this decision; only Continue or End is legal now.
+            </p>
+            <div className="journey-continuation-preview-cards">
+              {pendingChoice.continuationPreview.options.map((option) => (
+                <article key={option.id}>
+                  <h3>{option.label}</h3>
+                  <p>{option.consequence}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
         <div className="journey-choice-goal">
           <span>Current goal</span>
           <strong>{journey.goal.text}</strong>

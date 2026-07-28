@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { compactJourneyPresentation } from "../../src/mcp/journey_projection.js";
 import {
   ALBANY_DAWN_DISPATCH_CHOICE_IDS,
   ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX,
@@ -52,6 +53,7 @@ import {
   activateJourneyGoal,
   chooseJourney,
   createInitialJourneyContractSnapshot,
+  journeyPresentation,
   recordJourneyGoalCompleted,
   type JourneyContractSnapshot,
 } from "../../src/world/journey_contract.js";
@@ -553,6 +555,32 @@ describe("journey campaign", () => {
         "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through.",
       );
       expect(context?.storyChoice).toBeNull();
+      expect(context?.continuationPreview).toEqual(
+        albanyDawnDispatchStoryChoice(Object.values(WOLF_WINTER_CAMPAIGN_OUTCOMES)[index]!),
+      );
+      if (!context?.continuationPreview) throw new Error("Expected Albany dispatch preview.");
+      const full = journeyPresentation(journey, {
+        goalCompletion: {
+          goalVersion: journey.goal.version,
+          goalId: journey.goal.id,
+          messagePrefix: context.completionContext,
+          ...(context.preRetentionTeaser ? { messageSuffix: context.preRetentionTeaser } : {}),
+          ...(context.continueLabel ? { continueLabel: context.continueLabel } : {}),
+          ...(context.continueConsequencePrefix
+            ? { continueConsequencePrefix: context.continueConsequencePrefix }
+            : {}),
+          continuationPreview: context.continuationPreview,
+        },
+      });
+      const compact = compactJourneyPresentation(full);
+      expect(full.pendingChoice?.continuationPreview).toEqual(context.continuationPreview);
+      expect(compact.pendingChoice?.continuationPreview).toEqual(
+        full.pendingChoice?.continuationPreview,
+      );
+      expect(compact.pendingChoice?.options.map((option) => option.id)).toEqual([
+        "continue",
+        "end",
+      ]);
     }
   });
 

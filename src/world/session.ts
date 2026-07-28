@@ -1530,6 +1530,9 @@ export class OverworldSession {
           ...(campaign.continueConsequencePrefix
             ? { continueConsequencePrefix: campaign.continueConsequencePrefix }
             : {}),
+          ...(campaign.continuationPreview
+            ? { continuationPreview: campaign.continuationPreview }
+            : {}),
         };
       }
       if (campaign.storyChoice && !storyChoice) {

@@ -1107,6 +1107,7 @@ export type JourneyCampaignPresentationContext = Readonly<{
   preRetentionTeaser: string | null;
   continueLabel?: string;
   continueConsequencePrefix: string | null;
+  continuationPreview?: AlbanyDawnDispatchStoryChoice;
   storyChoice: JourneyCampaignStoryChoice | null;
 }>;
 
@@ -1124,6 +1125,9 @@ export function journeyCampaignPresentationContext(args: {
       completionContext: outcome.albanyReturnContext,
       preRetentionTeaser: beforeAlbanyRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
       ...(beforeAlbanyRetention ? { continueLabel: ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } : {}),
+      ...(beforeAlbanyRetention
+        ? { continuationPreview: albanyDawnDispatchStoryChoice(outcome) }
+        : {}),
       continueConsequencePrefix: beforeAlbanyRetention
         ? ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX
         : null,
@@ -1176,6 +1180,7 @@ export function journeyCampaignPresentationContext(args: {
       completionContext: outcome.albanyReturnContext,
       preRetentionTeaser: beforeRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
       ...(beforeRetention ? { continueLabel: ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } : {}),
+      ...(beforeRetention ? { continuationPreview: albanyDawnDispatchStoryChoice(outcome) } : {}),
       continueConsequencePrefix: beforeRetention
         ? ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX
         : null,

@@ -144,6 +144,16 @@ export type JourneyChoiceOption = Readonly<{
   consequence: string;
 }>;
 
+/**
+ * Read-only authored terms for the next mandatory story decision. A retention
+ * pause may show these terms, but it never makes the contained options legal.
+ */
+export type JourneyContinuationPreview = Readonly<{
+  id: string;
+  message: string;
+  options: readonly [JourneyStoryChoiceOption, JourneyStoryChoiceOption];
+}>;
+
 export type JourneyChoicePrompt = Readonly<{
   id: string;
   atDecision: number;
@@ -153,6 +163,7 @@ export type JourneyChoicePrompt = Readonly<{
   goalId: string | null;
   message: string;
   options: readonly [JourneyChoiceOption, ...JourneyChoiceOption[]];
+  continuationPreview?: JourneyContinuationPreview;
 }>;
 
 /**
@@ -302,6 +313,8 @@ export type JourneyGoalCompletionPresentationContext = Readonly<{
   continueLabel?: string;
   continueConsequencePrefix?: string;
   continueConsequenceSuffix?: string;
+  /** Read-only next-decision terms; legal options remain Continue and End. */
+  continuationPreview?: JourneyContinuationPreview;
 }>;
 
 /**
@@ -1053,6 +1066,10 @@ function pendingChoicePresentation(
           }),
         ]);
       })();
+  const continuationPreview =
+    characterDied || !goalContext?.continuationPreview
+      ? undefined
+      : freezeContinuationPreview(goalContext.continuationPreview);
   return Object.freeze({
     id: `journey:${pending.atDecision}:${pending.reasons.join("+")}:${String(pending.goalVersion ?? "none")}:${pending.goalId ?? "none"}`,
     atDecision: pending.atDecision,
@@ -1066,6 +1083,33 @@ function pendingChoicePresentation(
       goalContext?.messageSuffix,
     ),
     options: options as readonly [JourneyChoiceOption, ...JourneyChoiceOption[]],
+    ...(continuationPreview ? { continuationPreview } : {}),
+  });
+}
+
+function freezeContinuationPreview(
+  preview: JourneyContinuationPreview,
+): JourneyContinuationPreview {
+  if (preview.id.length === 0 || preview.message.length === 0 || preview.options.length !== 2) {
+    throw new Error(
+      "Journey continuation preview requires an id, message, and exactly two options.",
+    );
+  }
+  const optionIds = new Set<string>();
+  const options = preview.options.map((option) => {
+    if (option.id.length === 0 || option.label.length === 0 || option.consequence.length === 0) {
+      throw new Error("Journey continuation preview option fields cannot be empty.");
+    }
+    if (optionIds.has(option.id)) {
+      throw new Error("Journey continuation preview option ids must be unique.");
+    }
+    optionIds.add(option.id);
+    return Object.freeze({ ...option });
+  });
+  return Object.freeze({
+    id: preview.id,
+    message: preview.message,
+    options: Object.freeze(options) as JourneyContinuationPreview["options"],
   });
 }
 
