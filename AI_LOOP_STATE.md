@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 679 -->
+<!-- historical_cycle_count: 680 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - station_launch_first
+
+- Evidence choice: the exact ten-Terra pilot completed 10/10 but rated clarity 3.8 and independently repeated front-loaded Station density while every player chose the same LURE family.
+- Surface: when The Wolf-Winter has a legal road, compact MCP, UI, and terminal now present its authenticated launch card before the unchanged recap and optional Station planning; gated launches remain planning-first, and terminal previews the real `start` command before route selection.
+- Counterfactual: route legality, launch terms, choices, state/hash, accepted decisions, mechanics, RNG, and outcomes are unchanged; the promoted quest is only removed from its lower duplicate notice.
+- Pure evidence: exact-clean Terra seed 72910 saw both legal roads before planning, inspected preparation but skipped every optional Station choice, took the sheltered stockway, completed The Wolf-Winter through LURE at decision 28, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: launch-first made immediate departure executable but did not erase density—the player still made three optional preparation reads and named compact terminology as friction; do not rerun this layer alone, and measure only after truthful strategy-fit parity joins it.
+- Economy: the 45-turn canary used 2.081M raw / 97.1k uncached input and 6.3k output tokens at 95.3% cache reuse, or 3,694 useful tokens per accepted decision; no replacement was launched.
+- Guard: independent parity review fixed blocked-road copy and a terminal command-contract defect, pre/post crawls `20260728T125110Z`/`20260728T131327Z` are zero-finding, health passes 440 files/3,625 tests and all 12 packs, and local-browser policy blocked loopback so no visual pass is claimed.
 
 ### Cycle result - locked_albany_dispatch_preview
 
@@ -153,14 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the player did not cite the forecast and still called the preparation stack dense, so timing is clarified rather than density closed; land the already-green concise Civic categories next.
 - Economy: one 49-turn canary used 2.55M raw / 109k uncached input and 7.8k output tokens with a 95.7% cache hit; no exposure-chasing rerun or partial fleet was launched.
 - Guard: independent review is clean, patch identity survived the rebase, crawl `20260727T170457Z` is zero-finding, and health passes 436 files/3,592 tests, both typechecks, and all 12 packs.
-
-### Cycle result - albany_selected_field_term_recall
-
-- Evidence choice: consecutive verified players still described Albany's permanent departure terms as dense, and seed 72750 specifically lost a selected conditional preparation effect before the field.
-- Surface: Station's authenticated six-row recap now adds one concise active field term for each selected role, duty, evidence source, preparation, allocation, and field team; unresolved and legacy rows expose no invented term.
-- Counterfactual: the recap remains selected-only and read-only across full/compact MCP, terminal, and UI; choices, availability, costs, time, character effects, receipts, launch legality, routes, RNG, and endings are unchanged.
-- Pure evidence: exact-clean Terra seed 72754 completed The Wolf-Winter bloodlessly at decision 29, continued through checkpoint 40, completed Gallowmere at 52, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Feedback compile: three new verified pure exits produced zero rejected reports; the Albany cluster supports this recall layer and the queued timing forecast, while Gallowmere lethality and Queensbury identity remain outside the fixed starting slice.
-- Self-critique/follow-through: the canary did not explicitly cite the recap and repeated that cumulative optional time became clear too late, so do not claim the density issue closed; publish the already-proven preparation forecast next.
-- Economy: one canary used 5.59M raw / 172k uncached input and 13.2k output tokens; no exposure-chasing rerun or partial fleet was launched.
-- Guard: independent review is clean; pre/final crawls `20260727T132159Z` / `20260727T161038Z` are zero-finding and health passes 435 files/3,589 tests, both typechecks, and all 12 packs.
