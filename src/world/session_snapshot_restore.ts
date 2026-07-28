@@ -176,12 +176,14 @@ import {
 } from "./opening_relief_allocation_journal.js";
 import { applyOpeningReliefAllocationOption } from "./opening_relief_allocation.js";
 import {
+  openingReliefOathJournalId,
   openingReliefOathLegacyJournalEntry,
   openingReliefOathLegacySourceWorldHash,
   openingReliefOathOfferJournalEntry,
   proveOpeningReliefOathJournal,
   type OpeningReliefOathJournalProof,
 } from "./opening_relief_oath_journal.js";
+import { RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY } from "./relief_oath_strategy_parity_legacy.js";
 import {
   openingRegistrationLegacyJournalDraft,
   openingRegistrationLegacySourceWorldHash,
@@ -432,8 +434,11 @@ export const OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before Civic choice cards gained concise trigger categories. */
 export const OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH =
   "155ab48207c496c158dd5bb07fb9d44502d75fa456e219f25abf148118f40b31";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before relief-oath strategy fit became explicit. */
+export const OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH =
   "294bfefa9d3b17b21e5e2a48ded532e7b4c9b995ad7149b1519b1b4e490a9435";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "35d7ee917b8cd33c698e3771d7bd884d963763ab665e5b4ae919e971e013a50c";
 /** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
 export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
@@ -451,6 +456,23 @@ export const OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES: Read
     AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
     AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
     AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
+  ]);
+/**
+ * Exact supported manifests that shipped the former Aid-Only oath preview.
+ * These hashes were already trusted by their own migrations; this set only
+ * selects the additional copy normalization and must not become an admission
+ * path for an otherwise unknown manifest.
+ */
+const OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_COPY_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
+  new Set([
+    OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
+    ...OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES,
+    OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
+    ...EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES,
+    OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
+    OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH,
   ]);
 /** Exact supported manifests in which opening preparation was still anchored at Civic. */
 const OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES: ReadonlySet<string> = new Set([
@@ -489,6 +511,7 @@ type ExactSnapshotMigrationId =
   | "frost_jamb_signpost"
   | "june_return"
   | "registration_promise_closure"
+  | "relief_oath_strategy_parity"
   | "relief_protocol_trigger";
 
 /**
@@ -521,6 +544,7 @@ const EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES: Readonly<
     OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
     OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH,
   ]),
+  relief_oath_strategy_parity: OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_COPY_PREDECESSOR_WORLD_HASHES,
   relief_protocol_trigger: new Set([
     ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
     AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
@@ -719,6 +743,66 @@ type OpeningRegistrationLegacyJournalProof = Readonly<{
   journalIndex: number;
   sourceWorldHash: string;
 }>;
+
+function normalizeReliefOathStrategyParityPredecessorJournal(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  const oath = args.indexes.openingReliefOath;
+  const currentOffer = args.indexes.openingReliefOathOfferDraft;
+  const aid = oath?.options.find((option) => option.id === "albany:oath_limited_aid_only");
+  if (!oath || !currentOffer || !aid) {
+    throw new Error("Relief-oath strategy-parity migration target must retain the Aid-Only term.");
+  }
+  const aidSelectionId = openingReliefOathJournalId(oath.id, aid.id);
+  return args.journalEntries.map((entry) => {
+    if (
+      entry.id === currentOffer.id &&
+      RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.message !== currentOffer.text
+    ) {
+      if (
+        entry.kind !== currentOffer.kind ||
+        entry.title !== currentOffer.title ||
+        entry.text !== RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.message
+      ) {
+        throw new Error(
+          `Relief-oath strategy-parity predecessor offer "${entry.id}" does not match its exact authored copy.`,
+        );
+      }
+      return Object.freeze({ ...entry, text: currentOffer.text });
+    }
+    if (
+      entry.id !== aidSelectionId ||
+      RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.aidPreview === aid.preview
+    ) {
+      return entry;
+    }
+    if (entry.kind !== "relief_oath") {
+      throw new Error(
+        `Relief-oath strategy-parity predecessor entry "${entry.id}" is not an oath selection.`,
+      );
+    }
+    const before = RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.aidPreview;
+    const firstMatch = entry.text.indexOf(before);
+    if (firstMatch < 0) {
+      // An already-normalized exact entry is valid here and is proven against
+      // the current manifest below. This preserves idempotence and lets older
+      // migration-specific rejection checks retain their established order.
+      return entry;
+    }
+    if (entry.text.indexOf(before, firstMatch + before.length) >= 0) {
+      throw new Error(
+        `Relief-oath strategy-parity predecessor entry "${entry.id}" does not match its exact authored copy.`,
+      );
+    }
+    return Object.freeze({
+      ...entry,
+      text: `${entry.text.slice(0, firstMatch)}${aid.preview}${entry.text.slice(
+        firstMatch + before.length,
+      )}`,
+    });
+  });
+}
 
 function normalizeReliefProtocolTriggerCopyPredecessorJournal(args: {
   indexes: OverworldSnapshotManifestIndex;
@@ -2989,6 +3073,13 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesCivicTriggerCategory =
     migrationTargetsCurrentManifest &&
     exactSnapshotMigrationAppliesToSource("civic_trigger_category", sourceSnapshot.worldHash);
+  const migratesReliefOathStrategyParity =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH;
+  const normalizesReliefOathStrategyParity =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    exactSnapshotMigrationAppliesToSource("relief_oath_strategy_parity", sourceSnapshot.worldHash);
   const migratesCadeStoryPredicate =
     migrationTargetsCurrentManifest &&
     AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash);
@@ -3065,6 +3156,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesReliefProtocolTriggerCopy &&
     !migratesReliefAllocationTriggerCategory &&
     !migratesCivicTriggerCategory &&
+    !migratesReliefOathStrategyParity &&
     !migratesOpeningPreparationCopy &&
     !migratesRegistrationPromiseClosure &&
     !migratesJuneReturnCopy &&
@@ -3088,19 +3180,28 @@ export function planOverworldSessionSnapshotRestore(args: {
         }),
       })
     : sourceSnapshot;
+  const snapshotWithReliefOathStrategyParity = normalizesReliefOathStrategyParity
+    ? Object.freeze({
+        ...snapshotWithOpeningPreparationCopy,
+        journalEntries: normalizeReliefOathStrategyParityPredecessorJournal({
+          indexes,
+          journalEntries: snapshotWithOpeningPreparationCopy.journalEntries,
+        }),
+      })
+    : snapshotWithOpeningPreparationCopy;
   const normalizesReliefProtocolTriggerCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
     exactSnapshotMigrationAppliesToSource("relief_protocol_trigger", sourceSnapshot.worldHash);
   const snapshotWithReliefProtocolTriggerCopy = normalizesReliefProtocolTriggerCopy
     ? Object.freeze({
-        ...snapshotWithOpeningPreparationCopy,
+        ...snapshotWithReliefOathStrategyParity,
         journalEntries: normalizeReliefProtocolTriggerCopyPredecessorJournal({
           indexes,
-          journalEntries: snapshotWithOpeningPreparationCopy.journalEntries,
+          journalEntries: snapshotWithReliefOathStrategyParity.journalEntries,
         }),
       })
-    : snapshotWithOpeningPreparationCopy;
+    : snapshotWithReliefOathStrategyParity;
   const normalizesFrostJambCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
