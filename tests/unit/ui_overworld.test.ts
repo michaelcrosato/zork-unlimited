@@ -25,7 +25,6 @@ import {
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
-import { ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } from "../../src/world/journey_campaign.js";
 import { INITIAL_JOURNEY_GOAL_GUIDANCE } from "../../src/world/journey_contract.js";
 import { cloneOverworldView } from "../../src/world/session_view_clone.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
@@ -435,6 +434,19 @@ describe("OverworldSession", () => {
     completeAlbanyFirstGoal(session);
     const pendingJourney = session.journey();
     expect(pendingJourney.pendingChoice?.reasons).toContain("goal_completed");
+    expect(pendingJourney.pendingChoice?.options).toEqual([
+      {
+        id: "continue",
+        label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
+        consequence:
+          "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+      },
+      {
+        id: "end",
+        label: "End this journey",
+        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+      },
+    ]);
     const deferredLeadCount = pendingJourney.opportunities?.deferredLeadCount;
     expect(deferredLeadCount).toBeGreaterThan(0);
     if (!deferredLeadCount) throw new Error("Expected deferred Albany opportunity leads.");
@@ -493,10 +505,13 @@ describe("OverworldSession", () => {
         expect(markup).not.toContain("journey-opportunity-list");
         expect(markup).not.toContain("keep your objective");
       }
-      expect(markups[0]).toContain(ALBANY_DAWN_DISPATCH_CONTINUE_LABEL);
       expect(markups[0]).toContain(
-        "first safe break at or after checkpoint threshold 40, whichever comes first",
+        "Continue: decide the dawn wagon, then take the Gallowmere lead",
       );
+      expect(markups[0]).toContain(
+        "Choose where Albany&#x27;s only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through.",
+      );
+      expect(markups[0]).toContain("End this journey");
     } finally {
       await server.close();
     }

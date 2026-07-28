@@ -54,7 +54,9 @@ export type AlbanyDawnDispatchChoiceId = (typeof ALBANY_DAWN_DISPATCH_CHOICE_IDS
 export const ALBANY_DAWN_DISPATCH_TEASER =
   "At Albany Station Quarter, Hayden Hale has one dawn relief wagon and another live packet: Hedrick Cradoc's father was killed that morning by an old grey sow above Queensbury. Continue, and you will decide whether the wagon returns to Cade or runs north with the wardens before you carry Hedrick's lead onward." as const;
 export const ALBANY_DAWN_DISPATCH_CONTINUE_LABEL =
-  "Continue to decide the dawn relief wagon" as const;
+  "Continue: decide the dawn wagon, then take the Gallowmere lead" as const;
+export const ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX =
+  "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through." as const;
 
 export const ALBANY_DAWN_DISPATCH_GOALS = Object.freeze({
   send_wagon_to_cade: campaignGoal(
@@ -1123,7 +1125,7 @@ export function journeyCampaignPresentationContext(args: {
       preRetentionTeaser: beforeAlbanyRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
       ...(beforeAlbanyRetention ? { continueLabel: ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } : {}),
       continueConsequencePrefix: beforeAlbanyRetention
-        ? "Continue to decide where Albany's only dawn relief wagon goes."
+        ? ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX
         : null,
       storyChoice: afterAlbanyContinue ? albanyDawnDispatchStoryChoice(outcome) : null,
     });
@@ -1175,7 +1177,7 @@ export function journeyCampaignPresentationContext(args: {
       preRetentionTeaser: beforeRetention ? ALBANY_DAWN_DISPATCH_TEASER : null,
       ...(beforeRetention ? { continueLabel: ALBANY_DAWN_DISPATCH_CONTINUE_LABEL } : {}),
       continueConsequencePrefix: beforeRetention
-        ? "Continue to decide where Albany's only dawn relief wagon goes."
+        ? ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX
         : null,
       storyChoice: afterContinue ? albanyDawnDispatchStoryChoice(outcome) : null,
     });
