@@ -179,12 +179,24 @@ export type JourneyStoryChoiceDispatchForecast = Readonly<{
   proofHash: string;
 }>;
 
+/** Exact, read-only timing for one currently selectable Station option. */
+export type JourneyStoryChoiceDispatchImpact = Readonly<{
+  schemaVersion: 1;
+  resultingMinutes: number;
+  timing: "on_time" | "delayed";
+  addedMinutes: number;
+  line: string;
+  proofHash: string;
+}>;
+
 export type JourneyStoryChoiceOption = Readonly<{
   id: string;
   label: string;
   summary?: JourneyStoryChoiceSummary;
   /** Present only on the current authenticated Albany preparation comparison. */
   dispatchForecast?: JourneyStoryChoiceDispatchForecast;
+  /** Present only on a current authenticated Station relief or field-team card. */
+  dispatchImpact?: JourneyStoryChoiceDispatchImpact;
   consequence: string;
 }>;
 

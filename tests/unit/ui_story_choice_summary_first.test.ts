@@ -352,6 +352,12 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(allocationButton.textContent).toContain(
         `Leaves exposed: ${allocation.options[0]!.leaves_exposed}`,
       );
+      const allocationImpact = allocationJourney.storyChoice?.options[0]?.dispatchImpact?.line;
+      if (!allocationImpact) throw new Error("Expected the authenticated relief timing impact.");
+      expect(allocationButton.textContent).toContain(allocationImpact);
+      expect(allocationButton.textContent!.indexOf(allocationImpact)).toBeLessThan(
+        allocationButton.textContent!.indexOf("Purpose:"),
+      );
       expect(allocationButton.textContent).toContain(allocation.options[0]!.trigger_category);
       expect(allocationButton.textContent).not.toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).toContain(allocation.options[0]!.preview);

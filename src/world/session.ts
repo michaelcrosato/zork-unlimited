@@ -56,7 +56,10 @@ import {
   type OverworldQuestCompletionResult,
   type OverworldQuestStartPreparation,
 } from "./session_quests.js";
-import { deriveQuestDispatchPresentationWindow } from "./quest_dispatch_window.js";
+import {
+  classifyQuestDispatchMinutes,
+  deriveQuestDispatchPresentationWindow,
+} from "./quest_dispatch_window.js";
 import { deriveCampaignWorldFactIds } from "./campaign_consequences.js";
 import {
   resolveCampaignServiceRules,
@@ -143,6 +146,7 @@ import {
 } from "./opening_preparation_journal.js";
 import { presentOpeningPreparation } from "./opening_preparation_presentation.js";
 import { withOpeningPreparationDispatchForecast } from "./opening_preparation_dispatch_forecast.js";
+import { stripOpeningStationDispatchImpact } from "./opening_station_dispatch_impact.js";
 import { applyOpeningReliefAllocationOption } from "./opening_relief_allocation.js";
 import {
   openingReliefAllocationJournalEntry,
@@ -166,7 +170,10 @@ import {
   openingRegistrationOfferJournalId,
 } from "./opening_registration_journal.js";
 import { presentOpeningRegistration } from "./opening_registration_presentation.js";
-import { withOpeningDispatchBriefing } from "./opening_dispatch_briefing.js";
+import {
+  resolveOpeningDispatchManifestChain,
+  withOpeningDispatchBriefing,
+} from "./opening_dispatch_briefing.js";
 import {
   deriveOpeningDepartureRecap,
   type OpeningDepartureRecap,
@@ -1012,6 +1019,126 @@ export class OverworldSession {
     });
   }
 
+  private withOpeningStationDispatchImpact(
+    prompt: JourneyStoryChoicePrompt | null | undefined,
+  ): JourneyStoryChoicePrompt | null | undefined {
+    if (!prompt) return prompt;
+    const sanitized = () => stripOpeningStationDispatchImpact(prompt)!;
+    const kind = prompt.kind;
+    if (kind !== "relief_allocation" && kind !== "ally") return sanitized();
+    const chain = resolveOpeningDispatchManifestChain(this.world);
+    if (
+      !chain ||
+      (kind === "relief_allocation" && prompt.id !== chain.reliefAllocation.id) ||
+      (kind === "ally" && (!chain.ally || prompt.id !== chain.ally.id)) ||
+      this.journeyState.status !== "active" ||
+      this.startedQuestIds.has(chain?.quest.id ?? "") ||
+      this.completedQuestIds.has(chain?.quest.id ?? "") ||
+      this.currentId !== chain.preparation.home ||
+      this.currentAreaId !== chain.preparation.area
+    ) {
+      return sanitized();
+    }
+    const boundary = Object.freeze({
+      acceptedDecisions: this.journeyState.acceptedDecisions,
+      decisionProofHash: this.journeyState.decisionProof.hash,
+      townId: this.currentId,
+      areaId: this.currentAreaIdOrThrow(),
+      minutes: this.minutes,
+    });
+    const sameBoundary = (left: typeof boundary, right: typeof boundary) =>
+      left.acceptedDecisions === right.acceptedDecisions &&
+      left.decisionProofHash === right.decisionProofHash &&
+      left.townId === right.townId &&
+      left.areaId === right.areaId &&
+      left.minutes === right.minutes;
+    try {
+      const journalEntries =
+        kind === "relief_allocation" &&
+        !this.journalEntries.some((entry) => entry.kind === "relief_allocation_offer")
+          ? [
+              openingReliefAllocationOfferJournalEntry({
+                scene: chain.reliefAllocation,
+                town: this.currentNode().name,
+                recordedAt: timeLabel(boundary.minutes),
+                storyChoiceBoundary: boundary,
+              }),
+              ...this.journalEntries,
+            ]
+          : this.journalEntries;
+      const window = deriveQuestDispatchPresentationWindow({
+        questId: chain.quest.id,
+        journalEntries,
+        openingRegistration: chain.registration,
+        openingReliefOath: chain.reliefOath,
+        openingLeadSource: chain.leadSource,
+        openingPreparation: chain.preparation,
+        openingReliefAllocation: chain.reliefAllocation,
+        openingAlly: chain.ally,
+      });
+      const baseline =
+        kind === "relief_allocation" &&
+        window.status !== "june_commitment_pending" &&
+        window.receipt?.reliefAllocation.kind === "unassigned" &&
+        window.receipt.juneCommitment.kind === "solo_unasked" &&
+        sameBoundary(boundary, window.receipt.reliefAllocation.boundary)
+          ? window.ledgerMinutes
+          : kind === "ally" &&
+              window.status === "june_commitment_pending" &&
+              sameBoundary(boundary, window.receipt.juneCommitment.boundary)
+            ? window.committedMinutes
+            : undefined;
+      if (baseline === undefined) return sanitized();
+      const sourceOptions =
+        kind === "relief_allocation" ? chain.reliefAllocation.options : chain.ally!.options;
+      if (
+        sourceOptions.length !== prompt.options.length ||
+        sourceOptions.some((source) => !prompt.options.some((option) => option.id === source.id))
+      ) {
+        return sanitized();
+      }
+      return Object.freeze({
+        ...prompt,
+        options: Object.freeze(
+          prompt.options.map((option) => {
+            const source = sourceOptions.find((candidate) => candidate.id === option.id)!;
+            const addedMinutes = source.terms.minutes;
+            const resultingMinutes = baseline + addedMinutes;
+            const timing = classifyQuestDispatchMinutes(resultingMinutes);
+            const line = `Dispatch: ${
+              addedMinutes === 0 ? "no added delay" : `+${String(addedMinutes)}m delay`
+            } → ${String(resultingMinutes)}m, ${timing === "on_time" ? "on time" : "delayed"}.`;
+            if (line.length > 78)
+              throw new Error("Opening Station dispatch impact exceeds card limit.");
+            return Object.freeze({
+              ...option,
+              dispatchImpact: Object.freeze({
+                schemaVersion: 1 as const,
+                resultingMinutes,
+                timing,
+                addedMinutes,
+                line,
+                proofHash: hashState({
+                  schemaVersion: 1,
+                  promptId: prompt.id,
+                  kind,
+                  optionId: option.id,
+                  baseline,
+                  addedMinutes,
+                  resultingMinutes,
+                  timing,
+                  dispatchProofHash: window.proofHash,
+                }),
+              }),
+            });
+          }),
+        ),
+      }) as JourneyStoryChoicePrompt;
+    } catch {
+      return sanitized();
+    }
+  }
+
   inspectJourneyStory(storyChoiceId: string): JourneyStoryChoicePrompt {
     assertJourneyContractAcceptingDecision(this.journeyState);
     const presented = this.journey().storyChoice;
@@ -1025,16 +1152,20 @@ export class OverworldSession {
     }
     const preparation = this.openingPreparationDepartureInteractionAvailable();
     if (preparation?.id === storyChoiceId) {
-      return withOpeningDispatchBriefing(
-        this.world,
-        this.presentOpeningPreparationAtCurrentBoundary(preparation),
+      return this.withOpeningStationDispatchImpact(
+        withOpeningDispatchBriefing(
+          this.world,
+          this.presentOpeningPreparationAtCurrentBoundary(preparation),
+        ),
       )!;
     }
     const allocation = this.openingReliefAllocationDepartureInteractionAvailable();
     if (allocation?.id === storyChoiceId) {
-      return withOpeningDispatchBriefing(
-        this.world,
-        presentOpeningReliefAllocation(allocation, this.characterState),
+      return this.withOpeningStationDispatchImpact(
+        withOpeningDispatchBriefing(
+          this.world,
+          presentOpeningReliefAllocation(allocation, this.characterState),
+        ),
       )!;
     }
     throw new Error(
@@ -1048,14 +1179,18 @@ export class OverworldSession {
       ? null
       : this.openingReliefAllocationDepartureInteractionAvailable();
     const storyChoice = preparation
-      ? withOpeningDispatchBriefing(
-          this.world,
-          this.presentOpeningPreparationAtCurrentBoundary(preparation),
+      ? this.withOpeningStationDispatchImpact(
+          withOpeningDispatchBriefing(
+            this.world,
+            this.presentOpeningPreparationAtCurrentBoundary(preparation),
+          ),
         )
       : allocation
-        ? withOpeningDispatchBriefing(
-            this.world,
-            presentOpeningReliefAllocation(allocation, this.characterState),
+        ? this.withOpeningStationDispatchImpact(
+            withOpeningDispatchBriefing(
+              this.world,
+              presentOpeningReliefAllocation(allocation, this.characterState),
+            ),
           )
         : null;
     return storyChoice?.options.some((option) => option.id === choiceId) ? storyChoice : null;
@@ -1385,6 +1520,7 @@ export class OverworldSession {
                 : undefined;
 
     storyChoice = withOpeningDispatchBriefing(this.world, storyChoice);
+    storyChoice = this.withOpeningStationDispatchImpact(storyChoice);
 
     if (campaign) {
       if (pendingGoalCompletion && campaign.preRetentionTeaser) {
