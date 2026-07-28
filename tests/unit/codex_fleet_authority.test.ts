@@ -541,6 +541,35 @@ ${JSON.stringify({
   return { originalReport, evidence, primaryEnvelope, bound, run: parsedEvidence.sidecar };
 }
 
+function unboundVerifiedArtifactFixture() {
+  const fixture = receiptBindingFixture();
+  const report = Buffer.from(fixture.bound.reportBytes).toString("utf8");
+  const primaryEnvelope = JSON.parse(fixture.primaryEnvelope) as Record<string, unknown>;
+  primaryEnvelope.result = report;
+  const rolloutRows = rollout(report);
+  return {
+    artifacts: {
+      report: Buffer.from(report),
+      runSidecar: Buffer.from(JSON.stringify(fixture.run)),
+      runEvidence: Buffer.from(fixture.evidence),
+      primaryEnvelope: Buffer.from(`${JSON.stringify(primaryEnvelope)}\n`),
+      initialReport: null,
+      receiptBinding: null,
+      recoveryMetadata: null,
+      recoveryEnvelope: null,
+      providerEvents: Buffer.from(jsonl(publicEvents(report))),
+      providerRollout: Buffer.from(jsonl(rolloutRows)),
+      providerCapture: Buffer.from(captureReceipt(rolloutRows)),
+    },
+    expected: {
+      seed: 4244,
+      provider: "codex" as const,
+      model: "gpt-5.6-terra" as const,
+      build: BUILD,
+    },
+  };
+}
+
 describe("Codex certified fleet rollout authority", () => {
   it("binds one public thread to one rollout turn and exact final report", () => {
     const rows = strictTerraRollout();
@@ -560,6 +589,12 @@ describe("Codex certified fleet rollout authority", () => {
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: STRICT_CODE_MODE_CONTRACT,
+        usage: {
+          input_tokens: 10,
+          cached_input_tokens: 2,
+          output_tokens: 3,
+          reasoning_output_tokens: 0,
+        },
       },
     });
   });
@@ -586,6 +621,12 @@ describe("Codex certified fleet rollout authority", () => {
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: STRICT_CODE_MODE_CONTRACT,
+        usage: {
+          input_tokens: 10,
+          cached_input_tokens: 2,
+          output_tokens: 3,
+          reasoning_output_tokens: 0,
+        },
       },
     });
   });
@@ -613,6 +654,12 @@ describe("Codex certified fleet rollout authority", () => {
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: HISTORICAL_STRICT_CODE_MODE_CONTRACT,
+        usage: {
+          input_tokens: 10,
+          cached_input_tokens: 2,
+          output_tokens: 3,
+          reasoning_output_tokens: 0,
+        },
       },
     });
   });
@@ -901,6 +948,69 @@ describe("Codex certified fleet rollout authority", () => {
     ).toMatchObject({
       ok: false,
       reason: expect.stringMatching(/duplicate JSON object key "bound_report_sha256"/i),
+    });
+  });
+
+  it("rejects an internally consistent unbound primary usage that differs from its terminal event", () => {
+    const { artifacts, expected } = unboundVerifiedArtifactFixture();
+    expect(validatePureFleetRunArtifactBytes(artifacts, expected)).toMatchObject({
+      ok: true,
+      facts: { report_receipt_bound: false },
+    });
+
+    const tamperedPrimary = JSON.parse(artifacts.primaryEnvelope.toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+    const usage = tamperedPrimary.usage as Record<string, unknown>;
+    const modelUsage = tamperedPrimary.modelUsage as Record<string, Record<string, unknown>>;
+    usage.input_tokens = 11;
+    modelUsage["gpt-5.6-terra"]!.inputTokens = 11;
+
+    expect(
+      validatePureFleetRunArtifactBytes(
+        { ...artifacts, primaryEnvelope: Buffer.from(`${JSON.stringify(tamperedPrimary)}\n`) },
+        expected,
+      ),
+    ).toEqual({
+      ok: false,
+      reason: "primary Codex usage differs from authenticated terminal usage",
+    });
+  });
+
+  it("requires complete single-model primary Codex accounting", () => {
+    const { artifacts, expected } = unboundVerifiedArtifactFixture();
+    const malformedPrimary = JSON.parse(artifacts.primaryEnvelope.toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+    delete malformedPrimary.usage;
+    expect(
+      validatePureFleetRunArtifactBytes(
+        { ...artifacts, primaryEnvelope: Buffer.from(`${JSON.stringify(malformedPrimary)}\n`) },
+        expected,
+      ),
+    ).toEqual({ ok: false, reason: "primary Codex envelope is not a completed audited turn" });
+
+    const multiModelPrimary = JSON.parse(artifacts.primaryEnvelope.toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+    const modelUsage = multiModelPrimary.modelUsage as Record<string, unknown>;
+    modelUsage["gpt-5.6-sol"] = {
+      inputTokens: 10,
+      cacheReadInputTokens: 2,
+      outputTokens: 3,
+      reasoningOutputTokens: 0,
+    };
+    expect(
+      validatePureFleetRunArtifactBytes(
+        { ...artifacts, primaryEnvelope: Buffer.from(`${JSON.stringify(multiModelPrimary)}\n`) },
+        expected,
+      ),
+    ).toEqual({
+      ok: false,
+      reason: "primary Codex modelUsage must contain exactly the requested model",
     });
   });
 

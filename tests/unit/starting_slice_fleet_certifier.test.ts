@@ -678,6 +678,15 @@ describe("closed fleet filesystem integrity", () => {
       cli_version: "0.144.1",
       test_script: false,
     } as const;
+    const authorityProofBody = (client: unknown) => `${JSON.stringify(client, null, 2)}\n`;
+    const authorityProofIndex = (client: unknown) => {
+      const bytes = Buffer.from(authorityProofBody(client), "utf8");
+      return {
+        name: "codex-client-authority.private.json",
+        bytes: bytes.byteLength,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      };
+    };
     const outcomes = [
       "ending_held",
       "ending_pack_diverted",
@@ -928,7 +937,20 @@ describe("closed fleet filesystem integrity", () => {
         terminal_reason: "completed",
         num_turns: 1,
         requested_model: model,
-        modelUsage: { [model]: {} },
+        usage: {
+          input_tokens: 10,
+          cache_read_input_tokens: 0,
+          output_tokens: 10,
+          reasoning_output_tokens: 0,
+        },
+        modelUsage: {
+          [model]: {
+            inputTokens: 10,
+            cacheReadInputTokens: 0,
+            outputTokens: 10,
+            reasoningOutputTokens: 0,
+          },
+        },
       })}\n`;
       const modelAttestation = {
         schema_version: 7,
@@ -990,8 +1012,16 @@ describe("closed fleet filesystem integrity", () => {
             classification: "verified",
             report_recovered: false,
             archive: null,
+            usage: {
+              source: "primary_envelope",
+              input_tokens: 10,
+              cached_input_tokens: 0,
+              output_tokens: 10,
+              reasoning_output_tokens: 0,
+            },
           },
         ],
+        resume_usage: null,
         report_recovered: false,
         exit: 0,
         log: null,
@@ -1017,6 +1047,7 @@ describe("closed fleet filesystem integrity", () => {
       };
     });
     const summary = {
+      schema_version: 8,
       label: "codex-pilot",
       stamp: "20260102T000000Z",
       count: 10,
@@ -1046,11 +1077,35 @@ describe("closed fleet filesystem integrity", () => {
       evidence_schema_version: 2,
       model_attestation_schema_version: 7,
       build,
-      codex_client: codexClient,
+      codex_client: {
+        schema_version: 2,
+        launcher_kind: codexClient.launcher_kind,
+        authority_sha256: codexClient.authority_sha256,
+        cli_version: codexClient.cli_version,
+      },
+      codex_client_proof: authorityProofIndex(codexClient),
+      usage: {
+        attempt_count: 10,
+        launched_attempt_count: 10,
+        measured_attempt_count: 10,
+        skipped_resume_count: 0,
+        unrecoverable_attempt_count: 0,
+        complete: true,
+        observed_input_tokens: 100,
+        observed_cached_input_tokens: 0,
+        observed_uncached_input_tokens: 100,
+        observed_output_tokens: 100,
+        observed_reasoning_output_tokens: 0,
+        useful_tokens: 200,
+      },
     };
     const manifestPath = join(fleetDir, "manifest.jsonl");
+    const authorityProofPath = join(fleetDir, "codex-client-authority.private.json");
+    const writeAuthorityProof = (client: unknown) =>
+      writeFileSync(authorityProofPath, authorityProofBody(client));
     writeFileSync(join(fleetDir, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
     writeFileSync(manifestPath, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
+    writeAuthorityProof(codexClient);
 
     const accepted = validateStartingSlicePilot({ root: ROOT, fleetDir, expectedBuild: build });
     expect(accepted.validity_errors).toEqual([]);
@@ -1058,6 +1113,326 @@ describe("closed fleet filesystem integrity", () => {
     expect(accepted.authenticated_actual_model).toBe(model);
 
     const summaryPath = join(fleetDir, "summary.json");
+    const writeFleet = (nextRows: readonly Record<string, unknown>[], nextSummary: unknown) => {
+      writeFileSync(summaryPath, `${JSON.stringify(nextSummary, null, 2)}\n`);
+      writeFileSync(manifestPath, `${nextRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
+    };
+    const failedUsage = {
+      source: "unrecoverable",
+      input_tokens: null,
+      cached_input_tokens: null,
+      output_tokens: null,
+      reasoning_output_tokens: null,
+    } as const;
+    const terminalUsage = {
+      source: "terminal_turn_completed",
+      input_tokens: 3,
+      cached_input_tokens: 1,
+      output_tokens: 2,
+      reasoning_output_tokens: 0,
+    } as const;
+    const failedSummary = (usage: Record<string, unknown>) => ({
+      ...summary,
+      verified: 9,
+      failed: 1,
+      retention_eligible_verified_runs: 9,
+      retention_ineligible_or_unverified_runs: 1,
+      failed_attempts: 1,
+      technical_timeouts: 1,
+      usage,
+    });
+    const writeFailedArchive = (files: Record<string, string>) => {
+      const seed = rows[0]!.seed;
+      const directory = join(fleetDir, "attempts", `seed_${seed}`, "attempt_1");
+      rmSync(join(fleetDir, "attempts"), { recursive: true, force: true });
+      mkdirSync(directory, { recursive: true });
+      for (const [name, body] of Object.entries(files)) writeFileSync(join(directory, name), body);
+      return Object.entries(files)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([name, body]) => ({
+          name,
+          bytes: Buffer.byteLength(body, "utf8"),
+          sha256: sha256Text(body),
+        }));
+    };
+    const failedRow = (archive: Record<string, unknown>, usage: Record<string, unknown>) => ({
+      ...rows[0]!,
+      status: "failed",
+      exit: 124,
+      log: join(fleetDir, "attempts", `seed_${rows[0]!.seed}`, "attempt_1", "fleet-diagnostic.log"),
+      model_attestation: null,
+      evidence_schema_version: null,
+      run_seed: null,
+      build: null,
+      quest_outcomes: null,
+      report_schema_version: null,
+      retention_eligible: false,
+      evidence_status: "unverified",
+      session_contract_version: null,
+      baseline_decisions: null,
+      accepted_decisions: null,
+      retention_choices: [],
+      checkpoint: null,
+      exit_reason: null,
+      exit_reasons: [],
+      receipt_hash: null,
+      report_recovered: false,
+      report_receipt_bound: false,
+      resume_usage: null,
+      failure_reason: "technical_timeout",
+      attempt_history: [
+        {
+          attempt: 1,
+          exit: 124,
+          classification: "technical_timeout",
+          report_recovered: false,
+          archive,
+          usage,
+        },
+      ],
+    });
+
+    const tamperedAttemptUsage = rows.map((row, index) =>
+      index === 0
+        ? {
+            ...row,
+            attempt_history: row.attempt_history.map((attempt) => ({
+              ...attempt,
+              usage: { ...attempt.usage!, output_tokens: 11 },
+            })),
+          }
+        : row,
+    );
+    writeFleet(tamperedAttemptUsage, summary);
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("verified attempt usage differs from authenticated primary envelope");
+
+    writeFleet(rows, { ...summary, usage: { ...summary.usage, useful_tokens: 201 } });
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("summary usage differs from independently recomputed attempt usage");
+
+    for (const unsafeField of [
+      "authority_token",
+      "selected_binary",
+      "executable_binary",
+      "test_script",
+    ] as const) {
+      writeFleet(rows, {
+        ...summary,
+        codex_client: { ...summary.codex_client, [unsafeField]: "test-only-value" },
+      });
+      expect(
+        validateStartingSlicePilot({
+          root: ROOT,
+          fleetDir,
+          expectedBuild: build,
+        }).validity_errors.join("\n"),
+      ).toMatch(new RegExp(`summary\\.json invalid:.*${unsafeField}`, "i"));
+    }
+
+    writeFleet(rows, summary);
+    writeFileSync(authorityProofPath, `${authorityProofBody(codexClient)} `);
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("private Codex client authority proof bytes differ from summary digest index");
+
+    const launcherTamperedClient = {
+      ...codexClient,
+      launcher_kind: "official_npm_shim",
+    } as const;
+    writeAuthorityProof(launcherTamperedClient);
+    writeFleet(rows, {
+      ...summary,
+      codex_client_proof: authorityProofIndex(launcherTamperedClient),
+    });
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toMatch(/private Codex client authority proof invalid/i);
+
+    writeAuthorityProof(codexClient);
+    writeFleet(rows, {
+      ...summary,
+      codex_client: {
+        ...summary.codex_client,
+        authority_sha256: "e".repeat(64),
+      },
+    });
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain(
+      "summary Codex client projection differs from authenticated private authority proof",
+    );
+
+    writeFleet(rows, summary);
+    unlinkSync(authorityProofPath);
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toMatch(/private Codex client authority proof unsafe or unreadable/i);
+    writeAuthorityProof(codexClient);
+
+    const noUsageArtifacts = writeFailedArchive({
+      "fleet-diagnostic.log": "attempt=1\nclassification=technical_timeout\n",
+    });
+    const archivedFailedRow = failedRow(
+      {
+        directory: `attempts/seed_${rows[0]!.seed}/attempt_1`,
+        artifacts: noUsageArtifacts,
+        usage_artifacts: { primary_envelope: null, provider_events: null },
+      },
+      failedUsage,
+    );
+    writeFleet(
+      [archivedFailedRow, ...rows.slice(1)],
+      failedSummary({
+        attempt_count: 10,
+        launched_attempt_count: 10,
+        measured_attempt_count: 9,
+        skipped_resume_count: 0,
+        unrecoverable_attempt_count: 1,
+        complete: false,
+        observed_input_tokens: 90,
+        observed_cached_input_tokens: 0,
+        observed_uncached_input_tokens: 90,
+        observed_output_tokens: 90,
+        observed_reasoning_output_tokens: 0,
+        useful_tokens: 180,
+      }),
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("pilot cohort contains a failed slot");
+
+    const prefix = `20260102T000000Z_overworld_seed${rows[0]!.seed}`;
+    const malformedPrimaryArtifacts = writeFailedArchive({
+      [`${prefix}.codex.jsonl`]: `${JSON.stringify({
+        type: "turn.completed",
+        usage: {
+          input_tokens: terminalUsage.input_tokens,
+          cached_input_tokens: terminalUsage.cached_input_tokens,
+          output_tokens: terminalUsage.output_tokens,
+        },
+      })}\n`,
+      [`${prefix}.json`]: "{not valid JSON\n",
+    });
+    writeFleet(
+      [
+        failedRow(
+          {
+            directory: `attempts/seed_${rows[0]!.seed}/attempt_1`,
+            artifacts: malformedPrimaryArtifacts,
+            usage_artifacts: {
+              primary_envelope: `${prefix}.json`,
+              provider_events: `${prefix}.codex.jsonl`,
+            },
+          },
+          terminalUsage,
+        ),
+        ...rows.slice(1),
+      ],
+      failedSummary({
+        attempt_count: 10,
+        launched_attempt_count: 10,
+        measured_attempt_count: 9,
+        skipped_resume_count: 0,
+        unrecoverable_attempt_count: 1,
+        complete: false,
+        observed_input_tokens: 90,
+        observed_cached_input_tokens: 0,
+        observed_uncached_input_tokens: 90,
+        observed_output_tokens: 90,
+        observed_reasoning_output_tokens: 0,
+        useful_tokens: 180,
+      }),
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("usage differs from archived evidence");
+
+    const eventsOnlyArtifacts = writeFailedArchive({
+      [`${prefix}.codex.jsonl`]: `${JSON.stringify({
+        type: "turn.completed",
+        usage: {
+          input_tokens: terminalUsage.input_tokens,
+          cached_input_tokens: terminalUsage.cached_input_tokens,
+          output_tokens: terminalUsage.output_tokens,
+        },
+      })}\n`,
+    });
+    writeFleet(
+      [
+        failedRow(
+          {
+            directory: `attempts/seed_${rows[0]!.seed}/attempt_1`,
+            artifacts: eventsOnlyArtifacts,
+            usage_artifacts: {
+              primary_envelope: null,
+              provider_events: `${prefix}.codex.jsonl`,
+            },
+          },
+          terminalUsage,
+        ),
+        ...rows.slice(1),
+      ],
+      failedSummary({
+        attempt_count: 10,
+        launched_attempt_count: 10,
+        measured_attempt_count: 10,
+        skipped_resume_count: 0,
+        unrecoverable_attempt_count: 0,
+        complete: true,
+        observed_input_tokens: 93,
+        observed_cached_input_tokens: 1,
+        observed_uncached_input_tokens: 92,
+        observed_output_tokens: 92,
+        observed_reasoning_output_tokens: 0,
+        useful_tokens: 184,
+      }),
+    );
+    const eventsOnlyErrors = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir,
+      expectedBuild: build,
+    }).validity_errors;
+    expect(eventsOnlyErrors.join("\n")).toContain("pilot cohort contains a failed slot");
+    expect(eventsOnlyErrors.join("\n")).toContain("summary contains 1 failed runs");
+    expect(eventsOnlyErrors.join("\n")).not.toContain("usage differs from archived evidence");
+
+    rmSync(join(fleetDir, "attempts"), { recursive: true, force: true });
+    writeFleet(rows, summary);
     const testScriptAuthority = {
       ...(JSON.parse(Buffer.from(authorityToken, "base64url").toString("utf8")) as Record<
         string,
@@ -1090,7 +1465,7 @@ describe("closed fleet filesystem integrity", () => {
         fleetDir,
         expectedBuild: build,
       }).validity_errors.join("\n"),
-    ).toMatch(/summary/i);
+    ).toMatch(/authority_token/i);
 
     const fabricatedShellAuthority = {
       schema_version: 2,
@@ -1155,7 +1530,7 @@ describe("closed fleet filesystem integrity", () => {
         fleetDir,
         expectedBuild: build,
       }).validity_errors.join("\n"),
-    ).toMatch(/model attestation Codex client authority differs/i);
+    ).toMatch(/summary\.json invalid: codex_client/i);
     writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
 
     const { codex_client: _clientAuthority, ...historicalSummary } = summary;
@@ -1169,7 +1544,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedHistoricalPilot.validity_errors.join("\n")).toMatch(
-      /current Codex pilot certification requires attestation v7/i,
+      /v8 live certification requires current Codex attestation v7/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
 
@@ -1334,7 +1709,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedCurrentAuthority.validity_errors.join("\n")).toMatch(
-      /current Codex authority certification requires attestation v7/i,
+      /v8 live certification requires current Codex attestation v7/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
 

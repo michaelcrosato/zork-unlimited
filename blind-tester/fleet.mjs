@@ -43,6 +43,13 @@ import {
   removeOwnedEmptyFleetDirectory,
   scanFleetCohortIntents,
 } from "./fleet-cohort-ledger.mjs";
+import {
+  projectCodexClientForFleetSummary,
+  skippedResumeUsageRecord,
+  summarizeFleetUsage,
+  usageRecordFromFailedAttempt,
+  usageRecordFromVerifiedPrimaryEnvelope,
+} from "./fleet-usage.mjs";
 import { parseJsonRejectingDuplicateKeys } from "./strict-json.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -62,6 +69,8 @@ export const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
 export const HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
 export const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
 export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
+export const PURE_FLEET_SUMMARY_SCHEMA_VERSION = 8;
+export const CODEX_CLIENT_AUTHORITY_PROOF_NAME = "codex-client-authority.private.json";
 export const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1";
 export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v2";
 export const CERTIFIED_CODEX_MODELS = [
@@ -1645,10 +1654,16 @@ export function archiveFailedFleetAttemptArtifacts({
       return { source, name: entry.name, bytes: readFileSync(source) };
     });
 
+  const usageArtifacts = {
+    primary_envelope: null,
+    provider_events: null,
+  };
   const archived = [];
   for (const source of sources) {
     const destination = join(attemptDir, source.name);
     writeFileSync(destination, source.bytes, { flag: "wx" });
+    if (source.name === `${sourceBase}.json`) usageArtifacts.primary_envelope = source.name;
+    if (source.name === `${sourceBase}.codex.jsonl`) usageArtifacts.provider_events = source.name;
     archived.push({
       name: source.name,
       bytes: source.bytes.byteLength,
@@ -1669,7 +1684,159 @@ export function archiveFailedFleetAttemptArtifacts({
   return {
     directory: fleetRelativePath(fleetDir, attemptDir),
     artifacts: archived,
+    usage_artifacts: usageArtifacts,
   };
+}
+
+function archivedUsageArtifactText({ archive, fleetDir, role }) {
+  if (
+    archive === null ||
+    typeof archive !== "object" ||
+    Array.isArray(archive) ||
+    archive.usage_artifacts === null ||
+    typeof archive.usage_artifacts !== "object" ||
+    Array.isArray(archive.usage_artifacts) ||
+    !Object.prototype.hasOwnProperty.call(archive.usage_artifacts, role)
+  ) {
+    return null;
+  }
+  const name = archive.usage_artifacts[role];
+  if (name === null) return null;
+  if (
+    typeof name !== "string" ||
+    name.length === 0 ||
+    basename(name) !== name ||
+    !Array.isArray(archive.artifacts) ||
+    typeof archive.directory !== "string" ||
+    archive.directory.length === 0
+  ) {
+    return null;
+  }
+  const matches = archive.artifacts.filter(
+    (artifact) => artifact !== null && typeof artifact === "object" && artifact.name === name,
+  );
+  if (
+    matches.length !== 1 ||
+    !Number.isSafeInteger(matches[0].bytes) ||
+    matches[0].bytes < 0 ||
+    typeof matches[0].sha256 !== "string" ||
+    !/^[a-f0-9]{64}$/u.test(matches[0].sha256)
+  ) {
+    return null;
+  }
+  try {
+    const fleetRoot = realpathSync(fleetDir);
+    const artifactPath = resolve(fleetDir, archive.directory, name);
+    const artifactReal = realpathSync.native(artifactPath);
+    const fromRoot = relative(fleetRoot, artifactReal);
+    if (
+      fromRoot === "" ||
+      fromRoot === ".." ||
+      fromRoot.startsWith(`..${sep}`) ||
+      isAbsolute(fromRoot)
+    ) {
+      return null;
+    }
+    const metadata = lstatSync(artifactPath);
+    if (metadata.isSymbolicLink() || !metadata.isFile() || metadata.nlink !== 1) return null;
+    const bytes = readFileSync(artifactReal);
+    if (bytes.byteLength !== matches[0].bytes || sha256Bytes(bytes) !== matches[0].sha256)
+      return null;
+    return bytes.toString("utf8");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Failed-attempt usage comes only from immutable copies named by the archive's
+ * semantic usage map. A malformed archived primary remains authoritative and
+ * deliberately prevents a provider-event fallback.
+ */
+export function usageRecordFromFailedFleetAttemptArchive({ archive, fleetDir }) {
+  const primary = archivedUsageArtifactText({
+    archive,
+    fleetDir,
+    role: "primary_envelope",
+  });
+  const hasPrimary =
+    archive?.usage_artifacts !== null &&
+    typeof archive?.usage_artifacts === "object" &&
+    archive.usage_artifacts.primary_envelope !== null;
+  return usageRecordFromFailedAttempt({
+    archivedPrimaryEnvelopeText: hasPrimary ? (primary ?? "") : null,
+    providerEventsText: hasPrimary
+      ? null
+      : archivedUsageArtifactText({ archive, fleetDir, role: "provider_events" }),
+  });
+}
+
+function usageRecordFromVerifiedFleetAttempt(reportMd, reportsDir) {
+  try {
+    const primaryEnvelope = pureFleetRunArtifactPathsFor(reportMd).primary_envelope;
+    if (!isTrustedFleetArtifactFile(primaryEnvelope, reportsDir)) {
+      return usageRecordFromVerifiedPrimaryEnvelope(null);
+    }
+    return usageRecordFromVerifiedPrimaryEnvelope(readFileSync(primaryEnvelope, "utf8"));
+  } catch {
+    return usageRecordFromVerifiedPrimaryEnvelope(null);
+  }
+}
+
+/** Reduce only live-pure runner records into the v8 public accounting fields. */
+export function pureFleetSummaryAccounting(rows, fleetClient) {
+  const records = [];
+  for (const row of rows) {
+    for (const attempt of row?.attempt_history ?? []) {
+      records.push(attempt.usage);
+    }
+    if (row?.resume_usage !== null && row?.resume_usage !== undefined) {
+      records.push(row.resume_usage);
+    }
+  }
+  return {
+    schema_version: PURE_FLEET_SUMMARY_SCHEMA_VERSION,
+    usage: summarizeFleetUsage(records),
+    codex_client: projectCodexClientForFleetSummary(fleetClient),
+  };
+}
+
+/**
+ * Keep the full launcher closure out of the public summary while preserving
+ * one immutable preimage that a certifier can independently authenticate.
+ * The safe summary's authority_sha256 binds this private file's token.
+ */
+export function writePrivateCodexClientAuthorityProof(fleetDir, fleetClient) {
+  if (!isExactCodexClientAuthority(fleetClient)) {
+    throw new Error("fleet: private Codex client authority proof requires exact client authority");
+  }
+  const proofPath = join(fleetDir, CODEX_CLIENT_AUTHORITY_PROOF_NAME);
+  const proofBytes = Buffer.from(`${JSON.stringify(fleetClient, null, 2)}\n`, "utf8");
+  writeFileSync(proofPath, proofBytes, {
+    encoding: "utf8",
+    flag: "wx",
+    mode: 0o600,
+  });
+  return {
+    name: CODEX_CLIENT_AUTHORITY_PROOF_NAME,
+    bytes: proofBytes.byteLength,
+    sha256: sha256Bytes(proofBytes),
+  };
+}
+
+/**
+ * Preserve the legacy closed-slot success rule for structural and historical
+ * summaries, while current live-pure v8 fleets additionally fail closed when
+ * any launched attempt's usage could not be recovered.
+ */
+export function fleetSummaryExitSucceeded(summary) {
+  const closedSlotsSucceeded =
+    summary?.verified + summary?.["skipped-resume"] === summary?.count &&
+    summary?.failed_attempts === 0;
+  if (!closedSlotsSucceeded || summary?.schema_version !== PURE_FLEET_SUMMARY_SCHEMA_VERSION) {
+    return closedSlotsSucceeded;
+  }
+  return summary?.usage?.complete === true && summary?.usage?.unrecoverable_attempt_count === 0;
 }
 
 /** Summary counters are always reduced from every closed per-slot attempt,
@@ -1751,6 +1918,7 @@ async function executeRun(
           status: "skipped-resume",
           attempts: 0,
           attempt_history: [],
+          resume_usage: opts.mock ? undefined : skippedResumeUsageRecord(),
           exit: 0,
           run: verify.run,
           attestation: verify.attestation,
@@ -1834,12 +2002,16 @@ async function executeRun(
             report_recovered: reportRecovered,
             report_receipt_bound: reportReceiptBound,
             archive: null,
+            ...(opts.mock
+              ? {}
+              : { usage: usageRecordFromVerifiedFleetAttempt(reportMd, reportsDir) }),
           });
           return {
             report: reportMd,
             status: "verified",
             attempts: attempt + 1,
             attempt_history: attemptHistory,
+            resume_usage: opts.mock ? undefined : null,
             exit: 0,
             run: verifyResult.run,
             attestation,
@@ -1894,6 +2066,9 @@ async function executeRun(
       report_recovered: false,
       report_receipt_bound: false,
       archive,
+      ...(opts.mock
+        ? {}
+        : { usage: usageRecordFromFailedFleetAttemptArchive({ archive, fleetDir }) }),
     });
     const summarySource =
       verifyResult && verifyResult.stderr ? verifyResult.stderr : bashResult.stderr;
@@ -1912,6 +2087,7 @@ async function executeRun(
     status: "failed",
     attempts: maxAttempts,
     attempt_history: attemptHistory,
+    resume_usage: opts.mock ? undefined : null,
     exit: lastExit,
     log: lastLogPath,
     run: null,
@@ -2317,6 +2493,9 @@ async function main() {
     reportLock = liveCohortStartup.reportLock;
   }
   try {
+    const codexClientProof = opts.mock
+      ? null
+      : writePrivateCodexClientAuthorityProof(fleetDir, fleetClient);
     const manifestPath = join(fleetDir, "manifest.jsonl");
     const summaryPath = join(fleetDir, "summary.json");
     const counts = { verified: 0, "skipped-resume": 0, failed: 0 };
@@ -2347,6 +2526,7 @@ async function main() {
         status: result.status,
         attempts: result.attempts,
         attempt_history: result.attempt_history,
+        ...(opts.mock ? {} : { resume_usage: result.resume_usage }),
         report_recovered: result.report_recovered,
         report_receipt_bound: result.report_receipt_bound,
         exit: result.exit,
@@ -2404,7 +2584,8 @@ async function main() {
           ? PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
           : PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
       build: fleetBuild,
-      ...(fleetClient === null ? {} : { codex_client: fleetClient }),
+      ...(opts.mock ? {} : pureFleetSummaryAccounting(rows, fleetClient)),
+      ...(codexClientProof === null ? {} : { codex_client_proof: codexClientProof }),
       report_schema_version: 2,
       play_mode: opts.mock ? "structural" : "pure",
       start_surface: opts.target === "overworld" ? "fresh_overworld" : "direct_quest",
@@ -2424,9 +2605,7 @@ async function main() {
       flag: opts.mock ? "w" : "wx",
     });
 
-    const ok =
-      counts.verified + counts["skipped-resume"] === runs.length &&
-      attemptSummary.failed_attempts === 0;
+    const ok = fleetSummaryExitSucceeded(summary);
     console.log(
       `Fleet ${label}: ${counts.verified} verified, ${counts["skipped-resume"]} skipped-resume, ${counts.failed} failed slots, ${attemptSummary.failed_attempts} failed attempts (of ${runs.length})`,
     );
