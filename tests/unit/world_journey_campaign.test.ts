@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALBANY_DAWN_DISPATCH_CHOICE_IDS,
+  ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX,
   ALBANY_DAWN_DISPATCH_CONTINUE_LABEL,
   ALBANY_DAWN_DISPATCH_GOALS,
   ALBANY_DAWN_DISPATCH_ID,
@@ -542,8 +543,14 @@ describe("journey campaign", () => {
       expect(context?.preRetentionTeaser).toContain("Hedrick Cradoc's father");
       expect(context?.preRetentionTeaser).toContain("old grey sow above Queensbury");
       expect(context?.continueLabel).toBe(ALBANY_DAWN_DISPATCH_CONTINUE_LABEL);
+      expect(context?.continueLabel).toBe(
+        "Continue: decide the dawn wagon, then take the Gallowmere lead",
+      );
       expect(context?.continueConsequencePrefix).toBe(
-        "Continue to decide where Albany's only dawn relief wagon goes.",
+        ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX,
+      );
+      expect(context?.continueConsequencePrefix).toBe(
+        "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through.",
       );
       expect(context?.storyChoice).toBeNull();
     }

@@ -10,7 +10,12 @@ import {
   createInitialJourneyContractSnapshot,
   journeyPresentation,
   recordJourneyAcceptedDecision,
+  recordJourneyGoalCompleted,
 } from "../../src/world/journey_contract.js";
+import {
+  ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX,
+  ALBANY_DAWN_DISPATCH_CONTINUE_LABEL,
+} from "../../src/world/journey_campaign.js";
 import type {
   JourneyPresentation,
   JourneyStoryChoiceOption,
@@ -351,6 +356,34 @@ describe("compact journey projection", () => {
 
     const withoutStory = Object.freeze({ ...journey, storyChoice: null });
     expect(compactJourneyPresentation(withoutStory)).toBe(withoutStory);
+  });
+
+  it("preserves the exact Wolf-Winter continuation card in compact play", () => {
+    const completed = recordJourneyGoalCompleted(createInitialJourneyContractSnapshot());
+    const full = journeyPresentation(completed, {
+      goalCompletion: {
+        goalVersion: completed.goal.version,
+        goalId: completed.goal.id,
+        continueLabel: ALBANY_DAWN_DISPATCH_CONTINUE_LABEL,
+        continueConsequencePrefix: ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX,
+      },
+    });
+    const compact = compactJourneyPresentation(full);
+
+    expect(compact).toBe(full);
+    expect(compact.pendingChoice?.options).toEqual([
+      {
+        id: "continue",
+        label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
+        consequence:
+          "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+      },
+      {
+        id: "end",
+        label: "End this journey",
+        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+      },
+    ]);
   });
 
   it("preserves truthful checkpoint continuation copy in the compact MCP projection", () => {

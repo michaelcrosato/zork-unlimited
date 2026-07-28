@@ -95,7 +95,7 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   return session;
 }
 
-function uiSessionAtAlbanyStoryChoice(): OverworldSession {
+function uiSessionAtAlbanyGoalPause(): OverworldSession {
   const session = new OverworldSession(WORLD);
   const opening = session.view();
   session.scoutPoi(opening.pois[0]!.id);
@@ -121,6 +121,11 @@ function uiSessionAtAlbanyStoryChoice(): OverworldSession {
     endingTitle: "The Byre Held",
     death: false,
   });
+  return session;
+}
+
+function uiSessionAtAlbanyStoryChoice(): OverworldSession {
+  const session = uiSessionAtAlbanyGoalPause();
   session.chooseJourney("continue");
   if (!session.journey().storyChoice) throw new Error("expected Albany's dawn dispatch");
   return session;
@@ -624,6 +629,48 @@ describe("MCP journey surface", () => {
         include_observation: true,
       }).journey,
     );
+  });
+
+  it("shares the exact Wolf-Winter continuation card across full and compact MCP", () => {
+    const source = uiSessionAtAlbanyGoalPause();
+    const expectedOptions = [
+      {
+        id: "continue",
+        label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
+        consequence:
+          "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+      },
+      {
+        id: "end",
+        label: "End this journey",
+        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+      },
+    ] as const;
+    const sourceJourney = source.journey();
+    expect(sourceJourney).toMatchObject({
+      status: "awaiting_choice",
+      nextCheckpoint: 40,
+      pendingChoice: {
+        atDecision: sourceJourney.acceptedDecisions,
+        checkpoint: null,
+        reasons: ["goal_completed"],
+        options: expectedOptions,
+      },
+    });
+
+    const a = api();
+    const full = a.restore_overworld_session({
+      snapshot: source.snapshot(),
+      ...FULL_OVERWORLD,
+    });
+    const compact = a.restore_overworld_session({
+      snapshot: source.snapshot(),
+      compact_context: true,
+      compact_result: true,
+    });
+
+    expect(full.journey.pendingChoice?.options).toEqual(expectedOptions);
+    expect(compact.journey.pendingChoice?.options).toEqual(expectedOptions);
   });
 
   it("projects setup cards on compact restore, read, unchanged, rejection, and action responses", () => {
