@@ -98,6 +98,14 @@ canonical world id/hash, contiguous seeds, and run/model plan. Dirty state or a
 Git/provenance error fails before token spend; untracked notes do not dirty the
 check. A live fleet label must be fresh and names one closed cohort, so an
 existing label is rejected rather than appended to or mixed with stale rows.
+Live pure starts also share a fail-closed Git-common cohort ledger across linked
+worktrees: an active lease blocks every concurrent launch, while immutable
+intent records reject exact or overlapping member plans unless an operator
+supplies the current exact cohort fingerprint for a persisted exact duplicate.
+The runner never performs PID-based stale-lock recovery; after confirming no
+runner remains, an operator may remove only the active lease manually. See the
+fleet section of `docs/blind_playtest_protocol.md` for the record and recovery
+limits.
 
 Live fleets enforce `play_mode: pure`, `start_surface: fresh_overworld`, and the
 neutral default persona. The live fleet defaults to Codex

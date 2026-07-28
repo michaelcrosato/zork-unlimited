@@ -472,6 +472,55 @@ are ignored by the cleanliness test.
 Each plan and lock row records the exact provider and model. Each live fleet
 label must be fresh and names one closed cohort. An existing
 label directory is rejected rather than appended to or mixed with stale rows.
+
+#### Cross-worktree cohort ledger
+
+Before a live pure fleet creates its report directory, it resolves the exact
+Git worktree root and uses the shared Git common directory's
+`adventureforge-fleet-cohort-ledger/` registry. That registry has only the
+short-lived `active-fleet.lock` lease and immutable `intents/*.json` records.
+The lease rejects every concurrent start unconditionally, including a lock that
+looks old or has malformed/dead-looking contents: the runner never probes a PID,
+checks a timestamp, or recovers a lease automatically. Structural `fleet:mock`
+runs do not enter this live-cohort ledger.
+
+After the normal executable/build preflight, a live plan derives canonical exact
+member fingerprints and its cohort fingerprint from the captured clean-build
+identity at preflight, client authority, contract, and every planned member
+identity. Once it holds the active lease and report lock, it scans every
+persisted intent. Any exact, partial, or superset member overlap stops the run. The only acknowledgement is
+`--allow-duplicate-cohort <current-cohort-fingerprint>`; it is accepted only
+for one or more persisted *exact* cohort matches, never for a partial/superset
+overlap, no-overlap invocation, mock fleet, or active lease.
+
+The runner atomically publishes one no-clobber canonical intent before its pool
+starts. It includes every member identity plus local audit fields: stamp, label,
+canonical worktree root, the explicit duplicate override, and the sorted prior
+intent/member overlap evidence. These audit fields never change the cohort or
+member fingerprints. A failed start before publication removes only the empty
+label directory it created and releases the report lock then the lease. After
+publication the intent remains conservative even if a later startup/pool step
+fails; normal clean completion releases the active/report locks but never
+rewrites or deletes an intent.
+
+If exclusive lease acquisition itself faults after creating the lock, the runner
+first verifies its random lease token and attempts to remove only that owned
+lock; an incomplete rollback is reported rather than hidden. This is separate
+from stale-lock recovery, which remains manual.
+
+If a process is killed while `active-fleet.lock` remains, first verify that no
+fleet runner or child launch is still active. Only then may an operator manually
+remove that one lock from the shared Git-common registry and retry. Do not delete
+or edit intent records as routine recovery: a stranded intent intentionally
+requires the exact duplicate acknowledgement above. Malformed, symlinked,
+multiply-linked, or unexpected registry records fail closed and require manual
+inspection rather than automatic cleanup.
+
+This ledger protects against ordinary accidental duplicate or overlapping live
+starts across linked worktrees. It does not create an immutable execution
+snapshot or isolate later filesystem/client drift; the existing runner
+preflight and per-member verification retain their separate responsibilities.
+
 Bounded concurrency and retry/backoff remain deterministic. Before each retry,
 the runner copies every failed out-prefix artifact and its diagnostic into a
 per-seed/per-attempt bundle archive indexed by byte count and SHA-256. Manifest

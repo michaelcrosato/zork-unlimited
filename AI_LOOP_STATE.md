@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 682 -->
+<!-- historical_cycle_count: 683 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - pure_fleet_cohort_ledger
+
+- Evidence choice: parallel development and blind testing could start overlapping live cohorts from linked worktrees, duplicating expensive evidence without one durable cohort identity.
+- Surface: live pure fleets now take one Git-common startup lease, publish an immutable member fingerprint before launch, reject any persisted overlap unless its exact fingerprint is explicitly acknowledged, and always release the lease; internal player concurrency is unchanged.
+- Spend safety: `-h`/`--help` exits before every side effect, while unknown arguments and missing flag values fail closed instead of falling through to the 100-Spark default.
+- Pure evidence: exact-clean Terra seed 72932 completed The Wolf-Winter nonlethally through LURE in 31 accepted decisions with one authored recovery, no rejection or bug, clarity/enjoyment 3/4, replay-yes, and an end choice at the first completed-goal boundary.
+- Self-critique/follow-through: one canary proves live ledger custody rather than retention or gameplay lift; it repeated dense early Albany commitments, so the consolidated strict ten-player pilot—not another isolated copy edit—decides the next gameplay change.
+- Economy: the canary used 2.398M input / 108.2k uncached input and 7.9k output tokens at 95.49% cache reuse, or 3,746 useful tokens per accepted decision; four accidentally opened Spark streams produced no terminal usage or report and remain quarantined as unrecoverable cost.
+- Guard: independent final review is clean, the spend-safety suite passes 95/95, post-change crawl `20260728T193122Z` is zero-finding, and health passes 442 files/3,665 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - explicit_hunt_commitment_affordance
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the canary is required retention evidence but coverage-neutral for the new non-null state; its staged/full-consequence complaint belongs to the unchanged post-quest dawn-wagon response, while its repeated density report keeps progressive event disclosure next.
 - Economy: the single 60-turn canary used 3.64M raw / 128k uncached input and 9.7k output tokens at 96.5% cache reuse; no exposure-chasing rerun was launched.
 - Guard: independent review is clean, stable patch id `0344bf7f` survived the rebase, crawl `20260727T205003Z` is zero-finding, and health passes 437 files/3,601 tests, both typechecks, and all 12 packs.
-
-### Cycle result - wolf_winter_goal_guidance
-
-- Evidence choice: the opening goal named a local lead without stating which authored quest completes it or whether smaller jobs, events, and sites can satisfy it.
-- Surface: every shared journey presentation now says to complete Albany's Wolf-Winter quest and truthfully identifies jobs, events, and sites as lead sources rather than goal completion.
-- Counterfactual: goal id/text/version, completion predicate, proof inputs, snapshots, receipts, choices, mechanics, RNG, routes, and endings are unchanged; terminal, UI, compact, MCP, and restore consume one shared guidance value.
-- Pure evidence: exact-clean Terra seed 72758 received the guidance at start, marked goal-understood, completed The Wolf-Winter nonlethally at decision 31, rated clarity/enjoyment 3/4, stayed unstuck, ended at the first goal choice, and chose replay-yes.
-- Self-critique/follow-through: the player called the basic objective clear but repeated the compiled S1 that the persistent Station recap lacks a running selected-plan dispatch total; preempt the generic compact-event reduction with that narrower fix.
-- Economy: the single 42-turn canary used 2.12M raw / 101k uncached input and 6.6k output tokens at 95.2% cache reuse; no replacement or exposure-chasing run was launched.
-- Guard: independent review is clean, stable patch id `e253ce50` survived the rebase, crawl `20260727T194232Z` is zero-finding, and health passes 437 files/3,599 tests, both typechecks, and all 12 packs.

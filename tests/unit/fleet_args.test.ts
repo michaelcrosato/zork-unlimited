@@ -28,6 +28,7 @@ import {
   archiveFailedFleetAttemptArtifacts,
   classifyFleetAttempt,
   codexFleetMemberEnv,
+  FLEET_USAGE,
   fleetAttestationPathFor,
   fleetReportLockSpec,
   isTrustedFleetArtifactFile,
@@ -444,6 +445,72 @@ describe("fill-prompt", () => {
 });
 
 describe("fleet planning", () => {
+  it("prints help and exits before any fleet side effect", () => {
+    for (const helpFlag of ["--help", "-h"]) {
+      const root = mkdtempSync(join(tmpdir(), "af-fleet-help-"));
+      const reportsDir = join(root, "reports-that-must-not-exist");
+      const label = `help-${helpFlag === "--help" ? "long" : "short"}-${Date.now()}`;
+      try {
+        const result = spawnSync(
+          process.execPath,
+          [
+            "blind-tester/fleet.mjs",
+            helpFlag,
+            "--label",
+            label,
+            "--out",
+            reportsDir,
+            "--count",
+            "100",
+          ],
+          {
+            cwd: process.cwd(),
+            encoding: "utf8",
+            timeout: 5_000,
+            env: {
+              ...process.env,
+              BLIND_CODEX_BIN: join(root, "client-that-must-not-run"),
+            },
+          },
+        );
+
+        expect(result.status).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(result.stdout).toBe(`${FLEET_USAGE}\n`);
+        expect(existsSync(reportsDir)).toBe(false);
+        expect(existsSync(join(process.cwd(), "ai-runs", "fleet", label))).toBe(false);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it.each(["--unknown", "positional", "--count=1"])(
+    "rejects unknown argument %j before planning",
+    (argument) => {
+      expect(() => parseFleetArgs([argument])).toThrow(
+        `fleet: unknown argument ${JSON.stringify(argument)}; run with --help`,
+      );
+    },
+  );
+
+  it.each([
+    "--count",
+    "--concurrency",
+    "--model",
+    "--provider",
+    "--personas",
+    "--target",
+    "--seed-base",
+    "--label",
+    "--max-retries",
+    "--out",
+    "--allow-duplicate-cohort",
+  ])("rejects missing values for %s before planning", (flag) => {
+    expect(() => parseFleetArgs([flag])).toThrow(`fleet: ${flag} requires a value`);
+    expect(() => parseFleetArgs([flag, "--mock"])).toThrow(`fleet: ${flag} requires a value`);
+  });
+
   it("defaults milestone fleets to exactly 100 homogeneous-Spark fresh-overworld runs", () => {
     const opts = parseFleetArgs([]);
     expect(opts.count).toBe(100);
@@ -1260,6 +1327,18 @@ describe("fleet labels", () => {
   ])("rejects unsafe label %j", (label) => {
     expect(() => parseFleetArgs(["--label", label])).toThrow(/one non-reserved 1-80 character/i);
   });
+});
+
+it("keeps the live cohort duplicate override out of structural mock fleets", () => {
+  expect(() => parseFleetArgs(["--mock", "--allow-duplicate-cohort", "a".repeat(64)])).toThrow(
+    /only to live pure cohorts/i,
+  );
+});
+
+it("allows programmatic structural plans that omit the live-only override field", () => {
+  const opts = parseFleetArgs(["--mock"]);
+  delete (opts as { allowDuplicateCohort?: string | null }).allowDuplicateCohort;
+  expect(() => planFleetRuns(opts)).not.toThrow();
 });
 
 describe("parseFleetArgs numeric validation", () => {
