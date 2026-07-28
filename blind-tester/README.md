@@ -197,6 +197,7 @@ npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
 npm run fleet -- --provider codex --model gpt-5.6-terra --count 100 --concurrency 4 --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run fleet:mock -- --count 2     # structural zero-token dry run
 npm run fleet:mock -- --count 2 --target quest:sunken_barrow # structural drop-in
+npm run fleet -- --help             # list accepted flags; unknown arguments abort before fleet work
 ```
 
 - **Preflight**: before spending tokens, a live fleet freezes the full clean

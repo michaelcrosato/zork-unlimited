@@ -32,6 +32,17 @@ import { clearTimeout, setTimeout } from "node:timers";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { codexClientAuthorityRecord, validateOutputPrefix } from "./codex-rollout.mjs";
+import {
+  acquireFleetCohortLease,
+  assertFleetCohortOverlapAllowed,
+  createFleetCohort,
+  createFleetCohortIntentAudit,
+  findFleetCohortOverlaps,
+  publishFleetCohortIntent,
+  releaseFleetCohortLease,
+  removeOwnedEmptyFleetDirectory,
+  scanFleetCohortIntents,
+} from "./fleet-cohort-ledger.mjs";
 import { parseJsonRejectingDuplicateKeys } from "./strict-json.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +70,25 @@ export const CERTIFIED_CODEX_MODELS = [
   "gpt-5.6-luna",
   "gpt-5.3-codex-spark",
 ];
+export const FLEET_USAGE = `Usage: npm run fleet -- [options]
+
+Options:
+  --count <n>                         Player count (default: 100)
+  --concurrency <n>                   Concurrent players (default: 4)
+  --provider codex                    Live provider (default: codex)
+  --model <exact-model>               Codex model (default: gpt-5.3-codex-spark)
+  --personas <name>                   Structural mock persona
+  --target <overworld|quest:id>       Start surface (live: overworld only)
+  --seed-base <n>                     First player seed (default: 1000)
+  --mock                              Structural zero-token mode
+  --label <safe-name>                 Fleet artifact label
+  --max-retries <n>                   Retries per player (default: 2)
+  --no-resume                         Do not reuse verified reports
+  --out <directory>                   Report output directory
+  --allow-duplicate-cohort <sha256>   Acknowledge one exact persisted overlap
+  -h, --help                          Show this help without starting a fleet
+
+Unknown arguments abort before fleet work begins.`;
 
 // Rotation order for explicit structural `--mock --personas mixed`; live pure
 // fleets reject mixed/non-default personas.
@@ -73,6 +103,18 @@ function assertFleetInt(value, flag, min) {
     const bound = min !== undefined ? `a safe integer >= ${min}` : "a safe integer";
     throw new Error(`fleet: --${flag} must be ${bound} (got ${value})`);
   }
+}
+
+function requiredFleetArgValue(argv, index, flag) {
+  const value = argv[index + 1];
+  if (
+    value === undefined ||
+    value === "-h" ||
+    (typeof value === "string" && value.startsWith("--"))
+  ) {
+    throw new Error(`fleet: ${flag} requires a value`);
+  }
+  return value;
 }
 
 export function assertFleetSeedRange(opts) {
@@ -166,50 +208,66 @@ export function parseFleetArgs(argv) {
     maxRetries: 2,
     resume: true,
     out: null,
+    allowDuplicateCohort: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     switch (a) {
       case "--count":
-        opts.count = Number(argv[++i]);
+        opts.count = Number(requiredFleetArgValue(argv, i, a));
+        i++;
         break;
       case "--concurrency":
-        opts.concurrency = Number(argv[++i]);
+        opts.concurrency = Number(requiredFleetArgValue(argv, i, a));
+        i++;
         break;
       case "--model":
-        opts.model = argv[++i];
+        opts.model = requiredFleetArgValue(argv, i, a);
+        i++;
         break;
       case "--provider":
-        opts.provider = argv[++i];
+        opts.provider = requiredFleetArgValue(argv, i, a);
+        i++;
         break;
       case "--personas":
-        opts.personas = argv[++i];
+        opts.personas = requiredFleetArgValue(argv, i, a);
+        i++;
         break;
       case "--target":
-        opts.target = argv[++i];
+        opts.target = requiredFleetArgValue(argv, i, a);
+        i++;
         break;
       case "--seed-base":
-        opts.seedBase = Number(argv[++i]);
+        opts.seedBase = Number(requiredFleetArgValue(argv, i, a));
+        i++;
         break;
       case "--mock":
         opts.mock = true;
         break;
       case "--label":
-        opts.label = argv[++i];
+        opts.label = requiredFleetArgValue(argv, i, a);
+        i++;
         break;
       case "--max-retries":
-        opts.maxRetries = Number(argv[++i]);
+        opts.maxRetries = Number(requiredFleetArgValue(argv, i, a));
+        i++;
         break;
       case "--no-resume":
         opts.resume = false;
         break;
       case "--out":
-        opts.out = argv[++i];
+        opts.out = requiredFleetArgValue(argv, i, a);
+        i++;
+        break;
+      case "--allow-duplicate-cohort":
+        if (opts.allowDuplicateCohort !== null) {
+          throw new Error("fleet: --allow-duplicate-cohort may be supplied only once");
+        }
+        opts.allowDuplicateCohort = requiredFleetArgValue(argv, i, a);
+        i++;
         break;
       default:
-        // Unknown flag — ignored (forward-compatible; there is no
-        // temperature/top_p flag to accidentally accept here either).
-        break;
+        throw new Error(`fleet: unknown argument ${JSON.stringify(a)}; run with --help`);
     }
   }
   assertFleetInt(opts.count, "count", 1);
@@ -227,6 +285,13 @@ export function parseFleetArgs(argv) {
   }
   if (opts.model === null) opts.model = "gpt-5.3-codex-spark";
   if (opts.label !== null) validateFleetLabel(opts.label);
+  if (
+    opts.allowDuplicateCohort !== null &&
+    (typeof opts.allowDuplicateCohort !== "string" ||
+      !/^[a-f0-9]{64}$/.test(opts.allowDuplicateCohort))
+  ) {
+    throw new Error("fleet: --allow-duplicate-cohort must be one lowercase SHA-256 fingerprint");
+  }
   assertFleetTargetPolicy(opts);
   return opts;
 }
@@ -254,6 +319,11 @@ function assertFleetTargetPolicy(opts) {
   if (!opts.mock && opts.personas !== "default") {
     throw new Error(
       "fleet: pure live runs use the default first-time-player persona; non-default or mixed personas require explicit --mock structural mode",
+    );
+  }
+  if (opts.mock && opts.allowDuplicateCohort != null) {
+    throw new Error(
+      "fleet: --allow-duplicate-cohort applies only to live pure cohorts, never --mock structural fleets",
     );
   }
   if (!opts.mock && !isProviderModel(provider, opts.model, true)) {
@@ -1925,6 +1995,129 @@ export function releaseFleetReportLock(lock) {
   unlinkSync(lock.path);
 }
 
+/**
+ * Reserve the live-cohort ledger in the precise startup order. Report locking
+ * stays in this file because it protects the runner's report namespace; the
+ * Git-common ledger module only owns cross-worktree cohort coordination.
+ *
+ * The returned release function intentionally remains live around runPool().
+ * Any failure before immutable intent publication reverses only the empty
+ * local label directory this startup created, then releases report lock before
+ * lease. Once an intent is published, it is never rolled back.
+ */
+export function beginLiveFleetCohortStartup({
+  root = GAME_DIR,
+  cohort,
+  intentAudit,
+  allowDuplicateCohort,
+  createReportsDirectory,
+  acquireReportLock,
+  releaseReportLock,
+  validateLocalFleetLabel,
+  createLocalFleetDirectory,
+  removeLocalFleetDirectory = removeOwnedEmptyFleetDirectory,
+  publishIntent = publishFleetCohortIntent,
+  releaseCohortLease = releaseFleetCohortLease,
+}) {
+  let lease = null;
+  let reportLock = null;
+  let createdLocalFleetDirectory = null;
+  let intentPublished = false;
+  try {
+    lease = acquireFleetCohortLease(root, cohort);
+    createReportsDirectory();
+    reportLock = acquireReportLock();
+    const overlaps = findFleetCohortOverlaps(cohort, scanFleetCohortIntents(lease));
+    assertFleetCohortOverlapAllowed(cohort, overlaps, allowDuplicateCohort);
+    const audit = createFleetCohortIntentAudit({
+      ...intentAudit,
+      duplicateOverride: allowDuplicateCohort,
+      overlaps,
+      cohort,
+    });
+    validateLocalFleetLabel();
+    createdLocalFleetDirectory = createLocalFleetDirectory();
+    if (typeof createdLocalFleetDirectory !== "string" || !isAbsolute(createdLocalFleetDirectory)) {
+      throw new Error("fleet: local fleet directory creator must return its absolute path");
+    }
+    let intent;
+    try {
+      intent = publishIntent(lease, cohort, { audit });
+      intentPublished = true;
+    } catch (error) {
+      intentPublished = error && typeof error === "object" && error.intentPublished === true;
+      throw error;
+    }
+
+    let reportReleased = false;
+    let leaseReleased = false;
+    return {
+      cohort,
+      intent,
+      lease,
+      reportLock,
+      release() {
+        const releaseErrors = [];
+        if (!reportReleased) {
+          try {
+            releaseReportLock(reportLock);
+            reportReleased = true;
+          } catch (releaseError) {
+            releaseErrors.push(releaseError);
+          }
+        }
+        if (!leaseReleased) {
+          try {
+            releaseCohortLease(lease);
+            leaseReleased = true;
+          } catch (releaseError) {
+            releaseErrors.push(releaseError);
+          }
+        }
+        if (releaseErrors.length === 1) throw releaseErrors[0];
+        if (releaseErrors.length > 1) {
+          throw new AggregateError(
+            releaseErrors,
+            "fleet: report lock and active cohort lease could not both be released",
+            { cause: releaseErrors[0] },
+          );
+        }
+      },
+    };
+  } catch (error) {
+    const cleanupErrors = [];
+    if (!intentPublished && createdLocalFleetDirectory !== null) {
+      try {
+        removeLocalFleetDirectory(createdLocalFleetDirectory);
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+    }
+    if (reportLock !== null) {
+      try {
+        releaseReportLock(reportLock);
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+    }
+    if (lease !== null) {
+      try {
+        releaseCohortLease(lease);
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [error, ...cleanupErrors],
+        "fleet: live cohort startup failed and rollback could not complete",
+        { cause: error },
+      );
+    }
+    throw error;
+  }
+}
+
 function npmCliInvocation() {
   if (process.env.npm_execpath) {
     return { command: process.execPath, args: [process.env.npm_execpath] };
@@ -2022,9 +2215,15 @@ async function preflightPureCodexClient(bashPath, run) {
 }
 
 async function main() {
+  const argv = process.argv.slice(2);
+  if (argv.includes("--help") || argv.includes("-h")) {
+    console.log(FLEET_USAGE);
+    return;
+  }
+
   let opts;
   try {
-    opts = parseFleetArgs(process.argv.slice(2));
+    opts = parseFleetArgs(argv);
   } catch (err) {
     // Usage error (non-finite/out-of-range numeric flag, e.g. --count 0):
     // exit 2 before touching the filesystem or spawning anything.
@@ -2059,32 +2258,65 @@ async function main() {
   // One fail-closed build identity is captured before any live launcher can
   // spend tokens. Structural mocks retain their historical no-provenance path.
   const fleetBuild = opts.mock ? null : await captureExpectedPureFleetBuild();
+  const cohort = opts.mock
+    ? null
+    : createFleetCohort(runs, fleetBuild, fleetClient, PURE_SESSION_CONTRACT_VERSION);
 
   const stamp = utcStamp();
   const label = validateFleetLabel(opts.label ?? stamp);
-
-  mkdirSync(reportsDir, { recursive: true });
-  const reportLock = acquireFleetReportLock(reportsDir, stamp, runs);
-  try {
-    const fleetDir = join(GAME_DIR, "ai-runs", "fleet", label);
-    mkdirSync(dirname(fleetDir), { recursive: true });
-    if (opts.mock) {
-      // Mock fleets are structural QA and preserve their historical reusable
-      // labels; their closed manifest is replaced wholesale below, never appended.
+  const fleetDir = join(GAME_DIR, "ai-runs", "fleet", label);
+  let reportLock;
+  let liveCohortStartup = null;
+  if (opts.mock) {
+    // Structural mocks retain their existing report and local-label semantics;
+    // only live pure cohorts participate in the cross-worktree ledger.
+    mkdirSync(reportsDir, { recursive: true });
+    reportLock = acquireFleetReportLock(reportsDir, stamp, runs);
+    try {
+      mkdirSync(dirname(fleetDir), { recursive: true });
       mkdirSync(fleetDir, { recursive: true });
-    } else {
-      try {
-        mkdirSync(fleetDir);
-      } catch (error) {
-        if (error && typeof error === "object" && error.code === "EEXIST") {
+    } catch (error) {
+      releaseFleetReportLock(reportLock);
+      throw error;
+    }
+  } else {
+    liveCohortStartup = beginLiveFleetCohortStartup({
+      cohort,
+      intentAudit: {
+        stamp,
+        label,
+        canonicalWorktree: realpathSync.native(GAME_DIR),
+      },
+      allowDuplicateCohort: opts.allowDuplicateCohort,
+      createReportsDirectory: () => mkdirSync(reportsDir, { recursive: true }),
+      acquireReportLock: () => acquireFleetReportLock(reportsDir, stamp, runs),
+      releaseReportLock: releaseFleetReportLock,
+      validateLocalFleetLabel: () => {
+        mkdirSync(dirname(fleetDir), { recursive: true });
+        if (existsSync(fleetDir)) {
           throw new Error(
             `fleet: label directory already exists; choose a fresh label: ${fleetDir}`,
-            { cause: error },
           );
         }
-        throw error;
-      }
-    }
+      },
+      createLocalFleetDirectory: () => {
+        try {
+          mkdirSync(fleetDir);
+        } catch (error) {
+          if (error && typeof error === "object" && error.code === "EEXIST") {
+            throw new Error(
+              `fleet: label directory already exists; choose a fresh label: ${fleetDir}`,
+              { cause: error },
+            );
+          }
+          throw error;
+        }
+        return fleetDir;
+      },
+    });
+    reportLock = liveCohortStartup.reportLock;
+  }
+  try {
     const manifestPath = join(fleetDir, "manifest.jsonl");
     const summaryPath = join(fleetDir, "summary.json");
     const counts = { verified: 0, "skipped-resume": 0, failed: 0 };
@@ -2201,7 +2433,8 @@ async function main() {
     console.log(`Manifest: ${manifestPath}`);
     process.exitCode = ok ? 0 : 1;
   } finally {
-    releaseFleetReportLock(reportLock);
+    if (liveCohortStartup !== null) liveCohortStartup.release();
+    else releaseFleetReportLock(reportLock);
   }
 }
 
