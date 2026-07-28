@@ -173,6 +173,8 @@ export function buildOverworldSessionCompactView(
   const departureRecap = state.departureRecap
     ? compactOpeningDepartureRecap(state.departureRecap)
     : null;
+  const departureLaunchReady =
+    departureRecap !== null && questStarts.some(([questId]) => questId === departureRecap[1]);
   const opportunityLeads = compactJourneyOpportunityLeads(state.opportunities);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: state.areas.length,
@@ -205,9 +207,13 @@ export function buildOverworldSessionCompactView(
     ],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
-    ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
-    ...(departureContactLeads.length > 0 ? { departure_contact_leads: departureContactLeads } : {}),
-    ...(departureRecap ? { departure_recap: departureRecap } : {}),
+    ...(!departureLaunchReady && departureInteractions.length > 0
+      ? { departure_interactions: departureInteractions }
+      : {}),
+    ...(!departureLaunchReady && departureContactLeads.length > 0
+      ? { departure_contact_leads: departureContactLeads }
+      : {}),
+    ...(!departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
     ...(state.opportunities
       ? {
           opportunity_guidance: state.opportunities.guidance,
@@ -251,6 +257,13 @@ export function buildOverworldSessionCompactView(
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
     ...(questStarts.length > 0 ? { quest_starts: questStarts } : {}),
+    ...(departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
+    ...(departureLaunchReady && departureInteractions.length > 0
+      ? { departure_interactions: departureInteractions }
+      : {}),
+    ...(departureLaunchReady && departureContactLeads.length > 0
+      ? { departure_contact_leads: departureContactLeads }
+      : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),
     ...(journal.length > 0 ? { journal } : {}),
     ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),

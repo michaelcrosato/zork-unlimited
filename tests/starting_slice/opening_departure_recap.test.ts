@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { render } from "../../bin/overworld_play.js";
-import { OVERWORLD_COMPACT_VIEW_VERSION } from "../../src/world/compact_view.js";
+import {
+  OVERWORLD_COMPACT_VIEW_VERSION,
+  cloneOverworldCompactView,
+  compactOverworldView,
+} from "../../src/world/compact_view.js";
 import {
   deriveOpeningDepartureRecap,
   OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
@@ -142,6 +146,42 @@ describe("Albany opening departure recap", () => {
       ]),
       null,
     ]);
+    const launchFirstKeys = (value: object) =>
+      Object.keys(value).filter((key) =>
+        [
+          "quests",
+          "quest_starts",
+          "departure_recap",
+          "departure_interactions",
+          "departure_contact_leads",
+        ].includes(key),
+      );
+    const expectedLaunchFirstKeys = [
+      "quests",
+      "quest_starts",
+      "departure_recap",
+      "departure_interactions",
+      "departure_contact_leads",
+    ];
+    expect(launchFirstKeys(compact)).toEqual(expectedLaunchFirstKeys);
+    expect(launchFirstKeys(compactOverworldView(full))).toEqual(expectedLaunchFirstKeys);
+    const gatedView = { ...full, questStarts: [] };
+    const gatedCompact = compactOverworldView(gatedView);
+    const expectedPlanningFirstKeys = [
+      "departure_interactions",
+      "departure_contact_leads",
+      "departure_recap",
+      "quests",
+    ];
+    expect(launchFirstKeys(gatedCompact)).toEqual(expectedPlanningFirstKeys);
+    expect(launchFirstKeys(cloneOverworldCompactView(gatedCompact))).toEqual(
+      expectedPlanningFirstKeys,
+    );
+    const gatedTerminal = render(gatedView);
+    expect(gatedTerminal).not.toContain("Depart now:");
+    expect(gatedTerminal.indexOf(`${WOLF.title} dispatch recap:`)).toBeLessThan(
+      gatedTerminal.indexOf("Notice board:"),
+    );
 
     const visible = JSON.stringify(full.departureRecap);
     for (const alternative of [
@@ -198,11 +238,32 @@ describe("Albany opening departure recap", () => {
     );
 
     const terminal = render(session.view());
+    expect(terminal).toContain(
+      "Start the mission now; choosing an available road is the next step, and planning is optional.",
+    );
+    expect(terminal).toContain(
+      `Start with \`start ${WOLF.title}\`; route selection follows before commitment.`,
+    );
     expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
     expect(terminal).toContain(`Active field term: ${REGISTRATION.profiles[0]!.trigger_category}`);
     expect(terminal).toContain("Preparation: Open (optional)");
     expect(terminal).not.toContain("Dispatch committed:");
+    expect(terminal.indexOf("Depart now:")).toBeLessThan(
+      terminal.indexOf("Plan the dispatch (optional):"),
+    );
+    expect(terminal.indexOf("Plan the dispatch (optional):")).toBeLessThan(
+      terminal.indexOf(`${WOLF.title} dispatch recap:`),
+    );
+    expect(terminal.indexOf("Take the Exposed Ridge Road")).toBeLessThan(
+      terminal.indexOf("Plan the dispatch (optional):"),
+    );
+    const promotedLaunch = terminal.slice(
+      terminal.indexOf("Depart now:"),
+      terminal.indexOf("Plan the dispatch (optional):"),
+    );
+    expect(promotedLaunch).not.toContain("choose <number|name>");
+    expect(promotedLaunch).not.toMatch(/\bchoose [12] —/);
   });
 
   it("updates resolved optional rows, stays paired by choice, and respects the mission boundary", () => {

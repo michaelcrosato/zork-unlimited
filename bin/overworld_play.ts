@@ -105,6 +105,35 @@ export function render(view: OverworldView): string {
   if (view.pois.length) lines.push(`Scoutable: ${view.pois.map((p) => p.title).join(" · ")}`);
   if (view.characters.length)
     lines.push(`Contacts: ${view.characters.map((c) => `${c.name} (${c.role})`).join(" · ")}`);
+  const departureQuestId = view.departureRecap?.questId;
+  const departureQuest =
+    departureQuestId && view.questStarts.some(([questId]) => questId === departureQuestId)
+      ? view.quests.find((quest) => quest.id === departureQuestId)
+      : undefined;
+  const noticeBoardQuests = departureQuest
+    ? view.quests.filter((quest) => quest.id !== departureQuest.id)
+    : view.quests;
+  if (departureQuest) {
+    lines.push("Depart now:");
+    lines.push(
+      "  Start the mission now; choosing an available road is the next step, and planning is optional.",
+    );
+    lines.push(`  ${questLine(view, departureQuest)}`);
+    if (departureQuest.launch) {
+      lines.push(
+        ...renderQuestLaunch(departureQuest, "preview")
+          .trim()
+          .split("\n")
+          .map((line) => `  ${line}`),
+      );
+    }
+  }
+  if (
+    departureQuest &&
+    (view.departureRecap || view.departureInteractions.length || view.departureContactLeads.length)
+  ) {
+    lines.push("Plan the dispatch (optional):");
+  }
   if (view.departureRecap) lines.push(...renderDepartureRecap(view.departureRecap));
   if (view.departureInteractions.length) {
     lines.push("Optional departure decisions:");
@@ -146,9 +175,9 @@ export function render(view: OverworldView): string {
           .join(" · ") || "—"
       }${more(view.hiddenSiteCount)}`,
     );
-  if (view.quests.length || view.hiddenQuestCount) {
+  if (noticeBoardQuests.length || view.hiddenQuestCount) {
     lines.push(`Notice board${more(view.hiddenQuestCount)}:`);
-    for (const quest of view.quests) lines.push(`  ${questLine(view, quest)}`);
+    for (const quest of noticeBoardQuests) lines.push(`  ${questLine(view, quest)}`);
   }
   return lines.join("\n");
 }
@@ -206,18 +235,24 @@ function questLine(view: OverworldView, quest: OverworldQuestView): string {
 }
 
 /** Player-facing quest-launch terms shared by interactive and scripted CLI play. */
-export function renderQuestLaunch(quest: OverworldQuestView): string {
+export function renderQuestLaunch(
+  quest: OverworldQuestView,
+  mode: "selection" | "preview" = "selection",
+): string {
   if (!quest.launch) return "";
+  const selectionActive = mode === "selection";
   const lines = [
     `\n${quest.launch.prompt}`,
-    "Choose with `choose <number|name>`; a legacy bare number also works.",
+    selectionActive
+      ? "Choose with `choose <number|name>`; a legacy bare number also works."
+      : `Start with \`start ${quest.title}\`; route selection follows before commitment.`,
   ];
   quest.launch.options.forEach((option, index) => {
     const projection = option.projection;
     const availability =
       projection?.available === false ? ` [blocked: ${projection.blockedReason}]` : "";
     lines.push(
-      `  choose ${String(index + 1)} — ${option.title} — ${option.summary}${availability}`,
+      `  ${selectionActive ? `choose ${String(index + 1)}` : `${String(index + 1)}.`} — ${option.title} — ${option.summary}${availability}`,
     );
     lines.push(`     What you expect: ${option.preview}`);
     if (option.tradeoffSummary) {

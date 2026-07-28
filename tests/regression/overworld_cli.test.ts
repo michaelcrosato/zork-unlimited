@@ -555,6 +555,31 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
 });
 
 describe("overworld_play CLI (scripted mode)", () => {
+  it("uses an executable start command for the promoted Station launch preview", () => {
+    const stationed = sessionAtOpeningStation();
+    const baselineHash = stationed.snapshotHash();
+    const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-launch-first-"));
+    const snapshotPath = join(temp, "station.json");
+    writeFileSync(snapshotPath, JSON.stringify(stationed.snapshot()));
+    try {
+      const run = runCli([
+        "--restore",
+        snapshotPath,
+        "--commands",
+        "look; start The Wolf-Winter; cancel; hash",
+      ]);
+      expect(run.status, run.output).toBe(0);
+      expect(run.output).toContain("Depart now:");
+      expect(run.output).toContain(
+        "Start with `start The Wolf-Winter`; route selection follows before commitment.",
+      );
+      expect(run.output).not.toContain("A scripted command was rejected.");
+      expect(outputSnapshotHashes(run.output)).toEqual([baselineHash]);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
   it("plays a scripted leg: travel, resolve the encounter, rest — exit 0, no pack paths", () => {
     const run = runCli(["--commands", "look; go 1; press; journal; hash"]);
     expect(run.status, run.output).toBe(0);

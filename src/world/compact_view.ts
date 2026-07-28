@@ -1233,7 +1233,42 @@ function cloneCompactCampaignCharacter(
   return character[15] ? ([...clone, [...character[15]]] as const) : clone;
 }
 
+function cloneCompactDepartureRecap(
+  recap: OpeningCompactDepartureRecap,
+): OpeningCompactDepartureRecap {
+  return [
+    recap[0],
+    recap[1],
+    recap[2],
+    cloneTupleList(recap[3]),
+    recap[4] ? [recap[4][0], recap[4][1], recap[4][2], [...recap[4][3]]] : null,
+  ];
+}
+
+function cloneCompactDepartureFields(
+  clone: OverworldCompactView,
+  view: OverworldCompactView,
+  launchFirst: boolean,
+): void {
+  if (launchFirst && view.departure_recap) {
+    clone.departure_recap = cloneCompactDepartureRecap(view.departure_recap);
+  }
+  if (view.departure_interactions) {
+    clone.departure_interactions = cloneTupleList(view.departure_interactions);
+  }
+  if (view.departure_contact_leads) {
+    clone.departure_contact_leads = cloneTupleList(view.departure_contact_leads);
+  }
+  if (!launchFirst && view.departure_recap) {
+    clone.departure_recap = cloneCompactDepartureRecap(view.departure_recap);
+  }
+}
+
 export function cloneOverworldCompactView(view: OverworldCompactView): OverworldCompactView {
+  const departureQuestId = view.departure_recap?.[1];
+  const departureLaunchReady =
+    departureQuestId !== undefined &&
+    (view.quest_starts?.some(([questId]) => questId === departureQuestId) ?? false);
   const clone: OverworldCompactView = {
     v: view.v,
     character: cloneCompactCampaignCharacter(view.character),
@@ -1283,28 +1318,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
       action[9],
     ]);
   }
-  if (view.departure_interactions) {
-    clone.departure_interactions = cloneTupleList(view.departure_interactions);
-  }
-  if (view.departure_contact_leads) {
-    clone.departure_contact_leads = cloneTupleList(view.departure_contact_leads);
-  }
-  if (view.departure_recap) {
-    clone.departure_recap = [
-      view.departure_recap[0],
-      view.departure_recap[1],
-      view.departure_recap[2],
-      cloneTupleList(view.departure_recap[3]),
-      view.departure_recap[4]
-        ? [
-            view.departure_recap[4][0],
-            view.departure_recap[4][1],
-            view.departure_recap[4][2],
-            [...view.departure_recap[4][3]],
-          ]
-        : null,
-    ];
-  }
+  if (!departureLaunchReady) cloneCompactDepartureFields(clone, view, false);
   if (view.opportunity_guidance) clone.opportunity_guidance = view.opportunity_guidance;
   if (view.opportunity_leads) {
     clone.opportunity_leads = cloneTupleList(view.opportunity_leads);
@@ -1344,6 +1358,7 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
     });
   }
   if (view.quest_starts) clone.quest_starts = cloneTupleList(view.quest_starts);
+  if (departureLaunchReady) cloneCompactDepartureFields(clone, view, true);
   if (view.local_refs_truncated) clone.local_refs_truncated = [...view.local_refs_truncated];
   if (view.pending_road) {
     clone.pending_road = {
@@ -1411,6 +1426,8 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const departureRecap = view.departureRecap
     ? compactOpeningDepartureRecap(view.departureRecap)
     : null;
+  const departureLaunchReady =
+    departureRecap !== null && questStarts.some(([questId]) => questId === departureRecap[1]);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: view.areas.length,
     poi: view.pois.length,
@@ -1457,9 +1474,13 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     vitals: [view.supplies, view.maxSupplies, view.fatigue, view.travelCondition],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
-    ...(departureInteractions.length > 0 ? { departure_interactions: departureInteractions } : {}),
-    ...(departureContactLeads.length > 0 ? { departure_contact_leads: departureContactLeads } : {}),
-    ...(departureRecap ? { departure_recap: departureRecap } : {}),
+    ...(!departureLaunchReady && departureInteractions.length > 0
+      ? { departure_interactions: departureInteractions }
+      : {}),
+    ...(!departureLaunchReady && departureContactLeads.length > 0
+      ? { departure_contact_leads: departureContactLeads }
+      : {}),
+    ...(!departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
     hidden: [
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -1490,6 +1511,13 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
     ...(questStarts.length > 0 ? { quest_starts: questStarts } : {}),
+    ...(departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
+    ...(departureLaunchReady && departureInteractions.length > 0
+      ? { departure_interactions: departureInteractions }
+      : {}),
+    ...(departureLaunchReady && departureContactLeads.length > 0
+      ? { departure_contact_leads: departureContactLeads }
+      : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),
     ...(journal.length > 0 ? { journal } : {}),
     ...(travelLog.length > 0 ? { travel_log: travelLog } : {}),
