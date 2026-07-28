@@ -7,6 +7,7 @@ import {
   RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW,
   RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY,
 } from "../../../src/world/relief_protocol_trigger_copy_legacy.js";
+import { RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY } from "../../../src/world/relief_oath_strategy_parity_legacy.js";
 import type { OverworldSessionSnapshot } from "../../../src/world/session_snapshot.js";
 
 type ComparisonCardOption = { id: string; tradeoff?: string };
@@ -21,11 +22,35 @@ function comparisonCardOptionGroups(world: OverworldManifest): ComparisonCardOpt
   ];
 }
 
+/** Reconstruct the exact manifest before relief-oath strategy fit became explicit. */
+export function exactReliefOathStrategyParityPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const oath = predecessor.opening_relief_oath;
+  const full = oath?.options.find((option) => option.id === "albany:oath_full_compact_duty");
+  const aid = oath?.options.find((option) => option.id === "albany:oath_limited_aid_only");
+  const unaffiliated = oath?.options.find(
+    (option) => option.id === "albany:oath_unaffiliated_personal_bond",
+  );
+  if (!oath || !full || !aid || !unaffiliated) {
+    throw new Error("Albany must retain all three Wolf-Winter relief-oath terms.");
+  }
+  oath.message = RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.message;
+  full.trigger_category = RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.fullTriggerCategory;
+  aid.trigger_category = RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.aidTriggerCategory;
+  aid.preview = RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.aidPreview;
+  aid.tradeoff = RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.aidTradeoff;
+  unaffiliated.trigger_category =
+    RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.unaffiliatedTriggerCategory;
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before Civic choice cards gained trigger categories. */
 export function exactCivicTriggerCategoryPredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactReliefOathStrategyParityPredecessor(current);
   for (const option of [
     ...(predecessor.opening_registration?.profiles ?? []),
     ...(predecessor.opening_relief_oath?.options ?? []),

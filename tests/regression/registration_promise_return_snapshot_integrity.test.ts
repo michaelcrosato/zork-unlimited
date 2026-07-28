@@ -117,7 +117,7 @@ describe("registration-promise return snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "294bfefa9d3b17b21e5e2a48ded532e7b4c9b995ad7149b1519b1b4e490a9435",
+      "35d7ee917b8cd33c698e3771d7bd884d963763ab665e5b4ae919e971e013a50c",
     );
   });
 
@@ -171,10 +171,16 @@ describe("registration-promise return snapshot integrity", () => {
       const restoredWithoutMigratedEntries = restored
         .snapshot()
         .journalEntries.filter(
-          (entry) => entry.id !== "quest_done:wolf_winter" && !entry.id.endsWith(`:${DROVER}`),
+          (entry) =>
+            entry.id !== "quest_done:wolf_winter" &&
+            entry.kind !== "relief_oath" &&
+            !entry.id.endsWith(`:${DROVER}`),
         );
       const predecessorWithoutMigratedEntries = predecessor.journalEntries.filter(
-        (entry) => entry.id !== "quest_done:wolf_winter" && !entry.id.endsWith(`:${DROVER}`),
+        (entry) =>
+          entry.id !== "quest_done:wolf_winter" &&
+          entry.kind !== "relief_oath" &&
+          !entry.id.endsWith(`:${DROVER}`),
       );
       expect(restoredWithoutMigratedEntries).toEqual(predecessorWithoutMigratedEntries);
       expect(OverworldSession.restore(WORLD, restored.snapshot()).snapshot()).toEqual(

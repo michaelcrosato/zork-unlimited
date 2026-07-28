@@ -86,6 +86,22 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
           (condition) => "has_flag" in condition && condition.has_flag === "relief_oath_full_duty",
         ),
       )?.text ?? "";
+    const limitedDutyLure =
+      node("cade_lure")
+        ?.variants?.filter((variant) =>
+          variant.when.some(
+            (condition) =>
+              "has_flag" in condition && condition.has_flag === "relief_oath_limited_duty",
+          ),
+        )
+        .map((variant) => variant.text) ?? [];
+    const limitedDutyFortify =
+      node("cade_fortify")?.variants?.find((variant) =>
+        variant.when.some(
+          (condition) =>
+            "has_flag" in condition && condition.has_flag === "relief_oath_limited_duty",
+        ),
+      )?.text ?? "";
     const rootPrompt = (topicId: string) =>
       root?.topics.find((topic) => topic.id === topicId)?.prompt ?? "";
     const rootSurface = [
@@ -134,6 +150,15 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     );
     expect(fortify).not.toMatch(/Albany Repair[^]*2 easier/i);
     expect(fullDutyFortify).toMatch(/first Albany Repair 2 easier/i);
+    expect(limitedDutyLure).toHaveLength(2);
+    for (const disclosure of limitedDutyLure) {
+      expect(disclosure).toMatch(
+        /AID-ONLY LURE BENEFIT[^]*final bloodless cast[^]*skips[^]*ordinary \+1 alarm[^]*failed-cast pressure stays/i,
+      );
+    }
+    expect(limitedDutyFortify).toMatch(
+      /AID-ONLY CADE-TERMS FORTIFY FIT[^]*HOUSEHOLD fits duty[^]*gains Cade aid[^]*ALBANY exceeds duty[^]*no Cade aid/i,
+    );
 
     const publicSealChecks =
       pack.objects

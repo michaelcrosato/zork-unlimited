@@ -416,14 +416,32 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
   it("binds exactly one 10/5/0-minute durable character contract before source certification", () => {
     const pending = reachOathOffer();
     const pendingSnapshot = pending.snapshot();
+    const presentedOptions = new Map(
+      (pending.journey().storyChoice?.options ?? []).map((option) => [option.id, option]),
+    );
     const disclosedOptions = new Map(
       (pending.journey().storyChoice?.options ?? []).map((option) => [
         option.id,
         option.consequence,
       ]),
     );
+    expect(presentedOptions.get(FULL)?.summary?.fieldTrigger).toBe(
+      "FORTIFY benefit: first Albany public-seal Repair check is 2 DC easier.",
+    );
+    expect(presentedOptions.get(LIMITED)?.summary?.fieldTrigger).toBe(
+      "LURE benefit: final bloodless cast skips +1 alarm; Cade-terms FORTIFY fit.",
+    );
+    expect(presentedOptions.get(UNAFFILIATED)?.summary?.fieldTrigger).toBe(
+      "DRIVE benefit: first shutter signal is 2 DC easier.",
+    );
     expect(disclosedOptions.get(FULL)).toMatch(/Relief Protocol.*consolidat/i);
     expect(disclosedOptions.get(LIMITED)).toMatch(/Resident Shelter.*consolidat/i);
+    expect(disclosedOptions.get(LIMITED)).toMatch(
+      /final ordinary cattle-alarm[^]*never repairs a failed cast[^]*changes another strategy's mechanics/i,
+    );
+    expect(disclosedOptions.get(LIMITED)).toMatch(
+      /Cade-terms FORTIFY fits the duty[^]*keeps the promise[^]*ordinary failed-seat help[^]*no FORTIFY check bonus[^]*every strategy remains legal/i,
+    );
     expect(disclosedOptions.get(UNAFFILIATED)).toMatch(/whole-herd.*consolidat/i);
 
     for (const oathId of OATH_IDS) {

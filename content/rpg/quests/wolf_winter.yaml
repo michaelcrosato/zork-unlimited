@@ -3853,10 +3853,12 @@ npcs:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
               text: >
-                AID-ONLY MATCH: FEED LURE can save pack/herd; spends last feed, leaves paling
-                broken. Three casts; first foul risks two cattle; no retry, rail recovery.
-                Fieldcraft/fodder help. Choose QUICK LESSON first: +2 attack, +5 final tally;
-                commitment closes it. Cross uncommitted chooses HUNT; other plans close.
+                AID-ONLY LURE BENEFIT: On the final bloodless cast, the witnessed count skips its
+                ordinary +1 alarm; failed-cast pressure stays. FEED LURE can save pack/herd;
+                spends last feed, leaves paling broken. Three casts; first foul risks two cattle;
+                no retry, rail recovery. Fieldcraft/fodder help. Choose QUICK LESSON first: +2
+                attack, +5 final tally; commitment closes it. Cross uncommitted chooses HUNT;
+                other plans close.
             - when:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
@@ -3869,10 +3871,11 @@ npcs:
                 - { has_flag: relief_oath_limited_duty }
                 - { not_flag: strategy_lure_committed }
               text: >
-                AID-ONLY MATCH: FEED LURE can save pack/herd; spends last feed, leaves paling
-                broken. Three casts; first foul risks two cattle; no retry, rail recovery.
-                Fieldcraft/fodder help. Commit here. Cross uncommitted chooses HUNT; other plans
-                close.
+                AID-ONLY LURE BENEFIT: On the final bloodless cast, the witnessed count skips its
+                ordinary +1 alarm; failed-cast pressure stays. FEED LURE can save pack/herd;
+                spends last feed, leaves paling broken. Three casts; first foul risks two cattle;
+                no retry, rail recovery. Fieldcraft/fodder help. Commit here. Cross uncommitted
+                chooses HUNT; other plans close.
           topics:
             - id: quick_lesson
               aliases: [wolves, ask_wolves]
@@ -4011,9 +4014,10 @@ npcs:
                 Reach dawn.
             - when: [{ has_flag: relief_oath_limited_duty }]
               text: >
-                AID-ONLY MATCH: FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD fits
-                duty: exposes property, saves public seals, gains Cade aid. ALBANY exceeds duty:
-                saves property, spends seals, no Cade aid. Works/mobile support first seam.
+                AID-ONLY CADE-TERMS FORTIFY FIT: FORTIFY saves lives/herd/byre; no retreat/switch.
+                HOUSEHOLD fits duty: exposes property, saves public seals, gains Cade aid. ALBANY
+                exceeds duty: saves property, spends seals, no Cade aid. Works/mobile support
+                first seam.
             - when: [{ has_flag: relief_oath_unaffiliated_bond }]
               text: >
                 BOND MATCH: FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD fits
