@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 671 -->
+<!-- historical_cycle_count: 672 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - concise_station_delay_impact
+
+- Evidence choice: consecutive verified players found Albany's staged dispatch terms useful but still could not compare each live relief or June option's immediate effect on departure timing at a glance.
+- Surface: only current authenticated Station relief and June cards now lead with canonical `+Xm delay → Ym, on time/delayed` impact across full/compact MCP, terminal, UI, restore, and round-trip views.
+- Counterfactual: impact creation is private to `OverworldSession`; the public helper can only strip stale text, while malformed, forged, completed, or non-Station surfaces fail closed and choices, time, receipts, routes, RNG, and outcomes remain unchanged.
+- Pure evidence: exact-clean Terra seed 72762 organically chose fodder and June cattle-first, recovered a failed lure through Emery's route, completed The Wolf-Winter at decision 33, continued to checkpoint 40, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: the player said staged details helped but still raised the broader opening stack as S1 density; freeze this build and let the strict ten-player pilot measure the cohort instead of exposure-chasing another single-run presentation tweak.
+- Economy: the 59-turn canary used 3.647M raw / 138.6k uncached input and 10.4k output tokens at 96.2% cache reuse; no replacement or exposure-chasing rerun was launched.
+- Guard: adversarial rereview is clean, stable patch id `40b5d516` survived the rebase, crawl `20260728T003015Z` is zero-finding, and health passes 440 files/3,612 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - balanced_ci_test_groups
 
@@ -155,13 +165,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback compile: 23 newer verified pure exits keep Albany Station setup density hot; the higher-ranked seed-72659 post-lure loop predates and is closed by the merged northbound closure.
 - Self-critique/follow-through: the canary still found Station's interlocking permanent departure cards mentally demanding, so the next re-aim is structural staging rather than another prose-only reduction.
 - Guard: independent review is clean; pre/post crawls `20260727T042240Z` / `20260727T042435Z` are zero-finding and final health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
-
-### Cycle result - quest_launch_checkpoint_handoff
-
-- Evidence choice: verified pure seed 72744 repeated the long-standing Gallowmere defect where a decision-40 quest launch created the opening scene and immediately suppressed its actions behind the checkpoint choice.
-- Root cause/surface: `quest_start:*` still counts and retains its normal proof/hash, but the launch handoff is no longer itself checkpoint-safe; the first genuinely safe embedded-quest boundary surfaces any overdue prompt.
-- Counterfactual: decision 40 now returns the live opening menu, the first safe action materializes checkpoint 40 at decision 41, unsafe combat/dialogue remains uninterrupted, and non-launch overworld boundaries keep immediate behavior.
-- Compatibility: active overdue launch snapshots and older already-pending launch snapshots both restore without rewriting their proof, choice, or next checkpoint.
-- Pure evidence: exact-clean Terra seed 72745 completed The Wolf-Winter bloodlessly in 31 decisions, ended voluntarily, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes; it did not sample Gallowmere, so deterministic MCP replay carries the boundary claim.
-- Self-critique/follow-through: the canary repeated dense first-pass Byre-Yard tactical vocabulary; progressive disclosure there is the next evidence-backed presentation candidate, not another checkpoint change.
-- Guard: independent review is clean; post-crawl `20260727T023807Z` is zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
