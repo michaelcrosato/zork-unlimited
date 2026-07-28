@@ -25,7 +25,10 @@ import {
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
-import { INITIAL_JOURNEY_GOAL_GUIDANCE } from "../../src/world/journey_contract.js";
+import {
+  INITIAL_JOURNEY_GOAL_GUIDANCE,
+  type JourneyPresentation,
+} from "../../src/world/journey_contract.js";
 import { cloneOverworldView } from "../../src/world/session_view_clone.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import {
@@ -924,15 +927,25 @@ describe("OverworldSession", () => {
     if (!ready?.action) throw new Error("expected June's ready departure contact action");
 
     const app = readFileSync("ui/src/App.tsx", "utf8");
+    const recapComponent = readFileSync("ui/src/DepartureRecap.tsx", "utf8");
+    const storyChoiceScreen = readFileSync("ui/src/JourneyStoryChoiceScreen.tsx", "utf8");
     expect(app).toContain("worldView.departureContactLeads.map");
     expect(app).toContain("worldView.departureContactLeads.length > 0");
     expect(app).toContain("worldView.departureRecap");
     expect(app).toContain("<DepartureRecap recap={worldView.departureRecap} />");
-    expect(app).toContain("Active field term: {entry.activeFieldTerm}");
-    expect(app).toContain("Dispatch committed: {recap.dispatch.minutes}m");
-    expect(app).toContain("Direct launch now: {recap.dispatch.minutes}m");
-    expect(app).toContain("Dispatch sealed: {recap.dispatch.minutes}m");
-    expect(app).toContain("Direct-launch default; field-team contact remains optional.");
+    expect(app).toContain("departureRecap={worldView.departureRecap}");
+    expect(recapComponent).toContain("Active field term: {entry.activeFieldTerm}");
+    expect(recapComponent).toContain("Dispatch committed: {recap.dispatch.minutes}m");
+    expect(recapComponent).toContain("Direct launch now: {recap.dispatch.minutes}m");
+    expect(recapComponent).toContain("Dispatch sealed: {recap.dispatch.minutes}m");
+    expect(recapComponent).toContain("Direct-launch default; field-team contact remains optional.");
+    expect(storyChoiceScreen).toContain('departureRecap?: OverworldView["departureRecap"]');
+    expect(storyChoiceScreen).toContain(
+      "{departureRecap && <DepartureRecap recap={departureRecap} headingLevel={2} />}",
+    );
+    expect(storyChoiceScreen.indexOf("<DepartureRecap")).toBeLessThan(
+      storyChoiceScreen.indexOf("<JourneyOpportunityLeads"),
+    );
     expect(app).toContain("aria-disabled={!ready}");
     expect(app).toContain("onClick={ready ? onTalk : undefined}");
     expect(app).toContain("worldSession.talkToCharacter(lead.action.arguments.character_id)");
@@ -1237,6 +1250,9 @@ describe("OverworldSession", () => {
     const beforeInspection = session.snapshot();
     const storyChoice = session.inspectJourneyStory("albany:wolf_preparation");
     const journey = { ...session.journey(), storyChoice };
+    const departureRecap = session.view().departureRecap;
+    if (!departureRecap)
+      throw new Error("expected authenticated Station recall beside preparation");
     expect(storyChoice.kind).toBe("preparation");
     expect(session.snapshot()).toEqual(beforeInspection);
 
@@ -1260,13 +1276,53 @@ describe("OverworldSession", () => {
       const reactDomServer = requireFromUi("react-dom/server") as {
         renderToStaticMarkup: (element: unknown) => string;
       };
-      const markup = reactDomServer.renderToStaticMarkup(
-        react.createElement(module.JourneyStoryChoiceScreen, {
-          journey,
-          onChoose: () => undefined,
-          onDismiss: () => undefined,
-        }),
-      );
+      const renderStoryScreen = (
+        activeJourney: JourneyPresentation,
+        recap: typeof departureRecap,
+        dismissible: boolean,
+      ) =>
+        reactDomServer.renderToStaticMarkup(
+          react.createElement(module.JourneyStoryChoiceScreen, {
+            journey: activeJourney,
+            departureRecap: recap,
+            onChoose: () => undefined,
+            ...(dismissible ? { onDismiss: () => undefined } : {}),
+          }),
+        );
+      const assertRecapRows = (
+        screenMarkup: string,
+        recap: typeof departureRecap,
+        expectedSelected: number,
+        expectedOpen: number,
+      ): void => {
+        const recapStart = screenMarkup.indexOf(
+          '<section aria-label="The Wolf-Winter dispatch recap">',
+        );
+        const recapEnd = screenMarkup.indexOf("</section>", recapStart);
+        expect(recapStart).toBeGreaterThanOrEqual(0);
+        expect(recapEnd).toBeGreaterThan(recapStart);
+        const recapMarkup = screenMarkup.slice(recapStart, recapEnd);
+        const selectedEntries = recap.entries.filter((entry) => entry.status === "selected");
+        expect(selectedEntries).toHaveLength(expectedSelected);
+        for (const entry of selectedEntries) {
+          expect(recapMarkup).toContain(entry.title!.replaceAll("'", "&#x27;"));
+        }
+        expect(recap.entries.filter((entry) => entry.status === "open_optional")).toHaveLength(
+          expectedOpen,
+        );
+        expect(recapMarkup.match(/Open \(optional\)/g) ?? []).toHaveLength(expectedOpen);
+        const selectedTitles = new Set(selectedEntries.map((entry) => entry.title));
+        for (const alternative of [
+          ...world.opening_preparation!.profiles,
+          ...world.opening_relief_allocation!.options,
+          ...world.opening_ally!.options,
+        ]) {
+          if (!selectedTitles.has(alternative.title)) {
+            expect(recapMarkup).not.toContain(alternative.title.replaceAll("'", "&#x27;"));
+          }
+        }
+      };
+      const markup = renderStoryScreen(journey, departureRecap, true);
 
       expect(markup).toContain("Mission: The Wolf-Winter");
       expect(markup).toContain(
@@ -1277,9 +1333,47 @@ describe("OverworldSession", () => {
       expect(markup).not.toContain("Take the Exposed Ridge Road");
       expect(markup).not.toContain("Take the Sheltered Stockway");
       expect(markup).toContain("Tradeoff:");
+      expect(markup).toContain("The Wolf-Winter dispatch recap");
+      assertRecapRows(markup, departureRecap, 3, 1);
       expect(markup).not.toContain("clean three-cast lure line");
       expect(markup).toContain("Return to the Station without choosing");
       expect(markup.match(/<button/g)).toHaveLength(4);
+
+      const noRecapMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(module.JourneyStoryChoiceScreen, {
+          journey,
+          onChoose: () => undefined,
+          onDismiss: () => undefined,
+        }),
+      );
+      expect(noRecapMarkup).not.toContain("The Wolf-Winter dispatch recap");
+
+      const preparation = world.opening_preparation!;
+      const allocation = world.opening_relief_allocation!;
+      const ally = world.opening_ally!;
+      session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
+      const allocationStory = session.inspectJourneyStory(allocation.id);
+      const allocationRecap = session.view().departureRecap;
+      if (!allocationRecap) throw new Error("expected Station recall beside relief allocation");
+      const allocationMarkup = renderStoryScreen(
+        { ...session.journey(), storyChoice: allocationStory },
+        allocationRecap,
+        true,
+      );
+      expect(allocationMarkup).toContain("Choose what Albany can protect");
+      assertRecapRows(allocationMarkup, allocationRecap, 4, 2);
+
+      session.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
+      session.talkToCharacter(ally.contact);
+      const allyJourney = session.journey();
+      if (allyJourney.storyChoice?.kind !== "ally") {
+        throw new Error("expected active Station field-team choice");
+      }
+      const allyRecap = session.view().departureRecap;
+      if (!allyRecap) throw new Error("expected Station recall beside field-team choice");
+      const allyMarkup = renderStoryScreen(allyJourney, allyRecap, false);
+      expect(allyMarkup).toContain("Choose who leaves Albany");
+      assertRecapRows(allyMarkup, allyRecap, 5, 1);
     } finally {
       await server.close();
     }

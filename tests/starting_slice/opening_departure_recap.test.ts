@@ -277,7 +277,13 @@ describe("Albany opening departure recap", () => {
       `Direct launch now: ${String(soloWindow.ledgerMinutes)}m — on time. Field-team contact remains optional.`,
     );
     first.talkToCharacter(ALLY.contact);
-    expect(first.view().departureRecap).toBeNull();
+    expect(first.journey().storyChoice?.kind).toBe("ally");
+    expect(first.view().departureRecap?.dispatch).toEqual({
+      state: "committed",
+      minutes: soloWindow.ledgerMinutes,
+      timing: null,
+      remainingOptional: ["field_team"],
+    });
     first.chooseJourneyStory(ALLY.options[0]!.id);
     const teamWindow = canonicalWindow(first);
     expect(teamWindow.status).toBe("on_time");
@@ -374,10 +380,15 @@ describe("Albany opening departure recap", () => {
       timing: null,
       remainingOptional: ["field_team"],
     });
-    expect(session.view().departureRecap).toBeNull();
+    expect(session.view().departureRecap).toEqual(pendingRecap);
     expect(JSON.stringify(pendingRecap)).not.toContain("forecast");
     const compact = session.compactView();
-    expect(compact.departure_recap?.[4]).toBeUndefined();
+    expect(compact.departure_recap?.[4]).toEqual([
+      "committed",
+      pendingWindow.committedMinutes,
+      null,
+      ["field_team"],
+    ]);
     session.chooseJourneyStory(ALLY.options[0]!.id);
     const explicitWindow = canonicalWindow(session);
     expect(explicitWindow.status).toBe("on_time");
@@ -450,5 +461,105 @@ describe("Albany opening departure recap", () => {
     expect(render(delayed.view())).toContain("delayed.");
     expect(delayed.snapshot()).toEqual(beforeSnapshot);
     expect(delayed.snapshotHash()).toBe(beforeHash);
+  });
+
+  it("keeps only the authenticated plan visible beside every Station choice screen", () => {
+    const session = stationSession();
+    const beforeInspection = session.snapshot();
+    const beforeHash = session.snapshotHash();
+    const preparationStory = session.inspectJourneyStory(PREPARATION.id);
+    expect(session.snapshot()).toEqual(beforeInspection);
+    expect(session.snapshotHash()).toBe(beforeHash);
+    const stages: Array<{
+      kind: "preparation" | "relief_allocation" | "ally";
+      story: NonNullable<ReturnType<OverworldSession["journey"]>["storyChoice"]>;
+      selected: string[];
+      open: string[];
+      recap: NonNullable<ReturnType<OverworldSession["view"]>["departureRecap"]>;
+      compact: ReturnType<OverworldSession["compactView"]>;
+      terminal: string;
+    }> = [];
+    const captureStage = (
+      kind: "preparation" | "relief_allocation" | "ally",
+      story: NonNullable<ReturnType<OverworldSession["journey"]>["storyChoice"]>,
+      selected: string[],
+      open: string[],
+    ): void => {
+      const view = session.view();
+      if (!view.departureRecap) throw new Error(`Expected a recap beside ${kind}.`);
+      stages.push({
+        kind,
+        story,
+        selected,
+        open,
+        recap: view.departureRecap,
+        compact: session.compactView(),
+        terminal: render(view),
+      });
+    };
+    captureStage("preparation", preparationStory, ["role", "duty", "evidence"], ["preparation"]);
+
+    session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    captureStage(
+      "relief_allocation",
+      session.inspectJourneyStory(RELIEF_ALLOCATION.id),
+      ["role", "duty", "evidence", "preparation"],
+      ["relief_allocation", "field_team"],
+    );
+
+    session.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    session.talkToCharacter(ALLY.contact);
+    const allyStory = session.journey().storyChoice;
+    if (!allyStory) throw new Error("Expected an active June field-team choice.");
+    captureStage(
+      "ally",
+      allyStory,
+      ["role", "duty", "evidence", "preparation", "relief_allocation"],
+      ["field_team"],
+    );
+
+    for (const stage of stages) {
+      expect(stage.story.kind).toBe(stage.kind);
+      const recap = stage.recap;
+      expect(
+        recap.entries.filter((entry) => entry.status === "selected").map((entry) => entry.slot),
+      ).toEqual(stage.selected);
+      expect(
+        recap.entries
+          .filter((entry) => entry.status === "open_optional")
+          .map((entry) => entry.slot),
+      ).toEqual(stage.open);
+      expect(stage.compact.departure_recap).toEqual([
+        recap.version,
+        recap.questId,
+        recap.questTitle,
+        recap.entries.map((entry) => [
+          entry.slot,
+          entry.label,
+          entry.status,
+          entry.title,
+          entry.activeFieldTerm,
+        ]),
+        recap.dispatch
+          ? [
+              recap.dispatch.state,
+              recap.dispatch.minutes,
+              recap.dispatch.timing,
+              recap.dispatch.remainingOptional,
+            ]
+          : null,
+      ]);
+      expect(stage.terminal).toContain(`${WOLF.title} dispatch recap:`);
+      const visible = JSON.stringify(recap);
+      for (const alternative of [
+        ...PREPARATION.profiles.filter((profile) => profile.id !== PREPARATION.profiles[0]!.id),
+        ...RELIEF_ALLOCATION.options.filter(
+          (option) => option.id !== RELIEF_ALLOCATION.options[0]!.id,
+        ),
+        ...ALLY.options,
+      ]) {
+        expect(visible).not.toContain(alternative.title);
+      }
+    }
   });
 });

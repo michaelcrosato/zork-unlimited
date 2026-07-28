@@ -983,10 +983,7 @@ export class OverworldSession {
       this.currentAreaId !== preparation.area ||
       !this.discoveredQuestIds.has(preparation.target_quest) ||
       this.startedQuestIds.has(preparation.target_quest) ||
-      this.completedQuestIds.has(preparation.target_quest) ||
-      this.openingPreparationAvailable() !== null ||
-      this.openingReliefAllocationAvailable() !== null ||
-      this.openingAllyAvailable() !== null
+      this.completedQuestIds.has(preparation.target_quest)
     ) {
       return null;
     }

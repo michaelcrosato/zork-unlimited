@@ -1,15 +1,19 @@
 import { useEffect, useRef } from "react";
 import type { JourneyPresentation } from "../../src/world/journey_contract.js";
 import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
+import { DepartureRecap } from "./DepartureRecap.js";
+import type { OverworldView } from "./overworld.js";
 
 type JourneyStoryChoiceScreenProps = {
   journey: JourneyPresentation;
+  departureRecap?: OverworldView["departureRecap"];
   onChoose: (choiceId: string) => void;
   onDismiss?: () => void;
 };
 
 export function JourneyStoryChoiceScreen({
   journey,
+  departureRecap,
   onChoose,
   onDismiss,
 }: JourneyStoryChoiceScreenProps): JSX.Element {
@@ -99,6 +103,8 @@ export function JourneyStoryChoiceScreen({
                         : "Choose the consequence that sets your next objective."}
           </small>
         </div>
+
+        {departureRecap && <DepartureRecap recap={departureRecap} headingLevel={2} />}
 
         <JourneyOpportunityLeads
           opportunities={journey.opportunities}
