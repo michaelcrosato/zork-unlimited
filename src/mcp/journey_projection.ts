@@ -18,6 +18,7 @@ import type { McpObservation } from "./types.js";
 
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
+const COMPACT_MORE_CHOICES_INDEX = 12;
 export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 5 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Complete terms are staged; inspect this exact option before choosing if you need them." as const;
@@ -232,6 +233,7 @@ function suppressCompactGameplayOmissions(
   if (counts.length > COMPACT_MORE_UNAVAILABLE_INDEX) {
     counts[COMPACT_MORE_UNAVAILABLE_INDEX] = 0;
   }
+  if (counts.length > COMPACT_MORE_CHOICES_INDEX) counts[COMPACT_MORE_CHOICES_INDEX] = 0;
   return compactTrailingOmissionCounts(counts) as RpgCompactMore | undefined;
 }
 
@@ -247,6 +249,7 @@ export function suppressRpgGameplayActions<
         const {
           actions: _actions,
           unavailable: _unavailable,
+          choices: _choices,
           more,
           ...withoutActions
         } = payload.context;

@@ -225,6 +225,7 @@ export function cloneCompactRpgObservation(context: RpgCompactObservation): RpgC
     ...(context.journal ? { journal: [...context.journal] } : {}),
     ...(context.more ? { more: [...context.more] } : {}),
     ...(context.dialogue ? { dialogue: [...context.dialogue] } : {}),
+    ...(context.choices ? { choices: cloneCompactTupleList(context.choices) } : {}),
     ...(context.enemies ? { enemies: cloneCompactTupleList(context.enemies) } : {}),
     ...(context.ending ? { ending: { ...context.ending } } : {}),
   };
@@ -261,12 +262,12 @@ export function rpgViewField<Args extends RpgViewOptions>(
       session.id,
       `${OBSERVATION_PROJECTION_COMPACT}:${observationProjectionSuffix(
         opts,
-        `ids:actions:${includeActions ? 1 : 0}:version:${includeVersion ? 1 : 0}`,
+        `rows:actions:${includeActions ? 1 : 0}:version:${includeVersion ? 1 : 0}`,
       )}`,
       () => {
         const built = observationFrom(obs);
-        const actionIds = includeActions ? built.available_actions.map((action) => action.id) : [];
-        return compactRpgObservation(built, actionIds, { includeActions, includeVersion });
+        const actionRows = includeActions ? built.available_actions : [];
+        return compactRpgObservation(built, actionRows, { includeActions, includeVersion });
       },
     );
     return {

@@ -1022,7 +1022,9 @@ const COMPACT_EVENTS = {
 };
 const COMPACT_OBSERVATION = {
   compact_observation: B("False swaps the compact context for the verbose observation."),
-  include_actions: B("Legal action ids in context; enforced for active pure compact responses."),
+  include_actions: B(
+    "Legal action ids plus active dialogue prompts in context; enforced for active pure compact responses.",
+  ),
   include_context_version: B("Echo the context schema version."),
 };
 const IF_STATE_HASH = {

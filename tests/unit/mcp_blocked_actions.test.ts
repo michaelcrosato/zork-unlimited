@@ -95,20 +95,24 @@ describe("MCP authored blocked actions", () => {
       context: {
         ...compact.context,
         actions: ["look_around"],
-        more: [0, 0, 0, 0, 3, 2, 0, 0, 0, 0, 4],
+        choices: [["ask_plan", "PLAN — Hold the line."]],
+        more: [0, 0, 0, 0, 3, 2, 0, 0, 0, 0, 4, 0, 5],
       },
     });
     expect(suppressedWithOtherOmissions.context.actions).toBeUndefined();
     expect(suppressedWithOtherOmissions.context.unavailable).toBeUndefined();
+    expect(suppressedWithOtherOmissions.context.choices).toBeUndefined();
     expect(suppressedWithOtherOmissions.context.more).toEqual([0, 0, 0, 0, 0, 2]);
 
     const suppressedWithOnlyGameplayOmissions = suppressRpgGameplayActions({
       context: {
         ...compact.context,
         actions: ["look_around"],
-        more: [0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 4],
+        choices: [["ask_plan", "PLAN — Hold the line."]],
+        more: [0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 4, 0, 5],
       },
     });
+    expect(suppressedWithOnlyGameplayOmissions.context.choices).toBeUndefined();
     expect(suppressedWithOnlyGameplayOmissions.context.more).toBeUndefined();
   });
 });

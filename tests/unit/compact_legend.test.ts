@@ -130,6 +130,8 @@ describe("compact legends", () => {
     }
     // The one-time legend also decodes the step_action event tuples.
     expect(started.legend!.events).toContain("step_action");
+    expect(started.legend!.choices).toContain("authored_prompt");
+    expect(started.legend!.choices).toContain("unchanged id from actions");
 
     const fresh = a.new_game({ generate_rpg_seed: 7 });
     expect(fresh.legend).toBe(RPG_COMPACT_LEGEND);

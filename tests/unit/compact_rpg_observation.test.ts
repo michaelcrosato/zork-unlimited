@@ -8,6 +8,7 @@ import {
   COMPACT_BLOCKED_EXIT_CHAR_LIMIT,
   COMPACT_DESCRIPTION_CHAR_LIMIT,
   COMPACT_DIALOGUE_CHAR_LIMIT,
+  COMPACT_DIALOGUE_CHOICE_LIMIT,
   COMPACT_ENEMY_LIMIT,
   COMPACT_ENDING_TEXT_CHAR_LIMIT,
   COMPACT_EXIT_LIMIT,
@@ -66,7 +67,7 @@ describe("compactRpgObservation", () => {
     expect(compactRpgObservation(obs, ["look"], { includeVersion: true }).v).toBe(
       RPG_COMPACT_OBSERVATION_VERSION,
     );
-    expect(RPG_COMPACT_OBSERVATION_VERSION).toBe(18);
+    expect(RPG_COMPACT_OBSERVATION_VERSION).toBe(19);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
@@ -133,6 +134,76 @@ describe("compactRpgObservation", () => {
     });
 
     expect(compact.actions).toEqual(["look"]);
+  });
+
+  it("pairs active dialogue ids with bounded authored prompts while keeping ids executable", () => {
+    const dialogueActions: RpgObservation["available_actions"] = Array.from(
+      { length: COMPACT_DIALOGUE_CHOICE_LIMIT + 2 },
+      (_, index) => {
+        const ordinal = index.toString().padStart(2, "0");
+        return {
+          id: `ask_plan_${ordinal}`,
+          command: `ask: PLAN ${ordinal} — Compare its cost and consequence.`,
+          action: { type: "ASK", npc: "guide", topic: `plan_${ordinal}` },
+        };
+      },
+    );
+    const ordinaryAction: RpgObservation["available_actions"][number] = {
+      id: "go_north",
+      command: "go north",
+      action: { type: "MOVE", direction: "north" },
+    };
+    const obs: RpgObservation = {
+      ...observationWithLargeState(),
+      inventory: [],
+      state: {
+        flags: [],
+        vars: { hp: 8, attack: 2, defense: 1 },
+        journal: [],
+      },
+      dialogue: { npc: "guide", npc_text: "Choose a plan." },
+      available_actions: [...dialogueActions, ordinaryAction],
+    };
+    const compact = compactRpgObservation(obs, obs.available_actions, {
+      includeActions: true,
+    });
+
+    expect(compact.actions).toEqual(obs.available_actions.map((action) => action.id));
+    expect(compact.choices).toHaveLength(COMPACT_DIALOGUE_CHOICE_LIMIT);
+    expect(compact.choices?.[0]).toEqual([
+      "ask_plan_00",
+      "PLAN 00 — Compare its cost and consequence.",
+    ]);
+    expect(compact.choices?.some(([id]) => id === "go_north")).toBe(false);
+    expect(compact.more).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+
+    const leadingOrdinaryActions: RpgObservation["available_actions"] = Array.from(
+      { length: 20 },
+      (_, index) => ({
+        id: `use_item_${index}`,
+        command: `use item ${index}`,
+        action: { type: "USE", item: `item_${index}`, target: `item_${index}` },
+      }),
+    );
+    const actionCapped = compactRpgObservation(
+      obs,
+      [...leadingOrdinaryActions, ...dialogueActions],
+      { includeActions: true },
+    );
+    expect(actionCapped.actions).toHaveLength(COMPACT_ACTION_LIMIT);
+    expect(actionCapped.choices).toHaveLength(4);
+    expect(
+      actionCapped.choices?.every(([actionId]) => actionCapped.actions?.includes(actionId)),
+    ).toBe(true);
+    expect(actionCapped.more?.[4]).toBe(10);
+    expect(actionCapped.more?.[12]).toBe(10);
+
+    expect(
+      compactRpgObservation({ ...obs, dialogue: null }, obs.available_actions, {
+        includeActions: true,
+      }).choices,
+    ).toBeUndefined();
+    expect(compactRpgObservation(obs, obs.available_actions).choices).toBeUndefined();
   });
 
   it("caps action and visible world buckets with compact omission counts", () => {

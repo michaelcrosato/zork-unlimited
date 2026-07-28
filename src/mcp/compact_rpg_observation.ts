@@ -8,6 +8,7 @@ import {
   omittedCount,
 } from "./compact_truncation.js";
 import {
+  compactMcpActionLabel,
   compactMcpTranscriptSceneId,
   compactMcpTranscriptSummaryValue,
   compactMcpTranscriptTitle,
@@ -28,16 +29,18 @@ const COMPACT_FLAG_LIMIT = 16;
 const COMPACT_JOURNAL_LIMIT = 5;
 export const COMPACT_DESCRIPTION_CHAR_LIMIT = 720;
 export const COMPACT_DIALOGUE_CHAR_LIMIT = 1120;
+export const COMPACT_DIALOGUE_CHOICE_LIMIT = 12;
 export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 256;
 export const COMPACT_BLOCKED_ACTION_REASON_CHAR_LIMIT = RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT;
 export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 720;
-export const RPG_COMPACT_OBSERVATION_VERSION = 18 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 19 as const;
 
 export type RpgCompactRef = string;
 export type RpgCompactExit = string | readonly [direction: string, to: string];
 export type RpgCompactBlockedExit = readonly [direction: string, message: string];
 export type RpgCompactUnavailableAction = readonly [actionId: string, reason: string];
 export type RpgCompactDialogue = readonly [npc: string, text: string];
+export type RpgCompactDialogueChoice = readonly [actionId: string, prompt: string];
 export type RpgCompactEnemy = readonly [id: string, hp: number];
 export type RpgCompactPressure = readonly [
   id: string,
@@ -61,6 +64,7 @@ export type RpgCompactMore = readonly [
   enemies?: number,
   unavailable?: number,
   pressure?: number,
+  choices?: number,
 ];
 export type RpgCompactVitals = readonly [
   hp: number,
@@ -87,6 +91,7 @@ export type RpgCompactObservation = {
   journal?: string[];
   more?: RpgCompactMore;
   dialogue?: RpgCompactDialogue;
+  choices?: RpgCompactDialogueChoice[];
   enemies?: RpgCompactEnemy[];
   pressure?: RpgCompactPressure[];
   ended?: true;
@@ -117,8 +122,10 @@ export const RPG_COMPACT_LEGEND = {
   flags: "set story flags",
   vars: "story variables (core stats already shown in vitals are omitted)",
   journal: "recent journal entries",
-  more: "[inv, flags, vars, journal, actions, exits, objects, npcs, blocked, enemies, unavailable, pressure] counts omitted by truncation, trailing zeros dropped",
+  more: "[inv, flags, vars, journal, actions, exits, objects, npcs, blocked, enemies, unavailable, pressure, choices] counts omitted by truncation, trailing zeros dropped",
   dialogue: "[npc_id, npc_line] active dialogue",
+  choices:
+    "[[action_id, authored_prompt], ...] current legal dialogue choices; execute the unchanged id from actions",
   enemies: "[[enemy_id, hp], ...] enemies present",
   pressure:
     "[[track_id, title, value, band_min, band_label, next_min?, next_label?], ...] visible pressure tracks",
@@ -160,6 +167,17 @@ type CompactVarsResult = {
   omitted: number;
 };
 
+type CompactRpgActionRow = string | RpgObservation["available_actions"][number];
+
+function compactActionId(row: CompactRpgActionRow): string {
+  return typeof row === "string" ? row : row.id;
+}
+
+function compactDialoguePrompt(command: string): string {
+  const authoredPrompt = command.startsWith("ask: ") ? command.slice("ask: ".length) : command;
+  return compactMcpActionLabel(authoredPrompt);
+}
+
 function compactVars(vars: Record<string, number>): CompactVarsResult {
   const keys = Object.keys(vars)
     .filter((key) => !CORE_STATE_VARS.has(key))
@@ -178,13 +196,27 @@ function compactVars(vars: Record<string, number>): CompactVarsResult {
 
 export function compactRpgObservation(
   obs: RpgObservation,
-  actionIds: string[],
+  actionRows: readonly CompactRpgActionRow[],
   opts: CompactRpgObservationOptions = {},
 ): RpgCompactObservation {
   const vars = compactVars(obs.state.vars);
   const includeActions = opts.includeActions === true;
   const includeVersion = opts.includeVersion === true;
+  const actionIds = actionRows.map(compactActionId);
   const actions = includeActions ? compactHead(actionIds, COMPACT_ACTION_LIMIT) : [];
+  const visibleActionIds = new Set(actions);
+  const allDialogueChoices: RpgCompactDialogueChoice[] =
+    includeActions && obs.dialogue
+      ? actionRows.flatMap((row) =>
+          typeof row !== "string" && row.action.type === "ASK"
+            ? [[row.id, compactDialoguePrompt(row.command)] as const]
+            : [],
+        )
+      : [];
+  const choices = compactHead(
+    allDialogueChoices.filter(([actionId]) => visibleActionIds.has(actionId)),
+    COMPACT_DIALOGUE_CHOICE_LIMIT,
+  );
   const inv = compactHead(obs.inventory, COMPACT_INVENTORY_LIMIT).map(
     compactMcpTranscriptSummaryValue,
   );
@@ -212,6 +244,7 @@ export function compactRpgObservation(
   const omittedBlockedActions = omittedCount(obs.blocked_actions, compactBlockedActions);
   const omittedEnemies = omittedCount(obs.enemies_present, compactEnemies);
   const omittedPressure = omittedCount(obs.pressure_tracks ?? [], compactPressure);
+  const omittedChoices = omittedCount(allDialogueChoices, choices);
   const exits: RpgCompactExit[] = [];
   for (const exit of compactExits) {
     const direction = compactMcpTranscriptSummaryValue(exit.direction);
@@ -270,6 +303,7 @@ export function compactRpgObservation(
     omittedEnemies ?? 0,
     omittedBlockedActions ?? 0,
     omittedPressure ?? 0,
+    omittedChoices ?? 0,
   ]) as RpgCompactMore | undefined;
   return {
     ...(includeVersion ? { v: RPG_COMPACT_OBSERVATION_VERSION } : {}),
@@ -295,6 +329,7 @@ export function compactRpgObservation(
           ] as const,
         }
       : {}),
+    ...(choices.length > 0 ? { choices } : {}),
     ...(enemies.length > 0 ? { enemies } : {}),
     ...(pressure.length > 0 ? { pressure } : {}),
     ...(obs.ended ? { ended: true as const } : {}),

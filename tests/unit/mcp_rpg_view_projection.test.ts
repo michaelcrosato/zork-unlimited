@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { RpgAction } from "../../src/api/types.js";
 import {
+  cloneCompactRpgObservation,
   observationProjectionSuffix,
   publicActionRows,
   publicActions,
@@ -9,6 +10,7 @@ import {
   publicBlockedActions,
   publicObservation,
 } from "../../src/mcp/rpg_view_projection.js";
+import type { RpgCompactObservation } from "../../src/mcp/compact_rpg_observation.js";
 import type { RpgActionOption, RpgBlockedActionOption } from "../../src/rpg/legal_actions.js";
 import type { RpgObservation } from "../../src/rpg/observation.js";
 
@@ -161,5 +163,25 @@ describe("MCP RPG view projection", () => {
     expect(observation.state.flags).toEqual(["gate_seen"]);
     expect(actions[1]?.skill_check?.difficulty).toBe(12);
     expect(actions[1]?.resources?.gains).toEqual(["gate_token"]);
+  });
+
+  it("detaches compact dialogue choice rows from cached projections", () => {
+    const context: RpgCompactObservation = {
+      here: ["gatehouse", "Gatehouse"],
+      text: "Choose a route.",
+      vitals: [8, 2, 1, 1, 5],
+      actions: ["ask_hold", "ask_withdraw"],
+      dialogue: ["guard", "Which road?"],
+      choices: [
+        ["ask_hold", "HOLD — Defend the gate."],
+        ["ask_withdraw", "WITHDRAW — Save the caravan."],
+      ],
+    };
+
+    const cloned = cloneCompactRpgObservation(context);
+
+    expect(cloned).toEqual(context);
+    expect(cloned.choices).not.toBe(context.choices);
+    expect(cloned.choices?.[0]).not.toBe(context.choices?.[0]);
   });
 });
