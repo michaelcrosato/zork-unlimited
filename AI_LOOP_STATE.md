@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 675 -->
+<!-- historical_cycle_count: 676 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - truthful_wolf_gallowmere_continue
+
+- Evidence choice: the latest ten-Terra diagnostic cohort continued 6/10, while the actionable goal-completion label named only the dawn wagon and left its Gallowmere destination in surrounding prose.
+- Surface: full and compact play now invite the player to decide Albany's dawn wagon and then take Hedrick's Queensbury lead through The Gallowmere; the consequence states that exact sequence before the unchanged journey boundary.
+- Counterfactual: goals, story choices, wagon allocation, travel, availability, end opportunities, mechanics, RNG, outcomes, receipts, and full/compact parity are unchanged.
+- Pure evidence: exact-clean Terra seed 72880 saw the new card after completing The Wolf-Winter nonlethally at decision 30, reported no bugs or rejected actions, rated clarity/enjoyment 3/4, chose replay-yes, and still ended because Wolf-Winter felt like a natural first-session stop.
+- Self-critique/follow-through: this proves truthful reachability, not a continuation lift; do not rerun unchanged copy, and measure retention only after the active Station recap and HUNT commitment-legibility increments land together.
+- Economy: the one 49-turn canary used 2.592M raw / 124.7k uncached input and 7.4k output tokens at 95.2% cache reuse; no exposure-chasing replacement or cohort was launched.
+- Guard: independent review is clean, crawl `20260728T082709Z` is zero-finding, and health passes 440 files/3,617 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - compact_dialogue_choice_labels
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the canary did not exercise the reminder, so deterministic proofs carry it; the trace exposed a real 65m delayed → pending-June unverified → 80m delayed card flip, which is the next starting-slice fix.
 - Economy: one canary used 4.61M raw / 157k uncached input and 9.8k output tokens; no coverage replacement or sub-threshold feedback compile was launched.
 - Guard: independent review is clean; pre/final crawls `20260727T112123Z` / `20260727T115517Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
-
-### Cycle result - wolf_first_cast_failure_forecast
-
-- Evidence choice: exact-clean Terra seed 72748 understood the clean hill-road projection but only reconstructed cumulative cattle pressure after its first lure cast failed.
-- Surface: both pre-commitment hill cards now forecast the actual fouled-first-cast alarm total (ridge/stockway 3/2 on time, 4/3 delayed), spent feed, no retry, and a remaining recovery.
-- Counterfactual: compiled worst-cast traces prove both roads and every Cade-fodder/Aid-Only/delay presentation; RNG, alarms, actions, costs, recoveries, routes, and endings are unchanged, and the longest card is 354/360 characters.
-- Pure evidence: exact-clean Terra seed 72750 chose the exposed DC 10 road, suffered the forecasted failure, braced the rail, saved every wolf and cattle, completed The Wolf-Winter at decision 30 and Gallowmere at 54, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: the player still found compact payloads dense and lost Jamie's narrow Relief Protocol trigger after choosing a different recovery; triage that field reminder against payload focus rather than adding route copy.
-- Economy: a premature dirty-tree canary was compiler-rejected; the exact-clean replacement used 5.93M raw / 177k uncached input and 12k output tokens, so commit the frozen candidate before future canaries.
-- Guard: independent re-review is clean; pre/final crawls `20260727T100808Z` / `20260727T103942Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
