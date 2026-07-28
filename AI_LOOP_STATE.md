@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 680 -->
+<!-- historical_cycle_count: 681 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - truthful_relief_oath_strategy_fit
+
+- Evidence choice: the exact ten-Terra cohort completed 10/10 through LURE while Aid-Only falsely said it never helped another strategy even though Cade-terms FORTIFY already fit its duty; clarity averaged 3.8 and only 5/10 continued.
+- Surface: Albany's three duty cards now name their exact FORTIFY/LURE/DRIVE benefit, Aid-Only discloses its no-bonus Cade-terms FORTIFY fit, and Cade's LURE/FORTIFY briefings mirror those truthful terms.
+- Counterfactual: choices, strategy legality, route/commitment gates, checks, DCs, resources, pressure, RNG, outcomes, promises, and return consequences are unchanged.
+- Pure evidence: exact-clean Terra seed 72911 chose Aid-Only, Emery's recovery, fodder, June, ridge, and LURE; it completed The Wolf-Winter at decision 30 with no rejection, rated clarity/enjoyment 4/4, stayed unstuck, ended at the natural first-session boundary, and chose replay-yes.
+- Self-critique/follow-through: one canary proves truthful legibility rather than strategy diversification or retention lift; run one strict no-resume cohort only on the consolidated launch-first plus parity build.
+- Economy: the 45-turn canary used 2.262M raw / 105.5k uncached input and 6.8k output tokens at 95.3% cache reuse, or 3,741 useful tokens per accepted decision; no replacement was launched.
+- Guard: exact predecessor/current world hashes and every oath-bearing historical save lineage are pinned, pre/post crawls `20260728T134546Z`/`20260728T135411Z` are zero-finding, and health passes 441 files/3,629 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - station_launch_first
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the player still called the staged opening and compact overworld summary dense, so this improves first-use orientation rather than closing density; exact Wolf-Winter goal guidance is next.
 - Economy: seed 72756 failed closed on a strict transport-wrapper rejection and published no evidence; its single fresh replacement used 4.27M raw / 143k uncached input and 12.2k output tokens, with no further rerun.
 - Guard: independent review is clean, patch identity survived the rebase, crawl `20260727T183200Z` is zero-finding, and health passes 437 files/3,598 tests, both typechecks, and all 12 packs.
-
-### Cycle result - preparation_dispatch_forecast
-
-- Evidence choice: consecutive verified players understood final dispatch status but could not predict cumulative Station delay before committing preparation.
-- Surface: every authenticated preparation card now forecasts its final dispatch-minute range and guaranteed on-time/delayed status across all still-optional allocation and field-team choices, including zero allocation and solo departure.
-- Counterfactual: the route card stays neutral and forecast ranges never become launch authority; choices, costs, effects, availability, decision order, final receipts, RNG, routes, and endings are unchanged.
-- Pure evidence: exact-clean Terra seed 72755 saw all three delayed ranges, chose Reese's fortification, recovered a failed first Repair cast through its prepared strip and reserve crew, completed The Wolf-Winter at decision 21, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: the player did not cite the forecast and still called the preparation stack dense, so timing is clarified rather than density closed; land the already-green concise Civic categories next.
-- Economy: one 49-turn canary used 2.55M raw / 109k uncached input and 7.8k output tokens with a 95.7% cache hit; no exposure-chasing rerun or partial fleet was launched.
-- Guard: independent review is clean, patch identity survived the rebase, crawl `20260727T170457Z` is zero-finding, and health passes 436 files/3,592 tests, both typechecks, and all 12 packs.
