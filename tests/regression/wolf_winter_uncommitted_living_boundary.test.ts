@@ -22,7 +22,7 @@ if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const FULL = { compact_context: false, compact_result: false } as const;
 const LIVING_BOUNDARY =
-  /cross (?:north )?uncommitted[^]*hunt[^]*(?:others shut|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast)/i;
+  /cross (?:north )?uncommitted[^]*hunt[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast)/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string): GameState {
@@ -125,17 +125,31 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootDialogue = observation(uncommitted);
     expect(rootDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
     expect(rootDialogue.dialogue?.npc_text).toMatch(
-      /You came from Albany awake[^]*four ways through[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*hunt means fighting[^]*ask me about the other three before deciding[^]*cross north uncommitted[^]*hunt-and-hold[^]*other plans close/i,
+      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*cross uncommitted=HUNT[^]*others close/i,
     );
-    expect(rootDialogue.dialogue?.npc_text).not.toMatch(
-      /kills pack|holds herd\/byre|risk death|spares all if fed|foul risks herd|spares pack\/people|defense lost|crisis cost|property\/seals|no retreat/i,
+    const rootCommands = rootDialogue.available_actions.map((action) => action.command).join("\n");
+    expect(rootCommands).toMatch(
+      /hunt[^]*hold the breach[^]*protects cattle and relief reserves[^]*wolves may die/i,
     );
-    expect(rootDialogue.dialogue?.npc_text).not.toMatch(/foul\s*=\s*(?:2|two) cattle/i);
-    expect(rootDialogue.dialogue?.npc_text).toMatch(/lure[^]*drive[^]*fortify/i);
+    expect(rootCommands).toMatch(
+      /lure[^]*draw the pack out[^]*protects cattle and wolves[^]*spends finite feed[^]*paling broken[^]*foul risks cattle/i,
+    );
+    expect(rootCommands).toMatch(
+      /drive[^]*move herd and pack[^]*protects people and wolves[^]*abandons the outer line[^]*crisis costs wound, cattle, or rig/i,
+    );
+    expect(rootCommands).toMatch(
+      /fortify[^]*seal until dawn[^]*protects byre, cattle, and wolves[^]*outer property[^]*public seals[^]*Cade's aid/i,
+    );
+    expect(`${rootDialogue.dialogue?.npc_text}\n${rootCommands}`).not.toMatch(
+      /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b|\bDC\s*\d/i,
+    );
     const compactRootDialogue = compactRpgObservation(rootDialogue, [], {
       includeActions: true,
     }).dialogue?.[1];
     expect(compactRootDialogue).toBe(rootDialogue.dialogue?.npc_text.trimEnd());
+    expect(compactRootDialogue).toMatch(
+      /hunt[^]*lure[^]*drive[^]*fortify[^]*cross uncommitted=HUNT/i,
+    );
     expect(compactRootDialogue).not.toMatch(TRUNCATION_MARKER);
     uncommitted = act(uncommitted, "ask_lure");
 

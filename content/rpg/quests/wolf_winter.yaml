@@ -3610,9 +3610,10 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            You came from Albany awake. Four ways through: HUNT, LURE, DRIVE, or FORTIFY.
-            HUNT means fighting. Ask me about the other three before deciding. Cross north
-            uncommitted and you choose HUNT-and-hold; the other plans close.
+            Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE:
+            herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line;
+            crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help.
+            Cross uncommitted=HUNT; others close.
           variants:
             - when: [{ has_flag: pack_diverted }]
               text: >
@@ -3679,7 +3680,7 @@ npcs:
           topics:
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "Ask for Cade's quick spear-hand lesson."
+              prompt: "HUNT — Hold the breach; protects cattle and relief reserves; wolves may die. Learn Cade's quick/open tactic (+2 attack; +5 final tally)."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
@@ -3688,7 +3689,7 @@ npcs:
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
-              prompt: "Ask for Cade's guarded spear-fighting plan."
+              prompt: "HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening."
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
@@ -3697,7 +3698,7 @@ npcs:
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "Ask how Cade's one-sack plan could draw the pack out alive."
+              prompt: "LURE — Draw the pack out; protects cattle and wolves; spends finite feed, leaves the paling broken, and a foul risks cattle. Inspect."
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
@@ -3706,7 +3707,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "Ask how Cade's signal drive could move the wolves and cattle together."
+              prompt: "DRIVE — Move herd and pack; protects people and wolves; abandons the outer line, then a crisis costs wound, cattle, or rig. Inspect."
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
@@ -3715,7 +3716,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "Ask how to seal the byre and outlast the living pack until dawn."
+              prompt: "FORTIFY — Seal until dawn; protects byre, cattle, and wolves; trade outer property against public seals and Cade's aid. Inspect."
               conditions:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }

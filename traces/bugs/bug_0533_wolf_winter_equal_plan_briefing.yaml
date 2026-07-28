@@ -1,0 +1,54 @@
+id: bug_0533
+title: "Cade's first plan menu made the feed lure feel complete before alternatives were comparable"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: strict ten-player starting-slice pilot
+reports:
+  - blind-tester/reports/20260728T014138Z_overworld_seed72820.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72821.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72822.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72823.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72824.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72825.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72826.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72827.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72828.md
+  - blind-tester/reports/20260728T014138Z_overworld_seed72829.md
+  - blind-tester/reports/20260728T025915Z_overworld_seed72830.md
+severity: S2
+symptom: >
+  All ten verified fresh players completed Wolf-Winter through lure-and-divert.
+  Their exact transcripts repeated ask_lure, ask_quick_lesson, ask_lure, and
+  ask_commit_lure without inspecting drive, fortify, or hunt as a strategy.
+  Upstream duty, source, preparation, allocation, route, and check results varied,
+  so this was not a forced route or one bad seed.
+root_cause: >
+  Cade named four plans, but only described HUNT as fighting and invited the player
+  to ask about the other three. The first emotionally complete living option promised
+  a saved pack and herd, while DRIVE and FORTIFY exposed their irreversible costs only
+  after separate inspection. The legal branches were mechanically available but not
+  comparable at the decision surface. A label-only first fix also failed the default
+  pure surface: compact action-bearing turns expose stable ids, so its detailed topic
+  prompts remained behind an optional legal-action read.
+fix: >
+  Put the four-way save/cost comparison in Cade's first spoken line, which every default
+  compact and full surface carries, then mirror it in every root plan prompt. HUNT names
+  its herd-and-reserve protection and wolf cost; LURE names feed, paling, and cattle risk;
+  DRIVE names people-and-wolf protection plus outer-line loss and the later
+  wound/two-cattle/rig crisis; FORTIFY names its byre-and-lives protection plus the
+  property-versus-public-support trade. Preserve every action id, commitment boundary,
+  resolver, outcome, and detailed opt-in lesson.
+deterministic_witnesses:
+  - invariant: "Cade's first compact spoken line names the protected interest and irreversible cost for HUNT, LURE, DRIVE, and FORTIFY before commitment"
+  - invariant: "the comparison contains no exact DC, maneuver sequence, or outcome guarantee"
+  - invariant: "human and MCP surfaces retain the same authored action ids and order"
+  - invariant: "crossing north uncommitted still chooses hunt-and-hold and permanently closes all living plans"
+tests:
+  - tests/regression/wolf_winter_complementary_clues.test.ts
+  - tests/regression/wolf_winter_uncommitted_living_boundary.test.ts
+  - tests/regression/wolf_winter_dialogue_surface.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_complementary_clues.test.ts tests/regression/wolf_winter_uncommitted_living_boundary.test.ts tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_compact_surface.test.ts
+  - npm run crawl:smoke
+  - npm run health

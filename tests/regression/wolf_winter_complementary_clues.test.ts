@@ -86,25 +86,38 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
           (condition) => "has_flag" in condition && condition.has_flag === "relief_oath_full_duty",
         ),
       )?.text ?? "";
+    const rootPrompt = (topicId: string) =>
+      root?.topics.find((topic) => topic.id === topicId)?.prompt ?? "";
+    const rootSurface = [
+      root?.npc_text ?? "",
+      ...(root?.topics.map((topic) => topic.prompt) ?? []),
+    ].join("\n");
 
     expect(root?.npc_text).toMatch(
-      /You came from Albany awake[^]*four ways through[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*hunt means fighting[^]*ask me about the other three before deciding[^]*cross north uncommitted[^]*hunt-and-hold[^]*other plans close/i,
+      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*cross uncommitted=HUNT[^]*others close/i,
     );
-    expect(root?.npc_text).not.toMatch(
-      /kills pack|holds herd\/byre|risk death|spares all if fed|foul risks herd|spares pack\/people|defense lost|crisis cost|property\/seals|no retreat/i,
+    expect(rootPrompt("wolves")).toMatch(
+      /hunt[^]*hold the breach[^]*protects cattle and relief reserves[^]*wolves may die[^]*quick\/open/i,
     );
-    expect(root?.npc_text).not.toMatch(/foul\s*=\s*(?:2|two) cattle/i);
+    expect(rootPrompt("lure")).toMatch(
+      /lure[^]*draw the pack out[^]*protects cattle and wolves[^]*spends finite feed[^]*paling broken[^]*foul risks cattle/i,
+    );
+    expect(rootPrompt("drive")).toMatch(
+      /drive[^]*move herd and pack[^]*protects people and wolves[^]*abandons the outer line[^]*crisis costs wound, cattle, or rig/i,
+    );
+    expect(rootPrompt("fortify")).toMatch(
+      /fortify[^]*seal until dawn[^]*protects byre, cattle, and wolves[^]*outer property[^]*public seals[^]*Cade's aid/i,
+    );
+    expect(rootPrompt("byre")).toMatch(
+      /hunt support[^]*guarded\/patient[^]*same stakes[^]*safer combat opening/i,
+    );
+    expect(rootSurface).not.toMatch(
+      /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b/i,
+    );
+    expect(rootSurface).not.toMatch(
+      /\bDC\s*\d|no wolf[^]*pull you down|guarantees? (?:victory|survival)|foul\s*=\s*(?:2|two) cattle/i,
+    );
     expect(root?.npc_text).not.toMatch(/two roads/i);
-    expect(root?.npc_text).toMatch(/lure[^]*drive[^]*fortify/i);
-    expect(root?.topics.find((topic) => topic.id === "wolves")?.prompt).toMatch(
-      /quick spear-hand/i,
-    );
-    expect(root?.topics.find((topic) => topic.id === "byre")?.prompt).toMatch(
-      /guarded spear-fighting plan/i,
-    );
-    expect(root?.topics.find((topic) => topic.id === "fortify")?.prompt).toMatch(
-      /seal the byre[^]*outlast the living pack[^]*dawn/i,
-    );
 
     expect(quick).toMatch(/Quick lines[^]*set[^]*drive[^]*wheel[^]*turn/i);
     expect(quick).toMatch(/close[^]*fast[^]*guard opens[^]*drive/i);
@@ -168,7 +181,9 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
   it("keeps root copy and legal lesson actions aligned when quick is heard first", () => {
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
-    expect(observation.dialogue?.npc_text).toMatch(/hunt[^]*lure[^]*drive[^]*fortify/i);
+    expect(observation.dialogue?.npc_text).toMatch(
+      /Albany sent you[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*cross uncommitted=HUNT/i,
+    );
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",
       "ask_byre",

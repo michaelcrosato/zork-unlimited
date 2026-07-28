@@ -1813,7 +1813,7 @@ describe("MCP pure play mode", () => {
       exits: { direction: string; to?: string }[];
       available_actions: { id: string; command?: string }[];
     };
-    type RpgCompactContext = { actions?: string[] };
+    type RpgCompactContext = { actions?: string[]; dialogue?: [string, string] };
     const areaView = (payload: Record<string, unknown>): AreaView => {
       const context = payload.context as CompactAreaContext;
       return {
@@ -2505,7 +2505,11 @@ describe("MCP pure play mode", () => {
           }),
         );
         expect(talked.ok).toBe(true);
-        const talkActions = (talked.context as RpgCompactContext).actions;
+        const talkContext = talked.context as RpgCompactContext;
+        const talkActions = talkContext.actions;
+        expect(talkContext.dialogue?.[1]).toBe(
+          "Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE: herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line; crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help. Cross uncommitted=HUNT; others close.",
+        );
         expect(talkActions).toEqual(
           expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
         );
@@ -2529,8 +2533,10 @@ describe("MCP pure play mode", () => {
         expect(
           Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
         ).toMatchObject({
-          ask_wolves: "ask: Ask for Cade's quick spear-hand lesson.",
-          ask_byre: "ask: Ask for Cade's guarded spear-fighting plan.",
+          ask_wolves:
+            "ask: HUNT — Hold the breach; protects cattle and relief reserves; wolves may die. Learn Cade's quick/open tactic (+2 attack; +5 final tally).",
+          ask_byre:
+            "ask: HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
           ask_leave: "ask: Leave Cade.",
         });
         expect(labeledMenu).toMatchObject({
