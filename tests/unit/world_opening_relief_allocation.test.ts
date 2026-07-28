@@ -148,6 +148,14 @@ describe("opening relief allocation authoring", () => {
       Reflect.deleteProperty(option, "trigger_category");
     }
     expect(parseOpeningReliefAllocation(exactLegacy)).toEqual(exactLegacy);
+    const exactLegacyPrompt = presentOpeningReliefAllocation(
+      exactLegacy,
+      buildCampaignCharacterState(),
+    );
+    expect(exactLegacyPrompt.options[0]!.summary).toMatchObject({
+      fieldTrigger: exactLegacy.options[0]!.preview,
+    });
+    expect(exactLegacyPrompt.options[0]!.summary).not.toHaveProperty("fieldTriggerScope");
 
     const partiallyCategorized = cloneOpeningReliefAllocation(scene);
     Reflect.deleteProperty(partiallyCategorized.options[0]!, "trigger_category");

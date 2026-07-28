@@ -11,6 +11,19 @@ import {
   type OpeningPreparationCheckDisclosure,
 } from "./opening_preparation.js";
 
+const CURRENT_PREPARATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = Object.freeze({
+  "Opening repair at Cade's first loose paling rail.": "Opening fortification support",
+  "One-shot lure recovery after the first feed cast fails.": "Failed-lure recovery",
+  "Herd calming after the public-rail lure recovery.": "Herd-pressure recovery",
+});
+
+function preparationFieldCategory(
+  profile: ReturnType<typeof parseOpeningPreparation>["profiles"][number],
+): string | undefined {
+  if (profile.trigger_category === undefined) return undefined;
+  return CURRENT_PREPARATION_FIELD_CATEGORIES[profile.trigger_category] ?? profile.trigger_category;
+}
+
 function preparationCheckDisclosure(
   check: OpeningPreparationCheckDisclosure | undefined,
   character: CampaignCharacterState,
@@ -42,7 +55,7 @@ export function presentOpeningPreparation(
       parsed.profiles.map((profile) => {
         const terms = openingPreparationTerms(profile, character);
         const sponsorship = terms.sponsorNote ? ` ${terms.sponsorNote}` : "";
-        const triggerCategory = profile.trigger_category;
+        const fieldCategory = preparationFieldCategory(profile);
         const cost = formatOpeningPreparationCost(terms);
         const checkDisclosure = preparationCheckDisclosure(profile.check_disclosure, character);
         return Object.freeze({
@@ -50,13 +63,13 @@ export function presentOpeningPreparation(
           label: profile.title,
           summary: Object.freeze({
             commitment: profile.summary,
-            fieldTrigger: triggerCategory ?? profile.preview,
-            ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
+            fieldTrigger: fieldCategory ?? profile.preview,
+            ...(fieldCategory ? { fieldTriggerScope: "category" as const } : {}),
             immediateCost: cost,
             tradeoff: profile.tradeoff,
           }),
-          consequence: triggerCategory
-            ? `${profile.summary} ${triggerCategory} Full field terms: ${profile.preview}${checkDisclosure} Actual cost: ${cost}.${sponsorship} ${profile.consequence}`
+          consequence: fieldCategory
+            ? `${profile.summary} ${fieldCategory} Full field terms: ${profile.preview}${checkDisclosure} Actual cost: ${cost}.${sponsorship} ${profile.consequence}`
             : `${profile.summary} ${profile.preview}${checkDisclosure} Actual cost: ${cost}.${sponsorship} ${profile.consequence}`,
         });
       }),

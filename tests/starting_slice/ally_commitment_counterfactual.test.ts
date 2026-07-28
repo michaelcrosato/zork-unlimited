@@ -164,13 +164,17 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
             expect(prompt?.message).not.toMatch(/capability:.*condition:/i);
             expect(prompt?.options.map((option) => option.id)).toEqual([ACCEPT, RELAY, SOLO]);
             expect(prompt?.options.find((option) => option.id === ACCEPT)?.summary).toMatchObject({
-              fieldTrigger: ALLY.capability,
+              fieldTrigger: "Independent cattle-pressure ally",
+              fieldTriggerScope: "category",
               immediateCost: "15 minutes",
               tradeoff: ALLY.options.find((option) => option.id === ACCEPT)?.tradeoff,
             });
             expect(
               prompt?.options.every((option) => /actual cost:/i.test(option.consequence)),
             ).toBe(true);
+            expect(prompt?.options.find((option) => option.id === ACCEPT)?.consequence).toContain(
+              ALLY.options.find((option) => option.id === ACCEPT)?.preview,
+            );
 
             const before = session.snapshot();
             session.chooseJourneyStory(optionId);

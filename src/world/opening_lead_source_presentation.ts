@@ -10,6 +10,19 @@ import {
   type OpeningLeadSource,
 } from "./opening_lead_source.js";
 
+const CURRENT_LEAD_SOURCE_FIELD_CATEGORIES: Readonly<Record<string, string>> = Object.freeze({
+  "First use: public routes and split-rail recovery.": "Public routes and rail recovery",
+  "First use: the post-yearling fodder-loft route.": "Post-yearling loft approach",
+  "First use: the ordinary-hunt split rail.": "Ordinary-hunt split rail",
+});
+
+function leadSourceFieldCategory(
+  option: ReturnType<typeof parseOpeningLeadSource>["options"][number],
+): string | undefined {
+  if (option.trigger_category === undefined) return undefined;
+  return CURRENT_LEAD_SOURCE_FIELD_CATEGORIES[option.trigger_category] ?? option.trigger_category;
+}
+
 /** Project the Albany evidence packets onto the generic journey-choice surface. */
 export function presentOpeningLeadSource(
   scene: OpeningLeadSource,
@@ -23,19 +36,21 @@ export function presentOpeningLeadSource(
     options: Object.freeze(
       parsed.options.map((option) => {
         const terms = openingLeadSourceTerms(option, character);
-        const triggerCategory = option.trigger_category;
+        const fieldCategory = leadSourceFieldCategory(option);
         const sponsorship = terms.sponsorNote ? ` ${terms.sponsorNote}` : "";
         return Object.freeze({
           id: option.id,
           label: option.title,
           summary: Object.freeze({
             commitment: option.summary,
-            fieldTrigger: triggerCategory ?? option.preview,
-            ...(triggerCategory ? { fieldTriggerScope: "category" as const } : {}),
+            fieldTrigger: fieldCategory ?? option.preview,
+            ...(fieldCategory ? { fieldTriggerScope: "category" as const } : {}),
             immediateCost: formatOpeningLeadSourceCost(terms),
             tradeoff: option.tradeoff,
           }),
-          consequence: `${option.summary} ${option.preview} Actual cost: ${formatOpeningLeadSourceCost(terms)}.${sponsorship} ${option.consequence}`,
+          consequence: fieldCategory
+            ? `${option.summary} ${fieldCategory} ${option.preview} Actual cost: ${formatOpeningLeadSourceCost(terms)}.${sponsorship} ${option.consequence}`
+            : `${option.summary} ${option.preview} Actual cost: ${formatOpeningLeadSourceCost(terms)}.${sponsorship} ${option.consequence}`,
         });
       }),
     ) as JourneyLeadSourceStoryChoiceOptions,

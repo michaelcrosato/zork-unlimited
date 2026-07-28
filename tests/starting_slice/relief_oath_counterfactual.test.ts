@@ -425,15 +425,10 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
         option.consequence,
       ]),
     );
-    expect(presentedOptions.get(FULL)?.summary?.fieldTrigger).toBe(
-      "FORTIFY benefit: first Albany public-seal Repair check is 2 DC easier.",
-    );
-    expect(presentedOptions.get(LIMITED)?.summary?.fieldTrigger).toBe(
-      "LURE benefit: final bloodless cast skips +1 alarm; Cade-terms FORTIFY fit.",
-    );
-    expect(presentedOptions.get(UNAFFILIATED)?.summary?.fieldTrigger).toBe(
-      "DRIVE benefit: first shutter signal is 2 DC easier.",
-    );
+    expect(presentedOptions.get(FULL)?.summary?.fieldTrigger).toBe("FORTIFY support");
+    expect(presentedOptions.get(LIMITED)?.summary?.fieldTrigger).toBe("LURE support");
+    expect(presentedOptions.get(UNAFFILIATED)?.summary?.fieldTrigger).toBe("DRIVE support");
+    expect(presentedOptions.get(FULL)?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|return)\b/i);
     expect(disclosedOptions.get(FULL)).toMatch(/Relief Protocol.*consolidat/i);
     expect(disclosedOptions.get(LIMITED)).toMatch(/Resident Shelter.*consolidat/i);
     expect(disclosedOptions.get(LIMITED)).toMatch(

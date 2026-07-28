@@ -34,6 +34,21 @@ import {
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
+const PREPARATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
+  "albany:prep_works_fortification": "Opening fortification support",
+  "albany:prep_drover_route": "Failed-lure recovery",
+  "albany:prep_relief_protocol": "Herd-pressure recovery",
+};
+const RELIEF_ALLOCATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
+  "albany:relief_cade_fodder": "Opening herd support",
+  "albany:relief_resident_shelter": "Return fatigue recovery",
+  "albany:relief_mobile_reserve": "Field-failure and return reserve",
+};
+const LEAD_SOURCE_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
+  "albany:source_rowan_civic_docket": "Public routes and rail recovery",
+  "albany:source_jamie_market_testimony": "Post-yearling loft approach",
+  "albany:source_hayden_frost_report": "Ordinary-hunt split rail",
+};
 
 function twoOptionPrompt(option: JourneyStoryChoiceOption): JourneyStoryChoicePrompt {
   return Object.freeze({
@@ -173,22 +188,21 @@ describe("compact journey projection", () => {
     const compact = compactJourneyStoryChoicePrompt(full);
 
     for (const profile of preparation.profiles) {
-      const triggerCategory = profile.trigger_category;
-      if (!triggerCategory) throw new Error(`Preparation ${profile.id} needs a trigger category.`);
       const option = compact.options.find((candidate) => candidate.id === profile.id);
       expect(option?.summary).toEqual({
         commitment: profile.summary,
-        fieldTrigger: triggerCategory,
+        fieldTrigger: PREPARATION_FIELD_CATEGORIES[profile.id],
         fieldTriggerScope: "category",
         immediateCost: expect.any(String),
         tradeoff: expect.any(String),
       });
+      expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|check|success|threshold)\b/i);
+      expect(option?.summary?.fieldTrigger).not.toContain(profile.preview);
       expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
       const detail = compactJourneyStoryChoiceComparison(full, profile.id).inspectedOption;
       expect(detail?.consequence).toContain(`Full field terms: ${profile.preview}`);
       expect(detail?.consequence).toContain(profile.consequence);
       expect(detail?.consequence).not.toContain(profile.summary);
-      expect(detail?.consequence).not.toContain(triggerCategory);
     }
   });
 
@@ -202,24 +216,21 @@ describe("compact journey projection", () => {
     const compact = compactJourneyStoryChoicePrompt(full);
 
     for (const allocationOption of allocation.options) {
-      const triggerCategory = allocationOption.trigger_category;
-      if (!triggerCategory) {
-        throw new Error(`Relief allocation ${allocationOption.id} needs a trigger category.`);
-      }
       const option = compact.options.find((candidate) => candidate.id === allocationOption.id);
       expect(option?.summary).toEqual({
         commitment: allocationOption.summary,
-        fieldTrigger: triggerCategory,
+        fieldTrigger: RELIEF_ALLOCATION_FIELD_CATEGORIES[allocationOption.id],
         fieldTriggerScope: "category",
         immediateCost: expect.any(String),
         tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
       });
+      expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:alarm|15-minute|Campus|Market)\b/i);
+      expect(option?.summary?.fieldTrigger).not.toContain(allocationOption.preview);
       expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
       const detail = compactJourneyStoryChoiceComparison(full, allocationOption.id).inspectedOption;
       expect(detail?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
       expect(detail?.consequence).toContain(allocationOption.consequence);
       expect(detail?.consequence).not.toContain(allocationOption.summary);
-      expect(detail?.consequence).not.toContain(triggerCategory);
     }
   });
 
@@ -251,14 +262,23 @@ describe("compact journey projection", () => {
     for (const [full, sourceOptions] of civicPrompts) {
       const compact = compactJourneyStoryChoicePrompt(full);
       for (const sourceOption of sourceOptions) {
-        const category = sourceOption.trigger_category;
-        if (!category) throw new Error(`Civic option ${sourceOption.id} needs a trigger category.`);
         const option = compact.options.find((candidate) => candidate.id === sourceOption.id);
-        expect(option?.summary).toMatchObject({
-          commitment: sourceOption.summary,
-          fieldTrigger: category,
-          fieldTriggerScope: "category",
-        });
+        expect(option?.summary?.commitment).toBe(sourceOption.summary);
+        if (full.kind === "registration") {
+          expect(option?.summary).toMatchObject({
+            fieldTrigger: sourceOption.trigger_category,
+            fieldTriggerScope: "category",
+          });
+        } else {
+          expect(option?.summary).toMatchObject({
+            fieldTrigger:
+              full.kind === "relief_oath"
+                ? expect.stringMatching(/^[A-Z-]+ support$/)
+                : LEAD_SOURCE_FIELD_CATEGORIES[sourceOption.id],
+            fieldTriggerScope: "category",
+          });
+          expect(option?.summary?.fieldTrigger).not.toContain(sourceOption.preview);
+        }
         expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
         const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
         expect(detail?.consequence).toContain(sourceOption.preview);

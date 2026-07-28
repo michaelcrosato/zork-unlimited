@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 684 -->
+<!-- historical_cycle_count: 685 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - field_timed_opening_disclosure
+
+- Evidence choice: nine consolidated reports named front-loaded Albany setup density, so exact mechanics now arrive by inspection and repeat at their field moment instead of occupying every initial comparison card.
+- Surface: current duty, source, preparation, relief, and ally cards retain commitment, immediate cost, tradeoff, and distinct short field fit; uncategorized legacy and unfamiliar future content retain their authored exact terms.
+- Counterfactual: option ids, costs, time, character state, journals, dispatch receipts, legal actions, checks, RNG, pressure, outcomes, saves, and UI/full/compact parity are unchanged.
+- Pure evidence: exact-clean final-build Terra seed 73012 completed The Wolf-Winter nonlethally through LURE at decision 30, ended at the first goal boundary, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and reported no rejection.
+- Self-critique/follow-through: the player praised the nonlethal payoff but still named Station terminology dense; treat that as an open cohort question and run the strict ten-player consolidated build rather than another copy tweak.
+- Economy: authenticated summary v8 measured 2.130M input / 101.8k uncached input and 8.0k output tokens at 95.22% cache reuse, or 3,659 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
+- Guard: two independent rereviews are clean, 180/180 touched tests and post-review crawl `20260728T232654Z` are green, and final health passes 443 files/3,682 tests, both typechecks, and all 12 packs; the later state-only amend does not change tested game code.
 
 ### Cycle result - authenticated_fleet_usage_accounting
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the canary cannot validate CI orchestration and repeated the known front-loaded Station terminology; land the reviewed canonical per-option dispatch impact next, then freeze for the strict pilot.
 - Economy: the 41-turn canary used 2.014M raw / 91.9k uncached input and 6.5k output tokens at 95.4% cache reuse; no exposure-chasing rerun was launched.
 - Guard: independent review is clean, stable patch id `30a792f4` survived the rebase, crawl `20260727T230817Z` is zero-finding, and health passes 439 files/3,610 tests, both typechecks, and all 12 packs.
-
-### Cycle result - progressive_event_disclosure
-
-- Evidence choice: verified players repeatedly found the compact overworld dense, while blocked authored events front-loaded prompts and complete option terms before any event choice was legal.
-- Surface: compact v33 and UI now show a concise event lead plus its exact next prerequisite while blocked, withholding prompt/options/consequences until canonical `event_choices` are live; clone and checkpoint boundaries preserve the distinction.
-- Counterfactual: event availability, setup requirements, choices, costs, effects, receipts, decisions, RNG, and outcomes are unchanged; only the timing and shape of read-only disclosure changes.
-- Pure evidence: exact-clean Terra seed 72760 received the charter-backlog lead, scouted and talked without investigating, and never received its blocked terms; it completed The Wolf-Winter through a failed-cast nonlethal recovery at decision 33, rated clarity/enjoyment 4/4, stayed unstuck, ended voluntarily, and chose replay-yes.
-- Self-critique/follow-through: the canary proves safe withholding rather than lead-to-live conversion; a fresh 3-report compile still finds repeated Station delay-term density, so land measured CI balancing then the focused canonical option-impact summary before the pilot.
-- Economy: the single 47-turn canary used 2.48M raw / 101k uncached input and 7.0k output tokens at 95.9% cache reuse; no exposure-chasing rerun was launched.
-- Guard: independent review is clean, stable patch id `a3f9506a` survived the rebase, crawl `20260727T220117Z` is zero-finding, and health passes 438 files/3,605 tests, both typechecks, and all 12 packs.

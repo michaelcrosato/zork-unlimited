@@ -10,9 +10,16 @@ import {
   deriveOpeningDepartureRecap,
   OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
 } from "../../src/world/opening_departure_recap.js";
+import { presentOpeningAlly } from "../../src/world/opening_ally_presentation.js";
+import { presentOpeningLeadSource } from "../../src/world/opening_lead_source_presentation.js";
+import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
+import { presentOpeningRegistration } from "../../src/world/opening_registration_presentation.js";
+import { presentOpeningReliefAllocation } from "../../src/world/opening_relief_allocation_presentation.js";
+import { presentOpeningReliefOath } from "../../src/world/opening_relief_oath_presentation.js";
 import { deriveQuestDispatchPresentationWindow } from "../../src/world/quest_dispatch_window.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -55,18 +62,23 @@ function selectedTitle(session: OverworldSession, slot: string): string | null |
   return session.view().departureRecap?.entries.find((entry) => entry.slot === slot)?.title;
 }
 
+function projectedFieldTerm(prompt: JourneyStoryChoicePrompt, optionId: string): string {
+  const summary = prompt.options.find((option) => option.id === optionId)?.summary;
+  if (!summary) throw new Error(`Expected a canonical summary for "${optionId}".`);
+  return summary.fieldTriggerScope === "category" ? summary.fieldTrigger : summary.tradeoff;
+}
+
 describe("Albany opening departure recap", () => {
   it("keeps every canonical selected term concise enough for cumulative recall", () => {
+    const character = stationSession().snapshot().character;
     const candidateTerms = [
-      ...REGISTRATION.profiles.map((profile) => profile.trigger_category ?? profile.tradeoff),
-      ...RELIEF_OATH.options.map((option) => option.trigger_category ?? option.tradeoff),
-      ...LEAD_SOURCE.options.map((option) => option.trigger_category ?? option.tradeoff),
-      ...PREPARATION.profiles.map((profile) => profile.trigger_category ?? profile.tradeoff),
-      ...RELIEF_ALLOCATION.options.map(
-        (option) => option.trigger_category ?? `Leaves exposed: ${option.leaves_exposed}`,
-      ),
-      ...ALLY.options.map((option) => option.tradeoff),
-    ];
+      presentOpeningRegistration(REGISTRATION),
+      presentOpeningReliefOath(RELIEF_OATH, character),
+      presentOpeningLeadSource(LEAD_SOURCE, character),
+      presentOpeningPreparation(PREPARATION, character),
+      presentOpeningReliefAllocation(RELIEF_ALLOCATION, character),
+      presentOpeningAlly(ALLY, character),
+    ].flatMap((prompt) => prompt.options.map((option) => projectedFieldTerm(prompt, option.id)));
 
     for (const term of candidateTerms) {
       expect(term.length).toBeGreaterThan(0);
@@ -81,6 +93,14 @@ describe("Albany opening departure recap", () => {
     const beforeDecisions = session.journey().acceptedDecisions;
     const full = session.view();
     const compact = session.compactView();
+    const dutyFieldTerm = projectedFieldTerm(
+      presentOpeningReliefOath(RELIEF_OATH, beforeSnapshot.character),
+      RELIEF_OATH.options[0]!.id,
+    );
+    const evidenceFieldTerm = projectedFieldTerm(
+      presentOpeningLeadSource(LEAD_SOURCE, beforeSnapshot.character),
+      LEAD_SOURCE.options[0]!.id,
+    );
 
     expect(full.departureRecap).toEqual({
       version: 3,
@@ -99,14 +119,14 @@ describe("Albany opening departure recap", () => {
           label: "Duty",
           status: "selected",
           title: RELIEF_OATH.options[0]!.title,
-          activeFieldTerm: RELIEF_OATH.options[0]!.trigger_category,
+          activeFieldTerm: dutyFieldTerm,
         },
         {
           slot: "evidence",
           label: "Evidence",
           status: "selected",
           title: LEAD_SOURCE.options[0]!.title,
-          activeFieldTerm: LEAD_SOURCE.options[0]!.trigger_category,
+          activeFieldTerm: evidenceFieldTerm,
         },
         {
           slot: "preparation",
@@ -269,6 +289,7 @@ describe("Albany opening departure recap", () => {
   it("updates resolved optional rows, stays paired by choice, and respects the mission boundary", () => {
     const first = stationSession(0);
     const second = stationSession(1);
+    const presentationCharacter = first.snapshot().character;
     const firstEntries = first.view().departureRecap!.entries;
     const secondEntries = second.view().departureRecap!.entries;
     expect(
@@ -287,7 +308,10 @@ describe("Albany opening departure recap", () => {
     expect(first.view().departureRecap?.entries[3]).toMatchObject({
       status: "selected",
       title: PREPARATION.profiles[0]!.title,
-      activeFieldTerm: PREPARATION.profiles[0]!.trigger_category,
+      activeFieldTerm: projectedFieldTerm(
+        presentOpeningPreparation(PREPARATION, presentationCharacter),
+        PREPARATION.profiles[0]!.id,
+      ),
     });
     expect(first.view().departureRecap?.entries[4]).toMatchObject({
       status: "open_optional",
@@ -315,7 +339,10 @@ describe("Albany opening departure recap", () => {
     expect(first.view().departureRecap?.entries[4]).toMatchObject({
       status: "selected",
       title: RELIEF_ALLOCATION.options[0]!.title,
-      activeFieldTerm: RELIEF_ALLOCATION.options[0]!.trigger_category,
+      activeFieldTerm: projectedFieldTerm(
+        presentOpeningReliefAllocation(RELIEF_ALLOCATION, presentationCharacter),
+        RELIEF_ALLOCATION.options[0]!.id,
+      ),
     });
     expect(first.view().departureRecap?.entries[5]).toEqual({
       slot: "field_team",
@@ -360,7 +387,10 @@ describe("Albany opening departure recap", () => {
     expect(first.view().departureRecap?.entries[5]).toMatchObject({
       status: "selected",
       title: ALLY.options[0]!.title,
-      activeFieldTerm: ALLY.options[0]!.tradeoff,
+      activeFieldTerm: projectedFieldTerm(
+        presentOpeningAlly(ALLY, presentationCharacter),
+        ALLY.options[0]!.id,
+      ),
     });
     for (const entry of first.view().departureRecap!.entries) {
       expect(entry.activeFieldTerm).not.toBeNull();
