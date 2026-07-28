@@ -22,7 +22,7 @@ if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const FULL = { compact_context: false, compact_result: false } as const;
 const LIVING_BOUNDARY =
-  /cross (?:north )?uncommitted[^]*hunt[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast)/i;
+  /(?:name hunt[^]*cross uncommitted|cross (?:north )?uncommitted[^]*hunt)[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast|closes[^]*other plans)/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string): GameState {
@@ -125,7 +125,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootDialogue = observation(uncommitted);
     expect(rootDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
     expect(rootDialogue.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*cross uncommitted=HUNT[^]*others close/i,
+      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*name HUNT[^]*cross uncommitted[^]*crossing north commits it[^]*closes the other plans/i,
     );
     const rootCommands = rootDialogue.available_actions.map((action) => action.command).join("\n");
     expect(rootCommands).toMatch(/hunt[^]*hold breach[^]*cattle\/reserves safe[^]*wolves may die/i);
@@ -146,7 +146,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     }).dialogue?.[1];
     expect(compactRootDialogue).toBe(rootDialogue.dialogue?.npc_text.trimEnd());
     expect(compactRootDialogue).toMatch(
-      /hunt[^]*lure[^]*drive[^]*fortify[^]*cross uncommitted=HUNT/i,
+      /hunt[^]*lure[^]*drive[^]*fortify[^]*name HUNT[^]*cross uncommitted/i,
     );
     expect(compactRootDialogue).not.toMatch(TRUNCATION_MARKER);
     uncommitted = act(uncommitted, "ask_lure");

@@ -110,7 +110,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     ].join("\n");
 
     expect(root?.npc_text).toMatch(
-      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*cross uncommitted=HUNT[^]*others close/i,
+      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*name HUNT[^]*cross uncommitted[^]*crossing north commits it[^]*closes the other plans/i,
     );
     expect(rootPrompt("wolves")).toMatch(
       /hunt[^]*hold breach[^]*cattle\/reserves safe[^]*wolves may die[^]*learn \+2 attack\/\+5 tally[^]*leave[^]*north = hunt[^]*close lure\/drive\/fortify/i,
@@ -207,11 +207,12 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*cross uncommitted=HUNT/i,
+      /Albany sent you[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*name HUNT[^]*cross uncommitted/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",
       "ask_byre",
+      "ask_commit_hunt_and_hold",
       "ask_lure",
       "ask_drive",
       "ask_fortify",
@@ -228,6 +229,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_byre",
+      "ask_commit_hunt_and_hold",
       "ask_lure",
       "ask_drive",
       "ask_fortify",
@@ -243,7 +245,13 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /Both lessons are yours[^]*do not choose a road here[^]*commit[^]*later[^]*at the wolves/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_lure", "ask_drive", "ask_fortify", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual([
+      "ask_commit_hunt_and_hold",
+      "ask_lure",
+      "ask_drive",
+      "ask_fortify",
+      "ask_leave",
+    ]);
     expect(state.journal.some((entry) => /guarded\/patient/i.test(entry))).toBe(true);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
     expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
@@ -260,6 +268,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",
+      "ask_commit_hunt_and_hold",
       "ask_lure",
       "ask_drive",
       "ask_fortify",
@@ -272,7 +281,13 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(observation.dialogue?.npc_text).toMatch(
       /Both lessons are yours[^]*commit[^]*later[^]*at the wolves/i,
     );
-    expect(dialogueActionIds(state)).toEqual(["ask_lure", "ask_drive", "ask_fortify", "ask_leave"]);
+    expect(dialogueActionIds(state)).toEqual([
+      "ask_commit_hunt_and_hold",
+      "ask_lure",
+      "ask_drive",
+      "ask_fortify",
+      "ask_leave",
+    ]);
     expect(state.flags).toMatchObject({ heard_counsel: true, heard_plan: true });
     expect(state.vars).toMatchObject({ attack: 7, defense: 3, hp: 30, score: 5 });
   });

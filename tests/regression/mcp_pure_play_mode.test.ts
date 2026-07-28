@@ -2508,7 +2508,7 @@ describe("MCP pure play mode", () => {
         const talkContext = talked.context as RpgCompactContext;
         const talkActions = talkContext.actions;
         expect(talkContext.dialogue?.[1]).toBe(
-          "Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE: herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line; crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help. Cross uncommitted=HUNT; others close.",
+          "Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE: herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line; crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help. Name HUNT here, or cross uncommitted into it; crossing north commits it and closes the other plans.",
         );
         expect(talkActions).toEqual(
           expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
@@ -2537,6 +2537,8 @@ describe("MCP pure play mode", () => {
             "ask: HUNT — Hold breach: cattle/reserves safe; wolves may die. Learn +2 attack/+5 tally. Leave; if June, acknowledge; north = HUNT; close LURE/DRIVE/FORTIFY.",
           ask_byre:
             "ask: HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
+          ask_commit_hunt_and_hold:
+            "ask: Commit HUNT when you cross north — Hold breach: cattle/reserves safe; wolves may die; LURE/DRIVE/FORTIFY then close.",
           ask_leave: "ask: Leave Cade.",
         });
         expect(labeledMenu).toMatchObject({

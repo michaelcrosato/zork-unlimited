@@ -18,7 +18,8 @@ import { replayTrace } from "../../src/trace/replay.js";
 import { GameSession } from "../../ui/src/engine.js";
 
 const SOURCE_PATH = "content/rpg/quests/wolf_winter.yaml";
-const SOURCE_HASH = "2087a622fc0e26d904759ca602f87577eea857706908879468c5a92512fe044d";
+const PREDECESSOR_SOURCE_HASH = "2087a622fc0e26d904759ca602f87577eea857706908879468c5a92512fe044d";
+const SOURCE_HASH = "d48b443b8eeda82b2e7f747bd752d70b0f6f0e77ee7b5c817dfc9d8e0ad48b3f";
 const loaded = loadRpgSourceFile(SOURCE_PATH);
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
@@ -195,12 +196,16 @@ describe("Wolf-Winter paling stage action identities", () => {
     });
   });
 
-  it("keeps structured replay and a matching-hash save valid", () => {
+  it("keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture", () => {
     const split = choose(atPaling(), "wedge_paling_rail", "worst");
     const saved = save(split, SOURCE_HASH, SAVE_MODE, { worldQuestId: "wolf_winter" });
     const restored = load(saved, SOURCE_HASH);
     expect(restored.state).toEqual(split);
     expect(ids(restored.state)).toContain("bind_paling_rail");
+    const predecessorSaved = save(split, PREDECESSOR_SOURCE_HASH, SAVE_MODE, {
+      worldQuestId: "wolf_winter",
+    });
+    expect(() => load(predecessorSaved, SOURCE_HASH)).toThrow(/content hash mismatch/i);
 
     const trace = recordTrace(
       buildRpgRules(index, () => rng("worst")),
