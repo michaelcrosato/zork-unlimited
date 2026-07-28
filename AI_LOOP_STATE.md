@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 670 -->
+<!-- historical_cycle_count: 671 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - balanced_ci_test_groups
+
+- Evidence choice: PR 194's unchanged file-count shards completed in 16m25s and 41m10s, a 2.5× wall-time imbalance that delayed every remaining green increment.
+- Surface: CI now discovers all 439 current test files at runtime and deterministically assigns each exactly once; measured-cost groups contain 224/215 files and predict 4,036,770/4,034,691ms, only 0.05% apart.
+- Counterfactual: tests, workers, timeouts, integrity, type/lint/format, UI/pack validation, crawl, and the required `verify` gate are unchanged; stale weights can reduce balance but never omit a new file.
+- Pure evidence: exact-clean Terra seed 72761 completed The Wolf-Winter with a clean nonviolent lure at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, ended voluntarily, and chose replay-yes.
+- Self-critique/follow-through: the canary cannot validate CI orchestration and repeated the known front-loaded Station terminology; land the reviewed canonical per-option dispatch impact next, then freeze for the strict pilot.
+- Economy: the 41-turn canary used 2.014M raw / 91.9k uncached input and 6.5k output tokens at 95.4% cache reuse; no exposure-chasing rerun was launched.
+- Guard: independent review is clean, stable patch id `30a792f4` survived the rebase, crawl `20260727T230817Z` is zero-finding, and health passes 439 files/3,610 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - progressive_event_disclosure
 
@@ -155,13 +165,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 72745 completed The Wolf-Winter bloodlessly in 31 decisions, ended voluntarily, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes; it did not sample Gallowmere, so deterministic MCP replay carries the boundary claim.
 - Self-critique/follow-through: the canary repeated dense first-pass Byre-Yard tactical vocabulary; progressive disclosure there is the next evidence-backed presentation candidate, not another checkpoint change.
 - Guard: independent review is clean; post-crawl `20260727T023807Z` is zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
-
-### Cycle result - albany_departure_plan_recap
-
-- Evidence choice: verified Terra seed 72743 still requested a concise accumulated dispatch recap after the comparison-first response delta.
-- Surface: Hayden's Station now shows one authenticated six-row plan—role, duty, evidence, preparation, relief allocation, and field team—across full/compact MCP, CLI, and UI without exposing unchosen terms or adding an action.
-- Counterfactual: read-only inspection preserves time, decisions, receipts, hashes, legality, and snapshots; paired role choices change only the role row, optional choices fill only their row, and the recap retires away from Station or after launch.
-- Compatibility: exact Civic-preparation and legacy-registration restores retain authenticated source-era selections; malformed or contradictory evidence fails closed.
-- Pure evidence: exact-clean Terra seed 72744 completed The Wolf-Winter bloodlessly, continued to Gallowmere, ended voluntarily at decision 40, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: dense conditional setup remains noticeable, while the player independently repeated the Gallowmere checkpoint-after-launch pacing flaw; that boundary is the next focused candidate.
-- Guard: independent review found and closed Civic migration provenance; post-crawl `20260727T003546Z` is zero-finding and health passes 435 files/3,577 tests, both typechecks, and all 12 packs.

@@ -59,12 +59,12 @@ jobs:
         run: npm run ui:build
 
   test-shards:
-    name: Tests (${{ matrix.shard }})
+    name: Tests (${{ matrix.group }}/2)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: ["1/2", "2/2"]
+        group: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -77,10 +77,14 @@ jobs:
       - name: Install UI deps
         run: npm --prefix ui ci
       - name: Tests (unit + property + determinism)
-        # Keep hosted failures attributable: the dot reporter can end with only
-        # an exit code when a worker dies late in this hour-long suite. Vitest
-        # accepts this exact `--shard=<index>/<count>` form.
-        run: npm exec -- vitest run --reporter=verbose --shard=${{ matrix.shard }}
+        # Discover every current test file, then place it in exactly one of two
+        # deterministic groups. The allocator weights observed costly census
+        # proofs and gives future files a nonzero baseline, avoiding Vitest's
+        # opaque raw file-count split without freezing a hand-maintained list.
+        run: |
+          mapfile -t test_files < <(npm exec -- tsx scripts/ci-test-groups.ts --count 2 --group ${{ matrix.group }})
+          test "${#test_files[@]}" -gt 0
+          npm exec -- vitest run --reporter=verbose "${test_files[@]}"
 
   # Branch protection requires this exact check name. It runs even when a prerequisite
   # fails, then fails explicitly instead of being skipped or succeeding accidentally.

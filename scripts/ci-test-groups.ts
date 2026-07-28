@@ -1,0 +1,162 @@
+import { readdirSync } from "node:fs";
+import { resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/**
+ * File-level body-time samples from successful GitHub Actions run 30295854622
+ * (2026-07-27). The raw Vitest shard split put most of these census proofs in
+ * one job. Keep only the material outliers here; ordinary and future files use
+ * the measured residual-file baseline below and are still discovered at run
+ * time.
+ */
+export const MEASURED_TEST_COST_MS: Readonly<Record<string, number>> = {
+  "tests/regression/rpg_metamorphic_observation_stream.test.ts": 1_592_521,
+  "tests/regression/rpg_action_id_unique.test.ts": 794_613,
+  "tests/regression/rpg_variant_liveness.test.ts": 704_596,
+  "tests/regression/rpg_score_economy_sound.test.ts": 684_074,
+  "tests/regression/rpg_metamorphic_relabel.test.ts": 643_454,
+  "tests/regression/rpg_all_endings_reachable.test.ts": 315_297,
+  "tests/regression/no_dead_pocket.test.ts": 303_808,
+  "tests/regression/overworld_cli.test.ts": 285_798,
+  "tests/regression/nondeath_endings_render_cleanly.test.ts": 272_925,
+  "tests/regression/death_endings_render_cleanly.test.ts": 270_542,
+  "tests/regression/mcp_pure_play_mode.test.ts": 167_316,
+  "tests/acceptance/fleet_mock_pipeline.test.ts": 100_156,
+  "tests/unit/crawl_quest_crawler.test.ts": 88_648,
+  "tests/starting_slice/campus_archive_query_counterfactual.test.ts": 86_923,
+  "tests/regression/crawl_workers_determinism.test.ts": 84_749,
+  "tests/unit/rpg_generator.test.ts": 77_171,
+  "tests/unit/crawl_overworld.test.ts": 70_351,
+  "tests/regression/trace_cli_integrity.test.ts": 66_290,
+  "tests/regression/rpg_generator_guaranteed_gauntlet.test.ts": 50_338,
+  "tests/starting_slice/ally_commitment_counterfactual.test.ts": 49_844,
+  "tests/acceptance/crawler_fault_injection.test.ts": 41_269,
+  "tests/regression/overworld_snapshot_integrity.test.ts": 37_362,
+  "tests/starting_slice/cade_return_packet_counterfactual.test.ts": 35_416,
+};
+
+// The same run's unlisted files averaged about 3s of test body time. This is
+// deliberately nonzero so newly added files participate in balancing instead
+// of being appended to an arbitrary shard.
+export const DEFAULT_TEST_COST_MS = 3_000;
+
+export interface TestGroup {
+  estimatedMs: number;
+  files: string[];
+}
+
+function normalizePath(path: string): string {
+  return path.split(sep).join("/");
+}
+
+export function discoverTestFiles(root = process.cwd()): string[] {
+  const testsRoot = resolve(root, "tests");
+  const files: string[] = [];
+
+  const visit = (directory: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolute = resolve(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(absolute);
+      } else if (entry.isFile() && entry.name.endsWith(".test.ts")) {
+        files.push(normalizePath(absolute.slice(resolve(root).length + 1)));
+      }
+    }
+  };
+
+  visit(testsRoot);
+  return files.sort((left, right) => left.localeCompare(right));
+}
+
+export function testCostMs(file: string): number {
+  return MEASURED_TEST_COST_MS[file] ?? DEFAULT_TEST_COST_MS;
+}
+
+/**
+ * Longest-processing-time scheduling: deterministic, low-overhead, and it
+ * places every discovered file in exactly one group. File-name tie breaks make
+ * both the estimate and the command line stable across CI runners.
+ */
+export function assignTestGroups(files: readonly string[], groupCount: number): TestGroup[] {
+  if (!Number.isInteger(groupCount) || groupCount < 1) {
+    throw new Error(`Group count must be a positive integer, received ${groupCount}.`);
+  }
+  if (new Set(files).size !== files.length) {
+    throw new Error("Test discovery produced duplicate file paths.");
+  }
+
+  const groups = Array.from(
+    { length: groupCount },
+    (): TestGroup => ({
+      estimatedMs: 0,
+      files: [],
+    }),
+  );
+  const firstGroup = groups[0];
+  if (firstGroup === undefined) {
+    throw new Error("Test group allocation requires at least one group.");
+  }
+  const ordered = [...files].sort((left, right) => {
+    const costDifference = testCostMs(right) - testCostMs(left);
+    return costDifference !== 0 ? costDifference : left.localeCompare(right);
+  });
+
+  for (const file of ordered) {
+    let target = firstGroup;
+    for (const candidate of groups.slice(1)) {
+      if (
+        candidate.estimatedMs < target.estimatedMs ||
+        (candidate.estimatedMs === target.estimatedMs &&
+          candidate.files.length < target.files.length)
+      ) {
+        target = candidate;
+      }
+    }
+    target.files.push(file);
+    target.estimatedMs += testCostMs(file);
+  }
+
+  for (const group of groups) {
+    group.files.sort((left, right) => left.localeCompare(right));
+  }
+  return groups;
+}
+
+export function parseGroupArguments(args: readonly string[]): { count: number; group: number } {
+  let count: number | undefined;
+  let group: number | undefined;
+  for (let index = 0; index < args.length; index += 2) {
+    const flag = args[index];
+    const value = args[index + 1];
+    if ((flag !== "--count" && flag !== "--group") || value === undefined) {
+      throw new Error("Usage: tsx scripts/ci-test-groups.ts --count <n> --group <n>");
+    }
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed)) {
+      throw new Error(`Expected an integer after ${flag}, received ${value}.`);
+    }
+    if (flag === "--count") count = parsed;
+    if (flag === "--group") group = parsed;
+  }
+  if (count === undefined || group === undefined || count < 1 || group < 1 || group > count) {
+    throw new Error("Usage: tsx scripts/ci-test-groups.ts --count <n> --group <1..count>");
+  }
+  return { count, group };
+}
+
+function main(): void {
+  const { count, group } = parseGroupArguments(process.argv.slice(2));
+  const groups = assignTestGroups(discoverTestFiles(), count);
+  const selected = groups[group - 1];
+  if (selected === undefined || selected.files.length === 0) {
+    throw new Error(`Test group ${group}/${count} has no files.`);
+  }
+  console.error(
+    `CI test group ${group}/${count}: ${selected.files.length} files, estimated ${selected.estimatedMs}ms.`,
+  );
+  process.stdout.write(`${selected.files.join("\n")}\n`);
+}
+
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  main();
+}
