@@ -3613,7 +3613,8 @@ npcs:
             Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE:
             herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line;
             crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help.
-            Cross uncommitted=HUNT; others close.
+            Name HUNT here, or cross uncommitted into it; crossing north commits it and closes
+            the other plans.
           variants:
             - when: [{ has_flag: pack_diverted }]
               text: >
@@ -3696,6 +3697,15 @@ npcs:
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
               goto: cade_byre
+            - id: commit_hunt_and_hold
+              aliases: [choose_hunt_and_hold, commit_hunt]
+              prompt: "Commit HUNT when you cross north — Hold breach: cattle/reserves safe; wolves may die; LURE/DRIVE/FORTIFY then close."
+              conditions:
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              end: true
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
               prompt: "LURE — Draw the pack out; protects cattle and wolves; spends finite feed, leaves the paling broken, and a foul risks cattle. Inspect."
@@ -4140,11 +4150,12 @@ npcs:
           npc_text: >
             Rail now: spear funnel, not a living turn. If a committed first feed cast fouls,
             a brace can pen the yearling alive. Commit feed, drive, or seals before crossing.
-            Cross without one means hunt-and-hold; first wolf down ends our agreement.
+            Name HUNT here to hold the breach, or choose a living plan; crossing north commits
+            it, and first wolf down ends our agreement.
           topics:
-            - id: acknowledge_combat_line
-              aliases: [accept_wolf_line, choose_hunt_and_hold]
-              prompt: "Acknowledge that crossing north uncommitted chooses hunt-and-hold and first wolf death ends June's agreement."
+            - id: commit_hunt_and_hold
+              aliases: [accept_wolf_line, choose_hunt_and_hold, acknowledge_combat_line]
+              prompt: "Commit HUNT when you cross north — Hold breach; LURE/DRIVE/FORTIFY then close; first wolf death ends June's agreement."
               goto: june_combat_line_disclosed
             - id: keep_cattle_terms
               aliases: [choose_living_plan, ask_cade]

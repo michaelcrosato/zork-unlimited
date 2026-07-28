@@ -320,7 +320,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
 
     withJune = act(withJune, "talk_june_pike_combat_boundary");
     expect(actionIds(withJune)).toEqual(
-      expect.arrayContaining(["ask_acknowledge_combat_line", "ask_keep_cattle_terms"]),
+      expect.arrayContaining(["ask_commit_hunt_and_hold", "ask_keep_cattle_terms"]),
     );
 
     const keepTermsAction = enumerateRpgActions(index, withJune).find(
@@ -378,7 +378,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(askingCade.flags.strategy_drive_committed).not.toBe(true);
     expect(askingCade.flags.strategy_fortify_committed).not.toBe(true);
 
-    let acknowledged = act(withJune, "ask_acknowledge_combat_line");
+    let acknowledged = act(withJune, "ask_commit_hunt_and_hold");
     expect(acknowledged.flags.june_combat_line_acknowledged).toBe(true);
     expect(acknowledged.flags.june_blood_condition_broken).not.toBe(true);
     expect(acknowledged.journal.at(-1)).toMatch(
