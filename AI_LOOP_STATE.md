@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 676 -->
+<!-- historical_cycle_count: 677 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - active_station_departure_recap
+
+- Evidence choice: repeated verified players understood individual Station cards but still carried selected role, duty, evidence, preparation, allocation, and ally terms in working memory while comparing the next choice.
+- Surface: the authenticated selected-plan recap now remains beside preparation, relief-allocation, and field-team choices across full/compact MCP, terminal, and UI; terminal repeats only the bounded recap, and the dialog keeps h1→h2→h3 order.
+- Counterfactual: recap derivation remains selected-only, read-only, proof-bound, and absent away from its Station boundary; choices, option terms, actions, state/hash, dispatch authority, launch legality, mechanics, RNG, and outcomes are unchanged.
+- Pure evidence: exact-clean Terra seed 72881 received the recap at all three stages, correctly retained Emery's route, Cade fodder, and June's authority, completed The Wolf-Winter nonlethally at decision 30, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
+- Self-critique/follow-through: accurate recall did not close the Station-density S1, so do not rerun this unchanged layer; land the truthful HUNT commitment prompt, then let one strict no-resume cohort decide whether recall earns its payload.
+- Economy: the one 41-turn canary used 2.153M raw / 101.9k uncached input and 7.7k output tokens at 95.2% cache reuse; no replacement or cohort was launched.
+- Guard: independent proof and UX reviews are clean after the heading-order correction, crawl `20260728T090154Z` is zero-finding, and health passes 440 files/3,620 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - truthful_wolf_gallowmere_continue
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the canary validated the pending card but still could not forecast cumulative delay before choosing preparation; retain that upstream finding while selected-term recall is the already-evidenced next density fix.
 - Economy: one canary used 2.02M raw / 116k uncached input and 7k output tokens; no replacement run, fleet, or sub-threshold feedback compile was launched.
 - Guard: independent review is clean; pre/post crawls `20260727T124134Z` / `20260727T125505Z` are zero-finding and health passes 435 files/3,588 tests, both typechecks, and all 12 packs.
-
-### Cycle result - relief_protocol_braced_divergence_reminder
-
-- Evidence choice: exact-clean seed 72750 lost Jamie's narrow Relief Protocol trigger after choosing the mutually exclusive braced-rail recovery.
-- Surface: a Relief-prepared braced recovery at the Broken Paling now says the protocol required the failed wedge and spent split-rail guard, leaves its docket sealed, and retains the route to the second cast.
-- Counterfactual: flags, actions, alarms, costs, recoveries, routes, and endings are unchanged; full/compact parity, the exact combined-import liveness witness, split-guard control, and non-Relief negative are locked.
-- Pure evidence: exact-clean Terra seed 72751 chose Drover rather than Relief, diverted all wolves alive with the herd whole, completed Wolf-Winter at decision 30, continued, then died in Gallowmere at 48; clarity/enjoyment 4/4, unstuck, replay-yes.
-- Self-critique/follow-through: the canary did not exercise the reminder, so deterministic proofs carry it; the trace exposed a real 65m delayed → pending-June unverified → 80m delayed card flip, which is the next starting-slice fix.
-- Economy: one canary used 4.61M raw / 157k uncached input and 9.8k output tokens; no coverage replacement or sub-threshold feedback compile was launched.
-- Guard: independent review is clean; pre/final crawls `20260727T112123Z` / `20260727T115517Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
