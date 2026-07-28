@@ -2534,7 +2534,7 @@ describe("MCP pure play mode", () => {
           Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
         ).toMatchObject({
           ask_wolves:
-            "ask: HUNT — Hold the breach; protects cattle and relief reserves; wolves may die. Learn Cade's quick/open tactic (+2 attack; +5 final tally).",
+            "ask: HUNT — Hold breach: cattle/reserves safe; wolves may die. Learn +2 attack/+5 tally. Leave; if June, acknowledge; north = HUNT; close LURE/DRIVE/FORTIFY.",
           ask_byre:
             "ask: HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
           ask_leave: "ask: Leave Cade.",

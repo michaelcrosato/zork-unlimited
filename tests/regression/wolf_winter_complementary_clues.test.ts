@@ -97,7 +97,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*cross uncommitted=HUNT[^]*others close/i,
     );
     expect(rootPrompt("wolves")).toMatch(
-      /hunt[^]*hold the breach[^]*protects cattle and relief reserves[^]*wolves may die[^]*quick\/open/i,
+      /hunt[^]*hold breach[^]*cattle\/reserves safe[^]*wolves may die[^]*learn \+2 attack\/\+5 tally[^]*leave[^]*north = hunt[^]*close lure\/drive\/fortify/i,
     );
     expect(rootPrompt("lure")).toMatch(
       /lure[^]*draw the pack out[^]*protects cattle and wolves[^]*spends finite feed[^]*paling broken[^]*foul risks cattle/i,

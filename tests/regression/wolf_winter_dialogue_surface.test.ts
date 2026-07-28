@@ -186,6 +186,72 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(ids).not.toContain("ask_wolves_back");
   });
 
+  it("makes the quick lesson's existing +2 gain and two-step HUNT commitment explicit", () => {
+    let state = startCadeDialogue();
+    const root = buildRpgObservation(index, state);
+    expect(root.available_actions.find((action) => action.id === "ask_wolves")?.command).toBe(
+      "ask: HUNT — Hold breach: cattle/reserves safe; wolves may die. Learn +2 attack/+5 tally. Leave; if June, acknowledge; north = HUNT; close LURE/DRIVE/FORTIFY.",
+    );
+
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
+    expect(state.vars).toMatchObject({ attack: 7, score: 5 });
+    expect(
+      buildRpgObservation(index, state).available_actions.find(
+        (action) => action.id === "ask_leave",
+      )?.command,
+    ).toBe("ask: Leave Cade.");
+
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "leave" });
+    state = act(state, { type: "MOVE", direction: "north" });
+    expect(state.current).toBe("paling_gap");
+    expect(legalActionIds(state)).not.toEqual(
+      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
+    );
+  });
+
+  it("keeps June's acknowledgement between leaving Cade and committing HUNT at the north gate", () => {
+    let state = initStateForRpgPack(index, 542);
+    state.flags.june_pike_present = true;
+    state = act(state, { type: "MOVE", direction: "north" });
+    state = act(state, { type: "TALK", npc: "houndsman" });
+    expect(legalActionIds(state)).toEqual(
+      expect.arrayContaining(["ask_wolves", "ask_lure", "ask_drive", "ask_fortify"]),
+    );
+
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "leave" });
+    expect(legalActionIds(state)).not.toContain("go_north");
+    expect(legalActionIds(state)).toContain("talk_june_pike_combat_boundary");
+    expect(buildRpgObservation(index, state).blocked_exits).toContainEqual({
+      direction: "north",
+      message: expect.stringMatching(/acknowledge a hunt-and-hold warning/i),
+    });
+
+    state = act(state, { type: "TALK", npc: "june_pike_combat_boundary" });
+    state = act(state, {
+      type: "ASK",
+      npc: "june_pike_combat_boundary",
+      topic: "acknowledge_combat_line",
+    });
+    expect(state.flags.june_combat_line_acknowledged).toBe(true);
+    expect(state.flags.strategy_lure_committed).not.toBe(true);
+    expect(state.flags.strategy_drive_committed).not.toBe(true);
+    expect(state.flags.strategy_fortify_committed).not.toBe(true);
+    expect(legalActionIds(state)).toContain("go_north");
+
+    state = act(state, { type: "TALK", npc: "houndsman" });
+    expect(legalActionIds(state)).toEqual(
+      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
+    );
+    state = act(state, { type: "ASK", npc: "houndsman", topic: "leave" });
+    state = act(state, { type: "MOVE", direction: "north" });
+    state = act(state, { type: "MOVE", direction: "south" });
+    state = act(state, { type: "TALK", npc: "houndsman" });
+    expect(legalActionIds(state)).not.toEqual(
+      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
+    );
+  });
+
   it("keeps Cade's existing quick lesson beside the lure commitment until its +5 credit is decided", () => {
     const root = startCadeDialogue();
     const rootQuick = buildRpgObservation(index, root).available_actions.find(

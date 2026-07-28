@@ -3680,7 +3680,7 @@ npcs:
           topics:
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "HUNT — Hold the breach; protects cattle and relief reserves; wolves may die. Learn Cade's quick/open tactic (+2 attack; +5 final tally)."
+              prompt: "HUNT — Hold breach: cattle/reserves safe; wolves may die. Learn +2 attack/+5 tally. Leave; if June, acknowledge; north = HUNT; close LURE/DRIVE/FORTIFY."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
