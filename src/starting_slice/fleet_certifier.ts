@@ -41,6 +41,14 @@ import {
 import { WOLF_WINTER_CAMPAIGN_OUTCOMES } from "../world/journey_campaign.js";
 import { INITIAL_JOURNEY_GOAL } from "../world/journey_contract.js";
 import { loadOverworldManifest } from "../world/source.js";
+// @ts-expect-error -- hardened runner accounting module is intentionally plain ESM.
+import * as fleetUsage from "../../blind-tester/fleet-usage.mjs";
+const {
+  skippedResumeUsageRecord,
+  summarizeFleetUsage,
+  usageRecordFromFailedAttempt,
+  usageRecordFromVerifiedPrimaryEnvelope,
+} = fleetUsage;
 
 export const STARTING_SLICE_CERTIFICATION_SCHEMA_VERSION = 2 as const;
 export const STARTING_SLICE_AUTHORITY_COUNT = 100 as const;
@@ -426,6 +434,94 @@ const CodexClientAuthoritySchema = z
     }
   });
 
+/** V8 summaries deliberately retain only a non-sensitive client fingerprint. */
+const CodexClientSummarySchema = z
+  .object({
+    schema_version: z.literal(2),
+    launcher_kind: z.enum(["direct", "official_npm_shim"]),
+    authority_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    cli_version: z
+      .string()
+      .regex(
+        /^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/,
+      ),
+  })
+  .strict();
+
+const CODEX_CLIENT_AUTHORITY_PROOF_NAME = "codex-client-authority.private.json";
+
+function codexClientSummaryProjection(
+  client: z.infer<typeof CodexClientAuthoritySchema>,
+): z.infer<typeof CodexClientSummarySchema> {
+  return {
+    schema_version: client.schema_version,
+    launcher_kind: client.launcher_kind,
+    authority_sha256: client.authority_sha256,
+    cli_version: client.cli_version,
+  };
+}
+
+const CodexClientAuthorityProofSchema = z
+  .object({
+    name: z.literal(CODEX_CLIENT_AUTHORITY_PROOF_NAME),
+    bytes: z.number().int().positive().safe(),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  })
+  .strict();
+
+const FleetUsageRecordSchema = z
+  .object({
+    source: z.enum([
+      "primary_envelope",
+      "terminal_turn_completed",
+      "unrecoverable",
+      "skipped_resume",
+    ]),
+    input_tokens: z.number().int().safe().nonnegative().nullable(),
+    cached_input_tokens: z.number().int().safe().nonnegative().nullable(),
+    output_tokens: z.number().int().safe().nonnegative().nullable(),
+    reasoning_output_tokens: z.number().int().safe().nonnegative().nullable(),
+  })
+  .strict()
+  .superRefine((usage, context) => {
+    const values = [
+      usage.input_tokens,
+      usage.cached_input_tokens,
+      usage.output_tokens,
+      usage.reasoning_output_tokens,
+    ];
+    if (usage.source === "unrecoverable") {
+      if (!values.every((value) => value === null))
+        context.addIssue({ code: "custom", message: "unrecoverable usage must use null counts" });
+      return;
+    }
+    if (!values.every((value) => value !== null)) {
+      context.addIssue({ code: "custom", message: "observed usage must use integer counts" });
+      return;
+    }
+    if (usage.cached_input_tokens! > usage.input_tokens!)
+      context.addIssue({ code: "custom", message: "cached input cannot exceed input" });
+    if (usage.source === "skipped_resume" && !values.every((value) => value === 0))
+      context.addIssue({ code: "custom", message: "skipped-resume usage must be zero" });
+  });
+
+const FleetUsageSummarySchema = z
+  .object({
+    attempt_count: z.number().int().nonnegative().safe(),
+    launched_attempt_count: z.number().int().nonnegative().safe(),
+    measured_attempt_count: z.number().int().nonnegative().safe(),
+    skipped_resume_count: z.number().int().nonnegative().safe(),
+    unrecoverable_attempt_count: z.number().int().nonnegative().safe(),
+    complete: z.boolean(),
+    observed_input_tokens: z.number().int().nonnegative().safe(),
+    observed_cached_input_tokens: z.number().int().nonnegative().safe(),
+    observed_uncached_input_tokens: z.number().int().nonnegative().safe(),
+    observed_output_tokens: z.number().int().nonnegative().safe(),
+    observed_reasoning_output_tokens: z.number().int().nonnegative().safe(),
+    useful_tokens: z.number().int().nonnegative().safe(),
+  })
+  .strict();
+
 const FleetSummarySchema = z
   .object({
     label: z.string().refine(isSafeFleetLabel, "unsafe or reserved fleet label"),
@@ -520,6 +616,78 @@ const FleetSummarySchema = z
     }
   });
 
+/** Current live cohorts use v8: usage is audited and the client is redacted. */
+const FleetSummaryV8Schema = z
+  .object({
+    schema_version: z.literal(8),
+    label: z.string().refine(isSafeFleetLabel, "unsafe or reserved fleet label"),
+    stamp: z.string().regex(/^\d{8}T\d{6}Z$/),
+    count: z.number().int().positive(),
+    concurrency: z.number().int().positive(),
+    reportsDir: z.string().min(1),
+    report_schema_version: z.literal(2),
+    play_mode: z.literal("pure"),
+    start_surface: z.literal("fresh_overworld"),
+    retention_contract_eligible: z.literal(true),
+    retention_eligible_verified_runs: z.number().int().nonnegative(),
+    retention_ineligible_or_unverified_runs: z.number().int().nonnegative(),
+    session_contract_version: z.literal(3),
+    baseline_decisions: z.literal(40),
+    verified: z.number().int().nonnegative(),
+    "skipped-resume": z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    total_attempts: z.number().int().nonnegative(),
+    failed_attempts: z.number().int().nonnegative(),
+    technical_timeouts: z.number().int().nonnegative(),
+    report_recovered_runs: z.number().int().nonnegative(),
+    receipt_bound_runs: z.number().int().nonnegative().optional(),
+    seed_base: z.number().int().safe(),
+    provider: z.enum(["claude", "codex"]).optional(),
+    model: z.enum([
+      "sonnet",
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-5.3-codex-spark",
+    ]),
+    personas: z.literal("default"),
+    target: z.literal("overworld"),
+    resume_enabled: z.boolean(),
+    evidence_schema_version: z.literal(2),
+    model_attestation_schema_version: z.union([
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+      z.literal(5),
+      z.literal(6),
+      z.literal(7),
+    ]),
+    build: PureRunBuildSchema,
+    codex_client: CodexClientSummarySchema.optional(),
+    codex_client_proof: CodexClientAuthorityProofSchema,
+    usage: FleetUsageSummarySchema,
+  })
+  .strict()
+  .superRefine((summary, context) => {
+    const provider = summary.provider ?? "claude";
+    if (
+      provider !== "codex" ||
+      summary.model_attestation_schema_version !== PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["model_attestation_schema_version"],
+        message: "v8 live certification requires current Codex attestation v7",
+      });
+    }
+    if (summary.codex_client === undefined)
+      context.addIssue({
+        code: "custom",
+        path: ["codex_client"],
+        message: "v8 requires one safe Codex client projection",
+      });
+  });
+
 const FleetAttemptArtifactSchema = z
   .object({
     name: z
@@ -538,6 +706,13 @@ const FleetAttemptArchiveSchema = z
   .object({
     directory: z.string().min(1),
     artifacts: z.array(FleetAttemptArtifactSchema).min(1),
+    usage_artifacts: z
+      .object({
+        primary_envelope: z.string().min(1).nullable(),
+        provider_events: z.string().min(1).nullable(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -555,6 +730,7 @@ const FleetAttemptSchema = z
     report_recovered: z.boolean(),
     report_receipt_bound: z.boolean().optional(),
     archive: FleetAttemptArchiveSchema.nullable(),
+    usage: FleetUsageRecordSchema.optional(),
   })
   .strict();
 
@@ -577,6 +753,7 @@ const FleetManifestRowSchema = z
     status: z.enum(["verified", "skipped-resume"]),
     attempts: z.number().int().nonnegative(),
     attempt_history: z.array(FleetAttemptSchema),
+    resume_usage: FleetUsageRecordSchema.nullable().optional(),
     report_recovered: z.boolean(),
     report_receipt_bound: z.boolean().optional(),
     exit: z.literal(0),
@@ -606,9 +783,40 @@ const FleetManifestRowSchema = z
   })
   .strict();
 
-type FleetSummary = z.infer<typeof FleetSummarySchema>;
+/** V8 preserves failed slots instead of treating their absence as evidence. */
+const FleetManifestRowV8Schema = FleetManifestRowSchema.extend({
+  status: z.enum(["verified", "skipped-resume", "failed"]),
+  resume_usage: FleetUsageRecordSchema.nullable(),
+  exit: z.number().int().nonnegative().safe(),
+  log: z.string().nullable(),
+  model_attestation: PureFleetAttestationSchema.nullable(),
+  evidence_schema_version: z.literal(2).nullable(),
+  run_seed: z.number().int().safe().nullable(),
+  build: PureRunBuildSchema.nullable(),
+  quest_outcomes: CanonicalQuestOutcomesSchema.nullable(),
+  report_schema_version: z.literal(2).nullable(),
+  retention_eligible: z.boolean(),
+  evidence_status: z.string(),
+  session_contract_version: z.literal(3).nullable(),
+  baseline_decisions: z.literal(40).nullable(),
+  accepted_decisions: z.number().int().nonnegative().nullable(),
+  checkpoint: z.number().int().nonnegative().nullable(),
+  exit_reason: z.literal("player_ended_at_choice").nullable(),
+  exit_reasons: z.array(z.enum(["checkpoint", "goal_completed", "character_died"])),
+  receipt_hash: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .nullable(),
+  failure_reason: z.string().nullable(),
+});
+
+type FleetSummary = z.infer<typeof FleetSummarySchema> | z.infer<typeof FleetSummaryV8Schema>;
 type FleetManifestRow = z.infer<typeof FleetManifestRowSchema>;
 type FleetAttempt = z.infer<typeof FleetAttemptSchema>;
+
+function isFleetSummaryV8(summary: FleetSummary): summary is z.infer<typeof FleetSummaryV8Schema> {
+  return "schema_version" in summary && summary.schema_version === 8;
+}
 
 const STRATEGIES: readonly WolfStrategy[] = [
   "hunt_and_hold",
@@ -721,18 +929,18 @@ function validateAttemptArchive(
   tracker: CertifiedArtifactTracker,
   errors: string[],
   referencedDirectories: Set<string>,
-): void {
-  if (attempt.archive === null) return;
+): Map<string, Buffer> | null {
+  if (attempt.archive === null) return null;
   const expectedDirectory = `attempts/seed_${seed}/attempt_${attempt.attempt}`;
   if (attempt.archive.directory !== expectedDirectory) {
     errors.push(
       `seed ${seed} attempt ${attempt.attempt}: archive directory ${JSON.stringify(attempt.archive.directory)} != ${JSON.stringify(expectedDirectory)}`,
     );
-    return;
+    return null;
   }
   if (referencedDirectories.has(expectedDirectory)) {
     errors.push(`seed ${seed} attempt ${attempt.attempt}: duplicate archive directory`);
-    return;
+    return null;
   }
   referencedDirectories.add(expectedDirectory);
 
@@ -750,7 +958,7 @@ function validateAttemptArchive(
     errors.push(
       `seed ${seed} attempt ${attempt.attempt}: archive unsafe or unreadable: ${error instanceof Error ? error.message : String(error)}`,
     );
-    return;
+    return null;
   }
 
   const indexedNames = attempt.archive.artifacts.map((artifact) => artifact.name);
@@ -770,13 +978,14 @@ function validateAttemptArchive(
     errors.push(
       `seed ${seed} attempt ${attempt.attempt}: archive entries unreadable: ${error instanceof Error ? error.message : String(error)}`,
     );
-    return;
+    return null;
   }
   if (!isDeepStrictEqual(physicalNames, canonicalNames)) {
     errors.push(
       `seed ${seed} attempt ${attempt.attempt}: archived files differ from manifest index`,
     );
   }
+  const bytesByName = new Map<string, Buffer>();
   for (const artifact of attempt.archive.artifacts) {
     try {
       const artifactPath = requireContainedRegularFile(
@@ -796,12 +1005,14 @@ function validateAttemptArchive(
           `seed ${seed} attempt ${attempt.attempt}: artifact ${artifact.name} digest differs`,
         );
       }
+      bytesByName.set(artifact.name, bytes);
     } catch (error) {
       errors.push(
         `seed ${seed} attempt ${attempt.attempt}: artifact ${artifact.name} unsafe or unreadable: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
+  return bytesByName;
 }
 
 function discoverAttemptArchiveDirectories(fleetDir: string, fleetRootReal: string): string[] {
@@ -1335,7 +1546,14 @@ function validateAuthenticatedStartingSliceCohort(
 
   let summary: FleetSummary;
   try {
-    const parsed = FleetSummarySchema.safeParse(parseJsonFile(summaryPath, "summary.json"));
+    const rawSummary = parseJsonFile(summaryPath, "summary.json") as unknown;
+    const parsed =
+      rawSummary !== null &&
+      typeof rawSummary === "object" &&
+      !Array.isArray(rawSummary) &&
+      (rawSummary as Record<string, unknown>).schema_version === 8
+        ? FleetSummaryV8Schema.safeParse(rawSummary)
+        : FleetSummarySchema.safeParse(rawSummary);
     if (!parsed.success) {
       return invalidFilesystemResult(root, options.expectedCount, [
         `summary.json invalid: ${firstSchemaIssue(parsed.error)}`,
@@ -1353,6 +1571,58 @@ function validateAuthenticatedStartingSliceCohort(
     : resolve(root, summary.reportsDir);
   const expectedProvider = summary.provider ?? "claude";
   const errors = wolfStrategyMappingDrift(root);
+  const v8Summary = isFleetSummaryV8(summary) ? summary : null;
+  const isV8 = v8Summary !== null;
+  let authenticatedCodexClient: z.infer<typeof CodexClientAuthoritySchema> | null = null;
+  if (v8Summary !== null) {
+    try {
+      const proofPath = requireContainedRegularFile(
+        resolve(fleetDir, v8Summary.codex_client_proof.name),
+        fleetRootReal,
+        "private Codex client authority proof",
+        artifacts,
+      );
+      const proofBytes = readFileSync(proofPath);
+      if (
+        proofBytes.byteLength !== v8Summary.codex_client_proof.bytes ||
+        sha256(proofBytes) !== v8Summary.codex_client_proof.sha256
+      ) {
+        errors.push("private Codex client authority proof bytes differ from summary digest index");
+      } else {
+        const rawProof = parseJsonRejectingDuplicateKeys(
+          proofBytes.toString("utf8"),
+          "private Codex client authority proof",
+        );
+        if (!rawProof.ok) {
+          errors.push(`private Codex client authority proof invalid: ${rawProof.reason}`);
+        } else {
+          const parsedProof = CodexClientAuthoritySchema.safeParse(rawProof.value);
+          if (!parsedProof.success) {
+            errors.push(
+              `private Codex client authority proof invalid: ${firstSchemaIssue(parsedProof.error)}`,
+            );
+          } else {
+            authenticatedCodexClient = parsedProof.data;
+            if (
+              v8Summary.codex_client === undefined ||
+              !isDeepStrictEqual(
+                v8Summary.codex_client,
+                codexClientSummaryProjection(authenticatedCodexClient),
+              )
+            ) {
+              errors.push(
+                "summary Codex client projection differs from authenticated private authority proof",
+              );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      errors.push(
+        `private Codex client authority proof unsafe or unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
   if (
     expectedProvider === "codex" &&
     summary.model_attestation_schema_version !== PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
@@ -1360,6 +1630,9 @@ function validateAuthenticatedStartingSliceCohort(
     errors.push(
       `current Codex ${options.cohortKind} certification requires attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`,
     );
+  }
+  if (expectedProvider === "codex" && !isV8) {
+    errors.push(`current Codex ${options.cohortKind} certification requires fleet summary v8`);
   }
   const fleetBasename = basename(fleetDir);
   const labelBoundToDirectory = summary.label === fleetBasename;
@@ -1486,12 +1759,22 @@ function validateAuthenticatedStartingSliceCohort(
       errors.push(raw.reason);
       continue;
     }
-    const parsed = FleetManifestRowSchema.safeParse(raw.value);
+    const parsed = (isV8 ? FleetManifestRowV8Schema : FleetManifestRowSchema).safeParse(raw.value);
     if (!parsed.success) {
       errors.push(`manifest row ${index + 1} invalid: ${firstSchemaIssue(parsed.error)}`);
       continue;
     }
-    const row = parsed.data;
+    const row = parsed.data as FleetManifestRow;
+    if (isV8) {
+      if (!("resume_usage" in row)) {
+        errors.push(`manifest row ${index + 1} invalid: v8 row is missing resume_usage`);
+        continue;
+      }
+      if (row.attempt_history.some((attempt) => !("usage" in attempt))) {
+        errors.push(`manifest row ${index + 1} invalid: v8 attempt is missing usage`);
+        continue;
+      }
+    }
     if (row.planned_index !== index) {
       errors.push(
         `manifest row ${index + 1}: physical order does not match planned_index ${row.planned_index}`,
@@ -1514,11 +1797,13 @@ function validateAuthenticatedStartingSliceCohort(
   const normalizedRuns: StartingSliceEvaluationRun[] = [];
   let verifiedRows = 0;
   let resumedRows = 0;
+  let failedRows = 0;
   let manifestTotalAttempts = 0;
   let manifestFailedAttempts = 0;
   let manifestTechnicalTimeouts = 0;
   let manifestReportRecoveredRuns = 0;
   let manifestReceiptBoundRuns = 0;
+  const recomputedUsageRecords: unknown[] = [];
   const providerSessionIds = new Set<string>();
   const gameSessionIds = new Set<string>();
   const actualModels = new Set<string>();
@@ -1566,7 +1851,22 @@ function validateAuthenticatedStartingSliceCohort(
         `seed ${seed}: attempts ${row.attempts} != attempt_history length ${row.attempt_history.length}`,
       );
     }
-    if (row.status !== "verified") {
+    if (isV8) {
+      if (row.status === "skipped-resume") {
+        if (row.resume_usage === undefined || row.resume_usage === null) {
+          errors.push(`seed ${seed}: v8 skipped-resume row is missing resume_usage`);
+        } else {
+          const expectedUsage = skippedResumeUsageRecord();
+          if (!isDeepStrictEqual(row.resume_usage, expectedUsage)) {
+            errors.push(`seed ${seed}: resume_usage differs from the explicit zero bucket`);
+          }
+          recomputedUsageRecords.push(expectedUsage);
+        }
+      } else if (row.resume_usage !== null) {
+        errors.push(`seed ${seed}: v8 launched row must use null resume_usage`);
+      }
+    }
+    if (row.status === "skipped-resume") {
       errors.push(`seed ${seed}: ${options.cohortKind} row must be freshly verified, not resumed`);
     }
     if (row.attempts !== 1 || row.attempt_history.length !== 1) {
@@ -1594,6 +1894,9 @@ function validateAuthenticatedStartingSliceCohort(
         );
       }
       if (attempt.classification === "verified") {
+        if (isV8 && attempt.usage === undefined) {
+          errors.push(`seed ${seed} attempt ${attempt.attempt}: v8 attempt is missing usage`);
+        }
         if (attempt.exit !== 0) {
           errors.push(`seed ${seed} attempt ${attempt.attempt}: verified attempt must exit 0`);
         }
@@ -1641,7 +1944,7 @@ function validateAuthenticatedStartingSliceCohort(
         if (attempt.archive === null) {
           errors.push(`seed ${seed} attempt ${attempt.attempt}: failed attempt archive is missing`);
         } else {
-          validateAttemptArchive(
+          const archiveBytes = validateAttemptArchive(
             fleetDir,
             fleetRootReal,
             seed,
@@ -1650,8 +1953,62 @@ function validateAuthenticatedStartingSliceCohort(
             errors,
             referencedArchiveDirectories,
           );
+          if (isV8) {
+            if (attempt.usage === undefined) {
+              errors.push(`seed ${seed} attempt ${attempt.attempt}: v8 attempt is missing usage`);
+            }
+            const names = attempt.archive.usage_artifacts;
+            const prefix = basename(row.report, ".md");
+            if (names === undefined) {
+              errors.push(
+                `seed ${seed} attempt ${attempt.attempt}: v8 archive is missing usage_artifacts`,
+              );
+            } else if (
+              (names.primary_envelope !== null && names.primary_envelope !== `${prefix}.json`) ||
+              (names.provider_events !== null &&
+                names.provider_events !== `${prefix}.codex.jsonl`) ||
+              (names.primary_envelope !== null &&
+                names.primary_envelope === names.provider_events) ||
+              (names.primary_envelope !== null &&
+                !attempt.archive.artifacts.some(
+                  (artifact) => artifact.name === names.primary_envelope,
+                )) ||
+              (names.provider_events !== null &&
+                !attempt.archive.artifacts.some(
+                  (artifact) => artifact.name === names.provider_events,
+                ))
+            ) {
+              errors.push(
+                `seed ${seed} attempt ${attempt.attempt}: v8 usage_artifacts do not bind canonical archived evidence`,
+              );
+            } else {
+              const expectedUsage = usageRecordFromFailedAttempt({
+                archivedPrimaryEnvelopeText:
+                  names.primary_envelope === null
+                    ? null
+                    : (archiveBytes?.get(names.primary_envelope)?.toString("utf8") ?? ""),
+                providerEventsText:
+                  names.provider_events === null || archiveBytes === null
+                    ? null
+                    : (archiveBytes.get(names.provider_events)?.toString("utf8") ?? null),
+              });
+              if (!isDeepStrictEqual(attempt.usage, expectedUsage)) {
+                errors.push(
+                  `seed ${seed} attempt ${attempt.attempt}: usage differs from archived evidence`,
+                );
+              }
+              recomputedUsageRecords.push(expectedUsage);
+            }
+          }
         }
       }
+    }
+    const rowStatus = (row as unknown as { status: "verified" | "skipped-resume" | "failed" })
+      .status;
+    if (isV8 && rowStatus === "failed") {
+      failedRows += 1;
+      errors.push(`seed ${seed}: ${options.cohortKind} cohort contains a failed slot`);
+      continue;
     }
     if (row.status === "verified") {
       verifiedRows += 1;
@@ -1912,6 +2269,18 @@ function validateAuthenticatedStartingSliceCohort(
       continue;
     }
     const artifactFacts = artifactValidation.facts;
+    if (isV8 && row.status === "verified") {
+      const terminalAttempt = row.attempt_history.at(-1);
+      const expectedUsage = usageRecordFromVerifiedPrimaryEnvelope(
+        primaryEnvelopeBytes.toString("utf8"),
+      );
+      if (!isDeepStrictEqual(terminalAttempt?.usage, expectedUsage)) {
+        errors.push(
+          `seed ${seed}: verified attempt usage differs from authenticated primary envelope`,
+        );
+      }
+      recomputedUsageRecords.push(expectedUsage);
+    }
     const normalizedProviderSessionId = artifactFacts.provider_session_id.toLowerCase();
     if (providerSessionIds.has(normalizedProviderSessionId)) {
       errors.push(
@@ -1988,9 +2357,9 @@ function validateAuthenticatedStartingSliceCohort(
     }
     if (
       attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
-      (summary.codex_client === undefined ||
-        attestation.codex_cli_version !== summary.codex_client.cli_version ||
-        attestation.codex_client_authority_sha256 !== summary.codex_client.authority_sha256)
+      (authenticatedCodexClient === null ||
+        attestation.codex_cli_version !== authenticatedCodexClient.cli_version ||
+        attestation.codex_client_authority_sha256 !== authenticatedCodexClient.authority_sha256)
     ) {
       errors.push(`seed ${seed}: model attestation Codex client authority differs`);
     }
@@ -2107,6 +2476,9 @@ function validateAuthenticatedStartingSliceCohort(
       `manifest skipped-resume rows ${resumedRows} != summary ${summary["skipped-resume"]}`,
     );
   }
+  if (failedRows !== summary.failed) {
+    errors.push(`manifest failed rows ${failedRows} != summary ${summary.failed}`);
+  }
   if (manifestTotalAttempts !== summary.total_attempts) {
     errors.push(
       `manifest total attempts ${manifestTotalAttempts} != summary ${summary.total_attempts}`,
@@ -2131,6 +2503,40 @@ function validateAuthenticatedStartingSliceCohort(
     errors.push(
       `manifest receipt-bound runs ${manifestReceiptBoundRuns} != summary ${summary.receipt_bound_runs ?? 0}`,
     );
+  }
+  if (isV8) {
+    const v8Summary = summary as z.infer<typeof FleetSummaryV8Schema>;
+    let recomputedUsage: unknown;
+    try {
+      recomputedUsage = summarizeFleetUsage(recomputedUsageRecords);
+      if (!isDeepStrictEqual(v8Summary.usage, recomputedUsage)) {
+        errors.push("summary usage differs from independently recomputed attempt usage");
+      }
+    } catch (error) {
+      errors.push(
+        `could not summarize v8 usage: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    if (
+      v8Summary.usage.attempt_count !== v8Summary.total_attempts + v8Summary["skipped-resume"] ||
+      v8Summary.usage.launched_attempt_count !== v8Summary.total_attempts ||
+      v8Summary.usage.skipped_resume_count !== v8Summary["skipped-resume"] ||
+      v8Summary.usage.measured_attempt_count + v8Summary.usage.unrecoverable_attempt_count !==
+        v8Summary.total_attempts ||
+      v8Summary.usage.complete !== (v8Summary.usage.unrecoverable_attempt_count === 0)
+    ) {
+      errors.push("summary v8 usage count arithmetic is inconsistent");
+    }
+    if (
+      !v8Summary.usage.complete ||
+      v8Summary.usage.measured_attempt_count !== options.expectedCount ||
+      v8Summary.usage.unrecoverable_attempt_count !== 0 ||
+      v8Summary.usage.skipped_resume_count !== 0
+    ) {
+      errors.push(
+        `current ${options.cohortKind} cohort requires complete measured no-resume v8 usage`,
+      );
+    }
   }
   if (actualModels.size !== 1) {
     errors.push(

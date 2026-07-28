@@ -59,6 +59,35 @@ const PureFleetPrimaryCodexEnvelopeSchema = z
     result: z.string(),
     terminal_reason: z.literal("completed"),
     num_turns: z.number().int().positive(),
+    requested_model: CertifiedCodexModelSchema,
+    usage: z
+      .object({
+        input_tokens: z.number().int().nonnegative().safe(),
+        cache_read_input_tokens: z.number().int().nonnegative().safe(),
+        output_tokens: z.number().int().nonnegative().safe(),
+        reasoning_output_tokens: z.number().int().nonnegative().safe(),
+      })
+      .strict()
+      .superRefine((usage, context) => {
+        if (usage.cache_read_input_tokens > usage.input_tokens) {
+          context.addIssue({
+            code: "custom",
+            path: ["cache_read_input_tokens"],
+            message: "cache-read input cannot exceed total input",
+          });
+        }
+      }),
+    modelUsage: z.record(
+      z.string(),
+      z
+        .object({
+          inputTokens: z.number().int().nonnegative().safe(),
+          cacheReadInputTokens: z.number().int().nonnegative().safe(),
+          outputTokens: z.number().int().nonnegative().safe(),
+          reasoningOutputTokens: z.number().int().nonnegative().safe(),
+        })
+        .strict(),
+    ),
   })
   .passthrough();
 
@@ -309,6 +338,12 @@ interface CodexAuthorityFacts {
     | typeof CODEX_HISTORICAL_STRICT_CONTRACT
     | typeof CODEX_STRICT_CURRENT_CONTRACT
     | null;
+  usage: {
+    input_tokens: number;
+    cached_input_tokens: number;
+    output_tokens: number;
+    reasoning_output_tokens: number;
+  };
 }
 
 function finalCodexPublicMessage(rows: unknown[]): string | null {
@@ -556,9 +591,14 @@ function parseCodexAuthority(
     turn.data.cwd,
   );
   if (!capture.ok) return capture;
-  const inspected = inspectCodexPureEvidence(events.rows, rollout.rows, expectedModel, {
+  const inspected:
+    | { ok: true; threadId: string; usage: CodexAuthorityFacts["usage"] }
+    | {
+        ok: false;
+        reason: string;
+      } = inspectCodexPureEvidence(events.rows, rollout.rows, expectedModel, {
     codeModeContract: capture.codeModeContract,
-  }) as { ok: true; threadId: string } | { ok: false; reason: string };
+  });
   if (!inspected.ok)
     return { ok: false, reason: `Codex provider evidence rejected: ${inspected.reason}` };
   if (session.data.id !== inspected.threadId) {
@@ -626,6 +666,7 @@ function parseCodexAuthority(
       turnId: turn.data.turn_id,
       cwd: capture.canonicalCwd,
       codeModeContract: capture.codeModeContract,
+      usage: inspected.usage,
     },
   };
 }
@@ -770,6 +811,28 @@ export function validatePureFleetRunArtifactBytes(
     if (!primary.success) {
       return { ok: false, reason: "primary Codex envelope is not a completed audited turn" };
     }
+    if (primary.data.requested_model !== expectedModel.data) {
+      return { ok: false, reason: "primary Codex requested model differs from the planned run" };
+    }
+    const modelUsageEntries = Object.entries(primary.data.modelUsage);
+    if (
+      modelUsageEntries.length !== 1 ||
+      modelUsageEntries[0]![0] !== primary.data.requested_model
+    ) {
+      return {
+        ok: false,
+        reason: "primary Codex modelUsage must contain exactly the requested model",
+      };
+    }
+    const primaryModelUsage = modelUsageEntries[0]![1];
+    if (
+      primaryModelUsage.inputTokens !== primary.data.usage.input_tokens ||
+      primaryModelUsage.cacheReadInputTokens !== primary.data.usage.cache_read_input_tokens ||
+      primaryModelUsage.outputTokens !== primary.data.usage.output_tokens ||
+      primaryModelUsage.reasoningOutputTokens !== primary.data.usage.reasoning_output_tokens
+    ) {
+      return { ok: false, reason: "primary Codex modelUsage differs from primary usage" };
+    }
     let providerReport = decoded.report.text;
     if (!reportReceiptBound) {
       if (!bytesEqual(input.report, exactUtf8Bytes(primary.data.result))) {
@@ -821,6 +884,17 @@ export function validatePureFleetRunArtifactBytes(
     if (!authority.ok) return authority;
     if (primary.data.session_id !== authority.facts.sessionId) {
       return { ok: false, reason: "primary Codex envelope session differs from rollout authority" };
+    }
+    if (
+      primary.data.usage.input_tokens !== authority.facts.usage.input_tokens ||
+      primary.data.usage.cache_read_input_tokens !== authority.facts.usage.cached_input_tokens ||
+      primary.data.usage.output_tokens !== authority.facts.usage.output_tokens ||
+      primary.data.usage.reasoning_output_tokens !== authority.facts.usage.reasoning_output_tokens
+    ) {
+      return {
+        ok: false,
+        reason: "primary Codex usage differs from authenticated terminal usage",
+      };
     }
     const hashes = artifactHashes(input);
     return {

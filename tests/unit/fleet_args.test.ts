@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -27,10 +28,12 @@ import {
   acquireFleetReportLock,
   archiveFailedFleetAttemptArtifacts,
   classifyFleetAttempt,
+  CODEX_CLIENT_AUTHORITY_PROOF_NAME,
   codexFleetMemberEnv,
   FLEET_USAGE,
   fleetAttestationPathFor,
   fleetReportLockSpec,
+  fleetSummaryExitSucceeded,
   isTrustedFleetArtifactFile,
   normalizeShellHomeForNode,
   normalizeShellPathForNode,
@@ -41,7 +44,9 @@ import {
   PURE_BASELINE_DECISIONS,
   PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
   PURE_FLEET_EVIDENCE_SCHEMA_VERSION,
+  PURE_FLEET_SUMMARY_SCHEMA_VERSION,
   PURE_SESSION_CONTRACT_VERSION,
+  pureFleetSummaryAccounting,
   releaseFleetReportLock,
   renderClosedFleetManifest,
   reportPathFor,
@@ -49,9 +54,11 @@ import {
   runPool,
   runSidecarPathFor,
   summarizeFleetAttemptHistory,
+  usageRecordFromFailedFleetAttemptArchive,
   validateFleetLabel,
   validateFleetReportsDirectory,
   verifyReportForResume,
+  writePrivateCodexClientAuthorityProof,
   writeFreshPureFleetAttestation,
   // @ts-expect-error — plain .mjs module without type declarations
 } from "../../blind-tester/fleet.mjs";
@@ -64,6 +71,44 @@ import {
 it("keeps the fleet resume contract pinned to the engine journey contract", () => {
   expect(PURE_SESSION_CONTRACT_VERSION).toBe(JOURNEY_CONTRACT_VERSION);
   expect(PURE_BASELINE_DECISIONS).toBe(JOURNEY_BASELINE_DECISIONS);
+});
+
+it("fails current live fleets on incomplete usage without changing legacy success", () => {
+  const closedSlots = {
+    count: 1,
+    verified: 1,
+    "skipped-resume": 0,
+    failed_attempts: 0,
+  };
+  expect(fleetSummaryExitSucceeded(closedSlots)).toBe(true);
+  expect(
+    fleetSummaryExitSucceeded({
+      ...closedSlots,
+      schema_version: PURE_FLEET_SUMMARY_SCHEMA_VERSION - 1,
+      usage: { complete: false, unrecoverable_attempt_count: 1 },
+    }),
+  ).toBe(true);
+  expect(
+    fleetSummaryExitSucceeded({
+      ...closedSlots,
+      schema_version: PURE_FLEET_SUMMARY_SCHEMA_VERSION,
+      usage: { complete: true, unrecoverable_attempt_count: 0 },
+    }),
+  ).toBe(true);
+  expect(
+    fleetSummaryExitSucceeded({
+      ...closedSlots,
+      schema_version: PURE_FLEET_SUMMARY_SCHEMA_VERSION,
+      usage: { complete: false, unrecoverable_attempt_count: 0 },
+    }),
+  ).toBe(false);
+  expect(
+    fleetSummaryExitSucceeded({
+      ...closedSlots,
+      schema_version: PURE_FLEET_SUMMARY_SCHEMA_VERSION,
+      usage: { complete: true, unrecoverable_attempt_count: 1 },
+    }),
+  ).toBe(false);
 });
 
 it("freezes one shared Codex authority and version into every live member environment", () => {
@@ -258,6 +303,10 @@ it("keeps structural mock fleets independent from an absent configured Codex hom
     expect(result.status, output).toBe(0);
     expect(existsSync(missingHome)).toBe(false);
     expect(readdirSync(reportsDir).some((name) => name.endsWith(".md"))).toBe(true);
+    const structuralSummary = JSON.parse(readFileSync(join(fleetDir, "summary.json"), "utf8"));
+    expect(structuralSummary).not.toHaveProperty("schema_version");
+    expect(structuralSummary).not.toHaveProperty("usage");
+    expect(structuralSummary).not.toHaveProperty("codex_client");
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(fleetDir, { recursive: true, force: true });
@@ -1195,6 +1244,10 @@ describe("fleet attempt evidence", () => {
       });
 
       expect(archive.directory).toBe("attempts/seed_7/attempt_1");
+      expect(archive.usage_artifacts).toEqual({
+        primary_envelope: null,
+        provider_events: null,
+      });
       expect(archive.artifacts.map((artifact: { name: string }) => artifact.name)).toEqual([
         "20260716T120000Z_overworld_seed7.md",
         "20260716T120000Z_overworld_seed7.run.json",
@@ -1233,6 +1286,195 @@ describe("fleet attempt evidence", () => {
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("accounts failed Codex attempts only from digest-indexed semantic archive copies", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-fleet-usage-archive-"));
+    const reportsDir = join(root, "reports");
+    const fleetDir = join(root, "fleet");
+    mkdirSync(reportsDir);
+    mkdirSync(fleetDir);
+    const model = "gpt-5.6-terra";
+    const primaryUsage = {
+      input_tokens: 101,
+      cache_read_input_tokens: 40,
+      output_tokens: 9,
+      reasoning_output_tokens: 3,
+    };
+    const primary = JSON.stringify({
+      type: "result",
+      subtype: "success",
+      provider: "codex",
+      is_error: false,
+      terminal_reason: "completed",
+      num_turns: 1,
+      result: "completed",
+      session_id: "session-primary",
+      requested_model: model,
+      usage: primaryUsage,
+      modelUsage: {
+        [model]: {
+          inputTokens: primaryUsage.input_tokens,
+          cacheReadInputTokens: primaryUsage.cache_read_input_tokens,
+          outputTokens: primaryUsage.output_tokens,
+          reasoningOutputTokens: primaryUsage.reasoning_output_tokens,
+        },
+      },
+    });
+    const events = JSON.stringify({
+      type: "turn.completed",
+      usage: {
+        input_tokens: 999,
+        cached_input_tokens: 1,
+        output_tokens: 2,
+        reasoning_output_tokens: 0,
+      },
+    });
+    try {
+      const withPrimary = join(reportsDir, "20260716T120000Z_overworld_seed8");
+      writeFileSync(`${withPrimary}.json`, primary);
+      writeFileSync(`${withPrimary}.codex.jsonl`, `${events}\n`);
+      const primaryArchive = archiveFailedFleetAttemptArtifacts({
+        outPrefix: withPrimary,
+        fleetDir,
+        seed: 8,
+        attempt: 1,
+        diagnostic: "failed\n",
+      });
+      expect(primaryArchive.usage_artifacts).toEqual({
+        primary_envelope: "20260716T120000Z_overworld_seed8.json",
+        provider_events: "20260716T120000Z_overworld_seed8.codex.jsonl",
+      });
+      expect(
+        usageRecordFromFailedFleetAttemptArchive({ archive: primaryArchive, fleetDir }),
+      ).toEqual({
+        source: "primary_envelope",
+        input_tokens: 101,
+        cached_input_tokens: 40,
+        output_tokens: 9,
+        reasoning_output_tokens: 3,
+      });
+
+      const malformedPrimary = join(reportsDir, "20260716T120000Z_overworld_seed9");
+      writeFileSync(`${malformedPrimary}.json`, "{ malformed primary");
+      writeFileSync(`${malformedPrimary}.codex.jsonl`, `${events}\n`);
+      const malformedArchive = archiveFailedFleetAttemptArtifacts({
+        outPrefix: malformedPrimary,
+        fleetDir,
+        seed: 9,
+        attempt: 1,
+        diagnostic: "failed\n",
+      });
+      expect(
+        usageRecordFromFailedFleetAttemptArchive({ archive: malformedArchive, fleetDir }),
+      ).toMatchObject({
+        source: "unrecoverable",
+      });
+
+      const eventsOnly = join(reportsDir, "20260716T120000Z_overworld_seed10");
+      writeFileSync(`${eventsOnly}.codex.jsonl`, `${events}\n`);
+      const eventsArchive = archiveFailedFleetAttemptArtifacts({
+        outPrefix: eventsOnly,
+        fleetDir,
+        seed: 10,
+        attempt: 1,
+        diagnostic: "failed\n",
+      });
+      expect(
+        usageRecordFromFailedFleetAttemptArchive({ archive: eventsArchive, fleetDir }),
+      ).toMatchObject({
+        source: "terminal_turn_completed",
+        input_tokens: 999,
+      });
+
+      const archivedEventsPath = join(
+        fleetDir,
+        eventsArchive.directory,
+        eventsArchive.usage_artifacts.provider_events!,
+      );
+      writeFileSync(archivedEventsPath, `${events}\nextra`);
+      expect(
+        usageRecordFromFailedFleetAttemptArchive({ archive: eventsArchive, fleetDir }),
+      ).toMatchObject({
+        source: "unrecoverable",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("projects v8 live summary usage without leaking Codex authority or paths", () => {
+    const resolved = resolveCodexClientBinary(process.execPath);
+    const client = codexClientAuthorityRecord(resolved.identity_token, "0.144.1");
+    const summary = pureFleetSummaryAccounting(
+      [
+        {
+          attempt_history: [
+            {
+              usage: {
+                source: "primary_envelope",
+                input_tokens: 100,
+                cached_input_tokens: 25,
+                output_tokens: 8,
+                reasoning_output_tokens: 3,
+              },
+            },
+          ],
+          resume_usage: null,
+        },
+        {
+          attempt_history: [],
+          resume_usage: {
+            source: "skipped_resume",
+            input_tokens: 0,
+            cached_input_tokens: 0,
+            output_tokens: 0,
+            reasoning_output_tokens: 0,
+          },
+        },
+      ],
+      client,
+    );
+    expect(summary).toMatchObject({
+      schema_version: PURE_FLEET_SUMMARY_SCHEMA_VERSION,
+      usage: {
+        attempt_count: 2,
+        launched_attempt_count: 1,
+        skipped_resume_count: 1,
+        observed_uncached_input_tokens: 75,
+        useful_tokens: 83,
+      },
+      codex_client: {
+        schema_version: 2,
+        launcher_kind: client.launcher_kind,
+        authority_sha256: client.authority_sha256,
+        cli_version: client.cli_version,
+      },
+    });
+    const serialized = JSON.stringify(summary);
+    expect(serialized).not.toContain(client.authority_token);
+    expect(serialized).not.toContain(client.selected_binary);
+    expect(serialized).not.toContain(client.executable_binary);
+  });
+
+  it("writes the full Codex authority once as a private digest-indexed artifact", () => {
+    const fleetDir = mkdtempSync(join(tmpdir(), "af-fleet-client-proof-"));
+    try {
+      const resolved = resolveCodexClientBinary(process.execPath);
+      const client = codexClientAuthorityRecord(resolved.identity_token, "0.144.1");
+      const index = writePrivateCodexClientAuthorityProof(fleetDir, client);
+      const proofPath = join(fleetDir, CODEX_CLIENT_AUTHORITY_PROOF_NAME);
+      const bytes = readFileSync(proofPath);
+      expect(index).toEqual({
+        name: CODEX_CLIENT_AUTHORITY_PROOF_NAME,
+        bytes: bytes.byteLength,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      });
+      expect(JSON.parse(bytes.toString("utf8"))).toEqual(client);
+      expect(() => writePrivateCodexClientAuthorityProof(fleetDir, client)).toThrow();
+    } finally {
+      rmSync(fleetDir, { recursive: true, force: true });
     }
   });
 

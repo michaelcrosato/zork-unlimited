@@ -331,6 +331,20 @@ function writeCodexGameplayArtifacts(
       session_id: session,
       requested_model: "gpt-5.6-terra",
       terminal_reason: "completed",
+      usage: {
+        input_tokens: 1,
+        cache_read_input_tokens: 0,
+        output_tokens: 1,
+        reasoning_output_tokens: 0,
+      },
+      modelUsage: {
+        "gpt-5.6-terra": {
+          inputTokens: 1,
+          cacheReadInputTokens: 0,
+          outputTokens: 1,
+          reasoningOutputTokens: 0,
+        },
+      },
     })}\n`,
   );
   writeFileSync(
