@@ -413,7 +413,7 @@ export function resolveFleetCohortRegistry(root) {
   } catch (error) {
     throw ledgerError(
       error,
-      "fleet ledger: live cohorts require a Git worktree with a common directory",
+      "fleet ledger: live cohorts require a Git worktree root with a common directory",
     );
   }
   const lines = gitOutput.trim().split(/\r?\n/u);
