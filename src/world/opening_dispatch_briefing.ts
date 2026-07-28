@@ -1,6 +1,11 @@
 import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 
+const LEAD_SOURCE_COMPARISON_HEADER =
+  "Certify one account; the other two close. Compare each card's first field use, cost, and what it rules out. Inspect a card for its exact trigger chain.";
+const PREPARATION_COMPARISON_HEADER =
+  "Choose one optional specialist packet, or leave without one. Compare each card's first field use, cost, and tradeoff. Inspect a card for its exact check and recovery.";
+
 type OpeningDispatchStage = Readonly<{
   id: string;
   kind: NonNullable<JourneyStoryChoicePrompt["kind"]>;
@@ -136,6 +141,14 @@ export function withOpeningDispatchBriefing(
     (stage) => stage.id === prompt.id && stage.kind === prompt.kind,
   );
   if (civicStageIndex < 0 && !departureChoice) return prompt;
+  const leadSource = world.opening_lead_source;
+  const preparation = world.opening_preparation;
+  const displayMessage =
+    leadSource && prompt.id === leadSource.id && prompt.kind === "lead_source"
+      ? `${leadSource.title}. ${LEAD_SOURCE_COMPARISON_HEADER}`
+      : preparation && prompt.id === preparation.id && prompt.kind === "preparation"
+        ? `${preparation.title}. ${PREPARATION_COMPARISON_HEADER}`
+        : prompt.message;
   if (civicStageIndex >= 0) {
     const stage = plan.civicStages[civicStageIndex]!;
     const completed = plan.civicStages
@@ -151,7 +164,7 @@ export function withOpeningDispatchBriefing(
         : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Still ahead here: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station departure board for field preparation and relief capacity."}`;
     return {
       ...prompt,
-      message: `${progress} ${planningContext} ${prompt.message}`,
+      message: `${progress} ${planningContext} ${displayMessage}`,
     };
   }
   const choice = departureChoice!;
@@ -166,6 +179,6 @@ export function withOpeningDispatchBriefing(
   const missionCard = `Mission: ${plan.questTitle}. Last-mile route costs and field tradeoffs remain on its launch card.`;
   return {
     ...prompt,
-    message: `${progress} ${missionCard} ${planningContext} ${prompt.message}`,
+    message: `${progress} ${missionCard} ${planningContext} ${displayMessage}`,
   };
 }
