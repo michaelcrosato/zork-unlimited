@@ -128,9 +128,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*cross uncommitted=HUNT[^]*others close/i,
     );
     const rootCommands = rootDialogue.available_actions.map((action) => action.command).join("\n");
-    expect(rootCommands).toMatch(
-      /hunt[^]*hold the breach[^]*protects cattle and relief reserves[^]*wolves may die/i,
-    );
+    expect(rootCommands).toMatch(/hunt[^]*hold breach[^]*cattle\/reserves safe[^]*wolves may die/i);
     expect(rootCommands).toMatch(
       /lure[^]*draw the pack out[^]*protects cattle and wolves[^]*spends finite feed[^]*paling broken[^]*foul risks cattle/i,
     );
