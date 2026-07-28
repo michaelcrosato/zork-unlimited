@@ -31,6 +31,7 @@ import {
   COMPACT_ENDING_TEXT_CHAR_LIMIT,
   compactRpgObservation,
 } from "../../src/mcp/compact_rpg_observation.js";
+import { createToolApi } from "../../src/mcp/tools.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -212,6 +213,48 @@ describe("Wolf-Winter compact authored prose", () => {
         narrationText(wrapped),
       );
     }
+  });
+
+  it("labels every legal Cade plan in compact step responses without replacing action ids", () => {
+    const api = createToolApi({ root: process.cwd() });
+    const started = api.start_world_quest({
+      world_quest_id: "wolf_winter",
+      seed: 9821,
+      include_actions: true,
+    });
+    const enteredYard = api.step_action({
+      session_id: started.session_id,
+      action_id: "go_north",
+      expected_state_hash: started.state_hash,
+      include_actions: true,
+    });
+    if (!enteredYard.ok) throw new Error("expected Wolf-Winter yard entry");
+    const talked = api.step_action({
+      session_id: started.session_id,
+      action_id: "talk_houndsman",
+      expected_state_hash: enteredYard.state_hash,
+      include_actions: true,
+    });
+    if (!talked.ok) throw new Error("expected Cade's root dialogue");
+
+    const cade = pack.npcs.find((npc) => npc.id === "houndsman");
+    const root = cade?.dialogue.nodes.find((node) => node.id === cade.dialogue.root);
+    if (!root) throw new Error("expected Cade's root node");
+    const expectedChoices = root.topics.map((topic) => [`ask_${topic.id}`, topic.prompt] as const);
+
+    expect(talked.context.choices).toEqual(expectedChoices);
+    expect(talked.context.actions).toEqual(
+      expect.arrayContaining(expectedChoices.map(([id]) => id)),
+    );
+    expect(talked.context.choices).toEqual(
+      expect.arrayContaining([
+        expect.arrayContaining(["ask_wolves", expect.stringMatching(/^HUNT —/)]),
+        expect.arrayContaining(["ask_lure", expect.stringMatching(/^LURE —/)]),
+        expect.arrayContaining(["ask_drive", expect.stringMatching(/^DRIVE —/)]),
+        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^FORTIFY —/)]),
+      ]),
+    );
+    expect(talked.context.choices?.some(([id]) => id === "go_west")).toBe(false);
   });
 
   it("keeps every journal beat complete in both the recent-journal and event projections", () => {

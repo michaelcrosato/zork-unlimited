@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 674 -->
+<!-- historical_cycle_count: 675 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - compact_dialogue_choice_labels
+
+- Evidence choice: the prior valid ten-Terra pilot followed bare Cade action ids into LURE 10/10 without inspecting another living plan.
+- Surface: compact dialogue v19 now pairs each current legal ASK id with its bounded authored prompt while retaining the unchanged executable `actions` ids; future oversized menus expose only choices whose ids survived the action cap.
+- Counterfactual: dialogue legality, commitment, checks, costs, resources, pressure, outcomes, full views, unavailable actions, and journey pauses are unchanged; compact omission and clone contracts cover the additive field.
+- Pure evidence: exact-clean Terra seed 72852 received all six Cade prompts, completed The Wolf-Winter through LURE at decision 30, continued twice, completed The Gallowmere at 56, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Cohort: ten fresh verified Terra reports had zero failed attempts and moved outcomes from 10 LURE to 7 LURE / 3 FORTIFY (p50 29, 6/10 continued, 4.0/4.0, zero stuck or S2+); the label is diagnostic, not a valid strict pilot, because launch mistakenly retained resume permission despite zero resumed runs.
+- Self-critique/follow-through: visible labels materially broke the monopoly but HUNT/DRIVE remain absent and opening density/continuation still miss the milestone; do not rerun this unchanged build, and land the reviewed truthful continuation invitation next.
+- Guard: independent review is clear, crawl `20260728T072224Z` is zero-finding, and health passes 440 files/3,615 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - concise_source_preparation_headers
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the player still found compact payloads dense and lost Jamie's narrow Relief Protocol trigger after choosing a different recovery; triage that field reminder against payload focus rather than adding route copy.
 - Economy: a premature dirty-tree canary was compiler-rejected; the exact-clean replacement used 5.93M raw / 177k uncached input and 12k output tokens, so commit the frozen candidate before future canaries.
 - Guard: independent re-review is clean; pre/final crawls `20260727T100808Z` / `20260727T103942Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
-
-### Cycle result - compact_read_only_option_review
-
-- Evidence choice: 5/23 newer verified pure reports plus seed 72747 still found Station comparison dense, while its trace showed the exact `option_id` review path was buried and unused.
-- Surface: compact comparison v4 now returns one executable `reviewOption` contract with the exact story id, `option_id` value source, and `readOnly: true`; full/UI terms and exact-detail payloads are unchanged.
-- Counterfactual: constructing the detail call from that returned contract preserves snapshot hash, exported save, accepted decisions, time, money, and sibling-term isolation; choosing without review remains legal.
-- Pure evidence: exact-clean Terra seed 72748 received v4 on both Station cards, did not use either review action, completed The Wolf-Winter nonlethally with two cattle lost at decision 33, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: discoverability is now truthful but did not reduce this player's perceived front-loading; do not add another review hint, and re-aim between optional setup flow and the newly observed cumulative first-lure risk forecast.
-- Economy: one canary used 2.35M raw / 108k uncached input tokens and 9.5k output tokens; no replacement run or cohort was launched.
-- Guard: reviewer-found non-executable camel-case metadata is fixed; pre/post crawls `20260727T082007Z` / `20260727T082730Z` are zero-finding and health passes 435 files/3,579 tests, both typechecks, and all 12 packs.
