@@ -415,6 +415,19 @@ describe("overworld quest launch", () => {
     );
     expect(focusedTradeoff[3]?.[2][0]?.slice(11)).toEqual([null, null, tradeoff]);
 
+    expect(
+      compactOverworldQuestRef(
+        {
+          id: "test_quest",
+          title: "Test Quest",
+          area: "test_area",
+          launch,
+        },
+        false,
+        true,
+      ),
+    ).toEqual(["test_quest", "Test Quest", "test_area"]);
+
     const blocked = compactOverworldQuestRef({
       id: "test_quest",
       title: "Test Quest",

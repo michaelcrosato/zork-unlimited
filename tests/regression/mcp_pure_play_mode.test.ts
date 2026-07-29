@@ -289,6 +289,13 @@ async function launchPreparedPureWolf(client: Client): Promise<{
   expect(
     (launched.context as { quest_start_locations?: unknown } | undefined)?.quest_start_locations,
   ).toBeUndefined();
+  const launchedQuest = (
+    launched.context as {
+      quests?: Array<[string, string, string] | [string, string, string, unknown]>;
+    }
+  ).quests?.find(([questId]) => questId === "wolf_winter");
+  expect(launchedQuest).toEqual(["wolf_winter", "The Wolf-Winter", "albany_city__transport_hub"]);
+  expect((launched.quest as unknown[])[3]).toBeDefined();
   const rpgSession = launched.rpg_session as { state_hash: string };
   return {
     overworldSessionId,

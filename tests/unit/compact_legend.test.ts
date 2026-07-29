@@ -65,6 +65,9 @@ describe("compact legends", () => {
     expect(started.legend?.quests).toContain("dedicated strategic comparison");
     expect(started.legend?.quests).toContain("retain full preview and consequence");
     expect(started.legend?.quests).toContain("accepted action receipt");
+    expect(started.legend?.quests).toContain("Started quest rows omit launch");
+    expect(started.legend?.quests).toContain("starting them again is illegal");
+    expect(started.legend?.quests).toContain("persistent journal");
   });
 
   it("describes unavailable jobs and optional aftermath without overstating either", () => {

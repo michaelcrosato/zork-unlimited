@@ -3147,7 +3147,14 @@ describe("OverworldSession", () => {
     if (!quest) throw new Error("expected visible Wolf-Winter quest");
     const started = startVisibleQuest(session, quest);
     expect(started.id).toBe(quest.id);
-    expect(session.compactView().quest_start_locations).toBeUndefined();
+    const startedCompact = session.compactView();
+    expect(startedCompact.quest_start_locations).toBeUndefined();
+    expect(startedCompact.quests?.find(([questId]) => questId === quest.id)).toEqual([
+      quest.id,
+      quest.title,
+      quest.area,
+    ]);
+    expect(compactOverworldView(session.view())).toEqual(startedCompact);
 
     session.completeQuest(quest.id, {
       endingId: "ending_held",
