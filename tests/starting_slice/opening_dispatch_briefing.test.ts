@@ -27,6 +27,15 @@ const SOURCE_HEADER = `Certify one account; the other two close. Compare its pri
 const PREPARATION_HEADER = `Choose one optional field priority, or leave without one. Compare exact cost and what it gives up. ${FIELD_CHECK_TIMING}`;
 const RELIEF_ALLOCATION_HEADER = `Choose whom Albany protects, or leave capacity unassigned. Compare each priority's exact cost and what remains exposed. ${FIELD_CHECK_TIMING}`;
 
+function expectedPreparationCheckFit(profile: (typeof PREPARATION.profiles)[number]): string {
+  const check = profile.check_disclosure;
+  if (!check) throw new Error(`Preparation "${profile.id}" requires a check disclosure.`);
+  const character = REGISTRATION.profiles[0]!.character;
+  const modifier = character.skills.find((skill) => skill.skillId === check.skill_id)?.rank ?? 0;
+  const signedModifier = modifier >= 0 ? `+${String(modifier)}` : String(modifier);
+  return `${check.skill_label} ${signedModifier} vs DC ${String(check.difficulty)}`;
+}
+
 function currentStoryChoice(session: OverworldSession): JourneyStoryChoicePrompt {
   const storyChoice = session.journey().storyChoice;
   if (!storyChoice) throw new Error("Expected an opening dispatch story choice.");
@@ -118,6 +127,7 @@ function expectProgressivePreparationOptions(storyChoice: JourneyStoryChoiceProm
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
+      checkFit: expectedPreparationCheckFit(profile),
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
     });
@@ -136,6 +146,7 @@ function expectProgressivePreparationComparison(
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
+      checkFit: expectedPreparationCheckFit(profile),
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
     });

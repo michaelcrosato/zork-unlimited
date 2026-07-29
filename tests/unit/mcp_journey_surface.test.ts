@@ -981,14 +981,14 @@ describe("MCP journey surface", () => {
       compactPreparationStory.options.every(
         (option) =>
           JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
-          JSON.stringify(["commitment", "immediateCost", "tradeoff"]),
+          JSON.stringify(["checkFit", "commitment", "immediateCost", "tradeoff"]),
       ),
     ).toBe(true);
     expect(
       fullPreparationStory.options.every(
         (option) =>
           JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
-          JSON.stringify(["commitment", "immediateCost", "tradeoff"]),
+          JSON.stringify(["checkFit", "commitment", "immediateCost", "tradeoff"]),
       ),
     ).toBe(true);
 
@@ -1344,6 +1344,8 @@ describe("MCP journey surface", () => {
     const secondSummary = comparisonResponse.story.options.find(
       (option) => option.id === otherOptionId,
     )!.summary!;
+    expect(firstSummary.checkFit).toBe("Repair +0 vs DC 12");
+    expect(secondSummary.checkFit).toBe("Streetwise +0 vs DC 12");
     const firstReceipt =
       `Benefit: ${firstProfile.trigger_category ?? firstProfile.title} ` +
       `Cost: ${firstSummary.immediateCost}. Boundary: ${firstProfile.tradeoff}`;
@@ -1352,6 +1354,7 @@ describe("MCP journey surface", () => {
       `Cost: ${secondSummary.immediateCost}. Boundary: ${secondProfile.tradeoff}`;
     expect(firstDetail.story.inspectedOption).toMatchObject({
       id: optionId,
+      checkFit: firstSummary.checkFit,
       consequence: firstReceipt,
     });
     expect(openingSelectionReceiptWordCount(firstReceipt)).toBeLessThanOrEqual(
@@ -1364,10 +1367,11 @@ describe("MCP journey surface", () => {
       ["comparisonVersion", "id", "inspectedOption", "kind"].sort(),
     );
     expect(Object.keys(firstDetail.story.inspectedOption).sort()).toEqual(
-      ["consequence", "id", "label"].sort(),
+      ["checkFit", "consequence", "id", "label"].sort(),
     );
     expect(secondDetail.story.inspectedOption).toMatchObject({
       id: otherOptionId,
+      checkFit: secondSummary.checkFit,
       consequence: secondReceipt,
     });
     expect(openingSelectionReceiptWordCount(secondReceipt)).toBeLessThanOrEqual(

@@ -988,6 +988,46 @@ describe("journey contract presentation context", () => {
     ).toThrow(/field-trigger scope "exact" is invalid/i);
   });
 
+  it("preserves and validates optional character-relative check fit", () => {
+    const state = createInitialJourneyContractSnapshot();
+    const preparation = {
+      id: "albany_preparation_check_fit",
+      kind: "preparation",
+      message: "Compare each preparation against your current skills.",
+      options: Array.from({ length: 3 }, (_, index) => ({
+        id: `preparation_fit_${String(index)}`,
+        label: `Preparation fit ${String(index)}`,
+        summary: {
+          commitment: `Carry preparation ${String(index)}.`,
+          checkFit: `Skill ${String(index)} +${String(index)} vs DC 12`,
+          immediateCost: `${String(index + 5)} minutes`,
+          tradeoff: `Preparation ${String(index)} excludes the other packets.`,
+        },
+        consequence: `Full terms ${String(index)}.`,
+      })) as unknown as JourneyPreparationStoryChoiceOptions,
+    } satisfies JourneyStoryChoicePrompt;
+
+    const view = journeyPresentation(state, { storyChoice: preparation });
+    expect(view.storyChoice?.options.map((option) => option.summary?.checkFit)).toEqual([
+      "Skill 0 +0 vs DC 12",
+      "Skill 1 +1 vs DC 12",
+      "Skill 2 +2 vs DC 12",
+    ]);
+    expect(view.storyChoice?.options.every((option) => Object.isFrozen(option.summary))).toBe(true);
+
+    const invalid = structuredClone(preparation);
+    (
+      invalid.options[0]!.summary as unknown as {
+        checkFit: string;
+      }
+    ).checkFit = " ";
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: invalid as unknown as JourneyStoryChoicePrompt,
+      }),
+    ).toThrow(/summary fields cannot be empty/i);
+  });
+
   it("deep-freezes a typed ally commitment with three or four unique options", () => {
     const state = createInitialJourneyContractSnapshot();
     const ally = {

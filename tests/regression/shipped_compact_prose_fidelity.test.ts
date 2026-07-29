@@ -234,6 +234,11 @@ function expectOpeningPromptExact(
     ).toBeDefined();
     expect(inspectedOption!.label).toBe(sourceOption.title);
     expect(inspectedOption!.consequence).toBe(canonicalOption!.consequence);
+    if (canonicalOption!.summary?.checkFit === undefined) {
+      expect(inspectedOption).not.toHaveProperty("checkFit");
+    } else {
+      expect(inspectedOption!.checkFit).toBe(canonicalOption!.summary.checkFit);
+    }
     expect(inspectedOption!.consequence).not.toMatch(TRUNCATION_CHROME);
     expect(openingSelectionReceiptWordCount(inspectedOption!.consequence)).toBeLessThanOrEqual(
       OPENING_SELECTION_RECEIPT_WORD_LIMIT,
@@ -248,10 +253,14 @@ function expectOpeningPromptExact(
     expect(projectedOption!.summary).toEqual(canonicalOption!.summary);
     expect(projectedOption!.summary).toEqual({
       commitment: sourceOption.summary,
+      ...(canonicalOption!.summary!.checkFit === undefined
+        ? {}
+        : { checkFit: canonicalOption!.summary!.checkFit }),
       immediateCost: canonicalOption!.summary!.immediateCost,
       tradeoff: canonicalOption!.summary!.tradeoff,
     });
     expect(Object.keys(projectedOption!.summary!).sort()).toEqual([
+      ...(canonicalOption!.summary!.checkFit === undefined ? [] : ["checkFit"]),
       "commitment",
       "immediateCost",
       "tradeoff",

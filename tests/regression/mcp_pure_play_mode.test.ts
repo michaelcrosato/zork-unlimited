@@ -2204,7 +2204,11 @@ describe("MCP pure play mode", () => {
           comparisonVersion?: number;
           kind?: string;
           message?: string;
-          options?: { id: string; consequence?: string }[];
+          options?: {
+            id: string;
+            consequence?: string;
+            summary?: { checkFit?: string };
+          }[];
           reviewOption?: {
             tool: string;
             storyChoiceId: string;
@@ -2245,6 +2249,7 @@ describe("MCP pure play mode", () => {
         );
         if (!worksFortification)
           throw new Error("expected visible works-fortification preparation");
+        expect(worksFortification.summary?.checkFit).toBe("Repair +0 vs DC 12");
         const detailed = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2267,13 +2272,14 @@ describe("MCP pure play mode", () => {
         expect(detailedPreparation).not.toHaveProperty("options");
         expect(detailedPreparation.inspectedOption).toMatchObject({
           id: worksFortification.id,
+          checkFit: "Repair +0 vs DC 12",
           consequence:
             "Benefit: Opening repair at Cade's first loose paling rail. " +
             "Cost: 25 minutes and $4. " +
             "Boundary: Replaces the ordinary wedge and forfeits Hayden's frost-brace line.",
         });
         expect(Object.keys(detailedPreparation.inspectedOption ?? {}).sort()).toEqual(
-          ["consequence", "id", "label"].sort(),
+          ["checkFit", "consequence", "id", "label"].sort(),
         );
         const prepared = textPayload(
           await client.callTool({

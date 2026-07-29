@@ -438,8 +438,15 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
         const presented = presentOpeningPreparation(preparation, background.character).options.find(
           (option) => option.id === checkCase.profileId,
         );
+        const modifier =
+          background.character.skills.find((skill) => skill.skillId === checkCase.skillId)?.rank ??
+          0;
+        const signedModifier = modifier >= 0 ? `+${String(modifier)}` : String(modifier);
         expect(Object.keys(presented?.summary ?? {}).sort(), background.id).toEqual(
-          ["commitment", "immediateCost", "tradeoff"].sort(),
+          ["checkFit", "commitment", "immediateCost", "tradeoff"].sort(),
+        );
+        expect(presented?.summary?.checkFit, background.id).toBe(
+          `${checkCase.skillLabel} ${signedModifier} vs DC 12`,
         );
         expect(presented?.consequence, background.id).toMatch(
           /^Benefit: .+ Cost: .+\. Boundary: .+$/,
@@ -868,6 +875,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     ).options.find((option) => option.id === RELIEF);
     expect(presented?.summary).toEqual({
       commitment: reliefProfile?.summary,
+      checkFit: "Mediation +0 vs DC 12",
       immediateCost: "30 minutes and $4",
       tradeoff: reliefProfile?.tradeoff,
     });

@@ -11,6 +11,7 @@ export type OpeningChoiceOptionPresentation = Readonly<{
   label: string;
   commitment: string;
   exactBenefit: string;
+  checkFit?: string;
   immediateCost: string;
   giveUp: string;
 }>;
@@ -38,6 +39,7 @@ export function presentOpeningChoiceOption(
     label: args.label,
     summary: Object.freeze({
       commitment: args.commitment,
+      ...(args.checkFit === undefined ? {} : { checkFit: args.checkFit }),
       immediateCost: args.immediateCost,
       tradeoff: args.giveUp,
     }),

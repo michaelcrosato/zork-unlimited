@@ -302,6 +302,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       }
       const stationOption = stationJourney.storyChoice!.options[0]!;
       expect(stationButton.textContent).toContain("Promise / priority:");
+      expect(stationButton.textContent).toContain("Check fit:");
+      expect(stationButton.textContent).toContain(stationOption.summary!.checkFit!);
       expect(stationButton.textContent).toContain("Cost / give up:");
       expect(stationButton.textContent).not.toContain("Purpose:");
       expect(stationButton.textContent).not.toContain("Trigger category:");
@@ -312,6 +314,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(stationButton.textContent).toContain(forecastLine);
       expect(stationButton.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).toContain(stationOption.consequence);
+      expect(stationDetails.textContent).not.toContain(stationOption.summary!.checkFit!);
       expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.consequence);
       const stationDisclosures = Array.from(

@@ -90,12 +90,14 @@ function renderSummaryLines(summary: JourneyStoryChoiceSummary, indent: string):
   if (!labels.trigger || summary.fieldTrigger === undefined) {
     return [
       `${indent}${labels.commitment}: ${summary.commitment}`,
+      ...(summary.checkFit === undefined ? [] : [`${indent}Check fit: ${summary.checkFit}`]),
       `${indent}Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`,
     ];
   }
   return [
     `${indent}${labels.commitment}: ${summary.commitment}`,
     `${indent}${labels.trigger}: ${summary.fieldTrigger}`,
+    ...(summary.checkFit === undefined ? [] : [`${indent}Check fit: ${summary.checkFit}`]),
     `${indent}Immediate cost: ${summary.immediateCost}`,
     `${indent}Tradeoff: ${summary.tradeoff}`,
   ];
@@ -168,6 +170,9 @@ export function renderTerminalStoryChoiceDetail(
   if (option.summary) {
     if (option.summary.fieldTrigger === undefined) {
       lines.push(`  Promise / priority: ${option.summary.commitment}`);
+      if (option.summary.checkFit !== undefined) {
+        lines.push(`  Check fit: ${option.summary.checkFit}`);
+      }
     } else {
       lines.push(...renderSummaryLines(option.summary, "  "));
     }
