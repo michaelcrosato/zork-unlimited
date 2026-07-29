@@ -309,7 +309,12 @@ describe("bug_0512 — interruptible, auto-resuming RPG dialogue", () => {
     const option = enumerateRpgActions(game.index, state).find(
       (candidate) => candidate.id === "use_shepherd_log",
     );
-    expect(option?.skill_check).toEqual({ skill: "tracking", difficulty: 1, die: "d20" });
+    expect(option?.skill_check).toEqual({
+      skill: "tracking",
+      modifier: state.vars.tracking ?? 0,
+      difficulty: 1,
+      die: "d20",
+    });
     const rolled = drive(game.index, game.rules, state, "use_shepherd_log");
 
     expect(rolled.state.step).toBe(rolled.before.step + 1);

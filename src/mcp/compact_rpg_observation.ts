@@ -1,4 +1,5 @@
 import type { RpgObservation } from "../rpg/observation.js";
+import { SKILL_CHECK_STAKES_CHAR_LIMIT } from "../core/skill_check.js";
 import { RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT } from "../rpg/schema.js";
 import {
   compactHead,
@@ -33,7 +34,7 @@ export const COMPACT_DIALOGUE_CHOICE_LIMIT = 12;
 export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 256;
 export const COMPACT_BLOCKED_ACTION_REASON_CHAR_LIMIT = RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT;
 export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 720;
-export const RPG_COMPACT_OBSERVATION_VERSION = 19 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 20 as const;
 
 export type RpgCompactRef = string;
 export type RpgCompactExit = string | readonly [direction: string, to: string];
@@ -41,6 +42,14 @@ export type RpgCompactBlockedExit = readonly [direction: string, message: string
 export type RpgCompactUnavailableAction = readonly [actionId: string, reason: string];
 export type RpgCompactDialogue = readonly [npc: string, text: string];
 export type RpgCompactDialogueChoice = readonly [actionId: string, prompt: string];
+export type RpgCompactCheck = readonly [
+  actionId: string,
+  skill: string,
+  modifier: number,
+  die: string,
+  difficulty: number,
+  stakes?: string,
+];
 export type RpgCompactEnemy = readonly [id: string, hp: number];
 export type RpgCompactPressure = readonly [
   id: string,
@@ -81,6 +90,7 @@ export type RpgCompactObservation = {
   exits?: RpgCompactExit[];
   vitals: RpgCompactVitals;
   actions?: string[];
+  checks?: RpgCompactCheck[];
   objects?: RpgCompactRef[];
   npcs?: RpgCompactRef[];
   blocked?: RpgCompactBlockedExit[];
@@ -114,6 +124,8 @@ export const RPG_COMPACT_LEGEND = {
   exits: "open exits: 'direction' or [direction, dest_room_id]",
   vitals: "[hp, attack, defense, score, max_score]",
   actions: "legal action ids (include_actions only; list_legal_actions always has them)",
+  checks:
+    "[[action_id, skill, current_modifier, die, difficulty, authored_stakes?], ...] checks for the included legal actions",
   objects: "visible object ids",
   npcs: "ids of NPCs present",
   blocked: "[[direction, reason], ...] blocked exits",
@@ -178,6 +190,13 @@ function compactDialoguePrompt(command: string): string {
   return compactMcpActionLabel(authoredPrompt);
 }
 
+function compactCheck(row: Exclude<CompactRpgActionRow, string>): RpgCompactCheck | null {
+  const check = row.skill_check;
+  if (!check) return null;
+  const base = [row.id, check.skill, check.modifier, check.die, check.difficulty] as const;
+  return check.stakes ? [...base, compactProse(check.stakes, SKILL_CHECK_STAKES_CHAR_LIMIT)] : base;
+}
+
 function compactVars(vars: Record<string, number>): CompactVarsResult {
   const keys = Object.keys(vars)
     .filter((key) => !CORE_STATE_VARS.has(key))
@@ -205,6 +224,13 @@ export function compactRpgObservation(
   const actionIds = actionRows.map(compactActionId);
   const actions = includeActions ? compactHead(actionIds, COMPACT_ACTION_LIMIT) : [];
   const visibleActionIds = new Set(actions);
+  const checks: RpgCompactCheck[] = includeActions
+    ? actionRows.flatMap((row) => {
+        if (typeof row === "string" || !visibleActionIds.has(row.id)) return [];
+        const check = compactCheck(row);
+        return check ? [check] : [];
+      })
+    : [];
   const allDialogueChoices: RpgCompactDialogueChoice[] =
     includeActions && obs.dialogue
       ? actionRows.flatMap((row) =>
@@ -312,6 +338,7 @@ export function compactRpgObservation(
     ...(exits.length > 0 ? { exits } : {}),
     vitals: [obs.stats.hp, obs.stats.attack, obs.stats.defense, obs.score, obs.max_score],
     ...(includeActions && actions.length > 0 ? { actions } : {}),
+    ...(checks.length > 0 ? { checks } : {}),
     ...(objects.length > 0 ? { objects } : {}),
     ...(npcs.length > 0 ? { npcs } : {}),
     ...(blocked.length > 0 ? { blocked } : {}),

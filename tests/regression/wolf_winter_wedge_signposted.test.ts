@@ -166,7 +166,12 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
       target: "paling_rail",
     });
     expect(wedge!.action).not.toHaveProperty("item");
-    expect(wedge!.skill_check).toEqual({ skill: "defense", difficulty: 11, die: "d20" });
+    expect(wedge!.skill_check).toEqual({
+      skill: "defense",
+      modifier: d.state().vars.defense ?? 0,
+      difficulty: 11,
+      die: "d20",
+    });
   });
 
   it("the wedge stays optional but earns the flank-wolf's guarded opening", () => {

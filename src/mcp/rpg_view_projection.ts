@@ -47,8 +47,8 @@ export type RpgObservationViewOptions = Pick<
 >;
 
 const OBSERVATION_PROJECTION_COMPACT = `compact-observation:v${RPG_COMPACT_OBSERVATION_VERSION}`;
-const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v1";
-const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v1";
+const OBSERVATION_PROJECTION_PUBLIC = "public-observation:v2";
+const LEGAL_ACTION_ROWS_PROJECTION = "legal-action-rows:v2";
 const BLOCKED_ACTION_ROWS_PROJECTION = "blocked-action-rows:v1";
 
 export function publicObservationOptions(args: {
@@ -215,6 +215,7 @@ export function cloneCompactRpgObservation(context: RpgCompactObservation): RpgC
         }
       : {}),
     ...(context.actions ? { actions: [...context.actions] } : {}),
+    ...(context.checks ? { checks: cloneCompactTupleList(context.checks) } : {}),
     ...(context.objects ? { objects: [...context.objects] } : {}),
     ...(context.npcs ? { npcs: [...context.npcs] } : {}),
     ...(context.blocked ? { blocked: cloneCompactTupleList(context.blocked) } : {}),

@@ -59,7 +59,7 @@ export type RpgObservation = {
     id: string;
     command: string;
     action: RpgAction;
-    skill_check?: { skill: string; difficulty: number; die: string };
+    skill_check?: NonNullable<RpgActionOption["skill_check"]>;
     combat?: NonNullable<RpgActionOption["combat"]>;
     resources?: NonNullable<RpgActionOption["resources"]>;
   }[];

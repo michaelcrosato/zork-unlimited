@@ -158,6 +158,7 @@ function firstFeedCast(route: RouteName, seed: number): GameState {
   const cast = action(state, "use_winter_feed_sack_on_downwind_feed_line");
   expect(cast.skill_check).toEqual({
     skill: "fieldcraft",
+    modifier: state.vars.fieldcraft ?? 0,
     difficulty: routeSpecs[route].difficulty,
     die: "d20",
   });

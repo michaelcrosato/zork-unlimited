@@ -36,9 +36,10 @@ import {
 // declared skill var reads as vestigial (bug_0274; CYOA sibling bug_0269). `die: "d20"`
 // surfaces the ceiling so "nerve(3) vs 12" reads as "d20+3 vs 12" not a flat impossible
 // comparison (bug_0311; mirrors the post-roll d20 label in bug_0141). Only
-// `skill`/`difficulty`/`die` surface — never the check's `on_success`/`on_failure`
-// effects, which carry score/flag/end_game routing — so the destination graph stays
-// hidden. Omitted on every non-skill action, so the legacy option shape is unchanged.
+// `skill`/current `modifier`/`difficulty`/`die` and optional authored public
+// `stakes` surface — never the check's raw effects, which carry score/flag/end_game
+// routing — so the destination graph stays hidden. Omitted on every non-skill action,
+// so the legacy option shape is unchanged.
 export type RpgActionOption = {
   id: string;
   command: string;
@@ -46,7 +47,13 @@ export type RpgActionOption = {
   /** Input-only spellings. Structured UI/MCP surfaces expose only `id`; the
    * terminal projection may advertise unambiguous human-readable aliases. */
   inputAliases?: readonly string[];
-  skill_check?: { skill: string; difficulty: number; die: string };
+  skill_check?: {
+    skill: string;
+    modifier: number;
+    difficulty: number;
+    die: string;
+    stakes?: string;
+  };
   combat?: {
     attack_bonus: number;
     defense_bonus: number;
@@ -664,8 +671,10 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
       if (opt && it.skill_check) {
         opt.skill_check = {
           skill: it.skill_check.skill,
+          modifier: state.vars[it.skill_check.skill] ?? 0,
           difficulty: it.skill_check.difficulty,
           die: "d20",
+          ...(it.skill_check.stakes ? { stakes: it.skill_check.stakes } : {}),
         };
       }
       push(opt);

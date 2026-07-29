@@ -159,6 +159,7 @@ function relabelSkillCheck(
   return {
     skill: rv(s.skill),
     difficulty: s.difficulty,
+    ...(s.stakes ? { stakes: s.stakes } : {}),
     on_success: s.on_success.map((e) => relabelEffect(e, r, rv)),
     on_failure: s.on_failure.map((e) => relabelEffect(e, r, rv)),
   };

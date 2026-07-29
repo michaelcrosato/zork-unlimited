@@ -722,10 +722,18 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     );
     expect(wardenRail?.skill_check).toEqual({
       skill: "defense",
+      modifier: wardenAtRail.vars.defense ?? 0,
       difficulty: 11,
       die: "d20",
     });
-    expect(advocateRail?.skill_check).toEqual(wardenRail?.skill_check);
+    expect(advocateRail?.skill_check).toEqual({
+      skill: "defense",
+      modifier: advocateAtRail.vars.defense ?? 0,
+      difficulty: 11,
+      die: "d20",
+    });
+    expect(wardenRail?.skill_check?.modifier).toBe(4);
+    expect(advocateRail?.skill_check?.modifier).toBe(3);
 
     wardenAtRail = act(wardenAtRail, "wedge_paling_rail", 7);
     advocateAtRail = act(advocateAtRail, "wedge_paling_rail", 7);

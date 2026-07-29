@@ -440,8 +440,10 @@ function relabelObservation(
           ? {
               skill_check: {
                 skill: mapId(a.skill_check.skill),
+                modifier: a.skill_check.modifier,
                 difficulty: a.skill_check.difficulty,
                 die: a.skill_check.die, // die is label-invariant ("d20")
+                ...(a.skill_check.stakes ? { stakes: a.skill_check.stakes } : {}),
               },
             }
           : {}),

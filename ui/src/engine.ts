@@ -30,6 +30,7 @@ import {
   type RpgIndex,
 } from "../../src/rpg/runner.js";
 import { rpgActionOptionForInputId } from "../../src/rpg/legal_actions.js";
+import { renderRpgSkillCheckDisclosure } from "../../src/rpg/player_command_projection.js";
 import {
   parseCampaignCharacterState,
   type CampaignCharacterState,
@@ -74,7 +75,7 @@ export type View = {
   location: string;
   title: string;
   text: string;
-  choices: { id: string; label: string }[];
+  choices: { id: string; label: string; detail?: string }[];
   unavailableChoices: { id: string; label: string; reason: string }[];
   inventory: string[];
   pressureTracks?: NonNullable<RpgObservation["pressure_tracks"]>;
@@ -200,10 +201,11 @@ export class GameSession {
       choices: o.available_actions.map((a) => ({
         id: a.id,
         label: a.skill_check
-          ? `${a.command}  ⟨${a.skill_check.skill} check, DC ${a.skill_check.difficulty}⟩`
+          ? a.command
           : a.combat
             ? `${a.command}  ⟨${a.combat.phase === "opening" ? "opening" : a.combat.phase === "follow_through" ? "follow-through" : "one-shot"}, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round${resourceHint(a.resources)}⟩`
-          : a.command,
+            : a.command,
+        ...(a.skill_check ? { detail: renderRpgSkillCheckDisclosure(a.skill_check) } : {}),
       })),
       unavailableChoices: o.blocked_actions.map((action) => ({
         id: action.id,

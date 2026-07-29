@@ -1344,7 +1344,10 @@ export default function App(): JSX.Element {
               <ul className="choices">
                 {questView.choices.map((choice) => (
                   <li key={choice.id}>
-                    <button onClick={() => choose(choice.id, choice.label)}>{choice.label}</button>
+                    <button onClick={() => choose(choice.id, choice.label)}>
+                      <span>{choice.label}</span>
+                      {choice.detail && <small className="choice-detail">{choice.detail}</small>}
+                    </button>
                   </li>
                 ))}
                 {questView.unavailableChoices.map((choice) => (

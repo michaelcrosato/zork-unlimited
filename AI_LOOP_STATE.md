@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 690 -->
+<!-- historical_cycle_count: 691 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - checked_action_terms
+
+- Evidence choice: the exact merged-build five-Terra cohort took the role-first standard packet 5/5 and named setup density 5/5, so its predeclared gate stopped at five; the recurring hidden-check-terms finding set this focused change.
+- Surface: legal checked actions now expose the live skill, modifier, d20, DC, and bounded authored stakes through full/compact MCP, CLI, and UI; raw effects stay hidden and executable labels/action ids are unchanged.
+- Economy: a real Drover state grows by 261 bytes (~65 tokens, 15.3%) with its action array byte-identical, cheaper than another inspect/clarification turn; the five-player adaptive stop avoided an estimated second 697k-useful-token tranche.
+- Pure evidence: exact-candidate Spark seeds 73062, 73067, and 73068 all verified The Wolf-Winter across HUNT/LURE outcomes, rated clarity/enjoyment 4/4 with replay-yes, saw live +modifier/DC checks, and raised no hidden-odds complaint.
+- Spend integrity: the three measured Spark runs used 365.3k useful tokens across 114 decisions (~3,204/decision) with no retries; five-way startup produced one verified and four unmetered client-cache failures, while serialized seed 73068 passed 1/1, so serialize Spark startup until that client defect is fixed.
+- Self-critique/follow-through: pure play exercised numeric disclosure but not the three optional preparation-stakes strings; exact transport/leakage tests prove those strings, while the next cohort must measure comprehension and the next cycle should fix the repeated compact Albany Station launch cue.
+- Guard: independent architecture, UI, and save/hash reviews found no P1/P2; post-change crawl `20260729T122241Z` is zero-finding, and health passes 449 files/3,708 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - role_first_standard_packet
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: accurate recall did not close the Station-density S1, so do not rerun this unchanged layer; land the truthful HUNT commitment prompt, then let one strict no-resume cohort decide whether recall earns its payload.
 - Economy: the one 41-turn canary used 2.153M raw / 101.9k uncached input and 7.7k output tokens at 95.2% cache reuse; no replacement or cohort was launched.
 - Guard: independent proof and UX reviews are clean after the heading-order correction, crawl `20260728T090154Z` is zero-finding, and health passes 440 files/3,620 tests, both typechecks, and all 12 packs.
-
-### Cycle result - truthful_wolf_gallowmere_continue
-
-- Evidence choice: the latest ten-Terra diagnostic cohort continued 6/10, while the actionable goal-completion label named only the dawn wagon and left its Gallowmere destination in surrounding prose.
-- Surface: full and compact play now invite the player to decide Albany's dawn wagon and then take Hedrick's Queensbury lead through The Gallowmere; the consequence states that exact sequence before the unchanged journey boundary.
-- Counterfactual: goals, story choices, wagon allocation, travel, availability, end opportunities, mechanics, RNG, outcomes, receipts, and full/compact parity are unchanged.
-- Pure evidence: exact-clean Terra seed 72880 saw the new card after completing The Wolf-Winter nonlethally at decision 30, reported no bugs or rejected actions, rated clarity/enjoyment 3/4, chose replay-yes, and still ended because Wolf-Winter felt like a natural first-session stop.
-- Self-critique/follow-through: this proves truthful reachability, not a continuation lift; do not rerun unchanged copy, and measure retention only after the active Station recap and HUNT commitment-legibility increments land together.
-- Economy: the one 49-turn canary used 2.592M raw / 124.7k uncached input and 7.4k output tokens at 95.2% cache reuse; no exposure-chasing replacement or cohort was launched.
-- Guard: independent review is clean, crawl `20260728T082709Z` is zero-finding, and health passes 440 files/3,617 tests, both typechecks, and all 12 packs.
