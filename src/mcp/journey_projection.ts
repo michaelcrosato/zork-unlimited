@@ -26,6 +26,7 @@ export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
 export type JourneyStoryChoiceComparisonOption = Readonly<{
   id: string;
   label: string;
+  group?: JourneyStoryChoiceOption["group"];
   summary?: JourneyStoryChoiceSummary;
   dispatchForecast?: JourneyStoryChoiceDispatchForecast;
   dispatchImpact?: JourneyStoryChoiceDispatchImpact;
@@ -34,6 +35,7 @@ export type JourneyStoryChoiceComparisonOption = Readonly<{
 export type JourneyStoryChoiceDetailOption = Readonly<{
   id: string;
   label: string;
+  group?: JourneyStoryChoiceOption["group"];
   consequence: string;
 }>;
 
@@ -178,6 +180,7 @@ export function compactJourneyStoryChoiceComparison(
       inspectedOption: Object.freeze({
         id: inspectedSource.id,
         label: inspectedSource.label,
+        ...(inspectedSource.group === undefined ? {} : { group: inspectedSource.group }),
         consequence: inspectedSource.consequence,
       }),
     });
@@ -186,6 +189,7 @@ export function compactJourneyStoryChoiceComparison(
     Object.freeze({
       id: option.id,
       label: option.label,
+      ...(option.group === undefined ? {} : { group: option.group }),
       ...(option.summary ? { summary: Object.freeze({ ...option.summary }) } : {}),
       ...(option.dispatchForecast
         ? {

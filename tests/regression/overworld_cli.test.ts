@@ -615,7 +615,7 @@ describe("overworld_play CLI (scripted mode)", () => {
   it("holds Rowan's mandatory registration cascade until the player chooses each stage", () => {
     const run = runCli([
       "--commands",
-      "talk rowan; choose 1; choose 2; choose Leave on Rowan's Civic Docket; hash",
+      "talk rowan; choose albany:road_warden; choose albany:oath_limited_aid_only; choose Leave on Rowan's Civic Docket; hash",
     ]);
 
     expect(run.status, run.output).toBe(0);
@@ -629,7 +629,10 @@ describe("overworld_play CLI (scripted mode)", () => {
   });
 
   it("restates local goal guidance when follow goal has no road passage", () => {
-    const run = runCli(["--commands", "talk rowan; choose 1; choose 2; choose 1; follow goal"]);
+    const run = runCli([
+      "--commands",
+      "talk rowan; choose albany:road_warden; choose albany:oath_limited_aid_only; choose albany:source_rowan_civic_docket; follow goal",
+    ]);
 
     expect(run.status, run.output).toBe(0);
     expect(run.output).toContain(
@@ -665,7 +668,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     const run = runCli(["--commands", "talk rowan; journal; log"]);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output).toContain("The Wolf-Winter Civic docket");
+    expect(run.output).toContain("The Wolf-Winter Civic start");
     expect(run.output).toContain("No roads travelled yet.");
     expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
     expect(run.output).not.toContain("A scripted command was rejected.");
@@ -1034,7 +1037,7 @@ describe("overworld_play CLI (scripted mode)", () => {
   it("labels the discovered Winter Return Docket as future work and explains failed work truthfully", () => {
     const run = runCli([
       "--commands",
-      "talk rowan; choose 1; choose 2; choose 1; work winter return",
+      "talk rowan; choose albany:road_warden; choose albany:oath_limited_aid_only; choose albany:source_rowan_civic_docket; work winter return",
     ]);
 
     expect(run.status).toBe(1);

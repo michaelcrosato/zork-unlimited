@@ -22,11 +22,20 @@ function comparisonCardOptionGroups(world: OverworldManifest): ComparisonCardOpt
   ];
 }
 
+/** Reconstruct the exact manifest before Starting Doctrine registration choices. */
+export function exactStartingDoctrinePredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  if (predecessor.opening_registration) {
+    delete predecessor.opening_registration.doctrines;
+  }
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before relief-oath strategy fit became explicit. */
 export function exactReliefOathStrategyParityPredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactStartingDoctrinePredecessor(current);
   const oath = predecessor.opening_relief_oath;
   const full = oath?.options.find((option) => option.id === "albany:oath_full_compact_duty");
   const aid = oath?.options.find((option) => option.id === "albany:oath_limited_aid_only");

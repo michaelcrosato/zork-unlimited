@@ -336,6 +336,47 @@
           ]
         }
       }
+    ],
+    "doctrines": [
+      {
+        "id": "albany:doctrine_fortify_breach",
+        "title": "Fortify the Breach",
+        "summary": "Begin as an Ironhands Repairer carrying Rowan's full public-duty dispatch.",
+        "trigger_category": "Repair 4; first public-seal fortification check is 2 DC easier.",
+        "preview": "Starts as Ironhands Repairer under Full Compact Duty with Rowan's civic docket. Repair 4; first public-seal fortification check is 2 DC easier.",
+        "tradeoff": "No Works packet, relief allocation, June commitment, or road approach is selected.",
+        "consequence": "Optional preparation, relief allocation, June's field-team commitment, and road approach remain unselected and available later.",
+        "immediate_cost": "10 minutes and $0",
+        "profile_id": "albany:ironhands_repairer",
+        "relief_oath_option_id": "albany:oath_full_compact_duty",
+        "lead_source_option_id": "albany:source_rowan_civic_docket"
+      },
+      {
+        "id": "albany:doctrine_bounded_aid",
+        "title": "Hold the Aid Line",
+        "summary": "Begin as a Ledger Advocate with Rowan's bounded Aid-Only dispatch.",
+        "trigger_category": "Mediation 4; a wholly bloodless ordinary lure skips only the final cattle-alarm step.",
+        "preview": "Starts as Ledger Advocate under Aid-Only Duty with Rowan's civic docket. Mediation 4; a wholly bloodless ordinary lure skips only the final cattle-alarm step.",
+        "tradeoff": "No herd-recovery packet, relief allocation, June commitment, or road approach is selected.",
+        "consequence": "Optional preparation, relief allocation, June's field-team commitment, and road approach remain unselected and available later.",
+        "immediate_cost": "5 minutes and $0",
+        "profile_id": "albany:ledger_advocate",
+        "relief_oath_option_id": "albany:oath_limited_aid_only",
+        "lead_source_option_id": "albany:source_rowan_civic_docket"
+      },
+      {
+        "id": "albany:doctrine_independent_drive",
+        "title": "Drive on a Personal Bond",
+        "summary": "Begin as an unaffiliated courier with your witnessed personal dispatch bond.",
+        "trigger_category": "Streetwise 4; first shutter-signal check drops from DC 12 to DC 10.",
+        "preview": "Starts as an Unaffiliated Courier under a personal bond with Rowan's civic docket. Streetwise 4; first shutter-signal check drops from DC 12 to DC 10.",
+        "tradeoff": "No drover packet, relief allocation, June commitment, or road approach is selected.",
+        "consequence": "Optional preparation, relief allocation, June's field-team commitment, and road approach remain unselected and available later.",
+        "immediate_cost": "no added time and $0",
+        "profile_id": "albany:unaffiliated_courier",
+        "relief_oath_option_id": "albany:oath_unaffiliated_personal_bond",
+        "lead_source_option_id": "albany:source_rowan_civic_docket"
+      }
     ]
   },
   "opening_relief_oath": {

@@ -1915,6 +1915,7 @@ describe("MCP pure play mode", () => {
               kind?: string;
               options?: {
                 id: string;
+                group?: string;
                 consequence?: string;
                 summary?: { tradeoff?: string };
               }[];
@@ -1976,9 +1977,12 @@ describe("MCP pure play mode", () => {
         expect(registrationDetail.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
         expect(registrationDetail).not.toHaveProperty("message");
         expect(registrationDetail).not.toHaveProperty("options");
-        expect(registrationDetail.inspectedOption).toMatchObject({ id: ledgerAdvocate.id });
+        expect(registrationDetail.inspectedOption).toMatchObject({
+          id: ledgerAdvocate.id,
+          group: "custom_role",
+        });
         expect(Object.keys(registrationDetail.inspectedOption ?? {}).sort()).toEqual(
-          ["consequence", "id", "label"].sort(),
+          ["consequence", "group", "id", "label"].sort(),
         );
         const wolfBeforeSource = areaView(registration).quests.find(
           (quest) => quest.id === "wolf_winter",

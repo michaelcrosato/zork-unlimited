@@ -46,7 +46,7 @@ describe("Civic trigger-category snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "35d7ee917b8cd33c698e3771d7bd884d963763ab665e5b4ae919e971e013a50c",
+      "56577688e463b98883aea1c9063a6e577d6a5d2bb4fa412ee32b0f47576d849c",
     );
     for (const options of [
       WORLD.opening_registration?.profiles ?? [],

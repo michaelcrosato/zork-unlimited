@@ -49,6 +49,7 @@ function worldWithRule(rule: CampaignServiceRule): OverworldManifest {
   const world = structuredClone(WORLD);
   delete world.opening_ally;
   delete world.opening_relief_oath;
+  if (world.opening_registration) delete world.opening_registration.doctrines;
   world.campaign_service_rules = [rule];
   return world;
 }

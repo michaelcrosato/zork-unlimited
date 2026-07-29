@@ -3,6 +3,7 @@ import type { OverworldManifest } from "./overworld.js";
 
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
 const REGISTRATION_COMPARISON_HEADER = `Choose who you were and the promise you carry. Compare exact cost and what each role gives up. ${FIELD_CHECK_TIMING}`;
+const DOCTRINE_REGISTRATION_COMPARISON_HEADER = `Choose a doctrine or custom role. Compare its promise, exact cost, what it gives up, and what remains open. ${FIELD_CHECK_TIMING}`;
 const RELIEF_OATH_COMPARISON_HEADER = `Choose whose authority you accept and the promise you make. Compare exact cost and what each duty gives up. ${FIELD_CHECK_TIMING}`;
 const LEAD_SOURCE_COMPARISON_HEADER = `Certify one account; the other two close. Compare its priority, exact cost, and what it gives up. ${FIELD_CHECK_TIMING}`;
 const PREPARATION_COMPARISON_HEADER = `Choose one optional field priority, or leave without one. Compare exact cost and what it gives up. ${FIELD_CHECK_TIMING}`;
@@ -148,9 +149,14 @@ export function withOpeningDispatchBriefing(
   const leadSource = world.opening_lead_source;
   const preparation = world.opening_preparation;
   const reliefAllocation = world.opening_relief_allocation;
+  const offersStartingDoctrines = (registration?.doctrines?.length ?? 0) > 0;
   const displayMessage =
     registration && prompt.id === registration.id && prompt.kind === "registration"
-      ? `${registration.title}. ${REGISTRATION_COMPARISON_HEADER}`
+      ? `${registration.title}. ${
+          offersStartingDoctrines
+            ? DOCTRINE_REGISTRATION_COMPARISON_HEADER
+            : REGISTRATION_COMPARISON_HEADER
+        }`
       : reliefOath && prompt.id === reliefOath.id && prompt.kind === "relief_oath"
         ? `${reliefOath.title}. ${RELIEF_OATH_COMPARISON_HEADER}`
         : leadSource && prompt.id === leadSource.id && prompt.kind === "lead_source"
@@ -170,10 +176,15 @@ export function withOpeningDispatchBriefing(
     const remaining = plan.civicStages
       .slice(civicStageIndex + 1)
       .map((candidate) => candidate.label);
-    const progress = `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
+    const progress =
+      civicStageIndex === 0 && offersStartingDoctrines
+        ? `${plan.questTitle} Civic start — doctrine or custom role.`
+        : `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
     const planningContext =
       civicStageIndex === 0
-        ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; duty and evidence follow. None locks your field solution.`
+        ? offersStartingDoctrines
+          ? `Mission preview — ${plan.questDiscovery} A doctrine commits role, duty, and evidence together. A custom role commits role; duty and evidence follow. Both leave solutions open.`
+          : `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; duty and evidence follow. None locks your field solution.`
         : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;
     return {
       ...prompt,
