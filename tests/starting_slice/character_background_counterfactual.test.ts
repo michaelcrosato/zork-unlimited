@@ -87,29 +87,22 @@ function registerSession(profileId: string): OverworldSession {
     id: REGISTRATION.id,
     kind: "registration",
   });
-  const customRoleCards = registrationChoice?.options.filter(
-    (option) => option.group === "custom_role",
+  expect(registrationChoice?.options.map((option) => option.id)).toEqual(
+    REGISTRATION.profiles.map((profile) => profile.id),
   );
-  expect(customRoleCards).toEqual(
-    REGISTRATION.profiles.map((profile) =>
-      expect.objectContaining({
-        id: profile.id,
-        group: "custom_role",
-      }),
-    ),
-  );
-  const doctrineCards = registrationChoice?.options.filter((option) => option.group === "doctrine");
-  expect(doctrineCards).toEqual(
-    (REGISTRATION.doctrines ?? []).map((doctrine) =>
-      expect.objectContaining({ id: doctrine.id, group: "doctrine" }),
-    ),
-  );
+  expect(registrationChoice?.options.every((option) => option.group === undefined)).toBe(true);
   session.chooseJourneyStory(profileId);
   expect(session.view().quests.map((quest) => quest.id)).not.toContain("wolf_winter");
+  const standardPacket = REGISTRATION.doctrines?.find(
+    (doctrine) => doctrine.profile_id === profileId,
+  );
   expect(session.journey().storyChoice).toMatchObject({
     id: RELIEF_OATH.id,
     kind: "relief_oath",
-    options: RELIEF_OATH.options.map((option) => ({ id: option.id })),
+    options: [
+      ...(standardPacket ? [{ id: standardPacket.id }] : []),
+      ...RELIEF_OATH.options.map((option) => ({ id: option.id })),
+    ],
   });
   session.chooseJourneyStory(DEFAULT_OATH_ID);
   expect(session.journey().storyChoice).toMatchObject({

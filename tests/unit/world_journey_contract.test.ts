@@ -1033,13 +1033,13 @@ describe("journey contract presentation context", () => {
     ).toThrow(/ally choice requires between three and four options/i);
   });
 
-  it("requires and deep-freezes exactly three relief-oath terms", () => {
+  it("requires and deep-freezes three or four relief-oath routes", () => {
     const state = createInitialJourneyContractSnapshot();
     const reliefOath = {
       id: "albany_relief_oath",
       kind: "relief_oath",
       message: "Choose the exact term that binds this dispatch.",
-      options: Array.from({ length: 3 }, (_, index) => ({
+      options: Array.from({ length: 4 }, (_, index) => ({
         id: `oath_${String(index)}`,
         label: `Term ${String(index)}`,
         summary: {
@@ -1053,19 +1053,32 @@ describe("journey contract presentation context", () => {
 
     const view = journeyPresentation(state, { storyChoice: reliefOath });
     expect(view.storyChoice).toEqual(reliefOath);
-    expect(view.storyChoice?.options).toHaveLength(3);
+    expect(view.storyChoice?.options).toHaveLength(4);
     expect(Object.isFrozen(view.storyChoice)).toBe(true);
     expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
     expect(view.storyChoice?.options.every((option) => Object.isFrozen(option.summary))).toBe(true);
 
-    expect(() =>
-      journeyPresentation(state, {
-        storyChoice: {
-          ...reliefOath,
-          options: reliefOath.options.slice(0, 2),
-        } as unknown as JourneyStoryChoicePrompt,
-      }),
-    ).toThrow(/relief-oath choice requires exactly three options/i);
+    for (const invalidOptions of [
+      reliefOath.options.slice(0, 2),
+      [...reliefOath.options, { ...reliefOath.options[0]!, id: "oath_4" }],
+    ]) {
+      expect(() =>
+        journeyPresentation(state, {
+          storyChoice: {
+            ...reliefOath,
+            options: invalidOptions,
+          } as unknown as JourneyStoryChoicePrompt,
+        }),
+      ).toThrow(/relief-oath choice requires between three and four options/i);
+    }
+
+    const ordinaryTerms = {
+      ...reliefOath,
+      options: reliefOath.options.slice(1),
+    } as unknown as JourneyStoryChoicePrompt;
+    expect(
+      journeyPresentation(state, { storyChoice: ordinaryTerms }).storyChoice?.options,
+    ).toHaveLength(3);
   });
 });
 

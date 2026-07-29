@@ -179,10 +179,13 @@ function reachOathOffer(profileId = LEDGER_PROFILE): OverworldSession {
   session.scoutPoi(civicPoi.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(profileId);
+  const standardPacketId = REGISTRATION.doctrines?.find(
+    (doctrine) => doctrine.profile_id === profileId,
+  )?.id;
   expect(session.journey().storyChoice).toMatchObject({
     id: OATH.id,
     kind: "relief_oath",
-    options: OATH_IDS.map((id) => ({ id })),
+    options: [...(standardPacketId ? [standardPacketId] : []), ...OATH_IDS].map((id) => ({ id })),
   });
   return session;
 }

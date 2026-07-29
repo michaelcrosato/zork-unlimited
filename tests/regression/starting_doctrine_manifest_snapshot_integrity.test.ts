@@ -57,18 +57,18 @@ describe("Starting Doctrine manifest snapshot integrity", () => {
     );
   });
 
-  it("restores an exact pre-doctrine registration offer into the new grouped choice", () => {
+  it("restores an exact pre-doctrine registration offer into the role-first choice", () => {
     const predecessor = pendingRegistrationSession(PRE_DOCTRINE_PREDECESSOR).snapshot();
     const native = pendingRegistrationSession(WORLD).snapshot();
     const restored = OverworldSession.restore(WORLD, predecessor);
 
     expect(restored.snapshot()).toEqual(native);
-    expect(restored.journey().storyChoice?.options).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ group: "doctrine" }),
-        expect.objectContaining({ group: "custom_role" }),
-      ]),
+    expect(restored.journey().storyChoice?.options.map((option) => option.id)).toEqual(
+      WORLD.opening_registration!.profiles.map((profile) => profile.id),
     );
+    expect(
+      restored.journey().storyChoice?.options.every((option) => option.group === undefined),
+    ).toBe(true);
   });
 
   it("transparently restores the exact three-doctrine replacement predecessor at registration", () => {
@@ -78,9 +78,16 @@ describe("Starting Doctrine manifest snapshot integrity", () => {
     expect(OverworldSession.restore(WORLD, predecessor).snapshot()).toEqual(native);
   });
 
-  it("restores the retired doctrine through its canonical role, oath, and source evidence", () => {
+  it("restores retired doctrine-selected saves through their canonical evidence", () => {
     const predecessor = pendingRegistrationSession(REPLACEMENT_PREDECESSOR);
-    predecessor.chooseJourneyStory("albany:doctrine_bounded_aid");
+    const retiredDoctrine = REPLACEMENT_PREDECESSOR.opening_registration!.doctrines!.find(
+      (doctrine) => doctrine.id === "albany:doctrine_bounded_aid",
+    )!;
+    // The former one-click alias was never persisted. Its exact save evidence
+    // is the same canonical role → oath → source sequence reconstructed here.
+    predecessor.chooseJourneyStory(retiredDoctrine.profile_id);
+    predecessor.chooseJourneyStory(retiredDoctrine.relief_oath_option_id);
+    predecessor.chooseJourneyStory(retiredDoctrine.lead_source_option_id);
 
     const native = pendingRegistrationSession(WORLD);
     native.chooseJourneyStory("albany:ledger_advocate");

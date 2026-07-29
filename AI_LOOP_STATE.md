@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 689 -->
+<!-- historical_cycle_count: 690 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - role_first_standard_packet
+
+- Evidence choice: the exact merged-build ten-Terra cohort completed The Wolf-Winter 10/10 but chose the old doctrine-first shortcuts 0/10, chose Road-Warden 9/10, and named setup density in 10/10 reports, so this cycle changes commitment order instead of adding more copy.
+- Surface: registration now compares only four roles; after a role, its one matching standard packet appears before the three ordinary duties and explicitly names the bound duty and evidence source, while Ledger and every custom path remain ordinary choices.
+- Canonical guard: a packet still records the same role, oath, and source decisions/journals as manual play; packet execution defers checkpoint 40 until both internal choices finish, malformed mappings fail atomically, and world content, hashes, and save format remain unchanged.
+- Pure evidence: exact-candidate Terra seed 73056 selected the Road-Warden packet, completed The Wolf-Winter through a recovered nonlethal LURE at decision 33, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and encountered no rejected action or loop.
+- New finding/follow-through: the canary raised one S2 that Emery's one-use Drover Route resolves an optional Streetwise check only after use unless its staged terms or field object are inspected; carry this field-action disclosure into the next focused cycle and test recurrence in the merged-build cohort.
+- Economy: the exact canary used 2.216M raw / 102.8k uncached input and 7.3k output tokens at 95.36% cache reuse, or 3,338 useful tokens per accepted decision; one earlier 108.0k-useful provisional canary was invalidated after review improved pre-choice packet disclosure, with no retry or model fallback.
+- Guard: independent reviews closed checkpoint atomicity, oath-id collision, label-coupled UI, no-doctrine false guidance, and hidden source mapping; final crawl `20260729T101507Z` is zero-finding.
 
 ### Cycle result - dominant_road_warden_doctrine
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: this proves truthful reachability, not a continuation lift; do not rerun unchanged copy, and measure retention only after the active Station recap and HUNT commitment-legibility increments land together.
 - Economy: the one 49-turn canary used 2.592M raw / 124.7k uncached input and 7.4k output tokens at 95.2% cache reuse; no exposure-chasing replacement or cohort was launched.
 - Guard: independent review is clean, crawl `20260728T082709Z` is zero-finding, and health passes 440 files/3,617 tests, both typechecks, and all 12 packs.
-
-### Cycle result - compact_dialogue_choice_labels
-
-- Evidence choice: the prior valid ten-Terra pilot followed bare Cade action ids into LURE 10/10 without inspecting another living plan.
-- Surface: compact dialogue v19 now pairs each current legal ASK id with its bounded authored prompt while retaining the unchanged executable `actions` ids; future oversized menus expose only choices whose ids survived the action cap.
-- Counterfactual: dialogue legality, commitment, checks, costs, resources, pressure, outcomes, full views, unavailable actions, and journey pauses are unchanged; compact omission and clone contracts cover the additive field.
-- Pure evidence: exact-clean Terra seed 72852 received all six Cade prompts, completed The Wolf-Winter through LURE at decision 30, continued twice, completed The Gallowmere at 56, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Cohort: ten fresh verified Terra reports had zero failed attempts and moved outcomes from 10 LURE to 7 LURE / 3 FORTIFY (p50 29, 6/10 continued, 4.0/4.0, zero stuck or S2+); the label is diagnostic, not a valid strict pilot, because launch mistakenly retained resume permission despite zero resumed runs.
-- Self-critique/follow-through: visible labels materially broke the monopoly but HUNT/DRIVE remain absent and opening density/continuation still miss the milestone; do not rerun this unchanged build, and land the reviewed truthful continuation invitation next.
-- Guard: independent review is clear, crawl `20260728T072224Z` is zero-finding, and health passes 440 files/3,615 tests, both typechecks, and all 12 packs.

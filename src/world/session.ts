@@ -787,13 +787,14 @@ export class OverworldSession {
   }
 
   /**
-   * Resolve every authored reference before a doctrine starts the canonical
-   * registration → oath → source sequence. The sequence itself deliberately
+   * Resolve every authored reference before a role-anchored standard packet
+   * starts the canonical oath → source sequence. The sequence itself deliberately
    * reuses chooseJourneyStory so its durable proof boundaries remain identical
-   * to three ordinary selections.
+   * to two ordinary selections after the already-recorded role choice.
    */
-  private preflightOpeningRegistrationDoctrine(
+  private preflightOpeningReliefOathStandardPacket(
     registration: NonNullable<OverworldManifest["opening_registration"]>,
+    reliefOath: NonNullable<OverworldManifest["opening_relief_oath"]>,
     doctrineId: string,
   ) {
     const doctrine = registration.doctrines?.find((candidate) => candidate.id === doctrineId);
@@ -805,10 +806,13 @@ export class OverworldSession {
         `Opening doctrine "${doctrine.id}" references unknown registration profile "${doctrine.profile_id}".`,
       );
     }
+    if (this.characterState.background !== profile.id) {
+      throw new Error(
+        `Opening standard packet "${doctrine.id}" does not match registered role "${String(this.characterState.background)}".`,
+      );
+    }
 
-    const reliefOath = this.world.opening_relief_oath;
     if (
-      !reliefOath ||
       reliefOath.after_registration !== registration.id ||
       reliefOath.home !== registration.home ||
       reliefOath.area !== registration.area
@@ -847,14 +851,9 @@ export class OverworldSession {
     // Validate the canonical state transformations before mutating this
     // session. The live sequence below still owns the durable journals and
     // accepted-decision proofs.
-    const registeredCharacter = applyOpeningRegistrationProfile({
-      registration,
-      character: this.characterState,
-      profileId: profile.id,
-    });
     const swornCharacter = applyOpeningReliefOathOption({
       scene: reliefOath,
-      character: registeredCharacter,
+      character: this.characterState,
       optionId: reliefOathOption.id,
     }).characterAfter;
     applyOpeningLeadSourceOption({
@@ -873,7 +872,7 @@ export class OverworldSession {
     });
   }
 
-  private openingRegistrationDoctrineReceipt(args: {
+  private openingStandardPacketReceipt(args: {
     doctrine: OpeningStartingDoctrine;
     profileTitle: string;
     reliefOathTitle: string;
@@ -881,8 +880,8 @@ export class OverworldSession {
   }): string {
     return (
       `${args.doctrine.preview} Exact opening cost: ${args.doctrine.immediate_cost}. ` +
-      `${args.doctrine.consequence} Commitments: role — ` +
-      `${args.profileTitle}; duty — ${args.reliefOathTitle}; source — ${args.leadSourceTitle}.`
+      `${args.doctrine.consequence} Registered role — ${args.profileTitle}. ` +
+      `Packet commitments: duty — ${args.reliefOathTitle}; source — ${args.leadSourceTitle}.`
     );
   }
 
@@ -1624,7 +1623,16 @@ export class OverworldSession {
     let storyChoice: JourneyPresentationContext["storyChoice"] = registration
       ? presentOpeningRegistration(registration)
       : reliefOath
-        ? presentOpeningReliefOath(reliefOath, this.characterState)
+        ? presentOpeningReliefOath(
+            reliefOath,
+            this.characterState,
+            this.world.opening_registration && this.world.opening_lead_source
+              ? {
+                  registration: this.world.opening_registration,
+                  leadSource: this.world.opening_lead_source,
+                }
+              : undefined,
+          )
         : leadSource
           ? presentOpeningLeadSource(leadSource, this.characterState)
           : preparation
@@ -1796,6 +1804,14 @@ export class OverworldSession {
   }
 
   chooseJourneyStory(choiceId: string, storyChoiceId?: string): OverworldJourneyStoryChoiceResult {
+    return this.chooseJourneyStoryInternal(choiceId, storyChoiceId, true);
+  }
+
+  private chooseJourneyStoryInternal(
+    choiceId: string,
+    storyChoiceId: string | undefined,
+    checkpointSafeBoundary: boolean,
+  ): OverworldJourneyStoryChoiceResult {
     assertJourneyContractAcceptingDecision(this.journeyState);
     const presentedStoryChoice = this.journey().storyChoice;
     const inferredDepartureStoryChoice =
@@ -1830,33 +1846,6 @@ export class OverworldSession {
       const registration = this.openingRegistrationAvailable();
       if (!registration || storyChoice.id !== registration.id) {
         throw new Error("The presented opening registration is no longer available.");
-      }
-      const doctrine = this.preflightOpeningRegistrationDoctrine(registration, choiceId);
-      if (doctrine) {
-        this.chooseJourneyStory(doctrine.profile.id, storyChoice.id);
-        this.chooseJourneyStory(doctrine.reliefOathOption.id);
-        const leadSourceSelection = this.chooseJourneyStory(doctrine.leadSourceOption.id);
-        const consequence = this.openingRegistrationDoctrineReceipt({
-          doctrine: doctrine.doctrine,
-          profileTitle: doctrine.profile.title,
-          reliefOathTitle: doctrine.reliefOathOption.title,
-          leadSourceTitle: doctrine.leadSourceOption.title,
-        });
-        return Object.freeze({
-          storyChoiceId: storyChoice.id,
-          choiceId,
-          consequence,
-          goal: leadSourceSelection.goal,
-          entry: Object.freeze({
-            ...leadSourceSelection.entry,
-            title: `Doctrine confirmed: ${doctrine.doctrine.title}`,
-            text: consequence,
-          }),
-          // The three canonical calls above each record their own counted
-          // decision. The returned classification represents their final source
-          // certification, which is the immediate visible outcome.
-          journeyDecision: leadSourceSelection.journeyDecision,
-        });
       }
       const characterAfter = applyOpeningRegistrationProfile({
         registration,
@@ -1907,6 +1896,39 @@ export class OverworldSession {
       if (!scene || storyChoice.id !== scene.id) {
         throw new Error("The presented opening relief oath is no longer available.");
       }
+      const registration = this.world.opening_registration;
+      const standardPacket = registration
+        ? this.preflightOpeningReliefOathStandardPacket(registration, scene, choiceId)
+        : null;
+      if (standardPacket) {
+        this.chooseJourneyStoryInternal(standardPacket.reliefOathOption.id, storyChoice.id, false);
+        const leadSourceSelection = this.chooseJourneyStoryInternal(
+          standardPacket.leadSourceOption.id,
+          undefined,
+          true,
+        );
+        const consequence = this.openingStandardPacketReceipt({
+          doctrine: standardPacket.doctrine,
+          profileTitle: standardPacket.profile.title,
+          reliefOathTitle: standardPacket.reliefOathOption.title,
+          leadSourceTitle: standardPacket.leadSourceOption.title,
+        });
+        return Object.freeze({
+          storyChoiceId: storyChoice.id,
+          choiceId,
+          consequence,
+          goal: leadSourceSelection.goal,
+          entry: Object.freeze({
+            ...leadSourceSelection.entry,
+            title: `Standard packet confirmed: ${standardPacket.doctrine.title}`,
+            text: consequence,
+          }),
+          // The two canonical calls above each record their own counted
+          // decision. The returned classification represents their final source
+          // certification, which is the immediate visible outcome.
+          journeyDecision: leadSourceSelection.journeyDecision,
+        });
+      }
       const application = applyOpeningReliefOathOption({
         scene,
         character: this.characterState,
@@ -1921,6 +1943,7 @@ export class OverworldSession {
         `campaign_story:${storyChoice.id}:${choiceId}`,
         "progress",
         true,
+        checkpointSafeBoundary,
       );
       this.minutes += application.terms.minutes;
       const entry = openingReliefOathJournalEntry({

@@ -1979,10 +1979,9 @@ describe("MCP pure play mode", () => {
         expect(registrationDetail).not.toHaveProperty("options");
         expect(registrationDetail.inspectedOption).toMatchObject({
           id: ledgerAdvocate.id,
-          group: "custom_role",
         });
         expect(Object.keys(registrationDetail.inspectedOption ?? {}).sort()).toEqual(
-          ["consequence", "group", "id", "label"].sort(),
+          ["consequence", "id", "label"].sort(),
         );
         const wolfBeforeSource = areaView(registration).quests.find(
           (quest) => quest.id === "wolf_winter",

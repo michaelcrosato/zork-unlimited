@@ -668,7 +668,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     const run = runCli(["--commands", "talk rowan; journal; log"]);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output).toContain("The Wolf-Winter Civic start");
+    expect(run.output).toContain("The Wolf-Winter Civic docket · 1/3 — role");
     expect(run.output).toContain("No roads travelled yet.");
     expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
     expect(run.output).not.toContain("A scripted command was rejected.");

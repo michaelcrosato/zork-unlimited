@@ -20,8 +20,9 @@ const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
 const ALLY_CONTACT = WORLD.characters.find((character) => character.id === ALLY.contact)!;
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
-const REGISTRATION_HEADER = `Choose a doctrine or custom role. Compare its promise, exact cost, what it gives up, and what remains open. ${FIELD_CHECK_TIMING}`;
+const REGISTRATION_HEADER = `Choose who you were and the promise you carry. Compare exact cost and what each role gives up. ${FIELD_CHECK_TIMING}`;
 const OATH_HEADER = `Choose whose authority you accept and the promise you make. Compare exact cost and what each duty gives up. ${FIELD_CHECK_TIMING}`;
+const STANDARD_PACKET_OATH_HEADER = `Compare route promises, exact cost, and tradeoffs. ${FIELD_CHECK_TIMING}`;
 const SOURCE_HEADER = `Certify one account; the other two close. Compare its priority, exact cost, and what it gives up. ${FIELD_CHECK_TIMING}`;
 const PREPARATION_HEADER = `Choose one optional field priority, or leave without one. Compare exact cost and what it gives up. ${FIELD_CHECK_TIMING}`;
 const RELIEF_ALLOCATION_HEADER = `Choose whom Albany protects, or leave capacity unassigned. Compare each priority's exact cost and what remains exposed. ${FIELD_CHECK_TIMING}`;
@@ -90,9 +91,9 @@ function wordCount(value: string): number {
 }
 
 function expectRoleplayFirstFraming(storyChoice: JourneyStoryChoicePrompt): void {
-  expect(storyChoice.message).toMatch(/\b(?:promise|priority)\b/i);
+  expect(storyChoice.message).toMatch(/\b(?:promises?|priorit(?:y|ies))\b/i);
   expect(storyChoice.message).toContain("exact cost");
-  expect(storyChoice.message).toMatch(/\b(?:gives up|remains exposed)\b/i);
+  expect(storyChoice.message).toMatch(/\b(?:gives up|remains exposed|tradeoffs?)\b/i);
   expect(storyChoice.message).toContain(FIELD_CHECK_TIMING);
   expect(storyChoice.message).not.toMatch(
     /broad field fit|trigger category|inspect a card|exact check|recovery chain/i,
@@ -180,14 +181,17 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
 
     const registration = currentStoryChoice(session);
     expect(registration).toMatchObject({ id: REGISTRATION.id, kind: "registration" });
-    expect(registration.message).toContain(`${WOLF.title} Civic start — doctrine or custom role.`);
+    expect(registration.message).toContain(`${WOLF.title} Civic docket · 1/3 — role.`);
     expect(registration.message).toContain(`${REGISTRATION.title}. ${REGISTRATION_HEADER}`);
     expect(registration.message).not.toContain(REGISTRATION.message);
     expect(registration.message).toContain(`Mission preview — ${WOLF.discovery}`);
     expect(registration.message).toContain(
-      "A doctrine commits role, duty, and evidence together. A custom role commits role; duty and evidence follow. Both leave solutions open.",
+      "At Civic: role → duty → evidence. Choose only your role now; duty and evidence follow. None locks your field solution.",
     );
-    expect(registration.message).not.toContain("Choose only your role now");
+    expect(registration.options.map((option) => option.id)).toEqual(
+      REGISTRATION.profiles.map((profile) => profile.id),
+    );
+    expect(registration.options.every((option) => option.group === undefined)).toBe(true);
     expectRoleplayFirstFraming(registration);
     expect(wordCount(registration.message)).toBeLessThanOrEqual(120);
     expectSummaryFirstOptions(registration);
@@ -213,15 +217,43 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       label: "duty",
       originalTitle: RELIEF_OATH.title,
       originalMessage: RELIEF_OATH.message,
-      presentedMessage: OATH_HEADER,
+      presentedMessage: STANDARD_PACKET_OATH_HEADER,
     });
-    expect(oath.message).toContain("Chosen at Civic: role. Now choose: duty.");
-    expect(oath.message).toContain("Next: evidence.");
+    const standardPacket = REGISTRATION.doctrines!.find(
+      (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
+    )!;
+    expect(oath.message).toContain(
+      "Chosen at Civic: role. Choose the standard packet for duty + evidence, or a duty alone; custom evidence follows.",
+    );
+    expect(oath.options.map((option) => option.id)).toEqual([
+      standardPacket.id,
+      ...RELIEF_OATH.options.map((option) => option.id),
+    ]);
     expectRoleplayFirstFraming(oath);
     expect(wordCount(oath.message)).toBeLessThanOrEqual(50);
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(oath);
+
+    const ledgerSession = new OverworldSession(WORLD);
+    ledgerSession.scoutPoi(ledgerSession.view().pois[0]!.id);
+    ledgerSession.talkToCharacter(REGISTRATION.contact);
+    ledgerSession.chooseJourneyStory("albany:ledger_advocate");
+    const ledgerOath = expectStage(ledgerSession, {
+      id: RELIEF_OATH.id,
+      kind: "relief_oath",
+      phase: "Civic docket",
+      step: 2,
+      total: 3,
+      label: "duty",
+      originalTitle: RELIEF_OATH.title,
+      originalMessage: RELIEF_OATH.message,
+      presentedMessage: OATH_HEADER,
+    });
+    expect(ledgerOath.options.map((option) => option.id)).toEqual(
+      RELIEF_OATH.options.map((option) => option.id),
+    );
+    expect(ledgerOath.message).not.toContain("standard packet for duty + evidence");
 
     session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
     const source = expectStage(session, {
@@ -362,11 +394,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(talked.journey.storyChoice?.message).toContain(`Mission preview — ${WOLF.discovery}`);
     expectSummaryFirstOptions(talked.journey.storyChoice!);
 
-    const sharedChoices = [
-      REGISTRATION.profiles[0]!.id,
-      RELIEF_OATH.options[0]!.id,
-      LEAD_SOURCE.options[0]!.id,
-    ];
+    const standardPacket = REGISTRATION.doctrines!.find(
+      (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
+    )!;
+    const sharedChoices = [REGISTRATION.profiles[0]!.id, standardPacket.id];
     let compactJourney = talked.journey;
     for (const choice of sharedChoices) {
       ui.chooseJourneyStory(choice);

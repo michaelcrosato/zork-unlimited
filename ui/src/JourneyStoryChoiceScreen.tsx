@@ -38,6 +38,7 @@ export function JourneyStoryChoiceScreen({
   const isAlly = storyChoice.kind === "ally";
   const isReliefAllocation = storyChoice.kind === "relief_allocation";
   const isReliefOath = storyChoice.kind === "relief_oath";
+  const hasStandardPacket = isReliefOath && storyChoice.options.length === 4;
   const keepsCurrentObjective =
     isRegistration ||
     isLeadSource ||
@@ -62,6 +63,8 @@ export function JourneyStoryChoiceScreen({
       : null;
   const currentObjectiveGuidance = registrationGroups
     ? "A doctrine commits your role, oath, and source; a custom role continues step-by-step."
+    : hasStandardPacket
+      ? "The first card binds duty and evidence together; choosing an individual duty keeps the evidence choice next."
     : usesRoleplayReceipts
       ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
       : isRegistration
@@ -186,7 +189,9 @@ export function JourneyStoryChoiceScreen({
                   : isReliefAllocation
                     ? "Choose what Albany can protect"
                     : isReliefOath
-                      ? "Choose one binding term"
+                      ? hasStandardPacket
+                        ? "Choose a standard packet or duty"
+                        : "Choose one binding term"
                       : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">
