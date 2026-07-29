@@ -238,13 +238,18 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const choiceButtonText = (choiceButton as { textContent?: string | null }).textContent;
       const registrationSource = WORLD.opening_registration!;
       const registrationDetailsText = (details as { textContent?: string | null }).textContent;
-      expect(choiceButtonText).toContain("Trigger category:");
-      expect(choiceButtonText).toContain("Immediate cost:");
-      expect(choiceButtonText).toContain("Tradeoff:");
-      expect(choiceButtonText).toContain(registrationSource.profiles[0]!.trigger_category);
+      const registrationOption = registration.options[0]!;
+      expect(choiceButtonText).toContain("Promise / priority:");
+      expect(choiceButtonText).toContain("Cost / give up:");
+      expect(choiceButtonText).toContain(registrationOption.summary!.commitment);
+      expect(choiceButtonText).toContain(registrationOption.summary!.immediateCost);
+      expect(choiceButtonText).toContain(registrationOption.summary!.tradeoff);
+      expect(choiceButtonText).not.toContain("Trigger category:");
+      expect(choiceButtonText).not.toContain(registrationSource.profiles[0]!.trigger_category);
       expect(choiceButtonText).not.toContain(registrationSource.profiles[0]!.preview);
-      expect(registrationDetailsText).toContain(registrationSource.profiles[0]!.preview);
-      expect(registrationDetailsText).toContain(registrationSource.profiles[0]!.consequence);
+      expect(registrationDetailsText).toContain(registrationOption.consequence);
+      expect(registrationDetailsText).not.toContain(registrationSource.profiles[0]!.preview);
+      expect(registrationDetailsText).not.toContain(registrationSource.profiles[0]!.consequence);
 
       expect(details.parentElement).toBe(card);
       expect(choiceButton.contains(details)).toBe(false);
@@ -293,23 +298,22 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const stationButton = stationCard?.querySelector("button");
       const stationDetails = stationCard?.querySelector("details p");
       if (!stationButton || !stationDetails) {
-        throw new Error("Expected the Station preparation comparison and full-terms disclosure.");
+        throw new Error("Expected the Station preparation comparison and exact receipt.");
       }
-      expect(stationButton.textContent).toContain("Purpose:");
-      expect(stationButton.textContent).toContain("Trigger category:");
-      expect(stationButton.textContent).toContain("Immediate cost:");
-      expect(stationButton.textContent).toContain("Tradeoff:");
+      const stationOption = stationJourney.storyChoice!.options[0]!;
+      expect(stationButton.textContent).toContain("Promise / priority:");
+      expect(stationButton.textContent).toContain("Cost / give up:");
+      expect(stationButton.textContent).not.toContain("Purpose:");
+      expect(stationButton.textContent).not.toContain("Trigger category:");
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.tradeoff);
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.summary);
-      const stationFieldTrigger = stationJourney.storyChoice?.options[0]?.summary?.fieldTrigger;
-      if (!stationFieldTrigger) throw new Error("Expected the broad Station field category.");
-      expect(stationButton.textContent).toContain(stationFieldTrigger);
       const forecastLine = stationJourney.storyChoice?.options[0]?.dispatchForecast?.line;
       if (!forecastLine) throw new Error("Expected the authenticated Station timing forecast.");
       expect(stationButton.textContent).toContain(forecastLine);
       expect(stationButton.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
-      expect(stationDetails.textContent).toContain(stationPreparation.profiles[0]!.preview);
-      expect(stationDetails.textContent).toContain(stationPreparation.profiles[0]!.consequence);
+      expect(stationDetails.textContent).toContain(stationOption.consequence);
+      expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
+      expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.consequence);
       const stationDisclosures = Array.from(
         rootElement.querySelectorAll(".journey-choice-details > summary"),
       ) as Array<{
@@ -318,9 +322,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       }>;
       const disclosureNames = stationDisclosures.map((summary) => summary.textContent);
       expect(disclosureNames).toEqual(
-        stationPreparation.profiles.map(
-          (profile) => `Full terms and consequence for ${profile.title}`,
-        ),
+        stationPreparation.profiles.map((profile) => `Inspect exact receipt for ${profile.title}`),
       );
       expect(new Set(disclosureNames).size).toBe(stationPreparation.profiles.length);
       const selectedBeforeDisclosure = [...selected];
@@ -345,12 +347,13 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const allocationButton = allocationCard?.querySelector("button");
       const allocationDetails = allocationCard?.querySelector("details p");
       if (!allocationButton || !allocationDetails) {
-        throw new Error("Expected the Relief Allocation comparison and full-terms disclosure.");
+        throw new Error("Expected the Relief Allocation comparison and exact receipt.");
       }
-      expect(allocationButton.textContent).toContain("Purpose:");
-      expect(allocationButton.textContent).toContain("Trigger category:");
-      expect(allocationButton.textContent).toContain("Immediate cost:");
-      expect(allocationButton.textContent).toContain("Tradeoff:");
+      const allocationOption = allocationJourney.storyChoice!.options[0]!;
+      expect(allocationButton.textContent).toContain("Promise / priority:");
+      expect(allocationButton.textContent).toContain("Cost / give up:");
+      expect(allocationButton.textContent).not.toContain("Purpose:");
+      expect(allocationButton.textContent).not.toContain("Trigger category:");
       expect(allocationButton.textContent).toContain(
         `Leaves exposed: ${allocation.options[0]!.leaves_exposed}`,
       );
@@ -358,15 +361,12 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       if (!allocationImpact) throw new Error("Expected the authenticated relief timing impact.");
       expect(allocationButton.textContent).toContain(allocationImpact);
       expect(allocationButton.textContent!.indexOf(allocationImpact)).toBeLessThan(
-        allocationButton.textContent!.indexOf("Purpose:"),
+        allocationButton.textContent!.indexOf("Promise / priority:"),
       );
-      const allocationFieldTrigger =
-        allocationJourney.storyChoice?.options[0]?.summary?.fieldTrigger;
-      if (!allocationFieldTrigger) throw new Error("Expected the broad allocation field category.");
-      expect(allocationButton.textContent).toContain(allocationFieldTrigger);
       expect(allocationButton.textContent).not.toContain(allocation.options[0]!.preview);
-      expect(allocationDetails.textContent).toContain(allocation.options[0]!.preview);
-      expect(allocationDetails.textContent).toContain(allocation.options[0]!.consequence);
+      expect(allocationDetails.textContent).toContain(allocationOption.consequence);
+      expect(allocationDetails.textContent).not.toContain(allocation.options[0]!.preview);
+      expect(allocationDetails.textContent).not.toContain(allocation.options[0]!.consequence);
 
       for (const [comparedJourney, sourceOption] of [
         [reliefOathJourney(), WORLD.opening_relief_oath!.options[0]!],
@@ -389,15 +389,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         if (!comparedButton || !comparedDetails) {
           throw new Error("Expected every Albany setup kind to use the comparison-first card.");
         }
-        expect(comparedButton.textContent).toContain("Trigger category:");
-        const comparedFieldTrigger = comparedJourney.storyChoice?.options[0]?.summary?.fieldTrigger;
-        if (!comparedFieldTrigger) throw new Error("Expected a broad Civic field category.");
-        expect(comparedButton.textContent).toContain(comparedFieldTrigger);
+        const comparedOption = comparedJourney.storyChoice!.options[0]!;
+        expect(comparedButton.textContent).toContain("Promise / priority:");
+        expect(comparedButton.textContent).toContain("Cost / give up:");
+        expect(comparedButton.textContent).not.toContain("Trigger category:");
         expect(comparedButton.textContent).not.toContain(sourceOption.preview);
-        expect(comparedDetails.textContent).toContain(sourceOption.preview);
-        expect(comparedDetails.textContent).toContain(sourceOption.consequence);
-        expect(comparedButton.textContent).toContain("Immediate cost:");
-        expect(comparedButton.textContent).toContain("Tradeoff:");
+        expect(comparedDetails.textContent).toContain(comparedOption.consequence);
+        expect(comparedDetails.textContent).not.toContain(sourceOption.preview);
+        expect(comparedDetails.textContent).not.toContain(sourceOption.consequence);
       }
 
       await act(async () => {
@@ -412,8 +411,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         textContent: string | null;
       } | null;
       if (!allyButton) throw new Error("Expected the ally comparison-first card.");
-      expect(allyButton.textContent).toContain("Immediate cost:");
-      expect(allyButton.textContent).toContain("Tradeoff:");
+      expect(allyButton.textContent).toContain("Promise / priority:");
+      expect(allyButton.textContent).toContain("Cost / give up:");
     } finally {
       if (root && act) {
         await act(async () => root!.unmount());

@@ -4,6 +4,7 @@ import type {
   JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
 import { formatOpeningAllyCost, parseOpeningAlly, type OpeningAlly } from "./opening_ally.js";
+import { presentOpeningChoiceOption } from "./opening_choice_receipt.js";
 
 function allyFieldCategory(
   scene: ReturnType<typeof parseOpeningAlly>,
@@ -22,13 +23,12 @@ function allySummary(
   scene: ReturnType<typeof parseOpeningAlly>,
   option: ReturnType<typeof parseOpeningAlly>["options"][number],
 ) {
-  return Object.freeze({
+  return {
     commitment: option.summary,
-    fieldTrigger: allyFieldCategory(scene, option),
-    fieldTriggerScope: "category" as const,
+    exactBenefit: allyFieldCategory(scene, option),
     immediateCost: formatOpeningAllyCost(option.terms),
-    tradeoff: option.tradeoff,
-  });
+    giveUp: option.tradeoff,
+  };
 }
 
 /** Project the departure bond onto the same honest journey-choice surface as other openings. */
@@ -43,11 +43,10 @@ export function presentOpeningAlly(
     message: `${parsed.title}. ${parsed.message}`,
     options: Object.freeze(
       parsed.options.map((option) =>
-        Object.freeze({
+        presentOpeningChoiceOption({
           id: option.id,
           label: option.title,
-          summary: allySummary(parsed, option),
-          consequence: `${option.summary} ${allyFieldCategory(parsed, option)} ${option.preview} Actual cost: ${formatOpeningAllyCost(option.terms)}. ${option.consequence}`,
+          ...allySummary(parsed, option),
         }),
       ),
     ) as JourneyAllyStoryChoiceOptions,

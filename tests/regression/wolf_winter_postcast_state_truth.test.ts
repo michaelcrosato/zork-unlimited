@@ -300,7 +300,7 @@ describe("Wolf-Winter post-cast state truth", () => {
       }).unavailable,
     ).toContainEqual([
       "use_winter_feed_sack_on_outer_scent_gate",
-      "June has reached the pressing cattle under the authority you granted. Speak to her before committing the last scent cast.",
+      "June has reached the pressing cattle under the authority you granted. Speak to her first: her one cattle-line intervention lowers cattle alarm by 1 before the last scent cast.",
     ]);
 
     state = act(state, "talk_june_pike");

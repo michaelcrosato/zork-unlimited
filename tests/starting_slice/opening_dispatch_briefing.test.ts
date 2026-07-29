@@ -19,20 +19,12 @@ const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
 const ALLY_CONTACT = WORLD.characters.find((character) => character.id === ALLY.contact)!;
-const SOURCE_HEADER =
-  "Certify one account; the other two close. Compare immediate cost, broad field fit, and what you give up. Inspect a card for exact conditions; they surface again when relevant.";
-const PREPARATION_HEADER =
-  "Choose one optional specialist packet, or leave without one. Compare immediate cost, broad field fit, and tradeoff. Inspect a card for its exact check and recovery; they surface again in the field.";
-const PREPARATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
-  "albany:prep_works_fortification": "Opening fortification support",
-  "albany:prep_drover_route": "Failed-lure recovery",
-  "albany:prep_relief_protocol": "Herd-pressure recovery",
-};
-const RELIEF_ALLOCATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
-  "albany:relief_cade_fodder": "Opening herd support",
-  "albany:relief_resident_shelter": "Return fatigue recovery",
-  "albany:relief_mobile_reserve": "Field-failure and return reserve",
-};
+const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
+const REGISTRATION_HEADER = `Choose who you were and the promise you carry. Compare exact cost and what each role gives up. ${FIELD_CHECK_TIMING}`;
+const OATH_HEADER = `Choose whose authority you accept and the promise you make. Compare exact cost and what each duty gives up. ${FIELD_CHECK_TIMING}`;
+const SOURCE_HEADER = `Certify one account; the other two close. Compare its priority, exact cost, and what it gives up. ${FIELD_CHECK_TIMING}`;
+const PREPARATION_HEADER = `Choose one optional field priority, or leave without one. Compare exact cost and what it gives up. ${FIELD_CHECK_TIMING}`;
+const RELIEF_ALLOCATION_HEADER = `Choose whom Albany protects, or leave capacity unassigned. Compare each priority's exact cost and what remains exposed. ${FIELD_CHECK_TIMING}`;
 
 function currentStoryChoice(session: OverworldSession): JourneyStoryChoicePrompt {
   const storyChoice = session.journey().storyChoice;
@@ -51,7 +43,7 @@ function expectStage(
     label: string;
     originalTitle: string;
     originalMessage: string;
-    presentedMessage?: string;
+    presentedMessage: string;
   },
 ): JourneyStoryChoicePrompt {
   const storyChoice = currentStoryChoice(session);
@@ -59,9 +51,8 @@ function expectStage(
   expect(storyChoice.message).toContain(
     `${WOLF.title} ${args.phase} · ${args.step}/${args.total} — ${args.label}.`,
   );
-  expect(storyChoice.message).toContain(
-    `${args.originalTitle}. ${args.presentedMessage ?? args.originalMessage}`,
-  );
+  expect(storyChoice.message).toContain(`${args.originalTitle}. ${args.presentedMessage}`);
+  expect(storyChoice.message).not.toContain(args.originalMessage);
   return storyChoice;
 }
 
@@ -81,18 +72,16 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
   for (const option of storyChoice.options) {
     expect(option.summary).toMatchObject({
       commitment: expect.any(String),
-      fieldTrigger: expect.any(String),
       immediateCost: expect.any(String),
       tradeoff: expect.any(String),
     });
     expect(option.summary?.commitment.length).toBeGreaterThan(0);
-    expect(option.summary?.fieldTrigger.length).toBeGreaterThan(0);
     expect(option.summary?.immediateCost.length).toBeGreaterThan(0);
     expect(option.summary?.tradeoff.length).toBeGreaterThan(0);
-    expect(option.consequence).toContain(option.summary!.commitment);
-    if (option.summary?.fieldTriggerScope !== "category") {
-      expect(option.consequence).toContain(option.summary!.fieldTrigger);
-    }
+    expect(option.summary).not.toHaveProperty("fieldTrigger");
+    expect(option.consequence).toContain("Benefit:");
+    expect(option.consequence).toContain(`Cost: ${option.summary!.immediateCost}.`);
+    expect(option.consequence).toContain(`Boundary: ${option.summary!.tradeoff}`);
   }
 }
 
@@ -100,14 +89,24 @@ function wordCount(value: string): number {
   return value.match(/\S+/g)?.length ?? 0;
 }
 
+function expectRoleplayFirstFraming(storyChoice: JourneyStoryChoicePrompt): void {
+  expect(storyChoice.message).toMatch(/\b(?:promise|priority)\b/i);
+  expect(storyChoice.message).toContain("exact cost");
+  expect(storyChoice.message).toMatch(/\b(?:gives up|remains exposed)\b/i);
+  expect(storyChoice.message).toContain(FIELD_CHECK_TIMING);
+  expect(storyChoice.message).not.toMatch(
+    /broad field fit|trigger category|inspect a card|exact check|recovery chain/i,
+  );
+}
+
 function expectCompactSummaryOptions(storyChoice: JourneyStoryChoiceSummaryComparison): void {
   for (const option of storyChoice.options) {
     expect(option.summary).toMatchObject({
       commitment: expect.any(String),
-      fieldTrigger: expect.any(String),
       immediateCost: expect.any(String),
       tradeoff: expect.any(String),
     });
+    expect(option.summary).not.toHaveProperty("fieldTrigger");
     expect(option).not.toHaveProperty("consequence");
   }
   expect(storyChoice.inspectedOption).toBeNull();
@@ -118,17 +117,14 @@ function expectProgressivePreparationOptions(storyChoice: JourneyStoryChoiceProm
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
-      fieldTrigger: PREPARATION_FIELD_CATEGORIES[profile.id],
-      fieldTriggerScope: "category",
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
     });
     expect(option?.summary?.commitment.split(/\s+/).length).toBeLessThanOrEqual(16);
-    expect(option?.summary?.fieldTrigger.split(/\s+/).length).toBeLessThanOrEqual(8);
-    expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|check|success|threshold)\b/i);
-    expect(option?.summary?.fieldTrigger).not.toContain(profile.preview);
-    expect(option?.consequence).toContain(`Full field terms: ${profile.preview}`);
-    expect(option?.consequence).toContain(profile.consequence);
+    expect(option?.consequence).toContain(`Benefit: ${profile.trigger_category}`);
+    expect(option?.consequence).toContain(`Boundary: ${profile.tradeoff}`);
+    expect(option?.consequence).not.toContain(profile.preview);
+    expect(option?.consequence).not.toContain(profile.consequence);
   }
 }
 
@@ -139,8 +135,6 @@ function expectProgressivePreparationComparison(
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
-      fieldTrigger: PREPARATION_FIELD_CATEGORIES[profile.id],
-      fieldTriggerScope: "category",
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
     });
@@ -153,15 +147,13 @@ function expectProgressiveReliefAllocationOptions(storyChoice: JourneyStoryChoic
     const option = storyChoice.options.find((candidate) => candidate.id === allocationOption.id);
     expect(option?.summary).toEqual({
       commitment: allocationOption.summary,
-      fieldTrigger: RELIEF_ALLOCATION_FIELD_CATEGORIES[allocationOption.id],
-      fieldTriggerScope: "category",
       immediateCost: expect.any(String),
       tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
     });
-    expect(option?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
-    expect(option?.consequence).toContain(allocationOption.consequence);
-    expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:alarm|15-minute|Campus|Market)\b/i);
-    expect(option?.summary?.fieldTrigger).not.toContain(allocationOption.preview);
+    expect(option?.consequence).toContain(`Benefit: ${allocationOption.trigger_category}`);
+    expect(option?.consequence).toContain(`Boundary: Leaves exposed:`);
+    expect(option?.consequence).not.toContain(allocationOption.preview);
+    expect(option?.consequence).not.toContain(allocationOption.consequence);
   }
 }
 
@@ -172,8 +164,6 @@ function expectProgressiveReliefAllocationComparison(
     const option = storyChoice.options.find((candidate) => candidate.id === allocationOption.id);
     expect(option?.summary).toEqual({
       commitment: allocationOption.summary,
-      fieldTrigger: RELIEF_ALLOCATION_FIELD_CATEGORIES[allocationOption.id],
-      fieldTriggerScope: "category",
       immediateCost: expect.any(String),
       tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
     });
@@ -197,12 +187,15 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       label: "role",
       originalTitle: REGISTRATION.title,
       originalMessage: REGISTRATION.message,
+      presentedMessage: REGISTRATION_HEADER,
     });
     expect(registration.message).toContain(`Mission preview — ${WOLF.discovery}`);
     expect(registration.message).toContain("At Civic: role → duty → evidence");
     expect(registration.message).toContain(
-      "two docket decisions stay open. Each sets a promise and broad field fit; none locks your solution.",
+      "Choose only your role now; duty and evidence follow. None locks your field solution.",
     );
+    expectRoleplayFirstFraming(registration);
+    expect(wordCount(registration.message)).toBeLessThanOrEqual(120);
     expectSummaryFirstOptions(registration);
     expect(registration.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
@@ -226,9 +219,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       label: "duty",
       originalTitle: RELIEF_OATH.title,
       originalMessage: RELIEF_OATH.message,
+      presentedMessage: OATH_HEADER,
     });
     expect(oath.message).toContain("Chosen at Civic: role. Now choose: duty.");
-    expect(oath.message).toContain("Still ahead here: evidence.");
+    expect(oath.message).toContain("Next: evidence.");
+    expectRoleplayFirstFraming(oath);
+    expect(wordCount(oath.message)).toBeLessThanOrEqual(50);
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(oath);
@@ -248,7 +244,8 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(source.message).toContain("Chosen at Civic: role and duty. Now choose: evidence.");
     expect(source.message).toContain(`Certify the Wolf-Winter Source Packet. ${SOURCE_HEADER}`);
     expect(source.message).not.toContain(LEAD_SOURCE.message);
-    expect(wordCount(source.message)).toBeLessThanOrEqual(75);
+    expectRoleplayFirstFraming(source);
+    expect(wordCount(source.message)).toBeLessThanOrEqual(60);
     expectSummaryFirstOptions(source);
     expect(source.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
@@ -275,25 +272,29 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
     const preparation = session.inspectJourneyStory(PREPARATION.id);
     expect(preparation).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
-    expect(preparation.message).toContain(`${WOLF.title} Optional field packet — preparation.`);
+    expect(preparation.message).toContain(`${WOLF.title} · optional preparation.`);
     expect(preparation.message).toContain(`${PREPARATION.title}. ${PREPARATION_HEADER}`);
     expect(preparation.message).not.toContain(PREPARATION.message);
     expect(preparation.message).toContain(
-      `This field-packet choice is optional: choose one preparation, or close it and launch ${WOLF.title} now without one.`,
-    );
-    expect(preparation.message).toContain(
-      "Inspect a card for its exact check and recovery; the game repeats them if that field moment arrives.",
+      `Choose one preparation, or close this and launch ${WOLF.title} without one.`,
     );
     expect(preparation.message).not.toContain("relief-capacity choice");
     expect(preparation.message).toContain(
-      `${ALLY_CONTACT.name}'s optional field-team conversation remains separate.`,
+      `${ALLY_CONTACT.name}'s field-team conversation is separate.`,
     );
+    expectRoleplayFirstFraming(preparation);
     expect(preparation.message).not.toMatch(/Departure plan|1\/2|Still ahead/i);
-    expect(wordCount(preparation.message)).toBeLessThanOrEqual(105);
+    expect(wordCount(preparation.message)).toBeLessThanOrEqual(70);
     expectLaunchDetailsDeferred(preparation);
     expectSummaryFirstOptions(preparation);
     expectProgressivePreparationOptions(preparation);
     expect(preparation.options.every((option) => option.summary?.immediateCost)).toBe(true);
+    expect(preparation.options.every((option) => option.dispatchForecast)).toBe(true);
+    expect(
+      preparation.options.every((option) =>
+        option.dispatchForecast?.line.startsWith("Dispatch forecast if chosen:"),
+      ),
+    ).toBe(true);
     expect(
       OverworldSession.restore(WORLD, session.snapshot()).inspectJourneyStory(PREPARATION.id),
     ).toEqual(preparation);
@@ -315,25 +316,28 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       id: RELIEF_ALLOCATION.id,
       kind: "relief_allocation",
     });
-    expect(allocation.message).toContain(
-      `${WOLF.title} Optional relief capacity — relief allocation.`,
-    );
-    expect(allocation.message).toContain(
-      `${RELIEF_ALLOCATION.title}. ${RELIEF_ALLOCATION.message}`,
-    );
+    expect(allocation.message).toContain(`${WOLF.title} · optional relief priority.`);
+    expect(allocation.message).toContain(`${RELIEF_ALLOCATION.title}. ${RELIEF_ALLOCATION_HEADER}`);
+    expect(allocation.message).not.toContain(RELIEF_ALLOCATION.message);
     expect(allocation.message).not.toMatch(/Departure plan|2\/2|Still ahead|Chosen for departure/i);
     expect(allocation.message).not.toContain("Optional field-team choice follows");
     expect(allocation.message).toContain(
-      "This relief-capacity choice is separate and optional: choose one allocation, or close it to leave capacity unassigned.",
+      "Choose one relief priority, or close this and leave capacity unassigned.",
     );
     expect(allocation.message).not.toMatch(/\b(?:required|mandatory)\b/i);
     expect(allocation.message).toContain(
-      `After choosing or closing it, return to Station actions. ${ALLY_CONTACT.name}'s optional field-team conversation remains separate; launching ${WOLF.title} without it keeps the solo route legal.`,
+      `${ALLY_CONTACT.name}'s field-team conversation is separate; launching now keeps the solo route legal.`,
     );
+    expectRoleplayFirstFraming(allocation);
+    expect(wordCount(allocation.message)).toBeLessThanOrEqual(75);
     expectLaunchDetailsDeferred(allocation);
     expectSummaryFirstOptions(allocation);
     expectProgressiveReliefAllocationOptions(allocation);
     expect(allocation.options.every((option) => option.summary?.immediateCost)).toBe(true);
+    expect(allocation.options.every((option) => option.dispatchImpact)).toBe(true);
+    expect(
+      allocation.options.every((option) => option.dispatchImpact?.line.startsWith("Dispatch:")),
+    ).toBe(true);
     expect(
       OverworldSession.restore(WORLD, session.snapshot()).inspectJourneyStory(RELIEF_ALLOCATION.id),
     ).toEqual(allocation);

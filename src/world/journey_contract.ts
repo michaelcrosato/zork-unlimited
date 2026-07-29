@@ -173,7 +173,11 @@ export type JourneyChoicePrompt = Readonly<{
  */
 export type JourneyStoryChoiceSummary = Readonly<{
   commitment: string;
-  fieldTrigger: string;
+  /**
+   * Legacy or unfamiliar content may still compare an exact/broad field term.
+   * Shipped roleplay-first receipts omit it until the field actually consumes it.
+   */
+  fieldTrigger?: string;
   /** Present only when fieldTrigger is a broad comparison category, not exact terms. */
   fieldTriggerScope?: "category";
   immediateCost: string;
@@ -1179,7 +1183,7 @@ function freezeStoryChoice(
     if (
       option.summary &&
       (option.summary.commitment.length === 0 ||
-        option.summary.fieldTrigger.length === 0 ||
+        (option.summary.fieldTrigger !== undefined && option.summary.fieldTrigger.length === 0) ||
         typeof option.summary.immediateCost !== "string" ||
         option.summary.immediateCost.length === 0 ||
         typeof option.summary.tradeoff !== "string" ||
@@ -1189,7 +1193,7 @@ function freezeStoryChoice(
     }
     if (
       option.summary?.fieldTriggerScope !== undefined &&
-      option.summary.fieldTriggerScope !== "category"
+      (option.summary.fieldTrigger === undefined || option.summary.fieldTriggerScope !== "category")
     ) {
       throw new Error(
         `Journey story choice field-trigger scope "${String(option.summary.fieldTriggerScope)}" is invalid.`,

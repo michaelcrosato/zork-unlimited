@@ -47,6 +47,10 @@ import {
   createInitialCampaignCharacterState,
 } from "../../src/world/campaign_character_state.js";
 import {
+  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  openingSelectionReceiptWordCount,
+} from "../../src/world/opening_choice_receipt.js";
+import {
   compactCampaignServiceOffer,
   compactOverworldEventScenes,
   compactOverworldJobScenes,
@@ -229,8 +233,11 @@ function expectOpeningPromptExact(
       `opening:${source.id}.${sourceOption.id} must be inspectable`,
     ).toBeDefined();
     expect(inspectedOption!.label).toBe(sourceOption.title);
-    expect(inspectedOption!.consequence).toContain(sourceOption.consequence);
+    expect(inspectedOption!.consequence).toBe(canonicalOption!.consequence);
     expect(inspectedOption!.consequence).not.toMatch(TRUNCATION_CHROME);
+    expect(openingSelectionReceiptWordCount(inspectedOption!.consequence)).toBeLessThanOrEqual(
+      OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+    );
     expect(inspected).not.toHaveProperty("message");
     expect(inspected).not.toHaveProperty("options");
     const inspectedJson = JSON.stringify(inspected);
@@ -238,37 +245,24 @@ function expectOpeningPromptExact(
       expect(inspectedJson).not.toContain(sibling.consequence);
     }
 
-    if (projectedOption!.summary) {
-      expectExact(
-        `opening:${source.id}.${sourceOption.id}.summary`,
-        sourceOption.summary,
-        projectedOption!.summary!.commitment,
-      );
-      if (projectedOption!.summary!.fieldTriggerScope === "category") {
-        expectExact(
-          `opening:${source.id}.${sourceOption.id}.trigger_category`,
-          canonicalOption!.summary!.fieldTrigger,
-          projectedOption!.summary!.fieldTrigger,
-        );
-        expect(inspectedOption!.consequence).toContain(sourceOption.preview);
-      } else if (prompt.kind === "ally") {
-        expectExact(
-          `opening:${source.id}.${sourceOption.id}.field_trigger`,
-          canonicalOption!.summary!.fieldTrigger,
-          projectedOption!.summary!.fieldTrigger,
-        );
-        expect(inspectedOption!.consequence).toContain(sourceOption.preview);
-      } else {
-        expectExact(
-          `opening:${source.id}.${sourceOption.id}.preview`,
-          sourceOption.preview,
-          projectedOption!.summary!.fieldTrigger,
-        );
-      }
-    } else {
-      expect(inspectedOption!.consequence).toContain(sourceOption.summary);
-      expect(inspectedOption!.consequence).toContain(sourceOption.preview);
-    }
+    expect(projectedOption!.summary).toEqual(canonicalOption!.summary);
+    expect(projectedOption!.summary).toEqual({
+      commitment: sourceOption.summary,
+      immediateCost: canonicalOption!.summary!.immediateCost,
+      tradeoff: canonicalOption!.summary!.tradeoff,
+    });
+    expect(Object.keys(projectedOption!.summary!).sort()).toEqual([
+      "commitment",
+      "immediateCost",
+      "tradeoff",
+    ]);
+    expect(inspectedOption!.consequence).toMatch(/^Benefit: \S/);
+    expect(inspectedOption!.consequence).toContain(
+      ` Cost: ${canonicalOption!.summary!.immediateCost}. ` +
+        `Boundary: ${canonicalOption!.summary!.tradeoff}`,
+    );
+    expect(inspectedOption!.consequence).not.toContain(sourceOption.preview);
+    expect(inspectedOption!.consequence).not.toContain(sourceOption.consequence);
   }
   return projected;
 }
@@ -498,19 +492,27 @@ describe("shipped compact prose fidelity", () => {
         canonicalOption.consequence,
         projected.consequence,
       );
-      expect(projected.consequence).toContain(sourceOption.consequence);
+      expect(openingSelectionReceiptWordCount(projected.consequence)).toBeLessThanOrEqual(
+        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      );
+      expect(projected.consequence).not.toContain(sourceOption.consequence);
+      expect(selected.entry.text).toBe(canonicalOption.consequence);
+      expect(projected).not.toHaveProperty("entry_text");
+      expect(
+        session.snapshot().journalEntries.find((entry) => entry.id === selected.entry.id)?.text,
+      ).toContain(sourceOption.consequence);
     };
 
     const opening = session.view();
     session.scoutPoi(opening.pois[0]!.id);
     session.talkToCharacter(registration.contact);
-    choose(registration, registration.profiles, currentStoryChoice(session));
-    choose(oath, oath.options, currentStoryChoice(session));
+    choose(registration, registration.profiles, currentStoryChoice(session), false);
+    choose(oath, oath.options, currentStoryChoice(session), false);
     choose(lead, lead.options, currentStoryChoice(session), false);
 
     moveToArea(session, WORLD, preparation.area);
     choose(preparation, preparation.profiles, session.inspectJourneyStory(preparation.id), false);
-    choose(allocation, allocation.options, session.inspectJourneyStory(allocation.id));
+    choose(allocation, allocation.options, session.inspectJourneyStory(allocation.id), false);
 
     moveToArea(session, WORLD, ally.area);
     session.talkToCharacter(ally.contact);

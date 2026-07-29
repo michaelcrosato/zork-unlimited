@@ -542,15 +542,27 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     for (const key of witness.displayed) displayed.add(key);
     for (const key of witness.present) present.add(key);
   };
-  const run = (flags: string | readonly string[], actions: readonly WitnessAction[]): GameState => {
+  const run = (
+    flags: string | readonly string[],
+    actions: readonly WitnessAction[],
+    importedVars: Readonly<Record<string, number>> = {},
+  ): GameState => {
     const initial = initStateForRpgPack(index, 7);
     for (const flag of typeof flags === "string" ? [flags] : flags) {
       initial.flags[flag] = true;
     }
+    Object.assign(initial.vars, importedVars);
     const witness = replayConcreteWitness(index, initial, actions);
     record(witness);
     return witness.final;
   };
+
+  // Road-Warden registration reaches Wolf-Winter through numeric campaign imports,
+  // rather than a target_flag: Fieldcraft 4 is copied into both fieldcraft and DEF.
+  // Pair that real imported profile with Rowan and Jamie respectively so the two
+  // relief-spear receipts are witnessed in exactly the launch states that expose them.
+  run("relief_oath_full_duty", [], { fieldcraft: 4, defense: 4 });
+  run("jamie_market_testimony_certified", [], { fieldcraft: 4, defense: 4 });
 
   const reachAuthorityFortification: readonly WitnessAction[] = [
     "go_north",
@@ -720,6 +732,20 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "object:fortify_outer_seal#1",
     "object:outer_scent_gate#2",
     "object:drive_breach_signal#0",
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "relief_spear",
+      "Road-Warden field import with Rowan's baseline docket",
+      "Fieldcraft 4 set this watch's starting DEF to 4 instead of its base 3. Rowan's",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "relief_spear",
+      "Road-Warden field import with a certified source packet",
+      "separately certified source packet remains the controlling field evidence",
+    ),
     "room:store#4",
     "room:fodder_loft#1",
     "room:byre_door#9",

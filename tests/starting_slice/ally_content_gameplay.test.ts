@@ -477,7 +477,9 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(buildRpgObservation(index, withJune).blocked_actions).toContainEqual(
       expect.objectContaining({
         id: "use_winter_feed_sack_on_outer_scent_gate",
-        reason: expect.stringMatching(/authority.*speak to her/i),
+        reason: expect.stringMatching(
+          /authority.*speak to her first.*one cattle-line intervention lowers cattle alarm by 1.*before the last scent cast/i,
+        ),
       }),
     );
     expect(actionIds(solo)).not.toContain("talk_june_pike");

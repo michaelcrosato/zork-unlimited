@@ -31,12 +31,31 @@ export function isStructuredTerminalStoryChoice(prompt: JourneyStoryChoicePrompt
 }
 
 function summaryLabels(summary: JourneyStoryChoiceSummary): {
-  commitment: "Commitment" | "Purpose";
-  trigger: "Field trigger" | "Trigger category";
+  commitment: "Commitment" | "Purpose" | "Promise / priority";
+  trigger?: "Field trigger" | "Trigger category";
 } {
+  if (summary.fieldTrigger === undefined) {
+    return { commitment: "Promise / priority" };
+  }
   return summary.fieldTriggerScope === "category"
     ? { commitment: "Purpose", trigger: "Trigger category" }
     : { commitment: "Commitment", trigger: "Field trigger" };
+}
+
+function renderSummaryLines(summary: JourneyStoryChoiceSummary, indent: string): string[] {
+  const labels = summaryLabels(summary);
+  if (!labels.trigger || summary.fieldTrigger === undefined) {
+    return [
+      `${indent}${labels.commitment}: ${summary.commitment}`,
+      `${indent}Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`,
+    ];
+  }
+  return [
+    `${indent}${labels.commitment}: ${summary.commitment}`,
+    `${indent}${labels.trigger}: ${summary.fieldTrigger}`,
+    `${indent}Immediate cost: ${summary.immediateCost}`,
+    `${indent}Tradeoff: ${summary.tradeoff}`,
+  ];
 }
 
 /** Compact comparison for a structured prompt. Full authored consequences remain staged. */
@@ -58,13 +77,9 @@ export function renderTerminalStoryChoiceComparison(
     if (!option.summary) {
       throw new Error(`Story choice "${prompt.id}" lost a structured comparison summary.`);
     }
-    const labels = summaryLabels(option.summary);
     lines.push(`    ${String(index + 1)}. ${option.label}`);
     if (option.dispatchImpact) lines.push(`       ${option.dispatchImpact.line}`);
-    lines.push(`       ${labels.commitment}: ${option.summary.commitment}`);
-    lines.push(`       ${labels.trigger}: ${option.summary.fieldTrigger}`);
-    lines.push(`       Immediate cost: ${option.summary.immediateCost}`);
-    lines.push(`       Tradeoff: ${option.summary.tradeoff}`);
+    lines.push(...renderSummaryLines(option.summary, "       "));
     if (option.dispatchForecast) lines.push(`       ${option.dispatchForecast.line}`);
     lines.push(`       Inspect: \`inspect ${option.id}\``);
     lines.push(`       Choose: \`choose ${option.id}\``);
@@ -91,11 +106,11 @@ export function renderTerminalStoryChoiceDetail(
   }
   const lines = [`\n! Story choice detail — ${projected.label}`];
   if (option.summary) {
-    const labels = summaryLabels(option.summary);
-    lines.push(`  ${labels.commitment}: ${option.summary.commitment}`);
-    lines.push(`  ${labels.trigger}: ${option.summary.fieldTrigger}`);
-    lines.push(`  Immediate cost: ${option.summary.immediateCost}`);
-    lines.push(`  Tradeoff: ${option.summary.tradeoff}`);
+    if (option.summary.fieldTrigger === undefined) {
+      lines.push(`  Promise / priority: ${option.summary.commitment}`);
+    } else {
+      lines.push(...renderSummaryLines(option.summary, "  "));
+    }
     if (option.dispatchImpact) lines.push(`  ${option.dispatchImpact.line}`);
     if (option.dispatchForecast) lines.push(`  ${option.dispatchForecast.line}`);
   }

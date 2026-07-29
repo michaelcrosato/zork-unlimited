@@ -1,10 +1,12 @@
 import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 
-const LEAD_SOURCE_COMPARISON_HEADER =
-  "Certify one account; the other two close. Compare immediate cost, broad field fit, and what you give up. Inspect a card for exact conditions; they surface again when relevant.";
-const PREPARATION_COMPARISON_HEADER =
-  "Choose one optional specialist packet, or leave without one. Compare immediate cost, broad field fit, and tradeoff. Inspect a card for its exact check and recovery; they surface again in the field.";
+const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
+const REGISTRATION_COMPARISON_HEADER = `Choose who you were and the promise you carry. Compare exact cost and what each role gives up. ${FIELD_CHECK_TIMING}`;
+const RELIEF_OATH_COMPARISON_HEADER = `Choose whose authority you accept and the promise you make. Compare exact cost and what each duty gives up. ${FIELD_CHECK_TIMING}`;
+const LEAD_SOURCE_COMPARISON_HEADER = `Certify one account; the other two close. Compare its priority, exact cost, and what it gives up. ${FIELD_CHECK_TIMING}`;
+const PREPARATION_COMPARISON_HEADER = `Choose one optional field priority, or leave without one. Compare exact cost and what it gives up. ${FIELD_CHECK_TIMING}`;
+const RELIEF_ALLOCATION_COMPARISON_HEADER = `Choose whom Albany protects, or leave capacity unassigned. Compare each priority's exact cost and what remains exposed. ${FIELD_CHECK_TIMING}`;
 
 type OpeningDispatchStage = Readonly<{
   id: string;
@@ -141,14 +143,25 @@ export function withOpeningDispatchBriefing(
     (stage) => stage.id === prompt.id && stage.kind === prompt.kind,
   );
   if (civicStageIndex < 0 && !departureChoice) return prompt;
+  const registration = world.opening_registration;
+  const reliefOath = world.opening_relief_oath;
   const leadSource = world.opening_lead_source;
   const preparation = world.opening_preparation;
+  const reliefAllocation = world.opening_relief_allocation;
   const displayMessage =
-    leadSource && prompt.id === leadSource.id && prompt.kind === "lead_source"
-      ? `${leadSource.title}. ${LEAD_SOURCE_COMPARISON_HEADER}`
-      : preparation && prompt.id === preparation.id && prompt.kind === "preparation"
-        ? `${preparation.title}. ${PREPARATION_COMPARISON_HEADER}`
-        : prompt.message;
+    registration && prompt.id === registration.id && prompt.kind === "registration"
+      ? `${registration.title}. ${REGISTRATION_COMPARISON_HEADER}`
+      : reliefOath && prompt.id === reliefOath.id && prompt.kind === "relief_oath"
+        ? `${reliefOath.title}. ${RELIEF_OATH_COMPARISON_HEADER}`
+        : leadSource && prompt.id === leadSource.id && prompt.kind === "lead_source"
+          ? `${leadSource.title}. ${LEAD_SOURCE_COMPARISON_HEADER}`
+          : preparation && prompt.id === preparation.id && prompt.kind === "preparation"
+            ? `${preparation.title}. ${PREPARATION_COMPARISON_HEADER}`
+            : reliefAllocation &&
+                prompt.id === reliefAllocation.id &&
+                prompt.kind === "relief_allocation"
+              ? `${reliefAllocation.title}. ${RELIEF_ALLOCATION_COMPARISON_HEADER}`
+              : prompt.message;
   if (civicStageIndex >= 0) {
     const stage = plan.civicStages[civicStageIndex]!;
     const completed = plan.civicStages
@@ -160,8 +173,8 @@ export function withOpeningDispatchBriefing(
     const progress = `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
     const planningContext =
       civicStageIndex === 0
-        ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; two docket decisions stay open. Each sets a promise and broad field fit; none locks your solution.`
-        : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Still ahead here: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station board. Optional support is available there; inspect any card for detail that repeats in play."}`;
+        ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; duty and evidence follow. None locks your field solution.`
+        : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;
     return {
       ...prompt,
       message: `${progress} ${planningContext} ${displayMessage}`,
@@ -170,12 +183,12 @@ export function withOpeningDispatchBriefing(
   const choice = departureChoice!;
   const progress =
     choice.kind === "preparation"
-      ? `${plan.questTitle} Optional field packet — ${choice.label}.`
-      : `${plan.questTitle} Optional relief capacity — ${choice.label}.`;
+      ? `${plan.questTitle} · optional ${choice.label}.`
+      : `${plan.questTitle} · optional relief priority.`;
   const planningContext =
     choice.kind === "preparation"
-      ? `This field-packet choice is optional: choose one preparation, or close it and launch ${plan.questTitle} now without one. Inspect a card for its exact check and recovery; the game repeats them if that field moment arrives.${plan.allyContactName ? ` ${plan.allyContactName}'s optional field-team conversation remains separate.` : ""}`
-      : `This relief-capacity choice is separate and optional: choose one allocation, or close it to leave capacity unassigned.${plan.allyContactName ? ` After choosing or closing it, return to Station actions. ${plan.allyContactName}'s optional field-team conversation remains separate; launching ${plan.questTitle} without it keeps the solo route legal.` : ""}`;
+      ? `Choose one preparation, or close this and launch ${plan.questTitle} without one.${plan.allyContactName ? ` ${plan.allyContactName}'s field-team conversation is separate.` : ""}`
+      : `Choose one relief priority, or close this and leave capacity unassigned.${plan.allyContactName ? ` ${plan.allyContactName}'s field-team conversation is separate; launching now keeps the solo route legal.` : ""}`;
   const missionCard = `Mission: ${plan.questTitle}. Last-mile route costs and field tradeoffs remain on its launch card.`;
   return {
     ...prompt,

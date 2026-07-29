@@ -374,12 +374,20 @@ export function renderJourneyGate(journey: JourneyPresentation): string {
     lines.push(`    ${String(index + 1)}. ${option.label}`);
     const summary = "summary" in option ? option.summary : undefined;
     if (summary) {
-      const usesTriggerCategory = summary.fieldTriggerScope === "category";
-      lines.push(`       ${usesTriggerCategory ? "Purpose" : "Commitment"}: ${summary.commitment}`);
-      lines.push(
-        `       ${usesTriggerCategory ? "Trigger category" : "Field trigger"}: ${summary.fieldTrigger}`,
-      );
-      if (summary.immediateCost) lines.push(`       Immediate cost: ${summary.immediateCost}`);
+      if (summary.fieldTrigger === undefined) {
+        lines.push(`       Promise / priority: ${summary.commitment}`);
+        lines.push(`       Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`);
+      } else {
+        const usesTriggerCategory = summary.fieldTriggerScope === "category";
+        lines.push(
+          `       ${usesTriggerCategory ? "Purpose" : "Commitment"}: ${summary.commitment}`,
+        );
+        lines.push(
+          `       ${usesTriggerCategory ? "Trigger category" : "Field trigger"}: ${summary.fieldTrigger}`,
+        );
+        if (summary.immediateCost) lines.push(`       Immediate cost: ${summary.immediateCost}`);
+        lines.push(`       Tradeoff: ${summary.tradeoff}`);
+      }
     }
     lines.push(`       Consequence: ${option.consequence}`);
   });

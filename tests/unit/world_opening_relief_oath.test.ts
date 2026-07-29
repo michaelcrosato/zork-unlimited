@@ -5,6 +5,10 @@ import {
   cloneCampaignCharacterState,
 } from "../../src/world/campaign_character_state.js";
 import {
+  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  openingSelectionReceiptWordCount,
+} from "../../src/world/opening_choice_receipt.js";
+import {
   OPENING_RELIEF_OATH_OPTION_COUNT,
   OpeningReliefOathSchema,
   applyOpeningReliefOathOption,
@@ -189,13 +193,42 @@ describe("opening relief oath authoring", () => {
     });
     expect(parseOpeningReliefOath(categorized)).toEqual(categorized);
     const categorizedPrompt = presentOpeningReliefOath(categorized, buildCampaignCharacterState());
-    expect(categorizedPrompt.options.map((option) => option.summary?.fieldTrigger)).toEqual(
-      categorized.options.map((option) => option.trigger_category),
+    expect(categorizedPrompt.options.map((option) => option.summary)).toEqual(
+      categorized.options.map((option) => ({
+        commitment: option.summary,
+        immediateCost: formatOpeningReliefOathCost(option.terms),
+        tradeoff: option.tradeoff,
+      })),
     );
     expect(
-      categorizedPrompt.options.every((option) => option.summary?.fieldTriggerScope === "category"),
+      categorizedPrompt.options.every(
+        (option) =>
+          openingSelectionReceiptWordCount(option.consequence) <=
+          OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      ),
     ).toBe(true);
-    expect(categorizedPrompt.options[0]!.consequence).toContain(categorized.options[0]!.preview);
+    expect(categorizedPrompt.options[0]!.consequence).toBe(
+      "Benefit: First use 1. Cost: 10 minutes. Boundary: Public seals bind the fortification duty.",
+    );
+    expect(categorizedPrompt.options[0]!.consequence).not.toContain(
+      categorized.options[0]!.preview,
+    );
+
+    const legacyPrompt = presentOpeningReliefOath(scene, buildCampaignCharacterState());
+    expect(legacyPrompt.options[0]).toEqual({
+      id: scene.options[0]!.id,
+      label: scene.options[0]!.title,
+      summary: {
+        commitment: scene.options[0]!.summary,
+        fieldTrigger: scene.options[0]!.preview,
+        immediateCost: "10 minutes",
+        tradeoff: scene.options[0]!.tradeoff,
+      },
+      consequence:
+        `${scene.options[0]!.summary} ${scene.options[0]!.preview} ` +
+        `Access: ${scene.options[0]!.access} Duty: ${scene.options[0]!.duty} ` +
+        `Actual cost: 10 minutes. ${scene.options[0]!.consequence}`,
+    });
 
     const partialCategories = cloneOpeningReliefOath(categorized);
     Reflect.deleteProperty(partialCategories.options[0]!, "trigger_category");
@@ -411,8 +444,11 @@ describe("opening relief oath application and presentation", () => {
     expect(original).toEqual(before);
   });
 
-  it("discloses access, duty, cost, and consequence for every branch", () => {
+  it("presents one exact benefit, dynamic cost, and binding boundary for every branch", () => {
     const scene = reliefOathScene();
+    scene.options.forEach((option) => {
+      option.trigger_category = option.title;
+    });
     const prompt = presentOpeningReliefOath(scene, buildCampaignCharacterState());
 
     expect(prompt).toMatchObject({
@@ -422,12 +458,30 @@ describe("opening relief oath application and presentation", () => {
         "Set the Wolf-Winter Duty. Rowan separates permanent background from the terms under which this dispatch may use Albany's name.",
     });
     expect(prompt.options).toHaveLength(3);
-    expect(prompt.options[0]!.consequence).toMatch(
-      /access: Full emergency records.*duty: Protect people and herd.*actual cost: 10 minutes.*witnesses the official oath/i,
+    expect(prompt.options[0]).toMatchObject({
+      summary: {
+        commitment: scene.options[0]!.summary,
+        immediateCost: "10 minutes",
+        tradeoff: scene.options[0]!.tradeoff,
+      },
+      consequence:
+        "Benefit: Take the Official Relief Oath Cost: 10 minutes. Boundary: Public seals bind the fortification duty.",
+    });
+    expect(prompt.options[2]!.consequence).toBe(
+      "Benefit: Remain an Unaffiliated Helper Cost: no added time. " +
+        "Boundary: No public warrant or oath-gated requisition is granted.",
     );
-    expect(prompt.options[2]!.consequence).toMatch(/actual cost: no added time/i);
-    expect(prompt.options[0]!.summary?.fieldTrigger).toBe(scene.options[0]!.preview);
-    expect(prompt.options[0]!.summary).not.toHaveProperty("fieldTriggerScope");
+    for (const option of prompt.options) {
+      expect(Object.keys(option.summary ?? {}).sort()).toEqual([
+        "commitment",
+        "immediateCost",
+        "tradeoff",
+      ]);
+      expect(option.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
+      expect(openingSelectionReceiptWordCount(option.consequence)).toBeLessThanOrEqual(
+        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      );
+    }
     expect(formatOpeningReliefOathCost({ minutes: 5 })).toBe("5 minutes");
     expect(formatOpeningReliefOathCost({ minutes: 0 })).toBe("no added time");
     expect(Object.isFrozen(prompt)).toBe(true);

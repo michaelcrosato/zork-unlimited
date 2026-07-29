@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 686 -->
+<!-- historical_cycle_count: 687 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - roleplay_first_albany_receipts
+
+- Evidence choice: all ten exact pilot reports independently named Albany's six pre-field commitments as dense, so this cycle changes their information timing rather than adding more explanatory synonyms.
+- Surface: current registration, oath, source, preparation, relief, and ally cards share a 32-word promise/cost/boundary receipt; immediate MCP/UI/terminal results stay compact, full journals remain authoritative, and exact checks reappear at their Wolf-Winter action.
+- Counterfactual: ids, options, costs, time, dispatch receipts, legal actions, checks, RNG, pressure, outcomes, saves, and uncategorized legacy presentation are unchanged; 212 focused tests pin current/legacy and full/compact parity.
+- Pure evidence: exact-clean Terra seed 73031 diverted all three Wolf-Winter wolves with the herd whole at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and produced no rejected action or mechanical bug.
+- Self-critique/follow-through: the one canary still called the aggregate Station sequence dense and raised an S1 compact-inspection memory issue; do not patch toward one player, and let the predeclared strict ten-player merged-build cohort measure both signals.
+- Economy: authenticated summary v8 measured 1.975M input / 92.3k uncached input and 7.6k output tokens at 95.33% cache reuse, or 3,330 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
+- Guard: three independent reviews closed legacy-shape, immediate-entry, and duplicate-detail gaps; crawl `20260729T033928Z` is zero-finding, and health passes 443 files/3,685 tests, both typechecks, and all 12 packs on candidate `85a1ee81`.
 
 ### Cycle result - completion_forecast_truth
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: this proves default-surface reachability, not strategy balance; the 14-report compile still ranks source/preparation comparison density highest, so rerun the strict pilot before choosing between that fix and further strategy work.
 - Economy: the 78-turn canary used 6.535M raw / 184.0k uncached input and 11.8k output tokens at 97.2% cache reuse; seed 72830 exposed the label-only gap and was not rerun on that stale build.
 - Guard: independent rereview is clean, post-correction crawl `20260728T032120Z` is zero-finding, and health passes 440 files/3,612 tests, both typechecks, and all 12 packs.
-
-### Cycle result - concise_station_delay_impact
-
-- Evidence choice: consecutive verified players found Albany's staged dispatch terms useful but still could not compare each live relief or June option's immediate effect on departure timing at a glance.
-- Surface: only current authenticated Station relief and June cards now lead with canonical `+Xm delay → Ym, on time/delayed` impact across full/compact MCP, terminal, UI, restore, and round-trip views.
-- Counterfactual: impact creation is private to `OverworldSession`; the public helper can only strip stale text, while malformed, forged, completed, or non-Station surfaces fail closed and choices, time, receipts, routes, RNG, and outcomes remain unchanged.
-- Pure evidence: exact-clean Terra seed 72762 organically chose fodder and June cattle-first, recovered a failed lure through Emery's route, completed The Wolf-Winter at decision 33, continued to checkpoint 40, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: the player said staged details helped but still raised the broader opening stack as S1 density; freeze this build and let the strict ten-player pilot measure the cohort instead of exposure-chasing another single-run presentation tweak.
-- Economy: the 59-turn canary used 3.647M raw / 138.6k uncached input and 10.4k output tokens at 96.2% cache reuse; no replacement or exposure-chasing rerun was launched.
-- Guard: adversarial rereview is clean, stable patch id `40b5d516` survived the rebase, crawl `20260728T003015Z` is zero-finding, and health passes 440 files/3,612 tests, both typechecks, and all 12 packs.

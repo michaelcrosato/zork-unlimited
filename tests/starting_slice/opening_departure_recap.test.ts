@@ -65,7 +65,9 @@ function selectedTitle(session: OverworldSession, slot: string): string | null |
 function projectedFieldTerm(prompt: JourneyStoryChoicePrompt, optionId: string): string {
   const summary = prompt.options.find((option) => option.id === optionId)?.summary;
   if (!summary) throw new Error(`Expected a canonical summary for "${optionId}".`);
-  return summary.fieldTriggerScope === "category" ? summary.fieldTrigger : summary.tradeoff;
+  return summary.fieldTriggerScope === "category" && summary.fieldTrigger
+    ? summary.fieldTrigger
+    : summary.tradeoff;
 }
 
 describe("Albany opening departure recap", () => {
@@ -103,7 +105,7 @@ describe("Albany opening departure recap", () => {
     );
 
     expect(full.departureRecap).toEqual({
-      version: 3,
+      version: 4,
       questId: WOLF.id,
       questTitle: WOLF.title,
       entries: [
@@ -112,7 +114,7 @@ describe("Albany opening departure recap", () => {
           label: "Role",
           status: "selected",
           title: REGISTRATION.profiles[0]!.title,
-          activeFieldTerm: REGISTRATION.profiles[0]!.trigger_category,
+          activeFieldTerm: REGISTRATION.profiles[0]!.tradeoff,
         },
         {
           slot: "duty",
@@ -154,7 +156,7 @@ describe("Albany opening departure recap", () => {
     });
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.departure_recap).toEqual([
-      3,
+      4,
       WOLF.id,
       WOLF.title,
       full.departureRecap!.entries.map((entry) => [
@@ -254,7 +256,7 @@ describe("Albany opening departure recap", () => {
       REGISTRATION.profiles[0]!.title,
     );
     expect(session.compactView().departure_recap?.[3][0]?.[4]).toBe(
-      REGISTRATION.profiles[0]!.trigger_category,
+      REGISTRATION.profiles[0]!.tradeoff,
     );
 
     const terminal = render(session.view());
@@ -266,7 +268,7 @@ describe("Albany opening departure recap", () => {
     );
     expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
-    expect(terminal).toContain(`Active field term: ${REGISTRATION.profiles[0]!.trigger_category}`);
+    expect(terminal).toContain(`Active field term: ${REGISTRATION.profiles[0]!.tradeoff}`);
     expect(terminal).toContain("Preparation: Open (optional)");
     expect(terminal).not.toContain("Dispatch committed:");
     expect(terminal.indexOf("Depart now:")).toBeLessThan(

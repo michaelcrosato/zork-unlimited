@@ -40,6 +40,26 @@ export function JourneyStoryChoiceScreen({
     isAlly ||
     isReliefAllocation ||
     isReliefOath;
+  const usesRoleplayReceipts =
+    keepsCurrentObjective &&
+    storyChoice.options.every(
+      (option) => option.summary !== undefined && option.summary.fieldTrigger === undefined,
+    );
+  const currentObjectiveGuidance = usesRoleplayReceipts
+    ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
+    : isRegistration
+      ? "Your registered history persists into the journey; choose the experience and obligations you will carry."
+      : isLeadSource
+        ? "Your source changes the evidence and approaches you can carry forward; it does not replace this objective."
+        : isPreparation
+          ? "Your finite allocation changes later actions and the service Albany can release on your return; it does not replace this objective."
+          : isAlly
+            ? "Compare the field capability, binding condition, and actual cost in these terms; your commitment changes who can act independently without replacing this objective."
+            : isReliefAllocation
+              ? "Albany can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
+              : isReliefOath
+                ? "Compare each term's access, duty, actual cost, field consequence, and return promise. This binds the dispatch without replacing your current objective."
+                : "Choose the consequence that sets your next objective.";
 
   return (
     <main className="journey-decision-page">
@@ -88,19 +108,9 @@ export function JourneyStoryChoiceScreen({
           <span>{keepsCurrentObjective ? "Current objective" : "Goal just completed"}</span>
           <strong>{journey.goal.text}</strong>
           <small>
-            {isRegistration
-              ? "Your registered history persists into the journey; choose the experience and obligations you will carry."
-              : isLeadSource
-                ? "Your source changes the evidence and approaches you can carry forward; it does not replace this objective."
-                : isPreparation
-                  ? "Your finite allocation changes later actions and the service Albany can release on your return; it does not replace this objective."
-                  : isAlly
-                    ? "Compare the field capability, binding condition, and actual cost in these terms; your commitment changes who can act independently without replacing this objective."
-                    : isReliefAllocation
-                      ? "Albany can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
-                      : isReliefOath
-                        ? "Compare each term's access, duty, actual cost, field consequence, and return promise. This binds the dispatch without replacing your current objective."
-                        : "Choose the consequence that sets your next objective."}
+            {keepsCurrentObjective
+              ? currentObjectiveGuidance
+              : "Choose the consequence that sets your next objective."}
           </small>
         </div>
 
@@ -118,6 +128,8 @@ export function JourneyStoryChoiceScreen({
         >
           {storyChoice.options.map((option) => {
             const conciseSummary = option.summary;
+            const usesRoleplayReceipt =
+              conciseSummary !== undefined && conciseSummary.fieldTrigger === undefined;
             const usesTriggerCategory = conciseSummary?.fieldTriggerScope === "category";
             return (
               <div key={option.id} className="journey-choice-card">
@@ -130,13 +142,19 @@ export function JourneyStoryChoiceScreen({
                   )}
                   {conciseSummary ? (
                     <span className="journey-choice-summary">
-                      <b>{usesTriggerCategory ? "Purpose:" : "Commitment:"}</b>{" "}
+                      <b>
+                        {usesRoleplayReceipt
+                          ? "Promise / priority:"
+                          : usesTriggerCategory
+                            ? "Purpose:"
+                            : "Commitment:"}
+                      </b>{" "}
                       {conciseSummary.commitment}
                     </span>
                   ) : (
                     <span>{option.consequence}</span>
                   )}
-                  {conciseSummary && (
+                  {conciseSummary?.fieldTrigger && (
                     <small className="journey-choice-trigger">
                       <b>
                         {usesTriggerCategory
@@ -146,12 +164,18 @@ export function JourneyStoryChoiceScreen({
                       {conciseSummary.fieldTrigger}
                     </small>
                   )}
-                  {conciseSummary && (
+                  {conciseSummary && usesRoleplayReceipt && (
+                    <small className="journey-choice-cost">
+                      <b>Cost / give up:</b> {conciseSummary.immediateCost};{" "}
+                      {conciseSummary.tradeoff}
+                    </small>
+                  )}
+                  {conciseSummary && !usesRoleplayReceipt && (
                     <small className="journey-choice-cost">
                       <b>Immediate cost:</b> {conciseSummary.immediateCost}
                     </small>
                   )}
-                  {conciseSummary && (
+                  {conciseSummary && !usesRoleplayReceipt && (
                     <small className="journey-choice-tradeoff">
                       <b>Tradeoff:</b> {conciseSummary.tradeoff}
                     </small>
@@ -164,7 +188,11 @@ export function JourneyStoryChoiceScreen({
                 </button>
                 {conciseSummary && (
                   <details className="journey-choice-details">
-                    <summary>{`Full terms and consequence for ${option.label}`}</summary>
+                    <summary>
+                      {usesRoleplayReceipt
+                        ? `Inspect exact receipt for ${option.label}`
+                        : `Full terms and consequence for ${option.label}`}
+                    </summary>
                     <p>{option.consequence}</p>
                   </details>
                 )}

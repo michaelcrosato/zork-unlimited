@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { cloneCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import {
+  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  openingSelectionReceiptWordCount,
+} from "../../src/world/opening_choice_receipt.js";
+import {
   applyOpeningAllyOption,
   OpeningAllySchema,
   formatOpeningAllyCost,
@@ -16,32 +20,35 @@ const CHARACTER = WORLD.opening_registration!.profiles[0]!.character;
 describe("opening ally contract", () => {
   it("presents capability, condition, exact cost, and one real joining bond", () => {
     const prompt = presentOpeningAlly(ALLY, CHARACTER);
-    expect(prompt).toMatchObject({ id: ALLY.id, kind: "ally" });
-    expect(prompt.message).toBe(`${ALLY.title}. ${ALLY.message}`);
-    expect(prompt.options).toHaveLength(3);
-    expect(
-      prompt.options.every(
-        (option) =>
-          option.summary?.immediateCost &&
-          option.summary.fieldTrigger &&
-          option.summary.tradeoff ===
-            ALLY.options.find((candidate) => candidate.id === option.id)?.tradeoff,
-      ),
-    ).toBe(true);
-    expect(prompt.options.map((option) => option.summary?.fieldTrigger)).toEqual([
+    const exactBenefits = [
       "Independent cattle-pressure ally",
       "No companion; relay terms refused",
       "Solo field team; no ally action",
-    ]);
-    expect(prompt.options[0]!.summary?.fieldTrigger).not.toMatch(
-      /\b(?:alarm|drive|fortification)\b/i,
-    );
-    expect(prompt.options[0]!.consequence).toContain(ALLY.options[0]!.preview);
-    expect(prompt.options.map((option) => option.consequence)).toEqual([
-      expect.stringMatching(/actual cost: 15 minutes/i),
-      expect.stringMatching(/actual cost: 5 minutes/i),
-      expect.stringMatching(/actual cost: no added time/i),
-    ]);
+    ] as const;
+    expect(prompt).toMatchObject({ id: ALLY.id, kind: "ally" });
+    expect(prompt.message).toBe(`${ALLY.title}. ${ALLY.message}`);
+    expect(prompt.options).toHaveLength(3);
+    prompt.options.forEach((option, index) => {
+      const authored = ALLY.options[index]!;
+      const cost = formatOpeningAllyCost(authored.terms);
+      expect(option.summary).toEqual({
+        commitment: authored.summary,
+        immediateCost: cost,
+        tradeoff: authored.tradeoff,
+      });
+      expect(Object.keys(option.summary ?? {}).sort()).toEqual([
+        "commitment",
+        "immediateCost",
+        "tradeoff",
+      ]);
+      expect(option.consequence).toBe(
+        `Benefit: ${exactBenefits[index]} Cost: ${cost}. Boundary: ${authored.tradeoff}`,
+      );
+      expect(option.consequence).not.toContain(authored.preview);
+      expect(openingSelectionReceiptWordCount(option.consequence)).toBeLessThanOrEqual(
+        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      );
+    });
     expect(formatOpeningAllyCost({ minutes: 0 })).toBe("no added time");
 
     const before = cloneCampaignCharacterState(CHARACTER);
