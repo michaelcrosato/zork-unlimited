@@ -73,6 +73,11 @@ describe("pure blind prompt + runner contract", () => {
       expect(prompt).not.toContain(forbidden);
     }
     expect(prompt).toContain("current in-game goal");
+    expect(prompt).toContain("Keep the initial `legend`");
+    expect(prompt).toContain("merge\n  every later `legend_delta` into it by key");
+    expect(prompt).toMatch(/same response that first uses\s+it/);
+    expect(prompt).toContain("dotted keys such as `result.entry`");
+    expect(prompt).toContain("exact nested paths");
     expect(prompt).toContain("game presents its actual journey choice");
     expect(prompt).toContain("If you choose continue");
     expect(prompt).toContain("If you choose end");

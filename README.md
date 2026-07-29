@@ -125,13 +125,15 @@ repo ships `.mcp.json`, so an MCP client opened here connects automatically.
   `replay_trace`, `inspect_trace`.
 
 Observations are **compact and self-describing**: session-creating responses
-carry a one-time `legend` documenting every positional field of the compact
-context, events arrive as tagged tuples, and state-hash guards skip unchanged
-payloads — terse enough for a blind agent to play a long session in one context
-window. `tests/unit/compact_legend.test.ts` holds the tool descriptions and
-legend to that contract; the handlers (`src/mcp/tools.ts`) are unit-tested
-without a live client. All paths are confined to the project root; content and
-traces are data only.
+carry an initial `legend` for the positional fields used there, later responses
+add same-response `legend_delta` definitions before a field's first use (dotted
+keys name exact nested result paths), events arrive as tagged tuples, and
+state-hash guards skip unchanged payloads — terse enough for a blind agent to
+play a long session in one context window.
+`tests/unit/compact_legend.test.ts` holds the tool descriptions and legends to
+that contract; the handlers (`src/mcp/tools.ts`) are unit-tested without a live
+client. All paths are confined to the project root; content and traces are data
+only.
 
 Every overworld session also carries one versioned **journey contract**, shared
 unchanged by UI and MCP. Contract v3 keeps v2's meaningful-decision classifier:

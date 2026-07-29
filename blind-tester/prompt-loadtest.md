@@ -34,11 +34,13 @@ STRICT RULES:
 READING THE WORLD (it is COMPACT):
 
 - Start: `mcp__adventureforge__start_overworld` with compact_context = true. Capture
-  the `legend` from the response — it decodes the compact positional fields and is
-  sent only ONCE, at the start.
-- Most `context` fields are POSITIONAL TUPLES, and the `legend` (sent ONCE, in the
-  start_overworld response) tells you what each position means. KEEP that legend —
-  later responses return only raw tuples with no legend. Key fields:
+  the initial `legend` from the response — it decodes every compact positional field
+  used there. Merge each later `legend_delta` into that dictionary by key before
+  reading the response that carries it.
+- Most `context` fields are POSITIONAL TUPLES. The initial `legend` plus accumulated
+  `legend_delta` patches tell you what each position means; a delta key names its
+  exact field, and a dotted key such as `result.entry` names an exact nested path.
+  A newly appearing field is defined in the same response that first uses it. Key fields:
   `here` = [town_id, town_name, region, area_id, area_name]; `vitals` =
   [supplies, max_supplies, fatigue, condition]; `hidden` = [areas, jobs, sites,
   quests] STILL-UNDISCOVERED here; `roads` = [[dest_town_id, minutes, supplies,

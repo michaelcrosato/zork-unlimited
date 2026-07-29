@@ -352,6 +352,14 @@ describe("compactOverworldRoadEncounterResult", () => {
 
     const compact = compactOverworldRoadEncounterResult(result);
 
+    expect(compact).toMatchObject({
+      supplies_used: result.suppliesUsed,
+      fatigue_gained: result.fatigueGained,
+      renown_gained: result.renownGained,
+    });
+    expect(compact).not.toHaveProperty("supplies");
+    expect(compact).not.toHaveProperty("fatigue");
+    expect(compact).not.toHaveProperty("renown");
     expect(compact.encounter.route).toBe(result.encounter.route);
     expect(compact.encounter.event).toEqual([
       result.encounter.event.id,

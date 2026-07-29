@@ -24,6 +24,7 @@ import {
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
 } from "../../src/mcp/journey_projection.js";
+import { OVERWORLD_COMPACT_RESULT_LEGEND } from "../../src/mcp/compact_overworld_result.js";
 import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
 import {
   INSPECT_OVERWORLD_SESSION_STORY_TOOL,
@@ -95,6 +96,19 @@ function textResult(result: Awaited<ReturnType<Client["callTool"]>>): string {
   const first = content[0];
   if (!first || first.type !== "text") throw new Error("expected text tool result");
   return first.text ?? "";
+}
+
+function mergeLegendAndExpectContextCoverage(
+  accumulated: Record<string, string>,
+  payload: Record<string, unknown>,
+  label: string,
+): void {
+  Object.assign(accumulated, payload.legend, payload.legend_delta);
+  const context = payload.context as Record<string, unknown> | undefined;
+  if (!context) return;
+  for (const key of Object.keys(context)) {
+    expect(accumulated, `${label} compact field "${key}"`).toHaveProperty(key);
+  }
 }
 
 function expectPureStoryInspectionEnvelope(
@@ -622,6 +636,39 @@ describe("MCP pure play mode", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  }, 120_000);
+
+  it("keeps area-alias normalization from consuming progressive definitions", async () => {
+    await withFullServer(async (client) => {
+      const started = await callPlayerTool(client, "start_overworld", {
+        compact_context: false,
+      });
+      const sessionId = String(started.session_id);
+      const poiId = (
+        started.observation as {
+          pois?: { id: string }[];
+        }
+      ).pois?.[0]?.id;
+      if (!poiId) throw new Error("expected a fresh Albany point of interest");
+      await callPlayerTool(client, "scout_overworld_session_poi", {
+        session_id: sessionId,
+        poi_id: poiId,
+        compact_context: false,
+        compact_result: false,
+      });
+
+      const moved = await callPlayerTool(client, "move_overworld_session_area", {
+        session_id: sessionId,
+        area_id: "albany_city__market",
+      });
+      const delta = moved.legend_delta as Record<string, string>;
+      for (const key of Object.keys(moved.context as Record<string, unknown>)) {
+        expect(delta, `first compact move field "${key}"`).toHaveProperty(key);
+      }
+      const serialized = JSON.stringify(moved);
+      expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"result"'));
+      expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"context"'));
+    });
   }, 120_000);
 
   it("uses verbose full visibility beyond the compact route cap without widening pure play", async () => {
@@ -1897,9 +1944,11 @@ describe("MCP pure play mode", () => {
           }),
         );
         const sessionId = String(started.session_id);
+        const cumulativeLegend: Record<string, string> = {};
+        mergeLegendAndExpectContextCoverage(cumulativeLegend, started, "fresh start");
         expect(started.overworld_session_id).toBe(sessionId);
-        expect((started.legend as Record<string, string>).departure_contact_leads).toMatch(
-          /requires_preparation.*ready.*talk_overworld_session_contact.*solo default/i,
+        expect(started.legend as Record<string, string>).not.toHaveProperty(
+          "departure_contact_leads",
         );
         let view = areaView(started);
         const openingPoi = view.pois[0]?.id;
@@ -1916,6 +1965,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        mergeLegendAndExpectContextCoverage(cumulativeLegend, openingScout, "opening scout");
         view = areaView(openingScout);
         const rowan = view.characters[0];
         if (!rowan) throw new Error("expected Albany registration contact");
@@ -1930,6 +1980,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        mergeLegendAndExpectContextCoverage(cumulativeLegend, registration, "registration");
         const registrationChoice = (
           registration.journey as {
             storyChoice?: {
@@ -2019,6 +2070,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        mergeLegendAndExpectContextCoverage(cumulativeLegend, selected, "profile selection");
         const oathChoice = (
           selected.journey as {
             storyChoice?: {
@@ -2050,6 +2102,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        mergeLegendAndExpectContextCoverage(cumulativeLegend, oathed, "relief oath");
         const sourceChoice = (
           oathed.journey as {
             storyChoice?: {
@@ -2081,6 +2134,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        mergeLegendAndExpectContextCoverage(cumulativeLegend, sourced, "lead source");
         expect(
           (
             sourced.journey as {
@@ -2104,7 +2158,12 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        mergeLegendAndExpectContextCoverage(cumulativeLegend, stationed, "Station");
         expect((stationed.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
+        expect((stationed.legend_delta as Record<string, string>).departure_contact_leads).toMatch(
+          /requires_preparation.*ready.*talk_overworld_session_contact.*solo default/i,
+        );
+        expect(JSON.stringify(cumulativeLegend).length).toBeLessThanOrEqual(7_200);
         expect(
           (
             stationed.context as {
@@ -2391,6 +2450,9 @@ describe("MCP pure play mode", () => {
           }),
         );
         const rpgSessionId = String(launched.rpg_session_id);
+        expect(launched.legend_delta).toMatchObject({
+          quest: OVERWORLD_COMPACT_RESULT_LEGEND.quest,
+        });
         expect(launched).toMatchObject({
           overworld_session_id: sessionId,
           rpg_session_id: rpgSessionId,

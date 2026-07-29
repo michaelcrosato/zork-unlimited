@@ -49,8 +49,11 @@ READING THE PLAYER SURFACE
 - Treat the one-time tutorial, the current in-game goal, the journey status, and
   the choices the game presents as your complete manual. Do not assume hidden
   objectives or outside solution knowledge.
-- Compact fields can be positional tuples. Keep the `legend` returned by the
-  fresh start; later compact responses may omit it.
+- Compact fields can be positional tuples. Keep the initial `legend`, then merge
+  every later `legend_delta` into it by key before reading that response. A delta
+  key names the exact field it decodes; dotted keys such as `result.entry` name
+  exact nested paths. Each definition arrives in the same response that first uses
+  it; responses with no new field omit the delta.
 - Each state-bearing compact embedded-quest start, read, or step response carries
   the bounded current legal ids in `context.actions` while quest play is active.
   Submit one of those visible ids with `mcp__adventureforge__step_action`, passing

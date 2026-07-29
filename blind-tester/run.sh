@@ -293,7 +293,7 @@ fi
 if [[ "$OVERWORLD" == "1" ]]; then
   SOURCE_LABEL="overworld"
   SOURCE_SLUG="overworld"
-  START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Read the one-time \`tutorial\`, then capture the \`legend\` — it decodes the compact positional fields and is also sent only ONCE, at the start."
+  START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Read the one-time \`tutorial\`, capture the initial \`legend\`, and merge every later \`legend_delta\` into it by key before reading that response."
   PROMPT_FILE="$SCRIPT_DIR/prompt-overworld.md"
 else
   SOURCE_LABEL="quest=$QUEST_ID"
