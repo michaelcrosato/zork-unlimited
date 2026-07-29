@@ -44,7 +44,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 33 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 34 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -123,6 +123,7 @@ export type OverworldCompactQuestRef =
   | readonly [id: string, title: string, areaId: string]
   | readonly [id: string, title: string, areaId: string, launch: OverworldCompactQuestLaunch];
 export type OverworldCompactQuestStart = readonly [questId: string, approachId: string | null];
+export type OverworldCompactQuestStartLocation = readonly [questId: string, anchorAreaName: string];
 export type OverworldCompactServiceOffer = readonly [
   id: string,
   action: CampaignServiceOffer["action"],
@@ -393,6 +394,7 @@ export type OverworldCompactView = {
   remembered_jobs?: OverworldCompactJobLeadRef[];
   sites?: OverworldCompactRef[];
   quests?: OverworldCompactQuestRef[];
+  quest_start_locations?: OverworldCompactQuestStartLocation[];
   quest_starts?: OverworldCompactQuestStart[];
   pending_road?: OverworldCompactRoadEncounter;
   journal?: OverworldCompactJournalEntry[];
@@ -474,6 +476,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
   quests:
     "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview, consequence, tradeoff_summary|null]], selected_approach_id|null]?], ...] discovered quest leads; choose one available approach for launch-enabled quests, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
+  quest_start_locations:
+    "[[quest_id, anchor_area_name], ...] location requirement for visible unstarted quests anchored outside here[3]; advisory only, not a legal launch menu. Move there via area_routes, then use quest_starts when present",
   quest_starts:
     "[[quest_id, approach_id|null], ...] currently legal quest launches; call start_overworld_session_quest with these exact quest_id and approach_id values (omit approach_id when null)",
   pending_road:
@@ -741,6 +745,25 @@ export function compactOverworldQuestRefs(
     refs.push(compactOverworldQuestRef(values[index]!));
   }
   return refs;
+}
+
+export function compactOverworldQuestStartLocations(
+  values: readonly { id: string; area: string }[],
+  currentAreaId: string | null,
+  startedQuestIds: ReadonlySet<string>,
+  areaNamesById: ReadonlyMap<string, string>,
+  limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+): OverworldCompactQuestStartLocation[] {
+  const locations: OverworldCompactQuestStartLocation[] = [];
+  const capped = Math.min(values.length, limit);
+  for (let index = 0; index < capped; index += 1) {
+    const quest = values[index]!;
+    if (startedQuestIds.has(quest.id) || quest.area === currentAreaId) continue;
+    const areaName = areaNamesById.get(quest.area);
+    if (areaName === undefined) continue;
+    locations.push([quest.id, compactOverworldLabel(areaName)]);
+  }
+  return locations;
 }
 
 export function compactOverworldQuestStarts(
@@ -1357,6 +1380,9 @@ export function cloneOverworldCompactView(view: OverworldCompactView): Overworld
       ];
     });
   }
+  if (view.quest_start_locations) {
+    clone.quest_start_locations = cloneTupleList(view.quest_start_locations);
+  }
   if (view.quest_starts) clone.quest_starts = cloneTupleList(view.quest_starts);
   if (departureLaunchReady) cloneCompactDepartureFields(clone, view, true);
   if (view.local_refs_truncated) clone.local_refs_truncated = [...view.local_refs_truncated];
@@ -1418,6 +1444,12 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const quests = compactOverworldQuestRefs(view.quests);
+  const questStartLocations = compactOverworldQuestStartLocations(
+    view.quests,
+    view.currentArea?.id ?? null,
+    new Set(view.startedQuestIds),
+    new Map(view.areas.map((area) => [area.id, area.name])),
+  );
   const questStarts = compactOverworldQuestStarts(view.questStarts);
   const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);
   const serviceActions = compactOverworldServiceActions(view.serviceActions);
@@ -1510,6 +1542,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
+    ...(questStartLocations.length > 0 ? { quest_start_locations: questStartLocations } : {}),
     ...(questStarts.length > 0 ? { quest_starts: questStarts } : {}),
     ...(departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
     ...(departureLaunchReady && departureInteractions.length > 0

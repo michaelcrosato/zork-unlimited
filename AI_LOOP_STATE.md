@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 691 -->
+<!-- historical_cycle_count: 692 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - compact_quest_start_location
+
+- Evidence choice: compiled blind feedback carried 130 Albany launch-location mentions, and the compact player still learned Wolf-Winter's Station anchor through a rejected Civic start despite the full surface already naming it.
+- Surface: compact v34 adds one bounded `quest_start_locations` advisory naming the anchor area for each visible, unstarted, off-anchor quest; arrival, start, completion, hidden rows, and rows beyond the shared 12-quest cap omit it, while `quest_starts` remains the sole executable launch authority.
+- Counterfactual: quest choices, launch gates, area routes, state, accepted decisions, saves, content, and world hash are unchanged; the real Civic row adds 67 bytes (~17 tokens, 1.17%) and clone/full/session/MCP parity is pinned.
+- Pure evidence: exact-clean Terra seed 73063 saw `wolf_winter → Albany Station Quarter`, immediately took the Civic-to-Station route without rejection, diverted all three wolves alive through LURE at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
+- Economy: the one-attempt canary used 2.258M raw / 103.1k uncached input and 6.9k output tokens at 95.44% cache reuse, or 109,979 useful tokens / ~3,666 per accepted decision; no retry or fallback ran.
+- Self-critique/follow-through: this proves direct navigation and removes one wasteful error turn, not Albany pacing; the player still named staged Station commitments and compact terminology dense, so keep that as the cohort-level design question rather than adding more cue copy.
+- Guard: two independent reviews found no issue, pre/post crawls `20260729T133609Z` / `20260729T134809Z` are zero-finding, and health passes 449 files/3,710 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - checked_action_terms
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: this proves legibility rather than HUNT selection or strategy balance, and the player repeated the Station-density S1; do not rerun unchanged, and measure only after the locked Albany dispatch preview joins the consolidated build.
 - Economy: the one canary used 2.177M raw / 102.9k uncached input and 7.5k output tokens at 95.3% cache reuse; no replacement or cohort was launched.
 - Guard: independent review restored June's acknowledgement term, crawl `20260728T090621Z` is zero-finding, the isolated exhaustive Wolf action-id proof passed in 286s, and uncontended health passes 440 files/3,622 tests, both typechecks, and all 12 packs.
-
-### Cycle result - active_station_departure_recap
-
-- Evidence choice: repeated verified players understood individual Station cards but still carried selected role, duty, evidence, preparation, allocation, and ally terms in working memory while comparing the next choice.
-- Surface: the authenticated selected-plan recap now remains beside preparation, relief-allocation, and field-team choices across full/compact MCP, terminal, and UI; terminal repeats only the bounded recap, and the dialog keeps h1→h2→h3 order.
-- Counterfactual: recap derivation remains selected-only, read-only, proof-bound, and absent away from its Station boundary; choices, option terms, actions, state/hash, dispatch authority, launch legality, mechanics, RNG, and outcomes are unchanged.
-- Pure evidence: exact-clean Terra seed 72881 received the recap at all three stages, correctly retained Emery's route, Cade fodder, and June's authority, completed The Wolf-Winter nonlethally at decision 30, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: accurate recall did not close the Station-density S1, so do not rerun this unchanged layer; land the truthful HUNT commitment prompt, then let one strict no-resume cohort decide whether recall earns its payload.
-- Economy: the one 41-turn canary used 2.153M raw / 101.9k uncached input and 7.7k output tokens at 95.2% cache reuse; no replacement or cohort was launched.
-- Guard: independent proof and UX reviews are clean after the heading-order correction, crawl `20260728T090154Z` is zero-finding, and health passes 440 files/3,620 tests, both typechecks, and all 12 packs.

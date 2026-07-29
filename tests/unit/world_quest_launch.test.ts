@@ -6,6 +6,7 @@ import {
 } from "../../src/world/campaign_character_state.js";
 import {
   compactOverworldQuestRef,
+  compactOverworldQuestStartLocations,
   compactOverworldQuestStarts,
   OVERWORLD_COMPACT_VIEW_VERSION,
 } from "../../src/world/compact_view.js";
@@ -368,7 +369,7 @@ describe("overworld quest launch", () => {
         "test:exposed_ridge",
       ],
     ]);
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(33);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(34);
 
     const blocked = compactOverworldQuestRef({
       id: "test_quest",
@@ -393,6 +394,35 @@ describe("overworld quest launch", () => {
     expect(projected).toEqual(source);
     expect(projected).not.toBe(source);
     expect(projected[0]).not.toBe(source[0]);
+  });
+
+  it("advises only visible off-anchor unstarted quest locations within the shared cap", () => {
+    const quests = Array.from({ length: 14 }, (_, index) => ({
+      id: `quest_${index}`,
+      area: index === 2 ? "current_area" : index === 3 ? "missing_area" : `anchor_area_${index}`,
+    }));
+    const areaNames = new Map(
+      quests
+        .filter((quest) => quest.area !== "missing_area")
+        .map((quest) => [
+          quest.area,
+          quest.area === "current_area" ? "Current Yard" : `Anchor Yard ${quest.id.slice(6)}`,
+        ]),
+    );
+
+    expect(
+      compactOverworldQuestStartLocations(quests, "current_area", new Set(["quest_1"]), areaNames),
+    ).toEqual([
+      ["quest_0", "Anchor Yard 0"],
+      ["quest_4", "Anchor Yard 4"],
+      ["quest_5", "Anchor Yard 5"],
+      ["quest_6", "Anchor Yard 6"],
+      ["quest_7", "Anchor Yard 7"],
+      ["quest_8", "Anchor Yard 8"],
+      ["quest_9", "Anchor Yard 9"],
+      ["quest_10", "Anchor Yard 10"],
+      ["quest_11", "Anchor Yard 11"],
+    ]);
   });
 
   it("rejects non-launch effects and fingerprints the exact approach precondition", () => {

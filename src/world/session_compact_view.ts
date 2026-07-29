@@ -19,6 +19,7 @@ import {
   compactOverworldJobScenes,
   compactOverworldMovementTruncated,
   compactOverworldQuestRefs,
+  compactOverworldQuestStartLocations,
   compactOverworldQuestStarts,
   compactOverworldRefs,
   compactOverworldRenownEntries,
@@ -134,6 +135,12 @@ export function buildOverworldSessionCompactView(
   const rememberedJobs = compactOverworldJobLeadRefs(state.rememberedJobs);
   const sites = compactOverworldTitleRefs(state.sites);
   const quests = compactOverworldQuestRefs(state.quests);
+  const questStartLocations = compactOverworldQuestStartLocations(
+    state.quests,
+    state.currentArea?.id ?? null,
+    state.ids.startedQuestIds,
+    new Map(state.areas.map((area) => [area.id, area.name])),
+  );
   const questStarts = compactOverworldQuestStarts(state.questStarts);
   const pendingRoad = compactPendingRoad(state.pendingRoadEncounter);
   const journal = compactOverworldJournalEntries(state.journalEntries);
@@ -256,6 +263,7 @@ export function buildOverworldSessionCompactView(
     ...(rememberedJobs.length > 0 ? { remembered_jobs: rememberedJobs } : {}),
     ...(sites.length > 0 ? { sites } : {}),
     ...(quests.length > 0 ? { quests } : {}),
+    ...(questStartLocations.length > 0 ? { quest_start_locations: questStartLocations } : {}),
     ...(questStarts.length > 0 ? { quest_starts: questStarts } : {}),
     ...(departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
     ...(departureLaunchReady && departureInteractions.length > 0

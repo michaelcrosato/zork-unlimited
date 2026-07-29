@@ -3107,6 +3107,56 @@ describe("OverworldSession", () => {
     expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
   });
 
+  it("names an off-anchor quest start area without presenting it as a legal launch", () => {
+    const session = new OverworldSession(world);
+    const opening = session.view();
+    session.scoutPoi(opening.pois[0]!.id);
+    session.talkToCharacter(opening.characters[0]!.id);
+    session.chooseJourneyStory("albany:ledger_advocate");
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+
+    expect(session.view().currentArea?.id).toBe("albany_city__civic_core");
+    const civic = session.compactView();
+    expect(civic.quest_start_locations).toEqual([["wolf_winter", "Albany Station Quarter"]]);
+    expect(civic.quest_starts).toBeUndefined();
+    expect(
+      civic.area_routes?.some(
+        ([, destinationId]) => destinationId === "albany_city__transport_hub",
+      ),
+    ).toBe(true);
+    expect(compactOverworldView(session.view())).toEqual(civic);
+
+    const detachedLocation = civic.quest_start_locations?.[0] as [string, string] | undefined;
+    if (!detachedLocation) throw new Error("expected detached quest-start location");
+    detachedLocation[1] = "Tampered Quarter";
+    expect(session.compactView().quest_start_locations).toEqual([
+      ["wolf_winter", "Albany Station Quarter"],
+    ]);
+
+    moveToOpeningPreparation(session);
+    const stationed = session.compactView();
+    expect(stationed.quest_start_locations).toBeUndefined();
+    expect(stationed.quest_starts).toEqual([
+      ["wolf_winter", "albany:wolf_approach_exposed_ridge"],
+      ["wolf_winter", "albany:wolf_approach_sheltered_stockway"],
+    ]);
+    expect(compactOverworldView(session.view())).toEqual(stationed);
+
+    const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
+    if (!quest) throw new Error("expected visible Wolf-Winter quest");
+    const started = startVisibleQuest(session, quest);
+    expect(started.id).toBe(quest.id);
+    expect(session.compactView().quest_start_locations).toBeUndefined();
+
+    session.completeQuest(quest.id, {
+      endingId: "ending_held",
+      endingTitle: "The Byre Held",
+      death: false,
+    });
+    expect(session.compactView().quest_start_locations).toBeUndefined();
+  });
+
   it("treats one approach button as the one quest-start decision and rejects blocked starts", () => {
     const readyWolf = (manifest: OverworldManifest) => {
       const session = new OverworldSession(manifest);
