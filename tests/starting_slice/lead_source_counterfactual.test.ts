@@ -8,6 +8,7 @@ import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { buildRpgRules, enumerateRpgActions, indexRpgPack } from "../../src/rpg/runner.js";
 import { enemyHpVar } from "../../src/rpg/schema.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { openingLeadSourceJournalDraft } from "../../src/world/opening_lead_source_journal.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
@@ -288,6 +289,11 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       countsTowardJourney: true,
       reason: "situation_changed",
     } as const;
+    const expectedJournal = openingLeadSourceJournalDraft({
+      scene: LEAD_SOURCE,
+      character: pendingSnapshot.character,
+      optionId: ROWAN_SOURCE,
+    });
 
     const selected = api.choose_overworld_session_story({
       ...FULL_OVERWORLD,
@@ -301,11 +307,8 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       consequence: sourceOption.consequence,
       goal: pending.pendingJourney.goal,
       entry: {
-        id: `lead_source:${LEAD_SOURCE.id}:${ROWAN_SOURCE}`,
-        kind: "lead_source",
+        ...expectedJournal,
         town: town.name,
-        title: `Certified source: ${sourceOption.label}`,
-        text: sourceOption.consequence,
         recordedAt: offerEntry.recordedAt,
       },
       journeyDecision: expectedJourneyDecision,

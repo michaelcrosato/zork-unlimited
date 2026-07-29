@@ -20,9 +20,19 @@ const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
 const ALLY_CONTACT = WORLD.characters.find((character) => character.id === ALLY.contact)!;
 const SOURCE_HEADER =
-  "Certify one account; the other two close. Compare each card's first field use, cost, and what it rules out. Inspect a card for its exact trigger chain.";
+  "Certify one account; the other two close. Compare immediate cost, broad field fit, and what you give up. Inspect a card for exact conditions; they surface again when relevant.";
 const PREPARATION_HEADER =
-  "Choose one optional specialist packet, or leave without one. Compare each card's first field use, cost, and tradeoff. Inspect a card for its exact check and recovery.";
+  "Choose one optional specialist packet, or leave without one. Compare immediate cost, broad field fit, and tradeoff. Inspect a card for its exact check and recovery; they surface again in the field.";
+const PREPARATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
+  "albany:prep_works_fortification": "Opening fortification support",
+  "albany:prep_drover_route": "Failed-lure recovery",
+  "albany:prep_relief_protocol": "Herd-pressure recovery",
+};
+const RELIEF_ALLOCATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
+  "albany:relief_cade_fodder": "Opening herd support",
+  "albany:relief_resident_shelter": "Return fatigue recovery",
+  "albany:relief_mobile_reserve": "Field-failure and return reserve",
+};
 
 function currentStoryChoice(session: OverworldSession): JourneyStoryChoicePrompt {
   const storyChoice = session.journey().storyChoice;
@@ -105,19 +115,18 @@ function expectCompactSummaryOptions(storyChoice: JourneyStoryChoiceSummaryCompa
 
 function expectProgressivePreparationOptions(storyChoice: JourneyStoryChoicePrompt): void {
   for (const profile of PREPARATION.profiles) {
-    const triggerCategory = profile.trigger_category;
-    if (!triggerCategory) throw new Error(`Preparation ${profile.id} needs a trigger category.`);
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
-      fieldTrigger: triggerCategory,
+      fieldTrigger: PREPARATION_FIELD_CATEGORIES[profile.id],
       fieldTriggerScope: "category",
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
     });
     expect(option?.summary?.commitment.split(/\s+/).length).toBeLessThanOrEqual(16);
-    expect(option?.summary?.fieldTrigger.split(/\s+/).length).toBeLessThanOrEqual(10);
-    expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|success|failure)\b/i);
+    expect(option?.summary?.fieldTrigger.split(/\s+/).length).toBeLessThanOrEqual(8);
+    expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|check|success|threshold)\b/i);
+    expect(option?.summary?.fieldTrigger).not.toContain(profile.preview);
     expect(option?.consequence).toContain(`Full field terms: ${profile.preview}`);
     expect(option?.consequence).toContain(profile.consequence);
   }
@@ -127,12 +136,10 @@ function expectProgressivePreparationComparison(
   storyChoice: JourneyStoryChoiceSummaryComparison,
 ): void {
   for (const profile of PREPARATION.profiles) {
-    const triggerCategory = profile.trigger_category;
-    if (!triggerCategory) throw new Error(`Preparation ${profile.id} needs a trigger category.`);
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
-      fieldTrigger: triggerCategory,
+      fieldTrigger: PREPARATION_FIELD_CATEGORIES[profile.id],
       fieldTriggerScope: "category",
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
@@ -143,20 +150,18 @@ function expectProgressivePreparationComparison(
 
 function expectProgressiveReliefAllocationOptions(storyChoice: JourneyStoryChoicePrompt): void {
   for (const allocationOption of RELIEF_ALLOCATION.options) {
-    const triggerCategory = allocationOption.trigger_category;
-    if (!triggerCategory) {
-      throw new Error(`Relief allocation ${allocationOption.id} needs a trigger category.`);
-    }
     const option = storyChoice.options.find((candidate) => candidate.id === allocationOption.id);
     expect(option?.summary).toEqual({
       commitment: allocationOption.summary,
-      fieldTrigger: triggerCategory,
+      fieldTrigger: RELIEF_ALLOCATION_FIELD_CATEGORIES[allocationOption.id],
       fieldTriggerScope: "category",
       immediateCost: expect.any(String),
       tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
     });
     expect(option?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
     expect(option?.consequence).toContain(allocationOption.consequence);
+    expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:alarm|15-minute|Campus|Market)\b/i);
+    expect(option?.summary?.fieldTrigger).not.toContain(allocationOption.preview);
   }
 }
 
@@ -164,14 +169,10 @@ function expectProgressiveReliefAllocationComparison(
   storyChoice: JourneyStoryChoiceSummaryComparison,
 ): void {
   for (const allocationOption of RELIEF_ALLOCATION.options) {
-    const triggerCategory = allocationOption.trigger_category;
-    if (!triggerCategory) {
-      throw new Error(`Relief allocation ${allocationOption.id} needs a trigger category.`);
-    }
     const option = storyChoice.options.find((candidate) => candidate.id === allocationOption.id);
     expect(option?.summary).toEqual({
       commitment: allocationOption.summary,
-      fieldTrigger: triggerCategory,
+      fieldTrigger: RELIEF_ALLOCATION_FIELD_CATEGORIES[allocationOption.id],
       fieldTriggerScope: "category",
       immediateCost: expect.any(String),
       tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
@@ -200,7 +201,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(registration.message).toContain(`Mission preview — ${WOLF.discovery}`);
     expect(registration.message).toContain("At Civic: role → duty → evidence");
     expect(registration.message).toContain(
-      "two docket decisions stay open. Each changes field conditions or consequences; none locks your solution.",
+      "two docket decisions stay open. Each sets a promise and broad field fit; none locks your solution.",
     );
     expectSummaryFirstOptions(registration);
     expect(registration.options.every((option) => option.summary?.immediateCost)).toBe(true);
@@ -278,13 +279,14 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(preparation.message).toContain(`${PREPARATION.title}. ${PREPARATION_HEADER}`);
     expect(preparation.message).not.toContain(PREPARATION.message);
     expect(preparation.message).toContain(
-      `This field-packet choice is optional: choose one preparation, or close it and launch ${WOLF.title} now without a field packet.`,
+      `This field-packet choice is optional: choose one preparation, or close it and launch ${WOLF.title} now without one.`,
     );
     expect(preparation.message).toContain(
-      "Choosing a packet reveals a separate optional relief-capacity choice at this Station.",
+      "Inspect a card for its exact check and recovery; the game repeats them if that field moment arrives.",
     );
+    expect(preparation.message).not.toContain("relief-capacity choice");
     expect(preparation.message).toContain(
-      `${ALLY_CONTACT.name}'s field-team terms are another separate optional conversation.`,
+      `${ALLY_CONTACT.name}'s optional field-team conversation remains separate.`,
     );
     expect(preparation.message).not.toMatch(/Departure plan|1\/2|Still ahead/i);
     expect(wordCount(preparation.message)).toBeLessThanOrEqual(105);
@@ -322,11 +324,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(allocation.message).not.toMatch(/Departure plan|2\/2|Still ahead|Chosen for departure/i);
     expect(allocation.message).not.toContain("Optional field-team choice follows");
     expect(allocation.message).toContain(
-      "This relief-capacity choice is separate and optional: choose one allocation, or close it to leave the capacity unassigned.",
+      "This relief-capacity choice is separate and optional: choose one allocation, or close it to leave capacity unassigned.",
     );
     expect(allocation.message).not.toMatch(/\b(?:required|mandatory)\b/i);
     expect(allocation.message).toContain(
-      `After choosing or closing it, return to the Station actions. ${ALLY_CONTACT.name}'s field-team terms are a separate optional conversation; launching ${WOLF.title} without that conversation keeps the disclosed solo rider.`,
+      `After choosing or closing it, return to Station actions. ${ALLY_CONTACT.name}'s optional field-team conversation remains separate; launching ${WOLF.title} without it keeps the solo route legal.`,
     );
     expectLaunchDetailsDeferred(allocation);
     expectSummaryFirstOptions(allocation);

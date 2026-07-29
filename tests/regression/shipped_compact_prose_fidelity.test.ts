@@ -247,7 +247,7 @@ function expectOpeningPromptExact(
       if (projectedOption!.summary!.fieldTriggerScope === "category") {
         expectExact(
           `opening:${source.id}.${sourceOption.id}.trigger_category`,
-          sourceOption.trigger_category!,
+          canonicalOption!.summary!.fieldTrigger,
           projectedOption!.summary!.fieldTrigger,
         );
         expect(inspectedOption!.consequence).toContain(sourceOption.preview);

@@ -2,9 +2,9 @@ import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 
 const LEAD_SOURCE_COMPARISON_HEADER =
-  "Certify one account; the other two close. Compare each card's first field use, cost, and what it rules out. Inspect a card for its exact trigger chain.";
+  "Certify one account; the other two close. Compare immediate cost, broad field fit, and what you give up. Inspect a card for exact conditions; they surface again when relevant.";
 const PREPARATION_COMPARISON_HEADER =
-  "Choose one optional specialist packet, or leave without one. Compare each card's first field use, cost, and tradeoff. Inspect a card for its exact check and recovery.";
+  "Choose one optional specialist packet, or leave without one. Compare immediate cost, broad field fit, and tradeoff. Inspect a card for its exact check and recovery; they surface again in the field.";
 
 type OpeningDispatchStage = Readonly<{
   id: string;
@@ -160,8 +160,8 @@ export function withOpeningDispatchBriefing(
     const progress = `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
     const planningContext =
       civicStageIndex === 0
-        ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; two docket decisions stay open. Each changes field conditions or consequences; none locks your solution.`
-        : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Still ahead here: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station departure board for field preparation and relief capacity."}`;
+        ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; two docket decisions stay open. Each sets a promise and broad field fit; none locks your solution.`
+        : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Still ahead here: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station board. Optional support is available there; inspect any card for detail that repeats in play."}`;
     return {
       ...prompt,
       message: `${progress} ${planningContext} ${displayMessage}`,
@@ -174,8 +174,8 @@ export function withOpeningDispatchBriefing(
       : `${plan.questTitle} Optional relief capacity — ${choice.label}.`;
   const planningContext =
     choice.kind === "preparation"
-      ? `This field-packet choice is optional: choose one preparation, or close it and launch ${plan.questTitle} now without a field packet. Choosing a packet reveals a separate optional relief-capacity choice at this Station.${plan.allyContactName ? ` ${plan.allyContactName}'s field-team terms are another separate optional conversation.` : ""}`
-      : `This relief-capacity choice is separate and optional: choose one allocation, or close it to leave the capacity unassigned.${plan.allyContactName ? ` After choosing or closing it, return to the Station actions. ${plan.allyContactName}'s field-team terms are a separate optional conversation; launching ${plan.questTitle} without that conversation keeps the disclosed solo rider.` : ""}`;
+      ? `This field-packet choice is optional: choose one preparation, or close it and launch ${plan.questTitle} now without one. Inspect a card for its exact check and recovery; the game repeats them if that field moment arrives.${plan.allyContactName ? ` ${plan.allyContactName}'s optional field-team conversation remains separate.` : ""}`
+      : `This relief-capacity choice is separate and optional: choose one allocation, or close it to leave capacity unassigned.${plan.allyContactName ? ` After choosing or closing it, return to Station actions. ${plan.allyContactName}'s optional field-team conversation remains separate; launching ${plan.questTitle} without it keeps the solo route legal.` : ""}`;
   const missionCard = `Mission: ${plan.questTitle}. Last-mile route costs and field tradeoffs remain on its launch card.`;
   return {
     ...prompt,

@@ -28,6 +28,15 @@ describe("opening ally contract", () => {
             ALLY.options.find((candidate) => candidate.id === option.id)?.tradeoff,
       ),
     ).toBe(true);
+    expect(prompt.options.map((option) => option.summary?.fieldTrigger)).toEqual([
+      "Independent cattle-pressure ally",
+      "No companion; relay terms refused",
+      "Solo field team; no ally action",
+    ]);
+    expect(prompt.options[0]!.summary?.fieldTrigger).not.toMatch(
+      /\b(?:alarm|drive|fortification)\b/i,
+    );
+    expect(prompt.options[0]!.consequence).toContain(ALLY.options[0]!.preview);
     expect(prompt.options.map((option) => option.consequence)).toEqual([
       expect.stringMatching(/actual cost: 15 minutes/i),
       expect.stringMatching(/actual cost: 5 minutes/i),

@@ -215,8 +215,7 @@ describe("opening preparation snapshot integrity", () => {
       "Preparation",
       "selected",
       PREPARATION_TITLE,
-      WORLD.opening_preparation!.profiles.find((profile) => profile.title === PREPARATION_TITLE)!
-        .trigger_category,
+      "Herd-pressure recovery",
     ]);
     expectDepartureInteraction(
       selectedSession,

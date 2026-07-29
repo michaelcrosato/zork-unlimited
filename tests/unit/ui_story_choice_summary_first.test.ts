@@ -301,7 +301,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(stationButton.textContent).toContain("Tradeoff:");
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.tradeoff);
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.summary);
-      expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.trigger_category);
+      const stationFieldTrigger = stationJourney.storyChoice?.options[0]?.summary?.fieldTrigger;
+      if (!stationFieldTrigger) throw new Error("Expected the broad Station field category.");
+      expect(stationButton.textContent).toContain(stationFieldTrigger);
       const forecastLine = stationJourney.storyChoice?.options[0]?.dispatchForecast?.line;
       if (!forecastLine) throw new Error("Expected the authenticated Station timing forecast.");
       expect(stationButton.textContent).toContain(forecastLine);
@@ -358,7 +360,10 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(allocationButton.textContent!.indexOf(allocationImpact)).toBeLessThan(
         allocationButton.textContent!.indexOf("Purpose:"),
       );
-      expect(allocationButton.textContent).toContain(allocation.options[0]!.trigger_category);
+      const allocationFieldTrigger =
+        allocationJourney.storyChoice?.options[0]?.summary?.fieldTrigger;
+      if (!allocationFieldTrigger) throw new Error("Expected the broad allocation field category.");
+      expect(allocationButton.textContent).toContain(allocationFieldTrigger);
       expect(allocationButton.textContent).not.toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).toContain(allocation.options[0]!.consequence);
@@ -385,7 +390,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
           throw new Error("Expected every Albany setup kind to use the comparison-first card.");
         }
         expect(comparedButton.textContent).toContain("Trigger category:");
-        expect(comparedButton.textContent).toContain(sourceOption.trigger_category);
+        const comparedFieldTrigger = comparedJourney.storyChoice?.options[0]?.summary?.fieldTrigger;
+        if (!comparedFieldTrigger) throw new Error("Expected a broad Civic field category.");
+        expect(comparedButton.textContent).toContain(comparedFieldTrigger);
         expect(comparedButton.textContent).not.toContain(sourceOption.preview);
         expect(comparedDetails.textContent).toContain(sourceOption.preview);
         expect(comparedDetails.textContent).toContain(sourceOption.consequence);

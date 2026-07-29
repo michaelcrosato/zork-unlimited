@@ -38,6 +38,7 @@ import {
   parseOverworldManifest,
   type OverworldManifest,
 } from "../../src/world/overworld.js";
+import { presentOpeningLeadSource } from "../../src/world/opening_lead_source_presentation.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import type {
   OverworldJournalDecisionBoundary,
@@ -162,6 +163,14 @@ describe("Albany opening lead-source authoring", () => {
       Reflect.deleteProperty(option, "trigger_category");
     }
     expect(parseOpeningLeadSource(exactLegacy)).toEqual(exactLegacy);
+    const exactLegacyPrompt = presentOpeningLeadSource(
+      exactLegacy,
+      profileCharacter("albany:road_warden"),
+    );
+    expect(exactLegacyPrompt.options[0]!.summary).toMatchObject({
+      fieldTrigger: exactLegacy.options[0]!.preview,
+    });
+    expect(exactLegacyPrompt.options[0]!.summary).not.toHaveProperty("fieldTriggerScope");
 
     const partialCategories = cloneOpeningLeadSource(openingLeadSource);
     Reflect.deleteProperty(partialCategories.options[0]!, "trigger_category");

@@ -36,6 +36,11 @@ const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
 const PREPARATION_STORY_ID = "albany:wolf_preparation";
 const RELIEF_ALLOCATION_STORY_ID = "albany:wolf_relief_allocation";
+const RELIEF_ALLOCATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
+  "albany:relief_cade_fodder": "Opening herd support",
+  "albany:relief_resident_shelter": "Return fatigue recovery",
+  "albany:relief_mobile_reserve": "Field-failure and return reserve",
+};
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
 const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
 
@@ -1410,7 +1415,7 @@ describe("MCP journey surface", () => {
       ).toMatchObject({
         summary: {
           commitment: allocationOption.summary,
-          fieldTrigger: allocationOption.trigger_category,
+          fieldTrigger: RELIEF_ALLOCATION_FIELD_CATEGORIES[allocationOption.id],
           fieldTriggerScope: "category",
         },
       });

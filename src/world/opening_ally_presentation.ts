@@ -5,19 +5,27 @@ import type {
 } from "./journey_contract.js";
 import { formatOpeningAllyCost, parseOpeningAlly, type OpeningAlly } from "./opening_ally.js";
 
+function allyFieldCategory(
+  scene: ReturnType<typeof parseOpeningAlly>,
+  option: ReturnType<typeof parseOpeningAlly>["options"][number],
+): string {
+  if (option.effects.some((effect) => effect.type === "add_companion")) {
+    return "Independent cattle-pressure ally";
+  }
+  if (option.id === scene.solo_option_id) {
+    return "Solo field team; no ally action";
+  }
+  return "No companion; relay terms refused";
+}
+
 function allySummary(
   scene: ReturnType<typeof parseOpeningAlly>,
   option: ReturnType<typeof parseOpeningAlly>["options"][number],
 ) {
-  const joinsFieldTeam = option.effects.some((effect) => effect.type === "add_companion");
-  const travelsSolo = option.id === scene.solo_option_id;
   return Object.freeze({
     commitment: option.summary,
-    fieldTrigger: joinsFieldTeam
-      ? scene.capability
-      : travelsSolo
-        ? "No ally field trigger; every established solo route remains available."
-        : "No ally field trigger; June refuses a subordinate relay role.",
+    fieldTrigger: allyFieldCategory(scene, option),
+    fieldTriggerScope: "category" as const,
     immediateCost: formatOpeningAllyCost(option.terms),
     tradeoff: option.tradeoff,
   });
@@ -39,7 +47,7 @@ export function presentOpeningAlly(
           id: option.id,
           label: option.title,
           summary: allySummary(parsed, option),
-          consequence: `${option.summary} ${option.preview} Actual cost: ${formatOpeningAllyCost(option.terms)}. ${option.consequence}`,
+          consequence: `${option.summary} ${allyFieldCategory(parsed, option)} ${option.preview} Actual cost: ${formatOpeningAllyCost(option.terms)}. ${option.consequence}`,
         }),
       ),
     ) as JourneyAllyStoryChoiceOptions,

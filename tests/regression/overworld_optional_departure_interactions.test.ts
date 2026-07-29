@@ -242,10 +242,11 @@ describe("optional Station departure interactions", () => {
     });
     expect(inspected.story).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
     expect(inspected.story.message).toContain(`${WOLF.title} Optional field packet — preparation.`);
-    expect(inspected.story.message).toContain(`launch ${WOLF.title} now without a field packet`);
+    expect(inspected.story.message).toContain(`launch ${WOLF.title} now without one`);
     expect(inspected.story.message).toContain(
-      "separate optional relief-capacity choice at this Station",
+      "Inspect a card for its exact check and recovery; the game repeats them if that field moment arrives.",
     );
+    expect(inspected.story.message).not.toContain("relief-capacity choice");
     expect(inspected.story.message).not.toMatch(/Departure plan|1\/2|Still ahead/i);
     expect(inspected.snapshot_hash).toBe(before.snapshot_hash);
     const afterInspection = api.export_overworld_session({ session_id: sessionId });

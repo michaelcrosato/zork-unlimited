@@ -304,7 +304,7 @@ describe("opening preparation authoring", () => {
     ).toThrow();
   });
 
-  it("presents generic check odds without adding fields to the initial comparison", () => {
+  it("keeps generic check odds in exact detail rather than the initial comparison", () => {
     const scene = preparationScene();
     scene.profiles[0]!.check_disclosure = {
       skill_id: "skill:repair",
@@ -320,6 +320,8 @@ describe("opening preparation authoring", () => {
     expect(Object.keys(option.summary ?? {}).sort()).toEqual(
       ["commitment", "fieldTrigger", "immediateCost", "tradeoff"].sort(),
     );
+    expect(option.summary?.fieldTrigger).toBe(scene.profiles[0]!.preview);
+    expect(option.summary?.fieldTrigger).not.toContain("DC 12");
     expect(option.consequence).toContain(
       "Current Repair modifier: +4. This d20 + 4 vs DC 12 check succeeds on 8-20 (65%).",
     );

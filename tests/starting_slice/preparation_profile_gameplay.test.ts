@@ -706,11 +706,12 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     ).options.find((option) => option.id === RELIEF);
     expect(presented?.summary).toEqual({
       commitment: reliefProfile?.summary,
-      fieldTrigger: RELIEF_TRIGGER_CATEGORY,
+      fieldTrigger: "Herd-pressure recovery",
       fieldTriggerScope: "category",
       immediateCost: "30 minutes and $4",
       tradeoff: reliefProfile?.tradeoff,
     });
+    expect(presented?.summary?.fieldTrigger).not.toContain(RELIEF_TRIGGER_CATEGORY);
     expect(presented?.consequence).toContain(`Full field terms: ${RELIEF_PREVIEW}`);
     let specialist = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, LEDGER)));
     let generalist = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, COURIER)));

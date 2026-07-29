@@ -426,6 +426,8 @@ describe("opening relief oath application and presentation", () => {
       /access: Full emergency records.*duty: Protect people and herd.*actual cost: 10 minutes.*witnesses the official oath/i,
     );
     expect(prompt.options[2]!.consequence).toMatch(/actual cost: no added time/i);
+    expect(prompt.options[0]!.summary?.fieldTrigger).toBe(scene.options[0]!.preview);
+    expect(prompt.options[0]!.summary).not.toHaveProperty("fieldTriggerScope");
     expect(formatOpeningReliefOathCost({ minutes: 5 })).toBe("5 minutes");
     expect(formatOpeningReliefOathCost({ minutes: 0 })).toBe("no added time");
     expect(Object.isFrozen(prompt)).toBe(true);
