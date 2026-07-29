@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 695 -->
+<!-- historical_cycle_count: 696 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - character_relative_preparation_check_fit
+
+- Evidence choice: exact-clean Terra seeds 73056 and 73074 independently exposed Emery's one-use Drover Route as hiding its Streetwise dependency until use or exact inspection.
+- Surface: optional Albany preparation cards now show character-relative `Repair/Streetwise/Mediation +N vs DC 12` across compact MCP comparison/detail, terminal, and UI; exact odds, stakes, outcomes, and recovery remain field-timed.
+- Measured effect: the complete three-card compact comparison grows 1,942->2,045 bytes (+103, about 26 tokens) and exact Drover detail 357->393 (+36, about 9), cheaper than another inspect or clarification turn.
+- Counterfactual: this is presentation only; choices, checks, DC, RNG, costs, consequences, receipts, journals, hashes, saves, and world/content versions are unchanged, while absent legacy disclosure remains absent and migration hashes stay pinned.
+- Pure evidence: exact-clean Terra seed 73075 completed The Wolf-Winter through fortification in 17 decisions, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, or bug; it skipped optional preparation, so it is build/retention evidence rather than direct proof of the new line.
+- Economy: one attempt used 764.1k raw / 60.1k uncached input and 5.0k output tokens at 92.1% cache reuse, or 65,104 useful tokens / 17 decisions (about 3,830 each), with no retry or fallback.
+- Self-critique/guard: early role/duty terminology remains dense; browser verification showed the Courier's visible `Streetwise +4 vs DC 12` with no console error, three independent reviews are clean, pre/post crawls `20260729T194117Z` / `20260729T200038Z` have zero findings, and exact-tree health passes 449 files/3,723 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - progressive_compact_legend
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: visibility is proven but HUNT selection is not; the player again named dense Albany preparation, so strategy diversification awaits a fresh strict pilot and setup density remains a separate field-timed increment.
 - Economy: Terra used 6.722M input / 188.4k uncached input and 12.5k output tokens at 97.2% cache reuse, or 3,525 useful tokens per accepted decision; Spark 72930 yielded no valid report or terminal usage after a client model-cache schema failure, so its exact cost is unrecoverable and no retry was attempted.
 - Guard: independent gameplay/evidence review is clean, pre/post crawls `20260728T160242Z` / `20260728T162543Z` are zero-finding, and health passes 441 files/3,630 tests, both typechecks, and all 12 packs.
-
-### Cycle result - truthful_relief_oath_strategy_fit
-
-- Evidence choice: the exact ten-Terra cohort completed 10/10 through LURE while Aid-Only falsely said it never helped another strategy even though Cade-terms FORTIFY already fit its duty; clarity averaged 3.8 and only 5/10 continued.
-- Surface: Albany's three duty cards now name their exact FORTIFY/LURE/DRIVE benefit, Aid-Only discloses its no-bonus Cade-terms FORTIFY fit, and Cade's LURE/FORTIFY briefings mirror those truthful terms.
-- Counterfactual: choices, strategy legality, route/commitment gates, checks, DCs, resources, pressure, RNG, outcomes, promises, and return consequences are unchanged.
-- Pure evidence: exact-clean Terra seed 72911 chose Aid-Only, Emery's recovery, fodder, June, ridge, and LURE; it completed The Wolf-Winter at decision 30 with no rejection, rated clarity/enjoyment 4/4, stayed unstuck, ended at the natural first-session boundary, and chose replay-yes.
-- Self-critique/follow-through: one canary proves truthful legibility rather than strategy diversification or retention lift; run one strict no-resume cohort only on the consolidated launch-first plus parity build.
-- Economy: the 45-turn canary used 2.262M raw / 105.5k uncached input and 6.8k output tokens at 95.3% cache reuse, or 3,741 useful tokens per accepted decision; no replacement was launched.
-- Guard: exact predecessor/current world hashes and every oath-bearing historical save lineage are pinned, pre/post crawls `20260728T134546Z`/`20260728T135411Z` are zero-finding, and health passes 441 files/3,629 tests, both typechecks, and all 12 packs.

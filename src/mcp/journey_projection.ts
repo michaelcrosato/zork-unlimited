@@ -19,7 +19,7 @@ import type { McpObservation } from "./types.js";
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
 const COMPACT_MORE_CHOICES_INDEX = 12;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 6 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 7 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Complete terms are staged; inspect this exact option before choosing if you need them." as const;
 
@@ -36,6 +36,7 @@ export type JourneyStoryChoiceDetailOption = Readonly<{
   id: string;
   label: string;
   group?: JourneyStoryChoiceOption["group"];
+  checkFit?: string;
   consequence: string;
 }>;
 
@@ -181,6 +182,9 @@ export function compactJourneyStoryChoiceComparison(
         id: inspectedSource.id,
         label: inspectedSource.label,
         ...(inspectedSource.group === undefined ? {} : { group: inspectedSource.group }),
+        ...(inspectedSource.summary?.checkFit === undefined
+          ? {}
+          : { checkFit: inspectedSource.summary.checkFit }),
         consequence: inspectedSource.consequence,
       }),
     });

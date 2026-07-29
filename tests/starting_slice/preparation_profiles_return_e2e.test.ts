@@ -177,6 +177,7 @@ function launchPreparedWolf(api: ToolApi) {
   const presentedProfile = preparation.options.find((option) => option.id === PROFILE)!;
   expect(presentedProfile.summary).toEqual({
     commitment: sourceProfile.summary,
+    checkFit: "Streetwise +4 vs DC 12",
     immediateCost: "5 minutes and $0",
     tradeoff: sourceProfile.tradeoff,
   });

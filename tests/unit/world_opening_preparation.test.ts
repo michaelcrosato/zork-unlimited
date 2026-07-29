@@ -308,7 +308,7 @@ describe("opening preparation authoring", () => {
     ).toThrow();
   });
 
-  it("defers generic check odds from the opening receipt", () => {
+  it("shows character-relative check fit while deferring odds from the opening receipt", () => {
     const scene = preparationScene();
     scene.profiles.forEach((profile) => {
       profile.trigger_category = profile.title;
@@ -325,10 +325,12 @@ describe("opening preparation authoring", () => {
     });
     const option = presentOpeningPreparation(scene, character).options[0]!;
     expect(Object.keys(option.summary ?? {}).sort()).toEqual([
+      "checkFit",
       "commitment",
       "immediateCost",
       "tradeoff",
     ]);
+    expect(option.summary?.checkFit).toBe("Repair +4 vs DC 12");
     expect(option.consequence).toBe(
       "Benefit: Civic works survey Cost: 25 minutes and $4. " +
         "Boundary: The other specialist plans remain behind.",
@@ -336,9 +338,9 @@ describe("opening preparation authoring", () => {
     expect(option.consequence).not.toMatch(/\b(?:DC|check|modifier|odds|success|failure)\b/i);
 
     scene.profiles[0]!.check_disclosure!.difficulty = 26;
-    expect(presentOpeningPreparation(scene, character).options[0]!.consequence).toBe(
-      option.consequence,
-    );
+    const impossible = presentOpeningPreparation(scene, character).options[0]!;
+    expect(impossible.summary?.checkFit).toBe("Repair +4 vs DC 26");
+    expect(impossible.consequence).toBe(option.consequence);
   });
 
   it("rejects ambiguous, non-persistent, and non-provider effects", () => {

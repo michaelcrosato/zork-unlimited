@@ -116,6 +116,11 @@ export function JourneyStoryChoiceScreen({
               {conciseSummary.fieldTrigger}
             </small>
           )}
+          {conciseSummary?.checkFit && (
+            <small className="journey-choice-check-fit">
+              <b>Check fit:</b> {conciseSummary.checkFit}
+            </small>
+          )}
           {conciseSummary && usesRoleplayReceipt && (
             <small className="journey-choice-cost">
               <b>Cost / give up:</b> {conciseSummary.immediateCost}; {conciseSummary.tradeoff}

@@ -12,12 +12,28 @@ import {
 } from "./opening_preparation.js";
 import { presentOpeningChoiceOption } from "./opening_choice_receipt.js";
 
+function preparationCheckModifier(
+  check: OpeningPreparationCheckDisclosure,
+  character: CampaignCharacterState,
+): number {
+  return character.skills.find((skill) => skill.skillId === check.skill_id)?.rank ?? 0;
+}
+
+function preparationCheckFit(
+  check: OpeningPreparationCheckDisclosure,
+  character: CampaignCharacterState,
+): string {
+  const modifier = preparationCheckModifier(check, character);
+  const signedModifier = modifier >= 0 ? `+${String(modifier)}` : String(modifier);
+  return `${check.skill_label} ${signedModifier} vs DC ${String(check.difficulty)}`;
+}
+
 function preparationCheckDisclosure(
   check: OpeningPreparationCheckDisclosure | undefined,
   character: CampaignCharacterState,
 ): string {
   if (!check) return "";
-  const modifier = character.skills.find((skill) => skill.skillId === check.skill_id)?.rank ?? 0;
+  const modifier = preparationCheckModifier(check, character);
   const minimumRoll = check.difficulty - modifier;
   const successCount = Math.max(0, Math.min(20, 21 - minimumRoll));
   const chance = (successCount / 20) * 100;
@@ -65,6 +81,9 @@ export function presentOpeningPreparation(
           label: profile.title,
           commitment: profile.summary,
           exactBenefit: profile.trigger_category,
+          ...(profile.check_disclosure
+            ? { checkFit: preparationCheckFit(profile.check_disclosure, character) }
+            : {}),
           immediateCost: cost,
           giveUp: profile.tradeoff,
         });

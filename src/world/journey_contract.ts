@@ -180,6 +180,8 @@ export type JourneyStoryChoiceSummary = Readonly<{
   fieldTrigger?: string;
   /** Present only when fieldTrigger is a broad comparison category, not exact terms. */
   fieldTriggerScope?: "category";
+  /** Character-relative skill modifier and DC for a preparation's eventual field check. */
+  checkFit?: string;
   immediateCost: string;
   tradeoff: string;
 }>;
@@ -1190,6 +1192,7 @@ function freezeStoryChoice(
       option.summary &&
       (option.summary.commitment.length === 0 ||
         (option.summary.fieldTrigger !== undefined && option.summary.fieldTrigger.length === 0) ||
+        (option.summary.checkFit !== undefined && option.summary.checkFit.trim().length === 0) ||
         typeof option.summary.immediateCost !== "string" ||
         option.summary.immediateCost.length === 0 ||
         typeof option.summary.tradeoff !== "string" ||

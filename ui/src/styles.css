@@ -557,6 +557,7 @@ button:hover {
 }
 
 .journey-choice-trigger,
+.journey-choice-check-fit,
 .journey-choice-cost {
   color: color-mix(in srgb, currentColor 78%, var(--muted));
 }

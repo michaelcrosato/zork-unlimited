@@ -499,6 +499,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       expect(option.summary).not.toHaveProperty("fieldTrigger");
       expect(option.summary).not.toHaveProperty("fieldTriggerScope");
       expect(text).toContain(`Promise / priority: ${option.summary!.commitment}`);
+      expect(text).toContain(`Check fit: ${option.summary!.checkFit}`);
       expect(text).toContain(
         `Cost / give up: ${option.summary!.immediateCost}; ${option.summary!.tradeoff}`,
       );
@@ -516,6 +517,8 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     if (!inspected.summary) throw new Error("Expected structured Station detail.");
     const detail = renderTerminalStoryChoiceDetail(storyChoice, inspected);
     expect(detail.split(inspected.summary.commitment)).toHaveLength(2);
+    expect(detail.split(inspected.summary.checkFit!)).toHaveLength(2);
+    expect(detail).toContain(`Check fit: ${inspected.summary.checkFit}`);
     expect(detail.split(inspected.summary.immediateCost)).toHaveLength(2);
     expect(detail.split(inspected.summary.tradeoff)).toHaveLength(2);
     expect(detail).toContain(projected.consequence);

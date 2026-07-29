@@ -46,6 +46,7 @@ function expectRoleplayReceipt(
     id: string;
     commitment: string;
     benefit: string;
+    checkFit?: string;
     immediateCost: string;
     giveUp: string;
   },
@@ -53,15 +54,22 @@ function expectRoleplayReceipt(
   const option = prompt.options.find((candidate) => candidate.id === args.id);
   expect(option?.summary).toEqual({
     commitment: args.commitment,
+    ...(args.checkFit === undefined ? {} : { checkFit: args.checkFit }),
     immediateCost: args.immediateCost,
     tradeoff: args.giveUp,
   });
   expect(Object.keys(option?.summary ?? {}).sort()).toEqual([
+    ...(args.checkFit === undefined ? [] : ["checkFit"]),
     "commitment",
     "immediateCost",
     "tradeoff",
   ]);
   const detail = compactJourneyStoryChoiceComparison(prompt, args.id).inspectedOption;
+  if (args.checkFit === undefined) {
+    expect(detail).not.toHaveProperty("checkFit");
+  } else {
+    expect(detail.checkFit).toBe(args.checkFit);
+  }
   expect(detail.consequence).toBe(
     `Benefit: ${args.benefit} Cost: ${args.immediateCost}. Boundary: ${args.giveUp}`,
   );
@@ -210,10 +218,19 @@ describe("compact journey projection", () => {
     for (const profile of preparation.profiles) {
       const option = compact.options.find((candidate) => candidate.id === profile.id);
       const fullOption = full.options.find((candidate) => candidate.id === profile.id)!;
+      const check = profile.check_disclosure;
+      const modifier =
+        character.skills.find((skill) => skill.skillId === check?.skill_id)?.rank ?? 0;
+      const signedModifier = modifier >= 0 ? `+${String(modifier)}` : String(modifier);
       expectRoleplayReceipt(full, {
         id: profile.id,
         commitment: profile.summary,
         benefit: profile.trigger_category ?? profile.title,
+        ...(check
+          ? {
+              checkFit: `${check.skill_label} ${signedModifier} vs DC ${String(check.difficulty)}`,
+            }
+          : {}),
         immediateCost: fullOption.summary!.immediateCost,
         giveUp: profile.tradeoff,
       });
