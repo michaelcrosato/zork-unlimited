@@ -55,6 +55,10 @@ describe("compact legends", () => {
     }
     expect(started.legend?.quest_starts).toContain("start_overworld_session_quest");
     expect(started.legend?.quest_starts).toContain("approach_id");
+    expect(started.legend?.quest_start_locations).toContain("location requirement");
+    expect(started.legend?.quest_start_locations).toContain("advisory only");
+    expect(started.legend?.quest_start_locations).toContain("area_routes");
+    expect(started.legend?.quest_start_locations).toContain("quest_starts");
   });
 
   it("describes unavailable jobs and optional aftermath without overstating either", () => {

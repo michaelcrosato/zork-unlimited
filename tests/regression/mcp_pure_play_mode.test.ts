@@ -257,12 +257,23 @@ async function launchPreparedPureWolf(client: Client): Promise<{
     poi_id: "albany_city__market__poi",
   });
   view = await callPlayerTool(client, "get_overworld_session_context", parent);
+  expect(
+    (
+      view.context as {
+        quest_start_locations?: unknown;
+        quest_starts?: unknown;
+      }
+    ).quest_start_locations,
+  ).toEqual([["wolf_winter", "Albany Station Quarter"]]);
   expect((view.context as { quest_starts?: unknown }).quest_starts).toBeUndefined();
   const departure = await callPlayerTool(client, "move_overworld_session_area", {
     ...parent,
     area_route_id: compactAreaRoute(view, "albany_city__transport_hub"),
   });
   expect((departure.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
+  expect(
+    (departure.context as { quest_start_locations?: unknown }).quest_start_locations,
+  ).toBeUndefined();
   expect((departure.context as { quest_starts?: unknown }).quest_starts).toEqual([
     ["wolf_winter", "albany:wolf_approach_exposed_ridge"],
     ["wolf_winter", "albany:wolf_approach_sheltered_stockway"],
@@ -274,6 +285,9 @@ async function launchPreparedPureWolf(client: Client): Promise<{
   });
   expect(
     (launched.context as { quest_starts?: unknown } | undefined)?.quest_starts,
+  ).toBeUndefined();
+  expect(
+    (launched.context as { quest_start_locations?: unknown } | undefined)?.quest_start_locations,
   ).toBeUndefined();
   const rpgSession = launched.rpg_session as { state_hash: string };
   return {
