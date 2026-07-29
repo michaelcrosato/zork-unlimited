@@ -1478,28 +1478,39 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect a currently presented journey.storyChoice or an optional story listed in departure_interactions without changing the journey or snapshot. The default compact read returns only a short comparison plus an unchanged receipt; after seeing that comparison, pass option_id for only that option's new detail. Compact inspection deliberately omits repeated world context. Developer compact_result:false intentionally returns the canonical full story and context.",
-  {
-    ...OVERWORLD_SESSION,
-    story_choice_id: z
-      .string()
-      .describe("Story choice id from journey.storyChoice or departure_interactions."),
-    option_id: z
-      .string()
-      .optional()
-      .describe(
-        "Exact option id from the prior compact story.options. Compact output returns only that option's new detail and unchanged receipt; compact_result:false validates the id but returns the canonical full story.",
-      ),
-    ...OVERWORLD_ACTION_CONTEXT,
-  },
+  "Inspect a currently presented journey.storyChoice or optional story listed in departure_interactions without changing state. The default compact read returns a short comparison and unchanged receipt; pass option_id for only that option's new detail or reveal_id for a staged expansion. It omits repeated world context. Developer compact_result:false intentionally returns the canonical full story.",
+  z
+    .object({
+      ...OVERWORLD_SESSION,
+      story_choice_id: z
+        .string()
+        .describe("Story choice id from journey.storyChoice or departure_interactions."),
+      option_id: z
+        .string()
+        .optional()
+        .describe(
+          "Option id from compact story.options. Compact output returns only that option's new detail and unchanged receipt; compact_result:false validates the id but returns the canonical full story.",
+        ),
+      reveal_id: z
+        .string()
+        .optional()
+        .describe(
+          "Staged expansion id from revealOption; exclusive with option_id. compact_result:false validates it but returns the canonical full story.",
+        ),
+      ...OVERWORLD_ACTION_CONTEXT,
+    })
+    .refine((args) => !(args.option_id !== undefined && args.reveal_id !== undefined), {
+      message: "option_id and reveal_id are mutually exclusive.",
+      path: ["reveal_id"],
+    }),
   (a) => api.inspect_overworld_session_story(defaultCompactOverworld(a)),
 );
 tool(
   "choose_overworld_session_story",
-  "Choose a presented story option, or atomically choose an inspected optional departure story by story_choice_id.",
+  "Choose a current canonical story option, or an inspected departure story by story_choice_id.",
   {
     ...OVERWORLD_SESSION,
-    choice: z.string().describe("Choice id from journey.storyChoice.options."),
+    choice: z.string().describe("Choice id from current canonical story.options."),
     story_choice_id: z
       .string()
       .optional()

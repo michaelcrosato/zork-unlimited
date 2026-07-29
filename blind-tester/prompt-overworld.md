@@ -116,6 +116,10 @@ WHEN TO CONTINUE OR END
   either view does not change the game; its compact unchanged receipt
   deliberately does not repeat the world context or prior comparison. Retain
   the current state and comparison already shown, and do not expand every option.
+  If a visible `revealOption` is present, it is a read-only comparison expansion,
+  not a choice. You may call its named tool with its exact `story_choice_id` and
+  `reveal_id` arguments, then choose only from the expanded visible
+  `story.options`; never invent a reveal id.
   Then call
   `mcp__adventureforge__choose_overworld_session_story` with the same overworld
   `session_id` and that option's visible `id`. This is a normal gameplay

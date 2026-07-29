@@ -222,6 +222,21 @@ export type JourneyStoryChoiceOption = Readonly<{
   consequence: string;
 }>;
 
+/**
+ * A presentation-only split for an otherwise canonical story-choice set.
+ * Every option remains legal to choose; this only stages which cards are
+ * initially compared and the read-only affordance that reveals the remainder.
+ */
+export type JourneyStoryChoiceProgressiveDisclosure = Readonly<{
+  initialOptionIds: readonly [string, ...string[]];
+  reveal: Readonly<{
+    id: string;
+    label: string;
+    description: string;
+    optionIds: readonly [string, ...string[]];
+  }>;
+}>;
+
 export type JourneyStoryChoicePresentationKind =
   | "ally"
   | "lead_source"
@@ -281,6 +296,7 @@ export type JourneyReliefOathStoryChoiceOptions = readonly [
 type JourneyStoryChoicePromptBase = Readonly<{
   id: string;
   message: string;
+  progressiveDisclosure?: JourneyStoryChoiceProgressiveDisclosure;
 }>;
 
 export type JourneyStoryChoicePrompt = JourneyStoryChoicePromptBase &
@@ -315,6 +331,34 @@ export type JourneyStoryChoicePrompt = JourneyStoryChoicePromptBase &
         options: JourneyReliefOathStoryChoiceOptions;
       }
   >;
+
+/**
+ * Return only the cards appropriate for this read-only presentation state.
+ * The canonical prompt always retains every executable option.
+ */
+export function journeyStoryChoiceOptionsForPresentation(
+  prompt: JourneyStoryChoicePrompt,
+  revealId?: string,
+): readonly JourneyStoryChoiceOption[] {
+  const disclosure = prompt.progressiveDisclosure;
+  if (!disclosure) {
+    if (revealId !== undefined) {
+      throw new Error(
+        `Journey story choice "${prompt.id}" has no progressive disclosure "${revealId}".`,
+      );
+    }
+    return prompt.options;
+  }
+  if (revealId === undefined) {
+    return prompt.options.filter((option) => disclosure.initialOptionIds.includes(option.id));
+  }
+  if (revealId !== disclosure.reveal.id) {
+    throw new Error(
+      `Journey story choice "${prompt.id}" has no progressive disclosure "${revealId}".`,
+    );
+  }
+  return prompt.options;
+}
 
 export type JourneyGoalCompletionPresentationContext = Readonly<{
   goalVersion: number;
@@ -1218,9 +1262,70 @@ function freezeStoryChoice(
     });
   });
   const frozenOptions = Object.freeze(options);
+  const progressiveDisclosure = storyChoice.progressiveDisclosure;
+  if (progressiveDisclosure && presentationKind !== "relief_oath") {
+    throw new Error("Journey progressive disclosure is supported only for relief-oath choices.");
+  }
+  const frozenProgressiveDisclosure = progressiveDisclosure
+    ? (() => {
+        const initialOptionIds = progressiveDisclosure.initialOptionIds;
+        const reveal = progressiveDisclosure.reveal;
+        if (
+          initialOptionIds.length === 0 ||
+          reveal.optionIds.length === 0 ||
+          reveal.id.trim().length === 0 ||
+          reveal.label.trim().length === 0 ||
+          reveal.description.trim().length === 0
+        ) {
+          throw new Error("Journey progressive disclosure fields cannot be empty.");
+        }
+        if (optionIds.has(reveal.id)) {
+          throw new Error(
+            `Journey progressive disclosure id "${reveal.id}" collides with a story choice option id.`,
+          );
+        }
+
+        const disclosedOptionIds = new Set<string>();
+        for (const id of [...initialOptionIds, ...reveal.optionIds]) {
+          if (id.trim().length === 0) {
+            throw new Error("Journey progressive disclosure option ids cannot be empty.");
+          }
+          if (!optionIds.has(id)) {
+            throw new Error(
+              `Journey progressive disclosure references unknown story choice option "${id}".`,
+            );
+          }
+          if (disclosedOptionIds.has(id)) {
+            throw new Error(
+              "Journey progressive disclosure option ids must be unique and disjoint.",
+            );
+          }
+          disclosedOptionIds.add(id);
+        }
+        if (disclosedOptionIds.size !== optionIds.size) {
+          throw new Error(
+            "Journey progressive disclosure must cover every story choice option exactly once.",
+          );
+        }
+        return Object.freeze({
+          initialOptionIds: Object.freeze([
+            ...initialOptionIds,
+          ]) as JourneyStoryChoiceProgressiveDisclosure["initialOptionIds"],
+          reveal: Object.freeze({
+            id: reveal.id,
+            label: reveal.label,
+            description: reveal.description,
+            optionIds: Object.freeze([
+              ...reveal.optionIds,
+            ]) as JourneyStoryChoiceProgressiveDisclosure["reveal"]["optionIds"],
+          }),
+        });
+      })()
+    : undefined;
   return Object.freeze({
     ...storyChoice,
     options: frozenOptions,
+    ...(frozenProgressiveDisclosure ? { progressiveDisclosure: frozenProgressiveDisclosure } : {}),
   }) as JourneyStoryChoicePrompt;
 }
 

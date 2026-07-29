@@ -3,6 +3,7 @@ import type {
   JourneyStoryChoicePrompt,
   JourneyStoryChoiceSummary,
 } from "../src/world/journey_contract.js";
+import { journeyStoryChoiceOptionsForPresentation } from "../src/world/journey_contract.js";
 import { compactJourneyStoryChoiceComparison } from "../src/mcp/journey_projection.js";
 
 export type TerminalStoryChoiceReader = Readonly<{
@@ -106,13 +107,22 @@ function renderSummaryLines(summary: JourneyStoryChoiceSummary, indent: string):
 /** Compact comparison for a structured prompt. Full authored consequences remain staged. */
 export function renderTerminalStoryChoiceComparison(
   prompt: JourneyStoryChoicePrompt,
-  config: Readonly<{ allowComparisonExit?: boolean }> = {},
+  config: Readonly<{ allowComparisonExit?: boolean; revealId?: string }> = {},
 ): string {
   const structured = structuredOptions(prompt);
   if (!structured) {
     throw new Error(`Story choice "${prompt.id}" has no complete structured comparison.`);
   }
-  const comparison = compactJourneyStoryChoiceComparison(prompt);
+  const comparison =
+    config.revealId === undefined
+      ? compactJourneyStoryChoiceComparison(prompt)
+      : compactJourneyStoryChoiceComparison(prompt, undefined, config.revealId);
+  const visibleOptionIds = new Set(
+    journeyStoryChoiceOptionsForPresentation(prompt, config.revealId).map((option) => option.id),
+  );
+  const visibleComparisonOptions = comparison.options.filter((option) =>
+    visibleOptionIds.has(option.id),
+  );
   const lines = [
     "\n! Story choice comparison",
     `  ${comparison.message}`,
@@ -135,7 +145,9 @@ export function renderTerminalStoryChoiceComparison(
     for (const group of grouped) {
       lines.push(`  ${group.label}`);
       for (const option of group.options) {
-        const comparisonOption = comparison.options.find((candidate) => candidate.id === option.id);
+        const comparisonOption = visibleComparisonOptions.find(
+          (candidate) => candidate.id === option.id,
+        );
         if (!comparisonOption) {
           throw new Error(`Story choice "${prompt.id}" lost option "${option.id}".`);
         }
@@ -144,7 +156,13 @@ export function renderTerminalStoryChoiceComparison(
       }
     }
   } else {
-    comparison.options.forEach(renderOption);
+    visibleComparisonOptions.forEach(renderOption);
+  }
+  const progressiveDisclosure = prompt.progressiveDisclosure;
+  if (progressiveDisclosure && config.revealId !== progressiveDisclosure.reveal.id) {
+    lines.push(
+      `  Customize: \`customize\` — ${progressiveDisclosure.reveal.label}. ${progressiveDisclosure.reveal.description}`,
+    );
   }
   lines.push(
     config.allowComparisonExit
@@ -225,9 +243,24 @@ export async function runTerminalStoryChoiceController(args: {
   }
 
   let inspected: StructuredJourneyStoryChoiceOption | null = null;
+  let revealedStoryChoiceId: string | undefined;
+  const progressiveDisclosure = args.prompt.progressiveDisclosure;
+  const visibleOptions = (): readonly StructuredJourneyStoryChoiceOption[] => {
+    const visibleIds = new Set(
+      journeyStoryChoiceOptionsForPresentation(args.prompt, revealedStoryChoiceId).map(
+        (option) => option.id,
+      ),
+    );
+    return options.filter((option) => visibleIds.has(option.id));
+  };
+  const hiddenOption = (selector: string): StructuredJourneyStoryChoiceOption | null => {
+    const option = matchTerminalStoryChoiceOption(options, selector);
+    return option && !visibleOptions().some((visible) => visible.id === option.id) ? option : null;
+  };
   args.write(
     renderTerminalStoryChoiceComparison(args.prompt, {
       allowComparisonExit: args.allowComparisonExit === true,
+      ...(revealedStoryChoiceId === undefined ? {} : { revealId: revealedStoryChoiceId }),
     }),
   );
 
@@ -259,9 +292,35 @@ export async function runTerminalStoryChoiceController(args: {
       continue;
     }
 
+    if (
+      verb === "customize" &&
+      selector.length === 0 &&
+      progressiveDisclosure &&
+      revealedStoryChoiceId !== progressiveDisclosure.reveal.id
+    ) {
+      if (inspected) {
+        args.reject("Use `back` before comparing individual duties.");
+        continue;
+      }
+      revealedStoryChoiceId = progressiveDisclosure.reveal.id;
+      args.write(
+        renderTerminalStoryChoiceComparison(args.prompt, {
+          allowComparisonExit: args.allowComparisonExit === true,
+          revealId: revealedStoryChoiceId,
+        }),
+      );
+      continue;
+    }
+
     if (verb === "inspect") {
-      const option = matchTerminalStoryChoiceOption(options, selector);
+      const option = matchTerminalStoryChoiceOption(visibleOptions(), selector);
       if (!option) {
+        if (progressiveDisclosure && hiddenOption(selector)) {
+          args.reject(
+            "Use `customize` to reveal the individual duties before inspecting that card.",
+          );
+          continue;
+        }
         args.reject(
           "Inspect an exact option id, full option label, or number from the comparison.",
         );
@@ -273,8 +332,12 @@ export async function runTerminalStoryChoiceController(args: {
     }
 
     if (verb === "choose") {
-      const option = matchTerminalStoryChoiceOption(options, selector);
+      const option = matchTerminalStoryChoiceOption(visibleOptions(), selector);
       if (!option) {
+        if (progressiveDisclosure && hiddenOption(selector)) {
+          args.reject("Use `customize` to reveal the individual duties before choosing that card.");
+          continue;
+        }
         args.reject("Choose an exact option id, full option label, or number from the comparison.");
         continue;
       }

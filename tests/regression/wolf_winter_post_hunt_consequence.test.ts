@@ -9,6 +9,7 @@ import { makeStep } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
+import type { CompactJourneyPresentation } from "../../src/mcp/journey_projection.js";
 import { overworldQuestCompletionFromRpgSession } from "../../src/mcp/overworld_quest_bridge.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
@@ -21,7 +22,10 @@ import {
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
-import { JOURNEY_CONTRACT_VERSION } from "../../src/world/journey_contract.js";
+import {
+  JOURNEY_CONTRACT_VERSION,
+  type JourneyPresentation,
+} from "../../src/world/journey_contract.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { OVERWORLD_SESSION_LEGACY_SAVE_VERSION } from "../../src/world/session_snapshot.js";
 import {
@@ -485,7 +489,8 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       area_route_id: questRoute.id,
     });
 
-    let journey = api.get_overworld_session_context({ session_id: sessionId }).journey;
+    let journey: JourneyPresentation | CompactJourneyPresentation =
+      api.get_overworld_session_context({ session_id: sessionId }).journey;
     if ((38 - journey.acceptedDecisions) % 2 !== 0) {
       const contact = api.get_overworld_session({
         session_id: sessionId,

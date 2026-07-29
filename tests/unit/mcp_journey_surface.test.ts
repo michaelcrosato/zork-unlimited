@@ -8,12 +8,14 @@ import {
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
   type JourneyStoryChoiceDetail,
+  type JourneyStoryChoiceRevealAffordance,
   type JourneyStoryChoiceSummaryComparison,
 } from "../../src/mcp/journey_projection.js";
 import {
   INITIAL_JOURNEY_GOAL,
   INITIAL_JOURNEY_GOAL_GUIDANCE,
   JOURNEY_CONTRACT_VERSION,
+  type JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
 import {
   OPENING_SELECTION_RECEIPT_WORD_LIMIT,
@@ -845,20 +847,17 @@ describe("MCP journey surface", () => {
     const responseOptions = (compactResult: boolean) =>
       compactResult ? { compact_context: true, compact_result: true } : FULL_OVERWORLD;
     const expectStoryChoiceParity = (
-      compactJourney: typeof compact.journey,
-      fullJourney: typeof full.journey,
+      compactJourney: typeof compact.journey | typeof full.journey,
+      fullJourney: typeof compact.journey | typeof full.journey,
       kind: string,
     ) => {
       if (!fullJourney.storyChoice) throw new Error(`expected full ${kind} story choice`);
-      expect(compactJourney.storyChoice).toEqual(
-        compactJourneyStoryChoicePrompt(fullJourney.storyChoice),
-      );
-      expect(compactJourney.storyChoice).not.toEqual(fullJourney.storyChoice);
+      const fullStoryChoice = fullJourney.storyChoice as JourneyStoryChoicePrompt;
+      expect(compactJourney.storyChoice).toEqual(compactJourneyStoryChoicePrompt(fullStoryChoice));
+      expect(compactJourney.storyChoice).not.toEqual(fullStoryChoice);
       expect(compactJourney.storyChoice).toMatchObject({ kind });
       for (const compactOption of compactJourney.storyChoice!.options) {
-        const fullOption = fullJourney.storyChoice.options.find(
-          (option) => option.id === compactOption.id,
-        );
+        const fullOption = fullStoryChoice.options.find((option) => option.id === compactOption.id);
         if (!fullOption?.summary) throw new Error(`expected summary for ${compactOption.id}`);
         expect(compactOption).toMatchObject({
           id: fullOption.id,
@@ -1205,6 +1204,138 @@ describe("MCP journey surface", () => {
     });
     expect(inspectedChoice.snapshot_hash).toBe(directChoice.snapshot_hash);
     expect(inspectedChoice.result).toEqual(directChoice.result);
+  });
+
+  it("expands staged oath cards read-only without leaking them into the initial compact journey", () => {
+    const a = api();
+    const registration = WORLD.opening_registration;
+    const oath = WORLD.opening_relief_oath;
+    const doctrine = registration?.doctrines?.[0];
+    if (!registration || !oath || !doctrine) {
+      throw new Error("expected Albany's registration, oath, and standard packet");
+    }
+    const started = a.start_overworld();
+    a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: "albany_city__civic_core__poi",
+    });
+    a.talk_overworld_session_contact({
+      session_id: started.session_id,
+      character_id: registration.contact,
+    });
+    const compactOath = a.choose_overworld_session_story({
+      session_id: started.session_id,
+      choice: doctrine.profile_id,
+    }).journey.storyChoice;
+    if (!compactOath) throw new Error("expected a compact oath comparison");
+    expectTypeOf(compactOath.progressiveDisclosure).toEqualTypeOf<undefined>();
+    expectTypeOf(compactOath.revealOption).toEqualTypeOf<
+      JourneyStoryChoiceRevealAffordance | undefined
+    >();
+    const canonical = a.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: oath.id,
+      ...FULL_OVERWORLD,
+    }).story;
+    expectTypeOf(canonical.progressiveDisclosure).not.toEqualTypeOf<undefined>();
+    const disclosure = canonical.progressiveDisclosure;
+    if (!disclosure) throw new Error("expected staged custom oath disclosure");
+    const hiddenId = disclosure.reveal.optionIds[0];
+
+    expect(compactOath.options.map((option) => option.id)).toEqual(disclosure.initialOptionIds);
+    expect(compactOath).not.toHaveProperty("progressiveDisclosure");
+    const initialJourneyJson = JSON.stringify(compactOath);
+    for (const hiddenIdOrLabel of disclosure.reveal.optionIds) {
+      const hidden = canonical.options.find((option) => option.id === hiddenIdOrLabel)!;
+      expect(initialJourneyJson).not.toContain(hidden.id);
+      expect(initialJourneyJson).not.toContain(hidden.summary?.tradeoff);
+      expect(initialJourneyJson).not.toContain(hidden.consequence);
+    }
+
+    const before = a.export_overworld_session({ session_id: started.session_id });
+    if (!before.ok) throw new Error("expected an exportable oath comparison");
+    const initial = a.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: oath.id,
+    });
+    expect(initial).toMatchObject({
+      snapshot_hash: before.snapshot_hash,
+      unchanged: true,
+      story: compactJourneyStoryChoiceComparison(canonical),
+    });
+    expect(initial.story.options.map((option) => option.id)).toEqual(disclosure.initialOptionIds);
+    const initialJson = JSON.stringify(initial.story);
+    for (const hiddenIdOrLabel of disclosure.reveal.optionIds) {
+      const hidden = canonical.options.find((option) => option.id === hiddenIdOrLabel)!;
+      expect(initialJson).not.toContain(hidden.id);
+      expect(initialJson).not.toContain(hidden.summary?.tradeoff);
+      expect(initialJson).not.toContain(hidden.consequence);
+    }
+
+    const expanded = a.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: oath.id,
+      reveal_id: disclosure.reveal.id,
+    });
+    expect(expanded).toMatchObject({
+      snapshot_hash: before.snapshot_hash,
+      unchanged: true,
+      story: compactJourneyStoryChoiceComparison(canonical, undefined, disclosure.reveal.id),
+    });
+    expect(expanded.story.options.map((option) => option.id)).toEqual(
+      canonical.options.map((option) => option.id),
+    );
+    expect(expanded.story).not.toHaveProperty("revealOption");
+    const fullReveal = a.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: oath.id,
+      reveal_id: disclosure.reveal.id,
+      ...FULL_OVERWORLD,
+    });
+    expect(fullReveal.story).toEqual(canonical);
+    expect(fullReveal.snapshot_hash).toBe(before.snapshot_hash);
+
+    const detail = a.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: oath.id,
+      option_id: hiddenId,
+    });
+    expect(detail.story).toEqual(compactJourneyStoryChoiceComparison(canonical, hiddenId));
+    expect(detail.snapshot_hash).toBe(before.snapshot_hash);
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: started.session_id,
+        story_choice_id: oath.id,
+        reveal_id: "albany:unknown_custom_duty_disclosure",
+      }),
+    ).toThrow(/no progressive disclosure/i);
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: started.session_id,
+        story_choice_id: oath.id,
+        option_id: hiddenId,
+        reveal_id: disclosure.reveal.id,
+      }),
+    ).toThrow(/option_id or reveal_id/i);
+    expect(a.export_overworld_session({ session_id: started.session_id })).toEqual(before);
+
+    const directBranch = a.restore_overworld_session({ snapshot: before.snapshot });
+    const expandedBranch = a.restore_overworld_session({ snapshot: before.snapshot });
+    a.inspect_overworld_session_story({
+      session_id: expandedBranch.session_id,
+      story_choice_id: oath.id,
+      reveal_id: disclosure.reveal.id,
+    });
+    const directChoice = a.choose_overworld_session_story({
+      session_id: directBranch.session_id,
+      choice: hiddenId,
+    });
+    const expandedChoice = a.choose_overworld_session_story({
+      session_id: expandedBranch.session_id,
+      choice: hiddenId,
+    });
+    expect(expandedChoice.snapshot_hash).toBe(directChoice.snapshot_hash);
+    expect(expandedChoice.result).toEqual(directChoice.result);
   });
 
   it("stages compact departure terms without mutating zero-, one-, or multi-inspection play", () => {

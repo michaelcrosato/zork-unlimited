@@ -15,6 +15,7 @@ import {
   hasContinuedJourneyGoal,
   journeyExitReceipt,
   journeyPresentation,
+  journeyStoryChoiceOptionsForPresentation,
   recordJourneyAcceptedDecision,
   recordJourneyCharacterDied,
   recordJourneyDecision,
@@ -1119,6 +1120,129 @@ describe("journey contract presentation context", () => {
     expect(
       journeyPresentation(state, { storyChoice: ordinaryTerms }).storyChoice?.options,
     ).toHaveLength(3);
+  });
+
+  it("stages progressive story-choice cards without changing their canonical choices", () => {
+    const state = createInitialJourneyContractSnapshot();
+    const reliefOath = {
+      id: "albany_relief_oath",
+      kind: "relief_oath",
+      message: "Choose the exact term that binds this dispatch.",
+      options: Array.from({ length: 4 }, (_, index) => ({
+        id: `oath_${String(index)}`,
+        label: `Term ${String(index)}`,
+        summary: {
+          commitment: `Bind term ${String(index)}.`,
+          immediateCost: `${String(index)} minutes`,
+          tradeoff: `Duty limit ${String(index)}.`,
+        },
+        consequence: `Access and duty ${String(index)}.`,
+      })) as unknown as JourneyReliefOathStoryChoiceOptions,
+      progressiveDisclosure: {
+        initialOptionIds: ["oath_0"] as [string],
+        reveal: {
+          id: "customize_terms",
+          label: "Customize terms",
+          description: "Choose one individual term now; evidence follows next.",
+          optionIds: ["oath_1", "oath_2", "oath_3"] as [string, ...string[]],
+        },
+      },
+    } satisfies JourneyStoryChoicePrompt;
+
+    const prompt = journeyPresentation(state, { storyChoice: reliefOath }).storyChoice!;
+    expect(prompt.options.map((option) => option.id)).toEqual([
+      "oath_0",
+      "oath_1",
+      "oath_2",
+      "oath_3",
+    ]);
+    expect(journeyStoryChoiceOptionsForPresentation(prompt).map((option) => option.id)).toEqual([
+      "oath_0",
+    ]);
+    expect(
+      journeyStoryChoiceOptionsForPresentation(prompt, "customize_terms").map(
+        (option) => option.id,
+      ),
+    ).toEqual(["oath_0", "oath_1", "oath_2", "oath_3"]);
+    expect(() => journeyStoryChoiceOptionsForPresentation(prompt, "unknown_terms")).toThrow(
+      /no progressive disclosure/i,
+    );
+    expect(Object.isFrozen(prompt.progressiveDisclosure)).toBe(true);
+    expect(Object.isFrozen(prompt.progressiveDisclosure?.initialOptionIds)).toBe(true);
+    expect(Object.isFrozen(prompt.progressiveDisclosure?.reveal)).toBe(true);
+    expect(Object.isFrozen(prompt.progressiveDisclosure?.reveal.optionIds)).toBe(true);
+
+    const { progressiveDisclosure: _progressiveDisclosure, ...noDisclosure } = reliefOath;
+    expect(journeyStoryChoiceOptionsForPresentation(noDisclosure)).toBe(noDisclosure.options);
+    expect(() => journeyStoryChoiceOptionsForPresentation(noDisclosure, "ignored")).toThrow(
+      /no progressive disclosure/i,
+    );
+  });
+
+  it("rejects malformed progressive story-choice disclosure metadata", () => {
+    const state = createInitialJourneyContractSnapshot();
+    const base = {
+      id: "albany_relief_oath",
+      kind: "relief_oath",
+      message: "Choose the exact term that binds this dispatch.",
+      options: Array.from({ length: 4 }, (_, index) => ({
+        id: `oath_${String(index)}`,
+        label: `Term ${String(index)}`,
+        summary: {
+          commitment: `Bind term ${String(index)}.`,
+          immediateCost: `${String(index)} minutes`,
+          tradeoff: `Duty limit ${String(index)}.`,
+        },
+        consequence: `Access and duty ${String(index)}.`,
+      })) as unknown as JourneyReliefOathStoryChoiceOptions,
+    } satisfies JourneyStoryChoicePrompt;
+
+    const disclosure = {
+      initialOptionIds: ["oath_0"],
+      reveal: {
+        id: "customize_terms",
+        label: "Customize terms",
+        description: "Choose one individual term now; evidence follows next.",
+        optionIds: ["oath_1", "oath_2", "oath_3"],
+      },
+    };
+    expect(() =>
+      journeyPresentation(state, {
+        storyChoice: {
+          ...base,
+          kind: "registration",
+          progressiveDisclosure: disclosure,
+        } as unknown as JourneyStoryChoicePrompt,
+      }),
+    ).toThrow(/progressive disclosure is supported only for relief-oath choices/i);
+    const invalid = (progressiveDisclosure: unknown, expected: RegExp): void => {
+      expect(() =>
+        journeyPresentation(state, {
+          storyChoice: { ...base, progressiveDisclosure } as unknown as JourneyStoryChoicePrompt,
+        }),
+      ).toThrow(expected);
+    };
+
+    invalid(
+      { ...disclosure, reveal: { ...disclosure.reveal, id: "oath_0" } },
+      /collides with a story choice option id/i,
+    );
+    invalid(
+      { ...disclosure, reveal: { ...disclosure.reveal, description: " " } },
+      /fields cannot be empty/i,
+    );
+    invalid(
+      { ...disclosure, reveal: { ...disclosure.reveal, optionIds: ["oath_0", "oath_1"] } },
+      /unique and disjoint/i,
+    );
+    invalid(
+      { ...disclosure, reveal: { ...disclosure.reveal, optionIds: ["oath_1", "missing"] } },
+      /unknown story choice option/i,
+    );
+    invalid(
+      { ...disclosure, reveal: { ...disclosure.reveal, optionIds: ["oath_1", "oath_2"] } },
+      /cover every story choice option exactly once/i,
+    );
   });
 });
 

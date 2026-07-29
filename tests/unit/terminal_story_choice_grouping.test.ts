@@ -44,6 +44,65 @@ function prompt(kind: JourneyStoryChoicePrompt["kind"]): JourneyStoryChoicePromp
   } as JourneyStoryChoicePrompt;
 }
 
+function progressiveReliefOathPrompt(): JourneyStoryChoicePrompt {
+  return {
+    id: "test:relief-oath",
+    kind: "relief_oath",
+    message: "Choose duty and evidence.",
+    options: [
+      {
+        id: "standard-packet",
+        label: "Standard packet",
+        summary: {
+          commitment: "Bind the standard duty and evidence.",
+          immediateCost: "10 minutes",
+          tradeoff: "Other duty/source choices close.",
+        },
+        consequence: "Standard receipt.",
+      },
+      {
+        id: "custom-full",
+        label: "Full duty",
+        summary: {
+          commitment: "Take full duty.",
+          immediateCost: "10 minutes",
+          tradeoff: "Public seals bind you.",
+        },
+        consequence: "Full receipt.",
+      },
+      {
+        id: "custom-limited",
+        label: "Limited duty",
+        summary: {
+          commitment: "Take limited duty.",
+          immediateCost: "5 minutes",
+          tradeoff: "Cade keeps property authority.",
+        },
+        consequence: "Limited receipt.",
+      },
+      {
+        id: "custom-bond",
+        label: "Personal bond",
+        summary: {
+          commitment: "Take a personal bond.",
+          immediateCost: "No time",
+          tradeoff: "No public warrant.",
+        },
+        consequence: "Bond receipt.",
+      },
+    ],
+    progressiveDisclosure: {
+      initialOptionIds: ["standard-packet"],
+      reveal: {
+        id: "custom-duty-evidence",
+        label: "Compare individual duties",
+        description: "Reveal the three original duty cards before choosing one.",
+        optionIds: ["custom-full", "custom-limited", "custom-bond"],
+      },
+    },
+  } as JourneyStoryChoicePrompt;
+}
+
 describe("terminal registration story-choice groups", () => {
   it("labels doctrine and custom-role cards without changing generic comparisons", async () => {
     const grouped = renderTerminalStoryChoiceComparison(prompt("registration"));
@@ -75,5 +134,50 @@ describe("terminal registration story-choice groups", () => {
     });
     expect(result).toMatchObject({ kind: "chosen", option: { id: "doctrine-keeper" } });
     expect(selected).toEqual(["doctrine-keeper"]);
+  });
+
+  it("reveals custom relief terms locally before their exact commands become available", async () => {
+    const prompt = progressiveReliefOathPrompt();
+    const initial = renderTerminalStoryChoiceComparison(prompt);
+    expect(initial).toContain("1. Standard packet");
+    expect(initial).toContain("Customize: `customize` — Compare individual duties.");
+    expect(initial).not.toContain("Full duty");
+    expect(initial).not.toContain("custom-full");
+
+    const revealed = renderTerminalStoryChoiceComparison(prompt, {
+      revealId: prompt.progressiveDisclosure!.reveal.id,
+    });
+    expect(revealed).toContain("1. Standard packet");
+    expect(revealed).toContain("2. Full duty");
+    expect(revealed).toContain("3. Limited duty");
+    expect(revealed).toContain("4. Personal bond");
+    expect(revealed).not.toContain("Customize: `customize`");
+
+    const commands = [
+      "choose custom-full",
+      "customize",
+      "inspect custom-full",
+      "choose custom-full",
+    ];
+    const selected: string[] = [];
+    const rejected: string[] = [];
+    const written: string[] = [];
+    const result = await runTerminalStoryChoiceController({
+      prompt,
+      reader: { read: async () => commands.shift() ?? null },
+      write: (text) => written.push(text),
+      reject: (message) => rejected.push(message),
+      choose: (option) => selected.push(option.id),
+    });
+
+    expect(rejected).toEqual([
+      "Use `customize` to reveal the individual duties before choosing that card.",
+    ]);
+    expect(written).toHaveLength(3);
+    expect(written[0]).toBe(initial);
+    expect(written[1]).toBe(revealed);
+    expect(written[2]).toContain("Story choice detail — Full duty");
+    expect(result).toMatchObject({ kind: "chosen", option: { id: "custom-full" } });
+    expect(selected).toEqual(["custom-full"]);
   });
 });
