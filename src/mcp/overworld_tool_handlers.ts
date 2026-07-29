@@ -20,14 +20,17 @@ import {
   type TravelLogEntry,
 } from "../world/session.js";
 import {
+  compactOverworldActionResultLegendKeys,
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
   compactOverworldGoalPassageResult,
   compactOverworldJourneyStoryChoiceResult,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
+  compactOverworldServiceResultLegendKeys,
   compactOverworldServiceResult,
   compactOverworldTravelResult,
+  OVERWORLD_COMPACT_RESULT_LEGEND_KEYS,
   type OverworldCompactActionResult,
   type OverworldCompactAreaTravelResult,
   type OverworldCompactGoalPassageResult,
@@ -371,6 +374,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "route",
         (session) => session.planRoute(args.destination_town_id),
         compactRouteOption,
+        OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.route,
       );
     },
 
@@ -404,6 +408,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           "travel",
           (session) => session.travel(roadId),
           compactOverworldTravelResult,
+          OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.travel,
         );
       }
       const destinationTownId = args.destination_town_id;
@@ -418,6 +423,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "travel",
         (session) => session.travelTo(destinationTownId),
         compactOverworldTravelResult,
+        OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.travel,
       );
     },
 
@@ -436,6 +442,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "passage",
         (session) => session.followGoalPassage(),
         compactOverworldGoalPassageResult,
+        OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.goal_passage,
       );
     },
 
@@ -459,6 +466,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.resolveRoadEncounter(args.strategy),
         compactOverworldRoadEncounterResult,
+        OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.road_encounter,
       );
     },
 
@@ -477,6 +485,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.careAtTown(),
         compactOverworldServiceResult,
+        compactOverworldServiceResultLegendKeys,
       );
     },
 
@@ -495,6 +504,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.resupplyAtTown(),
         compactOverworldServiceResult,
+        compactOverworldServiceResultLegendKeys,
       );
     },
 
@@ -513,6 +523,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.restAtTown(),
         compactOverworldServiceResult,
+        compactOverworldServiceResultLegendKeys,
       );
     },
 
@@ -533,6 +544,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.scoutPoi(args.poi_id),
         compactOverworldActionResult,
+        compactOverworldActionResultLegendKeys,
       );
     },
 
@@ -553,6 +565,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.talkToCharacter(args.character_id),
         compactOverworldActionResult,
+        compactOverworldActionResultLegendKeys,
       );
     },
 
@@ -573,6 +586,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.investigateEvent(args.event_id),
         compactOverworldActionResult,
+        compactOverworldActionResultLegendKeys,
       );
     },
 
@@ -597,6 +611,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.resolveEvent(args.event_id, args.option_id),
         compactOverworldActionResult,
+        compactOverworldActionResultLegendKeys,
       );
     },
 
@@ -617,6 +632,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.exploreSite(args.site_id),
         compactOverworldActionResult,
+        compactOverworldActionResultLegendKeys,
       );
     },
 
@@ -637,6 +653,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.exploreArea(args.area_id),
         compactOverworldActionResult,
+        compactOverworldActionResultLegendKeys,
       );
     },
 
@@ -661,6 +678,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.workLocalJob(args.job_id, args.option_id),
         compactOverworldActionResult,
+        compactOverworldActionResultLegendKeys,
       );
     },
 
@@ -705,6 +723,13 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         ? suppressRpgGameplayActions(started.rpgSession)
         : started.rpgSession;
       const overworldSnapshotHash = overworldSessions.snapshotHash(session);
+      const view = overworldSessions.resultViewFields(
+        responseOptions,
+        session,
+        responseOptions.compact_result === true
+          ? OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.quest_start
+          : [],
+      );
       return {
         ok: true,
         session_id: args.session_id,
@@ -712,10 +737,11 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         overworld_snapshot_hash: overworldSnapshotHash,
         journey: responseJourney,
         journeyDecision: started.quest.journeyDecision,
+        ...view.beforeResult,
         quest: questResult,
         rpg_session_id: rpgSession.session_id,
         rpg_session: rpgSession,
-        ...overworldSessions.viewField(responseOptions, session),
+        ...view.afterResult,
       } as unknown as OverworldQuestStartResponse<DefaultCompactOverworldQuestStart<Args>>;
     },
 
@@ -799,6 +825,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           return session.chooseJourneyStory(args.choice, args.story_choice_id);
         },
         compactOverworldJourneyStoryChoiceResult,
+        OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.journey_story_choice,
       );
     },
 
@@ -890,6 +917,13 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         responseOptions.compact_result === true
           ? compactOverworldQuestCompletionResult(result)
           : result;
+      const view = overworldSessions.resultViewFields(
+        responseOptions,
+        session,
+        responseOptions.compact_result === true
+          ? OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.quest_completion
+          : [],
+      );
       return {
         ok: true,
         session_id: args.session_id,
@@ -899,8 +933,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
             ? compactJourneyPresentation(session.journey())
             : session.journey(),
         journeyDecision: result.journeyDecision,
+        ...view.beforeResult,
         result: responseValue,
-        ...overworldSessions.viewField(responseOptions, session),
+        ...view.afterResult,
       } as OverworldSessionResponse<
         "result",
         OverworldQuestCompletionResult,
@@ -926,6 +961,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         "result",
         (session) => session.moveArea(args.area_route_id),
         compactOverworldAreaTravelResult,
+        OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.area_travel,
       );
     },
   };

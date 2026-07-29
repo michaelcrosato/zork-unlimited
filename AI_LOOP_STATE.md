@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 694 -->
+<!-- historical_cycle_count: 695 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - progressive_compact_legend
+
+- Evidence choice: repeated blind feedback named compact terminology dense, while fresh sessions paid the complete legend before most positional fields appeared.
+- Surface/effect: compact sessions now disclose exact context and result-path definitions on first use, with same-response `legend_delta` ordered before its tuple; fresh start falls 13,647→6,097 bytes (55.3%), and the decoder accumulated through Albany Station is 7,109 bytes, 45.5% below the complete 13,046-byte context/result dictionary.
+- Counterfactual: the transport-only disclosure ledger is excluded from snapshots and hashes; choices, legal actions, mechanics, RNG, content, saves, outcomes, full responses, and journey state are unchanged, while unknown compact fields fail closed.
+- Pure evidence: exact-clean Terra seed 73074 completed The Wolf-Winter through nonlethal LURE in 33 decisions, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and produced no rejected action, loop, or soft-lock.
+- Economy: one measured attempt used 2.806M raw / 115.5k uncached input and 8.1k output tokens at 95.9% cache reuse, or 123,589 useful tokens / 33 decisions (~3,745 each), with no retry or fallback.
+- Self-critique/follow-through: the canary still named Emery's undisclosed Streetwise recovery dependency and staged setup confirmations; preserve both as gameplay-cycle evidence rather than expanding this transport-only increment.
+- Guard: independent reviews are clean, pre/post crawls `20260729T170557Z` / `20260729T180914Z` have zero findings, and exact-tree health passes 449 files/3,722 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - started_quest_handoff_dedup
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: one canary proves truthful legibility rather than strategy diversification or retention lift; run one strict no-resume cohort only on the consolidated launch-first plus parity build.
 - Economy: the 45-turn canary used 2.262M raw / 105.5k uncached input and 6.8k output tokens at 95.3% cache reuse, or 3,741 useful tokens per accepted decision; no replacement was launched.
 - Guard: exact predecessor/current world hashes and every oath-bearing historical save lineage are pinned, pre/post crawls `20260728T134546Z`/`20260728T135411Z` are zero-finding, and health passes 441 files/3,629 tests, both typechecks, and all 12 packs.
-
-### Cycle result - station_launch_first
-
-- Evidence choice: the exact ten-Terra pilot completed 10/10 but rated clarity 3.8 and independently repeated front-loaded Station density while every player chose the same LURE family.
-- Surface: when The Wolf-Winter has a legal road, compact MCP, UI, and terminal now present its authenticated launch card before the unchanged recap and optional Station planning; gated launches remain planning-first, and terminal previews the real `start` command before route selection.
-- Counterfactual: route legality, launch terms, choices, state/hash, accepted decisions, mechanics, RNG, and outcomes are unchanged; the promoted quest is only removed from its lower duplicate notice.
-- Pure evidence: exact-clean Terra seed 72910 saw both legal roads before planning, inspected preparation but skipped every optional Station choice, took the sheltered stockway, completed The Wolf-Winter through LURE at decision 28, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: launch-first made immediate departure executable but did not erase density—the player still made three optional preparation reads and named compact terminology as friction; do not rerun this layer alone, and measure only after truthful strategy-fit parity joins it.
-- Economy: the 45-turn canary used 2.081M raw / 97.1k uncached input and 6.3k output tokens at 95.3% cache reuse, or 3,694 useful tokens per accepted decision; no replacement was launched.
-- Guard: independent parity review fixed blocked-road copy and a terminal command-contract defect, pre/post crawls `20260728T125110Z`/`20260728T131327Z` are zero-finding, health passes 440 files/3,625 tests and all 12 packs, and local-browser policy blocked loopback so no visual pass is claimed.

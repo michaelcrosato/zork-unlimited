@@ -2,72 +2,109 @@
  * Version-bump guard for the compact-payload legends (the blind-agent contract).
  *
  * The compact contexts are positional — [town_id, name, region, ...] — so a blind
- * playtester can only decode them through the `legend` field that rides on
- * session-creating responses. Two invariants keep that contract honest:
+ * playtester can only decode them through the initial `legend` plus same-response
+ * `legend_delta` patches. Two invariants keep that contract honest:
  *
  *   1. Every key the compact encoders emit must have a legend entry, so adding a
  *      new positional field without documenting it fails here (the `satisfies`
  *      clauses on the legends enforce the same at compile time).
- *   2. Every registered MCP tool must carry a real description — terse
+ *   2. A definition arrives no later than the first compact response that uses it.
+ *   3. Every registered MCP tool must carry a real description — terse
  *      abbreviations ("Start OW.") regress the interface to unreadable.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createToolApi } from "../../src/mcp/tools.js";
+import {
+  OVERWORLD_COMPACT_RESULT_LEGEND,
+  OVERWORLD_COMPACT_RESULT_LEGEND_KEYS,
+} from "../../src/mcp/compact_overworld_result.js";
+import { OverworldMcpSessionStore } from "../../src/mcp/overworld_sessions.js";
 import { TOOL_REGISTRATIONS } from "../../src/mcp/server.js";
-import { OVERWORLD_COMPACT_LEGEND } from "../../src/world/compact_view.js";
+import {
+  OVERWORLD_COMPACT_LEGEND,
+  OVERWORLD_COMPACT_VIEW_VERSION,
+} from "../../src/world/compact_view.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { RPG_COMPACT_LEGEND } from "../../src/mcp/compact_rpg_observation.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-
-/** Response keys that are not part of the compact context itself. */
-const SCALAR_CONTEXT_KEYS = new Set(["v", "time", "world"]);
 
 function api() {
   return createToolApi({ root: ROOT });
 }
 
+function expectedLegendFor(context: Record<string, unknown>): Record<string, string> {
+  const contextKeys = new Set(Object.keys(context));
+  return Object.fromEntries(
+    Object.entries(OVERWORLD_COMPACT_LEGEND).filter(([key]) => contextKeys.has(key)),
+  );
+}
+
 function expectLegendCovers(legend: Record<string, string>, context: Record<string, unknown>) {
   const legendKeys = new Set(Object.keys(legend));
   for (const key of Object.keys(context)) {
-    if (SCALAR_CONTEXT_KEYS.has(key)) continue;
     expect(legendKeys, `compact context key "${key}" has no legend entry`).toContain(key);
   }
 }
 
 describe("compact legends", () => {
-  it("start_overworld carries a legend covering every compact context key", () => {
-    const a = api();
-    // Opt into every projection so the context carries its widest key set.
-    const started = a.start_overworld({
-      include_ids: true,
-      include_route_options: true,
-      include_world_name: true,
-    });
+  it("pins each overworld positional schema signature to an explicit version", () => {
+    const expectedSignatureByVersion = {
+      35: "578dc556fe58230281e6615f0c70f01f55272d1792f5faab335adc2bf3b26dce",
+    } as const;
+    const signature = createHash("sha256")
+      .update(
+        JSON.stringify({
+          context: OVERWORLD_COMPACT_LEGEND,
+          result: OVERWORLD_COMPACT_RESULT_LEGEND,
+        }),
+      )
+      .digest("hex");
 
-    expect(started.legend).toBe(OVERWORLD_COMPACT_LEGEND);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(35);
+    expect(signature).toBe(expectedSignatureByVersion[OVERWORLD_COMPACT_VIEW_VERSION]);
+  });
+
+  it("start_overworld sends only the definitions used by its compact context", () => {
+    const a = api();
+    const started = a.start_overworld();
+
+    expect(started.legend).toEqual(expectedLegendFor(started.context as Record<string, unknown>));
     expectLegendCovers(started.legend!, started.context as Record<string, unknown>);
+    expect(Object.keys(started.legend!)).toHaveLength(15);
+    expect(JSON.stringify(started.legend).length).toBeLessThanOrEqual(3_100);
+    expect(JSON.stringify(started.legend).length).toBeLessThan(
+      JSON.stringify(OVERWORLD_COMPACT_LEGEND).length * 0.3,
+    );
+    expect(JSON.stringify(started).indexOf('"legend"')).toBeLessThan(
+      JSON.stringify(started).indexOf('"context"'),
+    );
     for (const [key, text] of Object.entries(started.legend!)) {
       expect(typeof text, `legend entry "${key}"`).toBe("string");
       expect(text.length, `legend entry "${key}"`).toBeGreaterThan(10);
     }
-    expect(started.legend?.quest_starts).toContain("start_overworld_session_quest");
-    expect(started.legend?.quest_starts).toContain("approach_id");
-    expect(started.legend?.quest_start_locations).toContain("location requirement");
-    expect(started.legend?.quest_start_locations).toContain("advisory only");
-    expect(started.legend?.quest_start_locations).toContain("area_routes");
-    expect(started.legend?.quest_start_locations).toContain("quest_starts");
-    expect(started.legend?.quests).toContain("preview|null");
-    expect(started.legend?.quests).toContain("quest_starts");
-    expect(started.legend?.quests).toContain("strategic_comparison");
-    expect(started.legend?.quests).toContain("dedicated strategic comparison");
-    expect(started.legend?.quests).toContain("retain full preview and consequence");
-    expect(started.legend?.quests).toContain("accepted action receipt");
-    expect(started.legend?.quests).toContain("Started quest rows omit launch");
-    expect(started.legend?.quests).toContain("starting them again is illegal");
-    expect(started.legend?.quests).toContain("persistent journal");
+    expect(started.legend).not.toHaveProperty("quests");
+    expect(started.legend).not.toHaveProperty("quest_starts");
+
+    expect(OVERWORLD_COMPACT_LEGEND.quest_starts).toContain("start_overworld_session_quest");
+    expect(OVERWORLD_COMPACT_LEGEND.quest_starts).toContain("approach_id");
+    expect(OVERWORLD_COMPACT_LEGEND.quest_start_locations).toContain("location requirement");
+    expect(OVERWORLD_COMPACT_LEGEND.quest_start_locations).toContain("advisory only");
+    expect(OVERWORLD_COMPACT_LEGEND.quest_start_locations).toContain("area_routes");
+    expect(OVERWORLD_COMPACT_LEGEND.quest_start_locations).toContain("quest_starts");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("preview|null");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("quest_starts");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("strategic_comparison");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("dedicated strategic comparison");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("retain full preview and consequence");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("accepted action receipt");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("Started quest rows omit launch");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("starting them again is illegal");
+    expect(OVERWORLD_COMPACT_LEGEND.quests).toContain("persistent journal");
   });
 
   it("describes unavailable jobs and optional aftermath without overstating either", () => {
@@ -109,7 +146,224 @@ describe("compact legends", () => {
     expect(OVERWORLD_COMPACT_LEGEND.service_offers).toContain("present and available");
   });
 
-  it("restore_overworld_session repeats the legend; per-action responses do not", () => {
+  it("introduces context and result-only definitions once in the response that needs them", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const poiId = started.context.poi[0]?.[0];
+    if (!poiId) throw new Error("expected a fresh Albany point of interest");
+    const scouted = a.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: poiId,
+      expected_snapshot_hash: started.snapshot_hash,
+    });
+    expect(scouted.ok).toBe(true);
+    if (!scouted.ok) throw new Error("expected scout to succeed");
+    expect(Object.keys(scouted.legend_delta ?? {})).toEqual([
+      "area_routes",
+      "sites",
+      "journal",
+      "result.entry",
+      "result.areas",
+      "result.jobs",
+      "result.sites",
+    ]);
+    expectLegendCovers(
+      { ...started.legend, ...scouted.legend_delta } as Record<string, string>,
+      scouted.context as Record<string, unknown>,
+    );
+    expect(JSON.stringify(scouted.legend_delta).length).toBeLessThanOrEqual(850);
+    expect(JSON.stringify(scouted).indexOf('"legend_delta"')).toBeLessThan(
+      JSON.stringify(scouted).indexOf('"context"'),
+    );
+
+    const repeated = a.get_overworld_session_context({ session_id: started.session_id });
+    expect(repeated).not.toHaveProperty("legend_delta");
+
+    const routeDestination = scouted.context.roads[0]?.[0];
+    if (!routeDestination) throw new Error("expected a route destination");
+    const planned = a.plan_overworld_session_route({
+      session_id: started.session_id,
+      destination_town_id: routeDestination,
+      expected_snapshot_hash: scouted.snapshot_hash,
+    });
+    expect(planned.ok).toBe(true);
+    if (!planned.ok) throw new Error("expected route plan to succeed");
+    expect(planned.context).not.toHaveProperty("route_options");
+    expect(planned.legend_delta).toEqual({
+      route: OVERWORLD_COMPACT_RESULT_LEGEND.route,
+    });
+    const serializedPlan = JSON.stringify(planned);
+    expect(serializedPlan.indexOf('"legend_delta"')).toBeLessThan(
+      serializedPlan.indexOf('"route":['),
+    );
+    expect(serializedPlan.indexOf('"legend_delta"')).toBeLessThan(
+      serializedPlan.indexOf('"context"'),
+    );
+    const plannedAgain = a.plan_overworld_session_route({
+      session_id: started.session_id,
+      destination_town_id: routeDestination,
+      expected_snapshot_hash: planned.snapshot_hash,
+    });
+    expect(plannedAgain.ok).toBe(true);
+    if (!plannedAgain.ok) throw new Error("expected repeated route plan to succeed");
+    expect(plannedAgain).not.toHaveProperty("legend_delta");
+  });
+
+  it("defines transient discovery result tuples even when rolling context filters them out", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const areaId = started.context.here[3];
+    if (!areaId) throw new Error("expected a fresh Albany starting area");
+
+    const explored = a.explore_overworld_session_area({
+      session_id: started.session_id,
+      area_id: areaId,
+      expected_snapshot_hash: started.snapshot_hash,
+    });
+    expect(explored.ok).toBe(true);
+    if (!explored.ok) throw new Error("expected starting-area exploration to succeed");
+    expect(explored.result.jobs?.length).toBeGreaterThan(0);
+    expect(explored.context).not.toHaveProperty("jobs");
+    const accumulated = {
+      ...started.legend,
+      ...explored.legend_delta,
+    } as Record<string, string>;
+    for (const resultKey of ["entry", "jobs"] as const) {
+      const legendKey = `result.${resultKey}`;
+      expect(accumulated, `compact result key "${resultKey}"`).toHaveProperty(legendKey);
+    }
+    const serialized = JSON.stringify(explored);
+    expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"result"'));
+    expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"context"'));
+  });
+
+  it("defines a compact result when it is paired with a full observation", () => {
+    const a = api();
+    const started = a.start_overworld({ compact_context: false });
+    const destination = started.observation.exits[0]?.destination.id;
+    if (!destination) throw new Error("expected a fresh Albany road");
+
+    const planned = a.plan_overworld_session_route({
+      session_id: started.session_id,
+      destination_town_id: destination,
+      compact_context: false,
+      compact_result: true,
+    });
+    expect(planned.ok).toBe(true);
+    if (!planned.ok) throw new Error("expected mixed-mode route plan to succeed");
+    expect(planned.legend_delta).toEqual({
+      route: OVERWORLD_COMPACT_RESULT_LEGEND.route,
+    });
+    expect(planned).toHaveProperty("observation");
+    const serialized = JSON.stringify(planned);
+    expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"route":['));
+    expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"observation"'));
+  });
+
+  it("defines service resource tuples even when an unchanged service has no receipt", () => {
+    const a = api();
+    const started = a.start_overworld({ compact_context: false });
+    const rested = a.rest_overworld_session({
+      session_id: started.session_id,
+      compact_context: false,
+      compact_result: true,
+    });
+    expect(rested.ok).toBe(true);
+    if (!rested.ok) throw new Error("expected mixed-mode rest to succeed");
+    expect(rested.result.entry).toBeUndefined();
+    expect(rested.legend_delta).toEqual({
+      "result.supplies": OVERWORLD_COMPACT_RESULT_LEGEND["result.supplies"],
+      "result.fatigue": OVERWORLD_COMPACT_RESULT_LEGEND["result.fatigue"],
+    });
+    const serialized = JSON.stringify(rested);
+    expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"result":{'));
+  });
+
+  it("defines a consumed road encounter in the compact resolution result", () => {
+    const a = api();
+    const started = a.start_overworld({ compact_context: false });
+    const road = started.observation.exits.find(
+      (candidate) => candidate.destination.id === "colonie_town",
+    );
+    if (!road) throw new Error("expected the Albany-to-Colonie road");
+    const traveled = a.travel_overworld_session({
+      session_id: started.session_id,
+      road_id: road.id,
+      compact_context: false,
+      compact_result: false,
+    });
+    expect(traveled.ok).toBe(true);
+    if (!traveled.ok) throw new Error("expected verbose travel to succeed");
+
+    const resolved = a.resolve_overworld_session_road_encounter({
+      session_id: started.session_id,
+      strategy: "cautious_scout",
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) throw new Error("expected compact road resolution to succeed");
+    expect(resolved.context).not.toHaveProperty("pending_road");
+    expect(resolved.result.encounter).toBeDefined();
+    expect(resolved.legend_delta).toMatchObject({
+      "result.entry": OVERWORLD_COMPACT_RESULT_LEGEND["result.entry"],
+      "result.encounter": OVERWORLD_COMPACT_RESULT_LEGEND["result.encounter"],
+    });
+    const serialized = JSON.stringify(resolved);
+    expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"result"'));
+    expect(serialized.indexOf('"legend_delta"')).toBeLessThan(serialized.indexOf('"context"'));
+  });
+
+  it("declares result-only quest schemas centrally", () => {
+    expect(OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.quest_start).toEqual(["quest"]);
+    expect(OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.quest_completion).toEqual([
+      "result.entry",
+      "result.quest",
+      "result.ending",
+      "result.renown",
+    ]);
+    for (const keys of Object.values(OVERWORLD_COMPACT_RESULT_LEGEND_KEYS)) {
+      for (const key of keys) {
+        expect(OVERWORLD_COMPACT_RESULT_LEGEND, `compact result path "${key}"`).toHaveProperty(key);
+      }
+    }
+  });
+
+  it("introduces opt-in projection definitions once without changing game state", () => {
+    const a = api();
+    const started = a.start_overworld();
+    const worldNamed = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_world_name: true,
+    });
+    expect(worldNamed.legend_delta).toEqual({ world: OVERWORLD_COMPACT_LEGEND.world });
+    expect(worldNamed.snapshot_hash).toBe(started.snapshot_hash);
+
+    const ids = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_ids: true,
+    });
+    expect(ids.legend_delta).toEqual({ ids: OVERWORLD_COMPACT_LEGEND.ids });
+    expect(ids.snapshot_hash).toBe(started.snapshot_hash);
+
+    const routes = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_route_options: true,
+    });
+    expect(routes.legend_delta).toEqual({
+      route_options: OVERWORLD_COMPACT_LEGEND.route_options,
+    });
+    expect(routes.snapshot_hash).toBe(started.snapshot_hash);
+
+    const repeated = a.get_overworld_session_context({
+      session_id: started.session_id,
+      include_world_name: true,
+      include_ids: true,
+      include_route_options: true,
+    });
+    expect(repeated).not.toHaveProperty("legend_delta");
+    expect(repeated.snapshot_hash).toBe(started.snapshot_hash);
+  });
+
+  it("restore and the first compact read each create a self-contained disclosure boundary", () => {
     const a = api();
     const started = a.start_overworld();
     const exported = a.export_overworld_session({ session_id: started.session_id });
@@ -117,14 +371,106 @@ describe("compact legends", () => {
     if (!exported.ok) throw new Error("expected export to succeed");
 
     const restored = a.restore_overworld_session({ snapshot: exported.snapshot });
-    expect(restored.legend).toBe(OVERWORLD_COMPACT_LEGEND);
+    expect(restored.legend).toEqual(expectedLegendFor(restored.context as Record<string, unknown>));
     expect("tutorial" in restored).toBe(false);
     expectLegendCovers(restored.legend!, restored.context as Record<string, unknown>);
+    const independentlyRestored = a.restore_overworld_session({ snapshot: exported.snapshot });
+    expect(independentlyRestored.session_id).not.toBe(restored.session_id);
+    expect(independentlyRestored.legend).toEqual(restored.legend);
 
     const reread = a.get_overworld_session_context({ session_id: started.session_id });
     expect("legend" in reread).toBe(false);
+    expect("legend_delta" in reread).toBe(false);
     const rested = a.rest_overworld_session({ session_id: started.session_id });
     expect("legend" in rested).toBe(false);
+    expect(rested.legend_delta).toEqual({
+      "result.supplies": OVERWORLD_COMPACT_RESULT_LEGEND["result.supplies"],
+      "result.fatigue": OVERWORLD_COMPACT_RESULT_LEGEND["result.fatigue"],
+    });
+
+    const fullRestored = a.restore_overworld_session({
+      snapshot: exported.snapshot,
+      compact_context: false,
+    });
+    expect(fullRestored).not.toHaveProperty("legend");
+    expect(fullRestored).not.toHaveProperty("legend_delta");
+    const firstCompactRead = a.get_overworld_session_context({
+      session_id: fullRestored.session_id,
+    });
+    expect(firstCompactRead.legend_delta).toEqual(
+      expectedLegendFor(firstCompactRead.context as Record<string, unknown>),
+    );
+    expectLegendCovers(
+      firstCompactRead.legend_delta!,
+      firstCompactRead.context as Record<string, unknown>,
+    );
+  });
+
+  it("unchanged and rejected responses do not consume pending definitions", () => {
+    const a = api();
+    const fullStarted = a.start_overworld({ compact_context: false });
+    const unchanged = a.get_overworld_session_context({
+      session_id: fullStarted.session_id,
+      if_snapshot_hash: fullStarted.snapshot_hash,
+    });
+    expect(unchanged).not.toHaveProperty("context");
+    expect(unchanged).not.toHaveProperty("legend_delta");
+
+    const rejected = a.rest_overworld_session({
+      session_id: fullStarted.session_id,
+      expected_snapshot_hash: "0".repeat(24),
+    });
+    expect(rejected.ok).toBe(false);
+    expect(rejected).not.toHaveProperty("legend_delta");
+
+    const firstCompactRead = a.get_overworld_session_context({
+      session_id: fullStarted.session_id,
+    });
+    expect(firstCompactRead.legend_delta).toEqual(
+      expectedLegendFor(firstCompactRead.context as Record<string, unknown>),
+    );
+  });
+
+  it("verbose actions do not consume definitions needed by a later compact response", () => {
+    const a = api();
+    const fullStarted = a.start_overworld({ compact_context: false });
+    const poiId = fullStarted.observation.pois[0]?.id;
+    if (!poiId) throw new Error("expected a fresh Albany point of interest");
+    const fullScout = a.scout_overworld_session_poi({
+      session_id: fullStarted.session_id,
+      poi_id: poiId,
+      expected_snapshot_hash: fullStarted.snapshot_hash,
+      compact_context: false,
+      compact_result: false,
+    });
+    expect(fullScout.ok).toBe(true);
+    if (!fullScout.ok) throw new Error("expected verbose scout to succeed");
+    expect(fullScout).not.toHaveProperty("legend");
+    expect(fullScout).not.toHaveProperty("legend_delta");
+
+    const firstCompactRead = a.get_overworld_session_context({
+      session_id: fullStarted.session_id,
+    });
+    expect(firstCompactRead.legend_delta).toEqual(
+      expectedLegendFor(firstCompactRead.context as Record<string, unknown>),
+    );
+    expect(firstCompactRead.legend_delta).toHaveProperty("area_routes");
+    expect(firstCompactRead.legend_delta).toHaveProperty("sites");
+    expect(firstCompactRead.legend_delta).toHaveProperty("journal");
+  });
+
+  it("fails closed if a runtime compact field lacks a legend definition", () => {
+    const sessions = new OverworldMcpSessionStore(() => loadOverworldManifest(ROOT));
+    const created = sessions.create();
+    const context = created.session.compactView();
+    vi.spyOn(created.session, "compactView").mockReturnValue({
+      ...context,
+      future_field: ["undocumented"],
+    } as never);
+
+    expect(() => sessions.viewField({ compact_context: true }, created.session)).toThrowError(
+      /future_field.*no legend definition/i,
+    );
   });
 
   it("RPG session starts carry a legend covering every compact observation key", () => {

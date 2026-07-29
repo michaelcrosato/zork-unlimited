@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import {
   OVERWORLD_COMPACT_LEGEND,
-  type OverworldCompactLegend,
+  type OverworldCompactLegendKey,
+  type OverworldCompactLegendPatch,
   type OverworldCompactView,
 } from "../world/compact_view.js";
 import type { OverworldManifest } from "../world/overworld.js";
@@ -11,9 +12,21 @@ import { OverworldSession, type OverworldSessionSnapshot } from "../world/sessio
 import type { OverworldView } from "../world/session_view.js";
 import type { JourneyDecisionClassification } from "../world/journey_contract.js";
 import { excludedJourneyDecision } from "../world/journey_decision.js";
+import {
+  OVERWORLD_COMPACT_RESULT_LEGEND,
+  type OverworldCompactResultLegendKey,
+} from "./compact_overworld_result.js";
 import { compactJourneyPresentation } from "./journey_projection.js";
 
 export type OverworldMcpJourney = ReturnType<OverworldSession["journey"]>;
+
+export type OverworldMcpLegendKey = OverworldCompactLegendKey | OverworldCompactResultLegendKey;
+export type OverworldMcpLegendPatch = Partial<Record<OverworldMcpLegendKey, string>>;
+
+const OVERWORLD_MCP_COMPACT_LEGEND = {
+  ...OVERWORLD_COMPACT_LEGEND,
+  ...OVERWORLD_COMPACT_RESULT_LEGEND,
+} as const satisfies Record<OverworldMcpLegendKey, string>;
 
 export type OverworldMcpJourneyField = {
   journey: OverworldMcpJourney;
@@ -59,16 +72,24 @@ export type OverworldMcpCompactContext = Omit<
 export type OverworldMcpViewField<Args extends OverworldMcpResponseOptions> = Args extends {
   compact_context: true;
 }
-  ? { context: OverworldMcpCompactContext }
-  : { observation: OverworldView };
+  ? {
+      context: OverworldMcpCompactContext;
+      /** Definitions first used by this compact response; merge by key into legend. */
+      legend_delta?: OverworldMcpLegendPatch;
+    }
+  : {
+      observation: OverworldView;
+      /** Definitions first used by a compact result beside this full observation. */
+      legend_delta?: OverworldMcpLegendPatch;
+    };
 
 export type OverworldMcpStartResponse<Args extends OverworldMcpResponseOptions> = {
   session_id: string;
   snapshot_hash: string;
   /** One-time orientation for this genuinely fresh game. */
   tutorial: FreshGameTutorial;
-  /** Field guide for the compact context; sent only on session-creating responses. */
-  legend?: OverworldCompactLegend;
+  /** Definitions for every compact field present in this initial response. */
+  legend?: OverworldCompactLegendPatch;
 } & OverworldMcpJourneyField &
   OverworldMcpViewField<Args>;
 
@@ -76,8 +97,8 @@ export type OverworldMcpRestoreResponse<Args extends OverworldMcpResponseOptions
   ok: true;
   session_id: string;
   snapshot_hash: string;
-  /** Field guide for the compact context; sent only on session-creating responses. */
-  legend?: OverworldCompactLegend;
+  /** Definitions for every compact field present in this restored response. */
+  legend?: OverworldCompactLegendPatch;
 } & OverworldMcpJourneyField &
   OverworldMcpViewField<Args>;
 
@@ -149,6 +170,8 @@ export type OverworldMcpContextPayload<
   ok: true;
   snapshot_hash: string;
   context: OverworldMcpCompactContext;
+  /** Definitions first used by this compact response; merge by key into legend. */
+  legend_delta?: OverworldMcpLegendPatch;
 } & OverworldMcpJourneyField &
   OverworldMcpReadSessionIdField<Args>;
 
@@ -281,12 +304,14 @@ function overworldCompactReadPayload<Args extends OverworldMcpReadArgs>(
   snapshotHash: string,
   context: OverworldMcpCompactContext,
   journey: OverworldMcpJourney,
+  legendDelta?: OverworldMcpLegendPatch,
 ): OverworldMcpContextPayload<Args> {
   return {
     ok: true,
     ...(args.include_session_id === true ? { session_id: args.session_id } : {}),
     snapshot_hash: publicOverworldSnapshotHash(snapshotHash),
     journey,
+    ...(legendDelta ? { legend_delta: legendDelta } : {}),
     context,
   } as OverworldMcpContextPayload<Args>;
 }
@@ -353,6 +378,14 @@ export function isOverworldMcpRejectedSessionPayload(
 
 export class OverworldMcpSessionStore {
   private readonly sessions = new Map<string, OverworldSession>();
+  /**
+   * Transport-only disclosure state. It is deliberately absent from deterministic
+   * game snapshots and hashes, and WeakMap lifetime follows session eviction.
+   */
+  private readonly disclosedLegendKeys = new WeakMap<
+    OverworldSession,
+    Set<OverworldMcpLegendKey>
+  >();
 
   constructor(
     private readonly loadManifest: () => OverworldManifest,
@@ -394,6 +427,49 @@ export class OverworldMcpSessionStore {
     return publicOverworldSnapshotHash(this.fullSnapshotHash(session));
   }
 
+  private takeLegendPatch(
+    session: OverworldSession,
+    context: OverworldMcpCompactContext | undefined,
+    additionalKeys: readonly OverworldMcpLegendKey[] = [],
+  ): OverworldMcpLegendPatch | undefined {
+    const requiredKeys = [...Object.keys(context ?? {}), ...additionalKeys];
+    for (const key of requiredKeys) {
+      if (!(key in OVERWORLD_MCP_COMPACT_LEGEND)) {
+        throw new Error(`Compact overworld field "${key}" has no legend definition.`);
+      }
+    }
+    let disclosed = this.disclosedLegendKeys.get(session);
+    if (!disclosed) {
+      disclosed = new Set<OverworldMcpLegendKey>();
+      this.disclosedLegendKeys.set(session, disclosed);
+    }
+    const required = new Set<string>(requiredKeys);
+    const entries = (Object.keys(OVERWORLD_MCP_COMPACT_LEGEND) as OverworldMcpLegendKey[])
+      .filter((key) => required.has(key) && !disclosed.has(key))
+      .map((key) => [key, OVERWORLD_MCP_COMPACT_LEGEND[key]] as const);
+    if (entries.length === 0) return undefined;
+    for (const [key] of entries) disclosed.add(key);
+    return Object.fromEntries(entries) as OverworldMcpLegendPatch;
+  }
+
+  private compactContextField(
+    args: Pick<
+      OverworldMcpResponseOptions,
+      "include_ids" | "include_route_options" | "include_world_name"
+    >,
+    session: OverworldSession,
+    field: "legend" | "legend_delta",
+    additionalKeys: readonly OverworldMcpLegendKey[] = [],
+  ): {
+    context: OverworldMcpCompactContext;
+    legend?: OverworldMcpLegendPatch;
+    legend_delta?: OverworldMcpLegendPatch;
+  } {
+    const context = projectOverworldCompactContext(session.compactView(), args);
+    const patch = this.takeLegendPatch(session, context, additionalKeys);
+    return patch ? { [field]: patch, context } : { context };
+  }
+
   guardedSession<
     Args extends OverworldMcpSnapshotGuardOptions &
       Pick<OverworldMcpResponseOptions, "compact_context">,
@@ -416,13 +492,45 @@ export class OverworldMcpSessionStore {
   viewField<Args extends OverworldMcpResponseOptions>(
     args: Args,
     session: OverworldSession,
+    additionalLegendKeys: readonly OverworldMcpLegendKey[] = [],
   ): OverworldMcpViewField<Args> {
     if (args.compact_context === true) {
-      return {
-        context: projectOverworldCompactContext(session.compactView(), args),
-      } as OverworldMcpViewField<Args>;
+      return this.compactContextField(
+        args,
+        session,
+        "legend_delta",
+        additionalLegendKeys,
+      ) as OverworldMcpViewField<Args>;
     }
-    return { observation: session.view() } as OverworldMcpViewField<Args>;
+    const patch =
+      args.compact_result === true && additionalLegendKeys.length > 0
+        ? this.takeLegendPatch(session, undefined, additionalLegendKeys)
+        : undefined;
+    return {
+      ...(patch ? { legend_delta: patch } : {}),
+      observation: session.view(),
+    } as OverworldMcpViewField<Args>;
+  }
+
+  resultViewFields<Args extends OverworldMcpResponseOptions>(
+    args: Args,
+    session: OverworldSession,
+    additionalLegendKeys: readonly OverworldMcpLegendKey[] = [],
+  ): {
+    beforeResult: { legend_delta?: OverworldMcpLegendPatch };
+    afterResult:
+      | { context: OverworldMcpCompactContext }
+      | {
+          observation: OverworldView;
+        };
+  } {
+    const view = this.viewField(args, session, additionalLegendKeys);
+    return {
+      beforeResult:
+        "legend_delta" in view && view.legend_delta ? { legend_delta: view.legend_delta } : {},
+      afterResult:
+        "context" in view ? { context: view.context } : { observation: view.observation },
+    };
   }
 
   startResponse<Args extends OverworldMcpResponseOptions>(
@@ -437,10 +545,9 @@ export class OverworldMcpSessionStore {
         args.compact_context === true
           ? compactJourneyPresentation(created.session.journey())
           : created.session.journey(),
-      // The legend rides only on session-creating responses (here and in
-      // restoreResponse), keeping every subsequent per-action payload lean.
-      ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),
-      ...this.viewField(args, created.session),
+      ...(args.compact_context === true
+        ? this.compactContextField(args, created.session, "legend")
+        : this.viewField(args, created.session)),
     } as unknown as OverworldMcpStartResponse<Args>;
   }
 
@@ -457,8 +564,9 @@ export class OverworldMcpSessionStore {
         args.compact_context === true
           ? compactJourneyPresentation(restored.session.journey())
           : restored.session.journey(),
-      ...(args.compact_context === true ? { legend: OVERWORLD_COMPACT_LEGEND } : {}),
-      ...this.viewField(args, restored.session),
+      ...(args.compact_context === true
+        ? this.compactContextField(args, restored.session, "legend")
+        : this.viewField(args, restored.session)),
     } as unknown as OverworldMcpRestoreResponse<Args>;
   }
 
@@ -476,11 +584,13 @@ export class OverworldMcpSessionStore {
       ) as OverworldMcpReadResponse<Args>;
     }
     if (args.include_observation !== true) {
+      const compact = this.compactContextField(args, session, "legend_delta");
       return overworldCompactReadPayload(
         args,
         snapshotHash,
-        projectOverworldCompactContext(session.compactView(), args),
+        compact.context,
         compactJourneyPresentation(session.journey()),
+        compact.legend_delta,
       ) as OverworldMcpReadResponse<Args>;
     }
     return {
@@ -504,11 +614,13 @@ export class OverworldMcpSessionStore {
         true,
       ) as OverworldMcpContextResponse<Args>;
     }
+    const compact = this.compactContextField(args, session, "legend_delta");
     return overworldCompactReadPayload(
       args,
       snapshotHash,
-      projectOverworldCompactContext(session.compactView(), args),
+      compact.context,
       compactJourneyPresentation(session.journey()),
+      compact.legend_delta,
     ) as OverworldMcpContextResponse<Args>;
   }
 
@@ -545,6 +657,9 @@ export class OverworldMcpSessionStore {
     key: Key,
     action: (session: OverworldSession) => Value,
     compactValue?: (value: Value) => CompactValue,
+    compactResultLegendKeys:
+      | readonly OverworldMcpLegendKey[]
+      | ((value: CompactValue) => readonly OverworldMcpLegendKey[]) = [],
   ): OverworldMcpSessionResponse<Key, Value, Args, CompactValue> {
     const guarded = this.guardedSession(args, sessionId);
     if (isOverworldMcpRejectedSessionPayload(guarded)) {
@@ -555,6 +670,13 @@ export class OverworldMcpSessionStore {
     const journeyDecision = journeyDecisionFrom(value);
     const responseValue =
       args.compact_result === true && compactValue ? compactValue(value) : value;
+    const resultLegendKeys =
+      args.compact_result === true && compactValue
+        ? typeof compactResultLegendKeys === "function"
+          ? compactResultLegendKeys(responseValue as CompactValue)
+          : compactResultLegendKeys
+        : [];
+    const view = this.resultViewFields(args, session, resultLegendKeys);
     return {
       ok: true,
       session_id: sessionId,
@@ -564,8 +686,9 @@ export class OverworldMcpSessionStore {
           ? compactJourneyPresentation(session.journey())
           : session.journey(),
       ...(journeyDecision ? { journeyDecision } : {}),
+      ...view.beforeResult,
       [key]: responseValue,
-      ...this.viewField(args, session),
+      ...view.afterResult,
     } as unknown as OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;
   }
 }

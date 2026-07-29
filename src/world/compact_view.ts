@@ -414,8 +414,9 @@ export type OverworldCompactView = {
  * Agent-facing legend for the positional encodings above. Co-located with the
  * encoders in this file so the two cannot drift: the `satisfies` clause forces an
  * entry for every OverworldCompactView field, and tests/unit/compact_legend.test.ts
- * asserts emitted contexts stay covered. Sent ONCE per session (start_overworld /
- * restore_overworld_session), never repeated in per-action payloads.
+ * asserts emitted contexts stay covered. MCP session creation sends only the
+ * definitions used by its first compact context; later responses add a
+ * same-response patch when a previously unseen compact field first appears.
  */
 export const OVERWORLD_COMPACT_LEGEND = {
   v: "compact context schema version",
@@ -498,6 +499,8 @@ export const OVERWORLD_COMPACT_LEGEND = {
 } as const satisfies Record<keyof OverworldCompactView, string>;
 
 export type OverworldCompactLegend = typeof OVERWORLD_COMPACT_LEGEND;
+export type OverworldCompactLegendKey = keyof OverworldCompactLegend;
+export type OverworldCompactLegendPatch = Partial<OverworldCompactLegend>;
 
 export function compactOverworldLabel(value: string): string {
   return compactText(value, OVERWORLD_COMPACT_LABEL_CHAR_LIMIT);

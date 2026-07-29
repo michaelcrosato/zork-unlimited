@@ -90,9 +90,9 @@ export type OverworldCompactServiceResult = {
 export type OverworldCompactRoadEncounterResult = {
   strategy: OverworldRoadEncounterStrategy;
   m: number;
-  supplies: number;
-  fatigue: number;
-  renown: number;
+  supplies_used: number;
+  fatigue_gained: number;
+  renown_gained: number;
   encounter: OverworldCompactRoadEncounter;
   entry: OverworldCompactJournalEntry;
   text: string;
@@ -143,6 +143,75 @@ export type OverworldCompactGoalPassageResult = {
   legs: OverworldCompactTravelResult[];
   legs_truncated?: true;
 };
+
+/**
+ * Exact paths and positional schemas used only by immediate compact results.
+ * Dotted keys name nested response paths, so blind clients can apply each
+ * definition directly instead of inferring aliases from rolling context.
+ */
+export const OVERWORLD_COMPACT_RESULT_LEGEND = {
+  route:
+    "[dest_town_id, est_minutes, supplies_needed, fatigue_0to100_on_arrival, [road_id, ...]] single planned route",
+  travel:
+    "[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null, road_event_risk|null, road_event_title|null, road_event_summary|null] accepted trip and its immediate road scene",
+  "passage.minutes": "[base_minutes, delay_minutes, total_minutes]",
+  "passage.supplies": "[supplies_used, supplies_after]",
+  "passage.fatigue": "[fatigue_gained, fatigue_after]",
+  "passage.legs":
+    "[[road_id, from_town_id, to_town_id, minutes, supplies_used, fatigue_gained, road_event_id|null, road_event_risk|null, road_event_title|null, road_event_summary|null], ...] traversed passage legs",
+  "result.entry": "[kind, title, 'Day N, HH:MM'] single immediate journal receipt",
+  "result.areas": "[[area_id, name], ...] areas discovered by this action",
+  "result.jobs": "[[job_id, title], ...] jobs discovered by this action",
+  "result.sites": "[[site_id, title], ...] sites discovered by this action",
+  "result.quests":
+    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview|null, consequence|null, strategic_comparison|null]], selected_approach_id|null]?], ...] quests discovered by this action",
+  "result.supplies": "[supplies_before, supplies_after] for this service action",
+  "result.fatigue": "[fatigue_before, fatigue_after] for this service action",
+  "result.encounter":
+    "{id, edge: road_id, route: route_name, where: [from_town, to_town, at_time], event: [road_event_id, risk_text, title, summary], options: [[strategy, label, minutes, supplies_cost, fatigue_gained, renown_gained], ...], next_action: {tool, argument, values_from}} consumed road encounter",
+  quest:
+    "[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview|null, consequence|null, strategic_comparison|null]], selected_approach_id|null]?] accepted quest-start receipt",
+  "result.quest": "[quest_id, title, anchor_area_id] completed quest",
+  "result.ending": "[ending_id, ending_title]",
+  "result.renown": "[region_name, renown_gained, renown_total_after]",
+  "result.from": "[area_id, area_name] area left by this move",
+  "result.to": "[area_id, area_name] area reached by this move",
+} as const;
+
+export type OverworldCompactResultLegendKey = keyof typeof OVERWORLD_COMPACT_RESULT_LEGEND;
+
+export const OVERWORLD_COMPACT_RESULT_LEGEND_KEYS = {
+  route: ["route"],
+  travel: ["travel"],
+  goal_passage: ["passage.minutes", "passage.supplies", "passage.fatigue", "passage.legs"],
+  road_encounter: ["result.entry", "result.encounter"],
+  journey_story_choice: ["result.entry"],
+  quest_start: ["quest"],
+  quest_completion: ["result.entry", "result.quest", "result.ending", "result.renown"],
+  area_travel: ["result.from", "result.to"],
+} as const satisfies Record<string, readonly OverworldCompactResultLegendKey[]>;
+
+export function compactOverworldActionResultLegendKeys(
+  result: OverworldCompactActionResult,
+): OverworldCompactResultLegendKey[] {
+  return [
+    "result.entry",
+    ...(result.areas ? (["result.areas"] as const) : []),
+    ...(result.jobs ? (["result.jobs"] as const) : []),
+    ...(result.sites ? (["result.sites"] as const) : []),
+    ...(result.quests ? (["result.quests"] as const) : []),
+  ];
+}
+
+export function compactOverworldServiceResultLegendKeys(
+  result: OverworldCompactServiceResult,
+): OverworldCompactResultLegendKey[] {
+  return [
+    "result.supplies",
+    "result.fatigue",
+    ...(result.entry ? (["result.entry"] as const) : []),
+  ];
+}
 
 function compactOverworldJournalEntry(entry: {
   kind: string;
@@ -221,9 +290,9 @@ export function compactOverworldRoadEncounterResult(
   return {
     strategy: result.strategy,
     m: result.minutes,
-    supplies: result.suppliesUsed,
-    fatigue: result.fatigueGained,
-    renown: result.renownGained,
+    supplies_used: result.suppliesUsed,
+    fatigue_gained: result.fatigueGained,
+    renown_gained: result.renownGained,
     encounter,
     entry: compactOverworldJournalEntry(result.entry),
     text: compactText(result.entry.text, OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT),

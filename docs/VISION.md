@@ -95,8 +95,9 @@ authoritative:
   ledger. However intricate the source rules, the backend stays testable,
   replayable, and save-state resilient.
 - **The agent & tool surface.** State is exposed only through the compact MCP
-  observations at `src/mcp/server.ts`, with a one-time positional `legend`, so a
-  player or playtest agent parses the world at extreme token efficiency.
+  observations at `src/mcp/server.ts`, with an initial positional `legend` and
+  same-response patches for newly appearing fields, so a player or playtest
+  agent parses the world at extreme token efficiency.
 
 ## What "best in the world" means here
 
@@ -105,7 +106,7 @@ authoritative:
   dozens of blind playtests have already made fair, legible, and worth
   finishing.
 - **For the AI playtester**: observations terse enough to play a long session
-  in one context window (compact projections + a one-time legend), and an
+  in one context window (compact projections + progressive legends), and an
   action surface honest enough that the listed and executable sets coincide —
   everything offered executes, and everything executed was offered.
 - **For the AI dev**: a verification bar strong enough to trust its own

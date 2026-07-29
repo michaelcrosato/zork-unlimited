@@ -126,7 +126,7 @@ async function main() {
     }
 
     // Leg 1 — the DEFAULT blind mode: start the overworld core game from a
-    // fresh start, keep the one-time compact legend, and prove the guarded
+    // fresh start, keep its initial compact legend, and prove the guarded
     // context re-read round-trips.
     const overworld = parseResult(
       await client.callTool({
@@ -136,8 +136,13 @@ async function main() {
     );
     if (!overworld.session_id) throw new Error("start_overworld returned no session_id");
     if (!overworld.snapshot_hash) fail("start_overworld returned no snapshot_hash");
-    if (!overworld.legend) fail("start_overworld did not include the one-time compact legend");
+    if (!overworld.legend) fail("start_overworld did not include its initial compact legend");
     if (!overworld.context) fail("start_overworld did not include a compact context");
+    for (const key of Object.keys(overworld.context)) {
+      if (!(key in overworld.legend)) {
+        fail(`start_overworld compact field "${key}" has no same-response legend entry`);
+      }
+    }
     const overworldUnchanged = parseResult(
       await client.callTool({
         name: "get_overworld_session_context",
@@ -151,7 +156,7 @@ async function main() {
       fail("overworld context freshness check did not return hash-only unchanged");
     }
     console.log(
-      `• start_overworld ok → session ${overworld.session_id} (legend + snapshot_hash present)`,
+      `• start_overworld ok → session ${overworld.session_id} (initial legend + snapshot_hash present)`,
     );
 
     // Leg 2 — the targeted quest drop-in (a dev/QA entry point into the RPG

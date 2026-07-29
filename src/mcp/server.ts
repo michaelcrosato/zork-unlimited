@@ -8,8 +8,9 @@
  * Tool descriptions are the agent-facing contract: each one is a single sentence
  * that says what the tool does and when to use it (blind playtesters have no
  * other manual). The compact positional payloads are documented by the `legend`
- * field on session-creating responses; tests/unit/compact_legend.test.ts guards
- * both halves of that contract via the exported TOOL_REGISTRATIONS registry.
+ * field on session creation plus `legend_delta` patches on first field use;
+ * tests/unit/compact_legend.test.ts guards both halves of that contract via the
+ * exported TOOL_REGISTRATIONS registry.
  *
  * Run: `npm run mcp` (or register the project's .mcp.json in an MCP client).
  */
@@ -29,6 +30,7 @@ import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
 import { formatSpectateEntry } from "./spectate.js";
 import { OverworldSessionSnapshotSchema } from "../world/session_snapshot.js";
+import { compactOverworldAreaRoutes } from "../world/compact_view.js";
 import {
   FreshStartRunEvidenceV2Schema,
   JourneyExitRunEvidenceV2Schema,
@@ -739,22 +741,16 @@ export function resolveAreaMoveSelector(
 
 function visibleAreaRoutesForMove(input: Record<string, unknown>) {
   if (typeof input.session_id !== "string") return [] as const;
-  return PLAY_MODE !== "pure" && input.compact_context === false
-    ? api
-        .get_overworld_session({
-          session_id: input.session_id,
-          include_observation: true,
-        })
-        .observation.areaExits.map(
-          (route) => [route.id, route.destination.id, route.travel_minutes] as const,
-        )
-    : (() => {
-        const read = api.get_overworld_session_context({ session_id: input.session_id });
-        if (!("context" in read)) {
-          throw new Error("Cannot resolve a local route while the overworld context is unchanged.");
-        }
-        return read.context.area_routes ?? [];
-      })();
+  const routes = api.get_overworld_session({
+    session_id: input.session_id,
+    include_observation: true,
+  }).observation.areaExits;
+  if (PLAY_MODE !== "pure" && input.compact_context === false) {
+    return routes.map((route) => [route.id, route.destination.id, route.travel_minutes] as const);
+  }
+  // Alias normalization is an internal read: reuse the exact player-visible
+  // compact cap without advancing progressive legend disclosure.
+  return compactOverworldAreaRoutes(routes);
 }
 
 function normalizeAreaDestinationAlias(name: string, args: unknown): unknown {
@@ -1226,7 +1222,7 @@ const OVERWORLD_ACTION_CONTEXT = {
 
 tool(
   "start_overworld",
-  "Start a fresh overworld game; returns its one-time tutorial, current journey goal, session_id, snapshot_hash, and compact legend.",
+  "Start a fresh overworld game; keep its tutorial and initial compact legend, merging later legend_delta patches by key.",
   {
     ...COMPACT_OVERWORLD_CONTEXT,
   },
@@ -1271,7 +1267,7 @@ tool(
 );
 tool(
   "restore_overworld_session",
-  "Continue an exported overworld snapshot as a new session without replaying the fresh-game tutorial; repeats the compact-context legend.",
+  "Restore an exported overworld snapshot as a new session without replaying the fresh-start tutorial; keep its initial compact legend and merge later legend_delta patches by key.",
   {
     snapshot: z.record(z.unknown()).describe("Snapshot from export_overworld_session."),
     ...COMPACT_OVERWORLD_CONTEXT,

@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { OVERWORLD_COMPACT_RESULT_LEGEND } from "../../src/mcp/compact_overworld_result.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
@@ -154,6 +155,19 @@ describe("MCP Goal Passage", () => {
       expected_snapshot_hash: compactRestore.snapshot_hash,
     });
     if (!compact.ok) throw new Error(compact.rejection_reason);
+    expect(compact.legend_delta).toMatchObject({
+      "passage.minutes": OVERWORLD_COMPACT_RESULT_LEGEND["passage.minutes"],
+      "passage.supplies": OVERWORLD_COMPACT_RESULT_LEGEND["passage.supplies"],
+      "passage.fatigue": OVERWORLD_COMPACT_RESULT_LEGEND["passage.fatigue"],
+      "passage.legs": OVERWORLD_COMPACT_RESULT_LEGEND["passage.legs"],
+    });
+    const serializedCompact = JSON.stringify(compact);
+    expect(serializedCompact.indexOf('"legend_delta"')).toBeLessThan(
+      serializedCompact.indexOf('"passage":{'),
+    );
+    expect(serializedCompact.indexOf('"legend_delta"')).toBeLessThan(
+      serializedCompact.indexOf('"context":{'),
+    );
     expect(compact.passage).toMatchObject({
       goal_id: expected.goalId,
       destination: expected.destination,

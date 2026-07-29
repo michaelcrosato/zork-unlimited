@@ -24,6 +24,7 @@ import {
 } from "../../src/mcp/overworld_sessions.js";
 import {
   OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
+  OVERWORLD_COMPACT_RESULT_LEGEND,
   OVERWORLD_COMPACT_ROAD_ENCOUNTER_TEXT_CHAR_LIMIT,
 } from "../../src/mcp/compact_overworld_result.js";
 import { compactText } from "../../src/core/compact_text.js";
@@ -928,6 +929,10 @@ describe("MCP tools — validate / load (§9.4)", () => {
       snapshot: afterQuestStart.snapshot,
       compact_context: true,
     });
+    expect(Object.keys(restoredStarted.legend ?? {}).sort()).toEqual(
+      Object.keys(restoredStarted.context).sort(),
+    );
+    expect(JSON.stringify(restoredStarted.legend).length).toBeLessThanOrEqual(4_200);
     expect(restoredStarted.context.quest_starts).toBeUndefined();
     expect(
       restoredStarted.context.quests?.find(([questId]) => questId === discoveredQuest.id),
@@ -987,6 +992,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
       snapshot: beforeQuestStart.snapshot,
       compact_context: true,
     });
+    expect(JSON.stringify(compactSource.legend).length).toBeLessThanOrEqual(6_300);
     const compactStartedQuest = a.start_overworld_session_quest({
       session_id: compactSource.session_id,
       quest_id: discoveredQuest.id,
@@ -996,6 +1002,12 @@ describe("MCP tools — validate / load (§9.4)", () => {
       compact_observation: true,
       include_actions: true,
     });
+    expect(compactStartedQuest.legend_delta).toEqual({
+      quest: OVERWORLD_COMPACT_RESULT_LEGEND.quest,
+    });
+    expect(JSON.stringify(compactStartedQuest).indexOf('"legend_delta"')).toBeLessThan(
+      JSON.stringify(compactStartedQuest).indexOf('"quest":['),
+    );
     expect(compactStartedQuest.context.here[0]).toBe(started.observation.current.id);
     expect("observation" in compactStartedQuest).toBe(false);
     expect(compactStartedQuest.quest[3]).toBeDefined();
@@ -1392,6 +1404,30 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(repeated.result.renownGained).toBe(0);
     expect(repeated.result.renownAfter).toBe(completed.result.renownAfter);
     expect(repeated.snapshot_hash).toBe(completed.snapshot_hash);
+
+    const compactRepeated = a.complete_overworld_session_quest({
+      session_id: started.session_id,
+      rpg_session_id: launched.rpg_session_id,
+      compact_context: true,
+      compact_result: true,
+    });
+    expect(compactRepeated.ok).toBe(true);
+    if (!compactRepeated.ok) throw new Error("expected compact idempotent quest completion");
+    expect(compactRepeated.legend_delta).toMatchObject({
+      "result.quest": OVERWORLD_COMPACT_RESULT_LEGEND["result.quest"],
+      "result.ending": OVERWORLD_COMPACT_RESULT_LEGEND["result.ending"],
+      "result.renown": OVERWORLD_COMPACT_RESULT_LEGEND["result.renown"],
+    });
+    expect(OVERWORLD_COMPACT_RESULT_LEGEND["result.entry"]).toMatch(/kind.*title.*Day N/);
+    expect(compactRepeated.result.ending).toHaveLength(2);
+    expect(compactRepeated.result.renown).toHaveLength(3);
+    const serializedCompactCompletion = JSON.stringify(compactRepeated);
+    expect(serializedCompactCompletion.indexOf('"legend_delta"')).toBeLessThan(
+      serializedCompactCompletion.indexOf('"result":{'),
+    );
+    expect(serializedCompactCompletion.indexOf('"legend_delta"')).toBeLessThan(
+      serializedCompactCompletion.indexOf('"context":{'),
+    );
 
     const exported = a.export_overworld_session({
       session_id: started.session_id,
@@ -2039,9 +2075,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactResolved.result).toMatchObject({
       strategy: "press_on",
       m: fullResolved.result.minutes,
-      supplies: fullResolved.result.suppliesUsed,
-      fatigue: fullResolved.result.fatigueGained,
-      renown: fullResolved.result.renownGained,
+      supplies_used: fullResolved.result.suppliesUsed,
+      fatigue_gained: fullResolved.result.fatigueGained,
+      renown_gained: fullResolved.result.renownGained,
     });
     expect(compactResolved.result.encounter.event[0]).toBe(fullResolved.result.encounter.event.id);
     expect(compactResolved.result.entry).toEqual([

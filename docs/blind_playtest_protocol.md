@@ -318,12 +318,13 @@ it is neither cryptographic nor provider-signed attestation.
 ## Pure prompt boundary
 
 `blind-tester/prompt-overworld.md` is the locked live prompt. It may tell the
-agent how to call the player MCP tools, retain compact legends, use session ids
-and state hashes, recognize game-presented continue/end and authored story
-choices, and copy the returned receipt. It may not restate hidden content,
-recommend an opening route, require particular mechanics or locations, list
-defects to hunt, or impose a call/turn/time budget. Gameplay behavior must come
-from the game contract.
+agent how to call the player MCP tools, retain the initial compact legend and
+merge same-response `legend_delta` patches by exact field or dotted result path,
+use session ids and state hashes, recognize game-presented continue/end and
+authored story choices, and copy the returned receipt. It may not restate hidden
+content, recommend an opening route, require particular mechanics or locations,
+list defects to hunt, or impose a call/turn/time budget. Gameplay behavior must
+come from the game contract.
 
 For an embedded quest, pure mode enforces `hide_graph = true`. State-bearing
 compact quest start, read, and `step_action` responses default to
