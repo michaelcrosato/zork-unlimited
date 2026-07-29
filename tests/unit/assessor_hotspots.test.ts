@@ -20,6 +20,7 @@ type FixtureOverworld = Record<string, unknown> & {
   opening_preparation?: unknown;
   opening_relief_allocation?: unknown;
   opening_registration?: {
+    doctrines?: unknown;
     profiles: Array<{
       character: { relationships: Array<{ memories: string[] }> };
     }>;
@@ -46,6 +47,9 @@ function fixtureOverworldWithOpeningContactVariants(
 ): FixtureOverworld {
   const world = structuredClone(REAL_OVERWORLD);
   delete world.campaign_service_rules;
+  // This fixture deliberately omits the linked oath/source scenes; retain the
+  // minimal historical registration profiles but not their newer doctrine bundles.
+  delete world.opening_registration?.doctrines;
   const openingMemories = new Set(
     world.opening_registration?.profiles.flatMap((profile) =>
       profile.character.relationships.flatMap((relationship) => relationship.memories),

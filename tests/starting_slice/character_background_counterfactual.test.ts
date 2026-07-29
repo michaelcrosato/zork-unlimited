@@ -82,11 +82,28 @@ function registerSession(profileId: string): OverworldSession {
   session.scoutPoi(opening.pois[0]!.id);
   const talked = session.talkToCharacter(ROWAN_ID);
   expect(talked.discoveredQuests?.map((quest) => quest.id)).not.toContain("wolf_winter");
-  expect(session.journey().storyChoice).toMatchObject({
+  const registrationChoice = session.journey().storyChoice;
+  expect(registrationChoice).toMatchObject({
     id: REGISTRATION.id,
     kind: "registration",
-    options: REGISTRATION.profiles.map((profile) => ({ id: profile.id })),
   });
+  const customRoleCards = registrationChoice?.options.filter(
+    (option) => option.group === "custom_role",
+  );
+  expect(customRoleCards).toEqual(
+    REGISTRATION.profiles.map((profile) =>
+      expect.objectContaining({
+        id: profile.id,
+        group: "custom_role",
+      }),
+    ),
+  );
+  const doctrineCards = registrationChoice?.options.filter((option) => option.group === "doctrine");
+  expect(doctrineCards).toEqual(
+    (REGISTRATION.doctrines ?? []).map((doctrine) =>
+      expect.objectContaining({ id: doctrine.id, group: "doctrine" }),
+    ),
+  );
   session.chooseJourneyStory(profileId);
   expect(session.view().quests.map((quest) => quest.id)).not.toContain("wolf_winter");
   expect(session.journey().storyChoice).toMatchObject({

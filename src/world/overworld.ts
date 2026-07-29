@@ -1949,6 +1949,76 @@ function assertOpeningLeadSourceIntegrity(world: OverworldManifest): void {
   }
 }
 
+function formatOpeningStartingDoctrineCost(args: { minutes: number; money: number }): string {
+  const time = args.minutes === 0 ? "no added time" : `${String(args.minutes)} minutes`;
+  return `${time} and $${String(args.money)}`;
+}
+
+function assertOpeningStartingDoctrineIntegrity(world: OverworldManifest): void {
+  const registration = world.opening_registration;
+  const doctrines = registration?.doctrines;
+  if (!registration || !doctrines) return;
+
+  const oath = world.opening_relief_oath;
+  if (!oath || oath.after_registration !== registration.id) {
+    throw new Error("Opening starting doctrines require this world's relief oath.");
+  }
+  const leadSource = world.opening_lead_source;
+  if (!leadSource || leadSource.after_registration !== registration.id) {
+    throw new Error("Opening starting doctrines require this world's lead source.");
+  }
+  if (oath.target_quest !== leadSource.target_quest) {
+    throw new Error(
+      "Opening starting doctrines require relief-oath and lead-source choices for the same quest.",
+    );
+  }
+
+  for (const doctrine of doctrines) {
+    const profile = registration.profiles.find((candidate) => candidate.id === doctrine.profile_id);
+    if (!profile) {
+      throw new Error(
+        `Opening starting doctrine "${doctrine.id}" references missing registration profile "${doctrine.profile_id}".`,
+      );
+    }
+    const oathOption = oath.options.find(
+      (candidate) => candidate.id === doctrine.relief_oath_option_id,
+    );
+    if (!oathOption) {
+      throw new Error(
+        `Opening starting doctrine "${doctrine.id}" references missing relief-oath option "${doctrine.relief_oath_option_id}".`,
+      );
+    }
+    const leadSourceOption = leadSource.options.find(
+      (candidate) => candidate.id === doctrine.lead_source_option_id,
+    );
+    if (!leadSourceOption) {
+      throw new Error(
+        `Opening starting doctrine "${doctrine.id}" references missing lead-source option "${doctrine.lead_source_option_id}".`,
+      );
+    }
+
+    const oathApplication = applyOpeningReliefOathOption({
+      scene: oath,
+      character: profile.character,
+      optionId: oathOption.id,
+    });
+    const sourceApplication = applyOpeningLeadSourceOption({
+      scene: leadSource,
+      character: oathApplication.characterAfter,
+      optionId: leadSourceOption.id,
+    });
+    const expectedCost = formatOpeningStartingDoctrineCost({
+      minutes: oathApplication.terms.minutes + sourceApplication.terms.minutes,
+      money: sourceApplication.terms.money,
+    });
+    if (doctrine.immediate_cost !== expectedCost) {
+      throw new Error(
+        `Opening starting doctrine "${doctrine.id}" immediate cost must be "${expectedCost}", got "${doctrine.immediate_cost}".`,
+      );
+    }
+  }
+}
+
 function assertOpeningPreparationIntegrity(world: OverworldManifest): void {
   const scene = world.opening_preparation;
   if (!scene) return;
@@ -3457,6 +3527,8 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
   assertOpeningReliefOathIntegrity(world);
 
   assertOpeningLeadSourceIntegrity(world);
+
+  assertOpeningStartingDoctrineIntegrity(world);
 
   assertOpeningPreparationIntegrity(world);
   assertQuestsIntegrity(world, nodes, areaIds, areaHomes);

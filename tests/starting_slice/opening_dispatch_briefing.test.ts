@@ -20,7 +20,7 @@ const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
 const ALLY_CONTACT = WORLD.characters.find((character) => character.id === ALLY.contact)!;
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
-const REGISTRATION_HEADER = `Choose who you were and the promise you carry. Compare exact cost and what each role gives up. ${FIELD_CHECK_TIMING}`;
+const REGISTRATION_HEADER = `Choose a doctrine or custom role. Compare its promise, exact cost, what it gives up, and what remains open. ${FIELD_CHECK_TIMING}`;
 const OATH_HEADER = `Choose whose authority you accept and the promise you make. Compare exact cost and what each duty gives up. ${FIELD_CHECK_TIMING}`;
 const SOURCE_HEADER = `Certify one account; the other two close. Compare its priority, exact cost, and what it gives up. ${FIELD_CHECK_TIMING}`;
 const PREPARATION_HEADER = `Choose one optional field priority, or leave without one. Compare exact cost and what it gives up. ${FIELD_CHECK_TIMING}`;
@@ -178,22 +178,16 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     session.scoutPoi(opening.pois[0]!.id);
     session.talkToCharacter(REGISTRATION.contact);
 
-    const registration = expectStage(session, {
-      id: REGISTRATION.id,
-      kind: "registration",
-      phase: "Civic docket",
-      step: 1,
-      total: 3,
-      label: "role",
-      originalTitle: REGISTRATION.title,
-      originalMessage: REGISTRATION.message,
-      presentedMessage: REGISTRATION_HEADER,
-    });
+    const registration = currentStoryChoice(session);
+    expect(registration).toMatchObject({ id: REGISTRATION.id, kind: "registration" });
+    expect(registration.message).toContain(`${WOLF.title} Civic start — doctrine or custom role.`);
+    expect(registration.message).toContain(`${REGISTRATION.title}. ${REGISTRATION_HEADER}`);
+    expect(registration.message).not.toContain(REGISTRATION.message);
     expect(registration.message).toContain(`Mission preview — ${WOLF.discovery}`);
-    expect(registration.message).toContain("At Civic: role → duty → evidence");
     expect(registration.message).toContain(
-      "Choose only your role now; duty and evidence follow. None locks your field solution.",
+      "A doctrine commits role, duty, and evidence together. A custom role commits role; duty and evidence follow. Both leave solutions open.",
     );
+    expect(registration.message).not.toContain("Choose only your role now");
     expectRoleplayFirstFraming(registration);
     expect(wordCount(registration.message)).toBeLessThanOrEqual(120);
     expectSummaryFirstOptions(registration);

@@ -204,9 +204,14 @@ export type JourneyStoryChoiceDispatchImpact = Readonly<{
   proofHash: string;
 }>;
 
+/** Optional presentation-only section for the opening registration cards. */
+export type JourneyStoryChoiceOptionGroup = "doctrine" | "custom_role";
+
 export type JourneyStoryChoiceOption = Readonly<{
   id: string;
   label: string;
+  /** Present only when a registration prompt separates doctrine and custom-role starts. */
+  group?: JourneyStoryChoiceOptionGroup;
   summary?: JourneyStoryChoiceSummary;
   /** Present only on the current authenticated Albany preparation comparison. */
   dispatchForecast?: JourneyStoryChoiceDispatchForecast;

@@ -7,6 +7,8 @@ import {
 } from "../../src/world/campaign_character_state.js";
 import {
   OPENING_REGISTRATION_MAX_PROFILES,
+  OPENING_REGISTRATION_MAX_DOCTRINES,
+  OPENING_REGISTRATION_MIN_DOCTRINES,
   OPENING_REGISTRATION_MIN_PROFILES,
   OPENING_REGISTRATION_VERSION,
   applyOpeningRegistrationProfile,
@@ -43,7 +45,54 @@ function profileCharacter(profileId: string, index: number): CampaignCharacterSt
   });
 }
 
-function registrationInput(profileCount: number = OPENING_REGISTRATION_MIN_PROFILES) {
+function startingDoctrineInput() {
+  return [
+    {
+      id: "doctrine:fortify",
+      title: "Fortify the breach",
+      summary: "Repair joins public duty on the first dispatch.",
+      trigger_category: "FORTIFY focus: repair the public breach.",
+      preview: "Repair expertise travels with the Full Compact duty.",
+      tradeoff: "The other opening choices remain normal decisions.",
+      consequence: "Preparation, relief allocation, June, and road remain unselected.",
+      immediate_cost: "10 minutes and $0",
+      profile_id: PROFILE_IDS[2],
+      relief_oath_option_id: "oath:full_compact",
+      lead_source_option_id: "source:civic_docket",
+    },
+    {
+      id: "doctrine:aid",
+      title: "Hold the aid line",
+      summary: "Mediation joins a bounded public dispatch.",
+      trigger_category: "LURE focus: keep the cattle alarm quiet.",
+      preview: "Mediation travels with the Aid-Only duty.",
+      tradeoff: "The other opening choices remain normal decisions.",
+      consequence: "Preparation, relief allocation, June, and road remain unselected.",
+      immediate_cost: "5 minutes and $0",
+      profile_id: PROFILE_IDS[1],
+      relief_oath_option_id: "oath:aid_only",
+      lead_source_option_id: "source:civic_docket",
+    },
+    {
+      id: "doctrine:drive",
+      title: "Drive on a personal bond",
+      summary: "Streetwise joins a personal dispatch bond.",
+      trigger_category: "DRIVE focus: read the first shutter signal.",
+      preview: "Streetwise travels with the personal bond.",
+      tradeoff: "The other opening choices remain normal decisions.",
+      consequence: "Preparation, relief allocation, June, and road remain unselected.",
+      immediate_cost: "no added time and $0",
+      profile_id: PROFILE_IDS[3],
+      relief_oath_option_id: "oath:personal_bond",
+      lead_source_option_id: "source:civic_docket",
+    },
+  ];
+}
+
+function registrationInput(
+  profileCount: number = OPENING_REGISTRATION_MIN_PROFILES,
+  includeDoctrines: boolean = false,
+) {
   return {
     version: OPENING_REGISTRATION_VERSION,
     id: "albany:relief_registration",
@@ -61,6 +110,7 @@ function registrationInput(profileCount: number = OPENING_REGISTRATION_MIN_PROFI
       consequence: `This history becomes the character's permanent background ${id}.`,
       character: profileCharacter(id, index),
     })),
+    ...(includeDoctrines ? { doctrines: startingDoctrineInput() } : {}),
   };
 }
 
@@ -101,7 +151,7 @@ describe("opening registration", () => {
   });
 
   it("deeply detaches parsed and cloned scenes", () => {
-    const input = registrationInput();
+    const input = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
     const parsed = parseOpeningRegistration(input);
     const cloned = cloneOpeningRegistration(parsed);
     const parsedBefore = structuredClone(parsed);
@@ -109,12 +159,78 @@ describe("opening registration", () => {
     input.title = "Changed authoring title";
     input.profiles[0]!.summary = "Changed authoring summary";
     input.profiles[0]!.character.skills[0]!.rank = 5;
+    input.doctrines![0]!.preview = "Changed authoring doctrine preview";
     cloned.message = "Changed cloned message";
     cloned.profiles[0]!.preview = "Changed cloned preview";
     cloned.profiles[0]!.character.knowledge.push("knowledge:changed_clone");
+    cloned.doctrines![0]!.title = "Changed cloned doctrine title";
 
     expect(parsed).toEqual(parsedBefore);
     expect(cloned).not.toEqual(parsed);
+  });
+
+  it("parses optional starting doctrines as complete, distinct opening selections", () => {
+    const input = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    const parsed = parseOpeningRegistration(input);
+
+    expect(parsed.doctrines).toHaveLength(OPENING_REGISTRATION_MIN_DOCTRINES);
+    expect(parsed.doctrines?.map((doctrine) => doctrine.id)).toEqual([
+      "doctrine:fortify",
+      "doctrine:aid",
+      "doctrine:drive",
+    ]);
+    expect(parsed.doctrines?.[0]).toMatchObject({
+      profile_id: PROFILE_IDS[2],
+      relief_oath_option_id: "oath:full_compact",
+      lead_source_option_id: "source:civic_docket",
+      immediate_cost: "10 minutes and $0",
+    });
+  });
+
+  it("rejects incomplete, duplicated, or missing-category starting doctrines", () => {
+    const tooFew = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    tooFew.doctrines = tooFew.doctrines!.slice(0, OPENING_REGISTRATION_MIN_DOCTRINES - 1);
+    expect(() => parseOpeningRegistration(tooFew)).toThrow();
+
+    const tooMany = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    tooMany.doctrines = Array.from({ length: OPENING_REGISTRATION_MAX_DOCTRINES + 1 }, () =>
+      structuredClone(tooMany.doctrines![0]!),
+    );
+    expect(() => parseOpeningRegistration(tooMany)).toThrow();
+
+    const duplicateId = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    duplicateId.doctrines![1]!.id = duplicateId.doctrines![0]!.id;
+    expect(() => parseOpeningRegistration(duplicateId)).toThrow(/duplicate.*doctrine id/i);
+
+    const profileCollision = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    profileCollision.doctrines![0]!.id = PROFILE_IDS[0];
+    expect(() => parseOpeningRegistration(profileCollision)).toThrow(/collides.*profile id/i);
+
+    const repeatedSelection = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    repeatedSelection.doctrines![1] = {
+      ...repeatedSelection.doctrines![1]!,
+      profile_id: repeatedSelection.doctrines![0]!.profile_id,
+      relief_oath_option_id: repeatedSelection.doctrines![0]!.relief_oath_option_id,
+      lead_source_option_id: repeatedSelection.doctrines![0]!.lead_source_option_id,
+    };
+    expect(() => parseOpeningRegistration(repeatedSelection)).toThrow(/must not repeat/i);
+
+    const partialCategories = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    const { trigger_category: omittedTriggerCategory, ...missingTriggerCategory } =
+      partialCategories.doctrines![1]!;
+    expect(omittedTriggerCategory).toBeDefined();
+    expect(() =>
+      parseOpeningRegistration({
+        ...partialCategories,
+        doctrines: partialCategories.doctrines!.map((doctrine, index) =>
+          index === 1 ? missingTriggerCategory : doctrine,
+        ),
+      }),
+    ).toThrow();
+
+    const blankCost = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    blankCost.doctrines![0]!.immediate_cost = "  ";
+    expect(() => parseOpeningRegistration(blankCost)).toThrow(/blank/i);
   });
 
   it("rejects wrong versions, unknown fields, blank text, and profile counts outside bounds", () => {

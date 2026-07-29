@@ -18,6 +18,49 @@ export type TerminalStoryChoiceControllerResult =
 type StructuredJourneyStoryChoiceOption = JourneyStoryChoiceOption &
   Readonly<{ summary: JourneyStoryChoiceSummary }>;
 
+const REGISTRATION_OPTION_GROUPS = [
+  ["doctrine", "Start with a doctrine"],
+  ["custom_role", "Build a custom role"],
+] as const;
+
+type GroupedRegistrationOptions = readonly Readonly<{
+  label: string;
+  options: readonly StructuredJourneyStoryChoiceOption[];
+}>[];
+
+function groupedRegistrationOptions(
+  prompt: JourneyStoryChoicePrompt,
+): GroupedRegistrationOptions | null {
+  const options = structuredOptions(prompt);
+  if (
+    prompt.kind !== "registration" ||
+    !options ||
+    !options.some((option) => option.group !== undefined)
+  ) {
+    return null;
+  }
+  return REGISTRATION_OPTION_GROUPS.map(([group, label]) =>
+    Object.freeze({
+      label,
+      options: Object.freeze(
+        options.filter(
+          (option) =>
+            option.group === group || (group === "custom_role" && option.group === undefined),
+        ),
+      ),
+    }),
+  ).filter((group) => group.options.length > 0);
+}
+
+function orderedStructuredOptions(
+  prompt: JourneyStoryChoicePrompt,
+): readonly StructuredJourneyStoryChoiceOption[] | null {
+  const options = structuredOptions(prompt);
+  if (!options) return null;
+  const grouped = groupedRegistrationOptions(prompt);
+  return grouped ? grouped.flatMap((group) => group.options) : options;
+}
+
 function structuredOptions(
   prompt: JourneyStoryChoicePrompt,
 ): readonly StructuredJourneyStoryChoiceOption[] | null {
@@ -73,7 +116,7 @@ export function renderTerminalStoryChoiceComparison(
     `  ${comparison.message}`,
     "  Compare the cards, then use one exact command shown below:",
   ];
-  comparison.options.forEach((option, index) => {
+  const renderOption = (option: (typeof comparison.options)[number], index: number): void => {
     if (!option.summary) {
       throw new Error(`Story choice "${prompt.id}" lost a structured comparison summary.`);
     }
@@ -83,7 +126,24 @@ export function renderTerminalStoryChoiceComparison(
     if (option.dispatchForecast) lines.push(`       ${option.dispatchForecast.line}`);
     lines.push(`       Inspect: \`inspect ${option.id}\``);
     lines.push(`       Choose: \`choose ${option.id}\``);
-  });
+  };
+  const grouped = groupedRegistrationOptions(prompt);
+  if (grouped) {
+    let index = 0;
+    for (const group of grouped) {
+      lines.push(`  ${group.label}`);
+      for (const option of group.options) {
+        const comparisonOption = comparison.options.find((candidate) => candidate.id === option.id);
+        if (!comparisonOption) {
+          throw new Error(`Story choice "${prompt.id}" lost option "${option.id}".`);
+        }
+        renderOption(comparisonOption, index);
+        index += 1;
+      }
+    }
+  } else {
+    comparison.options.forEach(renderOption);
+  }
   lines.push(
     config.allowComparisonExit
       ? "  `back` or `cancel` leaves this optional comparison without changing the journey."
@@ -154,7 +214,7 @@ export async function runTerminalStoryChoiceController(args: {
     line: string,
   ) => TerminalStoryChoiceAuxiliaryResult | Promise<TerminalStoryChoiceAuxiliaryResult>;
 }): Promise<TerminalStoryChoiceControllerResult> {
-  const options = structuredOptions(args.prompt);
+  const options = orderedStructuredOptions(args.prompt);
   if (!options) {
     throw new Error(`Story choice "${args.prompt.id}" cannot use the structured controller.`);
   }

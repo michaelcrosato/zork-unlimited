@@ -120,7 +120,10 @@ import {
   serializeCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
-import { applyOpeningRegistrationProfile } from "./opening_registration.js";
+import {
+  applyOpeningRegistrationProfile,
+  type OpeningStartingDoctrine,
+} from "./opening_registration.js";
 import { applyOpeningAllyOption } from "./opening_ally.js";
 import {
   openingAllyJournalEntry,
@@ -781,6 +784,106 @@ export class OverworldSession {
       return null;
     }
     return registration;
+  }
+
+  /**
+   * Resolve every authored reference before a doctrine starts the canonical
+   * registration → oath → source sequence. The sequence itself deliberately
+   * reuses chooseJourneyStory so its durable proof boundaries remain identical
+   * to three ordinary selections.
+   */
+  private preflightOpeningRegistrationDoctrine(
+    registration: NonNullable<OverworldManifest["opening_registration"]>,
+    doctrineId: string,
+  ) {
+    const doctrine = registration.doctrines?.find((candidate) => candidate.id === doctrineId);
+    if (!doctrine) return null;
+
+    const profile = registration.profiles.find((candidate) => candidate.id === doctrine.profile_id);
+    if (!profile) {
+      throw new Error(
+        `Opening doctrine "${doctrine.id}" references unknown registration profile "${doctrine.profile_id}".`,
+      );
+    }
+
+    const reliefOath = this.world.opening_relief_oath;
+    if (
+      !reliefOath ||
+      reliefOath.after_registration !== registration.id ||
+      reliefOath.home !== registration.home ||
+      reliefOath.area !== registration.area
+    ) {
+      throw new Error(`Opening doctrine "${doctrine.id}" requires a compatible relief-oath scene.`);
+    }
+    const reliefOathOption = reliefOath.options.find(
+      (candidate) => candidate.id === doctrine.relief_oath_option_id,
+    );
+    if (!reliefOathOption) {
+      throw new Error(
+        `Opening doctrine "${doctrine.id}" references unknown relief-oath option "${doctrine.relief_oath_option_id}".`,
+      );
+    }
+
+    const leadSource = this.world.opening_lead_source;
+    if (
+      !leadSource ||
+      leadSource.after_registration !== registration.id ||
+      leadSource.home !== registration.home ||
+      leadSource.area !== registration.area ||
+      leadSource.target_quest !== reliefOath.target_quest ||
+      !this.questsById.has(leadSource.target_quest)
+    ) {
+      throw new Error(`Opening doctrine "${doctrine.id}" requires a compatible lead-source scene.`);
+    }
+    const leadSourceOption = leadSource.options.find(
+      (candidate) => candidate.id === doctrine.lead_source_option_id,
+    );
+    if (!leadSourceOption) {
+      throw new Error(
+        `Opening doctrine "${doctrine.id}" references unknown lead-source option "${doctrine.lead_source_option_id}".`,
+      );
+    }
+
+    // Validate the canonical state transformations before mutating this
+    // session. The live sequence below still owns the durable journals and
+    // accepted-decision proofs.
+    const registeredCharacter = applyOpeningRegistrationProfile({
+      registration,
+      character: this.characterState,
+      profileId: profile.id,
+    });
+    const swornCharacter = applyOpeningReliefOathOption({
+      scene: reliefOath,
+      character: registeredCharacter,
+      optionId: reliefOathOption.id,
+    }).characterAfter;
+    applyOpeningLeadSourceOption({
+      scene: leadSource,
+      character: swornCharacter,
+      optionId: leadSourceOption.id,
+    });
+
+    return Object.freeze({
+      doctrine,
+      profile,
+      reliefOath,
+      reliefOathOption,
+      leadSource,
+      leadSourceOption,
+    });
+  }
+
+  private openingRegistrationDoctrineReceipt(args: {
+    doctrine: OpeningStartingDoctrine;
+    profileTitle: string;
+    reliefOathTitle: string;
+    leadSourceTitle: string;
+  }): string {
+    return (
+      `${args.doctrine.preview} Exact opening cost: ${args.doctrine.immediate_cost}. ` +
+      `${args.doctrine.consequence} Commitments: role — ` +
+      `${args.profileTitle}; duty — ${args.reliefOathTitle}; source — ${args.leadSourceTitle}.`
+    );
   }
 
   private openingLeadSourceResolved(): boolean {
@@ -1727,6 +1830,33 @@ export class OverworldSession {
       const registration = this.openingRegistrationAvailable();
       if (!registration || storyChoice.id !== registration.id) {
         throw new Error("The presented opening registration is no longer available.");
+      }
+      const doctrine = this.preflightOpeningRegistrationDoctrine(registration, choiceId);
+      if (doctrine) {
+        this.chooseJourneyStory(doctrine.profile.id, storyChoice.id);
+        this.chooseJourneyStory(doctrine.reliefOathOption.id);
+        const leadSourceSelection = this.chooseJourneyStory(doctrine.leadSourceOption.id);
+        const consequence = this.openingRegistrationDoctrineReceipt({
+          doctrine: doctrine.doctrine,
+          profileTitle: doctrine.profile.title,
+          reliefOathTitle: doctrine.reliefOathOption.title,
+          leadSourceTitle: doctrine.leadSourceOption.title,
+        });
+        return Object.freeze({
+          storyChoiceId: storyChoice.id,
+          choiceId,
+          consequence,
+          goal: leadSourceSelection.goal,
+          entry: Object.freeze({
+            ...leadSourceSelection.entry,
+            title: `Doctrine confirmed: ${doctrine.doctrine.title}`,
+            text: consequence,
+          }),
+          // The three canonical calls above each record their own counted
+          // decision. The returned classification represents their final source
+          // certification, which is the immediate visible outcome.
+          journeyDecision: leadSourceSelection.journeyDecision,
+        });
       }
       const characterAfter = applyOpeningRegistrationProfile({
         registration,
