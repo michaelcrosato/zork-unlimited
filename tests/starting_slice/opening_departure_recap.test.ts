@@ -4,6 +4,7 @@ import { render } from "../../bin/overworld_play.js";
 import {
   OVERWORLD_COMPACT_VIEW_VERSION,
   cloneOverworldCompactView,
+  compactOverworldQuestRef,
   compactOverworldView,
 } from "../../src/world/compact_view.js";
 import {
@@ -186,7 +187,22 @@ describe("Albany opening departure recap", () => {
       "departure_contact_leads",
     ];
     expect(launchFirstKeys(compact)).toEqual(expectedLaunchFirstKeys);
-    expect(launchFirstKeys(compactOverworldView(full))).toEqual(expectedLaunchFirstKeys);
+    const projectedFull = compactOverworldView(full);
+    expect(launchFirstKeys(projectedFull)).toEqual(expectedLaunchFirstKeys);
+    expect(projectedFull.quests).toEqual(compact.quests);
+    const wolfQuest = full.quests.find((quest) => quest.id === WOLF.id);
+    if (!wolfQuest?.launch) throw new Error("Expected the legal Wolf-Winter launch card.");
+    const defaultWolfRef = compactOverworldQuestRef(wolfQuest);
+    const focusedWolfRef = compact.quests?.find(([questId]) => questId === WOLF.id);
+    if (!focusedWolfRef?.[3]) throw new Error("Expected the focused Wolf-Winter launch card.");
+    expect(focusedWolfRef[3][2].every((option) => option[11] === null)).toBe(true);
+    expect(focusedWolfRef[3][2].every((option) => option[12] === null)).toBe(true);
+    expect(focusedWolfRef[3][2].map((option) => option[13])).toEqual(
+      wolfQuest.launch.options.map((option) => option.tradeoffSummary ?? option.summary),
+    );
+    expect(
+      JSON.stringify(defaultWolfRef).length - JSON.stringify(focusedWolfRef).length,
+    ).toBeGreaterThan(700);
     const gatedView = { ...full, questStarts: [] };
     const gatedCompact = compactOverworldView(gatedView);
     const expectedPlanningFirstKeys = [
@@ -199,6 +215,9 @@ describe("Albany opening departure recap", () => {
     expect(launchFirstKeys(cloneOverworldCompactView(gatedCompact))).toEqual(
       expectedPlanningFirstKeys,
     );
+    const gatedWolfRef = gatedCompact.quests?.find(([questId]) => questId === WOLF.id);
+    expect(gatedWolfRef?.[3]?.[2].every((option) => typeof option[11] === "string")).toBe(true);
+    expect(gatedWolfRef?.[3]?.[2].every((option) => typeof option[12] === "string")).toBe(true);
     const gatedTerminal = render(gatedView);
     expect(gatedTerminal).not.toContain("Depart now:");
     expect(gatedTerminal.indexOf(`${WOLF.title} dispatch recap:`)).toBeLessThan(

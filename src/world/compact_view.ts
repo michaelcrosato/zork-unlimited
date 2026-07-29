@@ -44,7 +44,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 34 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 35 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -109,9 +109,9 @@ export type OverworldCompactQuestLaunchOption = readonly [
   fatigueAfter: number | null,
   conditionAfter: string | null,
   blockedReason: string | null,
-  preview: string,
-  consequence: string,
-  tradeoffSummary: string | null,
+  preview: string | null,
+  consequence: string | null,
+  strategicComparison: string | null,
 ];
 export type OverworldCompactQuestLaunch = readonly [
   id: string,
@@ -475,7 +475,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "[[job_id, title, area_id], ...] discovered unfinished jobs in other known areas; walk to area_id via area_routes before work_overworld_session_job",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
   quests:
-    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview, consequence, tradeoff_summary|null]], selected_approach_id|null]?], ...] discovered quest leads; choose one available approach for launch-enabled quests, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
+    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview|null, consequence|null, strategic_comparison|null]], selected_approach_id|null]?], ...] discovered quest leads. When quest_id is currently named by quest_starts and an option has a dedicated strategic comparison, preview and consequence are null to remove duplicate launch prose while strategic_comparison keeps its decision-complete route tradeoff; options without that dedicated comparison retain full preview and consequence. Exact cost, availability, and projected arrival remain in every row, and full launch prose returns in the accepted action receipt. Choose one available approach, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
   quest_start_locations:
     "[[quest_id, anchor_area_name], ...] location requirement for visible unstarted quests anchored outside here[3]; advisory only, not a legal launch menu. Move there via area_routes, then use quest_starts when present",
   quest_starts:
@@ -546,12 +546,15 @@ export function compactOverworldJobLeadRef(value: {
   return [value.id, compactOverworldTitle(value.title), value.area];
 }
 
-export function compactOverworldQuestRef(value: {
-  id: string;
-  title: string;
-  area: string;
-  launch?: OverworldQuestLaunchView;
-}): OverworldCompactQuestRef {
+export function compactOverworldQuestRef(
+  value: {
+    id: string;
+    title: string;
+    area: string;
+    launch?: OverworldQuestLaunchView;
+  },
+  focusLaunchDecision = false,
+): OverworldCompactQuestRef {
   const base = [value.id, compactOverworldTitle(value.title), value.area] as const;
   if (!value.launch) return base;
   const launch: OverworldCompactQuestLaunch = [
@@ -559,6 +562,7 @@ export function compactOverworldQuestRef(value: {
     compactText(value.launch.prompt, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
     value.launch.options.map((option) => {
       const projection = option.projection;
+      const focusOption = focusLaunchDecision && option.tradeoffSummary !== undefined;
       return [
         option.id,
         compactOverworldTitle(option.title),
@@ -571,9 +575,15 @@ export function compactOverworldQuestRef(value: {
         projection?.fatigueAfter ?? null,
         projection?.travelConditionAfter ?? null,
         projection?.blockedReason ?? null,
-        compactText(option.preview, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
-        compactText(option.consequence, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
-        option.tradeoffSummary ?? null,
+        focusOption
+          ? null
+          : compactText(option.preview, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+        focusOption
+          ? null
+          : compactText(option.consequence, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
+        focusOption
+          ? compactText(option.tradeoffSummary, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT)
+          : (option.tradeoffSummary ?? null),
       ] as const;
     }),
     value.launch.selected?.optionId ?? null,
@@ -738,11 +748,13 @@ export function compactOverworldQuestRefs(
     launch?: OverworldQuestLaunchView;
   }[],
   limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+  focusedQuestIds?: ReadonlySet<string>,
 ): OverworldCompactQuestRef[] {
   const refs: OverworldCompactQuestRef[] = [];
   const capped = Math.min(values.length, limit);
   for (let index = 0; index < capped; index += 1) {
-    refs.push(compactOverworldQuestRef(values[index]!));
+    const value = values[index]!;
+    refs.push(compactOverworldQuestRef(value, focusedQuestIds?.has(value.id) === true));
   }
   return refs;
 }
@@ -1443,14 +1455,18 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   );
   const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
-  const quests = compactOverworldQuestRefs(view.quests);
+  const questStarts = compactOverworldQuestStarts(view.questStarts);
+  const quests = compactOverworldQuestRefs(
+    view.quests,
+    OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+    new Set(questStarts.map(([questId]) => questId)),
+  );
   const questStartLocations = compactOverworldQuestStartLocations(
     view.quests,
     view.currentArea?.id ?? null,
     new Set(view.startedQuestIds),
     new Map(view.areas.map((area) => [area.id, area.name])),
   );
-  const questStarts = compactOverworldQuestStarts(view.questStarts);
   const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);
   const serviceActions = compactOverworldServiceActions(view.serviceActions);
   const departureInteractions = compactOverworldDepartureInteractions(view.departureInteractions);

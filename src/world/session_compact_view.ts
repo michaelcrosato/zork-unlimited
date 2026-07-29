@@ -134,14 +134,18 @@ export function buildOverworldSessionCompactView(
   );
   const rememberedJobs = compactOverworldJobLeadRefs(state.rememberedJobs);
   const sites = compactOverworldTitleRefs(state.sites);
-  const quests = compactOverworldQuestRefs(state.quests);
+  const questStarts = compactOverworldQuestStarts(state.questStarts);
+  const quests = compactOverworldQuestRefs(
+    state.quests,
+    OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
+    new Set(questStarts.map(([questId]) => questId)),
+  );
   const questStartLocations = compactOverworldQuestStartLocations(
     state.quests,
     state.currentArea?.id ?? null,
     state.ids.startedQuestIds,
     new Map(state.areas.map((area) => [area.id, area.name])),
   );
-  const questStarts = compactOverworldQuestStarts(state.questStarts);
   const pendingRoad = compactPendingRoad(state.pendingRoadEncounter);
   const journal = compactOverworldJournalEntries(state.journalEntries);
   const travelLog = compactOverworldTravelLog(state.travelLog);

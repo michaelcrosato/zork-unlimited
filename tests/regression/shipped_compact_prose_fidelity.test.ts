@@ -798,6 +798,9 @@ describe("shipped compact prose fidelity", () => {
       for (const option of launch.options) {
         const projected = compact[3][2].find(([optionId]) => optionId === option.id);
         expect(projected).toBeDefined();
+        if (projected![11] === null || projected![12] === null) {
+          throw new Error(`quest:${quest.id}.${option.id} default projection lost full prose`);
+        }
         expectExact(`quest:${quest.id}.${option.id}.preview`, option.preview, projected![11]);
         expectExact(
           `quest:${quest.id}.${option.id}.consequence`,

@@ -839,7 +839,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).not.toBe("relief_allocation");
     expect(
       a.get_overworld_session_context({ session_id: started.session_id }).context.quests?.[0],
-    ).toEqual(compactOverworldQuestRef(discoveredQuest));
+    ).toEqual(compactOverworldQuestRef(discoveredQuest, true));
     const routeAwayFromQuest = sourced.areaExits.find(
       (exit) => exit.destination.id !== discoveredQuest.area,
     );

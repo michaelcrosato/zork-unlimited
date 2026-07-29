@@ -369,7 +369,51 @@ describe("overworld quest launch", () => {
         "test:exposed_ridge",
       ],
     ]);
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(34);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(35);
+
+    const focused = compactOverworldQuestRef(
+      {
+        id: "test_quest",
+        title: "Test Quest",
+        area: "test_area",
+        launch,
+      },
+      true,
+    );
+    const focusedOption = focused[3]?.[2][0];
+    expect(focusedOption?.slice(0, 11)).toEqual([
+      "test:exposed_ridge",
+      "Take the ridge",
+      30,
+      1,
+      25,
+      true,
+      510,
+      5,
+      25,
+      "tired",
+      null,
+    ]);
+    expect(focusedOption?.slice(11)).toEqual([
+      LAUNCH.options[0]!.preview,
+      LAUNCH.options[0]!.consequence,
+      null,
+    ]);
+
+    const tradeoff = "Current commitments make the ridge the cattle-safe route.";
+    const focusedTradeoff = compactOverworldQuestRef(
+      {
+        id: "test_quest",
+        title: "Test Quest",
+        area: "test_area",
+        launch: {
+          ...launch,
+          options: [{ ...launch.options[0]!, tradeoffSummary: tradeoff }],
+        },
+      },
+      true,
+    );
+    expect(focusedTradeoff[3]?.[2][0]?.slice(11)).toEqual([null, null, tradeoff]);
 
     const blocked = compactOverworldQuestRef({
       id: "test_quest",

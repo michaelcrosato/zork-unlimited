@@ -21,21 +21,21 @@ const AID_ONLY_KNOWLEDGE_ID = "albany:knowledge_wolf_limited_aid_only";
 
 const ROUTE_SUMMARIES = Object.freeze({
   exposedRidge:
-    "Hill lip 0; final descent 1; first lure DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
+    "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; a clean lure reaches alarm 4 and scatters two cattle.",
   exposedRidgeWithAidOnly:
-    "Hill lip 0; final descent 1; first lure DC 10; aid-only suppresses the final clean-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
+    "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; aid-only suppresses the final clean-cast alarm: alarm 3, whole herd.",
   exposedRidgeWithFodder:
-    "Hill lip 0; final descent 1; first lure DC 10; Cade fodder suppresses the clean first-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
+    "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; Cade fodder suppresses the first clean-cast alarm: alarm 3, whole herd.",
   exposedRidgeWithFodderAndAidOnly:
-    "Hill lip 0; final descent 1; first lure DC 10; Cade fodder and aid-only suppress the first and final clean-cast alarms: alarm 2, whole herd.",
+    "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; Cade fodder and aid-only suppress two clean-cast alarms: alarm 2, whole herd.",
   shelteredStockway:
-    "Arrival alarm 0; first lure cast DC 12; a clean lure reaches alarm 3 and keeps the whole herd.",
+    "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); a clean lure reaches alarm 3 and keeps the whole herd.",
   shelteredStockwayWithAidOnly:
-    "Arrival alarm 0; first lure cast DC 12; aid-only suppresses the final clean-cast alarm, so a clean lure reaches alarm 2 and keeps the whole herd.",
+    "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); aid-only suppresses the final clean-cast alarm: alarm 2, whole herd.",
   shelteredStockwayWithFodder:
-    "Arrival alarm 0; first lure cast DC 12; Cade fodder does not alter the sheltered route; a clean lure reaches alarm 3 and keeps the whole herd.",
+    "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); Cade fodder leaves this route at alarm 3, whole herd.",
   shelteredStockwayWithFodderAndAidOnly:
-    "Arrival alarm 0; first lure cast DC 12; Cade fodder does not alter this route; aid-only makes the clean-lure result alarm 2, whole herd.",
+    "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); Cade fodder leaves this route unchanged; aid-only makes clean lure alarm 2, whole herd.",
 });
 
 const EXPOSED_RIDGE_WITH_FODDER_PREVIEW =
