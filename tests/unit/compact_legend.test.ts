@@ -59,6 +59,12 @@ describe("compact legends", () => {
     expect(started.legend?.quest_start_locations).toContain("advisory only");
     expect(started.legend?.quest_start_locations).toContain("area_routes");
     expect(started.legend?.quest_start_locations).toContain("quest_starts");
+    expect(started.legend?.quests).toContain("preview|null");
+    expect(started.legend?.quests).toContain("quest_starts");
+    expect(started.legend?.quests).toContain("strategic_comparison");
+    expect(started.legend?.quests).toContain("dedicated strategic comparison");
+    expect(started.legend?.quests).toContain("retain full preview and consequence");
+    expect(started.legend?.quests).toContain("accepted action receipt");
   });
 
   it("describes unavailable jobs and optional aftermath without overstating either", () => {

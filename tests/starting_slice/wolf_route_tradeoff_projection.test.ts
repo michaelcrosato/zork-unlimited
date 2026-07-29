@@ -53,7 +53,7 @@ const STALE_ABSOLUTE_RIDGE_RESULT =
   "A clean three-cast lure line therefore reaches alarm 4 (Breaking) and scatters cattle.";
 const STALE_ABSOLUTE_STOCKWAY_RESULT =
   "A clean three-cast lure line reaches alarm 3 (Restless), keeps the whole herd, and remains below Breaking.";
-const RIDGE_ENTRY_TIMING = "Hill lip 0; final descent 1";
+const RIDGE_ENTRY_TIMING = "visible descent starts alarm 1";
 
 const ROUTE_CARD_CASES = [
   {
@@ -64,13 +64,13 @@ const ROUTE_CARD_CASES = [
       ridge: {
         alarm: 4,
         summary:
-          "Hill lip 0; final descent 1; first lure DC 10; a clean lure reaches alarm 4 and scatters two cattle.",
+          "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; a clean lure reaches alarm 4 and scatters two cattle.",
         preview: STALE_ABSOLUTE_RIDGE_RESULT,
       },
       stockway: {
         alarm: 3,
         summary:
-          "Arrival alarm 0; first lure cast DC 12; a clean lure reaches alarm 3 and keeps the whole herd.",
+          "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); a clean lure reaches alarm 3 and keeps the whole herd.",
         preview: STALE_ABSOLUTE_STOCKWAY_RESULT,
       },
     },
@@ -83,14 +83,14 @@ const ROUTE_CARD_CASES = [
       ridge: {
         alarm: 3,
         summary:
-          "Hill lip 0; final descent 1; first lure DC 10; Cade fodder suppresses the clean first-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
+          "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; Cade fodder suppresses the first clean-cast alarm: alarm 3, whole herd.",
         preview:
           "Cade fodder suppresses the clean first-cast alarm; a clean lure reaches alarm 3 and keeps the whole herd.",
       },
       stockway: {
         alarm: 3,
         summary:
-          "Arrival alarm 0; first lure cast DC 12; Cade fodder does not alter the sheltered route; a clean lure reaches alarm 3 and keeps the whole herd.",
+          "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); Cade fodder leaves this route at alarm 3, whole herd.",
         preview:
           "Cade fodder does not alter this route; a clean lure reaches alarm 3 and keeps the whole herd.",
       },
@@ -104,14 +104,14 @@ const ROUTE_CARD_CASES = [
       ridge: {
         alarm: 3,
         summary:
-          "Hill lip 0; final descent 1; first lure DC 10; aid-only suppresses the final clean-cast alarm, so a clean lure reaches alarm 3 and keeps the herd.",
+          "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; aid-only suppresses the final clean-cast alarm: alarm 3, whole herd.",
         preview:
           "Aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 3 and keeps the whole herd.",
       },
       stockway: {
         alarm: 2,
         summary:
-          "Arrival alarm 0; first lure cast DC 12; aid-only suppresses the final clean-cast alarm, so a clean lure reaches alarm 2 and keeps the whole herd.",
+          "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); aid-only suppresses the final clean-cast alarm: alarm 2, whole herd.",
         preview:
           "Aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 2 and keeps the whole herd.",
       },
@@ -125,14 +125,14 @@ const ROUTE_CARD_CASES = [
       ridge: {
         alarm: 2,
         summary:
-          "Hill lip 0; final descent 1; first lure DC 10; Cade fodder and aid-only suppress the first and final clean-cast alarms: alarm 2, whole herd.",
+          "Open crest reveals wind (lure DC 10) but visible descent starts alarm 1; Cade fodder and aid-only suppress two clean-cast alarms: alarm 2, whole herd.",
         preview:
           "Cade fodder suppresses the first clean-cast alarm and aid-only suppresses the final one; a clean lure reaches alarm 2 and keeps the whole herd.",
       },
       stockway: {
         alarm: 2,
         summary:
-          "Arrival alarm 0; first lure cast DC 12; Cade fodder does not alter this route; aid-only makes the clean-lure result alarm 2, whole herd.",
+          "Hedges keep cattle calm at alarm 0 but hide wind (lure DC 12); Cade fodder leaves this route unchanged; aid-only makes clean lure alarm 2, whole herd.",
         preview:
           "Cade fodder does not alter this route, while aid-only suppresses the final ordinary clean-cast alarm; a clean lure reaches alarm 2 and keeps the whole herd.",
       },
@@ -254,7 +254,7 @@ function compactSummaries(session: OverworldSession): Record<string, string | nu
   return Object.fromEntries(launch[2].map((option) => [option[0], option[13]]));
 }
 
-function compactPreview(session: OverworldSession, optionId: string): string {
+function compactPreview(session: OverworldSession, optionId: string): string | null {
   const compactQuest = (session.compactView().quests ?? []).find(
     ([questId]) => questId === WOLF_ID,
   );
@@ -490,31 +490,19 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       const mcpStockwayPreview = mcpQuest.launch.options.find(
         (option) => option.id === STOCKWAY_ID,
       )?.preview;
-      for (const surface of [
-        ridgePreview,
-        mcpRidgePreview,
-        compactPreview(session, RIDGE_ID),
-        markup,
-        cli,
-      ]) {
+      for (const surface of [ridgePreview, mcpRidgePreview, markup, cli]) {
         expect(surface).toContain(expected.ridge.preview);
       }
-      for (const surface of [
-        stockwayPreview,
-        mcpStockwayPreview,
-        compactPreview(session, STOCKWAY_ID),
-        markup,
-        cli,
-      ]) {
+      expect(compactPreview(session, RIDGE_ID)).toBeNull();
+      for (const surface of [stockwayPreview, mcpStockwayPreview, markup, cli]) {
         expect(surface).toContain(expected.stockway.preview);
       }
+      expect(compactPreview(session, STOCKWAY_ID)).toBeNull();
       if (oathId === "albany:oath_limited_aid_only") {
         expect(ridgePreview).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
         expect(mcpRidgePreview).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
-        expect(compactPreview(session, RIDGE_ID)).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
         expect(stockwayPreview).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
         expect(mcpStockwayPreview).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
-        expect(compactPreview(session, STOCKWAY_ID)).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
         expect(markup).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);
         expect(markup).not.toContain(STALE_ABSOLUTE_STOCKWAY_RESULT);
         expect(cli).not.toContain(STALE_ABSOLUTE_RIDGE_RESULT);

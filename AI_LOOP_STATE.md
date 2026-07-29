@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 692 -->
+<!-- historical_cycle_count: 693 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - legal_launch_decision_focus
+
+- Evidence choice: ten recent verified reports named Albany/Station density in 6/10 and compact terminology in 5/10; the real legal Station context spent 34% of its bytes on two launch rows whose preview, consequence, and strategic comparison repeated the same road decision.
+- Surface: compact v35 nulls duplicate preview/consequence only for a currently legal option with a dedicated strategic comparison; exact costs, availability, projected arrival, causal route tradeoff, tuple positions, and every generic option remain complete, while full/UI/terminal and accepted-action receipts keep authored prose.
+- Measured effect: the real focused Station launch card removes 960 characters (~240 tokens, 14.6% of its prior compact context) without adding an inspection turn; open crest now explains visible wind/cattle alarm and hedges explain calm cattle/hidden wind rather than presenting only a numeric table.
+- Counterfactual: `quest_starts` alone authorizes focus; blocked terms, quest/start/completion results, state/hash, accepted decisions, saves, content mechanics, RNG, and outcomes are unchanged, with full/session/clone/MCP parity pinned and generic no-tradeoff quests failing open to full prose.
+- Pure evidence: exact-clean Terra seeds 73070–73072 verified 3/3, completed Wolf-Winter nonlethally and Gallowmere, had no rejection/loop/soft-lock, rated clarity/enjoyment 4/4, and chose replay-yes; the corrected compile now has 826 verified reports and 75 eligible pure exits.
+- Economy: three parallel one-attempt runs used 16.817M raw / 515.7k uncached input and 33.8k output at 96.93% cache reuse, or 549,443 useful tokens / 166 accepted decisions (~3,310 each), with no retry or fallback.
+- Self-critique/guard: 3/3 still named the broader legend/setup or parent-child handoff dense, so the next cycle should target that repeated layer rather than delete informed choices; independent reviews are clean, crawl `20260729T153325Z` has zero findings, and health passes 449 files/3,710 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - compact_quest_start_location
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: one clean continuation proves concrete reachability rather than a retention lift; the player repeated the Station-density S1, so freeze this layer and let the strict no-resume ten-player cohort decide.
 - Economy: the 73-turn canary used 5.498M raw / 170.3k uncached input and 12.4k output tokens at 96.9% cache reuse, or 3,382 useful tokens per accepted decision; no replacement was launched.
 - Guard: independent review added mobile stacking and full/compact MCP rejection proof, crawl `20260728T111047Z` is zero-finding, the local server booted but no browser surface could reach host loopback so no visual pass is claimed, and health passes 440 files/3,624 tests, both typechecks, and all 12 packs.
-
-### Cycle result - truthful_hunt_commitment_path
-
-- Evidence choice: the latest ten-Terra diagnostic produced 7 LURE / 3 FORTIFY and no HUNT runs, while HUNT's default card did not name its learned +2 attack/+5 tally or the action that closes the other living plans.
-- Surface: Cade's HUNT card now states cattle/reserve safety, wolf lethality, the learned bonuses, the leave-and-return sequence, June's acknowledgement gate when present, and that crossing north commits HUNT and closes LURE/DRIVE/FORTIFY.
-- Counterfactual: dialogue nodes, June's existing gate, movement, commitment, bonuses, resources, checks, combat, outcomes, and return consequences are unchanged; the canonical Wolf-Winter source hash moved honestly with the authored prompt.
-- Pure evidence: exact-clean Terra seed 72882 received the new card, freely chose LURE, completed The Wolf-Winter nonlethally at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes; later amendments changed tests only.
-- Self-critique/follow-through: this proves legibility rather than HUNT selection or strategy balance, and the player repeated the Station-density S1; do not rerun unchanged, and measure only after the locked Albany dispatch preview joins the consolidated build.
-- Economy: the one canary used 2.177M raw / 102.9k uncached input and 7.5k output tokens at 95.3% cache reuse; no replacement or cohort was launched.
-- Guard: independent review restored June's acknowledgement term, crawl `20260728T090621Z` is zero-finding, the isolated exhaustive Wolf action-id proof passed in 286s, and uncontended health passes 440 files/3,622 tests, both typechecks, and all 12 packs.
