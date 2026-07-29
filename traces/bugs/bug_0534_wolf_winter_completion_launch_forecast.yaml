@@ -1,0 +1,38 @@
+id: bug_0534
+title: "Wolf-Winter completion reattached a stale pre-launch cattle forecast"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: strict ten-player starting-slice pilot
+reports:
+  - blind-tester/reports/20260729T003905Z_overworld_seed73029.md
+severity: S2
+symptom: >
+  Aid-Only correctly changed the Exposed Ridge launch forecast to alarm 3 with
+  the herd whole if every lure cast succeeded. After the first cast actually
+  failed and the quest truthfully ended at alarm 4 with two cattle scattered,
+  the final full step response reattached the generic route catalog. That
+  completion payload had forgotten Aid-Only and again said a clean line reached
+  alarm 4, making the achieved failure-forward ending look inconsistent with
+  the earlier authenticated forecast.
+root_cause: >
+  Quest completion returned questView(quest), which reconstructs every authored
+  launch option without the opening knowledge and dispatch context used before
+  commitment. Those pre-launch forecasts were no longer actionable and could
+  not be truthfully reconstructed from the completion-plan state.
+fix: >
+  Return the completed quest as its stable public reference beside the achieved
+  ending and journal consequence. Keep launch options on discovery and start
+  responses only; never echo a counterfactual pre-launch catalog after the
+  outcome is known. Mechanics, route proof, return summary, campaign export,
+  character state, pressure, ending selection, and save replay remain unchanged.
+deterministic_witnesses:
+  - invariant: "a full embedded quest completion contains the exact ending but no launch option catalog or clean-lure forecast"
+  - invariant: "both Exposed Ridge and Sheltered Stockway start responses retain their selected route, costs, and conditional forecasts before commitment"
+  - invariant: "the completion journal retains the authenticated selected-route return summary"
+tests:
+  - tests/starting_slice/hill_approach_return_e2e.test.ts
+  - tests/starting_slice/wolf_route_tradeoff_projection.test.ts
+  - tests/unit/world_quest_launch.test.ts
+verification:
+  - npx vitest run tests/starting_slice/hill_approach_return_e2e.test.ts tests/starting_slice/wolf_route_tradeoff_projection.test.ts tests/unit/world_quest_launch.test.ts
+  - npm run crawl:smoke
+  - npm run health

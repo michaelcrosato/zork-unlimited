@@ -16,7 +16,11 @@ import {
   cloneCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
-import { questView, type OverworldQuestView } from "./session_local_discovery.js";
+import {
+  questReferenceView,
+  questView,
+  type OverworldQuestView,
+} from "./session_local_discovery.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import {
   applyOverworldQuestLaunchOption,
@@ -494,7 +498,11 @@ export function planOverworldQuestCompletion(
     : undefined;
   return {
     minutes,
-    quest: questView(quest),
+    // A completed quest returns its achieved ending and journal consequence.
+    // Re-attaching the pre-launch option catalog here can only be stale:
+    // its forecasts no longer describe an actionable future and completion
+    // state does not carry every dispatch modifier used to present them.
+    quest: questReferenceView(quest),
     endingId: state.outcome.endingId,
     endingTitle,
     characterAfter: consequence.characterAfter,

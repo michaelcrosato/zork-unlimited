@@ -252,6 +252,7 @@ describe("overworld quest launch", () => {
       "The quest closed at Test Ending after 130 minutes of local work. " +
         LAUNCH.options[1]!.return_summary,
     );
+    expect(plan.quest.launch).toBeUndefined();
 
     const legacyPlan = planOverworldQuestCompletion({
       questId: quest.id,
@@ -279,6 +280,7 @@ describe("overworld quest launch", () => {
     expect(legacyPlan.entryDraft.text).toBe(
       "The quest closed at Test Ending after 130 minutes of local work.",
     );
+    expect(legacyPlan.quest.launch).toBeUndefined();
   });
 
   it("applies only the authored character effects to a detached character", () => {
