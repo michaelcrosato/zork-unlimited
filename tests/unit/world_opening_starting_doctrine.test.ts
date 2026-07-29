@@ -32,13 +32,11 @@ describe("opening starting doctrines", () => {
         immediate_cost: "10 minutes and $0",
       },
       {
-        id: "albany:doctrine_bounded_aid",
-        profile_id: "albany:ledger_advocate",
+        id: "albany:doctrine_road_warden_aid_route",
+        profile_id: "albany:road_warden",
         relief_oath_option_id: "albany:oath_limited_aid_only",
-        lead_source_option_id: "albany:source_rowan_civic_docket",
-        trigger_category:
-          "Mediation 4; a wholly bloodless ordinary lure skips only the final cattle-alarm step.",
-        immediate_cost: "5 minutes and $0",
+        lead_source_option_id: "albany:source_hayden_frost_report",
+        immediate_cost: "10 minutes and $0",
       },
       {
         id: "albany:doctrine_independent_drive",
@@ -51,8 +49,12 @@ describe("opening starting doctrines", () => {
     ]);
 
     expect(doctrines[0]!.tradeoff).toContain("No Works packet");
-    expect(doctrines[1]!.tradeoff).toContain("No herd-recovery packet");
+    expect(doctrines[1]!.tradeoff).toContain("Rowan/Jamie sources");
+    expect(doctrines[1]!.trigger_category).toContain("Fieldcraft 4");
+    expect(doctrines[1]!.trigger_category).toContain("Aid-Only");
+    expect(doctrines[1]!.trigger_category).toContain("HUNT");
     expect(doctrines[2]!.tradeoff).toContain("No drover packet");
+    expect(doctrines.map((doctrine) => doctrine.id)).not.toContain("albany:doctrine_bounded_aid");
     for (const doctrine of doctrines) {
       expect(doctrine.consequence).toContain("relief allocation");
       expect(doctrine.consequence).toContain("June's field-team commitment");

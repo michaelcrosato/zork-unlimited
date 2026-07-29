@@ -5,13 +5,18 @@ import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
   OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH,
+  OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH,
   OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactStartingDoctrinePredecessor } from "./fixtures/historical_overworlds.js";
+import {
+  exactStartingDoctrinePredecessor,
+  exactStartingDoctrineReplacementPredecessor,
+} from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
-const PREDECESSOR = exactStartingDoctrinePredecessor(WORLD);
+const PRE_DOCTRINE_PREDECESSOR = exactStartingDoctrinePredecessor(WORLD);
+const REPLACEMENT_PREDECESSOR = exactStartingDoctrineReplacementPredecessor(WORLD);
 
 function pendingRegistrationSession(world: OverworldManifest): OverworldSession {
   const registration = world.opening_registration;
@@ -27,17 +32,33 @@ function pendingRegistrationSession(world: OverworldManifest): OverworldSession 
 }
 
 describe("Starting Doctrine manifest snapshot integrity", () => {
-  it("pins the exact pre-doctrine and current manifests", () => {
-    expect(PREDECESSOR.opening_registration?.doctrines).toBeUndefined();
-    expect(hashState(PREDECESSOR)).toBe(OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH);
+  it("pins the exact pre-doctrine, replacement, and current manifests", () => {
+    expect(PRE_DOCTRINE_PREDECESSOR.opening_registration?.doctrines).toBeUndefined();
+    expect(hashState(PRE_DOCTRINE_PREDECESSOR)).toBe(
+      OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH,
+    );
     expect(OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH).toBe(
       "35d7ee917b8cd33c698e3771d7bd884d963763ab665e5b4ae919e971e013a50c",
     );
+    expect(
+      REPLACEMENT_PREDECESSOR.opening_registration?.doctrines?.find(
+        (doctrine) => doctrine.id === "albany:doctrine_bounded_aid",
+      ),
+    ).toBeDefined();
+    expect(hashState(REPLACEMENT_PREDECESSOR)).toBe(
+      OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH,
+    );
+    expect(OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH).toBe(
+      "56577688e463b98883aea1c9063a6e577d6a5d2bb4fa412ee32b0f47576d849c",
+    );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
+    expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
+      "e201855d2d55a1eeaedc4306d204a83f49c0190c4ad3687214b7e854112caa24",
+    );
   });
 
-  it("restores an exact predecessor registration offer into the new grouped choice", () => {
-    const predecessor = pendingRegistrationSession(PREDECESSOR).snapshot();
+  it("restores an exact pre-doctrine registration offer into the new grouped choice", () => {
+    const predecessor = pendingRegistrationSession(PRE_DOCTRINE_PREDECESSOR).snapshot();
     const native = pendingRegistrationSession(WORLD).snapshot();
     const restored = OverworldSession.restore(WORLD, predecessor);
 
@@ -50,9 +71,30 @@ describe("Starting Doctrine manifest snapshot integrity", () => {
     );
   });
 
+  it("transparently restores the exact three-doctrine replacement predecessor at registration", () => {
+    const predecessor = pendingRegistrationSession(REPLACEMENT_PREDECESSOR).snapshot();
+    const native = pendingRegistrationSession(WORLD).snapshot();
+
+    expect(OverworldSession.restore(WORLD, predecessor).snapshot()).toEqual(native);
+  });
+
+  it("restores the retired doctrine through its canonical role, oath, and source evidence", () => {
+    const predecessor = pendingRegistrationSession(REPLACEMENT_PREDECESSOR);
+    predecessor.chooseJourneyStory("albany:doctrine_bounded_aid");
+
+    const native = pendingRegistrationSession(WORLD);
+    native.chooseJourneyStory("albany:ledger_advocate");
+    native.chooseJourneyStory("albany:oath_limited_aid_only");
+    native.chooseJourneyStory("albany:source_rowan_civic_docket");
+
+    expect(OverworldSession.restore(WORLD, predecessor.snapshot()).snapshot()).toEqual(
+      native.snapshot(),
+    );
+  });
+
   it("still rejects an unknown manifest hash", () => {
-    const unknown = pendingRegistrationSession(PREDECESSOR).snapshot();
-    unknown.worldHash = `f${OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH.slice(1)}`;
+    const unknown = pendingRegistrationSession(REPLACEMENT_PREDECESSOR).snapshot();
+    unknown.worldHash = `f${OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH.slice(1)}`;
 
     expect(() => OverworldSession.restore(WORLD, unknown)).toThrow(/different world manifest/i);
   });

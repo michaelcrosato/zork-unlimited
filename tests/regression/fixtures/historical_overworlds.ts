@@ -31,6 +31,36 @@ export function exactStartingDoctrinePredecessor(current: OverworldManifest): Ov
   return predecessor;
 }
 
+/** Reconstruct the exact three-doctrine manifest before the bounded-Aid replacement. */
+export function exactStartingDoctrineReplacementPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const boundedAid = predecessor.opening_registration?.doctrines?.find(
+    (doctrine) => doctrine.id === "albany:doctrine_road_warden_aid_route",
+  );
+  if (!boundedAid) throw new Error("Albany must retain the replacement Aid route doctrine.");
+
+  Object.assign(boundedAid, {
+    id: "albany:doctrine_bounded_aid",
+    title: "Hold the Aid Line",
+    summary: "Begin as a Ledger Advocate with Rowan's bounded Aid-Only dispatch.",
+    trigger_category:
+      "Mediation 4; a wholly bloodless ordinary lure skips only the final cattle-alarm step.",
+    preview:
+      "Starts as Ledger Advocate under Aid-Only Duty with Rowan's civic docket. Mediation 4; a wholly bloodless ordinary lure skips only the final cattle-alarm step.",
+    tradeoff:
+      "No herd-recovery packet, relief allocation, June commitment, or road approach is selected.",
+    consequence:
+      "Optional preparation, relief allocation, June's field-team commitment, and road approach remain unselected and available later.",
+    immediate_cost: "5 minutes and $0",
+    profile_id: "albany:ledger_advocate",
+    relief_oath_option_id: "albany:oath_limited_aid_only",
+    lead_source_option_id: "albany:source_rowan_civic_docket",
+  });
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before relief-oath strategy fit became explicit. */
 export function exactReliefOathStrategyParityPredecessor(
   current: OverworldManifest,

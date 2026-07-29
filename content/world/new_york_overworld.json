@@ -352,17 +352,17 @@
         "lead_source_option_id": "albany:source_rowan_civic_docket"
       },
       {
-        "id": "albany:doctrine_bounded_aid",
-        "title": "Hold the Aid Line",
-        "summary": "Begin as a Ledger Advocate with Rowan's bounded Aid-Only dispatch.",
-        "trigger_category": "Mediation 4; a wholly bloodless ordinary lure skips only the final cattle-alarm step.",
-        "preview": "Starts as Ledger Advocate under Aid-Only Duty with Rowan's civic docket. Mediation 4; a wholly bloodless ordinary lure skips only the final cattle-alarm step.",
-        "tradeoff": "No herd-recovery packet, relief allocation, June commitment, or road approach is selected.",
+        "id": "albany:doctrine_road_warden_aid_route",
+        "title": "Take the Road-Warden Aid Route",
+        "summary": "Begin as a Road-Warden under Aid-Only Duty with Hayden's sponsored frost report.",
+        "trigger_category": "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
+        "preview": "Starts as a Road-Warden Relief Hand under Aid-Only Duty with Hayden's sponsored frost report. Fieldcraft 4 raises Wolf-Winter's starting DEF floor to 4. Aid-Only skips only the final alarm step of a wholly bloodless ordinary lure. Hayden's report enables the ordinary-hunt frost brace only after the attempted public wedge splits; it never helps LURE.",
+        "tradeoff": "Rowan/Jamie sources omitted; prep, allocation, June, road remain open.",
         "consequence": "Optional preparation, relief allocation, June's field-team commitment, and road approach remain unselected and available later.",
-        "immediate_cost": "5 minutes and $0",
-        "profile_id": "albany:ledger_advocate",
+        "immediate_cost": "10 minutes and $0",
+        "profile_id": "albany:road_warden",
         "relief_oath_option_id": "albany:oath_limited_aid_only",
-        "lead_source_option_id": "albany:source_rowan_civic_docket"
+        "lead_source_option_id": "albany:source_hayden_frost_report"
       },
       {
         "id": "albany:doctrine_independent_drive",

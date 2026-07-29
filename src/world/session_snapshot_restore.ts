@@ -440,8 +440,11 @@ export const OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before Starting Doctrine registration choices. */
 export const OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH =
   "35d7ee917b8cd33c698e3771d7bd884d963763ab665e5b4ae919e971e013a50c";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before the bounded-Aid Starting Doctrine route was replaced. */
+export const OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH =
   "56577688e463b98883aea1c9063a6e577d6a5d2bb4fa412ee32b0f47576d849c";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "e201855d2d55a1eeaedc4306d204a83f49c0190c4ad3687214b7e854112caa24";
 /** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
 export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
@@ -3094,6 +3097,12 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesStartingDoctrine =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH;
+  // This replacement changes only a newly-presented registration alternative.
+  // A selected doctrine already persists its canonical role/oath/source state, so
+  // the exact predecessor needs no journal or campaign-state normalizer.
+  const migratesStartingDoctrineReplacement =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH;
   const migratesEmeryEvidenceCustody =
     migrationTargetsCurrentManifest &&
     EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES.has(sourceSnapshot.worldHash);
@@ -3171,6 +3180,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesCadeStoryPredicate &&
     !migratesComparisonCardContract &&
     !migratesStartingDoctrine &&
+    !migratesStartingDoctrineReplacement &&
     !migratesEmeryEvidenceCustody &&
     !migratesWoundCare &&
     !migratesBloodiedByreEvacuation &&
