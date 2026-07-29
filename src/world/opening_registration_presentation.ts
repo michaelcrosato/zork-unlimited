@@ -10,23 +10,8 @@ export function presentOpeningRegistration(
   registration: OpeningRegistration,
 ): JourneyStoryChoicePrompt {
   const parsed = parseOpeningRegistration(registration);
-  const doctrines = parsed.doctrines ?? [];
-  const doctrineOptions = doctrines.map((doctrine) =>
-    Object.freeze({
-      ...presentOpeningChoiceOption({
-        id: doctrine.id,
-        label: doctrine.title,
-        commitment: doctrine.summary,
-        exactBenefit: doctrine.trigger_category,
-        immediateCost: doctrine.immediate_cost,
-        giveUp: doctrine.tradeoff,
-      }),
-      group: "doctrine" as const,
-    }),
-  );
   const profileOptions = parsed.profiles.map((profile) => {
     const triggerCategory = profile.trigger_category;
-    const group = doctrines.length > 0 ? { group: "custom_role" as const } : {};
     if (triggerCategory === undefined) {
       return Object.freeze({
         id: profile.id,
@@ -38,7 +23,6 @@ export function presentOpeningRegistration(
           tradeoff: profile.tradeoff,
         }),
         consequence: `${profile.summary} ${profile.preview} ${profile.consequence}`,
-        ...group,
       });
     }
     const immediateCost = `no time/fee; starts with $${String(profile.character.money)}`;
@@ -51,19 +35,15 @@ export function presentOpeningRegistration(
         immediateCost,
         giveUp: profile.tradeoff,
       }),
-      ...group,
     });
   });
   return Object.freeze({
     id: parsed.id,
     kind: "registration" as const,
     message:
-      doctrines.length === 0
-        ? `${parsed.title}. ${parsed.message}`
-        : `${parsed.title}. Start with a doctrine to commit a role, Wolf-Winter duty, and source packet together. Or build a custom role below. ${parsed.message}`,
-    options: Object.freeze([
-      ...doctrineOptions,
-      ...profileOptions,
-    ]) as JourneyRegistrationStoryChoiceOptions,
+      (parsed.doctrines?.length ?? 0) > 0
+        ? `${parsed.title}. Choose your role now; Wolf-Winter duty and evidence follow. A role with an authored standard packet may bind both together at the next step. ${parsed.message}`
+        : `${parsed.title}. ${parsed.message}`,
+    options: Object.freeze(profileOptions) as JourneyRegistrationStoryChoiceOptions,
   });
 }

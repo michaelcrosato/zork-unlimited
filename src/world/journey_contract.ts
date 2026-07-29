@@ -273,6 +273,7 @@ export type JourneyReliefOathStoryChoiceOptions = readonly [
   JourneyStoryChoiceOption,
   JourneyStoryChoiceOption,
   JourneyStoryChoiceOption,
+  ...JourneyStoryChoiceOption[],
 ];
 
 type JourneyStoryChoicePromptBase = Readonly<{
@@ -1160,8 +1161,8 @@ function freezeStoryChoice(
       throw new Error("Journey relief-allocation choice requires exactly three options.");
     }
   } else if (presentationKind === "relief_oath") {
-    if (storyChoice.options.length !== 3) {
-      throw new Error("Journey relief-oath choice requires exactly three options.");
+    if (storyChoice.options.length < 3 || storyChoice.options.length > 4) {
+      throw new Error("Journey relief-oath choice requires between three and four options.");
     }
   } else if (presentationKind === "ally") {
     if (storyChoice.options.length < 3 || storyChoice.options.length > 4) {

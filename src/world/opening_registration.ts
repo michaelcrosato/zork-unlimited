@@ -143,6 +143,7 @@ export const OpeningRegistrationSchema = z
 
     const doctrineIds = new Set<string>();
     const doctrineSelections = new Set<string>();
+    const doctrineProfiles = new Set<string>();
     registration.doctrines?.forEach((doctrine, index) => {
       if (doctrineIds.has(doctrine.id)) {
         ctx.addIssue({
@@ -173,6 +174,14 @@ export const OpeningRegistrationSchema = z
         });
       }
       doctrineSelections.add(selection);
+      if (doctrineProfiles.has(doctrine.profile_id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["doctrines", index, "profile_id"],
+          message: "Opening starting doctrines must not repeat the same registration profile.",
+        });
+      }
+      doctrineProfiles.add(doctrine.profile_id);
     });
   });
 

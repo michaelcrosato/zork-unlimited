@@ -215,6 +215,15 @@ describe("opening registration", () => {
     };
     expect(() => parseOpeningRegistration(repeatedSelection)).toThrow(/must not repeat/i);
 
+    const repeatedProfile = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
+    repeatedProfile.doctrines![1] = {
+      ...repeatedProfile.doctrines![1]!,
+      profile_id: repeatedProfile.doctrines![0]!.profile_id,
+    };
+    expect(() => parseOpeningRegistration(repeatedProfile)).toThrow(
+      /must not repeat the same registration profile/i,
+    );
+
     const partialCategories = registrationInput(OPENING_REGISTRATION_MIN_PROFILES, true);
     const { trigger_category: omittedTriggerCategory, ...missingTriggerCategory } =
       partialCategories.doctrines![1]!;

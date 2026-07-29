@@ -1974,6 +1974,11 @@ function assertOpeningStartingDoctrineIntegrity(world: OverworldManifest): void 
   }
 
   for (const doctrine of doctrines) {
+    if (oath.options.some((candidate) => candidate.id === doctrine.id)) {
+      throw new Error(
+        `Opening starting doctrine "${doctrine.id}" collides with a relief-oath option id.`,
+      );
+    }
     const profile = registration.profiles.find((candidate) => candidate.id === doctrine.profile_id);
     if (!profile) {
       throw new Error(

@@ -3,8 +3,8 @@ import type { OverworldManifest } from "./overworld.js";
 
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
 const REGISTRATION_COMPARISON_HEADER = `Choose who you were and the promise you carry. Compare exact cost and what each role gives up. ${FIELD_CHECK_TIMING}`;
-const DOCTRINE_REGISTRATION_COMPARISON_HEADER = `Choose a doctrine or custom role. Compare its promise, exact cost, what it gives up, and what remains open. ${FIELD_CHECK_TIMING}`;
 const RELIEF_OATH_COMPARISON_HEADER = `Choose whose authority you accept and the promise you make. Compare exact cost and what each duty gives up. ${FIELD_CHECK_TIMING}`;
+const STANDARD_PACKET_RELIEF_OATH_COMPARISON_HEADER = `Compare route promises, exact cost, and tradeoffs. ${FIELD_CHECK_TIMING}`;
 const LEAD_SOURCE_COMPARISON_HEADER = `Certify one account; the other two close. Compare its priority, exact cost, and what it gives up. ${FIELD_CHECK_TIMING}`;
 const PREPARATION_COMPARISON_HEADER = `Choose one optional field priority, or leave without one. Compare exact cost and what it gives up. ${FIELD_CHECK_TIMING}`;
 const RELIEF_ALLOCATION_COMPARISON_HEADER = `Choose whom Albany protects, or leave capacity unassigned. Compare each priority's exact cost and what remains exposed. ${FIELD_CHECK_TIMING}`;
@@ -149,16 +149,21 @@ export function withOpeningDispatchBriefing(
   const leadSource = world.opening_lead_source;
   const preparation = world.opening_preparation;
   const reliefAllocation = world.opening_relief_allocation;
-  const offersStartingDoctrines = (registration?.doctrines?.length ?? 0) > 0;
+  const offersStandardPacket =
+    prompt.kind === "relief_oath" &&
+    (registration?.doctrines?.some((doctrine) =>
+      prompt.options.some((option) => option.id === doctrine.id),
+    ) ??
+      false);
   const displayMessage =
     registration && prompt.id === registration.id && prompt.kind === "registration"
-      ? `${registration.title}. ${
-          offersStartingDoctrines
-            ? DOCTRINE_REGISTRATION_COMPARISON_HEADER
-            : REGISTRATION_COMPARISON_HEADER
-        }`
+      ? `${registration.title}. ${REGISTRATION_COMPARISON_HEADER}`
       : reliefOath && prompt.id === reliefOath.id && prompt.kind === "relief_oath"
-        ? `${reliefOath.title}. ${RELIEF_OATH_COMPARISON_HEADER}`
+        ? `${reliefOath.title}. ${
+            offersStandardPacket
+              ? STANDARD_PACKET_RELIEF_OATH_COMPARISON_HEADER
+              : RELIEF_OATH_COMPARISON_HEADER
+          }`
         : leadSource && prompt.id === leadSource.id && prompt.kind === "lead_source"
           ? `${leadSource.title}. ${LEAD_SOURCE_COMPARISON_HEADER}`
           : preparation && prompt.id === preparation.id && prompt.kind === "preparation"
@@ -176,16 +181,13 @@ export function withOpeningDispatchBriefing(
     const remaining = plan.civicStages
       .slice(civicStageIndex + 1)
       .map((candidate) => candidate.label);
-    const progress =
-      civicStageIndex === 0 && offersStartingDoctrines
-        ? `${plan.questTitle} Civic start — doctrine or custom role.`
-        : `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
+    const progress = `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
     const planningContext =
       civicStageIndex === 0
-        ? offersStartingDoctrines
-          ? `Mission preview — ${plan.questDiscovery} A doctrine commits role, duty, and evidence together. A custom role commits role; duty and evidence follow. Both leave solutions open.`
-          : `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; duty and evidence follow. None locks your field solution.`
-        : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;
+        ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; duty and evidence follow. None locks your field solution.`
+        : civicStageIndex === 1 && offersStandardPacket
+          ? "Chosen at Civic: role. Choose the standard packet for duty + evidence, or a duty alone; custom evidence follows."
+          : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;
     return {
       ...prompt,
       message: `${progress} ${planningContext} ${displayMessage}`,
