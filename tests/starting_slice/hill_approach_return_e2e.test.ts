@@ -385,6 +385,10 @@ function playCleanLure(
 
   if (!finalStep) throw new Error("the clean lure route must contain actions");
   expect(finalStep.questCompletion).toMatchObject({ endingId: spec.endingId });
+  expect(finalStep.questCompletion?.quest.launch).toBeUndefined();
+  expect(JSON.stringify(finalStep.questCompletion)).not.toMatch(
+    /clean three-cast lure line|a clean lure reaches/,
+  );
   expect(finalStep.journey).toMatchObject({
     status: "awaiting_choice",
     goal: {

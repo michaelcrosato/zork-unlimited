@@ -51,6 +51,17 @@ export type MutableOverworldLocalDiscoveryIds = {
   discoveredQuestIds: Set<string>;
 };
 
+export function questReferenceView(quest: OverworldQuest): OverworldQuestView {
+  return {
+    id: quest.id,
+    title: quest.title,
+    home: quest.home,
+    area: quest.area,
+    discovery: quest.discovery,
+    visibility: quest.visibility,
+  };
+}
+
 /**
  * Reveal a quest lead together with the local district named by that lead.
  *
@@ -84,12 +95,7 @@ export function questView(
   dispatchWindow?: QuestDispatchPresentationWindow,
 ): OverworldQuestView {
   return {
-    id: quest.id,
-    title: quest.title,
-    home: quest.home,
-    area: quest.area,
-    discovery: quest.discovery,
-    visibility: quest.visibility,
+    ...questReferenceView(quest),
     ...(quest.launch
       ? {
           launch: presentOverworldQuestLaunch(

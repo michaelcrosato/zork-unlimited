@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 685 -->
+<!-- historical_cycle_count: 686 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - completion_forecast_truth
+
+- Evidence choice: the strict ten-Terra pilot exposed one S2 lifecycle contradiction: Wolf-Winter completion reattached a generic clean-line launch forecast after Aid-Only and a failed first cast had truthfully changed the achieved result.
+- Surface: a completed quest now returns its stable public reference beside the actual ending and journal consequence; discovery and start responses retain their actionable dispatch-aware launch options and forecasts.
+- Counterfactual: route choice, checks, resources, pressure, ending selection, return summary, campaign export, character state, saves, and compact/full parity are unchanged.
+- Pure evidence: exact-clean Terra seed 73030 recovered a failed first lure through Emery's route, completed The Wolf-Winter nonlethally with the herd whole at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and reported no rejected action or lifecycle contradiction.
+- Self-critique/follow-through: one canary proves playability, not cohort pacing; its S1 repeats the pilot's front-loaded Albany density and its S0 names raw action labels, so opening density remains the next focused cycle.
+- Economy: authenticated summary v8 measured 2.465M input / 108.0k uncached input and 7.6k output tokens at 95.62% cache reuse, or 3,851 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
+- Guard: two independent rereviews are clean, the targeted 18/18 tests and post-change crawl `20260729T010549Z` are green, and health passes 443 files/3,682 tests, both typechecks, and all 12 packs on clean candidate `b02275af`.
 
 ### Cycle result - field_timed_opening_disclosure
 
@@ -153,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the player said staged details helped but still raised the broader opening stack as S1 density; freeze this build and let the strict ten-player pilot measure the cohort instead of exposure-chasing another single-run presentation tweak.
 - Economy: the 59-turn canary used 3.647M raw / 138.6k uncached input and 10.4k output tokens at 96.2% cache reuse; no replacement or exposure-chasing rerun was launched.
 - Guard: adversarial rereview is clean, stable patch id `40b5d516` survived the rebase, crawl `20260728T003015Z` is zero-finding, and health passes 440 files/3,612 tests, both typechecks, and all 12 packs.
-
-### Cycle result - balanced_ci_test_groups
-
-- Evidence choice: PR 194's unchanged file-count shards completed in 16m25s and 41m10s, a 2.5× wall-time imbalance that delayed every remaining green increment.
-- Surface: CI now discovers all 439 current test files at runtime and deterministically assigns each exactly once; measured-cost groups contain 224/215 files and predict 4,036,770/4,034,691ms, only 0.05% apart.
-- Counterfactual: tests, workers, timeouts, integrity, type/lint/format, UI/pack validation, crawl, and the required `verify` gate are unchanged; stale weights can reduce balance but never omit a new file.
-- Pure evidence: exact-clean Terra seed 72761 completed The Wolf-Winter with a clean nonviolent lure at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, ended voluntarily, and chose replay-yes.
-- Self-critique/follow-through: the canary cannot validate CI orchestration and repeated the known front-loaded Station terminology; land the reviewed canonical per-option dispatch impact next, then freeze for the strict pilot.
-- Economy: the 41-turn canary used 2.014M raw / 91.9k uncached input and 6.5k output tokens at 95.4% cache reuse; no exposure-chasing rerun was launched.
-- Guard: independent review is clean, stable patch id `30a792f4` survived the rebase, crawl `20260727T230817Z` is zero-finding, and health passes 439 files/3,610 tests, both typechecks, and all 12 packs.
