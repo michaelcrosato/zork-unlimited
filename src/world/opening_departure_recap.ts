@@ -19,7 +19,7 @@ import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
-export const OPENING_DEPARTURE_RECAP_VERSION = 3 as const;
+export const OPENING_DEPARTURE_RECAP_VERSION = 4 as const;
 export const OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT = 120;
 
 export type OpeningDepartureRecapSlot =
@@ -143,9 +143,9 @@ function deriveDispatchRecap(
 }
 
 /**
- * Reuse one concise term from the canonical selected-choice presentation.
- * Broad field-trigger prose can be several hundred characters, so only authored
- * trigger categories qualify directly; other choices use their scannable tradeoff.
+ * Reuse the binding boundary from the canonical selected-choice presentation.
+ * Roleplay-first receipts defer field mechanics until their actual consumer, so
+ * the recap keeps the selected promise's concise "give up" term instead.
  */
 function selectedFieldTerm(prompt: JourneyStoryChoicePrompt, selectedId: string): string {
   const selected = prompt.options.find((option) => option.id === selectedId);
@@ -153,7 +153,7 @@ function selectedFieldTerm(prompt: JourneyStoryChoicePrompt, selectedId: string)
     throw new Error(`Opening departure recap cannot resolve selected field term "${selectedId}".`);
   }
   const value =
-    selected.summary.fieldTriggerScope === "category"
+    selected.summary.fieldTriggerScope === "category" && selected.summary.fieldTrigger
       ? selected.summary.fieldTrigger
       : selected.summary.tradeoff;
   if (value.length > OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT) {

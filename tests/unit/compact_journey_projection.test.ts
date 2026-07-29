@@ -22,6 +22,11 @@ import type {
   JourneyStoryChoiceOptions,
   JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
+import { presentOpeningAlly } from "../../src/world/opening_ally_presentation.js";
+import {
+  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  openingSelectionReceiptWordCount,
+} from "../../src/world/opening_choice_receipt.js";
 import { presentOpeningPreparation } from "../../src/world/opening_preparation_presentation.js";
 import { presentOpeningLeadSource } from "../../src/world/opening_lead_source_presentation.js";
 import { presentOpeningRegistration } from "../../src/world/opening_registration_presentation.js";
@@ -34,21 +39,36 @@ import {
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
-const PREPARATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
-  "albany:prep_works_fortification": "Opening fortification support",
-  "albany:prep_drover_route": "Failed-lure recovery",
-  "albany:prep_relief_protocol": "Herd-pressure recovery",
-};
-const RELIEF_ALLOCATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
-  "albany:relief_cade_fodder": "Opening herd support",
-  "albany:relief_resident_shelter": "Return fatigue recovery",
-  "albany:relief_mobile_reserve": "Field-failure and return reserve",
-};
-const LEAD_SOURCE_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
-  "albany:source_rowan_civic_docket": "Public routes and rail recovery",
-  "albany:source_jamie_market_testimony": "Post-yearling loft approach",
-  "albany:source_hayden_frost_report": "Ordinary-hunt split rail",
-};
+
+function expectRoleplayReceipt(
+  prompt: JourneyStoryChoicePrompt,
+  args: {
+    id: string;
+    commitment: string;
+    benefit: string;
+    immediateCost: string;
+    giveUp: string;
+  },
+): void {
+  const option = prompt.options.find((candidate) => candidate.id === args.id);
+  expect(option?.summary).toEqual({
+    commitment: args.commitment,
+    immediateCost: args.immediateCost,
+    tradeoff: args.giveUp,
+  });
+  expect(Object.keys(option?.summary ?? {}).sort()).toEqual([
+    "commitment",
+    "immediateCost",
+    "tradeoff",
+  ]);
+  const detail = compactJourneyStoryChoiceComparison(prompt, args.id).inspectedOption;
+  expect(detail.consequence).toBe(
+    `Benefit: ${args.benefit} Cost: ${args.immediateCost}. Boundary: ${args.giveUp}`,
+  );
+  expect(openingSelectionReceiptWordCount(detail.consequence)).toBeLessThanOrEqual(
+    OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  );
+}
 
 function twoOptionPrompt(option: JourneyStoryChoiceOption): JourneyStoryChoicePrompt {
   return Object.freeze({
@@ -90,7 +110,7 @@ function structuredPrompt(option: JourneyStoryChoiceOption): JourneyStoryChoiceP
 }
 
 describe("compact journey projection", () => {
-  it("stages active compact consequences while preserving one exact inspected detail", () => {
+  it("preserves the legacy trigger-shaped detail compactor", () => {
     const commitment = "Take the Works charter.";
     const fieldTrigger = "At first pressure, lower alarm.";
     const immediateCost = "20 minutes and 1 supply";
@@ -178,7 +198,7 @@ describe("compact journey projection", () => {
     expect(JSON.stringify(ally)).toBe(before);
   });
 
-  it("keeps exact Station preparation terms behind the concise compact comparison", () => {
+  it("keeps exact Station preparation receipts behind the concise compact comparison", () => {
     const preparation = WORLD.opening_preparation;
     const character = WORLD.opening_registration?.profiles[0]?.character;
     if (!preparation || !character) {
@@ -189,24 +209,22 @@ describe("compact journey projection", () => {
 
     for (const profile of preparation.profiles) {
       const option = compact.options.find((candidate) => candidate.id === profile.id);
-      expect(option?.summary).toEqual({
+      const fullOption = full.options.find((candidate) => candidate.id === profile.id)!;
+      expectRoleplayReceipt(full, {
+        id: profile.id,
         commitment: profile.summary,
-        fieldTrigger: PREPARATION_FIELD_CATEGORIES[profile.id],
-        fieldTriggerScope: "category",
-        immediateCost: expect.any(String),
-        tradeoff: expect.any(String),
+        benefit: profile.trigger_category ?? profile.title,
+        immediateCost: fullOption.summary!.immediateCost,
+        giveUp: profile.tradeoff,
       });
-      expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|check|success|threshold)\b/i);
-      expect(option?.summary?.fieldTrigger).not.toContain(profile.preview);
       expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
       const detail = compactJourneyStoryChoiceComparison(full, profile.id).inspectedOption;
-      expect(detail?.consequence).toContain(`Full field terms: ${profile.preview}`);
-      expect(detail?.consequence).toContain(profile.consequence);
-      expect(detail?.consequence).not.toContain(profile.summary);
+      expect(detail.consequence).not.toContain(profile.preview);
+      expect(detail.consequence).not.toContain(profile.consequence);
     }
   });
 
-  it("keeps exact Relief Allocation terms behind the concise compact comparison", () => {
+  it("keeps exact Relief Allocation receipts behind the concise compact comparison", () => {
     const allocation = WORLD.opening_relief_allocation;
     const character = WORLD.opening_registration?.profiles[0]?.character;
     if (!allocation || !character) {
@@ -217,24 +235,22 @@ describe("compact journey projection", () => {
 
     for (const allocationOption of allocation.options) {
       const option = compact.options.find((candidate) => candidate.id === allocationOption.id);
-      expect(option?.summary).toEqual({
+      const fullOption = full.options.find((candidate) => candidate.id === allocationOption.id)!;
+      expectRoleplayReceipt(full, {
+        id: allocationOption.id,
         commitment: allocationOption.summary,
-        fieldTrigger: RELIEF_ALLOCATION_FIELD_CATEGORIES[allocationOption.id],
-        fieldTriggerScope: "category",
-        immediateCost: expect.any(String),
-        tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
+        benefit: allocationOption.trigger_category ?? allocationOption.protects,
+        immediateCost: fullOption.summary!.immediateCost,
+        giveUp: `Leaves exposed: ${allocationOption.leaves_exposed}`,
       });
-      expect(option?.summary?.fieldTrigger).not.toMatch(/\b(?:alarm|15-minute|Campus|Market)\b/i);
-      expect(option?.summary?.fieldTrigger).not.toContain(allocationOption.preview);
       expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
       const detail = compactJourneyStoryChoiceComparison(full, allocationOption.id).inspectedOption;
-      expect(detail?.consequence).toContain(`Full field terms: ${allocationOption.preview}`);
-      expect(detail?.consequence).toContain(allocationOption.consequence);
-      expect(detail?.consequence).not.toContain(allocationOption.summary);
+      expect(detail.consequence).not.toContain(allocationOption.preview);
+      expect(detail.consequence).not.toContain(allocationOption.consequence);
     }
   });
 
-  it("keeps Civic category cards concise in compact projection with full terms inspectable", () => {
+  it("keeps Civic cards roleplay-first with exact bounded receipts", () => {
     const registration = WORLD.opening_registration;
     const oath = WORLD.opening_relief_oath;
     const source = WORLD.opening_lead_source;
@@ -247,9 +263,11 @@ describe("compact journey projection", () => {
         JourneyStoryChoicePrompt,
         ReadonlyArray<{
           id: string;
+          title: string;
           summary: string;
           trigger_category?: string | undefined;
           preview: string;
+          tradeoff: string;
           consequence: string;
         }>,
       ]
@@ -263,27 +281,40 @@ describe("compact journey projection", () => {
       const compact = compactJourneyStoryChoicePrompt(full);
       for (const sourceOption of sourceOptions) {
         const option = compact.options.find((candidate) => candidate.id === sourceOption.id);
-        expect(option?.summary?.commitment).toBe(sourceOption.summary);
-        if (full.kind === "registration") {
-          expect(option?.summary).toMatchObject({
-            fieldTrigger: sourceOption.trigger_category,
-            fieldTriggerScope: "category",
-          });
-        } else {
-          expect(option?.summary).toMatchObject({
-            fieldTrigger:
-              full.kind === "relief_oath"
-                ? expect.stringMatching(/^[A-Z-]+ support$/)
-                : LEAD_SOURCE_FIELD_CATEGORIES[sourceOption.id],
-            fieldTriggerScope: "category",
-          });
-          expect(option?.summary?.fieldTrigger).not.toContain(sourceOption.preview);
-        }
+        expectRoleplayReceipt(full, {
+          id: sourceOption.id,
+          commitment: sourceOption.summary,
+          benefit: sourceOption.trigger_category ?? sourceOption.title,
+          immediateCost: option!.summary!.immediateCost,
+          giveUp: sourceOption.tradeoff,
+        });
         expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
         const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
-        expect(detail?.consequence).toContain(sourceOption.preview);
-        expect(detail?.consequence).toContain(sourceOption.consequence);
+        expect(detail.consequence).not.toContain(sourceOption.preview);
+        expect(detail.consequence).not.toContain(sourceOption.consequence);
       }
+    }
+  });
+
+  it("keeps every ally card roleplay-first with an exact bounded receipt", () => {
+    const ally = WORLD.opening_ally;
+    const character = WORLD.opening_registration?.profiles[0]?.character;
+    if (!ally || !character) throw new Error("Albany must retain its ally commitment.");
+    const full = presentOpeningAlly(ally, character);
+    const benefits: Readonly<Record<string, string>> = {
+      "albany:ally_june_cattle_first": "Independent cattle-pressure ally",
+      "albany:ally_june_relay_only": "No companion; relay terms refused",
+      "albany:ally_travel_solo": "Solo field team; no ally action",
+    };
+    for (const sourceOption of ally.options) {
+      const option = full.options.find((candidate) => candidate.id === sourceOption.id)!;
+      expectRoleplayReceipt(full, {
+        id: sourceOption.id,
+        commitment: sourceOption.summary,
+        benefit: benefits[sourceOption.id]!,
+        immediateCost: option.summary!.immediateCost,
+        giveUp: sourceOption.tradeoff,
+      });
     }
   });
 

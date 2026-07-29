@@ -9,19 +9,7 @@ import {
   parseOpeningLeadSource,
   type OpeningLeadSource,
 } from "./opening_lead_source.js";
-
-const CURRENT_LEAD_SOURCE_FIELD_CATEGORIES: Readonly<Record<string, string>> = Object.freeze({
-  "First use: public routes and split-rail recovery.": "Public routes and rail recovery",
-  "First use: the post-yearling fodder-loft route.": "Post-yearling loft approach",
-  "First use: the ordinary-hunt split rail.": "Ordinary-hunt split rail",
-});
-
-function leadSourceFieldCategory(
-  option: ReturnType<typeof parseOpeningLeadSource>["options"][number],
-): string | undefined {
-  if (option.trigger_category === undefined) return undefined;
-  return CURRENT_LEAD_SOURCE_FIELD_CATEGORIES[option.trigger_category] ?? option.trigger_category;
-}
+import { presentOpeningChoiceOption } from "./opening_choice_receipt.js";
 
 /** Project the Albany evidence packets onto the generic journey-choice surface. */
 export function presentOpeningLeadSource(
@@ -36,21 +24,30 @@ export function presentOpeningLeadSource(
     options: Object.freeze(
       parsed.options.map((option) => {
         const terms = openingLeadSourceTerms(option, character);
-        const fieldCategory = leadSourceFieldCategory(option);
-        const sponsorship = terms.sponsorNote ? ` ${terms.sponsorNote}` : "";
-        return Object.freeze({
+        const cost = formatOpeningLeadSourceCost(terms);
+        if (option.trigger_category === undefined) {
+          const sponsorship = terms.sponsorNote ? ` ${terms.sponsorNote}` : "";
+          return Object.freeze({
+            id: option.id,
+            label: option.title,
+            summary: Object.freeze({
+              commitment: option.summary,
+              fieldTrigger: option.preview,
+              immediateCost: cost,
+              tradeoff: option.tradeoff,
+            }),
+            consequence:
+              `${option.summary} ${option.preview} Actual cost: ${cost}.` +
+              `${sponsorship} ${option.consequence}`,
+          });
+        }
+        return presentOpeningChoiceOption({
           id: option.id,
           label: option.title,
-          summary: Object.freeze({
-            commitment: option.summary,
-            fieldTrigger: fieldCategory ?? option.preview,
-            ...(fieldCategory ? { fieldTriggerScope: "category" as const } : {}),
-            immediateCost: formatOpeningLeadSourceCost(terms),
-            tradeoff: option.tradeoff,
-          }),
-          consequence: fieldCategory
-            ? `${option.summary} ${fieldCategory} ${option.preview} Actual cost: ${formatOpeningLeadSourceCost(terms)}.${sponsorship} ${option.consequence}`
-            : `${option.summary} ${option.preview} Actual cost: ${formatOpeningLeadSourceCost(terms)}.${sponsorship} ${option.consequence}`,
+          commitment: option.summary,
+          exactBenefit: option.trigger_category,
+          immediateCost: cost,
+          giveUp: option.tradeoff,
         });
       }),
     ) as JourneyLeadSourceStoryChoiceOptions,

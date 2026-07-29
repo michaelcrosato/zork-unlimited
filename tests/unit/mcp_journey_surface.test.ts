@@ -16,6 +16,10 @@ import {
   JOURNEY_CONTRACT_VERSION,
 } from "../../src/world/journey_contract.js";
 import {
+  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  openingSelectionReceiptWordCount,
+} from "../../src/world/opening_choice_receipt.js";
+import {
   TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
   TANNERS_FEVER_ACCOUNTABILITY_ID,
 } from "../../src/world/journey_campaign.js";
@@ -36,11 +40,6 @@ const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
 const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
 const PREPARATION_STORY_ID = "albany:wolf_preparation";
 const RELIEF_ALLOCATION_STORY_ID = "albany:wolf_relief_allocation";
-const RELIEF_ALLOCATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = {
-  "albany:relief_cade_fodder": "Opening herd support",
-  "albany:relief_resident_shelter": "Return fatigue recovery",
-  "albany:relief_mobile_reserve": "Field-failure and return reserve",
-};
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
 const SARATOGA_TO_QUEENSBURY = "road_saratoga_springs_city__queensbury_town";
 
@@ -805,6 +804,10 @@ describe("MCP journey surface", () => {
       throw new Error("expected accepted story choices");
     }
     expect(fullAction.result.entry.text).toBe(fullAction.result.consequence);
+    expect(fullAction.result.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
+    expect(openingSelectionReceiptWordCount(fullAction.result.consequence)).toBeLessThanOrEqual(
+      OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+    );
     expect(compactAction.result).toMatchObject({
       storyChoiceId: fullAction.result.storyChoiceId,
       choiceId: fullAction.result.choiceId,
@@ -817,7 +820,7 @@ describe("MCP journey surface", () => {
       ],
       journeyDecision: fullAction.result.journeyDecision,
     });
-    expect("entry_text" in compactAction.result).toBe(false);
+    expect(compactAction.result).not.toHaveProperty("entry_text");
     const compactResultJson = JSON.stringify(compactAction.result);
     const firstConsequence = compactResultJson.indexOf(fullAction.result.consequence);
     expect(firstConsequence).toBeGreaterThanOrEqual(0);
@@ -864,12 +867,18 @@ describe("MCP journey surface", () => {
           consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
         });
         expect(compactOption.consequence.length).toBeLessThan(fullOption.consequence.length);
-        expect(fullOption.consequence).toContain(fullOption.summary.commitment);
-        if (fullOption.summary.fieldTriggerScope !== "category") {
-          expect(fullOption.consequence).toContain(fullOption.summary.fieldTrigger);
-        }
+        expect(Object.keys(fullOption.summary).sort()).toEqual([
+          "commitment",
+          "immediateCost",
+          "tradeoff",
+        ]);
+        expect(fullOption.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
+        expect(fullOption.consequence).toContain(`Cost: ${fullOption.summary.immediateCost}.`);
+        expect(fullOption.consequence).toContain(`Boundary: ${fullOption.summary.tradeoff}`);
+        expect(openingSelectionReceiptWordCount(fullOption.consequence)).toBeLessThanOrEqual(
+          OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+        );
         expect(compactOption.consequence).not.toContain(fullOption.summary.commitment);
-        expect(compactOption.consequence).not.toContain(fullOption.summary.fieldTrigger);
         expect(compactOption.consequence).not.toContain(fullOption.summary.immediateCost);
         expect(compactOption.consequence).not.toContain(fullOption.summary.tradeoff);
         expect(JSON.stringify(compactJourney.storyChoice)).not.toContain(fullOption.consequence);
@@ -970,12 +979,16 @@ describe("MCP journey surface", () => {
     });
     expect(
       compactPreparationStory.options.every(
-        (option) => option.summary?.fieldTriggerScope === "category",
+        (option) =>
+          JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
+          JSON.stringify(["commitment", "immediateCost", "tradeoff"]),
       ),
     ).toBe(true);
     expect(
       fullPreparationStory.options.every(
-        (option) => option.summary?.fieldTriggerScope === "category",
+        (option) =>
+          JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
+          JSON.stringify(["commitment", "immediateCost", "tradeoff"]),
       ),
     ).toBe(true);
 
@@ -1323,10 +1336,27 @@ describe("MCP journey surface", () => {
     });
     const afterMultiple = a.export_overworld_session({ session_id: multipleInspectionId });
     expect(afterMultiple).toEqual(beforeMultiple);
+    const firstProfile = preparation.profiles[0]!;
+    const secondProfile = preparation.profiles[1]!;
+    const firstSummary = comparisonResponse.story.options.find(
+      (option) => option.id === optionId,
+    )!.summary!;
+    const secondSummary = comparisonResponse.story.options.find(
+      (option) => option.id === otherOptionId,
+    )!.summary!;
+    const firstReceipt =
+      `Benefit: ${firstProfile.trigger_category ?? firstProfile.title} ` +
+      `Cost: ${firstSummary.immediateCost}. Boundary: ${firstProfile.tradeoff}`;
+    const secondReceipt =
+      `Benefit: ${secondProfile.trigger_category ?? secondProfile.title} ` +
+      `Cost: ${secondSummary.immediateCost}. Boundary: ${secondProfile.tradeoff}`;
     expect(firstDetail.story.inspectedOption).toMatchObject({
       id: optionId,
-      consequence: expect.stringContaining(preparation.profiles[0]!.preview),
+      consequence: firstReceipt,
     });
+    expect(openingSelectionReceiptWordCount(firstReceipt)).toBeLessThanOrEqual(
+      OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+    );
     expect(Object.keys(firstDetail).sort()).toEqual(
       ["ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
     );
@@ -1338,11 +1368,14 @@ describe("MCP journey surface", () => {
     );
     expect(secondDetail.story.inspectedOption).toMatchObject({
       id: otherOptionId,
-      consequence: expect.stringContaining(preparation.profiles[1]!.preview),
+      consequence: secondReceipt,
     });
+    expect(openingSelectionReceiptWordCount(secondReceipt)).toBeLessThanOrEqual(
+      OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+    );
     const firstDetailJson = JSON.stringify(firstDetail.story);
-    expect(firstDetailJson).toContain(preparation.profiles[0]!.preview);
-    expect(firstDetailJson).toContain(preparation.profiles[0]!.consequence);
+    expect(firstDetailJson).not.toContain(firstProfile.preview);
+    expect(firstDetailJson).not.toContain(firstProfile.consequence);
     for (const profile of preparation.profiles.slice(1)) {
       expect(firstDetailJson).not.toContain(profile.preview);
       expect(firstDetailJson).not.toContain(profile.consequence);
@@ -1410,15 +1443,19 @@ describe("MCP journey surface", () => {
     for (const allocationOption of allocation.options) {
       expect(allocationComparisonJson).not.toContain(allocationOption.preview);
       expect(allocationComparisonJson).not.toContain(allocationOption.consequence);
-      expect(
-        allocationComparison.story.options.find((option) => option.id === allocationOption.id),
-      ).toMatchObject({
-        summary: {
-          commitment: allocationOption.summary,
-          fieldTrigger: RELIEF_ALLOCATION_FIELD_CATEGORIES[allocationOption.id],
-          fieldTriggerScope: "category",
-        },
+      const presented = allocationComparison.story.options.find(
+        (option) => option.id === allocationOption.id,
+      )!;
+      expect(presented.summary).toEqual({
+        commitment: allocationOption.summary,
+        immediateCost: presented.summary!.immediateCost,
+        tradeoff: `Leaves exposed: ${allocationOption.leaves_exposed}`,
       });
+      expect(Object.keys(presented.summary!).sort()).toEqual([
+        "commitment",
+        "immediateCost",
+        "tradeoff",
+      ]);
     }
 
     const allocationDetail = a.inspect_overworld_session_story({
@@ -1427,12 +1464,24 @@ describe("MCP journey surface", () => {
       option_id: allocationOptionId,
     });
     expect(a.export_overworld_session({ session_id: oneInspectionId })).toEqual(beforeAllocation);
+    const selectedAllocation = allocation.options[0]!;
+    const selectedAllocationSummary = allocationComparison.story.options.find(
+      (option) => option.id === allocationOptionId,
+    )!.summary!;
+    const allocationReceipt =
+      `Benefit: ${selectedAllocation.trigger_category ?? selectedAllocation.protects} ` +
+      `Cost: ${selectedAllocationSummary.immediateCost}. ` +
+      `Boundary: Leaves exposed: ${selectedAllocation.leaves_exposed}`;
     expect(allocationDetail.story.inspectedOption).toMatchObject({
       id: allocationOptionId,
-      consequence: expect.stringContaining(allocation.options[0]!.preview),
+      consequence: allocationReceipt,
     });
+    expect(openingSelectionReceiptWordCount(allocationReceipt)).toBeLessThanOrEqual(
+      OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+    );
     const allocationDetailJson = JSON.stringify(allocationDetail.story);
-    expect(allocationDetailJson).toContain(allocation.options[0]!.consequence);
+    expect(allocationDetailJson).not.toContain(selectedAllocation.preview);
+    expect(allocationDetailJson).not.toContain(selectedAllocation.consequence);
     for (const otherOption of allocation.options.slice(1)) {
       expect(allocationDetailJson).not.toContain(otherOption.preview);
       expect(allocationDetailJson).not.toContain(otherOption.consequence);
@@ -1473,9 +1522,17 @@ describe("MCP journey surface", () => {
     expect(fullAllocationWithOption).toEqual(fullAllocation);
     expect(fullAllocation.story.options).toHaveLength(allocation.options.length);
     for (const allocationOption of allocation.options) {
-      expect(
-        fullAllocation.story.options.find((option) => option.id === allocationOption.id),
-      ).toMatchObject({ consequence: expect.stringContaining(allocationOption.preview) });
+      const presented = fullAllocation.story.options.find(
+        (option) => option.id === allocationOption.id,
+      )!;
+      const receipt =
+        `Benefit: ${allocationOption.trigger_category ?? allocationOption.protects} ` +
+        `Cost: ${presented.summary!.immediateCost}. ` +
+        `Boundary: Leaves exposed: ${allocationOption.leaves_exposed}`;
+      expect(presented.consequence).toBe(receipt);
+      expect(openingSelectionReceiptWordCount(receipt)).toBeLessThanOrEqual(
+        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      );
     }
   });
 

@@ -101,13 +101,14 @@ function reachMcpLeadSource(
 function launchMcpWolf(
   sourceId: string,
   preparationId = COUNTERFACTUAL_PREPARATION,
+  profileId = COURIER,
 ): {
   api: ToolApi;
   overworldSessionId: string;
   state: GameState;
 } {
   const api = createToolApi({ root: process.cwd() });
-  const pending = reachMcpLeadSource(api);
+  const pending = reachMcpLeadSource(api, profileId);
   const selected = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: pending.sessionId,
@@ -308,6 +309,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       goal: pending.pendingJourney.goal,
       entry: {
         ...expectedJournal,
+        text: sourceOption.consequence,
         town: town.name,
         recordedAt: offerEntry.recordedAt,
       },
@@ -319,6 +321,9 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(questIds(selected.observation)).toContain(WOLF_ID);
 
     const accepted = api.export_overworld_session({ session_id: pending.sessionId });
+    expect(
+      accepted.snapshot.journalEntries.find((entry) => entry.id === expectedJournal.id)?.text,
+    ).toBe(expectedJournal.text);
     expect(() =>
       api.choose_overworld_session_story({
         ...FULL_OVERWORLD,
@@ -360,13 +365,13 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(pendingChoice).toMatchObject({ id: LEAD_SOURCE.id, kind: "lead_source" });
     expect(
       pendingChoice?.options.find((option) => option.id === ROWAN_SOURCE)?.consequence,
-    ).toContain("Actual cost: no added time and $0");
+    ).toContain("Cost: no added time and $0.");
     expect(
       pendingChoice?.options.find((option) => option.id === JAMIE_SOURCE)?.consequence,
-    ).toContain("Actual cost: 35 minutes and $6");
+    ).toContain("Cost: 35 minutes and $6.");
     expect(
       pendingChoice?.options.find((option) => option.id === HAYDEN_SOURCE)?.consequence,
-    ).toContain("Actual cost: 20 minutes and $0");
+    ).toContain("Cost: 20 minutes and $0.");
 
     const restoredPending = api.restore_overworld_session({
       snapshot: pendingSnapshot,
@@ -487,14 +492,14 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       moneyBefore: 18,
       moneyAfter: 12,
     });
-    expect(publicJamie.choice.consequence).toContain("Actual cost: 35 minutes and $6");
+    expect(publicJamie.choice.consequence).toContain("Cost: 35 minutes and $6.");
     expect(sponsoredJamie).toMatchObject({
       elapsedMinutes: 15,
       moneyBefore: 25,
       moneyAfter: 25,
     });
-    expect(sponsoredJamie.choice.consequence).toContain("Actual cost: 15 minutes and $0");
-    expect(sponsoredJamie.choice.consequence).toContain("waiving $6");
+    expect(sponsoredJamie.choice.consequence).toContain("Cost: 15 minutes and $0.");
+    expect(sponsoredJamie.choice.consequence).not.toContain("waiving $6");
 
     const publicHayden = sourceTerms(COURIER, HAYDEN_SOURCE);
     const sponsoredHayden = sourceTerms(ROAD_WARDEN, HAYDEN_SOURCE);
@@ -503,14 +508,14 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       moneyBefore: 18,
       moneyAfter: 18,
     });
-    expect(publicHayden.choice.consequence).toContain("Actual cost: 20 minutes and $0");
+    expect(publicHayden.choice.consequence).toContain("Cost: 20 minutes and $0.");
     expect(sponsoredHayden).toMatchObject({
       elapsedMinutes: 5,
       moneyBefore: 12,
       moneyAfter: 12,
     });
-    expect(sponsoredHayden.choice.consequence).toContain("Actual cost: 5 minutes and $0");
-    expect(sponsoredHayden.choice.consequence).toContain("reduces the route-desk review");
+    expect(sponsoredHayden.choice.consequence).toContain("Cost: 5 minutes and $0.");
+    expect(sponsoredHayden.choice.consequence).not.toContain("reduces the route-desk review");
   });
 
   it("imports exactly one equal-seed source and reserves the uncommitted combat loft for Jamie", () => {
@@ -579,6 +584,30 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     jamieAtFlank = act(jamieAtFlank, "go_east");
     expect(actionIds(jamieAtFlank)).toContain("maneuver_flank_wolf_drop_from_loft");
     expect(actionIds(jamieAtFlank)).not.toContain("maneuver_flank_wolf_frost_brace_trip");
+  });
+
+  it("repeats the Road-Warden import and Rowan's baseline source on the field packet", () => {
+    const roadRowan = launchMcpWolf(ROWAN_SOURCE, COUNTERFACTUAL_PREPARATION, ROAD_WARDEN).state;
+    const roadRowanBefore = structuredClone(roadRowan);
+    expect(roadRowan.vars).toMatchObject({ fieldcraft: 4, defense: 4 });
+    expect(narrationForAction(roadRowan, "examine_relief_spear")).toMatch(
+      /road-warden stamp[^]*Fieldcraft 4[^]*starting DEF to 4 instead of its base 3[^]*Rowan's unaugmented civic docket[^]*public routes and the split-rail recovery only[^]*no certified crawlboard or frost-brace evidence/i,
+    );
+    expect(roadRowan).toEqual(roadRowanBefore);
+
+    const roadJamie = launchMcpWolf(JAMIE_SOURCE, COUNTERFACTUAL_PREPARATION, ROAD_WARDEN).state;
+    const roadJamieReceipt = narrationForAction(roadJamie, "examine_relief_spear");
+    expect(roadJamieReceipt).toMatch(
+      /road-warden stamp[^]*Fieldcraft 4[^]*starting DEF to 4 instead of its base 3[^]*separately certified source packet remains the controlling field evidence/i,
+    );
+    expect(roadJamieReceipt).not.toMatch(/unaugmented civic docket/i);
+
+    const courierRowan = launchMcpWolf(ROWAN_SOURCE).state;
+    const courierRowanReceipt = narrationForAction(courierRowan, "examine_relief_spear");
+    expect(courierRowanReceipt).toMatch(
+      /Rowan's unaugmented civic docket[^]*public routes and the split-rail recovery only[^]*no certified crawlboard or frost-brace evidence/i,
+    );
+    expect(courierRowanReceipt).not.toMatch(/starting DEF to 4/i);
   });
 
   it("lets Hayden's source use Cade's separately committed nonlethal crawlboard instruction", () => {

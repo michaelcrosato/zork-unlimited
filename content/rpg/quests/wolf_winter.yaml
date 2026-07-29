@@ -1586,6 +1586,38 @@ objects:
         text: >
           The Albany relief spear, its butt packed with paling-snow where you set it
           against the yearling's first rush.
+      - when:
+          - { var_gte: { name: fieldcraft, value: 4 } }
+          - { not_flag: jamie_market_testimony_certified }
+          - { not_flag: hayden_frost_report_certified }
+          - any_of:
+              - { has_flag: relief_oath_full_duty }
+              - { has_flag: relief_oath_limited_duty }
+              - { has_flag: relief_oath_unaffiliated_bond }
+        text: >
+          The Albany relief spear is already in your hands and represents base attack,
+          not another item to find. Its road-warden stamp records the imported field edge:
+          Fieldcraft 4 set this watch's starting DEF to 4 instead of its base 3. Rowan's
+          unaugmented civic docket is folded beneath the tag: public routes and the
+          split-rail recovery only, with no certified crawlboard or frost-brace evidence.
+      - when: [{ var_gte: { name: fieldcraft, value: 4 } }]
+        text: >
+          The Albany relief spear is already in your hands and represents base attack,
+          not another item to find. Its road-warden stamp records the imported field edge:
+          Fieldcraft 4 set this watch's starting DEF to 4 instead of its base 3. The
+          separately certified source packet remains the controlling field evidence.
+      - when:
+          - { not_flag: jamie_market_testimony_certified }
+          - { not_flag: hayden_frost_report_certified }
+          - any_of:
+              - { has_flag: relief_oath_full_duty }
+              - { has_flag: relief_oath_limited_duty }
+              - { has_flag: relief_oath_unaffiliated_bond }
+        text: >
+          The Albany relief spear is already in your hands and represents base attack,
+          not another item to find. Rowan's unaugmented civic docket is folded beneath
+          its relief tag: public routes and the split-rail recovery only, with no
+          certified crawlboard or frost-brace evidence added before departure.
     held: true
 
   # The drive family owns one origin-honest quest-local resource. Cade issues it only
@@ -2894,9 +2926,10 @@ objects:
     name: "Emery's drover-route marks"
     aliases: [drover route, route marks, service cut, drover cut, emery's route]
     description: >
-      Three charcoal cuts on the relief packet match a snowed livestock service path
-      above the breach. It can turn one fouled yearling toward the high-wood scent; a
-      missed route spends the packet but leaves the public recovery pressure unchanged.
+      After the first feed cast fouls, Emery's three charcoal cuts open one Streetwise
+      check at DC 12. Success turns the yearling alive toward the high-wood scent and
+      lowers cattle alarm by 1. Failure spends the route without adding pressure; the
+      existing rail or spear recovery remains available at the same alarm.
     visible_when:
       - { has_flag: drover_route_prepared }
       - { has_flag: lure_trail_fouled }
@@ -2946,9 +2979,10 @@ objects:
     name: "Jamie's sealed relief protocol"
     aliases: [relief protocol, protocol, sealed docket, jamie's protocol, herd calls]
     description: >
-      A witnessed order of names, head-counts, and low yard calls for Cade to answer in
-      sequence. It applies only after a rough rail recovery has sent the yearling alive
-      away from the breach, while the cattle can still be brought back off the slats.
+      Jamie's witnessed sequence applies only after a fouled lure, failed public wedge,
+      and bound split-rail guard have sent the yearling alive away from the breach. Call
+      it here before the loft: one Mediation check at DC 12. Success lowers cattle alarm
+      by 1; failure raises it by 1. The protocol retires either way and the lure continues.
     visible_when:
       - { has_flag: relief_protocol_prepared }
       - { has_flag: yearling_redirected_with_split_guard }
@@ -3085,7 +3119,7 @@ objects:
             - { has_flag: flank_redirected }
             - { not_flag: june_blood_condition_broken }
             - { not_flag: june_cattle_line_taken }
-          reason: "June has reached the pressing cattle under the authority you granted. Speak to her before committing the last scent cast."
+          reason: "June has reached the pressing cattle under the authority you granted. Speak to her first: her one cattle-line intervention lowers cattle alarm by 1 before the last scent cast."
         effects:
           - remove_item: winter_feed_sack
           - set_flag: leader_redirected
@@ -3131,7 +3165,7 @@ objects:
             - { has_flag: flank_redirected }
             - { not_flag: june_blood_condition_broken }
             - { not_flag: june_cattle_line_taken }
-          reason: "June has reached the pressing cattle under the authority you granted. Speak to her before committing the last scent cast."
+          reason: "June has reached the pressing cattle under the authority you granted. Speak to her first: her one cattle-line intervention lowers cattle alarm by 1 before the last scent cast."
         effects:
           - remove_item: winter_feed_sack
           - set_flag: leader_redirected
@@ -3345,6 +3379,18 @@ objects:
       - { not_flag: split_rail_guard_made }
       - { not_flag: strategy_fortify_committed }
     variants:
+      - when:
+          - { has_flag: works_fortification_prepared }
+          - { not_flag: rail_attempted }
+          - { not_flag: strategy_fortify_committed }
+        name: "Works-marked paling-rail"
+        text: >
+          Reese's packet replaces the ordinary wedge here with one Repair check at DC 12,
+          closing Hayden's frost-brace line. Success braces the breach immediately. Failure
+          opens the marked cold-set splice: no second roll, the restored brace raises cattle
+          alarm by 1, and every registered background retains that recovery. On an ordinary
+          hunt the brace remains a combat funnel; after a committed fouled lure, it can
+          instead become a living scent-pen.
       - when: [{ has_flag: leader_turned_over_crossbrace }]
         name: "spent paling brace"
         text: "The paling-rail rests canted in the breach, its brace-stake gone north and split under the grey leader when you turned her over the crossbraced spear."

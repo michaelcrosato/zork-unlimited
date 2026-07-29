@@ -425,19 +425,23 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
         option.consequence,
       ]),
     );
-    expect(presentedOptions.get(FULL)?.summary?.fieldTrigger).toBe("FORTIFY support");
-    expect(presentedOptions.get(LIMITED)?.summary?.fieldTrigger).toBe("LURE support");
-    expect(presentedOptions.get(UNAFFILIATED)?.summary?.fieldTrigger).toBe("DRIVE support");
-    expect(presentedOptions.get(FULL)?.summary?.fieldTrigger).not.toMatch(/\b(?:DC|return)\b/i);
-    expect(disclosedOptions.get(FULL)).toMatch(/Relief Protocol.*consolidat/i);
-    expect(disclosedOptions.get(LIMITED)).toMatch(/Resident Shelter.*consolidat/i);
-    expect(disclosedOptions.get(LIMITED)).toMatch(
-      /final ordinary cattle-alarm[^]*never repairs a failed cast[^]*changes another strategy's mechanics/i,
-    );
-    expect(disclosedOptions.get(LIMITED)).toMatch(
-      /Cade-terms FORTIFY fits the duty[^]*keeps the promise[^]*ordinary failed-seat help[^]*no FORTIFY check bonus[^]*every strategy remains legal/i,
-    );
-    expect(disclosedOptions.get(UNAFFILIATED)).toMatch(/whole-herd.*consolidat/i);
+    for (const option of OATH.options) {
+      const presented = presentedOptions.get(option.id);
+      const immediateCost =
+        option.terms.minutes === 0 ? "no added time" : `${String(option.terms.minutes)} minutes`;
+      expect(presented?.summary).toEqual({
+        commitment: option.summary,
+        immediateCost,
+        tradeoff: option.tradeoff,
+      });
+      expect(disclosedOptions.get(option.id)).toBe(
+        `Benefit: ${option.trigger_category} Cost: ${immediateCost}. Boundary: ${option.tradeoff}`,
+      );
+      expect(disclosedOptions.get(option.id)?.match(/\S+/g)?.length).toBeLessThanOrEqual(32);
+      expect(disclosedOptions.get(option.id)).not.toMatch(
+        /Relief Protocol|Resident Shelter|consolidat|every strategy remains legal/i,
+      );
+    }
 
     for (const oathId of OATH_IDS) {
       const expected = OATH_CASES[oathId];

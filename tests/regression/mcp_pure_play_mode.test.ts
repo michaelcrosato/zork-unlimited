@@ -2184,7 +2184,10 @@ describe("MCP pure play mode", () => {
         expect(detailedPreparation).not.toHaveProperty("options");
         expect(detailedPreparation.inspectedOption).toMatchObject({
           id: worksFortification.id,
-          consequence: expect.stringContaining("Full field terms:"),
+          consequence:
+            "Benefit: Opening repair at Cade's first loose paling rail. " +
+            "Cost: 25 minutes and $4. " +
+            "Boundary: Replaces the ordinary wedge and forfeits Hayden's frost-brace line.",
         });
         expect(Object.keys(detailedPreparation.inspectedOption ?? {}).sort()).toEqual(
           ["consequence", "id", "label"].sort(),

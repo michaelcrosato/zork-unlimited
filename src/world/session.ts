@@ -259,6 +259,7 @@ import {
   type JourneyOpportunityPresentation,
   type JourneyPresentation,
   type JourneyPresentationContext,
+  type JourneyStoryChoiceOption,
   type JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
 import {
@@ -360,6 +361,21 @@ export type OverworldJourneyStoryChoiceResult = Readonly<{
   entry: OverworldJournalEntry;
   journeyDecision: JourneyDecisionClassification;
 }>;
+
+/**
+ * Keep the durable journal mechanically complete while ensuring the immediate
+ * choice response does not re-expand a roleplay-first receipt into deferred
+ * setup mechanics. Legacy and unfamiliar summaries retain their authored text.
+ */
+function storyChoiceEntryForPresentation(
+  entry: OverworldJournalEntry,
+  option: JourneyStoryChoiceOption,
+): OverworldJournalEntry {
+  const presented = redactOverworldJournalEntryForPresentation(entry);
+  return option.summary?.fieldTrigger === undefined && option.summary !== undefined
+    ? { ...presented, text: option.consequence }
+    : presented;
+}
 
 const DEFAULT_CAMPAIGN_CHARACTER_SERIALIZED = serializeCampaignCharacterState(
   createInitialCampaignCharacterState(),
@@ -1752,7 +1768,7 @@ export class OverworldSession {
         choiceId,
         consequence: option.consequence,
         goal: this.journey().goal,
-        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
         journeyDecision,
       });
     }
@@ -1800,7 +1816,7 @@ export class OverworldSession {
         choiceId,
         consequence: option.consequence,
         goal: this.journey().goal,
-        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
         journeyDecision,
       });
     }
@@ -1858,7 +1874,7 @@ export class OverworldSession {
         choiceId,
         consequence: option.consequence,
         goal: this.journey().goal,
-        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
         journeyDecision,
       });
     }
@@ -1913,7 +1929,7 @@ export class OverworldSession {
         choiceId,
         consequence: option.consequence,
         goal: this.journey().goal,
-        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
         journeyDecision,
       });
     }
@@ -1960,7 +1976,7 @@ export class OverworldSession {
         choiceId,
         consequence: option.consequence,
         goal: this.journey().goal,
-        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
         journeyDecision,
       });
     }
@@ -2007,7 +2023,7 @@ export class OverworldSession {
         choiceId,
         consequence: option.consequence,
         goal: this.journey().goal,
-        entry: Object.freeze(redactOverworldJournalEntryForPresentation(entry)),
+        entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
         journeyDecision,
       });
     }

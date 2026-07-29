@@ -241,12 +241,19 @@ describe("optional Station departure interactions", () => {
       ...preparationInteraction.inspect.arguments,
     });
     expect(inspected.story).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
-    expect(inspected.story.message).toContain(`${WOLF.title} Optional field packet — preparation.`);
-    expect(inspected.story.message).toContain(`launch ${WOLF.title} now without one`);
+    expect(inspected.story.message).toContain(`${WOLF.title} · optional preparation.`);
     expect(inspected.story.message).toContain(
-      "Inspect a card for its exact check and recovery; the game repeats them if that field moment arrives.",
+      `Mission: ${WOLF.title}. Last-mile route costs and field tradeoffs remain on its launch card.`,
     );
-    expect(inspected.story.message).not.toContain("relief-capacity choice");
+    expect(inspected.story.message).toContain(`launch ${WOLF.title} without one`);
+    expect(inspected.story.message).toContain(
+      "Choose one optional field priority, or leave without one. " +
+        "Compare exact cost and what it gives up. " +
+        "Field checks surface with their action before resolution.",
+    );
+    expect(inspected.story.message).not.toMatch(
+      /field packet|inspect a card|exact check|recovery/i,
+    );
     expect(inspected.story.message).not.toMatch(/Departure plan|1\/2|Still ahead/i);
     expect(inspected.snapshot_hash).toBe(before.snapshot_hash);
     const afterInspection = api.export_overworld_session({ session_id: sessionId });
@@ -305,12 +312,16 @@ describe("optional Station departure interactions", () => {
       session_id: sessionId,
       ...allocationInteraction.inspect.arguments,
     });
+    expect(allocationStory.story.message).toContain(`${WOLF.title} · optional relief priority.`);
     expect(allocationStory.story.message).toContain(
-      `${WOLF.title} Optional relief capacity — relief allocation.`,
+      "Choose one relief priority, or close this and leave capacity unassigned.",
     );
     expect(allocationStory.story.message).toContain(
-      "This relief-capacity choice is separate and optional",
+      "Choose whom Albany protects, or leave capacity unassigned. " +
+        "Compare each priority's exact cost and what remains exposed. " +
+        "Field checks surface with their action before resolution.",
     );
+    expect(allocationStory.story.message).not.toMatch(/relief-capacity choice|inspect a card/i);
     expect(allocationStory.story.message).not.toMatch(
       /Departure plan|2\/2|Still ahead|Chosen for departure/i,
     );

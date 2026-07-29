@@ -161,24 +161,40 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
             });
             const prompt = session.journey().storyChoice;
             expect(prompt).toMatchObject({ id: ALLY.id, kind: "ally" });
-            expect(prompt?.message).not.toMatch(/capability:.*condition:/i);
-            expect(prompt?.options.map((option) => option.id)).toEqual([ACCEPT, RELAY, SOLO]);
-            expect(prompt?.options.find((option) => option.id === ACCEPT)?.summary).toMatchObject({
-              fieldTrigger: "Independent cattle-pressure ally",
-              fieldTriggerScope: "category",
+            if (!prompt) throw new Error("ally prompt must be available");
+            expect(prompt.message).not.toMatch(/capability:.*condition:/i);
+            expect(prompt.options.map((option) => option.id)).toEqual([ACCEPT, RELAY, SOLO]);
+            const acceptSource = ALLY.options.find((option) => option.id === ACCEPT)!;
+            const acceptOption = prompt.options.find((option) => option.id === ACCEPT)!;
+            expect(acceptOption.summary).toEqual({
+              commitment: acceptSource.summary,
               immediateCost: "15 minutes",
-              tradeoff: ALLY.options.find((option) => option.id === ACCEPT)?.tradeoff,
+              tradeoff: acceptSource.tradeoff,
             });
-            expect(
-              prompt?.options.every((option) => /actual cost:/i.test(option.consequence)),
-            ).toBe(true);
-            expect(prompt?.options.find((option) => option.id === ACCEPT)?.consequence).toContain(
-              ALLY.options.find((option) => option.id === ACCEPT)?.preview,
+            expect(Object.keys(acceptOption.summary!).sort()).toEqual([
+              "commitment",
+              "immediateCost",
+              "tradeoff",
+            ]);
+            expect(acceptOption.consequence).toBe(
+              `Benefit: Independent cattle-pressure ally Cost: 15 minutes. Boundary: ${acceptSource.tradeoff}`,
             );
+            expect(
+              prompt.options.every((option) =>
+                /^Benefit: .+ Cost: .+\. Boundary: .+$/.test(option.consequence),
+              ),
+            ).toBe(true);
+            expect(acceptOption.consequence).not.toContain(acceptSource.preview);
 
             const before = session.snapshot();
-            session.chooseJourneyStory(optionId);
+            const selectedSource = ALLY.options.find((option) => option.id === optionId)!;
+            const selectedReceipt = prompt.options.find((option) => option.id === optionId)!;
+            const selection = session.chooseJourneyStory(optionId);
+            expect(selection.entry.text).toBe(selectedReceipt.consequence);
             const after = session.snapshot();
+            expect(
+              after.journalEntries.find((entry) => entry.id === selection.entry.id)?.text,
+            ).toContain(selectedSource.preview);
             expect(after.minutes - before.minutes).toBe(
               optionId === ACCEPT ? 15 : optionId === RELAY ? 5 : 0,
             );

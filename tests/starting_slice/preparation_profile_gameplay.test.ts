@@ -196,6 +196,23 @@ function act(state: GameState, actionId: string, ...rolls: number[]): GameState 
   return result.state;
 }
 
+function narrationForAction(state: GameState, actionId: string): string {
+  const options = enumerateRpgActions(index, state);
+  const option = options.find((candidate) => candidate.id === actionId);
+  expect(
+    option,
+    `${actionId} must be legal in ${state.current}; legal: ${options
+      .map((candidate) => candidate.id)
+      .join(", ")}`,
+  ).toBeDefined();
+  if (!option) throw new Error(`Missing action ${actionId}.`);
+  const result = makeStep(buildRpgRules(index, () => fixedRolls()))(state, option.action);
+  expect(result.ok, result.rejectionReason).toBe(true);
+  return result.events
+    .flatMap((event) => (event.type === "narration" ? [event.text] : []))
+    .join(" ");
+}
+
 function profileState(profileId: string, registrationId: string): GameState {
   const profile = registration.profiles.find((candidate) => candidate.id === registrationId);
   if (!profile) throw new Error(`Missing registration profile ${registrationId}.`);
@@ -390,7 +407,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     }
   });
 
-  it("shows every preparation check's exact current odds without expanding the initial comparison", () => {
+  it("keeps every authored check contract while deferring its odds to the field consumer", () => {
     for (const checkCase of PREPARATION_CHECK_CASES) {
       const authored = preparation.profiles.find(
         (candidate) => candidate.id === checkCase.profileId,
@@ -408,18 +425,18 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       });
 
       for (const background of registration.profiles) {
-        const modifier = background.id === checkCase.specialistId ? 4 : 0;
-        const minimumRoll = 12 - modifier;
-        const chance = (21 - minimumRoll) * 5;
         const presented = presentOpeningPreparation(preparation, background.character).options.find(
           (option) => option.id === checkCase.profileId,
         );
         expect(Object.keys(presented?.summary ?? {}).sort(), background.id).toEqual(
-          ["commitment", "fieldTrigger", "fieldTriggerScope", "immediateCost", "tradeoff"].sort(),
+          ["commitment", "immediateCost", "tradeoff"].sort(),
         );
-        expect(presented?.consequence, background.id).toContain(
-          `Current ${checkCase.skillLabel} modifier: +${String(modifier)}. This d20 + ${String(modifier)} vs DC 12 check succeeds on ${String(minimumRoll)}-20 (${String(chance)}%).`,
+        expect(presented?.consequence, background.id).toMatch(
+          /^Benefit: .+ Cost: .+\. Boundary: .+$/,
         );
+        expect(presented?.consequence.match(/\S+/g)?.length, background.id).toBeLessThanOrEqual(32);
+        expect(presented?.consequence, background.id).not.toContain(checkCase.skillLabel);
+        expect(presented?.consequence, background.id).not.toContain("DC 12");
       }
     }
 
@@ -432,8 +449,50 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       preparation,
       registration.profiles[0]!.character,
     ).options.find((option) => option.id === DROVER)?.consequence;
-    expect(droverDetail).toContain(drover.preview);
-    expect(droverDetail?.match(/same pressure as declining it/g)).toHaveLength(1);
+    expect(droverDetail).toBe(
+      `Benefit: ${drover.trigger_category} Cost: 20 minutes and $4. Boundary: ${drover.tradeoff}`,
+    );
+    expect(droverDetail).not.toContain(drover.preview);
+  });
+
+  it("repeats every preparation check and both outcomes at its field object before resolution", () => {
+    const works = reachPaling(profileState(WORKS, IRONHANDS));
+    const worksBefore = structuredClone(works);
+    expect(
+      enumerateRpgActions(index, works).find((action) => action.id === "set_paling_rail")
+        ?.skill_check,
+    ).toEqual({ skill: "repair", difficulty: 12, die: "d20" });
+    expect(narrationForAction(works, "examine_paling_rail")).toMatch(
+      /Repair check at DC 12[^]*closing Hayden's frost-brace line[^]*Success braces[^]*Failure opens the marked cold-set splice[^]*no second roll[^]*raises cattle alarm by 1[^]*ordinary hunt[^]*combat funnel[^]*committed fouled lure[^]*living scent-pen/i,
+    );
+    expect(works).toEqual(worksBefore);
+    expect(works.flags.rail_attempted).not.toBe(true);
+
+    const drover = foulFirstCast(profileState(DROVER, COURIER));
+    const droverBefore = structuredClone(drover);
+    expect(
+      enumerateRpgActions(index, drover).find((action) => action.id === "use_drover_route_marks")
+        ?.skill_check,
+    ).toEqual({ skill: "streetwise", difficulty: 12, die: "d20" });
+    expect(narrationForAction(drover, "examine_drover_route_marks")).toMatch(
+      /Streetwise[^]*DC 12[^]*Success[^]*yearling alive[^]*lowers cattle alarm by 1[^]*Failure spends the route without adding pressure[^]*rail or spear recovery remains/i,
+    );
+    expect(drover).toEqual(droverBefore);
+    expect(drover.flags.drover_route_attempted).not.toBe(true);
+
+    let relief = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, LEDGER)));
+    relief = act(relief, "go_south");
+    const reliefBefore = structuredClone(relief);
+    expect(
+      enumerateRpgActions(index, relief).find(
+        (action) => action.id === "use_relief_protocol_docket",
+      )?.skill_check,
+    ).toEqual({ skill: "mediation", difficulty: 12, die: "d20" });
+    expect(narrationForAction(relief, "examine_relief_protocol_docket")).toMatch(
+      /fouled lure[^]*failed public wedge[^]*bound split-rail guard[^]*Mediation[^]*DC 12[^]*Success lowers cattle alarm by 1[^]*failure raises it by 1[^]*retires either way[^]*lure continues/i,
+    );
+    expect(relief).toEqual(reliefBefore);
+    expect(relief.flags.relief_protocol_attempted).not.toBe(true);
   });
 
   it("makes Works Repair expertise matter while preserving its deterministic noisy recovery", () => {
@@ -706,13 +765,13 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     ).options.find((option) => option.id === RELIEF);
     expect(presented?.summary).toEqual({
       commitment: reliefProfile?.summary,
-      fieldTrigger: "Herd-pressure recovery",
-      fieldTriggerScope: "category",
       immediateCost: "30 minutes and $4",
       tradeoff: reliefProfile?.tradeoff,
     });
-    expect(presented?.summary?.fieldTrigger).not.toContain(RELIEF_TRIGGER_CATEGORY);
-    expect(presented?.consequence).toContain(`Full field terms: ${RELIEF_PREVIEW}`);
+    expect(presented?.consequence).toBe(
+      `Benefit: ${RELIEF_TRIGGER_CATEGORY} Cost: 30 minutes and $4. Boundary: ${reliefProfile?.tradeoff}`,
+    );
+    expect(presented?.consequence).not.toContain(RELIEF_PREVIEW);
     let specialist = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, LEDGER)));
     let generalist = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, COURIER)));
     specialist = act(specialist, "go_south");

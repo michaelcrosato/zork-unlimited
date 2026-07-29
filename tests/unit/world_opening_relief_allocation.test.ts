@@ -5,6 +5,10 @@ import {
   cloneCampaignCharacterState,
 } from "../../src/world/campaign_character_state.js";
 import {
+  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  openingSelectionReceiptWordCount,
+} from "../../src/world/opening_choice_receipt.js";
+import {
   OPENING_RELIEF_ALLOCATION_OPTION_COUNT,
   OpeningReliefAllocationSchema,
   applyOpeningReliefAllocationOption,
@@ -152,10 +156,15 @@ describe("opening relief allocation authoring", () => {
       exactLegacy,
       buildCampaignCharacterState(),
     );
-    expect(exactLegacyPrompt.options[0]!.summary).toMatchObject({
-      fieldTrigger: exactLegacy.options[0]!.preview,
+    expect(exactLegacyPrompt.options[0]!.summary).toEqual({
+      commitment: exactLegacy.options[0]!.summary,
+      immediateCost: "10 minutes",
+      tradeoff: `Leaves exposed: ${exactLegacy.options[0]!.leaves_exposed}`,
     });
-    expect(exactLegacyPrompt.options[0]!.summary).not.toHaveProperty("fieldTriggerScope");
+    expect(exactLegacyPrompt.options[0]!.consequence).toBe(
+      `Benefit: ${exactLegacy.options[0]!.protects} Cost: 10 minutes. ` +
+        `Boundary: Leaves exposed: ${exactLegacy.options[0]!.leaves_exposed}`,
+    );
 
     const partiallyCategorized = cloneOpeningReliefAllocation(scene);
     Reflect.deleteProperty(partiallyCategorized.options[0]!, "trigger_category");
@@ -260,7 +269,7 @@ describe("opening relief allocation application and presentation", () => {
     expect(openingReliefAllocationOptionById(scene, "albany:relief_missing")).toBeNull();
   });
 
-  it("presents exact coverage, exposure, time, and consequence for every option", () => {
+  it("presents exact benefit, exposure boundary, and dynamic time for every option", () => {
     const scene = reliefAllocationScene();
     const prompt = presentOpeningReliefAllocation(scene, buildCampaignCharacterState());
 
@@ -271,17 +280,28 @@ describe("opening relief allocation application and presentation", () => {
         "Allocate Albany's Relief Capacity. One public packet can cover Cade's steading, Albany's vulnerable residents, or the mobile reserve.",
     });
     expect(prompt.options).toHaveLength(3);
-    expect(prompt.options[0]!.consequence).toMatch(
-      /full field terms: The steading begins.*protects: Cade's byre.*leaves exposed: Albany's resident counter.*actual cost: 10 minutes/i,
+    expect(prompt.options[0]!.consequence).toBe(
+      "Benefit: Opening relief line at Cade's steading. Cost: 10 minutes. " +
+        "Boundary: Leaves exposed: Albany's resident counter and the roaming reserve.",
     );
     expect(prompt.options[0]!.summary).toEqual({
       commitment: scene.options[0]!.summary,
-      fieldTrigger: scene.options[0]!.trigger_category,
-      fieldTriggerScope: "category",
       immediateCost: "10 minutes",
       tradeoff: "Leaves exposed: Albany's resident counter and the roaming reserve.",
     });
-    expect(prompt.options[1]!.consequence).toMatch(/actual cost: no added time/i);
+    expect(prompt.options[1]!.summary?.immediateCost).toBe("no added time");
+    expect(prompt.options[1]!.consequence).toContain("Cost: no added time.");
+    for (const option of prompt.options) {
+      expect(Object.keys(option.summary ?? {}).sort()).toEqual([
+        "commitment",
+        "immediateCost",
+        "tradeoff",
+      ]);
+      expect(option.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
+      expect(openingSelectionReceiptWordCount(option.consequence)).toBeLessThanOrEqual(
+        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      );
+    }
     expect(formatOpeningReliefAllocationCost({ minutes: 5 })).toBe("5 minutes");
     expect(formatOpeningReliefAllocationCost({ minutes: 0 })).toBe("no added time");
     expect(Object.isFrozen(prompt)).toBe(true);

@@ -8,19 +8,7 @@ import {
   parseOpeningReliefOath,
   type OpeningReliefOath,
 } from "./opening_relief_oath.js";
-
-const CURRENT_RELIEF_OATH_FIELD_CATEGORIES: Readonly<Record<string, string>> = Object.freeze({
-  "FORTIFY benefit: first Albany public-seal Repair check is 2 DC easier.": "FORTIFY support",
-  "LURE benefit: final bloodless cast skips +1 alarm; Cade-terms FORTIFY fit.": "LURE support",
-  "DRIVE benefit: first shutter signal is 2 DC easier.": "DRIVE support",
-});
-
-function reliefOathFieldCategory(
-  option: ReturnType<typeof parseOpeningReliefOath>["options"][number],
-): string | undefined {
-  if (option.trigger_category === undefined) return undefined;
-  return CURRENT_RELIEF_OATH_FIELD_CATEGORIES[option.trigger_category] ?? option.trigger_category;
-}
+import { presentOpeningChoiceOption } from "./opening_choice_receipt.js";
 
 /** Project Albany's disclosed access-and-duty terms onto the journey choice surface. */
 export function presentOpeningReliefOath(
@@ -30,22 +18,29 @@ export function presentOpeningReliefOath(
   const parsed = parseOpeningReliefOath(scene);
   const options = Object.freeze(
     parsed.options.map((option) => {
-      const fieldCategory = reliefOathFieldCategory(option);
-      return Object.freeze({
+      const cost = formatOpeningReliefOathCost(option.terms);
+      if (option.trigger_category === undefined) {
+        return Object.freeze({
+          id: option.id,
+          label: option.title,
+          summary: Object.freeze({
+            commitment: option.summary,
+            fieldTrigger: option.preview,
+            immediateCost: cost,
+            tradeoff: option.tradeoff,
+          }),
+          consequence:
+            `${option.summary} ${option.preview} Access: ${option.access} Duty: ${option.duty} ` +
+            `Actual cost: ${cost}. ${option.consequence}`,
+        });
+      }
+      return presentOpeningChoiceOption({
         id: option.id,
         label: option.title,
-        summary: Object.freeze({
-          commitment: option.summary,
-          fieldTrigger: fieldCategory ?? option.preview,
-          ...(fieldCategory ? { fieldTriggerScope: "category" as const } : {}),
-          immediateCost: formatOpeningReliefOathCost(option.terms),
-          tradeoff: option.tradeoff,
-        }),
-        consequence: fieldCategory
-          ? `${option.summary} ${fieldCategory} ${option.preview} Access: ${option.access} Duty: ${option.duty} ` +
-            `Actual cost: ${formatOpeningReliefOathCost(option.terms)}. ${option.consequence}`
-          : `${option.summary} ${option.preview} Access: ${option.access} Duty: ${option.duty} ` +
-            `Actual cost: ${formatOpeningReliefOathCost(option.terms)}. ${option.consequence}`,
+        commitment: option.summary,
+        exactBenefit: option.trigger_category,
+        immediateCost: cost,
+        giveUp: option.tradeoff,
       });
     }),
   ) as JourneyReliefOathStoryChoiceOptions;

@@ -154,10 +154,10 @@ function compactOverworldJournalEntry(entry: {
 
 /**
  * Keep the selected consequence as the one authoritative receipt while reducing
- * its journal record to the same tuple used by rolling compact context. Opening
- * setup entries deliberately repeat the consequence byte-for-byte, so their prose
- * appears once. Campaign follow-through can journal different prose; preserve that
- * distinct text explicitly rather than silently dropping it.
+ * its presented journal record to the same tuple used by rolling compact context.
+ * Roleplay-first opening selections already project that receipt into the returned
+ * entry while retaining fuller prose in persistent journal state. Other campaign
+ * choices may return distinct journal prose; preserve that explicitly.
  */
 export function compactOverworldJourneyStoryChoiceResult(
   result: OverworldJourneyStoryChoiceResult,

@@ -10,6 +10,10 @@ import {
   type CampaignCharacterState,
 } from "../../src/world/campaign_character_state.js";
 import {
+  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  openingSelectionReceiptWordCount,
+} from "../../src/world/opening_choice_receipt.js";
+import {
   OPENING_PREPARATION_MAX_PROFILES,
   OPENING_PREPARATION_MIN_PROFILES,
   OpeningPreparationProfileSchema,
@@ -304,8 +308,11 @@ describe("opening preparation authoring", () => {
     ).toThrow();
   });
 
-  it("keeps generic check odds in exact detail rather than the initial comparison", () => {
+  it("defers generic check odds from the opening receipt", () => {
     const scene = preparationScene();
+    scene.profiles.forEach((profile) => {
+      profile.trigger_category = profile.title;
+    });
     scene.profiles[0]!.check_disclosure = {
       skill_id: "skill:repair",
       skill_label: "Repair",
@@ -317,18 +324,20 @@ describe("opening preparation authoring", () => {
       skills: [{ skillId: "skill:repair", rank: 4 }],
     });
     const option = presentOpeningPreparation(scene, character).options[0]!;
-    expect(Object.keys(option.summary ?? {}).sort()).toEqual(
-      ["commitment", "fieldTrigger", "immediateCost", "tradeoff"].sort(),
+    expect(Object.keys(option.summary ?? {}).sort()).toEqual([
+      "commitment",
+      "immediateCost",
+      "tradeoff",
+    ]);
+    expect(option.consequence).toBe(
+      "Benefit: Civic works survey Cost: 25 minutes and $4. " +
+        "Boundary: The other specialist plans remain behind.",
     );
-    expect(option.summary?.fieldTrigger).toBe(scene.profiles[0]!.preview);
-    expect(option.summary?.fieldTrigger).not.toContain("DC 12");
-    expect(option.consequence).toContain(
-      "Current Repair modifier: +4. This d20 + 4 vs DC 12 check succeeds on 8-20 (65%).",
-    );
+    expect(option.consequence).not.toMatch(/\b(?:DC|check|modifier|odds|success|failure)\b/i);
 
     scene.profiles[0]!.check_disclosure!.difficulty = 26;
-    expect(presentOpeningPreparation(scene, character).options[0]!.consequence).toContain(
-      "Current Repair modifier: +4. This d20 + 4 vs DC 26 check has no successful natural roll (0%).",
+    expect(presentOpeningPreparation(scene, character).options[0]!.consequence).toBe(
+      option.consequence,
     );
   });
 
@@ -497,8 +506,11 @@ describe("opening preparation application and presentation", () => {
     expect(source).toEqual(sourceBefore);
   });
 
-  it("presents every finite plan with visible actual terms and consequences", () => {
+  it("presents every finite plan with a three-key summary and exact receipt", () => {
     const scene = preparationScene();
+    scene.profiles.forEach((profile) => {
+      profile.trigger_category = profile.title;
+    });
     const publicPrompt = presentOpeningPreparation(scene, publicCharacter());
 
     expect(publicPrompt).toMatchObject({
@@ -512,23 +524,40 @@ describe("opening preparation application and presentation", () => {
       label: "Civic works survey",
       summary: {
         commitment: "Reese walks you through the damaged waterworks ledger.",
-        fieldTrigger: "You will enter knowing which frozen valves matter.",
         immediateCost: "25 minutes and $4",
         tradeoff: "The other specialist plans remain behind.",
       },
       consequence:
-        "Reese walks you through the damaged waterworks ledger. You will enter knowing which frozen valves matter. Actual cost: 25 minutes and $4. Reese remembers that you trusted the civic plan.",
+        "Benefit: Civic works survey Cost: 25 minutes and $4. Boundary: The other specialist plans remain behind.",
     });
-    expect(publicPrompt.options[0]!.summary).not.toHaveProperty("fieldTriggerScope");
-    expect(publicPrompt.options[0]!.consequence).not.toContain("Full field terms:");
-    expect(publicPrompt.options[0]!.consequence.match(/frozen valves matter/g)).toHaveLength(1);
+    expect(publicPrompt.options[0]!.consequence).not.toContain(scene.profiles[0]!.preview);
+    expect(publicPrompt.options[0]!.consequence).not.toContain(scene.profiles[0]!.consequence);
+    expect(
+      openingSelectionReceiptWordCount(publicPrompt.options[0]!.consequence),
+    ).toBeLessThanOrEqual(OPENING_SELECTION_RECEIPT_WORD_LIMIT);
     expect(Object.isFrozen(publicPrompt)).toBe(true);
     expect(Object.isFrozen(publicPrompt.options)).toBe(true);
     expect(Object.isFrozen(publicPrompt.options[0])).toBe(true);
 
     const sponsoredPrompt = presentOpeningPreparation(scene, sponsoredCharacter());
-    expect(sponsoredPrompt.options[0]!.consequence).toContain(
-      "Actual cost: 10 minutes and $1. Your civic sponsorship shortens the survey and covers most of its fee.",
+    expect(sponsoredPrompt.options[0]!.summary?.immediateCost).toBe("10 minutes and $1");
+    expect(sponsoredPrompt.options[0]!.consequence).toBe(
+      "Benefit: Civic works survey Cost: 10 minutes and $1. " +
+        "Boundary: The other specialist plans remain behind.",
+    );
+    expect(sponsoredPrompt.options[0]!.consequence).not.toContain(scene.profiles[0]!.sponsor!.note);
+
+    const exactLegacy = preparationScene();
+    const exactLegacyPrompt = presentOpeningPreparation(exactLegacy, publicCharacter());
+    expect(exactLegacyPrompt.options[0]!.summary).toEqual({
+      commitment: exactLegacy.profiles[0]!.summary,
+      fieldTrigger: exactLegacy.profiles[0]!.preview,
+      immediateCost: "25 minutes and $4",
+      tradeoff: exactLegacy.profiles[0]!.tradeoff,
+    });
+    expect(exactLegacyPrompt.options[0]!.consequence).toBe(
+      `${exactLegacy.profiles[0]!.summary} ${exactLegacy.profiles[0]!.preview} ` +
+        `Actual cost: 25 minutes and $4. ${exactLegacy.profiles[0]!.consequence}`,
     );
   });
 });

@@ -99,8 +99,9 @@ describe("Station dispatch impact cards", () => {
     );
     const rendered = renderTerminalStoryChoiceComparison(full);
     expect(rendered.indexOf("Dispatch: +5m delay → 65m, delayed.")).toBeLessThan(
-      rendered.indexOf("Purpose:"),
+      rendered.indexOf("Promise / priority:"),
     );
+    expect(rendered).not.toContain("Purpose:");
 
     const api = createToolApi({ root: process.cwd() });
     const started = api.start_overworld({ compact_context: false });

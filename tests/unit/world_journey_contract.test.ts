@@ -898,7 +898,6 @@ describe("journey contract presentation context", () => {
         label: `Background ${String(index)}`,
         summary: {
           commitment: `Carry background ${String(index)}.`,
-          fieldTrigger: `Its first field tradeoff is known before departure.`,
           immediateCost: "No added time or fee.",
           tradeoff: `Background ${String(index)} excludes the other histories.`,
         },
@@ -912,6 +911,13 @@ describe("journey contract presentation context", () => {
     expect(Object.keys(view.storyChoice!).sort()).toEqual(["id", "kind", "message", "options"]);
     expect(view.storyChoice?.options).toHaveLength(8);
     expect(new Set(view.storyChoice?.options.map((option) => option.id)).size).toBe(8);
+    expect(
+      view.storyChoice?.options.every(
+        (option) =>
+          JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
+          JSON.stringify(["commitment", "immediateCost", "tradeoff"]),
+      ),
+    ).toBe(true);
     expect(Object.isFrozen(view.storyChoice)).toBe(true);
     expect(Object.isFrozen(view.storyChoice?.options)).toBe(true);
     expect(view.storyChoice?.options.every((option) => Object.isFrozen(option))).toBe(true);
@@ -993,7 +999,6 @@ describe("journey contract presentation context", () => {
         label: `Commitment ${String(index)}`,
         summary: {
           commitment: `Field role ${String(index)}.`,
-          fieldTrigger: `Ally trigger ${String(index)}.`,
           immediateCost: `${String(index)} minutes`,
           tradeoff: `Ally limit ${String(index)}.`,
         },
@@ -1039,7 +1044,6 @@ describe("journey contract presentation context", () => {
         label: `Term ${String(index)}`,
         summary: {
           commitment: `Bind term ${String(index)}.`,
-          fieldTrigger: `Its first field tradeoff is known before departure.`,
           immediateCost: `${String(index)} minutes`,
           tradeoff: `Duty limit ${String(index)}.`,
         },

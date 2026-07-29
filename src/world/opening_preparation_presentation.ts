@@ -10,19 +10,7 @@ import {
   type OpeningPreparation,
   type OpeningPreparationCheckDisclosure,
 } from "./opening_preparation.js";
-
-const CURRENT_PREPARATION_FIELD_CATEGORIES: Readonly<Record<string, string>> = Object.freeze({
-  "Opening repair at Cade's first loose paling rail.": "Opening fortification support",
-  "One-shot lure recovery after the first feed cast fails.": "Failed-lure recovery",
-  "Herd calming after the public-rail lure recovery.": "Herd-pressure recovery",
-});
-
-function preparationFieldCategory(
-  profile: ReturnType<typeof parseOpeningPreparation>["profiles"][number],
-): string | undefined {
-  if (profile.trigger_category === undefined) return undefined;
-  return CURRENT_PREPARATION_FIELD_CATEGORIES[profile.trigger_category] ?? profile.trigger_category;
-}
+import { presentOpeningChoiceOption } from "./opening_choice_receipt.js";
 
 function preparationCheckDisclosure(
   check: OpeningPreparationCheckDisclosure | undefined,
@@ -54,23 +42,31 @@ export function presentOpeningPreparation(
     options: Object.freeze(
       parsed.profiles.map((profile) => {
         const terms = openingPreparationTerms(profile, character);
-        const sponsorship = terms.sponsorNote ? ` ${terms.sponsorNote}` : "";
-        const fieldCategory = preparationFieldCategory(profile);
         const cost = formatOpeningPreparationCost(terms);
-        const checkDisclosure = preparationCheckDisclosure(profile.check_disclosure, character);
-        return Object.freeze({
+        if (profile.trigger_category === undefined) {
+          const sponsorship = terms.sponsorNote ? ` ${terms.sponsorNote}` : "";
+          const checkDisclosure = preparationCheckDisclosure(profile.check_disclosure, character);
+          return Object.freeze({
+            id: profile.id,
+            label: profile.title,
+            summary: Object.freeze({
+              commitment: profile.summary,
+              fieldTrigger: profile.preview,
+              immediateCost: cost,
+              tradeoff: profile.tradeoff,
+            }),
+            consequence:
+              `${profile.summary} ${profile.preview}${checkDisclosure} Actual cost: ${cost}.` +
+              `${sponsorship} ${profile.consequence}`,
+          });
+        }
+        return presentOpeningChoiceOption({
           id: profile.id,
           label: profile.title,
-          summary: Object.freeze({
-            commitment: profile.summary,
-            fieldTrigger: fieldCategory ?? profile.preview,
-            ...(fieldCategory ? { fieldTriggerScope: "category" as const } : {}),
-            immediateCost: cost,
-            tradeoff: profile.tradeoff,
-          }),
-          consequence: fieldCategory
-            ? `${profile.summary} ${fieldCategory} Full field terms: ${profile.preview}${checkDisclosure} Actual cost: ${cost}.${sponsorship} ${profile.consequence}`
-            : `${profile.summary} ${profile.preview}${checkDisclosure} Actual cost: ${cost}.${sponsorship} ${profile.consequence}`,
+          commitment: profile.summary,
+          exactBenefit: profile.trigger_category,
+          immediateCost: cost,
+          giveUp: profile.tradeoff,
         });
       }),
     ) as JourneyPreparationStoryChoiceOptions,

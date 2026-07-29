@@ -171,8 +171,18 @@ function launchPreparedWolf(api: ToolApi) {
     session_id: overworldSessionId,
     story_choice_id: PREPARATION_STORY_ID,
   }).story;
-  expect(preparation.options.find((option) => option.id === PROFILE)?.consequence).toMatch(
-    /actual cost: 5 minutes and \$0[^]*independent bond/i,
+  const sourceProfile = WORLD.opening_preparation!.profiles.find(
+    (profile) => profile.id === PROFILE,
+  )!;
+  const presentedProfile = preparation.options.find((option) => option.id === PROFILE)!;
+  expect(presentedProfile.summary).toEqual({
+    commitment: sourceProfile.summary,
+    immediateCost: "5 minutes and $0",
+    tradeoff: sourceProfile.tradeoff,
+  });
+  expect(presentedProfile.consequence).toBe(
+    `Benefit: ${sourceProfile.trigger_category} Cost: 5 minutes and $0. ` +
+      `Boundary: ${sourceProfile.tradeoff}`,
   );
 
   const prepared = api.choose_overworld_session_story({
@@ -181,6 +191,7 @@ function launchPreparedWolf(api: ToolApi) {
     story_choice_id: PREPARATION_STORY_ID,
     choice: PROFILE,
   });
+  expect(prepared.result.entry.text).toBe(presentedProfile.consequence);
   expect(prepared.observation.character).toMatchObject({
     background: "albany:unaffiliated_courier",
     money: 18,
@@ -190,6 +201,9 @@ function launchPreparedWolf(api: ToolApi) {
   const preparedSnapshot = api.export_overworld_session({
     session_id: overworldSessionId,
   }).snapshot;
+  expect(
+    preparedSnapshot.journalEntries.find((entry) => entry.id === prepared.result.entry.id)?.text,
+  ).toMatch(/actual cost: 5 minutes and \$0[^]*independent bond/i);
   expect(UiOverworldSession.restore(WORLD, preparedSnapshot).view().character).toEqual(
     prepared.observation.character,
   );

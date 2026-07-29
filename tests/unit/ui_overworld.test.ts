@@ -621,13 +621,12 @@ describe("OverworldSession", () => {
     expect(screen).toContain('className="journey-choice-summary"');
     expect(screen).toContain('className="journey-choice-trigger"');
     expect(screen).toContain('className="journey-choice-cost"');
+    expect(screen).toContain("const usesRoleplayReceipt =");
     expect(screen).toContain(
       'const usesTriggerCategory = conciseSummary?.fieldTriggerScope === "category";',
     );
-    expect(screen).toContain('usesTriggerCategory ? "Purpose:" : "Commitment:"');
-    expect(screen).toContain(
-      "<summary>{`Full terms and consequence for ${option.label}`}</summary>",
-    );
+    expect(screen).toContain('? "Promise / priority:"');
+    expect(screen).toContain("`Inspect exact receipt for ${option.label}`");
     expect(styles).toContain(".journey-choice-actions .journey-choice-card > button");
     expect(styles).toContain(
       ".journey-choice-actions:not(.journey-choice-actions-registration)\n  .journey-choice-card:first-child\n  > button",
@@ -1415,7 +1414,7 @@ describe("OverworldSession", () => {
       expect(markup).not.toContain("wolf pack coming down with the weather");
       expect(markup).not.toContain("Take the Exposed Ridge Road");
       expect(markup).not.toContain("Take the Sheltered Stockway");
-      expect(markup).toContain("Tradeoff:");
+      expect(markup).toContain("Cost / give up:");
       expect(markup).toContain("The Wolf-Winter dispatch recap");
       assertRecapRows(markup, departureRecap, 3, 1);
       expect(markup).not.toContain("clean three-cast lure line");
@@ -1599,8 +1598,9 @@ describe("OverworldSession", () => {
       expect(markup).toContain("Relief terms");
       expect(markup).toContain(journey.storyChoice.message);
       expect(markup).toContain(selectedOption.label);
-      expect(markup).toContain("Actual cost: 5 minutes.");
-      expect(markup).toContain("Bounded authority becomes a named value");
+      expect(markup).toContain("Cost / give up:");
+      expect(markup).toContain(selectedOption.consequence);
+      expect(markup).not.toContain("Bounded authority becomes a named value");
       expect(markup.match(/<button/g)).toHaveLength(journey.storyChoice.options.length);
 
       type ReactElementNode = {

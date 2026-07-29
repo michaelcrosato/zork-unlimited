@@ -437,18 +437,12 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const text = renderJourneyGate(journey);
     expect(text).toContain("! Story choice comparison");
     for (const option of story!.options) {
-      const usesTriggerCategory = option.summary!.fieldTriggerScope === "category";
       expect(text).toContain(option.label);
+      expect(option.summary).not.toHaveProperty("fieldTrigger");
+      expect(text).toContain(`Promise / priority: ${option.summary!.commitment}`);
       expect(text).toContain(
-        `${usesTriggerCategory ? "Purpose" : "Commitment"}: ${option.summary!.commitment}`,
+        `Cost / give up: ${option.summary!.immediateCost}; ${option.summary!.tradeoff}`,
       );
-      expect(text).toContain(
-        `${usesTriggerCategory ? "Trigger category" : "Field trigger"}: ${
-          option.summary!.fieldTrigger
-        }`,
-      );
-      expect(text).toContain(`Immediate cost: ${option.summary!.immediateCost}`);
-      expect(text).toContain(`Tradeoff: ${option.summary!.tradeoff}`);
       expect(text).toContain(`Inspect: \`inspect ${option.id}\``);
       expect(text).toContain(`Choose: \`choose ${option.id}\``);
       expect(text).not.toContain(option.consequence);
@@ -483,7 +477,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(journey.pendingChoice?.options.map((option) => option.id)).toEqual(["continue", "end"]);
   });
 
-  it("labels categorized Station preparation summaries without changing legacy trigger labels", () => {
+  it("labels Station preparation summaries as roleplay-first receipts", () => {
     const registration = WORLD.opening_registration;
     const oath = WORLD.opening_relief_oath;
     const source = WORLD.opening_lead_source;
@@ -502,11 +496,16 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const text = renderJourneyGate({ ...session.journey(), storyChoice });
 
     for (const option of storyChoice.options) {
-      expect(option.summary?.fieldTriggerScope).toBe("category");
-      expect(text).toContain(`Purpose: ${option.summary!.commitment}`);
-      expect(text).toContain(`Trigger category: ${option.summary!.fieldTrigger}`);
+      expect(option.summary).not.toHaveProperty("fieldTrigger");
+      expect(option.summary).not.toHaveProperty("fieldTriggerScope");
+      expect(text).toContain(`Promise / priority: ${option.summary!.commitment}`);
+      expect(text).toContain(
+        `Cost / give up: ${option.summary!.immediateCost}; ${option.summary!.tradeoff}`,
+      );
+      expect(text).not.toContain(`Purpose: ${option.summary!.commitment}`);
       expect(text).not.toContain(`Commitment: ${option.summary!.commitment}`);
-      expect(text).not.toContain(`Field trigger: ${option.summary!.fieldTrigger}`);
+      expect(text).not.toContain("Trigger category:");
+      expect(text).not.toContain("Field trigger:");
     }
 
     const inspected = storyChoice.options[0]!;
@@ -517,7 +516,6 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     if (!inspected.summary) throw new Error("Expected structured Station detail.");
     const detail = renderTerminalStoryChoiceDetail(storyChoice, inspected);
     expect(detail.split(inspected.summary.commitment)).toHaveLength(2);
-    expect(detail.split(inspected.summary.fieldTrigger)).toHaveLength(2);
     expect(detail.split(inspected.summary.immediateCost)).toHaveLength(2);
     expect(detail.split(inspected.summary.tradeoff)).toHaveLength(2);
     expect(detail).toContain(projected.consequence);
@@ -864,10 +862,12 @@ describe("overworld_play CLI (scripted mode)", () => {
       }
       expect(run.output.match(/Back to the story choice comparison/g)?.length ?? 0).toBe(2);
       expect(run.output).toContain(
-        "This relief-capacity choice is separate and optional: choose one allocation, or close it to leave capacity unassigned.",
+        "Choose one relief priority, or close this and leave capacity unassigned.",
       );
       expect(run.output).not.toContain("final required departure-board choice");
-      expect(run.output).toContain("After choosing or closing it, return to Station actions.");
+      expect(run.output).toContain(
+        "Compare each priority's exact cost and what remains exposed. Field checks surface with their action before resolution.",
+      );
       expect(run.output).toContain("Optional before departure:");
       expect(run.output.match(/Command: talk June Pike/g) ?? []).toHaveLength(1);
       const junePromptStart = run.output.lastIndexOf("\n! Story choice comparison\n");

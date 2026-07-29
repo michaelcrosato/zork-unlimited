@@ -7,6 +7,10 @@ import {
   type CampaignCharacterState,
 } from "../../src/world/campaign_character_state.js";
 import {
+  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+  openingSelectionReceiptWordCount,
+} from "../../src/world/opening_choice_receipt.js";
+import {
   OPENING_LEAD_SOURCE_MAX_OPTIONS,
   OPENING_LEAD_SOURCE_MIN_OPTIONS,
   OpeningLeadSourceOptionSchema,
@@ -167,10 +171,16 @@ describe("Albany opening lead-source authoring", () => {
       exactLegacy,
       profileCharacter("albany:road_warden"),
     );
-    expect(exactLegacyPrompt.options[0]!.summary).toMatchObject({
+    expect(exactLegacyPrompt.options[0]!.summary).toEqual({
+      commitment: exactLegacy.options[0]!.summary,
       fieldTrigger: exactLegacy.options[0]!.preview,
+      immediateCost: "no added time and $0",
+      tradeoff: exactLegacy.options[0]!.tradeoff,
     });
-    expect(exactLegacyPrompt.options[0]!.summary).not.toHaveProperty("fieldTriggerScope");
+    expect(exactLegacyPrompt.options[0]!.consequence).toBe(
+      `${exactLegacy.options[0]!.summary} ${exactLegacy.options[0]!.preview} ` +
+        `Actual cost: no added time and $0. ${exactLegacy.options[0]!.consequence}`,
+    );
 
     const partialCategories = cloneOpeningLeadSource(openingLeadSource);
     Reflect.deleteProperty(partialCategories.options[0]!, "trigger_category");
@@ -242,6 +252,39 @@ describe("Albany opening lead-source authoring", () => {
         openingLeadSourceTerms(rowan, profileCharacter("albany:unaffiliated_courier")),
       ),
     ).toBe("no added time and $0");
+
+    const sponsoredPrompt = presentOpeningLeadSource(
+      openingLeadSource,
+      profileCharacter("albany:ledger_advocate"),
+    );
+    const sponsoredJamie = sponsoredPrompt.options.find((option) => option.id === jamie.id)!;
+    expect(sponsoredJamie.summary).toEqual({
+      commitment: jamie.summary,
+      immediateCost: "15 minutes and $0",
+      tradeoff: jamie.tradeoff,
+    });
+    expect(sponsoredJamie.consequence).toBe(
+      `Benefit: ${jamie.trigger_category} Cost: 15 minutes and $0. Boundary: ${jamie.tradeoff}`,
+    );
+
+    const unsponsoredPrompt = presentOpeningLeadSource(
+      openingLeadSource,
+      profileCharacter("albany:unaffiliated_courier"),
+    );
+    const unsponsoredJamie = unsponsoredPrompt.options.find((option) => option.id === jamie.id)!;
+    expect(unsponsoredJamie.consequence).toBe(
+      `Benefit: ${jamie.trigger_category} Cost: 35 minutes and $6. Boundary: ${jamie.tradeoff}`,
+    );
+    for (const option of [...sponsoredPrompt.options, ...unsponsoredPrompt.options]) {
+      expect(Object.keys(option.summary ?? {}).sort()).toEqual([
+        "commitment",
+        "immediateCost",
+        "tradeoff",
+      ]);
+      expect(openingSelectionReceiptWordCount(option.consequence)).toBeLessThanOrEqual(
+        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      );
+    }
 
     expect(openingLeadSourceOptionById(openingLeadSource, "albany:source_missing")).toBeNull();
   });
