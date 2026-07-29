@@ -924,6 +924,15 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(afterQuestStart.ok).toBe(true);
     if (!afterQuestStart.ok) throw new Error("expected post-quest export");
     expect(afterQuestStart.snapshot.startedQuestIds).toEqual([discoveredQuest.id]);
+    const restoredStarted = a.restore_overworld_session({
+      snapshot: afterQuestStart.snapshot,
+      compact_context: true,
+    });
+    expect(restoredStarted.context.quest_starts).toBeUndefined();
+    expect(
+      restoredStarted.context.quests?.find(([questId]) => questId === discoveredQuest.id),
+    ).toEqual([discoveredQuest.id, discoveredQuest.title, discoveredQuest.area]);
+    expect(restoredStarted.context.journal?.some(([kind]) => kind === "quest")).toBe(true);
     expect(() =>
       a.restore_overworld_session({
         ...FULL_OVERWORLD_RESPONSE,
@@ -989,6 +998,20 @@ describe("MCP tools — validate / load (§9.4)", () => {
     });
     expect(compactStartedQuest.context.here[0]).toBe(started.observation.current.id);
     expect("observation" in compactStartedQuest).toBe(false);
+    expect(compactStartedQuest.quest[3]).toBeDefined();
+    expect(
+      compactStartedQuest.context.quests?.find(([questId]) => questId === discoveredQuest.id),
+    ).toEqual([discoveredQuest.id, discoveredQuest.title, discoveredQuest.area]);
+    const duplicatedParentContext = {
+      ...compactStartedQuest.context,
+      quests: compactStartedQuest.context.quests?.map((quest) =>
+        quest[0] === discoveredQuest.id ? compactStartedQuest.quest : quest,
+      ),
+    };
+    expect(
+      JSON.stringify(duplicatedParentContext).length -
+        JSON.stringify(compactStartedQuest.context).length,
+    ).toBeGreaterThan(1_500);
     expect(compactStartedQuest.rpg_session.context.actions?.[0]).toEqual(expect.any(String));
     expect("observation" in compactStartedQuest.rpg_session).toBe(false);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(

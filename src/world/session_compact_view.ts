@@ -139,6 +139,7 @@ export function buildOverworldSessionCompactView(
     state.quests,
     OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
     new Set(questStarts.map(([questId]) => questId)),
+    state.ids.startedQuestIds,
   );
   const questStartLocations = compactOverworldQuestStartLocations(
     state.quests,

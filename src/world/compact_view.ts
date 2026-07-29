@@ -475,7 +475,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
     "[[job_id, title, area_id], ...] discovered unfinished jobs in other known areas; walk to area_id via area_routes before work_overworld_session_job",
   sites: "[[site_id, title], ...] discovered sites (explore_overworld_session_site)",
   quests:
-    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview|null, consequence|null, strategic_comparison|null]], selected_approach_id|null]?], ...] discovered quest leads. When quest_id is currently named by quest_starts and an option has a dedicated strategic comparison, preview and consequence are null to remove duplicate launch prose while strategic_comparison keeps its decision-complete route tradeoff; options without that dedicated comparison retain full preview and consequence. Exact cost, availability, and projected arrival remain in every row, and full launch prose returns in the accepted action receipt. Choose one available approach, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
+    "[[quest_id, title, anchor_area_id, [launch_id, prompt, [[approach_id, title, minutes, supplies_cost, fatigue_gained, available|null, minutes_after|null, supplies_after|null, fatigue_after|null, condition_after|null, blocked_reason|null, preview|null, consequence|null, strategic_comparison|null]], selected_approach_id|null]?], ...] discovered quest leads. Started quest rows omit launch because starting them again is illegal and the accepted start receipt plus persistent journal own the selected terms. When quest_id is currently named by quest_starts and an option has a dedicated strategic comparison, preview and consequence are null to remove duplicate launch prose while strategic_comparison keeps its decision-complete route tradeoff; options without that dedicated comparison retain full preview and consequence. Exact cost, availability, and projected arrival remain in every unstarted row, and full launch prose returns in the accepted action receipt. Choose one available approach, then be IN anchor_area_id (compare to here[3]; walk there via area_routes) before start_overworld_session_quest",
   quest_start_locations:
     "[[quest_id, anchor_area_name], ...] location requirement for visible unstarted quests anchored outside here[3]; advisory only, not a legal launch menu. Move there via area_routes, then use quest_starts when present",
   quest_starts:
@@ -546,6 +546,12 @@ export function compactOverworldJobLeadRef(value: {
   return [value.id, compactOverworldTitle(value.title), value.area];
 }
 
+/**
+ * Compact one public quest reference. Context builders opt into decision focus for
+ * currently legal launches and omit the obsolete launch card after acceptance.
+ * Discovery and start-action receipts use both defaults so their launch prose remains
+ * self-contained; completed quest sources already omit launch at the domain boundary.
+ */
 export function compactOverworldQuestRef(
   value: {
     id: string;
@@ -554,9 +560,10 @@ export function compactOverworldQuestRef(
     launch?: OverworldQuestLaunchView;
   },
   focusLaunchDecision = false,
+  omitLaunch = false,
 ): OverworldCompactQuestRef {
   const base = [value.id, compactOverworldTitle(value.title), value.area] as const;
-  if (!value.launch) return base;
+  if (!value.launch || omitLaunch) return base;
   const launch: OverworldCompactQuestLaunch = [
     value.launch.id,
     compactText(value.launch.prompt, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
@@ -749,12 +756,19 @@ export function compactOverworldQuestRefs(
   }[],
   limit = OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
   focusedQuestIds?: ReadonlySet<string>,
+  launchOmittedQuestIds?: ReadonlySet<string>,
 ): OverworldCompactQuestRef[] {
   const refs: OverworldCompactQuestRef[] = [];
   const capped = Math.min(values.length, limit);
   for (let index = 0; index < capped; index += 1) {
     const value = values[index]!;
-    refs.push(compactOverworldQuestRef(value, focusedQuestIds?.has(value.id) === true));
+    refs.push(
+      compactOverworldQuestRef(
+        value,
+        focusedQuestIds?.has(value.id) === true,
+        launchOmittedQuestIds?.has(value.id) === true,
+      ),
+    );
   }
   return refs;
 }
@@ -1456,15 +1470,17 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const rememberedJobs = compactOverworldJobLeadRefs(view.rememberedJobs);
   const sites = compactOverworldTitleRefs(view.sites);
   const questStarts = compactOverworldQuestStarts(view.questStarts);
+  const startedQuestIds = new Set(view.startedQuestIds);
   const quests = compactOverworldQuestRefs(
     view.quests,
     OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
     new Set(questStarts.map(([questId]) => questId)),
+    startedQuestIds,
   );
   const questStartLocations = compactOverworldQuestStartLocations(
     view.quests,
     view.currentArea?.id ?? null,
-    new Set(view.startedQuestIds),
+    startedQuestIds,
     new Map(view.areas.map((area) => [area.id, area.name])),
   );
   const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);

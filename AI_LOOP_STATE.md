@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 693 -->
+<!-- historical_cycle_count: 694 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - started_quest_handoff_dedup
+
+- Evidence choice: the decision-focus cohort named parent/child handoff density 3/3, and the canonical Wolf-Winter start repeated a 2,037-byte parent launch card immediately beside its 2,065-byte accepted start receipt inside a 12,403-byte response.
+- Surface: compact rolling context reduces every already-started quest to `[quest_id, title, anchor_area_id]`; the accepted quest receipt keeps the full selected launch, the child keeps live play, the persistent journal keeps the terms, and every unstarted/legal launch row remains decision-complete.
+- Measured effect: the authenticated handoff falls 1,975 bytes from 12,403 to 10,428 (15.9%) without an inspection turn, new tuple shape, or loss of player-facing decision or consequence information.
+- Counterfactual: launch legality, selected approach, costs, route state, actions, mechanics, RNG, saves, hashes, outcomes, completion/return proof, full receipts, and parent-only restore behavior are unchanged; full/session compact parity and illegal restart are pinned.
+- Pure evidence: exact-clean Terra seed 73073 completed The Wolf-Winter nonlethally and The Gallowmere in 56 accepted decisions, continued at both earlier boundaries, had no rejected action/loop/soft-lock, rated clarity/enjoyment 4/4, and chose replay-yes.
+- Economy: one attempt used 5.913M raw / 176.4k uncached input and 12.5k output tokens at 97.0% cache reuse, or 188,830 useful tokens / 56 decisions (~3,372 each), with no retry or fallback.
+- Self-critique/guard: the player still named compact terminology and raw parent/child handles dense, so progressive legend disclosure is next rather than removing state needed for play; three independent reviews are clean, crawl `20260729T161030Z` has zero findings, and exact-tree health passes 449 files/3,710 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - legal_launch_decision_focus
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: launch-first made immediate departure executable but did not erase density—the player still made three optional preparation reads and named compact terminology as friction; do not rerun this layer alone, and measure only after truthful strategy-fit parity joins it.
 - Economy: the 45-turn canary used 2.081M raw / 97.1k uncached input and 6.3k output tokens at 95.3% cache reuse, or 3,694 useful tokens per accepted decision; no replacement was launched.
 - Guard: independent parity review fixed blocked-road copy and a terminal command-contract defect, pre/post crawls `20260728T125110Z`/`20260728T131327Z` are zero-finding, health passes 440 files/3,625 tests and all 12 packs, and local-browser policy blocked loopback so no visual pass is claimed.
-
-### Cycle result - locked_albany_dispatch_preview
-
-- Evidence choice: three consecutive exact canaries ended at The Wolf-Winter's decision-30 goal pause, and a contract audit found that the boundary was honest but asked for retention before showing the concrete Albany-return fork.
-- Surface: the completed-goal panel now previews both exact outcome-specific dawn-wagon consequences as locked read-only cards across full/compact MCP, terminal, and UI before the unchanged Continue/End choice.
-- Counterfactual: the dispatch remains illegal until Continue; snapshots, facts, memories, journal, goals, accepted decisions, save/restore authority, and the one counted post-Continue dispatch selection are unchanged.
-- Pure evidence: exact-clean Terra seed 72883 continued at decision 30 without a rejected action, chose the real Cade dispatch afterward, completed The Gallowmere at 54, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: one clean continuation proves concrete reachability rather than a retention lift; the player repeated the Station-density S1, so freeze this layer and let the strict no-resume ten-player cohort decide.
-- Economy: the 73-turn canary used 5.498M raw / 170.3k uncached input and 12.4k output tokens at 96.9% cache reuse, or 3,382 useful tokens per accepted decision; no replacement was launched.
-- Guard: independent review added mobile stacking and full/compact MCP rejection proof, crawl `20260728T111047Z` is zero-finding, the local server booted but no browser surface could reach host loopback so no visual pass is claimed, and health passes 440 files/3,624 tests, both typechecks, and all 12 packs.
