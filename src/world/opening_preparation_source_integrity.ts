@@ -60,6 +60,9 @@ export function assertOpeningPreparationCheckDisclosurePackIntegrity(args: {
     if (!skillCheck) {
       throw new Error(`${description} has no compiled skill check.`);
     }
+    if (!skillCheck.stakes?.trim()) {
+      throw new Error(`${description} has no authored public stakes disclosure.`);
+    }
     const skillImports =
       args.quest.campaign_imports?.rules.filter(
         (rule): rule is SkillRankImportRule =>

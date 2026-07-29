@@ -66,7 +66,12 @@ describe("bug_0446 — Dawn Beacon cresset retry is easier and legible", () => {
   it("advertises the cresset as a d20 + might vs 10 check", () => {
     const opt = cressetOption(onBeaconStage());
     expect(opt?.command).toBe("lever toppled cresset with iron winch-bar");
-    expect(opt?.skill_check).toEqual({ skill: "might", difficulty: 10, die: "d20" });
+    expect(opt?.skill_check).toEqual({
+      skill: "might",
+      modifier: 3,
+      difficulty: 10,
+      die: "d20",
+    });
   });
 
   it("failed cresset rolls narrate progress and an explicit retry without awarding progress", () => {
@@ -86,6 +91,7 @@ describe("bug_0446 — Dawn Beacon cresset retry is easier and legible", () => {
     expect(r.state.vars["score"] ?? 0).toBe(0);
     expect(cressetOption(r.state)?.skill_check).toEqual({
       skill: "might",
+      modifier: 3,
       difficulty: 10,
       die: "d20",
     });

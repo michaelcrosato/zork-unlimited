@@ -2953,6 +2953,7 @@ objects:
         skill_check:
           skill: streetwise
           difficulty: 12
+          stakes: "Success redirects the yearling alive and lowers cattle alarm by 1; failure spends the route without added pressure, while rail or spear recovery remains."
           on_success:
             - set_flag: yearling_redirected
             - dec_var: { name: cattle_alarm, by: 1 }
@@ -3005,6 +3006,7 @@ objects:
         skill_check:
           skill: mediation
           difficulty: 12
+          stakes: "Success lowers cattle alarm by 1; failure raises it by 1. The protocol is spent either way, and the committed lure route remains open."
           on_success:
             - dec_var: { name: cattle_alarm, by: 1 }
             - add_journal: "You and Cade complete Jamie's witnessed relief calls in order. Cattle alarm falls by 1 before the loft cast."
@@ -3478,6 +3480,7 @@ objects:
         skill_check:
           skill: repair
           difficulty: 12
+          stakes: "Success braces the breach immediately; failure splits the rail but leaves a guaranteed cold-set recovery that raises cattle alarm by 1, plus 1 if dispatch began late."
           on_success:
             - set_flag: breach_braced
             - add_journal: "Reese's measured cold-set seats cleanly. The half-shut breach is braced without raising cattle alarm."

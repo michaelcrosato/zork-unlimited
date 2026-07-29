@@ -20,7 +20,13 @@ const actions: RpgActionOption[] = [
     id: "force_gate",
     command: "force gate",
     action: { type: "USE", target: "gate" } as RpgAction,
-    skill_check: { skill: "might", difficulty: 12, die: "d20" },
+    skill_check: {
+      skill: "might",
+      modifier: 3,
+      difficulty: 12,
+      die: "d20",
+      stakes: "Success opens the gate; failure leaves it shut.",
+    },
     resources: { gains: ["gate_token"], costs: ["iron_key"] },
   },
 ];
@@ -72,7 +78,13 @@ describe("MCP RPG view projection", () => {
       {
         id: "force_gate",
         command: "force gate",
-        skill_check: { skill: "might", difficulty: 12, die: "d20" },
+        skill_check: {
+          skill: "might",
+          modifier: 3,
+          difficulty: 12,
+          die: "d20",
+          stakes: "Success opens the gate; failure leaves it shut.",
+        },
         resources: { gains: ["gate_token"], costs: ["iron_key"] },
       },
     ]);
@@ -81,7 +93,13 @@ describe("MCP RPG view projection", () => {
       { id: "look" },
       {
         id: "force_gate",
-        skill_check: { skill: "might", difficulty: 12, die: "d20" },
+        skill_check: {
+          skill: "might",
+          modifier: 3,
+          difficulty: 12,
+          die: "d20",
+          stakes: "Success opens the gate; failure leaves it shut.",
+        },
         resources: { gains: ["gate_token"], costs: ["iron_key"] },
       },
     ]);
@@ -120,7 +138,13 @@ describe("MCP RPG view projection", () => {
       { id: "look" },
       {
         id: "force_gate",
-        skill_check: { skill: "might", difficulty: 12, die: "d20" },
+        skill_check: {
+          skill: "might",
+          modifier: 3,
+          difficulty: 12,
+          die: "d20",
+          stakes: "Success opens the gate; failure leaves it shut.",
+        },
         resources: { gains: ["gate_token"], costs: ["iron_key"] },
       },
     ]);
@@ -137,7 +161,13 @@ describe("MCP RPG view projection", () => {
         {
           id: "force_gate",
           command: "force gate",
-          skill_check: { skill: "might", difficulty: 12, die: "d20" },
+          skill_check: {
+            skill: "might",
+            modifier: 3,
+            difficulty: 12,
+            die: "d20",
+            stakes: "Success opens the gate; failure leaves it shut.",
+          },
           resources: { gains: ["gate_token"], costs: ["iron_key"] },
         },
       ],
@@ -171,6 +201,9 @@ describe("MCP RPG view projection", () => {
       text: "Choose a route.",
       vitals: [8, 2, 1, 1, 5],
       actions: ["ask_hold", "ask_withdraw"],
+      checks: [
+        ["ask_hold", "might", 3, "d20", 12, "Success opens the gate; failure leaves it shut."],
+      ],
       dialogue: ["guard", "Which road?"],
       choices: [
         ["ask_hold", "HOLD — Defend the gate."],
@@ -181,6 +214,8 @@ describe("MCP RPG view projection", () => {
     const cloned = cloneCompactRpgObservation(context);
 
     expect(cloned).toEqual(context);
+    expect(cloned.checks).not.toBe(context.checks);
+    expect(cloned.checks?.[0]).not.toBe(context.checks?.[0]);
     expect(cloned.choices).not.toBe(context.choices);
     expect(cloned.choices?.[0]).not.toBe(context.choices?.[0]);
   });

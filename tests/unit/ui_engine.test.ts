@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { GameSession, isRpgSource } from "../../ui/src/engine.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { RpgPackSchema } from "../../src/rpg/schema.js";
@@ -34,6 +34,39 @@ describe("GameSession — RPG-only structured play", () => {
     expect(isRpgSource(read("content/rpg/quests/sunken_barrow.yaml"))).toBe(true);
     expect(isRpgSource(NON_RPG_SOURCE)).toBe(false);
     expect(() => GameSession.start(NON_RPG_SOURCE, 1)).toThrow(/RPG-only/i);
+  });
+
+  it("shows current skill math and authored stakes before a checked choice", () => {
+    const stakes =
+      "Success opens the buried stair; failure leaves the slab shut, and another attempt remains available.";
+    const pack = RpgPackSchema.parse(parseYaml(read("content/rpg/quests/sunken_barrow.yaml")));
+    pack.meta.start_room = "slab_passage";
+    const entryHall = pack.rooms.find((room) => room.id === "entry_hall");
+    const slabPassage = pack.rooms.find((room) => room.id === "slab_passage");
+    if (!entryHall || !slabPassage) throw new Error("expected Sunken Barrow fixture rooms");
+    entryHall.objects = entryHall.objects.filter((objectId) => objectId !== "iron_bar");
+    slabPassage.objects.push("iron_bar");
+    const slab = pack.objects.find((object) => object.id === "stone_slab");
+    const lever = slab?.interactions.find(
+      (interaction) =>
+        interaction.verb === "USE" &&
+        interaction.item === "iron_bar" &&
+        interaction.target === "stone_slab",
+    );
+    if (!lever?.skill_check) throw new Error("expected Sunken Barrow lever check");
+    lever.skill_check.stakes = stakes;
+
+    const session = GameSession.start(stringifyYaml(pack), 1);
+    expect(session.choose("take_iron_bar").ok).toBe(true);
+    const choice = session
+      .view()
+      .choices.find((candidate) => candidate.id === "use_iron_bar_on_stone_slab");
+    expect(choice?.label).toBe("lever stone slab with iron bar");
+    expect(choice?.detail).toMatch(/might/i);
+    expect(choice?.detail).toContain("d20");
+    expect(choice?.detail).toContain("+3");
+    expect(choice?.detail).toMatch(/DC 12/i);
+    expect(choice?.detail).toContain(stakes);
   });
 
   it("rejects an illegal action id without advancing", () => {

@@ -1472,6 +1472,7 @@ dd {
   opacity: 0.72;
 }
 
+.choice-detail,
 .choice-reason {
   color: #c9bda5;
   font-size: 0.82rem;

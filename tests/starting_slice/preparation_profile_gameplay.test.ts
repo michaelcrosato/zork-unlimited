@@ -5,10 +5,14 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { renderActionOption } from "../../bin/rpg_play.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import { cloneGameState, type GameState } from "../../src/core/state.js";
-import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
+import {
+  COMPACT_ACTION_LIMIT,
+  compactRpgObservation,
+} from "../../src/mcp/compact_rpg_observation.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -84,6 +88,12 @@ const IRONHANDS = "albany:ironhands_repairer";
 const COURIER = "albany:unaffiliated_courier";
 const LEDGER = "albany:ledger_advocate";
 const WARDEN = "albany:road_warden";
+const WORKS_STAKES =
+  "Success braces the breach immediately; failure splits the rail but leaves a guaranteed cold-set recovery that raises cattle alarm by 1, plus 1 if dispatch began late.";
+const DROVER_STAKES =
+  "Success redirects the yearling alive and lowers cattle alarm by 1; failure spends the route without added pressure, while rail or spear recovery remains.";
+const RELIEF_STAKES =
+  "Success lowers cattle alarm by 1; failure raises it by 1. The protocol is spent either way, and the committed lure route remains open.";
 
 const DROVER_ROUTE_CASES = [
   {
@@ -461,7 +471,13 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(
       enumerateRpgActions(index, works).find((action) => action.id === "set_paling_rail")
         ?.skill_check,
-    ).toEqual({ skill: "repair", difficulty: 12, die: "d20" });
+    ).toEqual({
+      skill: "repair",
+      modifier: 4,
+      difficulty: 12,
+      die: "d20",
+      stakes: WORKS_STAKES,
+    });
     expect(narrationForAction(works, "examine_paling_rail")).toMatch(
       /Repair check at DC 12[^]*closing Hayden's frost-brace line[^]*Success braces[^]*Failure opens the marked cold-set splice[^]*no second roll[^]*raises cattle alarm by 1[^]*ordinary hunt[^]*combat funnel[^]*committed fouled lure[^]*living scent-pen/i,
     );
@@ -473,7 +489,13 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(
       enumerateRpgActions(index, drover).find((action) => action.id === "use_drover_route_marks")
         ?.skill_check,
-    ).toEqual({ skill: "streetwise", difficulty: 12, die: "d20" });
+    ).toEqual({
+      skill: "streetwise",
+      modifier: 4,
+      difficulty: 12,
+      die: "d20",
+      stakes: DROVER_STAKES,
+    });
     expect(narrationForAction(drover, "examine_drover_route_marks")).toMatch(
       /Streetwise[^]*DC 12[^]*Success[^]*yearling alive[^]*lowers cattle alarm by 1[^]*Failure spends the route without adding pressure[^]*rail or spear recovery remains/i,
     );
@@ -487,7 +509,13 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       enumerateRpgActions(index, relief).find(
         (action) => action.id === "use_relief_protocol_docket",
       )?.skill_check,
-    ).toEqual({ skill: "mediation", difficulty: 12, die: "d20" });
+    ).toEqual({
+      skill: "mediation",
+      modifier: 4,
+      difficulty: 12,
+      die: "d20",
+      stakes: RELIEF_STAKES,
+    });
     expect(narrationForAction(relief, "examine_relief_protocol_docket")).toMatch(
       /fouled lure[^]*failed public wedge[^]*bound split-rail guard[^]*Mediation[^]*DC 12[^]*Success lowers cattle alarm by 1[^]*failure raises it by 1[^]*retires either way[^]*lure continues/i,
     );
@@ -629,6 +657,72 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(declined.flags.drover_route_prepared).toBe(true);
     expect(declined.campaignImportReceipt).toEqual(generalist.campaignImportReceipt);
 
+    const specialistActions = enumerateRpgActions(index, specialist);
+    const specialistRoute = specialistActions.find(
+      (action) => action.id === "use_drover_route_marks",
+    );
+    const generalistRoute = enumerateRpgActions(index, generalist).find(
+      (action) => action.id === "use_drover_route_marks",
+    );
+    expect(specialistRoute?.skill_check).toEqual({
+      skill: "streetwise",
+      modifier: 4,
+      difficulty: 12,
+      die: "d20",
+      stakes: DROVER_STAKES,
+    });
+    expect(generalistRoute?.skill_check).toEqual({
+      skill: "streetwise",
+      modifier: 0,
+      difficulty: 12,
+      die: "d20",
+      stakes: DROVER_STAKES,
+    });
+
+    const specialistObservation = buildRpgObservation(index, specialist);
+    const compactWithActions = compactRpgObservation(
+      specialistObservation,
+      specialistObservation.available_actions,
+      { includeActions: true },
+    );
+    const expectedCompactActions = specialistObservation.available_actions
+      .map((action) => action.id)
+      .slice(0, COMPACT_ACTION_LIMIT);
+    expect(JSON.stringify(compactWithActions.actions)).toBe(JSON.stringify(expectedCompactActions));
+    expect(compactWithActions.checks).toContainEqual([
+      "use_drover_route_marks",
+      "streetwise",
+      4,
+      "d20",
+      12,
+      DROVER_STAKES,
+    ]);
+    const publicDisclosureJson = JSON.stringify(
+      specialistObservation.available_actions.find(
+        (action) => action.id === "use_drover_route_marks",
+      )?.skill_check,
+    );
+    const compactDisclosureJson = JSON.stringify(
+      compactWithActions.checks?.find(([actionId]) => actionId === "use_drover_route_marks"),
+    );
+    for (const disclosureJson of [publicDisclosureJson, compactDisclosureJson]) {
+      expect(disclosureJson).toContain(DROVER_STAKES);
+      expect(disclosureJson).not.toMatch(
+        /on_success|on_failure|on_failure_when|yearling_redirected|end_game/i,
+      );
+    }
+    expect(
+      compactRpgObservation(specialistObservation, specialistObservation.available_actions).checks,
+    ).toBeUndefined();
+
+    const terminalLabel = renderActionOption(specialistRoute!);
+    expect(terminalLabel).toContain(specialistRoute!.command);
+    expect(terminalLabel).toMatch(/streetwise/i);
+    expect(terminalLabel).toContain("+4");
+    expect(terminalLabel).toContain("d20");
+    expect(terminalLabel).toMatch(/DC 12/i);
+    expect(terminalLabel).toContain(DROVER_STAKES);
+
     const hybrid = act(specialist, "maneuver_yearling_wolf_commit_hybrid_strike", 1, 1);
     expect(hybrid.flags.lure_hybrid_combat_entered).toBe(true);
     expect(hybrid.flags.yearling_down).not.toBe(true);
@@ -640,6 +734,15 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(specialist.flags.yearling_redirected).toBe(true);
     expect(specialist.vars.cattle_alarm).toBe(1);
     expect(actionIds(specialist)).not.toContain("use_drover_route_marks");
+    const retiredObservation = buildRpgObservation(index, specialist);
+    const retiredCompact = compactRpgObservation(
+      retiredObservation,
+      retiredObservation.available_actions,
+      { includeActions: true },
+    );
+    expect(
+      retiredCompact.checks?.some(([actionId]) => actionId === "use_drover_route_marks") ?? false,
+    ).toBe(false);
     expect(generalist.flags.yearling_redirected).not.toBe(true);
     expect(generalist.vars.cattle_alarm).toBe(2);
     expect(actionIds(generalist)).not.toContain("use_drover_route_marks");

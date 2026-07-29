@@ -168,20 +168,29 @@ function signed(value: number): string {
   return value >= 0 ? `+${value}` : String(value);
 }
 
+/** One shared, surface-neutral rendering of a checked action's odds and authored stakes. */
+export function renderRpgSkillCheckDisclosure(
+  check: NonNullable<RpgActionOption["skill_check"]>,
+): string {
+  const stakes = check.stakes ? ` — ${check.stakes}` : "";
+  return `${check.skill} ${check.die} ${signed(check.modifier)} vs DC ${check.difficulty}${stakes}`;
+}
+
 /** Render one projected command while keeping prose and tactical annotations
  * visibly separate from the exact executable input. */
 export function renderRpgPlayerCommand(projection: RpgPlayerCommand): string {
   const { option } = projection;
   const aliases = projection.aliases.length ? ` (also: ${projection.aliases.join(", ")})` : "";
   const description = projection.description ? ` — ${projection.description}` : "";
-  if (!option.combat) return `${projection.command}${aliases}${description}`;
+  const check = option.skill_check ? ` [${renderRpgSkillCheckDisclosure(option.skill_check)}]` : "";
+  if (!option.combat) return `${projection.command}${aliases}${check}${description}`;
   const phase =
     option.combat.phase === "opening"
       ? "opening"
       : option.combat.phase === "follow_through"
         ? "follow-through"
         : "one-shot";
-  return `${projection.command}${aliases} [${phase}; ATK ${signed(option.combat.attack_bonus)}, DEF ${signed(option.combat.defense_bonus)} this round]${description}`;
+  return `${projection.command}${aliases}${check} [${phase}; ATK ${signed(option.combat.attack_bonus)}, DEF ${signed(option.combat.defense_bonus)} this round]${description}`;
 }
 
 /** Render the active speaker and only their current dialogue commands. Projection

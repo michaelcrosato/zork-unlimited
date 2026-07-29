@@ -25,6 +25,9 @@ import {
 import type { RpgObservation } from "../../src/rpg/observation.js";
 import { MCP_VISIBLE_JOURNAL_PROSE_CHAR_LIMIT } from "../../src/mcp/journal_prose.js";
 
+const CHECK_STAKES =
+  "Success opens the gate; failure leaves it barred, and the side path remains available.";
+
 function ids(prefix: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => `${prefix}_${i.toString().padStart(2, "0")}`);
 }
@@ -67,7 +70,7 @@ describe("compactRpgObservation", () => {
     expect(compactRpgObservation(obs, ["look"], { includeVersion: true }).v).toBe(
       RPG_COMPACT_OBSERVATION_VERSION,
     );
-    expect(RPG_COMPACT_OBSERVATION_VERSION).toBe(19);
+    expect(RPG_COMPACT_OBSERVATION_VERSION).toBe(20);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
@@ -134,6 +137,71 @@ describe("compactRpgObservation", () => {
     });
 
     expect(compact.actions).toEqual(["look"]);
+  });
+
+  it("pairs visible checked actions with current math and optional authored stakes", () => {
+    const checkedActions: RpgObservation["available_actions"] = [
+      {
+        id: "force_gate",
+        command: "force gate",
+        action: { type: "USE", target: "gate" },
+        skill_check: {
+          skill: "might",
+          modifier: 3,
+          difficulty: 12,
+          die: "d20",
+          stakes: CHECK_STAKES,
+        },
+      },
+      {
+        id: "read_runes",
+        command: "read runes",
+        action: { type: "USE", target: "runes" },
+        skill_check: {
+          skill: "lore",
+          modifier: -1,
+          difficulty: 9,
+          die: "d20",
+        },
+      },
+      {
+        id: "look",
+        command: "look",
+        action: { type: "LOOK" },
+      },
+    ];
+    const expectedActions = checkedActions.map((action) => action.id);
+    const observation = {
+      ...observationWithLargeState(),
+      available_actions: checkedActions,
+    };
+    const compact = compactRpgObservation(observation, checkedActions, {
+      includeActions: true,
+    });
+
+    expect(JSON.stringify(compact.actions)).toBe(JSON.stringify(expectedActions));
+    expect(compact.checks).toEqual([
+      ["force_gate", "might", 3, "d20", 12, CHECK_STAKES],
+      ["read_runes", "lore", -1, "d20", 9],
+    ]);
+    expect(compactRpgObservation(observation, checkedActions).checks).toBeUndefined();
+    expect(
+      compactRpgObservation(observation, expectedActions, { includeActions: true }).checks,
+    ).toBe(undefined);
+
+    const precedingActions: RpgObservation["available_actions"] = Array.from(
+      { length: COMPACT_ACTION_LIMIT },
+      (_, index) => ({
+        id: `ordinary_${index}`,
+        command: `ordinary ${index}`,
+        action: { type: "LOOK" },
+      }),
+    );
+    const capped = compactRpgObservation(observation, [...precedingActions, checkedActions[0]!], {
+      includeActions: true,
+    });
+    expect(capped.actions).toEqual(precedingActions.map((action) => action.id));
+    expect(capped.checks).toBeUndefined();
   });
 
   it("pairs active dialogue ids with bounded authored prompts while keeping ids executable", () => {

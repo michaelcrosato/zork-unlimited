@@ -18,10 +18,14 @@ const ConditionalSkillCheckEffectsSchema = z
   })
   .strict();
 
+/** Public, player-facing consequence prose carried with a checked action. */
+export const SKILL_CHECK_STAKES_CHAR_LIMIT = 240;
+
 export const SkillCheckSchema = z
   .object({
     skill: z.string().min(1),
     difficulty: z.number().int(),
+    stakes: z.string().trim().min(1).max(SKILL_CHECK_STAKES_CHAR_LIMIT).optional(),
     on_success: z.array(EffectSchema).default([]),
     on_failure: z.array(EffectSchema).default([]),
     on_failure_when: z.array(ConditionalSkillCheckEffectsSchema).min(1).optional(),

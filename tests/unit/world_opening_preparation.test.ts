@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
-import type { Interaction, RpgPack } from "../../src/rpg/schema.js";
+import { RpgPackSchema, type Interaction, type RpgPack } from "../../src/rpg/schema.js";
 import {
   buildCampaignCharacterState,
   cloneCampaignCharacterState,
@@ -693,6 +693,24 @@ describe("opening preparation manifest integrity", () => {
     expect(() =>
       assertOpeningPreparationCheckDisclosurePackIntegrity({ scene, quest, pack }),
     ).toThrow(/difficulty drift.*DC 12.*DC 13/i);
+  });
+
+  it("requires meaningful authored public stakes on every preparation-check consumer", () => {
+    const missingScene = structuredClone(shippedScene(SHIPPED_WORLD));
+    const missing = shippedTargetPack();
+    delete consumerInteraction(missingScene, missing.pack, 1).skill_check!.stakes;
+    expect(() =>
+      assertOpeningPreparationCheckDisclosurePackIntegrity({
+        scene: missingScene,
+        quest: missing.quest,
+        pack: missing.pack,
+      }),
+    ).toThrow(/no authored public stakes disclosure/i);
+
+    const whitespaceScene = structuredClone(shippedScene(SHIPPED_WORLD));
+    const whitespace = shippedTargetPack();
+    consumerInteraction(whitespaceScene, whitespace.pack, 1).skill_check!.stakes = "   ";
+    expect(() => RpgPackSchema.parse(whitespace.pack)).toThrow();
   });
 
   it("rejects a nonzero compiled base modifier that would falsify disclosed odds", () => {
