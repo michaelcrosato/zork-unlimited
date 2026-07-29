@@ -20,9 +20,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Evidence choice: the strict ten-Terra merged-build cohort completed 10/10 but every player called the six-choice Albany setup dense, so this cycle changes required-choice quantity and timing rather than adding more explanatory synonyms.
 - Surface: three visible Starting Doctrines commit one authored role/duty/source bundle in one player input while recording the same three canonical decisions and journals; all four custom roles and every later optional preparation remain selectable.
 - Counterfactual: doctrine routes reuse existing costs, promises, benefits, quest discovery, and save authority; exact pre-doctrine registration saves restore into the grouped choice, and unknown world hashes still fail closed.
-- Pure evidence: verified dev-only Terra seed 73042 chose the preserved custom Road-Warden route, completed The Wolf-Winter through LURE at decision 30, continued twice, completed The Gallowmere at 54, rated clarity/enjoyment 4/4, stayed unstuck, and reported no S2+ issue.
+- Pure evidence: exact-clean Terra seed 73043 chose the preserved custom Road-Warden route, completed The Wolf-Winter through LURE at decision 30, continued twice, completed The Gallowmere at 55, rated clarity/enjoyment 4/5, stayed unstuck, and reported no S2+ issue.
 - Self-critique/follow-through: the canary proves custom-route parity, not doctrine uptake or density lift; run the strict clean merged-build cohort and measure doctrine selection before changing another opening layer.
-- Economy: the one-attempt canary used 5.533M raw / 170.8k uncached input and 10.7k output tokens at 96.91% cache reuse, or 3,362 useful tokens per accepted decision; no retry or model fallback ran.
+- Economy: the one-attempt canary used 6.166M raw / 180.4k uncached input and 14.1k output tokens at 97.08% cache reuse, or 3,535 useful tokens per accepted decision; no retry or model fallback ran.
 - Guard: three independent reviews closed receipt-cost, historical-save, projection, and minimal-fixture gaps; crawl `20260729T055922Z` is zero-finding, and health passes 449 files/3,699 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - roleplay_first_albany_receipts
