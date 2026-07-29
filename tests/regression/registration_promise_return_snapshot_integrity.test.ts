@@ -117,7 +117,7 @@ describe("registration-promise return snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "56577688e463b98883aea1c9063a6e577d6a5d2bb4fa412ee32b0f47576d849c",
+      "e201855d2d55a1eeaedc4306d204a83f49c0190c4ad3687214b7e854112caa24",
     );
   });
 

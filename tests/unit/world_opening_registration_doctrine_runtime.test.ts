@@ -15,6 +15,10 @@ const PREPARATION = WORLD.opening_preparation!;
 const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const DOCTRINE = REGISTRATION.doctrines![0]!;
+const ROAD_WARDEN_AID_ROUTE_ID = "albany:doctrine_road_warden_aid_route";
+const ROAD_WARDEN_AID_ROUTE = REGISTRATION.doctrines!.find(
+  (doctrine) => doctrine.id === ROAD_WARDEN_AID_ROUTE_ID,
+)!;
 
 function atRegistration(world: OverworldManifest = WORLD): OverworldSession {
   const session = new OverworldSession(world);
@@ -40,6 +44,8 @@ describe("Albany starting doctrine runtime", () => {
   it("runs every doctrine as the exact canonical registration, oath, and source sequence", () => {
     const opening = atRegistration();
     const prompt = opening.journey().storyChoice!;
+    expect(REGISTRATION.doctrines).toHaveLength(3);
+    expect(prompt.options).toHaveLength(7);
     expect(prompt.options.slice(0, REGISTRATION.doctrines!.length)).toEqual(
       expect.arrayContaining(
         REGISTRATION.doctrines!.map((doctrine) =>
@@ -54,6 +60,15 @@ describe("Albany starting doctrine runtime", () => {
         ),
       ),
     );
+    expect(REGISTRATION.doctrines!.map((doctrine) => doctrine.id)).not.toContain(
+      "albany:doctrine_bounded_aid",
+    );
+    expect(ROAD_WARDEN_AID_ROUTE).toMatchObject({
+      profile_id: "albany:road_warden",
+      relief_oath_option_id: "albany:oath_limited_aid_only",
+      lead_source_option_id: "albany:source_hayden_frost_report",
+      immediate_cost: "10 minutes and $0",
+    });
 
     for (const doctrine of REGISTRATION.doctrines!) {
       const doctrineSession = atRegistration();
@@ -95,6 +110,19 @@ describe("Albany starting doctrine runtime", () => {
       expect(journalIds).not.toContain(doctrine.id);
       expect(doctrineSession.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
     }
+  });
+
+  it("runs the Road-Warden Aid Route as its exact canonical sequence", () => {
+    const doctrineSession = atRegistration();
+    const manualSession = atRegistration();
+
+    const doctrineResult = doctrineSession.chooseJourneyStory(ROAD_WARDEN_AID_ROUTE_ID);
+    manualSession.chooseJourneyStory("albany:road_warden");
+    manualSession.chooseJourneyStory("albany:oath_limited_aid_only");
+    manualSession.chooseJourneyStory("albany:source_hayden_frost_report");
+
+    expect(doctrineResult.choiceId).toBe(ROAD_WARDEN_AID_ROUTE_ID);
+    expect(doctrineSession.snapshot()).toEqual(manualSession.snapshot());
   });
 
   it("leaves preparation, allocation, and June unselected while keeping their normal route selectable", () => {

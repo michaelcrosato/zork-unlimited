@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 688 -->
+<!-- historical_cycle_count: 689 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - dominant_road_warden_doctrine
+
+- Evidence choice: the exact merged-build ten-Terra cohort completed The Wolf-Winter 10/10 but chose doctrines 0/10, Road-Warden 9/10, Ledger 0/10, and Road-Warden/Aid-Only/Hayden as its plurality exact triple, while clarity/enjoyment remained 3.8/4.1.
+- Surface: the unused Ledger/Aid-Only/Rowan preset is replaced—not added to the seven-card opening—by a one-input Road-Warden/Aid-Only/Hayden route; Ledger and every later optional choice remain available through the custom path.
+- Counterfactual: the preset records the same three canonical decisions, costs 10 minutes/$0, truthfully separates Aid-Only LURE from Hayden's conditional HUNT brace, and exact pending or selected predecessor saves restore while unknown hashes fail closed.
+- Pure evidence: verified Terra seed 73054 independently assembled the same custom triple, completed The Wolf-Winter through LURE at decision 29, continued twice, completed The Gallowmere at 52, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and reported one setup-density S1.
+- Self-critique/follow-through: one canary recreated but did not select the preset, so this improves route relevance without proving uptake; measure doctrine selection only on the immutable merged-build cohort before changing the opening again.
+- Economy: the one-attempt canary used 5.559M raw / 170.1k uncached input and 10.3k output tokens at 96.94% cache reuse, or 3,469 useful tokens per accepted decision; no retry or fallback ran.
+- Guard: independent reviews closed a 44-word receipt overflow and a wrong source name, crawl `20260729T082814Z` is zero-finding, and final health passes 449 files/3,702 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - progressive_starting_doctrines
 
@@ -154,12 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Cohort: ten fresh verified Terra reports had zero failed attempts and moved outcomes from 10 LURE to 7 LURE / 3 FORTIFY (p50 29, 6/10 continued, 4.0/4.0, zero stuck or S2+); the label is diagnostic, not a valid strict pilot, because launch mistakenly retained resume permission despite zero resumed runs.
 - Self-critique/follow-through: visible labels materially broke the monopoly but HUNT/DRIVE remain absent and opening density/continuation still miss the milestone; do not rerun this unchanged build, and land the reviewed truthful continuation invitation next.
 - Guard: independent review is clear, crawl `20260728T072224Z` is zero-finding, and health passes 440 files/3,615 tests, both typechecks, and all 12 packs.
-
-### Cycle result - concise_source_preparation_headers
-
-- Evidence choice: all ten valid strict-pilot players independently called Albany's pre-field source/preparation stack dense, making this the cohort's strongest repeated quality signal.
-- Surface: the two visible root descriptions are 71% shorter and tell players to compare each summary card first, then inspect only the exact trigger/check chain they need.
-- Counterfactual: the authored/persisted manifest copy and world hash remain unchanged; options, costs, odds, triggers, recoveries, dispatch time, choices, mechanics, RNG, outcomes, and full/compact projection contracts are unchanged.
-- Pure evidence: exact-clean Terra seed 72851 completed The Wolf-Winter nonlethally at decision 30, continued to checkpoint 41, rated clarity/enjoyment 3/4, stayed unstuck, and chose replay-yes.
-- Self-critique/follow-through: the player still rated the complete interacting dispatch web S1-dense, so this removes default repetition rather than closing the cluster; expose Cade's already-authored labeled strategy choices next.
-- Guard: independent review restored stronger prior contracts, migration sentinels keep the canonical hash exact, crawl `20260728T064229Z` is zero-finding, and health passes 440 files/3,612 tests, both typechecks, and all 12 packs.
