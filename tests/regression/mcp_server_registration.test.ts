@@ -165,6 +165,16 @@ describe("MCP server registration", () => {
     ).toContain("ready departure_contact_leads entry");
   });
 
+  it("keeps exact departure terms behind the read-only compact-context request", () => {
+    const block = registeredToolBlock("get_overworld_session_context");
+    expect(block).toContain("include_departure_recap_terms");
+    expect(block).toContain("Exact selected plan terms.");
+    expect(
+      TOOL_REGISTRATIONS.find((candidate) => candidate.name === "get_overworld_session_context")
+        ?.annotations.readOnlyHint,
+    ).toBe(true);
+  });
+
   it("advertises world-bound and generated starts, not the retired Charter-Marches quest menu", () => {
     const newGame = registeredToolBlock("new_game");
     const startWorldQuest = registeredToolBlock("start_world_quest");

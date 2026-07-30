@@ -1247,10 +1247,11 @@ tool(
 );
 tool(
   "get_overworld_session_context",
-  "Re-read only the compact context of an overworld session, with if_snapshot_hash change detection.",
+  "Read compact context; if_snapshot_hash detects changes.",
   {
     ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,
+    include_departure_recap_terms: B("Exact selected plan terms."),
     ...OVERWORLD_READ_DETAILS,
   },
   (a) => api.get_overworld_session_context(a),

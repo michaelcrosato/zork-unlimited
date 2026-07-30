@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import {
   render,
   renderDepartureRecap,
+  renderDepartureRecapTerms,
   renderEncounter,
   renderJourneyGate,
   renderJourneyStatus,
@@ -272,9 +273,16 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const recap = session.view().departureRecap;
     if (!recap) throw new Error("Expected authenticated Station recall.");
     const bounded = renderDepartureRecap(recap).join("\n");
+    const terms = renderDepartureRecapTerms(recap).join("\n");
 
     expect(render(session.view())).toContain(bounded);
     expect(bounded).toContain(`${recap.questTitle} dispatch recap:`);
+    expect(bounded).toContain("Exact selected terms: `review dispatch`.");
+    for (const entry of recap.entries) {
+      if (!entry.activeFieldTerm) continue;
+      expect(bounded).not.toContain(entry.activeFieldTerm);
+      expect(terms).toContain(`${entry.label}: ${entry.activeFieldTerm}`);
+    }
     expect(bounded).not.toContain("Roads:");
     expect(bounded).not.toContain("Supplies ");
     expect(bounded).not.toContain("Local routes:");
@@ -567,12 +575,16 @@ describe("overworld_play CLI (scripted mode)", () => {
         "--restore",
         snapshotPath,
         "--commands",
-        "look; start The Wolf-Winter; cancel; hash",
+        "look; review dispatch; start The Wolf-Winter; cancel; hash",
       ]);
       expect(run.status, run.output).toBe(0);
       expect(run.output).toContain("Depart now:");
       expect(run.output).toContain(
         "Start with `start The Wolf-Winter`; route selection follows before commitment.",
+      );
+      expect(run.output).toContain("The Wolf-Winter exact active terms:");
+      expect(run.output).toContain(
+        `Role: ${stationed.view().departureRecap!.entries[0]!.activeFieldTerm!}`,
       );
       expect(run.output).not.toContain("A scripted command was rejected.");
       expect(outputSnapshotHashes(run.output)).toEqual([baselineHash]);
@@ -846,6 +858,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       const commands = [
         "look",
         `inspect ${preparation.id}`,
+        "review dispatch",
         `inspect ${preparationOption.id}`,
         "back",
         `choose ${preparationOption.id}`,
@@ -863,6 +876,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.status, run.output).toBe(0);
       expect(run.output).not.toContain("A scripted command was rejected.");
       expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(3);
+      expect(run.output.match(/The Wolf-Winter exact active terms:/g) ?? []).toHaveLength(1);
       for (const option of [preparationOption, allocationOption]) {
         expect(run.output).toContain(`! Story choice detail — ${option.title}`);
       }

@@ -215,11 +215,32 @@ export function renderDepartureRecap(
     lines.push(
       `  ${entry.label}: ${value}${entry.status === "solo_default" ? " (direct-launch default; field-team contact remains optional)" : ""}`,
     );
-    if (entry.activeFieldTerm) {
-      lines.push(`    Active field term: ${entry.activeFieldTerm}`);
-    }
+  }
+  if (recap.entries.some((entry) => entry.activeFieldTerm)) {
+    lines.push("  Exact selected terms: `review dispatch`.");
   }
   return lines;
+}
+
+/** Explicit read-only expansion of the authenticated terms omitted from the summary. */
+export function renderDepartureRecapTerms(
+  recap: NonNullable<OverworldView["departureRecap"]>,
+): string[] {
+  const terms = recap.entries.flatMap((entry) =>
+    entry.activeFieldTerm ? [`  ${entry.label}: ${entry.activeFieldTerm}`] : [],
+  );
+  return terms.length > 0
+    ? [`${recap.questTitle} exact active terms:`, ...terms]
+    : [`${recap.questTitle} has no selected active terms yet.`];
+}
+
+function printDepartureRecapTerms(session: OverworldSession): void {
+  const recap = session.view().departureRecap;
+  console.log(
+    recap
+      ? renderDepartureRecapTerms(recap).join("\n")
+      : "No Station departure plan is available to review.",
+  );
 }
 
 function questLine(view: OverworldView, quest: OverworldQuestView): string {
@@ -487,6 +508,7 @@ function strategyForCommand(raw: string): OverworldRoadEncounterStrategy | null 
 
 const HELP = `Commands:
   look                     full status of the current town and area
+  review dispatch          exact selected Station plan terms
   choose <number|label|id> answer the active journey or story choice
   inspect <id>             compare an optional story choice or expand one structured card
   follow goal              take a road passage, or restate local goal guidance
@@ -707,6 +729,10 @@ async function main(): Promise<void> {
           console.log(renderJourneyStatus(session.journey()));
           return "handled";
         }
+        if (verb === "review" && rest.toLowerCase() === "dispatch") {
+          printDepartureRecapTerms(session);
+          return "handled";
+        }
         if (verb === "hash" && rest.length === 0) {
           console.log(session.snapshotHash());
           return "handled";
@@ -775,6 +801,8 @@ async function main(): Promise<void> {
           if (["look", "status", "l"].includes(verb)) {
             console.log(render(session.view()));
             console.log(renderJourneyStatus(session.journey()));
+          } else if (verb === "review" && rest === "dispatch") {
+            printDepartureRecapTerms(session);
           } else if (verb === "hash") {
             console.log(session.snapshotHash());
           } else if (verb === "journal") {
@@ -804,7 +832,7 @@ async function main(): Promise<void> {
             console.log(renderJourneyStatus(session.journey()));
           } else {
             fail(
-              "Choose the active journey prompt first with `choose <number|label>`; `look`, `help`, `journal`, `log`, `save`, `load`, `hash`, and `quit` remain available.",
+              "Choose the active journey prompt first with `choose <number|label>`; `look`, `review dispatch`, `help`, `journal`, `log`, `save`, `load`, `hash`, and `quit` remain available.",
             );
           }
           continue;
@@ -818,6 +846,8 @@ async function main(): Promise<void> {
           } else if (["look", "status", "l"].includes(low)) {
             console.log(render(session.view()));
             console.log(renderJourneyStatus(session.journey()));
+          } else if (low === "review dispatch") {
+            printDepartureRecapTerms(session);
           } else if (low === "hash") {
             console.log(session.snapshotHash());
           } else if (low.startsWith("save")) {
@@ -856,6 +886,13 @@ async function main(): Promise<void> {
             }
             break;
           }
+          case "review":
+            if (rest !== "dispatch") {
+              fail("Review what? Use `review dispatch` for exact selected Station plan terms.");
+              break;
+            }
+            printDepartureRecapTerms(session);
+            break;
           case "go":
           case "travel": {
             if (!rest) {
