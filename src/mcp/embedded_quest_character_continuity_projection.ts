@@ -1,5 +1,4 @@
 import {
-  COMPACT_EMBEDDED_QUEST_CHARACTER_CONTINUITY_LEGEND,
   compactEmbeddedQuestCharacterContinuity,
   projectEmbeddedQuestCharacterContinuity,
   type CompactEmbeddedQuestCharacterContinuity,
@@ -13,7 +12,6 @@ export type EmbeddedQuestCharacterContinuityField<Args extends RpgViewOptions> =
 }
   ? {
       character_continuity?: CompactEmbeddedQuestCharacterContinuity;
-      character_continuity_legend?: typeof COMPACT_EMBEDDED_QUEST_CHARACTER_CONTINUITY_LEGEND;
     }
   : { character_continuity?: EmbeddedQuestCharacterContinuity };
 
@@ -31,7 +29,6 @@ export function embeddedQuestCharacterContinuityField<Args extends RpgViewOption
   if (args.compact_observation === true) {
     return {
       character_continuity: compactEmbeddedQuestCharacterContinuity(live),
-      character_continuity_legend: COMPACT_EMBEDDED_QUEST_CHARACTER_CONTINUITY_LEGEND,
     } as EmbeddedQuestCharacterContinuityField<Args>;
   }
   return {

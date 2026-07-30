@@ -10,6 +10,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
 import { COMPACT_DESCRIPTION_CHAR_LIMIT } from "../../src/mcp/compact_rpg_observation.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import type { EmbeddedQuestCharacterContinuity } from "../../src/rpg/embedded_quest_character_continuity.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
@@ -31,6 +32,28 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const world = loadOverworldManifest(process.cwd());
+
+function namedCompactContinuity(continuity: EmbeddedQuestCharacterContinuity | undefined) {
+  if (!continuity) return undefined;
+  return {
+    continuity: continuity.continuity,
+    cross_boundary: "authored_imports_exports_only" as const,
+    persistent_record: {
+      background: continuity.persistent_record.background,
+      health: { ...continuity.persistent_record.health },
+    },
+    quest_local_profile: {
+      hp: continuity.quest_local_profile.hp,
+      attack: continuity.quest_local_profile.attack,
+      defense: continuity.quest_local_profile.defense,
+      skills: continuity.quest_local_profile.skills.map((skill) => ({ ...skill })),
+      inventory: [...continuity.quest_local_profile.inventory],
+    },
+    applied_campaign_import_effects: continuity.applied_campaign_import_effects.map((effect) => ({
+      ...effect,
+    })),
+  };
+}
 
 function registeredQueensburyMarketSession(): OverworldSession {
   const session = new OverworldSession(world);
@@ -242,24 +265,29 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       },
       applied_campaign_import_effects: [],
     });
-    expect(compact.rpg_session.character_continuity).toEqual([
-      "same_campaign_character",
-      "quest_local",
-      ["persistent_campaign_record", "albany:road_warden", 30, 30],
-      [
-        24,
-        4,
-        2,
-        [
-          ["lore", 3],
-          ["tracking", 3],
+    expect(compact.rpg_session.character_continuity).toEqual({
+      continuity: "same_campaign_character",
+      cross_boundary: "authored_imports_exports_only",
+      persistent_record: {
+        background: "albany:road_warden",
+        health: { current: 30, max: 30 },
+      },
+      quest_local_profile: {
+        hp: 24,
+        attack: 4,
+        defense: 2,
+        skills: [
+          { id: "lore", value: 3 },
+          { id: "tracking", value: 3 },
         ],
-        ["hunting_knife"],
-      ],
-      [],
-      expect.any(String),
-    ]);
-    expect(compact.rpg_session.character_continuity_legend).toContain("profile_scope");
+        inventory: ["hunting_knife"],
+      },
+      applied_campaign_import_effects: [],
+    });
+    expect(compact.rpg_session.character_continuity).toEqual(
+      namedCompactContinuity(full.rpg_session.character_continuity),
+    );
+    expect(compact.rpg_session).not.toHaveProperty("character_continuity_legend");
     expect(fullApi.sessions.get(full.rpg_session_id).stateHash).toBe(
       compactApi.sessions.get(compact.rpg_session_id).stateHash,
     );
@@ -279,7 +307,20 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     expect(compactOpeningRead.character_continuity).toEqual(
       compact.rpg_session.character_continuity,
     );
-    expect(compactOpeningRead.character_continuity_legend).toContain("profile_scope");
+    expect(compactOpeningRead).not.toHaveProperty("character_continuity_legend");
+
+    const compactInitialStateHash = compactApi.sessions.get(compact.rpg_session_id).stateHash;
+    const compactRejected = compactApi.step_action({
+      session_id: compact.rpg_session_id,
+      action_id: "not_a_legal_action",
+      compact_observation: true,
+      compact_events: true,
+    });
+    expect(compactRejected.ok).toBe(false);
+    expect(compactRejected.state_hash).toBe(compact.rpg_session.state_hash);
+    expect(compactRejected.character_continuity).toEqual(compact.rpg_session.character_continuity);
+    expect(compactRejected).not.toHaveProperty("character_continuity_legend");
+    expect(compactApi.sessions.get(compact.rpg_session_id).stateHash).toBe(compactInitialStateHash);
 
     expect(
       fullApi.step_action({
@@ -332,8 +373,15 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       compact_events: true,
     });
     expect(compactLoreStep.ok).toBe(true);
-    expect(compactLoreStep.character_continuity?.[3][3]).toContainEqual(["lore", 8]);
-    expect(compactLoreStep.character_continuity_legend).toContain("profile_scope");
+    expect(compactLoreStep.character_continuity?.quest_local_profile.skills).toContainEqual({
+      id: "lore",
+      value: 8,
+    });
+    expect(compactLoreStep.character_continuity).toEqual(
+      namedCompactContinuity(fullLoreStep.character_continuity),
+    );
+    expect(compactLoreStep.state_hash).toBe(fullLoreStep.state_hash);
+    expect(compactLoreStep).not.toHaveProperty("character_continuity_legend");
 
     const fullReread = fullApi.get_observation({
       session_id: full.rpg_session_id,
@@ -366,8 +414,14 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       id: "lore",
       value: 8,
     });
-    expect(compactReload.character_continuity?.[3][3]).toContainEqual(["lore", 8]);
-    expect(compactReload.character_continuity_legend).toContain("profile_scope");
+    expect(compactReload.character_continuity?.quest_local_profile.skills).toContainEqual({
+      id: "lore",
+      value: 8,
+    });
+    expect(compactReload.character_continuity).toEqual(
+      namedCompactContinuity(fullReload.character_continuity),
+    );
+    expect(compactReload).not.toHaveProperty("character_continuity_legend");
     const reloadedSession = fullApi.sessions.get(fullReload.session_id);
     expect(reloadedSession.overworldSessionId).toBeUndefined();
     expect(Object.isFrozen(reloadedSession.embeddedCharacterContinuity)).toBe(true);

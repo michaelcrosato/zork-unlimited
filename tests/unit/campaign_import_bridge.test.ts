@@ -8,6 +8,7 @@ import { RpgMcpSessionRuntime } from "../../src/mcp/rpg_session_runtime.js";
 import { SessionStore } from "../../src/mcp/sessions.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import type { CampaignCharacterImports } from "../../src/rpg/campaign_character_import.js";
+import type { EmbeddedQuestCharacterContinuity } from "../../src/rpg/embedded_quest_character_continuity.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
@@ -24,6 +25,8 @@ const RESIDENT_SHELTER_ALLOCATION_ID = "albany:relief_resident_shelter";
 const PREPARATION_ID = "albany:wolf_preparation";
 const RELIEF_ALLOCATION_ID = "albany:wolf_relief_allocation";
 const LIMITED_AID_OATH_ID = "albany:oath_limited_aid_only";
+const PREVIOUS_COMPACT_CONTINUITY_LEGEND =
+  "[continuity, profile_scope, [persistent_record_identity, background|null, health_current, health_max], [quest_hp, quest_attack, quest_defense, [[quest_skill_id, value], ...], [quest_inventory_item_id, ...]], [applied_campaign_import_effect, ...], explanation]; import effects are [rule_id, type, target_var|target_flag, value] or [rule_id, equipment_to_item, target_object]";
 const WORLD = loadOverworldManifest(ROOT);
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const WOLF_QUEST = WORLD.quests.find((quest) => quest.id === "wolf_winter");
@@ -34,6 +37,39 @@ if (!loadedWolf.ok) throw new Error("Wolf-Winter must compile.");
 const wolfIndex = indexRpgPack(loadedWolf.compiled.pack);
 
 type ToolApi = ReturnType<typeof createToolApi>;
+
+function previousCompactContinuityPayload(continuity: EmbeddedQuestCharacterContinuity) {
+  return {
+    character_continuity: [
+      continuity.continuity,
+      continuity.profile_scope,
+      [
+        continuity.persistent_record.identity,
+        continuity.persistent_record.background,
+        continuity.persistent_record.health.current,
+        continuity.persistent_record.health.max,
+      ],
+      [
+        continuity.quest_local_profile.hp,
+        continuity.quest_local_profile.attack,
+        continuity.quest_local_profile.defense,
+        continuity.quest_local_profile.skills.map((skill) => [skill.id, skill.value]),
+        continuity.quest_local_profile.inventory,
+      ],
+      continuity.applied_campaign_import_effects.map((effect) => {
+        if (effect.type === "health_current_to_var" || effect.type === "skill_rank_to_var") {
+          return [effect.rule_id, effect.type, effect.target_var, effect.value];
+        }
+        if (effect.type === "equipment_to_item") {
+          return [effect.rule_id, effect.type, effect.target_object];
+        }
+        return [effect.rule_id, effect.type, effect.target_flag, true];
+      }),
+      continuity.explanation,
+    ],
+    character_continuity_legend: PREVIOUS_COMPACT_CONTINUITY_LEGEND,
+  };
+}
 
 function moveToOpeningPreparation(session: OverworldSession): void {
   const areaId = WORLD.opening_preparation?.area;
@@ -490,23 +526,34 @@ describe("trusted campaign-character quest launch bridge", () => {
     expect(Object.isFrozen(fullSession.embeddedCharacterContinuity?.quest_local_profile)).toBe(
       true,
     );
-    expect(compact.launched.rpg_session.character_continuity).toEqual([
-      "same_campaign_character",
-      "quest_local",
-      expect.any(Array),
-      expect.any(Array),
-      fullSession.state.campaignImportReceipt?.effects.map((effect) =>
-        effect.type === "health_current_to_var" || effect.type === "skill_rank_to_var"
-          ? [effect.rule_id, effect.type, effect.target_var, effect.value]
-          : effect.type === "equipment_to_item"
-            ? [effect.rule_id, effect.type, effect.target_object]
-            : [effect.rule_id, effect.type, effect.target_flag, true],
-      ),
-      expect.any(String),
-    ]);
-    expect(compact.launched.rpg_session.character_continuity_legend).toContain(
-      "quest_inventory_item_id",
+    expect(compact.launched.rpg_session.character_continuity).toEqual({
+      continuity: "same_campaign_character",
+      cross_boundary: "authored_imports_exports_only",
+      persistent_record: {
+        background: "albany:ledger_advocate",
+        health: { current: 30, max: 30 },
+      },
+      quest_local_profile: {
+        hp: fullSession.state.vars.hp,
+        attack: fullSession.state.vars.attack,
+        defense: fullSession.state.vars.defense,
+        skills: expect.any(Array),
+        inventory: fullSession.state.inventory,
+      },
+      applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
+    });
+    expect(compact.launched.rpg_session).not.toHaveProperty("character_continuity_legend");
+    const fullContinuity = fullSession.embeddedCharacterContinuity;
+    if (!fullContinuity) throw new Error("expected full embedded continuity");
+    const namedContinuityBytes = Buffer.byteLength(
+      JSON.stringify({
+        character_continuity: compact.launched.rpg_session.character_continuity,
+      }),
     );
+    const previousContinuityBytes = Buffer.byteLength(
+      JSON.stringify(previousCompactContinuityPayload(fullContinuity)),
+    );
+    expect(namedContinuityBytes).toBeLessThan(previousContinuityBytes);
 
     const direct = fullApi.start_world_quest({ world_quest_id: "wolf_winter", seed: 505 });
     expect(fullApi.sessions.get(direct.session_id).overworldSessionId).toBeUndefined();
@@ -548,15 +595,23 @@ describe("trusted campaign-character quest launch bridge", () => {
       persistent_record: fullSession.embeddedCharacterContinuity?.persistent_record,
       applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
     });
-    expect(embeddedCompactReload.character_continuity).toEqual([
-      "same_campaign_character",
-      "quest_local",
-      expect.any(Array),
-      expect.any(Array),
-      expect.any(Array),
-      expect.any(String),
-    ]);
-    expect(embeddedCompactReload.character_continuity_legend).toContain("profile_scope");
+    expect(embeddedCompactReload.character_continuity).toEqual({
+      continuity: "same_campaign_character",
+      cross_boundary: "authored_imports_exports_only",
+      persistent_record: {
+        background: "albany:ledger_advocate",
+        health: { current: 30, max: 30 },
+      },
+      quest_local_profile: {
+        hp: fullSession.state.vars.hp,
+        attack: fullSession.state.vars.attack,
+        defense: fullSession.state.vars.defense,
+        skills: expect.any(Array),
+        inventory: fullSession.state.inventory,
+      },
+      applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
+    });
+    expect(embeddedCompactReload).not.toHaveProperty("character_continuity_legend");
     const reloadedSession = fullApi.sessions.get(embeddedFullReload.session_id);
     expect(reloadedSession.overworldSessionId).toBeUndefined();
     expect(Object.isFrozen(reloadedSession.embeddedCharacterContinuity)).toBe(true);

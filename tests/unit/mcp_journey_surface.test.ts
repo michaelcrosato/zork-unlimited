@@ -1825,15 +1825,25 @@ describe("MCP journey surface", () => {
     expect(resumed.context).toEqual(compactReread.context);
     expect(resumed.journey).toEqual(continued.journey);
     expect(resumed.overworld_snapshot_hash).toBe(continued.snapshot_hash);
-    expect(resumed.character_continuity).toEqual([
-      "same_campaign_character",
-      "quest_local",
-      expect.any(Array),
-      expect.any(Array),
-      expect.any(Array),
-      expect.any(String),
-    ]);
-    expect(resumed.character_continuity_legend).toContain("profile_scope");
+    expect(resumed.character_continuity).toMatchObject({
+      continuity: "same_campaign_character",
+      cross_boundary: "authored_imports_exports_only",
+      persistent_record: {
+        background: expect.any(String),
+        health: { current: expect.any(Number), max: expect.any(Number) },
+      },
+      quest_local_profile: {
+        hp: expect.any(Number),
+        attack: expect.any(Number),
+        defense: expect.any(Number),
+        skills: expect.arrayContaining([
+          expect.objectContaining({ id: expect.any(String), value: expect.any(Number) }),
+        ]),
+        inventory: expect.any(Array),
+      },
+      applied_campaign_import_effects: expect.any(Array),
+    });
+    expect(resumed).not.toHaveProperty("character_continuity_legend");
 
     const endedRun = mcpWolfWinterCheckpointInsideQuest();
     const ended = endedRun.a.choose_overworld_session_journey({
