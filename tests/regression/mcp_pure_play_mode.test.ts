@@ -1730,6 +1730,17 @@ describe("MCP pure play mode", () => {
           ]),
         );
 
+        const contextTool = listed.tools.find(
+          (tool) => tool.name === "get_overworld_session_context",
+        );
+        expect(contextTool?.inputSchema.properties).toHaveProperty(
+          "include_departure_recap_terms",
+          expect.objectContaining({
+            type: "boolean",
+            description: "Exact selected plan terms.",
+          }),
+        );
+
         const storyChoiceTool = listed.tools.find(
           (tool) => tool.name === "choose_overworld_session_story",
         );
@@ -1818,7 +1829,10 @@ describe("MCP pure play mode", () => {
         });
         const recoveredRead = await client.callTool({
           name: "get_overworld_session_context",
-          arguments: { session_id: recovery.overworld_session_id },
+          arguments: {
+            session_id: recovery.overworld_session_id,
+            include_departure_recap_terms: true,
+          },
         });
         expect(recoveredRead.isError).not.toBe(true);
         expect(textPayload(recoveredRead).overworld_session_id).toBe(sessionId);

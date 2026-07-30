@@ -8,6 +8,10 @@ export function DepartureRecap({
   headingLevel?: 2 | 4;
 }): JSX.Element {
   const Heading = headingLevel === 2 ? "h2" : "h4";
+  const selectedTerms = recap.entries.filter(
+    (entry): entry is typeof entry & { activeFieldTerm: string } =>
+      entry.activeFieldTerm !== null,
+  );
   return (
     <section aria-label={`${recap.questTitle} dispatch recap`}>
       <Heading>{recap.questTitle} dispatch recap</Heading>
@@ -44,14 +48,6 @@ export function DepartureRecap({
                 (entry.status === "open_optional"
                   ? "Open (optional)"
                   : "Available after choosing preparation")}
-              {entry.activeFieldTerm && (
-                <>
-                  <br />
-                  <small className="departure-recap-field-term">
-                    Active field term: {entry.activeFieldTerm}
-                  </small>
-                </>
-              )}
               {entry.status === "solo_default" && (
                 <>
                   <br />
@@ -64,6 +60,19 @@ export function DepartureRecap({
           </div>
         ))}
       </dl>
+      {selectedTerms.length > 0 && (
+        <details className="departure-recap-terms">
+          <summary>Review exact active terms</summary>
+          <dl>
+            {selectedTerms.map((entry) => (
+              <div key={entry.slot}>
+                <dt>{entry.label}</dt>
+                <dd>{entry.activeFieldTerm}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
     </section>
   );
 }

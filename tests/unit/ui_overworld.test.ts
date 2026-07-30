@@ -969,7 +969,9 @@ describe("OverworldSession", () => {
     expect(app).toContain("worldView.departureRecap");
     expect(app).toContain("<DepartureRecap recap={worldView.departureRecap} />");
     expect(app).toContain("departureRecap={worldView.departureRecap}");
-    expect(recapComponent).toContain("Active field term: {entry.activeFieldTerm}");
+    expect(recapComponent).toContain('<details className="departure-recap-terms">');
+    expect(recapComponent).toContain("<summary>Review exact active terms</summary>");
+    expect(recapComponent).not.toContain("Active field term: {entry.activeFieldTerm}");
     expect(recapComponent).toContain("Dispatch committed: {recap.dispatch.minutes}m");
     expect(recapComponent).toContain("Direct launch now: {recap.dispatch.minutes}m");
     expect(recapComponent).toContain("Dispatch sealed: {recap.dispatch.minutes}m");
@@ -1032,6 +1034,10 @@ describe("OverworldSession", () => {
       );
       expect(recapMarkup).toContain("Open (optional)");
       expect(recapMarkup).toContain("Available after choosing preparation");
+      expect(recapMarkup).toContain('<details class="departure-recap-terms">');
+      expect(recapMarkup).toContain("<summary>Review exact active terms</summary>");
+      expect(recapMarkup).not.toMatch(/<details[^>]*\sopen(?:=|>)/);
+      expect(recapMarkup).toContain(recap.entries[0]!.activeFieldTerm!);
 
       const readyMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.DepartureContactLead, {

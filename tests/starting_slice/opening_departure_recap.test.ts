@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { render } from "../../bin/overworld_play.js";
+import {
+  render,
+  renderDepartureRecap,
+  renderDepartureRecapTerms,
+} from "../../bin/overworld_play.js";
 import {
   OVERWORLD_COMPACT_VIEW_VERSION,
   cloneOverworldCompactView,
@@ -8,6 +12,7 @@ import {
   compactOverworldView,
 } from "../../src/world/compact_view.js";
 import {
+  compactOpeningDepartureRecapTerms,
   deriveOpeningDepartureRecap,
   OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
 } from "../../src/world/opening_departure_recap.js";
@@ -106,7 +111,7 @@ describe("Albany opening departure recap", () => {
     );
 
     expect(full.departureRecap).toEqual({
-      version: 4,
+      version: 5,
       questId: WOLF.id,
       questTitle: WOLF.title,
       entries: [
@@ -157,17 +162,21 @@ describe("Albany opening departure recap", () => {
     });
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.departure_recap).toEqual([
-      4,
+      5,
       WOLF.id,
       WOLF.title,
-      full.departureRecap!.entries.map((entry) => [
-        entry.slot,
-        entry.label,
-        entry.status,
-        entry.title,
-        entry.activeFieldTerm,
-      ]),
+      full.departureRecap!.entries.map((entry) => [entry.slot, entry.status, entry.title]),
       null,
+    ]);
+    expect(compact).not.toHaveProperty("departure_recap_terms");
+    expect(compactOpeningDepartureRecapTerms(full.departureRecap!)).toEqual([
+      5,
+      WOLF.id,
+      [
+        ["role", REGISTRATION.profiles[0]!.tradeoff],
+        ["duty", dutyFieldTerm],
+        ["evidence", evidenceFieldTerm],
+      ],
     ]);
     const launchFirstKeys = (value: object) =>
       Object.keys(value).filter((key) =>
@@ -267,17 +276,18 @@ describe("Albany opening departure recap", () => {
         number,
         string,
         string,
-        Array<[string, string, string, string | null, string | null]>,
+        Array<[string, string, string | null]>,
       ]
-    )[3][0]![3] = "forged compact title";
+    )[3][0]![2] = "forged compact title";
     expect(selectedTitle(session, "role")).toBe(REGISTRATION.profiles[0]!.title);
-    expect(session.compactView().departure_recap?.[3][0]?.[3]).toBe(
+    expect(session.compactView().departure_recap?.[3][0]?.[2]).toBe(
       REGISTRATION.profiles[0]!.title,
     );
-    expect(session.compactView().departure_recap?.[3][0]?.[4]).toBe(
+    expect(JSON.stringify(session.compactView().departure_recap)).not.toContain(
       REGISTRATION.profiles[0]!.tradeoff,
     );
 
+    const authenticatedRecap = session.view().departureRecap!;
     const terminal = render(session.view());
     expect(terminal).toContain(
       "Start the mission now; choosing an available road is the next step, and planning is optional.",
@@ -287,7 +297,16 @@ describe("Albany opening departure recap", () => {
     );
     expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
-    expect(terminal).toContain(`Active field term: ${REGISTRATION.profiles[0]!.tradeoff}`);
+    expect(terminal).not.toContain(REGISTRATION.profiles[0]!.tradeoff);
+    expect(terminal).toContain("Exact selected terms: `review dispatch`.");
+    expect(renderDepartureRecap(authenticatedRecap).join("\n")).not.toContain(
+      REGISTRATION.profiles[0]!.tradeoff,
+    );
+    const reviewedTerms = renderDepartureRecapTerms(authenticatedRecap).join("\n");
+    expect(reviewedTerms).toContain(`Role: ${REGISTRATION.profiles[0]!.tradeoff}`);
+    expect(reviewedTerms).toContain(`Duty: ${dutyFieldTerm}`);
+    expect(reviewedTerms).toContain(`Evidence: ${evidenceFieldTerm}`);
+    expect(reviewedTerms).not.toContain(PREPARATION.profiles[0]!.tradeoff);
     expect(terminal).toContain("Preparation: Open (optional)");
     expect(terminal).not.toContain("Dispatch committed:");
     expect(terminal.indexOf("Depart now:")).toBeLessThan(
@@ -645,13 +664,7 @@ describe("Albany opening departure recap", () => {
         recap.version,
         recap.questId,
         recap.questTitle,
-        recap.entries.map((entry) => [
-          entry.slot,
-          entry.label,
-          entry.status,
-          entry.title,
-          entry.activeFieldTerm,
-        ]),
+        recap.entries.map((entry) => [entry.slot, entry.status, entry.title]),
         recap.dispatch
           ? [
               recap.dispatch.state,

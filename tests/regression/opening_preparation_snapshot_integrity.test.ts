@@ -34,9 +34,6 @@ const PREPARATION_PROFILE = "albany:prep_relief_protocol";
 const PREPARATION_TITLE = PREPARATION.profiles.find(
   (profile) => profile.id === PREPARATION_PROFILE,
 )!.title;
-const PREPARATION_TRADEOFF = PREPARATION.profiles.find(
-  (profile) => profile.id === PREPARATION_PROFILE,
-)!.tradeoff;
 
 function expectDepartureInteraction(
   session: OverworldSession,
@@ -215,10 +212,8 @@ describe("opening preparation snapshot integrity", () => {
     });
     expect(selectedSession.compactView().departure_recap?.[3][3]).toEqual([
       "preparation",
-      "Preparation",
       "selected",
       PREPARATION_TITLE,
-      PREPARATION_TRADEOFF,
     ]);
     expectDepartureInteraction(
       selectedSession,

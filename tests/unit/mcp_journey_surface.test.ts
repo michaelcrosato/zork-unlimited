@@ -21,6 +21,7 @@ import {
   OPENING_SELECTION_RECEIPT_WORD_LIMIT,
   openingSelectionReceiptWordCount,
 } from "../../src/world/opening_choice_receipt.js";
+import { compactOpeningDepartureRecapTerms } from "../../src/world/opening_departure_recap.js";
 import {
   TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
   TANNERS_FEVER_ACCOUNTABILITY_ID,
@@ -1045,7 +1046,34 @@ describe("MCP journey surface", () => {
       const compact = a.restore_overworld_session({ compact_context: true, snapshot });
       expect(full.observation.departureRecap).toEqual(expectedFull);
       expect(compact.context.departure_recap).toEqual(expectedCompact);
+      expect(compact.context).not.toHaveProperty("departure_recap_terms");
       expect(full.snapshot_hash).toBe(compact.snapshot_hash);
+      const reviewed = a.get_overworld_session_context({
+        session_id: compact.session_id,
+        if_snapshot_hash: compact.snapshot_hash,
+        include_departure_recap_terms: true,
+      });
+      expect(reviewed).not.toHaveProperty("unchanged");
+      if (!("context" in reviewed)) {
+        throw new Error(`expected explicit departure terms before ${kind}`);
+      }
+      expect(reviewed.context.departure_recap).toEqual(expectedCompact);
+      expect(reviewed.context.departure_recap_terms).toEqual(
+        compactOpeningDepartureRecapTerms(expectedFull),
+      );
+      expect(reviewed.legend_delta).toHaveProperty("departure_recap_terms");
+      expect(reviewed.snapshot_hash).toBe(compact.snapshot_hash);
+      expect(reviewed.journey).toEqual(compact.journey);
+      const repeatedReview = a.get_overworld_session_context({
+        session_id: compact.session_id,
+        include_departure_recap_terms: true,
+      });
+      expect(repeatedReview).not.toHaveProperty("legend_delta");
+      const afterReview = a.export_overworld_session({ session_id: compact.session_id });
+      expect(afterReview.ok).toBe(true);
+      if (!afterReview.ok) throw new Error(`expected export after ${kind} recap review`);
+      expect(afterReview.snapshot).toEqual(snapshot);
+      expect(afterReview.snapshot_hash).toBe(compact.snapshot_hash);
       expect(
         a.inspect_overworld_session_story({
           session_id: full.session_id,

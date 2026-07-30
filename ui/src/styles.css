@@ -975,6 +975,31 @@ h3 {
   padding: 0.55rem 0.65rem;
 }
 
+.departure-recap-terms {
+  border-top: 1px solid var(--line);
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+}
+
+.departure-recap-terms summary {
+  color: var(--road);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.departure-recap-terms dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.65rem 0 0;
+}
+
+.departure-recap-terms dl > div {
+  display: grid;
+  gap: 0.2rem;
+  grid-template-columns: minmax(7rem, 0.25fr) minmax(0, 1fr);
+}
+
 .service-offer-terms {
   color: var(--muted);
   line-height: 1.45;

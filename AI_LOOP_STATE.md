@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 697 -->
+<!-- historical_cycle_count: 698 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - summary_first_departure_recap
+
+- Evidence choice: three consecutive exact Terra canaries named Albany setup density, most recently the accumulated pre-departure modifier stack; reduce repeated recap load without removing the decisions that define the character and relief plan.
+- Surface: the default Albany Station departure recap now leads with selected titles, open slots, status, and dispatch; exact active role, duty, oath, source, preparation, allocation, and ally terms remain deliberately reviewable through compact MCP, terminal `review dispatch`, and a closed UI disclosure.
+- Measured effect: initial/sealed recap payloads fall 634->333 bytes (47.5%) and 923->395 (57.2%), reducing their complete compact contexts 5.3% and 8.5%; exact detail costs 264/559 bytes only when requested.
+- Counterfactual: the full journal-derived model remains authenticated; choices, legal actions, mechanics, RNG, saves, hashes, accepted decisions, and outcomes are unchanged, while a requested transport detail bypasses only the current-hash no-change shortcut.
+- Pure evidence: exact-clean Terra seed 73078 completed The Wolf-Winter with a whole-herd, all-wolves-alive LURE, continued into The Gallowmere, then ended at decision 40 with clarity/enjoyment 4/5, replay-yes, no rejection or bug, and no departure-recap complaint.
+- Economy/admission: Terra used 3.137M raw / 146.2k uncached input and 9.7k output at 95.34% cache reuse (155,875 useful / 40 decisions, about 3,897 each); one exact-build Spark admission probe failed pre-report with exit 43 and no retry, preventing wasteful fanout.
+- Self-critique/guard: compact state density and persistent-versus-quest stats remain next-cycle evidence; independent review is clean, crawls `20260730T162003Z` / `20260730T171341Z` have zero findings, browser disclosure is console-clean, and exact-tree health passes 449 files/3,729 tests plus all 12 packs before this state-only amend.
 
 ### Cycle result - progressive_custom_duty_disclosure
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the canary measured 2.247M input / 102.7k uncached input and 7.8k output tokens at 95.43% cache reuse, or 3,683 useful tokens per accepted decision; 1/1 attempts was measured and none was unrecoverable.
 - Self-critique/follow-through: accounting is now honest rather than cheaper by itself; the player repeated Albany setup density, so land the prepared field-timed disclosure increment before spending a strict ten-player cohort.
 - Guard: two adversarial reviews closed client-proof and false-success gaps, post-change crawl `20260728T220529Z` is zero-finding, and health passes 443 files/3,682 tests, both typechecks, and all 12 packs.
-
-### Cycle result - pure_fleet_cohort_ledger
-
-- Evidence choice: parallel development and blind testing could start overlapping live cohorts from linked worktrees, duplicating expensive evidence without one durable cohort identity.
-- Surface: live pure fleets now take one Git-common startup lease, publish an immutable member fingerprint before launch, reject any persisted overlap unless its exact fingerprint is explicitly acknowledged, and always release the lease; internal player concurrency is unchanged.
-- Spend safety: `-h`/`--help` exits before every side effect, while unknown arguments and missing flag values fail closed instead of falling through to the 100-Spark default.
-- Pure evidence: exact-clean Terra seed 72932 completed The Wolf-Winter nonlethally through LURE in 31 accepted decisions with one authored recovery, no rejection or bug, clarity/enjoyment 3/4, replay-yes, and an end choice at the first completed-goal boundary.
-- Self-critique/follow-through: one canary proves live ledger custody rather than retention or gameplay lift; it repeated dense early Albany commitments, so the consolidated strict ten-player pilot—not another isolated copy edit—decides the next gameplay change.
-- Economy: the canary used 2.398M input / 108.2k uncached input and 7.9k output tokens at 95.49% cache reuse, or 3,746 useful tokens per accepted decision; four accidentally opened Spark streams produced no terminal usage or report and remain quarantined as unrecoverable cost.
-- Guard: independent final review is clean, the spend-safety suite passes 95/95, post-change crawl `20260728T193122Z` is zero-finding, and health passes 442 files/3,665 tests, both typechecks, and all 12 packs.

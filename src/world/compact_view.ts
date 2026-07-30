@@ -25,6 +25,7 @@ import type {
 import {
   compactOpeningDepartureRecap,
   type OpeningCompactDepartureRecap,
+  type OpeningCompactDepartureRecapTerms,
 } from "./opening_departure_recap.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
@@ -44,7 +45,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 35 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 36 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -368,6 +369,7 @@ export type OverworldCompactView = {
   departure_interactions?: OverworldCompactDepartureInteraction[];
   departure_contact_leads?: OverworldCompactDepartureContactLead[];
   departure_recap?: OpeningCompactDepartureRecap;
+  departure_recap_terms?: OpeningCompactDepartureRecapTerms;
   opportunity_guidance?: string;
   opportunity_leads?: OverworldCompactOpportunityLead[];
   opportunity_leads_deferred?: number;
@@ -435,7 +437,9 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_contact_leads:
     "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; requires_preparation has no available action, ready may be pursued with talk_overworld_session_contact(character_id: contact_id), and either status leaves quest_id launch legal as the explicitly disclosed solo default",
   departure_recap:
-    "[version, quest_id, quest_title, [[slot, label, status, selected_title|null, active_field_term|null], ...], dispatch|null] read-only accumulated Station departure plan. dispatch is [state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]] from canonical dispatch authority only; committed names the remaining authenticated optional selection and has null timing, direct_launch gives the exact timing if leaving now while naming a replaceable optional field team, and sealed has exact on_time or delayed timing after an explicit field-team choice. Slots are role, duty, evidence, preparation, relief_allocation, field_team. selected rows include one canonical active field term; solo_default is the authenticated direct-launch solo receipt and does not remove the separate optional field-team contact; legacy rows and unresolved rows use null. open_optional may still be chosen or skipped; available_after_preparation opens only after preparation. It reveals no unselected option or outcome and adds no action",
+    "[version, quest_id, quest_title, [[slot, status, selected_title|null], ...], dispatch|null] read-only Station plan summary. dispatch is [state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]; committed has null timing, direct_launch names a replaceable optional field team, and sealed follows an explicit team choice. Slots are role, duty, evidence, preparation, relief_allocation, field_team. open_optional may be skipped; available_after_preparation opens after preparation. For exact selected terms, call get_overworld_session_context(include_departure_recap_terms:true)",
+  departure_recap_terms:
+    "[version, quest_id, [[slot, active_field_term], ...]] exact authenticated terms for selected Station plan slots, returned only by explicit read-only include_departure_recap_terms; no alternatives, outcomes, or actions",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
@@ -1297,6 +1301,12 @@ function cloneCompactDepartureRecap(
   ];
 }
 
+function cloneCompactDepartureRecapTerms(
+  terms: OpeningCompactDepartureRecapTerms,
+): OpeningCompactDepartureRecapTerms {
+  return [terms[0], terms[1], cloneTupleList(terms[2])];
+}
+
 function cloneCompactDepartureFields(
   clone: OverworldCompactView,
   view: OverworldCompactView,
@@ -1304,6 +1314,9 @@ function cloneCompactDepartureFields(
 ): void {
   if (launchFirst && view.departure_recap) {
     clone.departure_recap = cloneCompactDepartureRecap(view.departure_recap);
+  }
+  if (launchFirst && view.departure_recap_terms) {
+    clone.departure_recap_terms = cloneCompactDepartureRecapTerms(view.departure_recap_terms);
   }
   if (view.departure_interactions) {
     clone.departure_interactions = cloneTupleList(view.departure_interactions);
@@ -1313,6 +1326,9 @@ function cloneCompactDepartureFields(
   }
   if (!launchFirst && view.departure_recap) {
     clone.departure_recap = cloneCompactDepartureRecap(view.departure_recap);
+  }
+  if (!launchFirst && view.departure_recap_terms) {
+    clone.departure_recap_terms = cloneCompactDepartureRecapTerms(view.departure_recap_terms);
   }
 }
 

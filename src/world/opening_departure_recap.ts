@@ -19,7 +19,7 @@ import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
-export const OPENING_DEPARTURE_RECAP_VERSION = 4 as const;
+export const OPENING_DEPARTURE_RECAP_VERSION = 5 as const;
 export const OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT = 120;
 
 export type OpeningDepartureRecapSlot =
@@ -71,10 +71,8 @@ export type OpeningDepartureRecap = Readonly<{
 
 export type OpeningCompactDepartureRecapEntry = readonly [
   slot: OpeningDepartureRecapSlot,
-  label: string,
   status: OpeningDepartureRecapStatus,
   title: string | null,
-  activeFieldTerm: string | null,
 ];
 
 export type OpeningCompactDepartureRecap = readonly [
@@ -90,6 +88,12 @@ export type OpeningCompactDepartureRecap = readonly [
         remainingOptional: readonly OpeningDepartureRecapDispatch["remainingOptional"][number][],
       ]
     | null,
+];
+
+export type OpeningCompactDepartureRecapTerms = readonly [
+  version: typeof OPENING_DEPARTURE_RECAP_VERSION,
+  questId: string,
+  terms: readonly (readonly [slot: OpeningDepartureRecapSlot, activeFieldTerm: string])[],
 ];
 
 export type OpeningDepartureRecapInputs = Readonly<{
@@ -370,10 +374,7 @@ export function compactOpeningDepartureRecap(
     recap.version,
     recap.questId,
     recap.questTitle,
-    recap.entries.map(
-      (entry) =>
-        [entry.slot, entry.label, entry.status, entry.title, entry.activeFieldTerm] as const,
-    ),
+    recap.entries.map((entry) => [entry.slot, entry.status, entry.title] as const),
     recap.dispatch
       ? [
           recap.dispatch.state,
@@ -382,5 +383,17 @@ export function compactOpeningDepartureRecap(
           [...recap.dispatch.remainingOptional],
         ]
       : null,
+  ];
+}
+
+export function compactOpeningDepartureRecapTerms(
+  recap: OpeningDepartureRecap,
+): OpeningCompactDepartureRecapTerms {
+  return [
+    recap.version,
+    recap.questId,
+    recap.entries.flatMap((entry) =>
+      entry.activeFieldTerm ? [[entry.slot, entry.activeFieldTerm] as const] : [],
+    ),
   ];
 }
