@@ -35,6 +35,9 @@ const SPARK_CODE_MODE_UNSTABLE_WARNING_PREFIX =
   "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
 const SPARK_CODE_MODE_METADATA_WARNING =
   "Code Mode is enabled in configuration, but model `gpt-5.3-codex-spark` does not advertise Code Mode support. This may degrade model performance. Disable `features.code_mode` and `features.code_mode_only`, or select a model whose metadata enables Code Mode.";
+const CODEX_0146_EXPLICIT_ONLY_MODE_BLOCK =
+  "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>";
+const CODEX_0146_CLI_VERSION = "0.146.0";
 export const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1";
 export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
@@ -594,16 +597,19 @@ function exactRolloutReplay(initial, replay) {
   );
 }
 
-function validPrivateInputMessage(payload, role, turnId) {
+function validPrivateInputMessage(payload, role, turnId, requiresItemId = false) {
+  const keys = [
+    "type",
+    ...(requiresItemId ? ["id"] : []),
+    "role",
+    "content",
+    "internal_chat_message_metadata_passthrough",
+  ];
   if (
     !isRecord(payload) ||
-    !hasOnlyKeys(payload, [
-      "type",
-      "role",
-      "content",
-      "internal_chat_message_metadata_passthrough",
-    ]) ||
+    !hasOnlyKeys(payload, keys) ||
     payload.type !== "message" ||
+    (requiresItemId && !validItemId(payload.id)) ||
     payload.role !== role ||
     !Array.isArray(payload.content) ||
     payload.content.length === 0 ||
@@ -633,37 +639,36 @@ function exactTaggedInputBlock(block, tag) {
   );
 }
 
-function validPermissionsAndSkillsMessage(payload, turnId) {
+function validPermissionsAndSkillsMessage(payload, turnId, requiresItemId) {
   return (
-    validPrivateInputMessage(payload, "developer", turnId) &&
+    validPrivateInputMessage(payload, "developer", turnId, requiresItemId) &&
     payload.content.length === 2 &&
     exactTaggedInputBlock(payload.content[0], "permissions instructions") &&
     exactTaggedInputBlock(payload.content[1], "skills_instructions")
   );
 }
 
-function validSingleInputMessage(payload, role, turnId, predicate) {
+function validSingleInputMessage(payload, role, turnId, requiresItemId, predicate) {
   return (
-    validPrivateInputMessage(payload, role, turnId) &&
+    validPrivateInputMessage(payload, role, turnId, requiresItemId) &&
     payload.content.length === 1 &&
     predicate(payload.content[0].text)
   );
 }
 
-function validV2TeamMessage(payload, turnId) {
-  return validSingleInputMessage(payload, "developer", turnId, (text) =>
+function validV2TeamMessage(payload, turnId, requiresItemId) {
+  return validSingleInputMessage(payload, "developer", turnId, requiresItemId, (text) =>
     text.startsWith(
       "You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.",
     ),
   );
 }
 
-function validV2MultiAgentModeMessage(payload, turnId) {
-  return validSingleInputMessage(
-    payload,
-    "developer",
-    turnId,
-    (text) => text.startsWith("<multi_agent_mode>") && text.endsWith("</multi_agent_mode>"),
+function validV2MultiAgentModeMessage(payload, turnId, requiresItemId, exactModeBlock) {
+  return validSingleInputMessage(payload, "developer", turnId, requiresItemId, (text) =>
+    exactModeBlock === null
+      ? text.startsWith("<multi_agent_mode>") && text.endsWith("</multi_agent_mode>")
+      : text === exactModeBlock,
   );
 }
 
@@ -676,8 +681,8 @@ function validGlobalAgentInstructionsBlock(block) {
   );
 }
 
-function validEnvironmentMessage(payload, turnId) {
-  if (!validPrivateInputMessage(payload, "user", turnId)) return false;
+function validEnvironmentMessage(payload, turnId, requiresItemId) {
+  if (!validPrivateInputMessage(payload, "user", turnId, requiresItemId)) return false;
   if (payload.content.length === 1) {
     return exactTaggedInputBlock(payload.content[0], "environment_context");
   }
@@ -728,7 +733,7 @@ function validNativeCollaborationMode(turnContext, expectedModel) {
   );
 }
 
-function codexCaptureProfile(turnContext, expectedModel) {
+function codexCaptureProfile(turnContext, expectedModel, expectedCliVersion, capturedCliVersion) {
   if (!isRecord(turnContext) || typeof turnContext.model !== "string") return null;
   if (expectedModel !== undefined && turnContext.model !== expectedModel) return null;
   if (!validNativeCollaborationMode(turnContext, expectedModel)) return null;
@@ -737,21 +742,50 @@ function codexCaptureProfile(turnContext, expectedModel) {
     turnContext.multi_agent_version === "v1" &&
     !Object.hasOwn(turnContext, "multi_agent_mode")
   ) {
-    return { kind: "luna_v1", preludeCount: 2 };
+    return { kind: "luna_v1", preludeCount: 2, requiresItemIds: false, exactModeBlock: null };
   }
   if (
     turnContext.model === SPARK_DISABLED_MODEL &&
     turnContext.multi_agent_version === "disabled" &&
     !Object.hasOwn(turnContext, "multi_agent_mode")
   ) {
-    return { kind: "spark_disabled", preludeCount: 2 };
+    return {
+      kind: "spark_disabled",
+      preludeCount: 2,
+      requiresItemIds: false,
+      exactModeBlock: null,
+    };
   }
   if (
     V2_MULTI_AGENT_MODELS.has(turnContext.model) &&
     turnContext.multi_agent_version === "v2" &&
-    turnContext.multi_agent_mode === "explicitRequestOnly"
+    turnContext.multi_agent_mode === "explicitRequestOnly" &&
+    !(
+      turnContext.model === "gpt-5.6-terra" &&
+      (expectedCliVersion === CODEX_0146_CLI_VERSION ||
+        capturedCliVersion === CODEX_0146_CLI_VERSION)
+    )
   ) {
-    return { kind: "multi_agent_v2", preludeCount: 4 };
+    return {
+      kind: "multi_agent_v2",
+      preludeCount: 4,
+      requiresItemIds: false,
+      exactModeBlock: null,
+    };
+  }
+  if (
+    turnContext.model === "gpt-5.6-terra" &&
+    turnContext.multi_agent_version === "v2" &&
+    !Object.hasOwn(turnContext, "multi_agent_mode") &&
+    expectedCliVersion === CODEX_0146_CLI_VERSION &&
+    capturedCliVersion === CODEX_0146_CLI_VERSION
+  ) {
+    return {
+      kind: "multi_agent_v2_0146",
+      preludeCount: 4,
+      requiresItemIds: true,
+      exactModeBlock: CODEX_0146_EXPLICIT_ONLY_MODE_BLOCK,
+    };
   }
   return null;
 }
@@ -829,20 +863,22 @@ function validPrivateWrapperPayload(payload, turnId) {
   );
 }
 
-function validPrivateWrapperOutputPayload(payload, turnId) {
+function validPrivateWrapperOutputPayload(payload, turnId, requiresItemId) {
   return (
     isRecord(payload) &&
     hasOnlyKeys(payload, [
       "type",
+      ...(requiresItemId ? ["id"] : []),
       "call_id",
       "output",
       "internal_chat_message_metadata_passthrough",
     ]) &&
+    (!requiresItemId || validItemId(payload.id)) &&
     validTurnMetadata(payload.internal_chat_message_metadata_passthrough, turnId)
   );
 }
 
-function inspectCodexRolloutStructure(rows, expectedModel) {
+function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
   if (!Array.isArray(rows) || rows.length === 0) return rolloutReject("rollout is empty");
   const indices = {
     sessions: [],
@@ -917,7 +953,12 @@ function inspectCodexRolloutStructure(rows, expectedModel) {
   const promptContent = promptMessage?.content;
   const promptBlock = Array.isArray(promptContent) ? promptContent[0] : null;
   const turnId = rows[initialTurnContext]?.payload?.turn_id;
-  const profile = codexCaptureProfile(rows[initialTurnContext]?.payload, expectedModel);
+  const profile = codexCaptureProfile(
+    rows[initialTurnContext]?.payload,
+    expectedModel,
+    expectedCliVersion,
+    rows[indices.sessions[0]]?.payload?.cli_version,
+  );
   if (profile === null) {
     return rolloutReject("rollout model and multi-agent capture profile is unsupported");
   }
@@ -926,13 +967,29 @@ function inspectCodexRolloutStructure(rows, expectedModel) {
     (_, index) => indices.taskStarts[0] + index + 1,
   );
   const expectedPromptIndices = [...preludeIndices, promptMessageIndex];
+  const responseItemIds = profile.requiresItemIds
+    ? rows.filter((row) => row?.type === "response_item").map((row) => row?.payload?.id)
+    : [];
+  const validResponseItemIds =
+    !profile.requiresItemIds ||
+    (responseItemIds.every((id) => validItemId(id)) &&
+      new Set(responseItemIds).size === responseItemIds.length);
   const validPrelude =
-    validPermissionsAndSkillsMessage(rows[preludeIndices[0]]?.payload, turnId) &&
-    (profile.kind !== "multi_agent_v2"
-      ? validEnvironmentMessage(rows[preludeIndices[1]]?.payload, turnId)
-      : validV2TeamMessage(rows[preludeIndices[1]]?.payload, turnId) &&
-        validV2MultiAgentModeMessage(rows[preludeIndices[2]]?.payload, turnId) &&
-        validEnvironmentMessage(rows[preludeIndices[3]]?.payload, turnId));
+    validPermissionsAndSkillsMessage(
+      rows[preludeIndices[0]]?.payload,
+      turnId,
+      profile.requiresItemIds,
+    ) &&
+    (profile.preludeCount === 2
+      ? validEnvironmentMessage(rows[preludeIndices[1]]?.payload, turnId, profile.requiresItemIds)
+      : validV2TeamMessage(rows[preludeIndices[1]]?.payload, turnId, profile.requiresItemIds) &&
+        validV2MultiAgentModeMessage(
+          rows[preludeIndices[2]]?.payload,
+          turnId,
+          profile.requiresItemIds,
+          profile.exactModeBlock,
+        ) &&
+        validEnvironmentMessage(rows[preludeIndices[3]]?.payload, turnId, profile.requiresItemIds));
   if (
     !(
       indices.taskStarts[0] === 1 &&
@@ -949,10 +1006,12 @@ function inspectCodexRolloutStructure(rows, expectedModel) {
     rows[indices.taskCompletes[0]]?.payload?.turn_id !== turnId ||
     !sameJsonValue(indices.promptMessages, expectedPromptIndices) ||
     !validPrelude ||
-    !validPrivateInputMessage(promptMessage, "user", turnId) ||
+    !validResponseItemIds ||
+    !validPrivateInputMessage(promptMessage, "user", turnId, profile.requiresItemIds) ||
     indices.gameplay.some((index) => !validPrivateWrapperPayload(rows[index]?.payload, turnId)) ||
     indices.wrapperOutputs.some(
-      (index) => !validPrivateWrapperOutputPayload(rows[index]?.payload, turnId),
+      (index) =>
+        !validPrivateWrapperOutputPayload(rows[index]?.payload, turnId, profile.requiresItemIds),
     ) ||
     indices.assistantMessages.some(
       (index) => !validPrivateAssistantMessage(rows[index]?.payload, turnId),
@@ -1507,11 +1566,11 @@ export function inspectCodexPureEvidence(
   publicRows,
   rolloutRows,
   expectedModel = undefined,
-  { codeModeContract = null } = {},
+  { codeModeContract = null, cliVersion = undefined } = {},
 ) {
   const publicEvidence = inspectCodexPureEvents(publicRows, expectedModel, { codeModeContract });
   if (!publicEvidence.ok) return publicEvidence;
-  const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel);
+  const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel, cliVersion);
   if (!rolloutStructure.ok) return rolloutStructure;
   const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows, { codeModeContract });
   if (!privateEvidence.ok) return privateEvidence;
@@ -1533,6 +1592,7 @@ export function buildCodexPureEnvelope({
   model,
   durationMs,
   codeModeContract = undefined,
+  cliVersion = undefined,
 }) {
   if (typeof report !== "string" || report.trim().length === 0) {
     return reject("Codex pure run produced no final report");
@@ -1552,6 +1612,7 @@ export function buildCodexPureEnvelope({
   }
   const inspected = inspectCodexPureEvidence(rows, rolloutRows, model, {
     codeModeContract: codeModeContract ?? null,
+    cliVersion,
   });
   if (!inspected.ok) return inspected;
 
@@ -1617,6 +1678,7 @@ function main() {
   const rolloutPath = option(argv, "--rollout");
   const reportPath = option(argv, "--report");
   const model = option(argv, "--model");
+  const cliVersion = option(argv, "--cli-version");
   const startedAtMs = Number(option(argv, "--started-at-ms"));
   const codeModeContract = option(argv, "--code-mode-contract");
   if (
@@ -1624,11 +1686,12 @@ function main() {
     !rolloutPath ||
     !reportPath ||
     !model ||
+    !cliVersion ||
     !nonNegativeInteger(startedAtMs) ||
     codeModeContract !== CODEX_STRICT_CURRENT_CONTRACT
   ) {
     console.error(
-      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --started-at-ms <n> --code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}`,
+      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --cli-version <semver> --started-at-ms <n> --code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}`,
     );
     process.exit(2);
   }
@@ -1639,6 +1702,7 @@ function main() {
       rolloutRows: parseEventRows(rolloutPath, "Codex private rollout"),
       report: readFileSync(reportPath, "utf8"),
       model,
+      cliVersion,
       durationMs: Math.max(0, Date.now() - startedAtMs),
       codeModeContract,
     });

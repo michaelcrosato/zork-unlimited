@@ -820,6 +820,7 @@ printf 'codex-cli 0.144.1\\n'
     expect(codexLaunch).toContain('--receipt "$CODEX_CAPTURE_ARG"');
     expect(codexLaunch).toContain('--expected-cwd "$CODEX_PLAYER_CWD_ARG"');
     expect(codexLaunch).toContain("--code-mode-contract strict-code-mode-v2");
+    expect(codexLaunch).toContain('--cli-version "$CODEX_CLI_VERSION"');
     expect(runner).toContain("codex-rollout.mjs");
     expect(codexLaunch).toContain("--ignore-user-config");
     expect(codexLaunch).toContain("--ignore-rules");

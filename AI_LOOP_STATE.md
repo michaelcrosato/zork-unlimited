@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 700 -->
+<!-- historical_cycle_count: 701 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - codex_0146_exact_capture_profile
+
+- Evidence choice: Codex 0.144.1 began failing Terra/Spark admission on refreshed model metadata; stable 0.146.0 restored admission but correctly failed the old strict audit after adding private item ids and omitting its redundant mode echo.
+- Surface: live pure authority now binds Terra's exact 0.146.0 preflight and captured session versions, absent `multi_agent_mode`, exact no-delegation block, and required bounded globally unique input/output ids; the runner and later fleet authority both forward the version.
+- Counterfactual: the legacy profiles, sandbox/read-only proof, model/effort binding, tool allowlist, wrapper/result cross-binding, game code, content, actions, mechanics, saves, hashes, and outcomes are unchanged; a stripped-id legacy downgrade under 0.146 fails closed.
+- Pure evidence: exact-clean Terra seed 74012 completed The Wolf-Winter by fortified cattle-first terms and won The Gallowmere, continued twice, ended at decision 44, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, loop, or soft-lock.
+- Economy: one first-attempt run used 4.459M raw / 165.5k uncached input and 12.0k output at 96.29% cache reuse (177,573 useful / 44 decisions, about 4,036 each); no retry, recovery, fallback, or fanout ran.
+- Self-critique/follow-through: the canary repeated dense staged planning and checkpoint-timing hypotheses plus Queensbury lead discovery, but no item has a current three-report cluster; measure the frozen ten-player pilot rather than patching one run.
+- Guard: two independent integrity reviews are incorporated; the archived 65-call 0.146 rollout replays cleanly, final crawl `20260730T212017Z` has zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
 
 ### Cycle result - active_dialogue_movement_affordance
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the one canary still called the aggregate Station sequence dense and raised an S1 compact-inspection memory issue; do not patch toward one player, and let the predeclared strict ten-player merged-build cohort measure both signals.
 - Economy: authenticated summary v8 measured 1.975M input / 92.3k uncached input and 7.6k output tokens at 95.33% cache reuse, or 3,330 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
 - Guard: three independent reviews closed legacy-shape, immediate-entry, and duplicate-detail gaps; crawl `20260729T033928Z` is zero-finding, and health passes 443 files/3,685 tests, both typechecks, and all 12 packs on candidate `85a1ee81`.
-
-### Cycle result - completion_forecast_truth
-
-- Evidence choice: the strict ten-Terra pilot exposed one S2 lifecycle contradiction: Wolf-Winter completion reattached a generic clean-line launch forecast after Aid-Only and a failed first cast had truthfully changed the achieved result.
-- Surface: a completed quest now returns its stable public reference beside the actual ending and journal consequence; discovery and start responses retain their actionable dispatch-aware launch options and forecasts.
-- Counterfactual: route choice, checks, resources, pressure, ending selection, return summary, campaign export, character state, saves, and compact/full parity are unchanged.
-- Pure evidence: exact-clean Terra seed 73030 recovered a failed first lure through Emery's route, completed The Wolf-Winter nonlethally with the herd whole at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and reported no rejected action or lifecycle contradiction.
-- Self-critique/follow-through: one canary proves playability, not cohort pacing; its S1 repeats the pilot's front-loaded Albany density and its S0 names raw action labels, so opening density remains the next focused cycle.
-- Economy: authenticated summary v8 measured 2.465M input / 108.0k uncached input and 7.6k output tokens at 95.62% cache reuse, or 3,851 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
-- Guard: two independent rereviews are clean, the targeted 18/18 tests and post-change crawl `20260729T010549Z` are green, and health passes 443 files/3,682 tests, both typechecks, and all 12 packs on clean candidate `b02275af`.
