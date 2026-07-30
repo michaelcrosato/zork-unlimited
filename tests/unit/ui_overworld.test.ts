@@ -1613,6 +1613,7 @@ describe("OverworldSession", () => {
       dispatcher.current = {
         useEffect: () => undefined,
         useRef: <T>(initialValue: T) => ({ current: initialValue }),
+        useState: <T>(initialValue: T) => [initialValue, () => undefined] as const,
       };
       let elementTree: unknown;
       try {

@@ -1,6 +1,7 @@
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import type {
   JourneyReliefOathStoryChoiceOptions,
+  JourneyStoryChoiceProgressiveDisclosure,
   JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
 import type { OpeningLeadSource } from "./opening_lead_source.js";
@@ -84,13 +85,30 @@ export function presentOpeningReliefOath(
     ...(standardPacket ? [standardPacket] : []),
     ...oathOptions,
   ]) as JourneyReliefOathStoryChoiceOptions;
+  const progressiveDisclosure: JourneyStoryChoiceProgressiveDisclosure | undefined = standardPacket
+    ? Object.freeze({
+        initialOptionIds: Object.freeze([
+          standardPacket.id,
+        ]) as JourneyStoryChoiceProgressiveDisclosure["initialOptionIds"],
+        reveal: Object.freeze({
+          id: "customize_duty_and_evidence",
+          label: "Compare individual duties",
+          description:
+            "Review individual duties without choosing; selecting one leads to its evidence choice.",
+          optionIds: Object.freeze(
+            oathOptions.map((option) => option.id),
+          ) as JourneyStoryChoiceProgressiveDisclosure["reveal"]["optionIds"],
+        }),
+      })
+    : undefined;
 
   return Object.freeze({
     id: parsed.id,
     kind: "relief_oath" as const,
     message: standardPacket
-      ? `${parsed.title}. Use your role's standard packet to bind duty and evidence together, or choose a custom duty below; its evidence source follows. ${parsed.message}`
+      ? `${parsed.title}. Use your role's standard packet to bind duty and evidence together, or customize duty and evidence; an individual duty is chosen now and its evidence source follows. ${parsed.message}`
       : `${parsed.title}. ${parsed.message}`,
     options,
+    ...(progressiveDisclosure ? { progressiveDisclosure } : {}),
   });
 }

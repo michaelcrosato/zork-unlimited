@@ -20,6 +20,7 @@ import {
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  type CompactJourneyStoryChoicePrompt,
 } from "../../src/mcp/journey_projection.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
 import {
@@ -204,7 +205,7 @@ function expectOpeningPromptExact(
   sourceOptions: readonly OpeningSourceOption[],
   prompt: JourneyStoryChoicePrompt,
   authoredMessageVisible: boolean = true,
-): JourneyStoryChoicePrompt {
+): CompactJourneyStoryChoicePrompt {
   expect(prompt.id).toBe(source.id);
   const projected = compactJourneyStoryChoicePrompt(prompt);
   expectExact(`opening:${source.id}.prompt`, prompt.message, projected.message);
@@ -212,19 +213,61 @@ function expectOpeningPromptExact(
   if (authoredMessageVisible) expect(projected.message).toContain(source.message);
   else expect(projected.message).not.toContain(source.message);
 
+  const progressiveDisclosure = prompt.progressiveDisclosure;
+  const expanded = progressiveDisclosure
+    ? compactJourneyStoryChoiceComparison(prompt, undefined, progressiveDisclosure.reveal.id)
+    : undefined;
+  if (progressiveDisclosure) {
+    expect(projected.options.map((option) => option.id)).toEqual(
+      progressiveDisclosure.initialOptionIds,
+    );
+    expect(projected.revealOption).toMatchObject({
+      id: progressiveDisclosure.reveal.id,
+      label: progressiveDisclosure.reveal.label,
+      description: progressiveDisclosure.reveal.description,
+      arguments: {
+        story_choice_id: prompt.id,
+        reveal_id: progressiveDisclosure.reveal.id,
+      },
+      readOnly: true,
+    });
+    expect(expanded!.options.map((option) => option.id)).toEqual(
+      prompt.options.map((option) => option.id),
+    );
+    expect(expanded).not.toHaveProperty("revealOption");
+  } else {
+    expect(projected.options.map((option) => option.id)).toEqual(
+      prompt.options.map((option) => option.id),
+    );
+    expect(projected).not.toHaveProperty("revealOption");
+  }
+
   for (const sourceOption of sourceOptions) {
     const canonicalOption = prompt.options.find((option) => option.id === sourceOption.id);
     const projectedOption = projected.options.find((option) => option.id === sourceOption.id);
+    const expandedOption = expanded?.options.find((option) => option.id === sourceOption.id);
+    const isInitiallyProjected =
+      progressiveDisclosure?.initialOptionIds.includes(sourceOption.id) ?? true;
     expect(
       canonicalOption,
       `opening:${source.id}.${sourceOption.id} must be presented`,
     ).toBeDefined();
+    if (isInitiallyProjected) {
+      expect(
+        projectedOption,
+        `opening:${source.id}.${sourceOption.id} must be initially compacted`,
+      ).toBeDefined();
+      expect(projectedOption!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+    } else {
+      expect(projectedOption).toBeUndefined();
+      expect(progressiveDisclosure!.reveal.optionIds).toContain(sourceOption.id);
+    }
+    const comparisonOption = projectedOption ?? expandedOption;
     expect(
-      projectedOption,
-      `opening:${source.id}.${sourceOption.id} must be compacted`,
+      comparisonOption,
+      `opening:${source.id}.${sourceOption.id} must be available after staged expansion`,
     ).toBeDefined();
-    expect(projectedOption!.label).toBe(sourceOption.title);
-    expect(projectedOption!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+    expect(comparisonOption!.label).toBe(sourceOption.title);
 
     const inspected = compactJourneyStoryChoiceComparison(prompt, sourceOption.id);
     const inspectedOption = inspected.inspectedOption;
@@ -250,8 +293,8 @@ function expectOpeningPromptExact(
       expect(inspectedJson).not.toContain(sibling.consequence);
     }
 
-    expect(projectedOption!.summary).toEqual(canonicalOption!.summary);
-    expect(projectedOption!.summary).toEqual({
+    expect(comparisonOption!.summary).toEqual(canonicalOption!.summary);
+    expect(comparisonOption!.summary).toEqual({
       commitment: sourceOption.summary,
       ...(canonicalOption!.summary!.checkFit === undefined
         ? {}
@@ -259,7 +302,7 @@ function expectOpeningPromptExact(
       immediateCost: canonicalOption!.summary!.immediateCost,
       tradeoff: canonicalOption!.summary!.tradeoff,
     });
-    expect(Object.keys(projectedOption!.summary!).sort()).toEqual([
+    expect(Object.keys(comparisonOption!.summary!).sort()).toEqual([
       ...(canonicalOption!.summary!.checkFit === undefined ? [] : ["checkFit"]),
       "commitment",
       "immediateCost",

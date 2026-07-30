@@ -1739,7 +1739,7 @@ describe("MCP pure play mode", () => {
           | undefined;
         expect(storyChoiceProperties?.choice).toMatchObject({
           type: "string",
-          description: "Choice id from journey.storyChoice.options.",
+          description: "Choice id from current canonical story.options.",
         });
         expect(storyChoiceProperties?.choice).not.toHaveProperty("enum");
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
@@ -2002,11 +2002,11 @@ describe("MCP pure play mode", () => {
               typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
-        const ledgerAdvocate = registrationChoice?.options?.find(
-          (option) => option.id === "albany:ledger_advocate",
+        const ironhandsRepairer = registrationChoice?.options?.find(
+          (option) => option.id === "albany:ironhands_repairer",
         );
-        if (!ledgerAdvocate) throw new Error("expected visible Ledger Advocate profile");
-        for (const optionId of [undefined, ledgerAdvocate.id] as const) {
+        if (!ironhandsRepairer) throw new Error("expected visible Ironhands Repairer profile");
+        for (const optionId of [undefined, ironhandsRepairer.id] as const) {
           const staleInspection = textPayload(
             await client.callTool({
               name: "inspect_overworld_session_story",
@@ -2032,7 +2032,7 @@ describe("MCP pure play mode", () => {
             arguments: {
               session_id: sessionId,
               story_choice_id: "albany:relief_registration",
-              option_id: ledgerAdvocate.id,
+              option_id: ironhandsRepairer.id,
               compact_context: false,
               compact_result: false,
             },
@@ -2050,7 +2050,7 @@ describe("MCP pure play mode", () => {
         expect(registrationDetail).not.toHaveProperty("message");
         expect(registrationDetail).not.toHaveProperty("options");
         expect(registrationDetail.inspectedOption).toMatchObject({
-          id: ledgerAdvocate.id,
+          id: ironhandsRepairer.id,
         });
         expect(Object.keys(registrationDetail.inspectedOption ?? {}).sort()).toEqual(
           ["consequence", "id", "label"].sort(),
@@ -2064,7 +2064,7 @@ describe("MCP pure play mode", () => {
             name: "choose_overworld_session_story",
             arguments: {
               session_id: sessionId,
-              choice: ledgerAdvocate.id,
+              choice: ironhandsRepairer.id,
               compact_context: false,
               compact_result: false,
             },
@@ -2076,6 +2076,10 @@ describe("MCP pure play mode", () => {
             storyChoice?: {
               kind?: string;
               options?: { id: string; consequence?: string; summary?: { tradeoff?: string } }[];
+              revealOption?: {
+                id: string;
+                arguments: { story_choice_id: string; reveal_id: string };
+              };
             };
           }
         ).storyChoice;
@@ -2087,9 +2091,30 @@ describe("MCP pure play mode", () => {
               typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
-        const limitedOath = oathChoice?.options?.find(
-          (option) => option.id === "albany:oath_limited_aid_only",
+        expect(oathChoice?.options?.map((option) => option.id)).toEqual([
+          "albany:doctrine_fortify_breach",
+        ]);
+        expect(JSON.stringify(oathChoice)).not.toContain("albany:oath_limited_aid_only");
+        const reveal = oathChoice?.revealOption;
+        if (!reveal) throw new Error("expected pure compact oath reveal affordance");
+        const expandedOath = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              ...reveal.arguments,
+            },
+          }),
         );
+        expectPureStoryInspectionEnvelope(expandedOath, sessionId);
+        expect(expandedOath.snapshot_hash).toBe(selected.snapshot_hash);
+        const limitedOath = (
+          expandedOath.story as {
+            options?: { id: string; consequence?: string; summary?: { tradeoff?: string } }[];
+            revealOption?: unknown;
+          }
+        ).options?.find((option) => option.id === "albany:oath_limited_aid_only");
+        expect(expandedOath.story as Record<string, unknown>).not.toHaveProperty("revealOption");
         if (!limitedOath) throw new Error("expected visible limited aid-only oath");
         const oathed = textPayload(
           await client.callTool({
@@ -2249,7 +2274,7 @@ describe("MCP pure play mode", () => {
         );
         if (!worksFortification)
           throw new Error("expected visible works-fortification preparation");
-        expect(worksFortification.summary?.checkFit).toBe("Repair +0 vs DC 12");
+        expect(worksFortification.summary?.checkFit).toBe("Repair +4 vs DC 12");
         const detailed = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2272,10 +2297,10 @@ describe("MCP pure play mode", () => {
         expect(detailedPreparation).not.toHaveProperty("options");
         expect(detailedPreparation.inspectedOption).toMatchObject({
           id: worksFortification.id,
-          checkFit: "Repair +0 vs DC 12",
+          checkFit: "Repair +4 vs DC 12",
           consequence:
             "Benefit: Opening repair at Cade's first loose paling rail. " +
-            "Cost: 25 minutes and $4. " +
+            "Cost: 10 minutes and $0. " +
             "Boundary: Replaces the ordinary wedge and forfeits Hayden's frost-brace line.",
         });
         expect(Object.keys(detailedPreparation.inspectedOption ?? {}).sort()).toEqual(

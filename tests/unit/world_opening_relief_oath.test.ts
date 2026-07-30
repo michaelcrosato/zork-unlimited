@@ -458,6 +458,7 @@ describe("opening relief oath application and presentation", () => {
         "Set the Wolf-Winter Duty. Rowan separates permanent background from the terms under which this dispatch may use Albany's name.",
     });
     expect(prompt.options).toHaveLength(3);
+    expect(prompt).not.toHaveProperty("progressiveDisclosure");
     expect(prompt.options[0]).toMatchObject({
       summary: {
         commitment: scene.options[0]!.summary,

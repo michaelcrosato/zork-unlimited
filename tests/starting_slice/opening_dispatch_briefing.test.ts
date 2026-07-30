@@ -3,9 +3,14 @@ import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   compactJourneyStoryChoiceComparison,
+  type CompactJourneyPresentation,
   type JourneyStoryChoiceSummaryComparison,
 } from "../../src/mcp/journey_projection.js";
-import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
+import {
+  journeyStoryChoiceOptionsForPresentation,
+  type JourneyPresentation,
+  type JourneyStoryChoicePrompt,
+} from "../../src/world/journey_contract.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
@@ -234,7 +239,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
     expect(oath.message).toContain(
-      "Chosen at Civic: role. Choose the standard packet for duty + evidence, or a duty alone; custom evidence follows.",
+      "Civic role chosen. Choose its standard duty + evidence packet, or customize.",
     );
     expect(oath.options.map((option) => option.id)).toEqual([
       standardPacket.id,
@@ -244,6 +249,27 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(wordCount(oath.message)).toBeLessThanOrEqual(50);
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
+    expect(oath.progressiveDisclosure).toEqual({
+      initialOptionIds: [standardPacket.id],
+      reveal: {
+        id: "customize_duty_and_evidence",
+        label: "Compare individual duties",
+        description:
+          "Review individual duties without choosing; selecting one leads to its evidence choice.",
+        optionIds: RELIEF_OATH.options.map((option) => option.id),
+      },
+    });
+    expect(journeyStoryChoiceOptionsForPresentation(oath).map((option) => option.id)).toEqual([
+      standardPacket.id,
+    ]);
+    expect(
+      journeyStoryChoiceOptionsForPresentation(oath, "customize_duty_and_evidence").map(
+        (option) => option.id,
+      ),
+    ).toEqual([standardPacket.id, ...RELIEF_OATH.options.map((option) => option.id)]);
+    expect(() => journeyStoryChoiceOptionsForPresentation(oath, "not_a_reveal")).toThrow(
+      /no progressive disclosure/i,
+    );
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(oath);
 
     const ledgerSession = new OverworldSession(WORLD);
@@ -262,6 +288,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       presentedMessage: OATH_HEADER,
     });
     expect(ledgerOath.options.map((option) => option.id)).toEqual(
+      RELIEF_OATH.options.map((option) => option.id),
+    );
+    expect(ledgerOath).not.toHaveProperty("progressiveDisclosure");
+    expect(journeyStoryChoiceOptionsForPresentation(ledgerOath).map((option) => option.id)).toEqual(
       RELIEF_OATH.options.map((option) => option.id),
     );
     expect(ledgerOath.message).not.toContain("standard packet for duty + evidence");
@@ -409,7 +439,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
     const sharedChoices = [REGISTRATION.profiles[0]!.id, standardPacket.id];
-    let compactJourney = talked.journey;
+    let compactJourney: JourneyPresentation | CompactJourneyPresentation = talked.journey;
     for (const choice of sharedChoices) {
       ui.chooseJourneyStory(choice);
       compactJourney = api.choose_overworld_session_story({

@@ -1,3 +1,4 @@
+import { journeyStoryChoiceOptionsForPresentation } from "../world/journey_contract.js";
 import type {
   JourneyPresentation,
   JourneyStoryChoiceDispatchImpact,
@@ -19,7 +20,7 @@ import type { McpObservation } from "./types.js";
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
 const COMPACT_MORE_CHOICES_INDEX = 12;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 7 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 8 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Complete terms are staged; inspect this exact option before choosing if you need them." as const;
 
@@ -49,6 +50,36 @@ export type JourneyStoryChoiceReviewAffordance = Readonly<{
   readOnly: true;
 }>;
 
+/** Read-only expansion for deliberately staged story-choice cards. */
+export type JourneyStoryChoiceRevealAffordance = Readonly<{
+  id: string;
+  label: string;
+  description: string;
+  tool: typeof INSPECT_OVERWORLD_SESSION_STORY_TOOL;
+  arguments: Readonly<{ story_choice_id: string; reveal_id: string }>;
+  readOnly: true;
+}>;
+
+/**
+ * Compact story-card surface. Canonical kind-specific tuple cardinalities do
+ * not apply here because progressive disclosure may initially project one card.
+ */
+export type CompactJourneyStoryChoicePrompt = Readonly<{
+  id: string;
+  message: string;
+  kind?: JourneyStoryChoicePresentationKind;
+  options: readonly JourneyStoryChoiceOption[];
+  /** Canonical disclosure metadata is replaced by the read-only MCP affordance. */
+  progressiveDisclosure?: never;
+  revealOption?: JourneyStoryChoiceRevealAffordance;
+}>;
+
+/** Compact-context journey with an honestly typed projected story surface. */
+export type CompactJourneyPresentation = Omit<JourneyPresentation, "storyChoice"> &
+  Readonly<{
+    storyChoice: CompactJourneyStoryChoicePrompt | null;
+  }>;
+
 /**
  * Compact, read-only story inspection. The first response is deliberately only
  * a comparison surface; one exact option can be expanded without exposing the
@@ -65,6 +96,8 @@ export type JourneyStoryChoiceSummaryComparison = JourneyStoryChoiceProjectionBa
     message: string;
     options: readonly JourneyStoryChoiceComparisonOption[];
     reviewOption: JourneyStoryChoiceReviewAffordance;
+    /** Present only until this prompt's staged cards have been expanded. */
+    revealOption?: JourneyStoryChoiceRevealAffordance;
     inspectedOption: null;
   }>;
 
@@ -77,12 +110,34 @@ export type JourneyStoryChoiceComparison =
   | JourneyStoryChoiceSummaryComparison
   | JourneyStoryChoiceDetail;
 
-export type EmbeddedJourneyField = {
-  journey: JourneyPresentation;
+export type EmbeddedJourneyField<
+  Journey extends JourneyPresentation | CompactJourneyPresentation = JourneyPresentation,
+> = {
+  journey: Journey;
   overworld_snapshot_hash: string;
 };
 
-export function journeyBlocksGameplay(journey: JourneyPresentation): boolean {
+function progressiveDisclosureRevealAffordance(
+  prompt: JourneyStoryChoicePrompt,
+): JourneyStoryChoiceRevealAffordance | undefined {
+  const disclosure = prompt.progressiveDisclosure;
+  if (!disclosure) return undefined;
+  return Object.freeze({
+    id: disclosure.reveal.id,
+    label: disclosure.reveal.label,
+    description: disclosure.reveal.description,
+    tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+    arguments: Object.freeze({
+      story_choice_id: prompt.id,
+      reveal_id: disclosure.reveal.id,
+    }),
+    readOnly: true,
+  });
+}
+
+export function journeyBlocksGameplay(
+  journey: JourneyPresentation | CompactJourneyPresentation,
+): boolean {
   return (
     journey.pendingChoice !== null || journey.storyChoice !== null || journey.status === "ended"
   );
@@ -139,8 +194,8 @@ export function journeyStoryChoiceOptionById(
 /** Stage active compact consequences behind exact, read-only option inspection. */
 export function compactJourneyStoryChoicePrompt(
   prompt: JourneyStoryChoicePrompt,
-): JourneyStoryChoicePrompt {
-  const options = prompt.options.map((option) =>
+): CompactJourneyStoryChoicePrompt {
+  const options = journeyStoryChoiceOptionsForPresentation(prompt).map((option) =>
     option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE
       ? option
       : Object.freeze({
@@ -148,11 +203,20 @@ export function compactJourneyStoryChoicePrompt(
           consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
         }),
   );
-  if (options.every((option, index) => option === prompt.options[index])) return prompt;
+  const { progressiveDisclosure: _progressiveDisclosure, ...withoutProgressiveDisclosure } = prompt;
+  const revealOption = progressiveDisclosureRevealAffordance(prompt);
+  if (
+    _progressiveDisclosure === undefined &&
+    options.length === prompt.options.length &&
+    options.every((option, index) => option === prompt.options[index])
+  ) {
+    return prompt as unknown as CompactJourneyStoryChoicePrompt;
+  }
   return Object.freeze({
-    ...prompt,
+    ...withoutProgressiveDisclosure,
     options: Object.freeze(options),
-  }) as JourneyStoryChoicePrompt;
+    ...(revealOption ? { revealOption } : {}),
+  }) as CompactJourneyStoryChoicePrompt;
 }
 
 /** Build the staged compact inspection without changing the canonical prompt. */
@@ -165,8 +229,28 @@ export function compactJourneyStoryChoiceComparison(
 ): JourneyStoryChoiceDetail;
 export function compactJourneyStoryChoiceComparison(
   prompt: JourneyStoryChoicePrompt,
+  optionId: undefined,
+  revealId: string,
+): JourneyStoryChoiceSummaryComparison;
+export function compactJourneyStoryChoiceComparison(
+  prompt: JourneyStoryChoicePrompt,
+  optionId: undefined,
+  revealId?: string,
+): JourneyStoryChoiceSummaryComparison;
+/** Runtime validation rejects this mutually exclusive argument combination. */
+export function compactJourneyStoryChoiceComparison(
+  prompt: JourneyStoryChoicePrompt,
+  optionId: string,
+  revealId: string,
+): JourneyStoryChoiceComparison;
+export function compactJourneyStoryChoiceComparison(
+  prompt: JourneyStoryChoicePrompt,
   optionId?: string,
+  revealId?: string,
 ): JourneyStoryChoiceComparison {
+  if (optionId !== undefined && revealId !== undefined) {
+    throw new Error("Story choice inspection accepts option_id or reveal_id, not both.");
+  }
   const base = Object.freeze({
     comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
     id: prompt.id,
@@ -189,7 +273,7 @@ export function compactJourneyStoryChoiceComparison(
       }),
     });
   }
-  const options = prompt.options.map((option) =>
+  const options = journeyStoryChoiceOptionsForPresentation(prompt, revealId).map((option) =>
     Object.freeze({
       id: option.id,
       label: option.label,
@@ -208,6 +292,8 @@ export function compactJourneyStoryChoiceComparison(
         : {}),
     }),
   );
+  const revealOption =
+    revealId === undefined ? progressiveDisclosureRevealAffordance(prompt) : undefined;
   return Object.freeze({
     ...base,
     message: prompt.message,
@@ -220,15 +306,20 @@ export function compactJourneyStoryChoiceComparison(
       valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
       readOnly: true,
     }),
+    ...(revealOption ? { revealOption } : {}),
     inspectedOption: null,
   });
 }
 
 /** Compact MCP projection; the canonical journey and all non-story fields remain shared. */
-export function compactJourneyPresentation(journey: JourneyPresentation): JourneyPresentation {
-  if (!journey.storyChoice) return journey;
+export function compactJourneyPresentation(
+  journey: JourneyPresentation,
+): CompactJourneyPresentation {
+  if (!journey.storyChoice) return journey as CompactJourneyPresentation;
   const storyChoice = compactJourneyStoryChoicePrompt(journey.storyChoice);
-  if (storyChoice === journey.storyChoice) return journey;
+  if ((storyChoice as object) === journey.storyChoice) {
+    return journey as CompactJourneyPresentation;
+  }
   return Object.freeze({ ...journey, storyChoice });
 }
 

@@ -129,6 +129,8 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("versioned comparison contains short option summaries");
     expect(prompt).toContain("exact option `id` as");
     expect(prompt).toContain("`option_id`");
+    expect(prompt).toContain("visible `revealOption`");
+    expect(prompt).toContain("`reveal_id`");
     expect(prompt).toContain("reveals only that option");
     expect(prompt).toContain("need not expand every option");
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");

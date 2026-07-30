@@ -1,5 +1,8 @@
-import { useEffect, useRef } from "react";
-import type { JourneyPresentation } from "../../src/world/journey_contract.js";
+import { useEffect, useRef, useState } from "react";
+import {
+  journeyStoryChoiceOptionsForPresentation,
+  type JourneyPresentation,
+} from "../../src/world/journey_contract.js";
 import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 import { DepartureRecap } from "./DepartureRecap.js";
 import type { OverworldView } from "./overworld.js";
@@ -24,10 +27,17 @@ export function JourneyStoryChoiceScreen({
 }: JourneyStoryChoiceScreenProps): JSX.Element {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const storyChoice = journey.storyChoice;
+  const [revealedStoryChoice, setRevealedStoryChoice] = useState<
+    Readonly<{ storyChoiceId: string; revealId: string }> | null
+  >(null);
 
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    setRevealedStoryChoice(null);
+  }, [storyChoice?.id]);
 
   if (!storyChoice) {
     throw new Error("JourneyStoryChoiceScreen requires a pending story choice.");
@@ -38,7 +48,19 @@ export function JourneyStoryChoiceScreen({
   const isAlly = storyChoice.kind === "ally";
   const isReliefAllocation = storyChoice.kind === "relief_allocation";
   const isReliefOath = storyChoice.kind === "relief_oath";
-  const hasStandardPacket = isReliefOath && storyChoice.options.length === 4;
+  const progressiveDisclosure = storyChoice.progressiveDisclosure;
+  const hasStandardPacket = progressiveDisclosure !== undefined;
+  const initialOptions = journeyStoryChoiceOptionsForPresentation(storyChoice);
+  const isProgressiveDisclosureRevealed =
+    progressiveDisclosure !== undefined &&
+    revealedStoryChoice?.storyChoiceId === storyChoice.id &&
+    revealedStoryChoice.revealId === progressiveDisclosure.reveal.id;
+  const revealedOptions =
+    progressiveDisclosure && isProgressiveDisclosureRevealed
+      ? journeyStoryChoiceOptionsForPresentation(storyChoice, progressiveDisclosure.reveal.id).filter(
+          (option) => !initialOptions.some((initialOption) => initialOption.id === option.id),
+        )
+      : [];
   const keepsCurrentObjective =
     isRegistration ||
     isLeadSource ||
@@ -64,7 +86,7 @@ export function JourneyStoryChoiceScreen({
   const currentObjectiveGuidance = registrationGroups
     ? "A doctrine commits your role, oath, and source; a custom role continues step-by-step."
     : hasStandardPacket
-      ? "The first card binds duty and evidence together; choosing an individual duty keeps the evidence choice next."
+      ? "The standard card binds duty and evidence together; the comparison control is read-only."
     : usesRoleplayReceipts
       ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
       : isRegistration
@@ -80,7 +102,7 @@ export function JourneyStoryChoiceScreen({
               : isReliefOath
                 ? "Compare each term's access, duty, actual cost, field consequence, and return promise. This binds the dispatch without replacing your current objective."
                 : "Choose the consequence that sets your next objective.";
-  const renderOption = (option: (typeof storyChoice.options)[number]): JSX.Element => {
+  const renderOption = (option: (typeof initialOptions)[number]): JSX.Element => {
     const conciseSummary = option.summary;
     const usesRoleplayReceipt =
       conciseSummary !== undefined && conciseSummary.fieldTrigger === undefined;
@@ -195,7 +217,7 @@ export function JourneyStoryChoiceScreen({
                     ? "Choose what Albany can protect"
                     : isReliefOath
                       ? hasStandardPacket
-                        ? "Choose a standard packet or duty"
+                        ? "Choose the standard packet or customize"
                         : "Choose one binding term"
                       : "Choose what follows"}
         </h1>
@@ -237,8 +259,43 @@ export function JourneyStoryChoiceScreen({
               keepsCurrentObjective ? " journey-choice-actions-registration" : ""
             }`}
           >
-            {storyChoice.options.map(renderOption)}
+            {initialOptions.map(renderOption)}
           </div>
+        )}
+        {progressiveDisclosure && (
+          <section className="journey-choice-progressive-disclosure">
+            <button
+              className="secondary"
+              type="button"
+              aria-expanded={isProgressiveDisclosureRevealed}
+              aria-controls={`journey-story-choice-${progressiveDisclosure.reveal.id}`}
+              aria-describedby={`journey-story-choice-${progressiveDisclosure.reveal.id}-description`}
+              onClick={() =>
+                setRevealedStoryChoice((current) =>
+                  current?.storyChoiceId === storyChoice.id &&
+                  current.revealId === progressiveDisclosure.reveal.id
+                    ? null
+                    : { storyChoiceId: storyChoice.id, revealId: progressiveDisclosure.reveal.id },
+                )
+              }
+            >
+              {progressiveDisclosure.reveal.label}
+            </button>
+            <p id={`journey-story-choice-${progressiveDisclosure.reveal.id}-description`}>
+              {progressiveDisclosure.reveal.description}
+            </p>
+            {revealedOptions.length > 0 && (
+              <section
+                id={`journey-story-choice-${progressiveDisclosure.reveal.id}`}
+                className="journey-choice-option-group"
+              >
+                <h2>{progressiveDisclosure.reveal.label}</h2>
+                <div className="journey-choice-actions journey-choice-actions-registration">
+                  {revealedOptions.map(renderOption)}
+                </div>
+              </section>
+            )}
+          </section>
         )}
         {onDismiss && (
           <button className="secondary" type="button" onClick={onDismiss}>

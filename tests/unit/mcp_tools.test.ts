@@ -22,6 +22,7 @@ import {
   publicOverworldSnapshotHash,
   OVERWORLD_PUBLIC_SNAPSHOT_HASH_LENGTH,
 } from "../../src/mcp/overworld_sessions.js";
+import type { CompactJourneyStoryChoicePrompt } from "../../src/mcp/journey_projection.js";
 import {
   OVERWORLD_COMPACT_ACTION_TEXT_CHAR_LIMIT,
   OVERWORLD_COMPACT_RESULT_LEGEND,
@@ -44,6 +45,7 @@ import { buildRpgObservation } from "../../src/rpg/observation.js";
 import { makeStep } from "../../src/core/engine.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
 import { hashState } from "../../src/core/hash.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
@@ -397,7 +399,8 @@ function resolveCurrentOverworldSessionEvent(
       choice: "albany:ledger_advocate",
     });
   }
-  let storyChoice = a.get_overworld_session({ session_id: sessionId }).journey.storyChoice;
+  let storyChoice: JourneyStoryChoicePrompt | CompactJourneyStoryChoicePrompt | null =
+    a.get_overworld_session({ session_id: sessionId }).journey.storyChoice;
   if (storyChoice?.kind === "relief_oath") {
     storyChoice = a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,

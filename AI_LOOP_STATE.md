@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 696 -->
+<!-- historical_cycle_count: 697 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - progressive_custom_duty_disclosure
+
+- Evidence choice: the prior exact Terra canary still named early role/duty terminology dense, while the role-first standard packet had become the common path; reduce first-view load without deleting custom terms.
+- Surface: a standard-packet role now shows its one packet first and a read-only `Compare individual duties` affordance; expansion restores all three canonical duties, and choosing one still leads to its evidence choice.
+- Measured effect: the real Road-Warden compact comparison falls 2,045->1,376 bytes (32.7%); the expanded comparison is 2,009 bytes, still 1.8% below the former always-expanded view.
+- Counterfactual: disclosure is presentation-only; canonical choices, direct/revealed selection results, costs, accepted decisions, saves, hashes, mechanics, and outcomes are unchanged, while unsupported story-card kinds fail closed.
+- Pure evidence: exact-clean Terra seed 73076 inspected and chose the standard packet, completed The Wolf-Winter through a recovered bloodless LURE in 32 decisions, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, or bug.
+- Economy: one attempt used 2.566M raw / 120.9k uncached input and 7.5k output tokens at 95.3% cache reuse, or 128,382 useful tokens / 32 decisions (about 4,012 each), with no retry or fallback.
+- Self-critique/guard: the player still named the accumulated pre-departure modifier stack dense, so target a lighter truthful recap rather than fewer decisions; three independent reviews are clean, pre/post crawls `20260729T210911Z` / `20260729T215403Z` have zero findings, browser parity is clean, and exact-tree health passes 449 files/3,728 tests, both typechecks, and all 12 packs.
 
 ### Cycle result - character_relative_preparation_check_fit
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: one canary proves live ledger custody rather than retention or gameplay lift; it repeated dense early Albany commitments, so the consolidated strict ten-player pilot—not another isolated copy edit—decides the next gameplay change.
 - Economy: the canary used 2.398M input / 108.2k uncached input and 7.9k output tokens at 95.49% cache reuse, or 3,746 useful tokens per accepted decision; four accidentally opened Spark streams produced no terminal usage or report and remain quarantined as unrecoverable cost.
 - Guard: independent final review is clean, the spend-safety suite passes 95/95, post-change crawl `20260728T193122Z` is zero-finding, and health passes 442 files/3,665 tests, both typechecks, and all 12 packs.
-
-### Cycle result - explicit_hunt_commitment_affordance
-
-- Evidence choice: the closed nine-report diagnostic produced 7 LURE / 2 FORTIFY and no HUNT or DRIVE; HUNT alone still required players to infer a positive strategy from leaving Cade, acknowledging June's warning, and crossing north "uncommitted."
-- Surface: Cade now offers one explicit HUNT-for-north action beside the other strategy cards, and June exposes the same canonical action with her wolf-death consequence; crossing north remains the truthful irreversible boundary.
-- Counterfactual: the new Cade action is state-neutral, the legacy June MCP id still resolves, unannounced north crossing remains compatible, and strategy legality, bonuses, checks, resources, combat, outcomes, and return consequences are unchanged.
-- Pure evidence: exact-clean Terra seed 72931 saw the new action, freely chose LURE, recovered two failed checks, completed The Wolf-Winter at decision 33, continued twice, completed The Gallowmere at 57, then ended; clarity/enjoyment 4/5, unstuck, replay-yes, no bugs or rejected actions.
-- Self-critique/follow-through: visibility is proven but HUNT selection is not; the player again named dense Albany preparation, so strategy diversification awaits a fresh strict pilot and setup density remains a separate field-timed increment.
-- Economy: Terra used 6.722M input / 188.4k uncached input and 12.5k output tokens at 97.2% cache reuse, or 3,525 useful tokens per accepted decision; Spark 72930 yielded no valid report or terminal usage after a client model-cache schema failure, so its exact cost is unrecoverable and no retry was attempted.
-- Guard: independent gameplay/evidence review is clean, pre/post crawls `20260728T160242Z` / `20260728T162543Z` are zero-finding, and health passes 441 files/3,630 tests, both typechecks, and all 12 packs.

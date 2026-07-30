@@ -46,6 +46,15 @@ function reliefOathJourney(): ReturnType<OverworldSession["journey"]> {
   return session.journey();
 }
 
+function ledgerReliefOathJourney(): ReturnType<OverworldSession["journey"]> {
+  const session = new OverworldSession(WORLD);
+  const registration = WORLD.opening_registration!;
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(registration.contact);
+  session.chooseJourneyStory("albany:ledger_advocate");
+  return session.journey();
+}
+
 function leadSourceJourney(): ReturnType<OverworldSession["journey"]> {
   const session = new OverworldSession(WORLD);
   const registration = WORLD.opening_registration!;
@@ -370,6 +379,95 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(allocationDetails.textContent).toContain(allocationOption.consequence);
       expect(allocationDetails.textContent).not.toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).not.toContain(allocation.options[0]!.consequence);
+
+      const standardPacketJourney = reliefOathJourney();
+      const standardPacketChoice = standardPacketJourney.storyChoice;
+      if (!standardPacketChoice?.progressiveDisclosure) {
+        throw new Error(
+          "Expected the Road-Warden relief oath to offer a progressive standard packet.",
+        );
+      }
+      await act(async () => {
+        root!.render(
+          react.createElement(module.JourneyStoryChoiceScreen, {
+            journey: standardPacketJourney,
+            onChoose: (choiceId: string) => selected.push(choiceId),
+          }),
+        );
+      });
+      const standardPacketButtons = Array.from(
+        rootElement.querySelectorAll(".journey-choice-card > button"),
+      ) as Array<{ textContent: string | null }>;
+      expect(standardPacketButtons).toHaveLength(
+        standardPacketChoice.progressiveDisclosure.initialOptionIds.length,
+      );
+      const customize = rootElement.querySelector(
+        ".journey-choice-progressive-disclosure > button",
+      ) as {
+        click: () => void;
+        getAttribute: (name: string) => string | null;
+        textContent: string | null;
+      } | null;
+      if (!customize) throw new Error("Expected a real progressive-disclosure button.");
+      expect(customize.textContent).toBe(standardPacketChoice.progressiveDisclosure.reveal.label);
+      expect(customize.getAttribute("aria-expanded")).toBe("false");
+      const customSectionId = customize.getAttribute("aria-controls");
+      expect(customSectionId).toBeTruthy();
+      const descriptionId = customize.getAttribute("aria-describedby");
+      expect(descriptionId).toBeTruthy();
+      const describedBy = rootElement.querySelector(`[id="${descriptionId}"]`) as {
+        textContent: string | null;
+      } | null;
+      expect(describedBy?.textContent).toBe(
+        standardPacketChoice.progressiveDisclosure.reveal.description,
+      );
+      const selectedBeforeCustomize = [...selected];
+      await act(async () => {
+        customize.click();
+      });
+      expect(selected).toEqual(selectedBeforeCustomize);
+      expect(customize.getAttribute("aria-expanded")).toBe("true");
+      await act(async () => {
+        customize.click();
+      });
+      expect(selected).toEqual(selectedBeforeCustomize);
+      expect(customize.getAttribute("aria-expanded")).toBe("false");
+      await act(async () => {
+        customize.click();
+      });
+      const revealedCards = Array.from(
+        rootElement.querySelectorAll(
+          ".journey-choice-progressive-disclosure .journey-choice-option-group .journey-choice-card > button",
+        ),
+      ) as Array<{ textContent: string | null; click: () => void }>;
+      expect(revealedCards).toHaveLength(
+        standardPacketChoice.progressiveDisclosure.reveal.optionIds.length,
+      );
+      expect(revealedCards.map((card) => card.textContent)).toEqual(
+        standardPacketChoice.options
+          .filter((option) =>
+            standardPacketChoice.progressiveDisclosure!.reveal.optionIds.includes(option.id),
+          )
+          .map((option) => expect.stringContaining(option.label)),
+      );
+      await act(async () => {
+        revealedCards[0]!.click();
+      });
+      expect(selected.at(-1)).toBe(standardPacketChoice.progressiveDisclosure.reveal.optionIds[0]);
+
+      const ledgerJourney = ledgerReliefOathJourney();
+      await act(async () => {
+        root!.render(
+          react.createElement(module.JourneyStoryChoiceScreen, {
+            journey: ledgerJourney,
+            onChoose: (choiceId: string) => selected.push(choiceId),
+          }),
+        );
+      });
+      expect(rootElement.querySelector(".journey-choice-progressive-disclosure")).toBeNull();
+      expect(rootElement.querySelectorAll(".journey-choice-card > button")).toHaveLength(
+        ledgerJourney.storyChoice!.options.length,
+      );
 
       for (const [comparedJourney, sourceOption] of [
         [reliefOathJourney(), WORLD.opening_relief_oath!.options[0]!],

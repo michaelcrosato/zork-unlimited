@@ -510,9 +510,24 @@ button:hover {
 }
 
 .journey-choice-option-groups,
-.journey-choice-option-group {
+.journey-choice-option-group,
+.journey-choice-progressive-disclosure {
   display: grid;
   gap: 0.75rem;
+}
+
+.journey-choice-progressive-disclosure {
+  background: color-mix(in srgb, var(--panel-3) 72%, transparent);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+
+.journey-choice-progressive-disclosure > p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin: 0;
 }
 
 .journey-choice-option-group > h2 {

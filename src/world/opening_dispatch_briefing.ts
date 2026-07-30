@@ -186,7 +186,7 @@ export function withOpeningDispatchBriefing(
       civicStageIndex === 0
         ? `Mission preview — ${plan.questDiscovery} At Civic: role → duty → evidence. Choose only your ${stage.label} now; duty and evidence follow. None locks your field solution.`
         : civicStageIndex === 1 && offersStandardPacket
-          ? "Chosen at Civic: role. Choose the standard packet for duty + evidence, or a duty alone; custom evidence follows."
+          ? "Civic role chosen. Choose its standard duty + evidence packet, or customize."
           : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;
     return {
       ...prompt,

@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   compactJourneyPresentation,
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  type JourneyStoryChoiceRevealAffordance,
 } from "../../src/mcp/journey_projection.js";
 import {
   createInitialJourneyContractSnapshot,
@@ -204,6 +205,126 @@ describe("compact journey projection", () => {
     ).toBe(true);
     expect(compactJourneyStoryChoiceComparison(ally, "a").inspectedOption).toEqual(ally.options[0]);
     expect(JSON.stringify(ally)).toBe(before);
+  });
+
+  it("reveals staged story cards only through the read-only progressive affordance", () => {
+    const prompt = Object.freeze({
+      id: "test:progressive-oath",
+      kind: "relief_oath" as const,
+      message: "Choose the standard packet or expand custom duty cards.",
+      progressiveDisclosure: Object.freeze({
+        initialOptionIds: Object.freeze(["test:standard-packet"]) as readonly [string],
+        reveal: Object.freeze({
+          id: "test:custom-duties",
+          label: "Compare custom duties",
+          description: "Reveal the remaining duty cards without changing this choice.",
+          optionIds: Object.freeze(["test:custom-duty-a", "test:custom-duty-b"]) as readonly [
+            string,
+            string,
+          ],
+        }),
+      }),
+      options: Object.freeze([
+        Object.freeze({
+          id: "test:standard-packet",
+          label: "Standard packet",
+          summary: Object.freeze({
+            commitment: "Bind the mapped duty and evidence.",
+            immediateCost: "10 minutes",
+            tradeoff: "Other opening choices close.",
+          }),
+          consequence: "The packet binds both terms.",
+        }),
+        Object.freeze({
+          id: "test:custom-duty-a",
+          label: "Custom duty A",
+          summary: Object.freeze({
+            commitment: "Carry the first custom duty.",
+            immediateCost: "5 minutes",
+            tradeoff: "The source follows separately.",
+          }),
+          consequence: "The first custom duty awaits evidence.",
+        }),
+        Object.freeze({
+          id: "test:custom-duty-b",
+          label: "Custom duty B",
+          summary: Object.freeze({
+            commitment: "Carry the second custom duty.",
+            immediateCost: "No added time",
+            tradeoff: "The source follows separately.",
+          }),
+          consequence: "The second custom duty awaits evidence.",
+        }),
+      ]),
+    }) as unknown as JourneyStoryChoicePrompt;
+    const before = JSON.stringify(prompt);
+
+    const compactJourney = compactJourneyStoryChoicePrompt(prompt);
+    expectTypeOf(compactJourney.progressiveDisclosure).toEqualTypeOf<undefined>();
+    expectTypeOf(compactJourney.revealOption).toEqualTypeOf<
+      JourneyStoryChoiceRevealAffordance | undefined
+    >();
+    expectTypeOf(compactJourney.options).toEqualTypeOf<readonly JourneyStoryChoiceOption[]>();
+    expect(compactJourney).not.toHaveProperty("progressiveDisclosure");
+    expect(compactJourney).toMatchObject({
+      revealOption: {
+        id: "test:custom-duties",
+        label: "Compare custom duties",
+        description: "Reveal the remaining duty cards without changing this choice.",
+        tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+        arguments: { story_choice_id: prompt.id, reveal_id: "test:custom-duties" },
+        readOnly: true,
+      },
+    });
+    expect(compactJourney.options).toHaveLength(1);
+    expect(compactJourney.options[0]).toMatchObject({
+      id: "test:standard-packet",
+      consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+    });
+    expect(JSON.stringify(compactJourney)).not.toContain("test:custom-duty-a");
+    expect(JSON.stringify(compactJourney)).not.toContain("Custom duty A");
+    expect(JSON.stringify(compactJourney)).not.toContain("The first custom duty awaits evidence.");
+
+    const initial = compactJourneyStoryChoiceComparison(prompt);
+    expect(initial.options.map((option) => option.id)).toEqual(["test:standard-packet"]);
+    expect(initial).toMatchObject({
+      revealOption: {
+        id: "test:custom-duties",
+        label: "Compare custom duties",
+        description: "Reveal the remaining duty cards without changing this choice.",
+        tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+        arguments: {
+          story_choice_id: prompt.id,
+          reveal_id: "test:custom-duties",
+        },
+        readOnly: true,
+      },
+    });
+    const initialJson = JSON.stringify(initial);
+    expect(initialJson).not.toContain("test:custom-duty-a");
+    expect(initialJson).not.toContain("Custom duty A");
+    expect(initialJson).not.toContain("Carry the first custom duty.");
+    expect(initialJson).not.toContain("The first custom duty awaits evidence.");
+
+    const expanded = compactJourneyStoryChoiceComparison(prompt, undefined, "test:custom-duties");
+    expect(expanded.options.map((option) => option.id)).toEqual(
+      prompt.options.map((option) => option.id),
+    );
+    expect(expanded).not.toHaveProperty("revealOption");
+
+    const directDetail = compactJourneyStoryChoiceComparison(prompt, "test:custom-duty-a");
+    expect(directDetail.inspectedOption).toEqual({
+      id: "test:custom-duty-a",
+      label: "Custom duty A",
+      consequence: "The first custom duty awaits evidence.",
+    });
+    expect(() =>
+      compactJourneyStoryChoiceComparison(prompt, "test:custom-duty-a", "test:custom-duties"),
+    ).toThrow(/option_id or reveal_id/i);
+    expect(() =>
+      compactJourneyStoryChoiceComparison(prompt, undefined, "test:unknown-reveal"),
+    ).toThrow(/no progressive disclosure/i);
+    expect(JSON.stringify(prompt)).toBe(before);
   });
 
   it("keeps exact Station preparation receipts behind the concise compact comparison", () => {
