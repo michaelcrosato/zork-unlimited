@@ -210,6 +210,7 @@ export function renderRpgActiveDialoguePrompt(
   );
   return [
     `[Active speaker: ${speaker}]`,
+    "Other legal actions remain available; type actions for the complete menu. Leaving the room ends the exchange.",
     "Dialogue commands:",
     ...commands.map((projection) => `  ${renderRpgPlayerCommand(projection)}`),
   ].join("\n");

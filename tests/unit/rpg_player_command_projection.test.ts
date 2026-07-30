@@ -93,6 +93,9 @@ describe("terminal RPG command projection", () => {
       options,
     );
     expect(prompt).toContain("[Active speaker: the guide]");
+    expect(prompt).toContain(
+      "Other legal actions remain available; type actions for the complete menu. Leaving the room ends the exchange.",
+    );
     expect(prompt).toContain("choose ask_first");
     expect(prompt).toContain("choose ask_second");
     expect(prompt).not.toContain("\n  shared topic");
