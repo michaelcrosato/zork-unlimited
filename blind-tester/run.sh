@@ -1005,7 +1005,7 @@ set +e
   if [[ "$STATUS" -eq 0 ]]; then
     "$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" \
       --events "$CODEX_EVENTS_ARG" --rollout "$CODEX_ROLLOUT_ARG" --report "$CODEX_REPORT_ARG" \
-      --model "$MODEL" --started-at-ms "$CODEX_STARTED_AT_MS" \
+      --model "$MODEL" --cli-version "$CODEX_CLI_VERSION" --started-at-ms "$CODEX_STARTED_AT_MS" \
       --code-mode-contract strict-code-mode-v2 \
       > "$OUT.json" 2> "$OUT.codex-audit.log"
     CODEX_AUDIT_STATUS=$?

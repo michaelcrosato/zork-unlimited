@@ -21,6 +21,8 @@ const V2_TEAM_BLOCK =
   "You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.";
 const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
+const V2_0146_MODE_BLOCK =
+  "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
 const GLOBAL_AGENTS_BLOCK =
   "# AGENTS.md instructions\n\n" +
@@ -332,6 +334,36 @@ function strictTerraRollout(report = REPORT): unknown[] {
   return rows;
 }
 
+function codex0146StrictTerraRollout(report = REPORT): unknown[] {
+  const rows = strictTerraRollout(report);
+  let inputOrdinal = 0;
+  let outputOrdinal = 0;
+  for (const row of rows) {
+    const record = row as { type?: string; payload?: Record<string, unknown> };
+    const candidate = record.payload;
+    if (!candidate) continue;
+    if (record.type === "session_meta") candidate.cli_version = "0.146.0";
+    if (record.type === "turn_context") delete candidate.multi_agent_mode;
+    if (
+      record.type === "response_item" &&
+      candidate.type === "message" &&
+      (candidate.role === "developer" || candidate.role === "user")
+    ) {
+      inputOrdinal += 1;
+      candidate.id = `msg-current-${inputOrdinal}`;
+      const content = candidate.content as Array<{ text?: string }>;
+      for (const block of content) {
+        if (block.text === V2_MODE_BLOCK) block.text = V2_0146_MODE_BLOCK;
+      }
+    }
+    if (record.type === "response_item" && candidate.type === "custom_tool_call_output") {
+      outputOrdinal += 1;
+      candidate.id = `output-current-${outputOrdinal}`;
+    }
+  }
+  return rows;
+}
+
 function historicalStrictTerraRollout(report = REPORT): unknown[] {
   const rows = rollout(report);
   const wrapper = rows.find(
@@ -595,6 +627,27 @@ describe("Codex certified fleet rollout authority", () => {
           output_tokens: 3,
           reasoning_output_tokens: 0,
         },
+      },
+    });
+  });
+
+  it("propagates the exact Codex 0.146 session version through fleet authority", () => {
+    const rows = codex0146StrictTerraRollout();
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(strictPublicEvents()),
+        rollout: jsonl(rows),
+        capture: captureReceipt(rows, true),
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toMatchObject({
+      ok: true,
+      facts: {
+        sessionId: SESSION,
+        actualModel: "gpt-5.6-terra",
+        turnId: TURN,
+        codeModeContract: STRICT_CODE_MODE_CONTRACT,
       },
     });
   });

@@ -26,6 +26,8 @@ const V2_TEAM_BLOCK =
   "You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.";
 const V2_MODE_BLOCK =
   "<multi_agent_mode>Only explicit requests permit delegation.</multi_agent_mode>";
+const V2_0146_MODE_BLOCK =
+  "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>";
 const ENVIRONMENT_BLOCK = "<environment_context>isolated player</environment_context>";
 const GLOBAL_AGENTS_BLOCK =
   "# AGENTS.md instructions\n\n" +
@@ -332,6 +334,38 @@ function completeRollout(
     },
     { type: "event_msg", payload: { type: "task_complete", turn_id: "turn-1" } },
   ];
+}
+
+function codex0146TerraRollout(gameplayRows = forwardingRollout(undefined, { content: [] })) {
+  const rows = completeRollout(gameplayRows, "terra_v2") as Array<{
+    type?: string;
+    payload?: Record<string, unknown>;
+  }>;
+  let inputOrdinal = 0;
+  let outputOrdinal = 0;
+  for (const row of rows) {
+    const payload = row.payload;
+    if (!payload) continue;
+    if (row.type === "session_meta") payload.cli_version = "0.146.0";
+    if (row.type === "turn_context") delete payload.multi_agent_mode;
+    if (
+      row.type === "response_item" &&
+      payload.type === "message" &&
+      (payload.role === "developer" || payload.role === "user")
+    ) {
+      inputOrdinal += 1;
+      payload.id = `msg-current-${inputOrdinal}`;
+      const content = payload.content as Array<{ type?: string; text?: string }>;
+      for (const block of content) {
+        if (block.text === V2_MODE_BLOCK) block.text = V2_0146_MODE_BLOCK;
+      }
+    }
+    if (row.type === "response_item" && payload.type === "custom_tool_call_output") {
+      outputOrdinal += 1;
+      payload.id = `output-current-${outputOrdinal}`;
+    }
+  }
+  return rows;
 }
 
 function environmentInputContent(
@@ -1106,6 +1140,150 @@ describe("Codex pure blind provider envelope", () => {
         "gpt-5.3-codex-spark",
       ),
     ).toMatchObject({ ok: true });
+  });
+
+  it("accepts only the exact Codex 0.146 Terra capture profile", () => {
+    const rows = codex0146TerraRollout();
+    expect(
+      inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-terra", {
+        cliVersion: "0.146.0",
+      }),
+    ).toMatchObject({ ok: true, completedMcpCalls: 1 });
+    expect(
+      buildCodexPureEnvelope({
+        rows: validRows(),
+        rolloutRows: rows,
+        report: "report",
+        model: "gpt-5.6-terra",
+        cliVersion: "0.146.0",
+        durationMs: 1,
+      }),
+    ).toMatchObject({ ok: true, envelope: { requested_model: "gpt-5.6-terra" } });
+
+    const wrongExpectedVersion = codex0146TerraRollout();
+    expect(
+      inspectCodexPureEvidence(validRows(), wrongExpectedVersion, "gpt-5.6-terra", {
+        cliVersion: "0.146.1",
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/capture profile is unsupported/i),
+    });
+
+    const wrongCapturedVersion = codex0146TerraRollout();
+    const session = wrongCapturedVersion.find((row) => row.type === "session_meta")?.payload;
+    if (!session) throw new Error("missing current session fixture");
+    session.cli_version = "0.146.1";
+    expect(
+      inspectCodexPureEvidence(validRows(), wrongCapturedVersion, "gpt-5.6-terra", {
+        cliVersion: "0.146.0",
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/capture profile is unsupported/i),
+    });
+
+    for (const [label, mutate] of [
+      [
+        "altered no-delegation text",
+        (candidate: typeof rows) => {
+          const mode = candidate.find(
+            (row) =>
+              row.payload?.type === "message" &&
+              Array.isArray(row.payload.content) &&
+              (row.payload.content as Array<{ text?: string }>).some((block) =>
+                block.text?.startsWith("<multi_agent_mode>"),
+              ),
+          )?.payload;
+          const content = mode?.content as Array<{ text?: string }> | undefined;
+          if (!content?.[0]) throw new Error("missing current mode fixture");
+          content[0].text = `${V2_0146_MODE_BLOCK} `;
+        },
+      ],
+      [
+        "a stripped-id downgrade to the legacy metadata mode",
+        (candidate: typeof rows) => {
+          const context = candidate.find((row) => row.type === "turn_context")?.payload;
+          if (!context) throw new Error("missing current context fixture");
+          context.multi_agent_mode = "explicitRequestOnly";
+          for (const row of candidate) {
+            const candidatePayload = row.payload;
+            if (
+              candidatePayload?.type === "custom_tool_call_output" ||
+              (candidatePayload?.type === "message" &&
+                (candidatePayload.role === "developer" || candidatePayload.role === "user"))
+            ) {
+              delete candidatePayload.id;
+            }
+          }
+        },
+      ],
+    ] as const) {
+      const candidate = structuredClone(rows);
+      mutate(candidate);
+      expect(
+        inspectCodexPureEvidence(validRows(), candidate, "gpt-5.6-terra", {
+          cliVersion: "0.146.0",
+        }),
+        label,
+      ).toMatchObject({ ok: false });
+    }
+  });
+
+  it("requires exact, bounded, unique item ids throughout the Codex 0.146 profile", () => {
+    const inspectCurrent = (rows: ReturnType<typeof codex0146TerraRollout>) =>
+      inspectCodexPureEvidence(validRows(), rows, "gpt-5.6-terra", {
+        cliVersion: "0.146.0",
+      });
+    const findInput = (rows: ReturnType<typeof codex0146TerraRollout>) => {
+      const payload = rows.find(
+        (row) =>
+          row.payload?.type === "message" &&
+          (row.payload.role === "developer" || row.payload.role === "user"),
+      )?.payload;
+      if (!payload) throw new Error("missing current input fixture");
+      return payload;
+    };
+    const findOutput = (rows: ReturnType<typeof codex0146TerraRollout>) => {
+      const payload = rows.find((row) => row.payload?.type === "custom_tool_call_output")?.payload;
+      if (!payload) throw new Error("missing current output fixture");
+      return payload;
+    };
+
+    for (const invalidId of ["", "x".repeat(129), 42, null]) {
+      for (const locate of [findInput, findOutput]) {
+        const rows = codex0146TerraRollout();
+        locate(rows).id = invalidId;
+        expect(inspectCurrent(rows)).toMatchObject({ ok: false });
+      }
+    }
+
+    for (const locate of [findInput, findOutput]) {
+      const missing = codex0146TerraRollout();
+      delete locate(missing).id;
+      expect(inspectCurrent(missing)).toMatchObject({ ok: false });
+
+      const extra = codex0146TerraRollout();
+      locate(extra).unexpected = true;
+      expect(inspectCurrent(extra)).toMatchObject({ ok: false });
+    }
+
+    const duplicate = codex0146TerraRollout();
+    findOutput(duplicate).id = findInput(duplicate).id;
+    expect(inspectCurrent(duplicate)).toMatchObject({ ok: false });
+
+    const legacyWithCurrentId = completeRollout(
+      forwardingRollout(undefined, { content: [] }),
+      "terra_v2",
+    ) as Array<{ payload?: Record<string, unknown> }>;
+    const legacyInput = legacyWithCurrentId.find(
+      (row) => row.payload?.type === "message" && row.payload.role === "developer",
+    )?.payload;
+    if (!legacyInput) throw new Error("missing legacy input fixture");
+    legacyInput.id = "unexpected-current-id";
+    expect(
+      inspectCodexPureEvidence(validRows(), legacyWithCurrentId, "gpt-5.6-terra"),
+    ).toMatchObject({ ok: false });
   });
 
   it("accepts only the exact empty-audio user event added by Codex 0.145", () => {
@@ -2380,6 +2558,8 @@ describe("Codex pure blind provider envelope", () => {
           report,
           "--model",
           "gpt-5.6-sol",
+          "--cli-version",
+          "0.146.0",
           "--started-at-ms",
           "0",
           "--code-mode-contract",

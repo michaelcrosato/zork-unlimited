@@ -598,6 +598,7 @@ function parseCodexAuthority(
         reason: string;
       } = inspectCodexPureEvidence(events.rows, rollout.rows, expectedModel, {
     codeModeContract: capture.codeModeContract,
+    cliVersion: session.data.cli_version,
   });
   if (!inspected.ok)
     return { ok: false, reason: `Codex provider evidence rejected: ${inspected.reason}` };
