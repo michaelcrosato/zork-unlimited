@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
 import {
-  COMPACT_EMBEDDED_QUEST_CHARACTER_CONTINUITY_LEGEND,
   EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
   buildEmbeddedQuestCharacterContinuity,
   compactEmbeddedQuestCharacterContinuity,
@@ -63,39 +62,110 @@ describe("embedded quest character continuity contract", () => {
     expect(JSON.parse(JSON.stringify(continuity))).toEqual(continuity);
   });
 
-  it("uses a bounded compact tuple and legend without aliasing the full projection", () => {
+  it("uses a self-describing compact projection without aliasing the full projection", () => {
     const character = buildCampaignCharacterState({
       background: "albany:road_warden",
       health: { current: 30, max: 30 },
     });
     const child = initStateForRpgPack(index, 7);
     const continuity = buildEmbeddedQuestCharacterContinuity({ character, pack, state: child });
+    continuity.applied_campaign_import_effects.push({
+      rule_id: "import:test_health_current",
+      type: "health_current_to_var",
+      target_var: "hp",
+      value: 30,
+    });
     const compact = compactEmbeddedQuestCharacterContinuity(continuity);
 
-    expect(compact).toEqual([
-      "same_campaign_character",
-      "quest_local",
-      ["persistent_campaign_record", "albany:road_warden", 30, 30],
-      [
-        24,
-        4,
-        2,
-        [
-          ["lore", 3],
-          ["tracking", 3],
+    expect(compact).toEqual({
+      continuity: "same_campaign_character",
+      cross_boundary: "authored_imports_exports_only",
+      persistent_record: {
+        background: "albany:road_warden",
+        health: { current: 30, max: 30 },
+      },
+      quest_local_profile: {
+        hp: 24,
+        attack: 4,
+        defense: 2,
+        skills: [
+          { id: "lore", value: 3 },
+          { id: "tracking", value: 3 },
         ],
-        ["hunting_knife"],
+        inventory: ["hunting_knife"],
+      },
+      applied_campaign_import_effects: [
+        {
+          rule_id: "import:test_health_current",
+          type: "health_current_to_var",
+          target_var: "hp",
+          value: 30,
+        },
       ],
-      [],
-      EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
-    ]);
-    expect(COMPACT_EMBEDDED_QUEST_CHARACTER_CONTINUITY_LEGEND).toContain(
-      "persistent_record_identity",
-    );
+    });
+    expect(compact).not.toHaveProperty("profile_scope");
+    expect(compact).not.toHaveProperty("explanation");
 
-    (continuity.quest_local_profile.inventory as string[]).push("caller_mutation");
-    expect(compact[3][4]).toEqual(["hunting_knife"]);
+    continuity.persistent_record.health.current = 12;
+    continuity.quest_local_profile.skills[0]!.value = 9;
+    continuity.quest_local_profile.inventory.push("caller_mutation");
+    const sourceEffect = continuity.applied_campaign_import_effects[0]!;
+    if (sourceEffect.type !== "health_current_to_var") throw new Error("expected health import");
+    sourceEffect.value = 12;
+
+    expect(compact.persistent_record.health.current).toBe(30);
+    expect(compact.quest_local_profile.skills[0]?.value).toBe(3);
+    expect(compact.quest_local_profile.inventory).toEqual(["hunting_knife"]);
+    expect(compact.applied_campaign_import_effects[0]).toMatchObject({ value: 30 });
     expect(child.inventory).toEqual(["hunting_knife"]);
+
+    compact.persistent_record.health.current = 5;
+    compact.quest_local_profile.skills[0]!.value = 6;
+    compact.quest_local_profile.inventory.push("compact_mutation");
+    const compactEffect = compact.applied_campaign_import_effects[0]!;
+    if (compactEffect.type !== "health_current_to_var") throw new Error("expected health import");
+    compactEffect.value = 5;
+
+    expect(continuity.persistent_record.health.current).toBe(12);
+    expect(continuity.quest_local_profile.skills[0]?.value).toBe(9);
+    expect(continuity.quest_local_profile.inventory).toEqual(["hunting_knife", "caller_mutation"]);
+    expect(sourceEffect.value).toBe(12);
+  });
+
+  it("is smaller than the previous tuple-plus-legend compact payload on Gallowmere", () => {
+    const character = buildCampaignCharacterState({
+      background: "albany:road_warden",
+      health: { current: 30, max: 30 },
+    });
+    const child = initStateForRpgPack(index, 7);
+    const compact = compactEmbeddedQuestCharacterContinuity(
+      buildEmbeddedQuestCharacterContinuity({ character, pack, state: child }),
+    );
+    const previousPayload = {
+      character_continuity: [
+        "same_campaign_character",
+        "quest_local",
+        ["persistent_campaign_record", "albany:road_warden", 30, 30],
+        [
+          24,
+          4,
+          2,
+          [
+            ["lore", 3],
+            ["tracking", 3],
+          ],
+          ["hunting_knife"],
+        ],
+        [],
+        EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
+      ],
+      character_continuity_legend:
+        "[continuity, profile_scope, [persistent_record_identity, background|null, health_current, health_max], [quest_hp, quest_attack, quest_defense, [[quest_skill_id, value], ...], [quest_inventory_item_id, ...]], [applied_campaign_import_effect, ...], explanation]; import effects are [rule_id, type, target_var|target_flag, value] or [rule_id, equipment_to_item, target_object]",
+    };
+
+    expect(JSON.stringify({ character_continuity: compact }).length).toBeLessThan(
+      JSON.stringify(previousPayload).length,
+    );
   });
 
   it("keeps identity/import provenance fixed while projecting the current child profile", () => {

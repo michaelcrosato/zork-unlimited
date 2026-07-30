@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 698 -->
+<!-- historical_cycle_count: 699 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - named_embedded_character_continuity
+
+- Evidence choice: persistent-versus-quest-local comprehension appeared in exact Terra seed 73078 and compact/setup density in 7 of the latest 12 reports; clarify scope without flattening either character layer.
+- Surface: compact embedded quests now expose named `persistent_record`, `quest_local_profile`, exact named import provenance, and `cross_boundary: authored_imports_exports_only`; the repeated positional decoder is gone.
+- Measured effect: importless Gallowmere continuity falls 761->388 bytes (49.0%), while the real five-import Wolf-Winter launch falls 1,279->1,126 (12.0%); launch/read/accepted/rejected/reload/resume values remain full-projection exact.
+- Counterfactual: this changes only compact projection; full continuity, saves and save bytes, engine state, hashes, legal actions, events, mechanics, RNG, imports, outcomes, and UI are unchanged.
+- Pure evidence: exact-clean Terra seed 73079 completed The Wolf-Winter with every wolf alive, continued, won The Gallowmere, and ended at decision 56 with clarity/enjoyment 4/5, replay-yes, no rejection or bug, and no persistent-versus-local confusion.
+- Economy/admission: one attempt used 5.553M raw / 187.9k uncached input and 10.7k output at 96.62% cache reuse (198,622 useful / 56 decisions, about 3,547 each); unchanged Codex 0.144.1 Spark admission remains quarantined, so no known-failure retry or fanout ran.
+- Self-critique/guard: one canary is not causal and still named broad overworld density, sequential setup, and dialogue closure; final review is clean, crawls `20260730T180354Z` / `20260730T183820Z` have zero findings, and exact-tree health passes 449 files/3,730 tests plus all 12 packs before this state-only amend.
 
 ### Cycle result - summary_first_departure_recap
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the player praised the nonlethal payoff but still named Station terminology dense; treat that as an open cohort question and run the strict ten-player consolidated build rather than another copy tweak.
 - Economy: authenticated summary v8 measured 2.130M input / 101.8k uncached input and 8.0k output tokens at 95.22% cache reuse, or 3,659 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
 - Guard: two independent rereviews are clean, 180/180 touched tests and post-review crawl `20260728T232654Z` are green, and final health passes 443 files/3,682 tests, both typechecks, and all 12 packs; the later state-only amend does not change tested game code.
-
-### Cycle result - authenticated_fleet_usage_accounting
-
-- Evidence choice: 58 recent failed or unverified blind attempts had no terminal accounting, so visible successful-run totals could understate spend and make unreliable clients look efficient.
-- Surface: live pure summary v8 records every launched, resumed, measured, or unrecoverable attempt; verified usage is cross-bound across the primary envelope, model ledger, terminal event, manifest, and independently recomputed aggregate.
-- Spend safety: incomplete accounting now makes the fleet command fail, failed primary evidence cannot fall back to a favorable event stream, and the four-field public client fingerprint is bound to a digest-indexed private launcher proof.
-- Pure evidence: exact-clean Terra seed 73010 completed The Wolf-Winter nonlethally through LURE in 30 decisions, with no rejection or bug, clarity/enjoyment 4/4, replay-yes, and an end choice at the first completed-goal boundary.
-- Economy: the canary measured 2.247M input / 102.7k uncached input and 7.8k output tokens at 95.43% cache reuse, or 3,683 useful tokens per accepted decision; 1/1 attempts was measured and none was unrecoverable.
-- Self-critique/follow-through: accounting is now honest rather than cheaper by itself; the player repeated Albany setup density, so land the prepared field-timed disclosure increment before spending a strict ten-player cohort.
-- Guard: two adversarial reviews closed client-proof and false-success gaps, post-change crawl `20260728T220529Z` is zero-finding, and health passes 443 files/3,682 tests, both typechecks, and all 12 packs.

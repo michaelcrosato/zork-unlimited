@@ -75,43 +75,25 @@ export const EmbeddedQuestCharacterContinuitySchema = z
   })
   .strict();
 
-export type CompactCampaignImportEffect =
-  | readonly [
-      ruleId: string,
-      type: "health_current_to_var" | "skill_rank_to_var",
-      targetVar: string,
-      value: number,
-    ]
-  | readonly [
-      ruleId: string,
-      type: "background_to_flag" | "ability_to_flag" | "knowledge_to_flag" | "companion_to_flag",
-      targetFlag: string,
-      value: true,
-    ]
-  | readonly [ruleId: string, type: "equipment_to_item", targetObject: string];
-
-export type CompactEmbeddedQuestCharacterContinuity = readonly [
-  continuity: "same_campaign_character",
-  profileScope: "quest_local",
-  persistentRecord: readonly [
-    identity: "persistent_campaign_record",
-    background: string | null,
-    healthCurrent: number,
-    healthMax: number,
-  ],
-  questLocalProfile: readonly [
-    hp: number,
-    attack: number,
-    defense: number,
-    skills: readonly (readonly [id: string, value: number])[],
-    inventory: readonly string[],
-  ],
-  appliedCampaignImportEffects: readonly CompactCampaignImportEffect[],
-  explanation: typeof EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
-];
-
-export const COMPACT_EMBEDDED_QUEST_CHARACTER_CONTINUITY_LEGEND =
-  "[continuity, profile_scope, [persistent_record_identity, background|null, health_current, health_max], [quest_hp, quest_attack, quest_defense, [[quest_skill_id, value], ...], [quest_inventory_item_id, ...]], [applied_campaign_import_effect, ...], explanation]; import effects are [rule_id, type, target_var|target_flag, value] or [rule_id, equipment_to_item, target_object]";
+export type CompactEmbeddedQuestCharacterContinuity = {
+  continuity: "same_campaign_character";
+  cross_boundary: "authored_imports_exports_only";
+  persistent_record: {
+    background: string | null;
+    health: {
+      current: number;
+      max: number;
+    };
+  };
+  quest_local_profile: {
+    hp: number;
+    attack: number;
+    defense: number;
+    skills: EmbeddedQuestLocalSkill[];
+    inventory: string[];
+  };
+  applied_campaign_import_effects: CampaignImportReceiptEffect[];
+};
 
 const CORE_RPG_VARS = new Set(["hp", "attack", "defense", "score", "max_score"]);
 
@@ -213,38 +195,23 @@ export function cloneEmbeddedQuestCharacterContinuity(
   };
 }
 
-function compactCampaignImportEffect(
-  effect: CampaignImportReceiptEffect,
-): CompactCampaignImportEffect {
-  if (effect.type === "health_current_to_var" || effect.type === "skill_rank_to_var") {
-    return [effect.rule_id, effect.type, effect.target_var, effect.value];
-  }
-  if (effect.type === "equipment_to_item") {
-    return [effect.rule_id, effect.type, effect.target_object];
-  }
-  return [effect.rule_id, effect.type, effect.target_flag, true];
-}
-
 export function compactEmbeddedQuestCharacterContinuity(
   continuity: EmbeddedQuestCharacterContinuity,
 ): CompactEmbeddedQuestCharacterContinuity {
-  return [
-    continuity.continuity,
-    continuity.profile_scope,
-    [
-      continuity.persistent_record.identity,
-      continuity.persistent_record.background,
-      continuity.persistent_record.health.current,
-      continuity.persistent_record.health.max,
-    ],
-    [
-      continuity.quest_local_profile.hp,
-      continuity.quest_local_profile.attack,
-      continuity.quest_local_profile.defense,
-      continuity.quest_local_profile.skills.map((skill) => [skill.id, skill.value] as const),
-      [...continuity.quest_local_profile.inventory],
-    ],
-    continuity.applied_campaign_import_effects.map(compactCampaignImportEffect),
-    continuity.explanation,
-  ];
+  return {
+    continuity: continuity.continuity,
+    cross_boundary: "authored_imports_exports_only",
+    persistent_record: {
+      background: continuity.persistent_record.background,
+      health: { ...continuity.persistent_record.health },
+    },
+    quest_local_profile: {
+      hp: continuity.quest_local_profile.hp,
+      attack: continuity.quest_local_profile.attack,
+      defense: continuity.quest_local_profile.defense,
+      skills: continuity.quest_local_profile.skills.map((skill) => ({ ...skill })),
+      inventory: [...continuity.quest_local_profile.inventory],
+    },
+    applied_campaign_import_effects: continuity.applied_campaign_import_effects.map(cloneEffect),
+  };
 }
