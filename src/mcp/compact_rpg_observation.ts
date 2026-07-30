@@ -123,7 +123,8 @@ export const RPG_COMPACT_LEGEND = {
   text: "room description",
   exits: "open exits: 'direction' or [direction, dest_room_id]",
   vitals: "[hp, attack, defense, score, max_score]",
-  actions: "legal action ids (include_actions only; list_legal_actions always has them)",
+  actions:
+    "legal action ids shown here; dialogue does not suspend other listed actions; more counts truncation and list_legal_actions has the complete menu",
   checks:
     "[[action_id, skill, current_modifier, die, difficulty, authored_stakes?], ...] checks for the included legal actions",
   objects: "visible object ids",
@@ -137,7 +138,7 @@ export const RPG_COMPACT_LEGEND = {
   more: "[inv, flags, vars, journal, actions, exits, objects, npcs, blocked, enemies, unavailable, pressure, choices] counts omitted by truncation, trailing zeros dropped",
   dialogue: "[npc_id, npc_line] active dialogue",
   choices:
-    "[[action_id, authored_prompt], ...] current legal dialogue choices; execute the unchanged id from actions",
+    "[[action_id, authored_prompt], ...] dialogue replies only; other listed actions remain legal and leaving the room ends the exchange; execute an unchanged id from actions",
   enemies: "[[enemy_id, hp], ...] enemies present",
   pressure:
     "[[track_id, title, value, band_min, band_label, next_min?, next_label?], ...] visible pressure tracks",

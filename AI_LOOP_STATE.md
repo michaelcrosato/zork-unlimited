@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 699 -->
+<!-- historical_cycle_count: 700 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - active_dialogue_movement_affordance
+
+- Evidence choice: exact Terra seeds 73078 and 73079 both named close/return navigation overhead; their traces used no-effect leave replies before already-legal movement in The Wolf-Winter and The Gallowmere.
+- Surface/effect: the one-time compact legend now distinguishes dialogue replies from other listed legal actions and says leaving the room ends the exchange; the terminal speaker panel points to the complete `actions` menu, while the UI already showed every legal action. This costs 133 one-time legend bytes.
+- Counterfactual: action ids, menus, dialogue nodes, content/world hashes, engine state, steps, RNG, checkpoints, saves, outcomes, full MCP, and UI are unchanged; compact version remains compatible and truncation remains explicit.
+- Pure evidence: exact-clean Terra seed 73080 skipped both redundant closures (`ask_commit_lure -> go_west`, `ask_ask_father -> go_east`), completed both quests at decision 56, continued twice, rated clarity/enjoyment 4/4, replay-yes, and raised no dialogue friction, rejection, loop, or soft-lock.
+- Economy: one first-attempt run used 5.885M raw / 196.5k uncached input and 11.4k output at 96.66% cache reuse (207,951 useful / 56 decisions, about 3,713 each); no retry, recovery, Spark admission, or fallback ran.
+- Self-critique/follow-through: one canary supports the mechanism but does not close causality; it still named staged setup density plus S1 packet-scope/checkpoint timing, so measure recurrence in the predeclared ten-player pilot rather than patching one report.
+- Guard: two independent audits and final review are clean; crawls `20260730T190959Z` / `20260730T193323Z` have zero findings, and exact-tree health passes 449 files/3,730 tests plus all 12 packs before this state-only amend.
 
 ### Cycle result - named_embedded_character_continuity
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: one canary proves playability, not cohort pacing; its S1 repeats the pilot's front-loaded Albany density and its S0 names raw action labels, so opening density remains the next focused cycle.
 - Economy: authenticated summary v8 measured 2.465M input / 108.0k uncached input and 7.6k output tokens at 95.62% cache reuse, or 3,851 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
 - Guard: two independent rereviews are clean, the targeted 18/18 tests and post-change crawl `20260729T010549Z` are green, and health passes 443 files/3,682 tests, both typechecks, and all 12 packs on clean candidate `b02275af`.
-
-### Cycle result - field_timed_opening_disclosure
-
-- Evidence choice: nine consolidated reports named front-loaded Albany setup density, so exact mechanics now arrive by inspection and repeat at their field moment instead of occupying every initial comparison card.
-- Surface: current duty, source, preparation, relief, and ally cards retain commitment, immediate cost, tradeoff, and distinct short field fit; uncategorized legacy and unfamiliar future content retain their authored exact terms.
-- Counterfactual: option ids, costs, time, character state, journals, dispatch receipts, legal actions, checks, RNG, pressure, outcomes, saves, and UI/full/compact parity are unchanged.
-- Pure evidence: exact-clean final-build Terra seed 73012 completed The Wolf-Winter nonlethally through LURE at decision 30, ended at the first goal boundary, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and reported no rejection.
-- Self-critique/follow-through: the player praised the nonlethal payoff but still named Station terminology dense; treat that as an open cohort question and run the strict ten-player consolidated build rather than another copy tweak.
-- Economy: authenticated summary v8 measured 2.130M input / 101.8k uncached input and 8.0k output tokens at 95.22% cache reuse, or 3,659 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
-- Guard: two independent rereviews are clean, 180/180 touched tests and post-review crawl `20260728T232654Z` are green, and final health passes 443 files/3,682 tests, both typechecks, and all 12 packs; the later state-only amend does not change tested game code.
