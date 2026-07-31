@@ -92,6 +92,8 @@ const WORKS_STAKES =
   "Success braces the breach immediately; failure splits the rail but leaves a guaranteed cold-set recovery that raises cattle alarm by 1, plus 1 if dispatch began late.";
 const DROVER_STAKES =
   "Success redirects the yearling alive and lowers cattle alarm by 1; failure spends the route without added pressure, while rail or spear recovery remains.";
+const DROVER_DRIVE_STAKES =
+  "Success removes the folded shutter's extra pack-pressure beat and prevents the later -2 HP overrun brace; failure leaves that cost. The route retires either way, and the loose hurdle remains mandatory.";
 const RELIEF_STAKES =
   "Success lowers cattle alarm by 1; failure raises it by 1. The protocol is spent either way, and the committed lure route remains open.";
 
@@ -307,6 +309,22 @@ function foulFirstCast(state: GameState, expectedAlarm = 2): GameState {
   return state;
 }
 
+function foulDriveShutter(state: GameState): GameState {
+  state = act(state, "go_north");
+  state = act(state, "talk_houndsman");
+  state = act(state, "ask_drive");
+  state = act(state, "ask_commit_drive");
+  state = act(state, "ask_leave");
+  state = act(state, "take_drive_signal_rope_kit");
+  state = act(state, "go_north");
+  state = act(state, "use_drive_signal_rope_kit_on_drive_breach_signal", 1);
+  expect(state).toMatchObject({
+    flags: { drive_opening_fouled: true, drover_route_prepared: true },
+    vars: { pack_drive: 2, drive_kit_charges: 1 },
+  });
+  return state;
+}
+
 function recoverWithSplitRail(state: GameState): GameState {
   state = act(state, "wedge_paling_rail", 1);
   expect(state.flags.rail_split).toBe(true);
@@ -460,7 +478,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     const drover = preparation.profiles.find((candidate) => candidate.id === DROVER);
     if (!drover) throw new Error("Missing Emery's Drover Route.");
     expect(drover.preview).toBe(
-      "Only after the first lure cast fails, the route opens one Streetwise check (DC 12). Success turns the yearling down a service cut and lowers cattle alarm by 1. Failure spends the route without raising alarm; the existing split-rail bind or fight remains available at the same pressure as declining it. Streetwise training improves the attempt without class-locking it.",
+      "After the first lure cast or DRIVE shutter fails, the route opens one Streetwise check (DC 12). On LURE, success redirects the yearling alive and lowers cattle alarm by 1; failure spends the route while rail or fight remains at the same pressure. On DRIVE, success removes the failed shutter's extra pack-pressure beat; failure leaves it. Either DRIVE outcome still requires the loose hurdle, but success prevents the later overrun brace and its persistent -2 HP strain before the same three crisis priorities. Streetwise training improves either attempt without class-locking it.",
     );
     const droverDetail = presentOpeningPreparation(
       preparation,
@@ -508,6 +526,25 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     );
     expect(drover).toEqual(droverBefore);
     expect(drover.flags.drover_route_attempted).not.toBe(true);
+
+    const driveDrover = foulDriveShutter(profileState(DROVER, COURIER));
+    const driveDroverBefore = structuredClone(driveDrover);
+    expect(
+      enumerateRpgActions(index, driveDrover).find(
+        (action) => action.id === "use_drive_drover_route_marks",
+      )?.skill_check,
+    ).toEqual({
+      skill: "streetwise",
+      modifier: 4,
+      difficulty: 12,
+      die: "d20",
+      stakes: DROVER_DRIVE_STAKES,
+    });
+    expect(narrationForAction(driveDrover, "examine_drive_drover_route_marks")).toMatch(
+      /first DRIVE shutter[^]*Streetwise[^]*DC 12[^]*extra pack-pressure[^]*-2 HP[^]*Failure leaves[^]*loose hurdle remains/i,
+    );
+    expect(driveDrover).toEqual(driveDroverBefore);
+    expect(driveDrover.flags.drover_route_attempted).not.toBe(true);
 
     let relief = recoverWithSplitRail(foulFirstCast(profileState(RELIEF, LEDGER)));
     relief = act(relief, "go_south");

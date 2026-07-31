@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
+import {
+  DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW,
+  DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY,
+} from "../../src/world/drover_route_drive_recovery_legacy.js";
 import { DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW } from "../../src/world/drover_route_fail_forward_legacy.js";
 import {
+  OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES,
   OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_WORLD_HASH,
   OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_TRUSTED_PREDECESSOR_WORLD_HASHES,
 } from "../../src/world/opening_preparation_copy_migrations.js";
@@ -10,16 +16,25 @@ import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
   OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH,
+  OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH,
   OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
   OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import {
+  exactDroverRouteDriveRecoveryPredecessor,
   exactDroverRouteFailForwardPredecessor,
   exactRegistrationPromiseClosurePredecessor,
 } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
+const DRIVE_PREDECESSOR = exactDroverRouteDriveRecoveryPredecessor(WORLD);
 const PREDECESSOR = exactDroverRouteFailForwardPredecessor(WORLD);
 const REGISTRATION_PROMISE_PREDECESSOR = exactRegistrationPromiseClosurePredecessor(WORLD);
 const DROVER = "albany:prep_drover_route";
@@ -92,14 +107,20 @@ function preparationEntry(session: OverworldSession, profileId: string) {
 }
 
 describe("Drover route fail-forward snapshot integrity", () => {
-  it("pins the exact prior-current and pressure-neutral manifest hashes", () => {
+  it("pins the exact fail-forward, DRIVE-consumer, and current manifest hashes", () => {
     expect(hashState(PREDECESSOR)).toBe(OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_WORLD_HASH);
     expect(OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_WORLD_HASH).toBe(
       "1d8ed584e39c462a7eb5132c23796ea39b8f76a545add86a88080ecf926b9f9c",
     );
+    expect(hashState(DRIVE_PREDECESSOR)).toBe(
+      OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_WORLD_HASH,
+    );
+    expect(OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_WORLD_HASH).toBe(
+      "e201855d2d55a1eeaedc4306d204a83f49c0190c4ad3687214b7e854112caa24",
+    );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "e201855d2d55a1eeaedc4306d204a83f49c0190c4ad3687214b7e854112caa24",
+      "7b517d0a2ccae01b9548b415465391c51176c6357facc513c506808e7a115590",
     );
     expect(OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_TRUSTED_PREDECESSOR_WORLD_HASHES.size).toBe(22);
     expect(
@@ -117,6 +138,48 @@ describe("Drover route fail-forward snapshot integrity", () => {
         OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
       ),
     ).toBe(false);
+    expect(OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES).toEqual(
+      new Set([
+        OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH,
+        OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH,
+        OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH,
+        OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
+        OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH,
+        OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH,
+        OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH,
+        OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_WORLD_HASH,
+      ]),
+    );
+    expect(
+      OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
+        OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
+      ),
+    ).toBe(false);
+    expect(
+      OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
+        OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_WORLD_HASH,
+      ),
+    ).toBe(false);
+  });
+
+  it("migrates the exact pre-DRIVE Drover selection without reopening it", () => {
+    const predecessor = preparedSession(DRIVE_PREDECESSOR, DROVER);
+    const predecessorText = preparationEntry(predecessor, DROVER).text;
+    expect(predecessorText).toContain(DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY);
+    expect(predecessorText).toContain(DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW);
+
+    const migrated = OverworldSession.restore(WORLD, predecessor.snapshot()).snapshot();
+    const native = preparedSession(WORLD, DROVER).snapshot();
+    expect(migrated).toEqual(native);
+    const migratedText = preparationEntry(
+      OverworldSession.restore(WORLD, predecessor.snapshot()),
+      DROVER,
+    ).text;
+    expect(migratedText).toContain(CURRENT_DROVER.summary);
+    expect(migratedText).toContain(CURRENT_DROVER.preview);
+    expect(migratedText).not.toContain(DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY);
+    expect(migratedText).not.toContain(DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW);
+    expect(OverworldSession.restore(WORLD, migrated).snapshot()).toEqual(migrated);
   });
 
   it("migrates the exact persisted Drover selection without reopening it", () => {
@@ -169,6 +232,14 @@ describe("Drover route fail-forward snapshot integrity", () => {
     const entry = tampered.journalEntries.find((candidate) => candidate.id.endsWith(`:${DROVER}`));
     if (!entry) throw new Error("Expected persisted Drover preparation.");
     entry.text = entry.text.replace("raises alarm by 1", "raises alarm by 2");
+    expect(() => OverworldSession.restore(WORLD, tampered)).toThrow(/exact authored copy/i);
+  });
+
+  it("rejects tampered pre-DRIVE Drover copy", () => {
+    const tampered = preparedSession(DRIVE_PREDECESSOR, DROVER).snapshot();
+    const entry = tampered.journalEntries.find((candidate) => candidate.id.endsWith(`:${DROVER}`));
+    if (!entry) throw new Error("Expected persisted Drover preparation.");
+    entry.text = entry.text.replace("fouled first feed cast", "failed first shutter");
     expect(() => OverworldSession.restore(WORLD, tampered)).toThrow(/exact authored copy/i);
   });
 

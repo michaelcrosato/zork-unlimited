@@ -1,4 +1,10 @@
 import type { CampaignCharacterState } from "../../../src/world/campaign_character_state.js";
+import {
+  DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW,
+  DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY,
+  DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_TRADEOFF,
+  DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_TRIGGER_CATEGORY,
+} from "../../../src/world/drover_route_drive_recovery_legacy.js";
 import { DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW } from "../../../src/world/drover_route_fail_forward_legacy.js";
 import type { OverworldManifest } from "../../../src/world/overworld.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "../../../src/world/frost_jamb_signpost_legacy.js";
@@ -24,7 +30,7 @@ function comparisonCardOptionGroups(world: OverworldManifest): ComparisonCardOpt
 
 /** Reconstruct the exact manifest before Starting Doctrine registration choices. */
 export function exactStartingDoctrinePredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactDroverRouteDriveRecoveryPredecessor(current);
   if (predecessor.opening_registration) {
     delete predecessor.opening_registration.doctrines;
   }
@@ -35,7 +41,7 @@ export function exactStartingDoctrinePredecessor(current: OverworldManifest): Ov
 export function exactStartingDoctrineReplacementPredecessor(
   current: OverworldManifest,
 ): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactDroverRouteDriveRecoveryPredecessor(current);
   const boundedAid = predecessor.opening_registration?.doctrines?.find(
     (doctrine) => doctrine.id === "albany:doctrine_road_warden_aid_route",
   );
@@ -321,6 +327,28 @@ const REGISTRATION_PROMISE_CLOSURE_BY_BACKGROUND: ReadonlyMap<string, string> = 
   ["albany:ironhands_repairer", "albany:promise_return_reese_tools"],
 ]);
 
+function restoreDroverDriveRecoveryPredecessorCopy(world: OverworldManifest): void {
+  const drover = world.opening_preparation?.profiles.find(
+    (profile) => profile.id === "albany:prep_drover_route",
+  );
+  if (!drover) throw new Error("Albany must retain Emery's Drover Route preparation");
+  Object.assign(drover, {
+    summary: DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY,
+    trigger_category: DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_TRIGGER_CATEGORY,
+    preview: DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW,
+    tradeoff: DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_TRADEOFF,
+  });
+}
+
+/** Reconstruct the exact manifest before Drover Route gained its DRIVE consumer. */
+export function exactDroverRouteDriveRecoveryPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  restoreDroverDriveRecoveryPredecessorCopy(predecessor);
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before failed Drover checks became pressure-neutral. */
 export function exactDroverRouteFailForwardPredecessor(
   current: OverworldManifest,
@@ -334,6 +362,7 @@ export function exactDroverRouteFailForwardPredecessor(
   for (const profile of preparation.profiles) {
     Reflect.deleteProperty(profile, "check_disclosure");
   }
+  restoreDroverDriveRecoveryPredecessorCopy(predecessor);
   drover.preview = DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW;
   return predecessor;
 }
@@ -517,6 +546,50 @@ export function exactRegistrationPromiseClosurePredecessorSnapshot(
     throw new Error(`Expected current registration promise "${promiseId}" to be kept.`);
   }
   promise.status = "active";
+  return predecessor;
+}
+
+/** Reverse only the persisted pre-DRIVE Drover copy for historical fixtures. */
+export function exactDroverRouteDriveRecoveryPredecessorSnapshot(
+  current: OverworldManifest,
+  currentSnapshot: OverworldSessionSnapshot,
+): OverworldSessionSnapshot {
+  const predecessor = structuredClone(currentSnapshot);
+  const preparation = current.opening_preparation;
+  const drover = preparation?.profiles.find((profile) => profile.id === "albany:prep_drover_route");
+  if (!preparation || !drover) {
+    throw new Error("Albany must retain Emery's current Drover Route preparation");
+  }
+  const selectionId = `preparation:${preparation.id}:${drover.id}`;
+  predecessor.journalEntries = predecessor.journalEntries.map((entry) => {
+    if (entry.id !== selectionId) return entry;
+    if (
+      entry.kind === "preparation" &&
+      entry.text.includes(DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY) &&
+      entry.text.includes(DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW)
+    ) {
+      return entry;
+    }
+    if (entry.kind !== "preparation") {
+      throw new Error(
+        `Current Drover Route fixture entry "${entry.id}" does not match its exact authored copy.`,
+      );
+    }
+    let text = entry.text;
+    for (const [before, after] of [
+      [drover.summary, DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY],
+      [drover.preview, DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW],
+    ] as const) {
+      const firstMatch = text.indexOf(before);
+      if (firstMatch < 0 || text.indexOf(before, firstMatch + before.length) >= 0) {
+        throw new Error(
+          `Current Drover Route fixture entry "${entry.id}" does not match its exact authored copy.`,
+        );
+      }
+      text = `${text.slice(0, firstMatch)}${after}${text.slice(firstMatch + before.length)}`;
+    }
+    return { ...entry, text };
+  });
   return predecessor;
 }
 

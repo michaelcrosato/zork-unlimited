@@ -115,6 +115,9 @@ pressure_tracks:
       - min: 2
         label: "Crisis"
         description: "Signal pressure is at crisis; the next unresolved drive commitment cannot be delayed, or its chosen evacuation line remains to be finished."
+      - min: 3
+        label: "Overrun"
+        description: "The folded opening has put one extra beat into the driven pack. Brace the swing-gate at a persistent 2 HP strain before choosing the crisis priority."
       - min: 6
         label: "Cleared"
         description: "The chosen evacuation line has separated the living pack from people and cattle; its wound, herd loss, or spent reserve is now fixed."
@@ -572,6 +575,7 @@ rooms:
         paling_rail,
         downwind_feed_line,
         drover_route_marks,
+        drive_drover_route_marks,
         drive_breach_signal,
         drive_hurdle_recovery,
         fortify_outer_seal,
@@ -604,6 +608,18 @@ rooms:
           The yearling runs alive ahead of the shutter signal along Cade's outside lane.
           The first of two kit charges is spent. Carry the remaining rope-and-bell line
           north to turn the flank-wolf at the byre door; the yard is south.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_opening_fouled }
+          - { not_flag: drive_yearling_turned }
+          - { not_flag: yearling_down }
+          - { has_flag: drover_route_prepared }
+          - { not_flag: drover_route_attempted }
+        text: >
+          The one permitted shutter call folded against the wall. Emery's prepared service
+          cut opens one Streetwise check (DC 12): success removes the failed call's extra
+          pack-pressure beat; failure spends the cut. Either way, the hard commitment has
+          no spear switch and the loose hurdle remains the required living recovery.
       - when:
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_opening_fouled }
@@ -1196,6 +1212,7 @@ rooms:
         cattle_crisis_priority,
         person_crisis_priority,
         reserve_crisis_priority,
+        drive_overrun_recovery,
         cattle_first_evacuation,
         person_first_evacuation,
         reserve_spent_evacuation,
@@ -1221,6 +1238,20 @@ rooms:
       - when:
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_flank_turned }
+          - { var_gte: { name: pack_drive, value: 3 } }
+          - none_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+              - { has_flag: drive_reserve_spent }
+        text: >
+          The folded shutter's extra beat has driven the pack past Crisis into Overrun.
+          Before any protection priority is honest, brace the swinging gate and take its
+          rope-burn strain (-2 HP). That recovers Crisis; the same shoulder, cattle, or rig
+          choice follows. A successful prepared drover cut would have prevented this cost.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+          - { var_lte: { name: pack_drive, value: 2 } }
           - none_of:
               - { has_flag: drive_courier_wounded }
               - { has_flag: drive_cattle_lost }
@@ -1854,6 +1885,46 @@ objects:
               It turns after the yearling. The herd moves too; old grey begins folding both
               lines together. Both charges are spent. Crisis waits at the byre mouth.
 
+  # A failed first shutter adds one extra pack-drive beat. Emery's route can remove it at
+  # the paling; otherwise this authored complication takes a small persistent strain and
+  # returns pressure to Crisis before the unchanged three-way priority becomes legal.
+  - id: drive_overrun_recovery
+    name: "overrun swing-gate brace"
+    aliases: [overrun brace, swing gate, brace gate, rope burn, overrun recovery]
+    description: >
+      The failed shutter's extra pressure has driven the living pack past Crisis. Catch
+      the swinging gate on Cade's rope and take the strain yourself (-2 HP); pack pressure
+      returns to Crisis, then the same shoulder, cattle, or finite-rig priorities open.
+    visible_when:
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_flank_turned }
+      - { var_gte: { name: pack_drive, value: 3 } }
+      - none_of:
+          - { has_flag: drive_courier_wounded }
+          - { has_flag: drive_cattle_lost }
+          - { has_flag: drive_reserve_spent }
+    interactions:
+      - verb: USE
+        target: drive_overrun_recovery
+        command_verb: brace
+        conditions:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+          - { var_gte: { name: pack_drive, value: 3 } }
+          - none_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+              - { has_flag: drive_reserve_spent }
+        effects:
+          - dec_var: { name: hp, by: 2 }
+          - dec_var: { name: pack_drive, by: 1 }
+          - add_journal: "You absorb the failed shutter's overrun at the swing-gate (-2 HP). Pack drive returns to Crisis; choose shoulder, cattle, or the finite rig."
+          - narrate: >
+              Old grey folds the extra beat from the failed shutter into the herd. You catch
+              the swing-gate on Cade's rope; hemp burns both palms before the line settles.
+              The strain persists (-2 HP), but pack pressure falls back to Crisis. Choose
+              what the final evacuation protects.
+
   # Three simultaneous crisis targets need distinct object ids so the legal action list
   # exposes three genuine choices, not one overloaded USE id. June, when imported, must
   # first exercise her cattle authority; solo play reaches the same menu directly.
@@ -1866,6 +1937,7 @@ objects:
     visible_when:
       - { has_flag: strategy_drive_committed }
       - { has_flag: drive_flank_turned }
+      - { var_lte: { name: pack_drive, value: 2 } }
       - none_of:
           - { has_flag: drive_courier_wounded }
           - { has_flag: drive_cattle_lost }
@@ -1878,6 +1950,7 @@ objects:
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_flank_turned }
           - { var_gte: { name: pack_drive, value: 2 } }
+          - { var_lte: { name: pack_drive, value: 2 } }
           - none_of:
               - { has_flag: drive_courier_wounded }
               - { has_flag: drive_cattle_lost }
@@ -1911,6 +1984,7 @@ objects:
     visible_when:
       - { has_flag: strategy_drive_committed }
       - { has_flag: drive_flank_turned }
+      - { var_lte: { name: pack_drive, value: 2 } }
       - none_of:
           - { has_flag: drive_courier_wounded }
           - { has_flag: drive_cattle_lost }
@@ -1923,6 +1997,7 @@ objects:
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_flank_turned }
           - { var_gte: { name: pack_drive, value: 2 } }
+          - { var_lte: { name: pack_drive, value: 2 } }
           - none_of:
               - { has_flag: drive_courier_wounded }
               - { has_flag: drive_cattle_lost }
@@ -1956,6 +2031,7 @@ objects:
     visible_when:
       - { has_flag: strategy_drive_committed }
       - { has_flag: drive_flank_turned }
+      - { var_lte: { name: pack_drive, value: 2 } }
       - none_of:
           - { has_flag: drive_courier_wounded }
           - { has_flag: drive_cattle_lost }
@@ -1970,6 +2046,7 @@ objects:
           - { has_flag: drive_flank_turned }
           - { var_lte: { name: drive_kit_charges, value: 0 } }
           - { var_gte: { name: pack_drive, value: 2 } }
+          - { var_lte: { name: pack_drive, value: 2 } }
           - none_of:
               - { has_flag: drive_courier_wounded }
               - { has_flag: drive_cattle_lost }
@@ -2918,10 +2995,10 @@ objects:
               The recovery saves the lure but spends wood that might have guarded a later
               jaw or barred the cattle gate.
 
-  # Emery's preparation is a one-shot recovery, not a second lure roll. It exists only
-  # after the public first cast has failed. Failure retires the route without adding
-  # pressure beyond the public recovery while the existing split-rail and combat
-  # recoveries remain legal.
+  # Emery's preparation is a one-shot recovery, never a retry. A failed first lure cast
+  # can use it to turn the yearling; a failed DRIVE shutter can use the same service cut
+  # to remove only the failure's extra pack-pressure beat. Both failures retire the route,
+  # and DRIVE still requires its loose-hurdle recovery before the final signal.
   - id: drover_route_marks
     name: "Emery's drover-route marks"
     aliases: [drover route, route marks, service cut, drover cut, emery's route]
@@ -2972,6 +3049,57 @@ objects:
                 sightline and stops in the breach. Emery's route is spent, but the herd
                 gains no new pressure beyond the fouled cast. Bind a failed rail onto the
                 remaining scent or fight the wolf, then carry the lure deeper.
+
+  - id: drive_drover_route_marks
+    name: "Emery's shutter-recovery marks"
+    aliases: [drive drover route, shutter route, drive service cut, emery's drive cut]
+    description: >
+      After Cade's first DRIVE shutter folds, Emery's service cut opens one Streetwise
+      check at DC 12. Success removes the failed call's extra pack-pressure beat and
+      prevents the later -2 HP overrun brace; failure leaves that cost. The route retires
+      either way. It never repairs or repeats the shutter, and the loose hurdle remains
+      the required living recovery.
+    visible_when:
+      - { has_flag: drover_route_prepared }
+      - { has_flag: strategy_drive_committed }
+      - { has_flag: drive_combat_withheld }
+      - { has_flag: drive_opening_fouled }
+      - { not_flag: drover_route_attempted }
+      - { not_flag: drive_yearling_turned }
+      - { not_flag: yearling_down }
+    interactions:
+      - verb: USE
+        target: drive_drover_route_marks
+        command_verb: run
+        conditions:
+          - { has_flag: drover_route_prepared }
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_combat_withheld }
+          - { has_flag: drive_opening_fouled }
+          - { not_flag: drover_route_attempted }
+          - { not_flag: drive_yearling_turned }
+          - { not_flag: yearling_down }
+          - { not_flag: june_blood_condition_broken }
+        effects:
+          - set_flag: drover_route_attempted
+        skill_check:
+          skill: streetwise
+          difficulty: 12
+          stakes: "Success removes the folded shutter's extra pack-pressure beat and prevents the later -2 HP overrun brace; failure leaves that cost. The route retires either way, and the loose hurdle remains mandatory."
+          on_success:
+            - dec_var: { name: pack_drive, by: 1 }
+            - add_journal: "Emery's one-use drover cut recovers the folded shutter's extra pressure beat. The loose hurdle remains required; the later overrun brace is prevented."
+            - narrate: >
+                You follow Emery's half-buried service cut beyond the herd's sightline and
+                pull the yearling's attention outward. The route does not repair the shutter
+                or turn the wolf; it buys back the failed call's extra pressure beat. Drop
+                the loose hurdle for the required living recovery.
+          on_failure:
+            - add_journal: "Emery's drover cut is spent without recovering pressure. The loose hurdle remains required, and Overrun will demand a -2 HP brace after the final signal."
+            - narrate: >
+                Snow has swallowed the cut's far corner. You gain no clean angle on the
+                moving herd; the folded call's extra pressure remains. The route is spent.
+                Drop the loose hurdle, then expect an overrun brace at the byre mouth.
 
   # Jamie's protocol waits for the specific public rail recovery: the first cast fouled,
   # the ordinary wedge split, and its bound guard was spent redirecting the yearling.

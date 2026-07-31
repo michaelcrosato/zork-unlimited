@@ -1,6 +1,10 @@
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import type { OpeningPreparation, OpeningPreparationProfile } from "./opening_preparation.js";
 import { openingPreparationJournalId } from "./opening_preparation_journal.js";
+import {
+  DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW,
+  DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY,
+} from "./drover_route_drive_recovery_legacy.js";
 import { DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW } from "./drover_route_fail_forward_legacy.js";
 
 export type OpeningPreparationJournalCopyField = Extract<
@@ -23,6 +27,10 @@ export type OpeningPreparationJournalCopyMigration = Readonly<{
 /** Exact manifest immediately before failed Drover checks became pressure-neutral. */
 export const OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_WORLD_HASH =
   "1d8ed584e39c462a7eb5132c23796ea39b8f76a545add86a88080ecf926b9f9c";
+
+/** Exact manifest immediately before Drover Route gained its DRIVE consumer. */
+export const OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_WORLD_HASH =
+  "e201855d2d55a1eeaedc4306d204a83f49c0190c4ad3687214b7e854112caa24";
 
 /**
  * Exact supported manifests that shipped opening preparation with the same
@@ -55,6 +63,19 @@ export const OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_TRUSTED_PREDECESSOR_WORLD_HASHE
     OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_WORLD_HASH,
   ]);
 
+/** Every post-fail-forward shipped manifest that retained the pre-DRIVE Drover copy. */
+export const OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
+  new Set([
+    "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3",
+    "0770c6e8349923d1ed0c025d8b7e2e12323c53c457b7801667ea0574d90003ed",
+    "5757ef201328662d8145b1e4fbad87907996fc1d9dad10170c3c2f8d422d2077",
+    "155ab48207c496c158dd5bb07fb9d44502d75fa456e219f25abf148118f40b31",
+    "294bfefa9d3b17b21e5e2a48ded532e7b4c9b995ad7149b1519b1b4e490a9435",
+    "35d7ee917b8cd33c698e3771d7bd884d963763ab665e5b4ae919e971e013a50c",
+    "56577688e463b98883aea1c9063a6e577d6a5d2bb4fa412ee32b0f47576d849c",
+    OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_WORLD_HASH,
+  ]);
+
 const OPENING_PREPARATION_JOURNAL_COPY_MIGRATIONS: readonly OpeningPreparationJournalCopyMigration[] =
   Object.freeze([
     Object.freeze({
@@ -63,8 +84,27 @@ const OPENING_PREPARATION_JOURNAL_COPY_MIGRATIONS: readonly OpeningPreparationJo
       sourceWorldHashes: OVERWORLD_DROVER_ROUTE_FAIL_FORWARD_TRUSTED_PREDECESSOR_WORLD_HASHES,
       replacements: Object.freeze([
         Object.freeze({
+          field: "summary" as const,
+          predecessor: DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY,
+        }),
+        Object.freeze({
           field: "preview" as const,
           predecessor: DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW,
+        }),
+      ]),
+    }),
+    Object.freeze({
+      id: "drover_route_drive_recovery",
+      profileId: "albany:prep_drover_route",
+      sourceWorldHashes: OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES,
+      replacements: Object.freeze([
+        Object.freeze({
+          field: "summary" as const,
+          predecessor: DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_SUMMARY,
+        }),
+        Object.freeze({
+          field: "preview" as const,
+          predecessor: DROVER_ROUTE_DRIVE_RECOVERY_PREDECESSOR_PREVIEW,
         }),
       ]),
     }),

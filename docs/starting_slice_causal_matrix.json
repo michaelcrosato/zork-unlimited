@@ -248,7 +248,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, optionally inspect and commit one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, current matching skill modifier and d20 success chance, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation. Emery's authored field terms additionally compare failure with declining the route; both hill launches remain legal without a selection.",
+      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, optionally inspect and commit one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, current matching skill modifier and d20 success chance, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation. Emery's authored field terms disclose both its failed-LURE and failed-DRIVE consumers, compare failure with declining the route, and state that DRIVE still requires its loose hurdle; both hill launches remain legal without a selection.",
       "immediate_state_delta": [
         "character.money",
         "character.knowledge",
@@ -259,14 +259,14 @@
       "delayed_consumers": [
         "Wolf-Winter imports only the selected plan flag plus the character's matching Repair, Streetwise, or Mediation rank. Direct starts retain exact zero-rank, no-plan defaults.",
         "Works replaces the public paling wedge with one Repair check. A miss preserves the split rail, then Reese's marked cold-set restores the breach without a reroll while raising cattle alarm by 1.",
-        "Drover appears only after the first lure cast fails. Success redirects the living yearling and lowers cattle alarm by 1; failure retires the route without raising pressure beyond the public recovery and leaves the established rail-or-fight recovery legal.",
+        "Drover appears after either the first lure cast or DRIVE shutter fails and shares one-use retirement across both consumers. On LURE, success redirects the living yearling and lowers cattle alarm by 1 while failure preserves rail-or-fight recovery at the same pressure. On DRIVE, success removes the failed shutter's extra pack-pressure beat while failure leaves it; both outcomes still require the loose hurdle. After the final signal, unrecovered pressure reaches Overrun and requires a persistent -2 HP swing-gate brace before the same three crisis priorities unlock.",
         "Relief appears only after the ordinary split-rail recovery redirects the yearling. Success lowers cattle alarm by 1 before the loft cast; failure raises it by 1 and retires without blocking completion.",
         "A truthful held-byre return pairs each selected plan with one different 15-minute service: Works District resupply, Campus rest, or Civic Core resupply. Paired low-supply and fatigued states include paid preparation, shortest Albany relocation, and each alternative profile's best matching service; each profile wins somewhere, so none dominates globally."
       ],
       "visible_feedback": [
         "The pull-based Station interaction exposes all three affordable plans for all four backgrounds and all three source choices; inspection is read-only, departure remains legal, and an accepted choice records the exact paid terms, learned plan, and provider memory.",
-        "Wolf room variants, legal commands, narrated skill arithmetic, cattle-alarm bands, one-shot retirement, and deterministic recoveries name the selected plan and its actual consequence.",
-        "A representative Drover route proves full MCP, compact MCP, and browser parity end to end. Paired core-session proofs cover all three matching return services and causes; journal-bound story-choice proof consumes each one-time benefit across restore."
+        "Wolf room variants, legal commands, narrated skill arithmetic, cattle-alarm and pack-drive bands, shared one-shot retirement, mandatory DRIVE hurdle, prepared pressure recovery, and unprepared overrun strain name the selected plan and its actual consequence.",
+        "Representative LURE and DRIVE Drover routes prove full MCP, compact MCP, browser, and RPG save parity. Paired deterministic proofs carry prepared success, prepared failure, and no-plan DRIVE states through the same three crisis priorities; core-session proofs cover all three matching return services and causes, while journal-bound story-choice proof consumes each one-time benefit across restore."
       ],
       "systems": [
         "economy",

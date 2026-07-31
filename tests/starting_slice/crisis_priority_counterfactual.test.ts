@@ -71,8 +71,12 @@ function fresh(withJune = false): GameState {
   return state;
 }
 
-function commitDrive(withJune = false): GameState {
+function commitDrive(withJune = false, withDrover = false): GameState {
   let state = fresh(withJune);
+  if (withDrover) {
+    state.flags.drover_route_prepared = true;
+    state.vars.streetwise = 4;
+  }
   state = act(state, "go_north");
   state = act(state, "talk_houndsman");
   state = act(state, "ask_drive");
@@ -109,8 +113,12 @@ function commitDrive(withJune = false): GameState {
   return state;
 }
 
-function reachCrisis(opening: Roll, withJune = false): GameState {
-  let state = commitDrive(withJune);
+function reachCrisis(
+  opening: Roll,
+  withJune = false,
+  droverAttempt: Roll | "none" = "none",
+): GameState {
+  let state = commitDrive(withJune, droverAttempt !== "none");
   state = act(state, "go_north");
   state = act(state, "use_drive_signal_rope_kit_on_drive_breach_signal", opening);
 
@@ -133,6 +141,14 @@ function reachCrisis(opening: Roll, withJune = false): GameState {
         band: expect.objectContaining({ label: "Crisis" }),
       }),
     );
+    if (droverAttempt !== "none") {
+      expect(actionIds(state)).toContain("use_drive_drover_route_marks");
+      state = act(state, "use_drive_drover_route_marks", droverAttempt);
+      expect(state.flags.drover_route_attempted).toBe(true);
+      expect(state.vars.pack_drive).toBe(droverAttempt === "best" ? 1 : 2);
+      expect(actionIds(state)).not.toContain("use_drive_drover_route_marks");
+      expect(actionIds(state)).toContain("use_drive_hurdle_recovery");
+    }
     state = act(state, "use_drive_hurdle_recovery");
     expect(state.flags.drive_opening_fouled).toBe(true);
   }
@@ -144,10 +160,34 @@ function reachCrisis(opening: Roll, withJune = false): GameState {
   state = act(state, "use_drive_signal_rope_kit_on_drive_threshold_line");
   expect(state).toMatchObject({
     flags: { drive_flank_turned: true },
-    vars: { drive_kit_charges: 0, pack_drive: opening === "best" ? 2 : 3 },
+    vars: {
+      drive_kit_charges: 0,
+      pack_drive: opening === "best" || droverAttempt === "best" ? 2 : 3,
+    },
   });
   expect(state.flags.flank_wolf_down).not.toBe(true);
   state = act(state, "go_north");
+
+  if (state.vars.pack_drive === 3) {
+    expect(actionIds(state)).toContain("use_drive_overrun_recovery");
+    expect(actionIds(state)).not.toContain("use_cattle_crisis_priority");
+    expect(actionIds(state)).not.toContain("use_person_crisis_priority");
+    expect(actionIds(state)).not.toContain("use_reserve_crisis_priority");
+    expect(buildRpgObservation(index, state).pressure_tracks).toContainEqual(
+      expect.objectContaining({
+        id: "pack_drive",
+        value: 3,
+        band: expect.objectContaining({ label: "Overrun" }),
+      }),
+    );
+    state = act(state, "use_drive_overrun_recovery");
+    expect(state).toMatchObject({
+      vars: { hp: 28, pack_drive: 2 },
+    });
+  } else {
+    expect(actionIds(state)).not.toContain("use_drive_overrun_recovery");
+    expect(state.vars.hp).toBe(30);
+  }
 
   if (withJune) {
     const beforeJune = actionIds(state);
@@ -206,6 +246,17 @@ function finishPriority(priority: Priority, withJune = false): GameState {
     }),
   );
   return state;
+}
+
+function carryFouledDriveToByre(state: GameState): GameState {
+  expect(actionIds(state)).toContain("use_drive_hurdle_recovery");
+  state = act(state, "use_drive_hurdle_recovery");
+  expect(state.flags.drive_opening_fouled).toBe(true);
+  expect(state.flags.drive_yearling_turned).toBe(true);
+  expect(actionIds(state)).not.toContain("use_drive_drover_route_marks");
+  state = act(state, "go_north");
+  state = act(state, "use_drive_signal_rope_kit_on_drive_threshold_line");
+  return act(state, "go_north");
 }
 
 describe("SS-F10 — drive-and-evacuate crisis priority", () => {
@@ -299,6 +350,68 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     expect(state.vars.score ?? 0).toBe(0);
   });
 
+  it("makes Drover preparation a one-use DRIVE pressure recovery while preserving the hurdle and crisis", () => {
+    let prepared = commitDrive(false, true);
+    let unprepared = commitDrive();
+    expect(actionIds(prepared)).not.toContain("use_drive_drover_route_marks");
+    prepared = act(prepared, "go_north");
+    unprepared = act(unprepared, "go_north");
+    expect(actionIds(prepared)).not.toContain("use_drive_drover_route_marks");
+    prepared = act(prepared, "use_drive_signal_rope_kit_on_drive_breach_signal", "worst");
+    unprepared = act(unprepared, "use_drive_signal_rope_kit_on_drive_breach_signal", "worst");
+
+    expect(actionIds(prepared)).toContain("use_drive_drover_route_marks");
+    expect(actionIds(unprepared)).not.toContain("use_drive_drover_route_marks");
+    expect(objectDescription(index.objects.get("drive_drover_route_marks")!, prepared)).toMatch(
+      /Streetwise[^]*DC 12[^]*extra pack-pressure[^]*-2 HP[^]*loose hurdle/i,
+    );
+
+    let recovered = act(structuredClone(prepared), "use_drive_drover_route_marks", "best");
+    let missed = act(structuredClone(prepared), "use_drive_drover_route_marks", "worst");
+    let declined = structuredClone(prepared);
+    expect(recovered).toMatchObject({
+      flags: { drover_route_attempted: true, drive_opening_fouled: true },
+      vars: { pack_drive: 1, drive_kit_charges: 1, hp: 30 },
+    });
+    expect(missed).toMatchObject({
+      flags: { drover_route_attempted: true, drive_opening_fouled: true },
+      vars: { pack_drive: 2, drive_kit_charges: 1, hp: 30 },
+    });
+    expect(declined).toMatchObject({
+      vars: { pack_drive: 2, drive_kit_charges: 1, hp: 30 },
+    });
+    expect(declined.flags.drover_route_attempted).not.toBe(true);
+    for (const state of [recovered, missed, declined]) {
+      expect(actionIds(state)).toContain("use_drive_hurdle_recovery");
+      expect(actionIds(state)).not.toContain("use_drive_signal_rope_kit_on_drive_breach_signal");
+      expectCommittedDriveWithholdsCombat(state);
+    }
+
+    recovered = carryFouledDriveToByre(recovered);
+    missed = carryFouledDriveToByre(missed);
+    declined = carryFouledDriveToByre(declined);
+    const priorities = [
+      "use_cattle_crisis_priority",
+      "use_person_crisis_priority",
+      "use_reserve_crisis_priority",
+    ];
+    expect(recovered.vars).toMatchObject({ pack_drive: 2, hp: 30 });
+    expect(actionIds(recovered)).toEqual(expect.arrayContaining(priorities));
+    expect(actionIds(recovered)).not.toContain("use_drive_overrun_recovery");
+
+    for (let state of [missed, declined]) {
+      expect(state.vars).toMatchObject({ pack_drive: 3, hp: 30 });
+      expect(actionIds(state)).toContain("use_drive_overrun_recovery");
+      for (const priority of priorities) expect(actionIds(state)).not.toContain(priority);
+      state = act(state, "use_drive_overrun_recovery");
+      expect(state).toMatchObject({
+        vars: { pack_drive: 2, hp: 28 },
+      });
+      expect(actionIds(state)).toEqual(expect.arrayContaining(priorities));
+      expect(actionIds(state)).not.toContain("use_drive_overrun_recovery");
+    }
+  });
+
   it("spends two finite charges on two different drive actions and fails forward without a retry", () => {
     const state = reachCrisis("worst");
 
@@ -307,10 +420,12 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
       drive_yearling_turned: true,
       drive_flank_turned: true,
     });
-    expect(state.vars).toMatchObject({ drive_kit_charges: 0, pack_drive: 3 });
+    expect(state.vars).toMatchObject({ drive_kit_charges: 0, pack_drive: 2, hp: 28 });
     expect(state.vars.score ?? 0).toBe(0);
     expect(state.inventory).toContain("drive_signal_rope_kit");
-    expect(state.journal.join("\n")).toMatch(/no retry[^]*loose hurdle[^]*second and final/i);
+    expect(state.journal.join("\n")).toMatch(
+      /no retry[^]*loose hurdle[^]*second and final[^]*overrun/i,
+    );
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
   });
 

@@ -173,7 +173,7 @@ describe("Emery evidence-custody snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "e201855d2d55a1eeaedc4306d204a83f49c0190c4ad3687214b7e854112caa24",
+      "7b517d0a2ccae01b9548b415465391c51176c6357facc513c506808e7a115590",
     );
   });
 
