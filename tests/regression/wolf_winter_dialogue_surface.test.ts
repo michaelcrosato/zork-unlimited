@@ -20,6 +20,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
+import { relabelRpgPack } from "./support/relabel_rpg.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
@@ -105,6 +106,77 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(ids).not.toContain("ask_ask_wolves");
     expect(ids).not.toContain("ask_ask_byre");
     expect(ids).not.toContain("ask_leave_cade");
+  });
+
+  it("compares all four strategy costs symmetrically without changing state or actions", () => {
+    let state = initStateForRpgPack(index, 541);
+    state = act(state, { type: "MOVE", direction: "north" });
+    const talked = step(state, { type: "TALK", npc: "houndsman" });
+    expect(talked.ok).toBe(true);
+    if (!talked.ok) throw new Error("unreachable");
+    state = talked.state;
+    const before = structuredClone(state);
+    const idsBefore = legalActionIds(state);
+    const observation = buildRpgObservation(index, state);
+    const scorecard = observation.dialogue?.npc_text;
+
+    expect(scorecard).toContain(
+      "Any of the four plans can finish Wolf-Winter, but each protects something by spending something else.",
+    );
+    expect(scorecard).toContain("Choose the cost you accept; I will not name a best answer.");
+    expect(scorecard).toContain("HUNT — protects herd and stores; wolves may die.");
+    expect(scorecard).toContain(
+      "LURE — protects herd and wolves; spends the last feed, leaves the paling broken, and a foul can cost cattle.",
+    );
+    expect(scorecard).toContain(
+      "DRIVE — protects people and wolves; gives up the outer line, then a crisis costs a wound, two cattle, or the rig.",
+    );
+    expect(scorecard).toContain(
+      "FORTIFY — protects byre, herd, and wolves; trades Cade's outer property against public seals and his aid.",
+    );
+    expect(scorecard).toContain("asking does not commit your strategy");
+    expect(scorecard).toContain("Cross north uncommitted and HUNT becomes final");
+    expect(scorecard!.indexOf("HUNT —")).toBeLessThan(scorecard!.indexOf("LURE —"));
+    expect(scorecard!.indexOf("LURE —")).toBeLessThan(scorecard!.indexOf("DRIVE —"));
+    expect(scorecard!.indexOf("DRIVE —")).toBeLessThan(scorecard!.indexOf("FORTIFY —"));
+    expect(narrations(talked.events)).toEqual([`old Cade the houndsman: "${scorecard}"`]);
+    expect(narrations(talked.events).join(" ")).not.toContain("Save/cost—HUNT");
+
+    const compact = compactRpgObservation(observation, observation.available_actions, {
+      includeActions: true,
+    });
+    expect(compact.dialogue).toEqual(["houndsman", scorecard]);
+    expect(compact.choices?.map(([id]) => id)).toEqual(dialogueActionIds(idsBefore));
+    const compactWithoutActions = compactRpgObservation(
+      { ...observation, available_actions: [] },
+      [],
+    );
+    expect(compactWithoutActions.dialogue).toEqual(["houndsman", scorecard]);
+    expect(compactWithoutActions.actions).toBeUndefined();
+    expect(compactWithoutActions.choices).toBeUndefined();
+    expect(observation.available_actions.map((action) => action.id)).toEqual(idsBefore);
+    expect(state).toEqual(before);
+    expect(legalActionIds(state)).toEqual(idsBefore);
+  });
+
+  it("keeps the scorecard prose invariant under a consistent identifier relabeling", () => {
+    const originalText = buildRpgObservation(index, startCadeDialogue()).dialogue?.npc_text;
+    const { pack: twinPack, relabeler } = relabelRpgPack(pack);
+    const twinIndex = indexRpgPack(twinPack);
+    const twinStep = makeStep(buildRpgRules(twinIndex));
+    let twinState = initStateForRpgPack(twinIndex, 541);
+    const moved = twinStep(twinState, { type: "MOVE", direction: "north" });
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) throw new Error("unreachable");
+    twinState = moved.state;
+
+    const twinNpc = relabeler.r("houndsman");
+    expect(twinNpc).not.toBe("houndsman");
+    const talked = twinStep(twinState, { type: "TALK", npc: twinNpc });
+    expect(talked.ok).toBe(true);
+    if (!talked.ok) throw new Error("unreachable");
+
+    expect(buildRpgObservation(twinIndex, talked.state).dialogue?.npc_text).toBe(originalText);
   });
 
   it("keeps old MCP action ids as hidden aliases without listing them", () => {
@@ -391,6 +463,7 @@ describe("Wolf-Winter dialogue surface", () => {
     );
     expect(obs.dialogue?.npc_text).not.toContain("Old Cade shifts");
     expect(obs.dialogue?.npc_text).not.toMatch(/: "Old Cade\b/);
+    expect(obs.dialogue?.npc_text).not.toContain("Any of the four plans can finish Wolf-Winter");
     expect(obs.available_actions.map((option) => option.id)).not.toContain("ask_wolves_back");
     expect(obs.available_actions.map((option) => option.id)).toEqual(
       expect.arrayContaining(["ask_byre", "ask_leave"]),

@@ -75,6 +75,7 @@ export type View = {
   location: string;
   title: string;
   text: string;
+  dialogue: { npc: string; text: string } | null;
   choices: { id: string; label: string; detail?: string }[];
   unavailableChoices: { id: string; label: string; reason: string }[];
   inventory: string[];
@@ -198,6 +199,14 @@ export class GameSession {
       location: o.room,
       title: o.title,
       text: o.description,
+      dialogue: o.dialogue
+        ? {
+            npc:
+              o.npcs_present.find((candidate) => candidate.id === o.dialogue?.npc)?.name ??
+              o.dialogue.npc,
+            text: o.dialogue.npc_text,
+          }
+        : null,
       choices: o.available_actions.map((a) => ({
         id: a.id,
         label: a.skill_check

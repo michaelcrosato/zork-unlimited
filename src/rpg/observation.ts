@@ -14,11 +14,11 @@ import type { WorldBinding } from "../world/schema.js";
 import {
   activeDialogue,
   endingText as resolveEndingText,
-  nodeText,
   objectName,
   roomDescription,
   visibleObjectIds,
 } from "./model.js";
+import { dialogueNodeText } from "./dialogue_presentation.js";
 import { enemyHp } from "./combat.js";
 import { publicFlags, publicInventory, publicJournal, publicVars } from "./observation_state.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR } from "./schema.js";
@@ -179,7 +179,12 @@ export function buildRpgObservation(
       vars: publicVars(state),
       journal: publicJournal(state),
     },
-    dialogue: active ? { npc: active.npc.id, npc_text: nodeText(active.node, state) } : null,
+    dialogue: active
+      ? {
+          npc: active.npc.id,
+          npc_text: dialogueNodeText(state, active.node),
+        }
+      : null,
     enemies_present: enemies,
     stats: {
       hp: state.vars[HP_VAR] ?? 0,
