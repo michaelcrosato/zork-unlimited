@@ -981,7 +981,7 @@ describe("MCP journey surface", () => {
       compactPreparationStory.options.every(
         (option) =>
           JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
-          JSON.stringify(["checkFit", "commitment", "immediateCost", "tradeoff"]),
+          JSON.stringify(["commitment", "immediateCost", "tradeoff"]),
       ),
     ).toBe(true);
     expect(
@@ -1519,8 +1519,8 @@ describe("MCP journey surface", () => {
     const secondSummary = comparisonResponse.story.options.find(
       (option) => option.id === otherOptionId,
     )!.summary!;
-    expect(firstSummary.checkFit).toBe("Repair +0 vs DC 12");
-    expect(secondSummary.checkFit).toBe("Streetwise +0 vs DC 12");
+    expect(firstSummary).not.toHaveProperty("checkFit");
+    expect(secondSummary).not.toHaveProperty("checkFit");
     const firstReceipt =
       `Benefit: ${firstProfile.trigger_category ?? firstProfile.title} ` +
       `Cost: ${firstSummary.immediateCost}. Boundary: ${firstProfile.tradeoff}`;
@@ -1529,7 +1529,8 @@ describe("MCP journey surface", () => {
       `Cost: ${secondSummary.immediateCost}. Boundary: ${secondProfile.tradeoff}`;
     expect(firstDetail.story.inspectedOption).toMatchObject({
       id: optionId,
-      checkFit: firstSummary.checkFit,
+      checkFit: "Repair +0 vs DC 12",
+      dispatchForecast: { proofHash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       consequence: firstReceipt,
     });
     expect(openingSelectionReceiptWordCount(firstReceipt)).toBeLessThanOrEqual(
@@ -1544,11 +1545,12 @@ describe("MCP journey surface", () => {
       ["comparisonVersion", "id", "inspectedOption", "kind"].sort(),
     );
     expect(Object.keys(firstDetail.story.inspectedOption).sort()).toEqual(
-      ["checkFit", "consequence", "id", "label"].sort(),
+      ["checkFit", "consequence", "dispatchForecast", "id", "label"].sort(),
     );
     expect(secondDetail.story.inspectedOption).toMatchObject({
       id: otherOptionId,
-      checkFit: secondSummary.checkFit,
+      checkFit: "Streetwise +0 vs DC 12",
+      dispatchForecast: { proofHash: expect.stringMatching(/^[0-9a-f]{64}$/) },
       consequence: secondReceipt,
     });
     expect(openingSelectionReceiptWordCount(secondReceipt)).toBeLessThanOrEqual(

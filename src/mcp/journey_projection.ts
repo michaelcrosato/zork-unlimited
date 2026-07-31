@@ -20,17 +20,16 @@ import type { McpObservation } from "./types.js";
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
 const COMPACT_MORE_CHOICES_INDEX = 12;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 8 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 9 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
-  "Complete terms are staged; inspect this exact option before choosing if you need them." as const;
+  "Technical detail and complete terms are staged; inspect this exact option before choosing if you need them." as const;
 
 export type JourneyStoryChoiceComparisonOption = Readonly<{
   id: string;
   label: string;
   group?: JourneyStoryChoiceOption["group"];
-  summary?: JourneyStoryChoiceSummary;
-  dispatchForecast?: JourneyStoryChoiceDispatchForecast;
-  dispatchImpact?: JourneyStoryChoiceDispatchImpact;
+  /** Human stakes and cost only; check math is staged with the exact option detail. */
+  summary?: Omit<JourneyStoryChoiceSummary, "checkFit">;
 }>;
 
 export type JourneyStoryChoiceDetailOption = Readonly<{
@@ -38,6 +37,8 @@ export type JourneyStoryChoiceDetailOption = Readonly<{
   label: string;
   group?: JourneyStoryChoiceOption["group"];
   checkFit?: string;
+  dispatchForecast?: JourneyStoryChoiceDispatchForecast;
+  dispatchImpact?: JourneyStoryChoiceDispatchImpact;
   consequence: string;
 }>;
 
@@ -191,27 +192,36 @@ export function journeyStoryChoiceOptionById(
   return option;
 }
 
+/** Keep the first tier on human stakes; exact check arithmetic is read-only detail. */
+function compactJourneyStoryChoiceBriefSummary(
+  summary: JourneyStoryChoiceSummary,
+): Omit<JourneyStoryChoiceSummary, "checkFit"> {
+  return Object.freeze({
+    commitment: summary.commitment,
+    ...(summary.fieldTrigger === undefined ? {} : { fieldTrigger: summary.fieldTrigger }),
+    ...(summary.fieldTriggerScope === undefined
+      ? {}
+      : { fieldTriggerScope: summary.fieldTriggerScope }),
+    immediateCost: summary.immediateCost,
+    tradeoff: summary.tradeoff,
+  });
+}
+
 /** Stage active compact consequences behind exact, read-only option inspection. */
 export function compactJourneyStoryChoicePrompt(
   prompt: JourneyStoryChoicePrompt,
 ): CompactJourneyStoryChoicePrompt {
   const options = journeyStoryChoiceOptionsForPresentation(prompt).map((option) =>
-    option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE
-      ? option
-      : Object.freeze({
-          ...option,
-          consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
-        }),
+    Object.freeze({
+      id: option.id,
+      label: option.label,
+      ...(option.group === undefined ? {} : { group: option.group }),
+      ...(option.summary ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary) } : {}),
+      consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+    }),
   );
   const { progressiveDisclosure: _progressiveDisclosure, ...withoutProgressiveDisclosure } = prompt;
   const revealOption = progressiveDisclosureRevealAffordance(prompt);
-  if (
-    _progressiveDisclosure === undefined &&
-    options.length === prompt.options.length &&
-    options.every((option, index) => option === prompt.options[index])
-  ) {
-    return prompt as unknown as CompactJourneyStoryChoicePrompt;
-  }
   return Object.freeze({
     ...withoutProgressiveDisclosure,
     options: Object.freeze(options),
@@ -269,6 +279,19 @@ export function compactJourneyStoryChoiceComparison(
         ...(inspectedSource.summary?.checkFit === undefined
           ? {}
           : { checkFit: inspectedSource.summary.checkFit }),
+        ...(inspectedSource.dispatchForecast
+          ? {
+              dispatchForecast: Object.freeze({
+                ...inspectedSource.dispatchForecast,
+                finalMinutes: Object.freeze({
+                  ...inspectedSource.dispatchForecast.finalMinutes,
+                }),
+              }),
+            }
+          : {}),
+        ...(inspectedSource.dispatchImpact
+          ? { dispatchImpact: Object.freeze({ ...inspectedSource.dispatchImpact }) }
+          : {}),
         consequence: inspectedSource.consequence,
       }),
     });
@@ -278,18 +301,7 @@ export function compactJourneyStoryChoiceComparison(
       id: option.id,
       label: option.label,
       ...(option.group === undefined ? {} : { group: option.group }),
-      ...(option.summary ? { summary: Object.freeze({ ...option.summary }) } : {}),
-      ...(option.dispatchForecast
-        ? {
-            dispatchForecast: Object.freeze({
-              ...option.dispatchForecast,
-              finalMinutes: Object.freeze({ ...option.dispatchForecast.finalMinutes }),
-            }),
-          }
-        : {}),
-      ...(option.dispatchImpact
-        ? { dispatchImpact: Object.freeze({ ...option.dispatchImpact }) }
-        : {}),
+      ...(option.summary ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary) } : {}),
     }),
   );
   const revealOption =

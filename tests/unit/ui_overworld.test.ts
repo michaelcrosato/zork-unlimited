@@ -969,6 +969,9 @@ describe("OverworldSession", () => {
     expect(app).toContain("worldView.departureRecap");
     expect(app).toContain("<DepartureRecap recap={worldView.departureRecap} />");
     expect(app).toContain("departureRecap={worldView.departureRecap}");
+    expect(recapComponent).toContain('<details className="departure-recap-slots">');
+    expect(recapComponent).toContain("<summary>Review selected and optional plan slots</summary>");
+    expect(recapComponent).toContain('className="departure-recap-selected"');
     expect(recapComponent).toContain('<details className="departure-recap-terms">');
     expect(recapComponent).toContain("<summary>Review exact active terms</summary>");
     expect(recapComponent).not.toContain("Active field term: {entry.activeFieldTerm}");
@@ -1035,6 +1038,17 @@ describe("OverworldSession", () => {
       );
       expect(recapMarkup).toContain("Open (optional)");
       expect(recapMarkup).not.toContain("Available after choosing preparation");
+      expect(recapMarkup).toContain('<details class="departure-recap-slots">');
+      expect(recapMarkup).toContain("<summary>Review selected and optional plan slots</summary>");
+      const slotDetailsIndex = recapMarkup.indexOf('<details class="departure-recap-slots">');
+      const firstTier = recapMarkup.slice(0, slotDetailsIndex);
+      expect(firstTier).toContain("Selected plan:");
+      expect(firstTier).toContain(world.opening_registration!.profiles[0]!.title);
+      expect(firstTier).toContain(world.opening_relief_oath!.options[0]!.title);
+      expect(firstTier).toContain(
+        world.opening_lead_source!.options[0]!.title.replace("'", "&#x27;"),
+      );
+      expect(firstTier).not.toContain("Open (optional)");
       expect(recapMarkup).toContain('<details class="departure-recap-terms">');
       expect(recapMarkup).toContain("<summary>Review exact active terms</summary>");
       expect(recapMarkup).not.toMatch(/<details[^>]*\sopen(?:=|>)/);

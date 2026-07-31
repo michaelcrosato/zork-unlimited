@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { renderTerminalStoryChoiceComparison } from "../../bin/terminal_story_choice.js";
+import {
+  renderTerminalStoryChoiceComparison,
+  renderTerminalStoryChoiceDetail,
+} from "../../bin/terminal_story_choice.js";
 import { compactJourneyStoryChoiceComparison } from "../../src/mcp/journey_projection.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { stripOpeningStationDispatchImpact } from "../../src/world/opening_station_dispatch_impact.js";
@@ -144,17 +147,22 @@ describe("Station dispatch impact cards", () => {
     const session = stationSession();
     const full = session.inspectJourneyStory(ALLOCATION.id);
     const compact = compactJourneyStoryChoiceComparison(full);
-    expect(compact.options.map((option) => option.dispatchImpact?.line)).toEqual(
-      full.options.map((option) => option.dispatchImpact?.line),
-    );
+    expect(compact.options.every((option) => !("dispatchImpact" in option))).toBe(true);
+    expect(JSON.stringify(compact)).not.toContain("proofHash");
+    expect(JSON.stringify(compact).length).toBeLessThanOrEqual(1_850);
     const rendered = renderTerminalStoryChoiceComparison(full);
-    expect(rendered.indexOf("Dispatch: +5m delay → 65m committed (delayed).")).toBeLessThan(
-      rendered.indexOf("Promise / priority:"),
-    );
+    expect(rendered).not.toContain("Dispatch: +5m delay → 65m committed (delayed).");
     expect(rendered).toContain(
       "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
     );
     expect(rendered.indexOf("Purpose:")).toBeLessThan(rendered.indexOf("Promise / priority:"));
+    const firstOption = full.options[0]!;
+    const stagedDetail = compactJourneyStoryChoiceComparison(full, firstOption.id).inspectedOption;
+    expect(stagedDetail).toMatchObject({ dispatchImpact: firstOption.dispatchImpact });
+    expect(JSON.stringify(stagedDetail).length).toBeLessThanOrEqual(650);
+    expect(renderTerminalStoryChoiceDetail(full, firstOption)).toContain(
+      "Dispatch: +5m delay → 65m committed (delayed).",
+    );
 
     const api = createToolApi({ root: process.cwd() });
     const started = api.start_overworld({ compact_context: false });
@@ -199,16 +207,22 @@ describe("Station dispatch impact cards", () => {
       compact_context: false,
       compact_result: false,
     });
+    const compactMcp = api.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: ALLOCATION.id,
+      compact_context: true,
+      compact_result: true,
+    }).story;
+    expect(compactMcp.options.every((option) => !("dispatchImpact" in option))).toBe(true);
     expect(
-      api
-        .inspect_overworld_session_story({
-          session_id: started.session_id,
-          story_choice_id: ALLOCATION.id,
-          compact_context: true,
-          compact_result: true,
-        })
-        .story.options.map((option) => option.dispatchImpact?.line),
-    ).toEqual(full.options.map((option) => option.dispatchImpact?.line));
+      api.inspect_overworld_session_story({
+        session_id: started.session_id,
+        story_choice_id: ALLOCATION.id,
+        option_id: full.options[0]!.id,
+        compact_context: true,
+        compact_result: true,
+      }).story.inspectedOption.dispatchImpact?.line,
+    ).toBe(full.options[0]!.dispatchImpact?.line);
 
     const restored = OverworldSession.restore(WORLD, structuredClone(session.snapshot()));
     expect(restored.inspectJourneyStory(ALLOCATION.id)).toEqual(full);

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { renderTerminalStoryChoiceComparison } from "../../bin/terminal_story_choice.js";
+import {
+  renderTerminalStoryChoiceComparison,
+  renderTerminalStoryChoiceDetail,
+} from "../../bin/terminal_story_choice.js";
 import { compactJourneyStoryChoiceComparison } from "../../src/mcp/journey_projection.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
@@ -107,10 +110,15 @@ describe("authenticated Albany preparation dispatch forecast", () => {
     const ui = preparationSessionForUi();
     expect(ui.inspectJourneyStory(PREPARATION.id)).toEqual(full);
     const compact = compactJourneyStoryChoiceComparison(full);
-    expect(compact.options.map((option) => option.dispatchForecast?.line)).toEqual(
-      full.options.map((option) => option.dispatchForecast?.line),
-    );
-    expect(renderTerminalStoryChoiceComparison(full)).toContain(
+    expect(compact.options.every((option) => !("dispatchForecast" in option))).toBe(true);
+    expect(JSON.stringify(compact)).not.toContain("proofHash");
+    expect(JSON.stringify(compact).length).toBeLessThanOrEqual(1_700);
+    const drover = full.options.find((option) => option.id === "albany:prep_drover_route")!;
+    const stagedDetail = compactJourneyStoryChoiceComparison(full, drover.id).inspectedOption;
+    expect(stagedDetail.dispatchForecast?.line).toBe(drover.dispatchForecast?.line);
+    expect(JSON.stringify(stagedDetail).length).toBeLessThanOrEqual(750);
+    expect(renderTerminalStoryChoiceComparison(full)).not.toContain("Dispatch forecast if chosen:");
+    expect(renderTerminalStoryChoiceDetail(full, drover)).toContain(
       "Dispatch forecast if chosen: 60–80m. On time at 60m; later optional choices can make dispatch delayed.",
     );
 

@@ -305,14 +305,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         querySelector: (selector: string) => { textContent: string | null } | null;
       } | null;
       const stationButton = stationCard?.querySelector("button");
-      const stationDetails = stationCard?.querySelector("details p");
+      const stationDetails = stationCard?.querySelector("details");
       if (!stationButton || !stationDetails) {
         throw new Error("Expected the Station preparation comparison and exact receipt.");
       }
       const stationOption = stationJourney.storyChoice!.options[0]!;
       expect(stationButton.textContent).toContain("Promise / priority:");
-      expect(stationButton.textContent).toContain("Check fit:");
-      expect(stationButton.textContent).toContain(stationOption.summary!.checkFit!);
+      expect(stationButton.textContent).not.toContain("Check fit:");
+      expect(stationButton.textContent).not.toContain(stationOption.summary!.checkFit!);
       expect(stationButton.textContent).toContain("Cost / give up:");
       expect(stationButton.textContent).not.toContain("Purpose:");
       expect(stationButton.textContent).not.toContain("Trigger category:");
@@ -320,10 +320,11 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.summary);
       const forecastLine = stationJourney.storyChoice?.options[0]?.dispatchForecast?.line;
       if (!forecastLine) throw new Error("Expected the authenticated Station timing forecast.");
-      expect(stationButton.textContent).toContain(forecastLine);
+      expect(stationButton.textContent).not.toContain(forecastLine);
       expect(stationButton.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).toContain(stationOption.consequence);
-      expect(stationDetails.textContent).not.toContain(stationOption.summary!.checkFit!);
+      expect(stationDetails.textContent).toContain(stationOption.summary!.checkFit!);
+      expect(stationDetails.textContent).toContain(forecastLine);
       expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.consequence);
       const stationDisclosures = Array.from(
@@ -357,7 +358,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         querySelector: (selector: string) => { textContent: string | null } | null;
       } | null;
       const allocationButton = allocationCard?.querySelector("button");
-      const allocationDetails = allocationCard?.querySelector("details p");
+      const allocationDetails = allocationCard?.querySelector("details");
       if (!allocationButton || !allocationDetails) {
         throw new Error("Expected the Relief Allocation comparison and exact receipt.");
       }
@@ -371,12 +372,10 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       );
       const allocationImpact = allocationJourney.storyChoice?.options[0]?.dispatchImpact?.line;
       if (!allocationImpact) throw new Error("Expected the authenticated relief timing impact.");
-      expect(allocationButton.textContent).toContain(allocationImpact);
-      expect(allocationButton.textContent!.indexOf(allocationImpact)).toBeLessThan(
-        allocationButton.textContent!.indexOf("Promise / priority:"),
-      );
+      expect(allocationButton.textContent).not.toContain(allocationImpact);
       expect(allocationButton.textContent).not.toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).toContain(allocationOption.consequence);
+      expect(allocationDetails.textContent).toContain(allocationImpact);
       expect(allocationDetails.textContent).not.toContain(allocation.options[0]!.preview);
       expect(allocationDetails.textContent).not.toContain(allocation.options[0]!.consequence);
 

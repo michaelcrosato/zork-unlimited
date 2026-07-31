@@ -144,7 +144,8 @@ describe("compact journey projection", () => {
       ...option,
       consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
     });
-    expect(compact.options[0]!.summary).toBe(option.summary);
+    expect(compact.options[0]!.summary).toEqual(option.summary);
+    expect(compact.options[0]!.summary).not.toBe(option.summary);
     expect(compact.options[1]).not.toBe(prompt.options[1]);
     expect(compact.options[1]!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
     expect(comparison.reviewOption).toEqual({
