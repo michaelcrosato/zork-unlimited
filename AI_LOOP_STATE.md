@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 708 -->
+<!-- historical_cycle_count: 709 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - two_tier_station_briefing
+
+- Evidence choice: the structural depth contract was green, but repeated blind reports still named Albany Station's accumulated planning vocabulary and exact modifier stack dense.
+- Surface/effect: direct launch, the three selected plan titles, and optional-slot/clock status stay first-tier; check fit, timing forecasts, proof, complete slot terms, and exact consequences move behind read-only inspection across compact MCP, terminal, and UI.
+- Measured effect: the default departure recap falls 1,083→258 bytes (76%), preparation 3,152→1,680 (47%), and relief allocation 2,784→1,797 (35%) while exact detail remains available on demand.
+- Counterfactual: choices, actions, meaningful decisions, terms, mechanics, RNG, state, saves, hashes, and outcomes are unchanged; shared projection contracts advance to comparison v9, recap v7, and compact v39.
+- Pure evidence: exact-clean Terra seed 73101852 completed The Wolf-Winter through whole-herd/all-wolves-alive LURE in 30 decisions, ended at the first goal, rated clarity/enjoyment 4/4, replay-yes, and had no rejection, bug, loop, or soft-lock.
+- Economy: one accepted first attempt used 2.260M raw / 107.7k uncached input + 6.2k output at 95.23% cache reuse (113,887 useful, about 3,796/decision); the compiler accepts its full Codex authority chain.
+- Self-critique/follow-through: the player still named Station density and multi-room lure recall, so this is presentation/token efficiency rather than experiential certification; repair Spark 0.146 item-ID admission before spending on a broader cohort.
+- Guard: pre/post crawls `20260731T182704Z` / `20260731T185017Z` have zero findings, two independent reviews are clean, and exact code health passes 450 files/3,750 tests plus all 12 packs before this state-only commit.
 
 ### Cycle result - order_neutral_station_dispatch_hub
 
@@ -155,13 +166,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: one measured attempt used 2.806M raw / 115.5k uncached input and 8.1k output tokens at 95.9% cache reuse, or 123,589 useful tokens / 33 decisions (~3,745 each), with no retry or fallback.
 - Self-critique/follow-through: the canary still named Emery's undisclosed Streetwise recovery dependency and staged setup confirmations; preserve both as gameplay-cycle evidence rather than expanding this transport-only increment.
 - Guard: independent reviews are clean, pre/post crawls `20260729T170557Z` / `20260729T180914Z` have zero findings, and exact-tree health passes 449 files/3,722 tests, both typechecks, and all 12 packs.
-
-### Cycle result - started_quest_handoff_dedup
-
-- Evidence choice: the decision-focus cohort named parent/child handoff density 3/3, and the canonical Wolf-Winter start repeated a 2,037-byte parent launch card immediately beside its 2,065-byte accepted start receipt inside a 12,403-byte response.
-- Surface: compact rolling context reduces every already-started quest to `[quest_id, title, anchor_area_id]`; the accepted quest receipt keeps the full selected launch, the child keeps live play, the persistent journal keeps the terms, and every unstarted/legal launch row remains decision-complete.
-- Measured effect: the authenticated handoff falls 1,975 bytes from 12,403 to 10,428 (15.9%) without an inspection turn, new tuple shape, or loss of player-facing decision or consequence information.
-- Counterfactual: launch legality, selected approach, costs, route state, actions, mechanics, RNG, saves, hashes, outcomes, completion/return proof, full receipts, and parent-only restore behavior are unchanged; full/session compact parity and illegal restart are pinned.
-- Pure evidence: exact-clean Terra seed 73073 completed The Wolf-Winter nonlethally and The Gallowmere in 56 accepted decisions, continued at both earlier boundaries, had no rejected action/loop/soft-lock, rated clarity/enjoyment 4/4, and chose replay-yes.
-- Economy: one attempt used 5.913M raw / 176.4k uncached input and 12.5k output tokens at 97.0% cache reuse, or 188,830 useful tokens / 56 decisions (~3,372 each), with no retry or fallback.
-- Self-critique/guard: the player still named compact terminology and raw parent/child handles dense, so progressive legend disclosure is next rather than removing state needed for play; three independent reviews are clean, crawl `20260729T161030Z` has zero findings, and exact-tree health passes 449 files/3,710 tests, both typechecks, and all 12 packs.
