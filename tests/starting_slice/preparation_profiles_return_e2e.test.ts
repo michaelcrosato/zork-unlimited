@@ -1,8 +1,9 @@
 /**
  * SS-F05 end-to-end proof. One same-origin Unaffiliated Courier carries Emery's
  * drover preparation through the generic overworld choice, trusted quest
- * import, a failed lure with successful failure-forward recovery, RPG
- * save/replay, the truthful Albany return, and its one-time Campus service.
+ * import, failed LURE and DRIVE openings with their distinct one-use consumers,
+ * RPG save/replay, full/compact MCP and browser parity, the truthful Albany
+ * return, and its one-time Campus service.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -60,6 +61,41 @@ const ROUTE = [
   "use_winter_feed_sack_on_outer_scent_gate",
   "go_north",
 ] as const;
+const DRIVE_ROUTE = [
+  "use_sheltered_stockway_last_mile",
+  "talk_houndsman",
+  "ask_drive",
+  "ask_commit_drive",
+  "ask_leave",
+  "take_drive_signal_rope_kit",
+  "go_north",
+  "use_drive_signal_rope_kit_on_drive_breach_signal",
+  "use_drive_drover_route_marks",
+  "use_drive_hurdle_recovery",
+  "go_north",
+  "use_drive_signal_rope_kit_on_drive_threshold_line",
+  "go_north",
+  "use_reserve_crisis_priority",
+  "use_reserve_spent_evacuation",
+] as const;
+const DRIVE_OVERRUN_ROUTE = [
+  "use_sheltered_stockway_last_mile",
+  "talk_houndsman",
+  "ask_drive",
+  "ask_commit_drive",
+  "ask_leave",
+  "take_drive_signal_rope_kit",
+  "go_north",
+  "use_drive_signal_rope_kit_on_drive_breach_signal",
+  "use_drive_drover_route_marks",
+  "use_drive_hurdle_recovery",
+  "go_north",
+  "use_drive_signal_rope_kit_on_drive_threshold_line",
+  "go_north",
+  "use_drive_overrun_recovery",
+  "use_reserve_crisis_priority",
+  "use_reserve_spent_evacuation",
+] as const;
 
 type ToolApi = ReturnType<typeof createToolApi>;
 
@@ -115,7 +151,7 @@ function addRoadStrain(api: ToolApi, sessionId: string): void {
   }
 }
 
-function launchPreparedWolf(api: ToolApi) {
+function launchPreparedWolf(api: ToolApi, seed = 5) {
   const started = api.start_overworld({ compact_context: false });
   const overworldSessionId = started.session_id;
   const civicPoi = started.observation.pois[0];
@@ -224,12 +260,264 @@ function launchPreparedWolf(api: ToolApi) {
     session_id: overworldSessionId,
     quest_id: WOLF.id,
     approach_id: "albany:wolf_approach_sheltered_stockway",
-    seed: 5,
+    seed,
   });
   return { launched, overworldSessionId };
 }
 
 describe("SS-F05 — preparation survives Wolf-Winter and the Albany return", () => {
+  it("carries the prepared DRIVE recovery through save, full/compact MCP, and browser parity", () => {
+    const api = createToolApi({ root: ROOT });
+    const { launched, overworldSessionId } = launchPreparedWolf(api, 5);
+    const rpgSessionId = launched.rpg_session_id;
+    const launchedCharacter = api.export_overworld_session({
+      session_id: overworldSessionId,
+    }).snapshot.character;
+    const ui = GameSession.startEmbedded(WOLF_SOURCE, launchedCharacter, WOLF_IMPORTS, 5);
+    expect(ui.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
+
+    let detachedSessionId: string | null = null;
+    let finalStep: ReturnType<ToolApi["step_action"]> | null = null;
+    for (const actionId of DRIVE_ROUTE) {
+      const primary = api.step_action({
+        session_id: rpgSessionId,
+        action_id: actionId,
+        compact_observation: false,
+        compact_events: false,
+      });
+      expect(primary.ok, primary.rejection_reason).toBe(true);
+      const uiStep = ui.choose(actionId);
+      expect(uiStep.ok, uiStep.rejection ?? undefined).toBe(true);
+      expect(ui.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
+      finalStep = primary;
+
+      if (actionId === "use_drive_signal_rope_kit_on_drive_breach_signal") {
+        expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+          flags: { drive_opening_fouled: true, drover_route_prepared: true },
+          vars: { pack_drive: 2, drive_kit_charges: 1, hp: 30 },
+        });
+        const fullIds = api
+          .list_legal_actions({ session_id: rpgSessionId, compact_actions: false })
+          .actions.map((action) => (typeof action === "string" ? action : action.id));
+        const compactIds = api.list_legal_actions({
+          session_id: rpgSessionId,
+          compact_actions: true,
+        }).actions;
+        for (const ids of [fullIds, compactIds]) {
+          expect(ids).toContain("use_drive_drover_route_marks");
+          expect(ids).toContain("use_drive_hurdle_recovery");
+          expect(ids).not.toContain("use_drive_signal_rope_kit_on_drive_breach_signal");
+        }
+        const save = api.save_game({
+          session_id: rpgSessionId,
+          include_source: true,
+          include_content_hash: true,
+        });
+        const loaded = api.load_game({ save: save.save, compact_observation: false });
+        detachedSessionId = loaded.session_id;
+        expect(loaded.state_hash).toBe(primary.state_hash);
+      } else if (detachedSessionId) {
+        const mirror = api.step_action({
+          session_id: detachedSessionId,
+          action_id: actionId,
+          compact_observation: false,
+          compact_events: false,
+        });
+        expect(mirror.ok, mirror.rejection_reason).toBe(true);
+        expect(mirror.state_hash).toBe(primary.state_hash);
+      }
+
+      if (actionId === "use_drive_drover_route_marks") {
+        expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+          flags: { drover_route_attempted: true, drive_opening_fouled: true },
+          vars: { pack_drive: 1, drive_kit_charges: 1, hp: 30 },
+        });
+        expect(primary.observation.description).toMatch(
+          /drop the loose hurdle[^]*living recovery/i,
+        );
+      }
+      if (actionId === "use_drive_signal_rope_kit_on_drive_threshold_line") {
+        expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+          flags: { drive_flank_turned: true },
+          vars: { pack_drive: 2, drive_kit_charges: 0, hp: 30 },
+        });
+      }
+      if (
+        actionId === "go_north" &&
+        api.sessions.get(rpgSessionId).state.flags.drive_flank_turned
+      ) {
+        const crisisIds = api.list_legal_actions({
+          session_id: rpgSessionId,
+          compact_actions: true,
+        }).actions;
+        expect(crisisIds).toEqual(
+          expect.arrayContaining([
+            "use_cattle_crisis_priority",
+            "use_person_crisis_priority",
+            "use_reserve_crisis_priority",
+          ]),
+        );
+        expect(crisisIds).not.toContain("use_drive_overrun_recovery");
+      }
+    }
+
+    if (!finalStep || !detachedSessionId) throw new Error("DRIVE parity route must finish");
+    expect(finalStep.questCompletion?.endingId).toBe("ending_drive_reserve_spent");
+    expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+      ended: true,
+      endingId: "ending_drive_reserve_spent",
+      flags: {
+        drover_route_attempted: true,
+        drive_reserve_spent: true,
+      },
+      vars: { hp: 30, pack_drive: 6 },
+    });
+    expect(api.sessions.get(detachedSessionId).stateHash).toBe(
+      api.sessions.get(rpgSessionId).stateHash,
+    );
+    expect(ui.ending()?.id).toBe("ending_drive_reserve_spent");
+    expect(finalStep.journey.acceptedDecisions).toBeLessThanOrEqual(45);
+  });
+
+  it("keeps a failed prepared DRIVE recovery and its persistent overrun strain in parity", () => {
+    const api = createToolApi({ root: ROOT });
+    const { launched, overworldSessionId } = launchPreparedWolf(api, 13);
+    const rpgSessionId = launched.rpg_session_id;
+    const launchedCharacter = api.export_overworld_session({
+      session_id: overworldSessionId,
+    }).snapshot.character;
+    const ui = GameSession.startEmbedded(WOLF_SOURCE, launchedCharacter, WOLF_IMPORTS, 13);
+    expect(ui.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
+
+    const fullActionIds = (): string[] =>
+      api
+        .list_legal_actions({ session_id: rpgSessionId, compact_actions: false })
+        .actions.map((action) => (typeof action === "string" ? action : action.id));
+    const compactActionIds = (): string[] =>
+      api.list_legal_actions({ session_id: rpgSessionId, compact_actions: true }).actions;
+    const uiActionIds = (): string[] => ui.view().choices.map((choice) => choice.id);
+
+    let detachedSessionId: string | null = null;
+    let finalStep: ReturnType<ToolApi["step_action"]> | null = null;
+    for (const actionId of DRIVE_OVERRUN_ROUTE) {
+      const primary = api.step_action({
+        session_id: rpgSessionId,
+        action_id: actionId,
+        compact_observation: false,
+        compact_events: false,
+      });
+      expect(primary.ok, primary.rejection_reason).toBe(true);
+      const uiStep = ui.choose(actionId);
+      expect(uiStep.ok, uiStep.rejection ?? undefined).toBe(true);
+      expect(ui.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
+      finalStep = primary;
+
+      if (actionId === "use_drive_drover_route_marks") {
+        expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+          flags: { drover_route_attempted: true, drive_opening_fouled: true },
+          vars: { pack_drive: 2, drive_kit_charges: 1, hp: 30 },
+        });
+        for (const ids of [fullActionIds(), compactActionIds(), uiActionIds()]) {
+          expect(ids).toContain("use_drive_hurdle_recovery");
+          expect(ids).not.toContain("use_drive_drover_route_marks");
+          expect(ids).not.toContain("use_drive_signal_rope_kit_on_drive_breach_signal");
+        }
+        const save = api.save_game({
+          session_id: rpgSessionId,
+          include_source: true,
+          include_content_hash: true,
+        });
+        const loaded = api.load_game({ save: save.save, compact_observation: true });
+        detachedSessionId = loaded.session_id;
+        expect(loaded.state_hash).toBe(primary.state_hash);
+      } else if (detachedSessionId) {
+        const mirror = api.step_action({
+          session_id: detachedSessionId,
+          action_id: actionId,
+          compact_observation: true,
+          compact_events: true,
+        });
+        expect(mirror.ok, mirror.rejection_reason).toBe(true);
+        expect(mirror.state_hash).toBe(primary.state_hash);
+      }
+
+      if (actionId === "use_drive_hurdle_recovery") {
+        expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+          flags: { drive_yearling_turned: true, drover_route_attempted: true },
+          vars: { pack_drive: 2, drive_kit_charges: 1, hp: 30 },
+        });
+      }
+      if (
+        actionId === "go_north" &&
+        api.sessions.get(rpgSessionId).state.flags.drive_flank_turned
+      ) {
+        expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+          vars: { pack_drive: 3, drive_kit_charges: 0, hp: 30 },
+        });
+        expect(primary.observation.pressure_tracks).toContainEqual(
+          expect.objectContaining({
+            id: "pack_drive",
+            value: 3,
+            band: expect.objectContaining({ label: "Overrun" }),
+          }),
+        );
+        expect(ui.view().pressureTracks).toContainEqual(
+          expect.objectContaining({
+            id: "pack_drive",
+            value: 3,
+            band: expect.objectContaining({ label: "Overrun" }),
+          }),
+        );
+        for (const ids of [fullActionIds(), compactActionIds(), uiActionIds()]) {
+          expect(ids).toContain("use_drive_overrun_recovery");
+          expect(ids).not.toContain("use_cattle_crisis_priority");
+          expect(ids).not.toContain("use_person_crisis_priority");
+          expect(ids).not.toContain("use_reserve_crisis_priority");
+        }
+      }
+      if (actionId === "use_drive_overrun_recovery") {
+        expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+          vars: { pack_drive: 2, drive_kit_charges: 0, hp: 28 },
+        });
+        expect(primary.observation.pressure_tracks).toContainEqual(
+          expect.objectContaining({
+            id: "pack_drive",
+            value: 2,
+            band: expect.objectContaining({ label: "Crisis" }),
+          }),
+        );
+        for (const ids of [fullActionIds(), compactActionIds(), uiActionIds()]) {
+          expect(ids).not.toContain("use_drive_overrun_recovery");
+          expect(ids).toEqual(
+            expect.arrayContaining([
+              "use_cattle_crisis_priority",
+              "use_person_crisis_priority",
+              "use_reserve_crisis_priority",
+            ]),
+          );
+        }
+      }
+    }
+
+    if (!finalStep || !detachedSessionId) throw new Error("DRIVE overrun route must finish");
+    expect(finalStep.questCompletion?.endingId).toBe("ending_drive_reserve_spent");
+    expect(api.sessions.get(rpgSessionId).state).toMatchObject({
+      ended: true,
+      endingId: "ending_drive_reserve_spent",
+      flags: {
+        drover_route_attempted: true,
+        drive_reserve_spent: true,
+      },
+      vars: { hp: 28, pack_drive: 6 },
+    });
+    expect(api.sessions.get(detachedSessionId).stateHash).toBe(
+      api.sessions.get(rpgSessionId).stateHash,
+    );
+    expect(ui.view().stateHash).toBe(api.sessions.get(rpgSessionId).stateHash);
+    expect(ui.ending()?.id).toBe("ending_drive_reserve_spent");
+    expect(finalStep.journey.acceptedDecisions).toBeLessThanOrEqual(45);
+  });
+
   it("carries the drover profile through MCP/UI replay and consumes its truthful return service", () => {
     const api = createToolApi({ root: ROOT });
     const { launched, overworldSessionId } = launchPreparedWolf(api);

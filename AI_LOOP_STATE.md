@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 706 -->
+<!-- historical_cycle_count: 707 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - drover_drive_recovery
+
+- Evidence choice: Emery's one-use Drover Route recovered a failed LURE cast but had no DRIVE consumer, while a failed first shutter accumulated pack pressure that never changed the final crisis.
+- Surface/effect: after that failed shutter, the prepared DC 12 Streetwise route can remove one pack-pressure beat; success or failure retires it, the loose hurdle remains mandatory, and neither the shutter nor combat reopens.
+- Consequence: unrecovered pressure 3 now forces a persistent 2 HP Overrun before the unchanged cattle/person/reserve priorities; recovery reaches the established pressure-2 crisis without that cost.
+- Counterfactual/proof: prepared success/failure/decline and unprepared routes pin exact state, the shared LURE latch, three ending costs, save/replay, compact/full MCP and UI parity, and exact migration/rejection across 266 historical snapshot tests.
+- Pure evidence: exact-clean Terra seed 7312603 completed The Wolf-Winter through LURE at decision 34, continued through The Gallowmere at 58, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, loop, or soft-lock.
+- Self-critique/follow-through: the canary did not organically exercise DRIVE and repeated the known six-choice planning-density S1, so this lands deterministic depth while strategy distribution and setup compression remain open.
+- Guard: pre/post crawls `20260731T091843Z` / `20260731T101317Z` have zero findings; the new save-copy era remains exact-hash-bound and rejects tampered or adjacent manifests.
 
 ### Cycle result - opening_dispatch_purpose_framing
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seeds 73070–73072 verified 3/3, completed Wolf-Winter nonlethally and Gallowmere, had no rejection/loop/soft-lock, rated clarity/enjoyment 4/4, and chose replay-yes; the corrected compile now has 826 verified reports and 75 eligible pure exits.
 - Economy: three parallel one-attempt runs used 16.817M raw / 515.7k uncached input and 33.8k output at 96.93% cache reuse, or 549,443 useful tokens / 166 accepted decisions (~3,310 each), with no retry or fallback.
 - Self-critique/guard: 3/3 still named the broader legend/setup or parent-child handoff dense, so the next cycle should target that repeated layer rather than delete informed choices; independent reviews are clean, crawl `20260729T153325Z` has zero findings, and health passes 449 files/3,710 tests, both typechecks, and all 12 packs.
-
-### Cycle result - compact_quest_start_location
-
-- Evidence choice: compiled blind feedback carried 130 Albany launch-location mentions, and the compact player still learned Wolf-Winter's Station anchor through a rejected Civic start despite the full surface already naming it.
-- Surface: compact v34 adds one bounded `quest_start_locations` advisory naming the anchor area for each visible, unstarted, off-anchor quest; arrival, start, completion, hidden rows, and rows beyond the shared 12-quest cap omit it, while `quest_starts` remains the sole executable launch authority.
-- Counterfactual: quest choices, launch gates, area routes, state, accepted decisions, saves, content, and world hash are unchanged; the real Civic row adds 67 bytes (~17 tokens, 1.17%) and clone/full/session/MCP parity is pinned.
-- Pure evidence: exact-clean Terra seed 73063 saw `wolf_winter → Albany Station Quarter`, immediately took the Civic-to-Station route without rejection, diverted all three wolves alive through LURE at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, and chose replay-yes.
-- Economy: the one-attempt canary used 2.258M raw / 103.1k uncached input and 6.9k output tokens at 95.44% cache reuse, or 109,979 useful tokens / ~3,666 per accepted decision; no retry or fallback ran.
-- Self-critique/follow-through: this proves direct navigation and removes one wasteful error turn, not Albany pacing; the player still named staged Station commitments and compact terminology dense, so keep that as the cohort-level design question rather than adding more cue copy.
-- Guard: two independent reviews found no issue, pre/post crawls `20260729T133609Z` / `20260729T134809Z` are zero-finding, and health passes 449 files/3,710 tests, both typechecks, and all 12 packs.

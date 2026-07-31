@@ -674,6 +674,16 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
   run([], [...startFouled, ["wedge_paling_rail", "best"], "turn_paling_rail"]);
   run([], [...startFouled, ["maneuver_yearling_wolf_commit_hybrid_strike", "worst"]]);
   run("drover_route_prepared", startFouled);
+  run("drover_route_prepared", [
+    "go_north",
+    "talk_houndsman",
+    "ask_drive",
+    "ask_commit_drive",
+    "ask_leave",
+    "take_drive_signal_rope_kit",
+    "go_north",
+    ["use_drive_signal_rope_kit_on_drive_breach_signal", "worst"],
+  ]);
   run("relief_protocol_prepared", [
     ...startFouled,
     ["wedge_paling_rail", "worst"],

@@ -8,7 +8,10 @@ import {
   OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactBloodiedByreEvacuationPredecessor } from "./fixtures/historical_overworlds.js";
+import {
+  exactBloodiedByreEvacuationPredecessor,
+  exactDroverRouteDriveRecoveryPredecessorSnapshot,
+} from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 
@@ -81,13 +84,13 @@ describe("bloodied-byre manifest snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "e201855d2d55a1eeaedc4306d204a83f49c0190c4ad3687214b7e854112caa24",
+      "7b517d0a2ccae01b9548b415465391c51176c6357facc513c506808e7a115590",
     );
   });
 
   it("rebinds an unfinished immediate-predecessor journey without changing gameplay state", () => {
     const current = wolfBoundary().session.snapshot();
-    const predecessor = structuredClone(current);
+    const predecessor = exactDroverRouteDriveRecoveryPredecessorSnapshot(WORLD, current);
     predecessor.worldHash = OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH;
 
     const restored = OverworldSession.restore(WORLD, predecessor).snapshot();
@@ -98,7 +101,10 @@ describe("bloodied-byre manifest snapshot integrity", () => {
   });
 
   it("rejects the new ending when forged beneath the predecessor manifest hash", () => {
-    const forged = completedBloodiedEvacuation().snapshot();
+    const forged = exactDroverRouteDriveRecoveryPredecessorSnapshot(
+      WORLD,
+      completedBloodiedEvacuation().snapshot(),
+    );
     forged.worldHash = OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH;
 
     expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
@@ -107,7 +113,10 @@ describe("bloodied-byre manifest snapshot integrity", () => {
   });
 
   it("rejects the new ending beneath an older trusted predecessor manifest", () => {
-    const forged = completedBloodiedEvacuation().snapshot();
+    const forged = exactDroverRouteDriveRecoveryPredecessorSnapshot(
+      WORLD,
+      completedBloodiedEvacuation().snapshot(),
+    );
     forged.worldHash = OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH;
 
     expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
