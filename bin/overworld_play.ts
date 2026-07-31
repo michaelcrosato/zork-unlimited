@@ -1005,6 +1005,10 @@ async function main(): Promise<void> {
               fail(`Optional story choice "${interaction.id}" has no structured comparison.`);
               break;
             }
+            const departureRecap = session.view().departureRecap;
+            if (departureRecap) {
+              console.log(renderDepartureRecap(departureRecap).join("\n"));
+            }
             const outcome = await controlTerminalStoryChoice({
               session,
               prompt,

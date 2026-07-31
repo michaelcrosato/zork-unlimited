@@ -114,6 +114,7 @@ function mergeLegendAndExpectContextCoverage(
 function expectPureStoryInspectionEnvelope(
   payload: Record<string, unknown>,
   sessionId: string,
+  expectedDepartureRecap?: unknown,
 ): void {
   expect(payload).toMatchObject({
     ok: true,
@@ -123,9 +124,22 @@ function expectPureStoryInspectionEnvelope(
     unchanged: true,
     story: expect.any(Object),
   });
-  expect(Object.keys(payload).sort()).toEqual(
-    ["ok", "overworld_session_id", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
-  );
+  const expectedKeys = [
+    "ok",
+    "overworld_session_id",
+    "session_id",
+    "snapshot_hash",
+    "story",
+    "unchanged",
+    ...(expectedDepartureRecap === undefined ? [] : ["departure_recap"]),
+  ];
+  expect(Object.keys(payload).sort()).toEqual(expectedKeys.sort());
+  if (expectedDepartureRecap === undefined) {
+    expect(payload).not.toHaveProperty("departure_recap");
+  } else {
+    expect(payload.departure_recap).toEqual(expectedDepartureRecap);
+  }
+  expect(payload).not.toHaveProperty("departure_recap_terms");
   expect(payload).not.toHaveProperty("journey");
   expect(payload).not.toHaveProperty("context");
   expect(payload).not.toHaveProperty("observation");
@@ -1890,6 +1904,7 @@ describe("MCP pure play mode", () => {
         string,
         string,
       ][];
+      departure_recap?: unknown;
     };
     type RpgObservation = {
       exits: { direction: string; to?: string }[];
@@ -2227,6 +2242,10 @@ describe("MCP pure play mode", () => {
           "wolf_winter",
           expect.any(String),
         ]);
+        const stationedDepartureRecap = (stationed.context as CompactAreaContext).departure_recap;
+        if (!stationedDepartureRecap) {
+          throw new Error("expected the authenticated Station departure recap");
+        }
         const inspected = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2238,7 +2257,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        expectPureStoryInspectionEnvelope(inspected, sessionId);
+        expectPureStoryInspectionEnvelope(inspected, sessionId, stationedDepartureRecap);
         const preparationChoice = inspected.story as {
           comparisonVersion?: number;
           kind?: string;
@@ -2299,7 +2318,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        expectPureStoryInspectionEnvelope(detailed, sessionId);
+        expectPureStoryInspectionEnvelope(detailed, sessionId, stationedDepartureRecap);
         expect(detailed.snapshot_hash).toBe(inspected.snapshot_hash);
         const detailedPreparation = detailed.story as Record<string, unknown> & {
           inspectedOption?: Record<string, unknown> & { id?: string; consequence?: string };
@@ -2386,6 +2405,21 @@ describe("MCP pure play mode", () => {
           (option) => option.id === "albany:ally_june_cattle_first",
         );
         if (!cattleFirst) throw new Error("expected June's visible cattle-first option");
+        const allyDepartureRecap = (juneConversation.context as CompactAreaContext).departure_recap;
+        if (!allyDepartureRecap) {
+          throw new Error("expected the authenticated recap beside June's choice");
+        }
+        const inspectedAlly = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: allyChoice.id,
+            },
+          }),
+        );
+        expectPureStoryInspectionEnvelope(inspectedAlly, sessionId, allyDepartureRecap);
+        expect((inspectedAlly.story as { kind?: string }).kind).toBe("ally");
         const allied = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",
@@ -2417,6 +2451,21 @@ describe("MCP pure play mode", () => {
         ]);
         const wolfWinter = areaView(prepared).quests.find((quest) => quest.id === "wolf_winter");
         if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
+        const allocationDepartureRecap = (allied.context as CompactAreaContext).departure_recap;
+        if (!allocationDepartureRecap) {
+          throw new Error("expected the authenticated recap beside relief allocation");
+        }
+        const inspectedAllocation = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: "albany:wolf_relief_allocation",
+            },
+          }),
+        );
+        expectPureStoryInspectionEnvelope(inspectedAllocation, sessionId, allocationDepartureRecap);
+        expect((inspectedAllocation.story as { kind?: string }).kind).toBe("relief_allocation");
         const allocated = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",

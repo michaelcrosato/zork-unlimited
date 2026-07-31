@@ -1074,21 +1074,33 @@ describe("MCP journey surface", () => {
       if (!afterReview.ok) throw new Error(`expected export after ${kind} recap review`);
       expect(afterReview.snapshot).toEqual(snapshot);
       expect(afterReview.snapshot_hash).toBe(compact.snapshot_hash);
-      expect(
-        a.inspect_overworld_session_story({
-          session_id: full.session_id,
-          story_choice_id: storyChoiceId,
-          ...FULL_OVERWORLD,
-        }).story.kind,
-      ).toBe(kind);
-      expect(
-        a.inspect_overworld_session_story({
-          session_id: compact.session_id,
-          story_choice_id: storyChoiceId,
-          compact_context: true,
-          compact_result: true,
-        }).story.kind,
-      ).toBe(kind);
+      const fullInspection = a.inspect_overworld_session_story({
+        session_id: full.session_id,
+        story_choice_id: storyChoiceId,
+        ...FULL_OVERWORLD,
+      });
+      expect(fullInspection.story.kind).toBe(kind);
+      expect(fullInspection.observation.departureRecap).toEqual(expectedFull);
+      const compactInspection = a.inspect_overworld_session_story({
+        session_id: compact.session_id,
+        story_choice_id: storyChoiceId,
+        compact_context: true,
+        compact_result: true,
+      });
+      expect(compactInspection.story.kind).toBe(kind);
+      expect(compactInspection.unchanged).toBe(true);
+      expect(compactInspection.departure_recap).toEqual(expectedCompact);
+      expect(compactInspection).not.toHaveProperty("departure_recap_terms");
+      const optionInspection = a.inspect_overworld_session_story({
+        session_id: compact.session_id,
+        story_choice_id: storyChoiceId,
+        option_id: compactInspection.story.options[0]!.id,
+        compact_context: true,
+        compact_result: true,
+      });
+      expect(optionInspection.departure_recap).toEqual(expectedCompact);
+      expect(optionInspection).not.toHaveProperty("departure_recap_terms");
+      expect(optionInspection.snapshot_hash).toBe(compactInspection.snapshot_hash);
       const recapText = JSON.stringify(full.observation.departureRecap);
       const selectedTitles = new Set(
         expectedFull.entries.flatMap((entry) => (entry.title ? [entry.title] : [])),
@@ -1427,11 +1439,14 @@ describe("MCP journey surface", () => {
     });
     const afterOne = a.export_overworld_session({ session_id: oneInspectionId });
     expect(afterOne).toEqual(beforeOne);
+    const expectedDepartureRecap = OverworldSession.restore(WORLD, beforeOne.snapshot).compactView()
+      .departure_recap;
     expect(comparisonResponse).toMatchObject({
       ok: true,
       session_id: oneInspectionId,
       snapshot_hash: beforeOne.snapshot_hash,
       unchanged: true,
+      departure_recap: expectedDepartureRecap,
       story: {
         comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
         id: preparation.id,
@@ -1448,8 +1463,9 @@ describe("MCP journey surface", () => {
       },
     });
     expect(Object.keys(comparisonResponse).sort()).toEqual(
-      ["ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
+      ["departure_recap", "ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
     );
+    expect(comparisonResponse).not.toHaveProperty("departure_recap_terms");
     expect(comparisonResponse.story.options).toHaveLength(preparation.profiles.length);
     for (const option of comparisonResponse.story.options) {
       expect(option).not.toHaveProperty("consequence");
@@ -1520,8 +1536,10 @@ describe("MCP journey surface", () => {
       OPENING_SELECTION_RECEIPT_WORD_LIMIT,
     );
     expect(Object.keys(firstDetail).sort()).toEqual(
-      ["ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
+      ["departure_recap", "ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
     );
+    expect(firstDetail.departure_recap).toEqual(expectedDepartureRecap);
+    expect(firstDetail).not.toHaveProperty("departure_recap_terms");
     expect(Object.keys(firstDetail.story).sort()).toEqual(
       ["comparisonVersion", "id", "inspectedOption", "kind"].sort(),
     );
