@@ -87,7 +87,8 @@ rooms:
       Grey afternoon rolls across the high moor toward the Gallowmere, the boggy
       hollow northwest where Hedrick says the old sow lairs and his father died this
       morning. Your hunting-knife is secured at your belt. Hedrick waits in the bothy
-      west; the moor path climbs north.
+      west; the moor path climbs north. Your history remains your own; on this moor,
+      the hunt is read in spoor, wind, and knife-work.
     exits:
       - { direction: west, to: shepherd_bothy }
       - { direction: north, to: moor_trail }

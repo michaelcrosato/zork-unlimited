@@ -32,6 +32,8 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const world = loadOverworldManifest(process.cwd());
+const MOOR_EDGE_PROFILE_CONTEXT =
+  "Your history remains your own; on this moor, the hunt is read in spoor, wind, and knife-work.";
 
 function namedCompactContinuity(continuity: EmbeddedQuestCharacterContinuity | undefined) {
   if (!continuity) return undefined;
@@ -161,6 +163,7 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
 
     expect(human.text).toMatch(/hunting-knife is secured at your belt/i);
     expect(human.text).toMatch(/bothy[^]*west[^]*path[^]*north/i);
+    expect(human.text).toContain(MOOR_EDGE_PROFILE_CONTEXT);
     expect(human.inventory).toEqual(["hunting_knife"]);
     expect(human.choices.map((choice) => choice.id)).toContain("examine_hunting_knife");
     expect(human.choices.map((choice) => choice.id)).not.toEqual(
@@ -168,11 +171,13 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     );
 
     expect(full.observation.description).toBe(human.text);
+    expect(full.observation.description).toContain(MOOR_EDGE_PROFILE_CONTEXT);
     expect(full.observation.inventory).toEqual(human.inventory);
     expect(full.observation.available_actions.map((choice) => choice.id)).toEqual(
       human.choices.map((choice) => choice.id),
     );
     expect(compact.context.text).toBe(human.text.trimEnd());
+    expect(compact.context.text).toContain(MOOR_EDGE_PROFILE_CONTEXT);
     expect(compact.context.inv).toEqual(human.inventory);
     expect(compact.context.objects ?? []).not.toContain("hunting_knife");
     expect(compact.context.actions).toEqual(human.choices.map((choice) => choice.id));
@@ -194,6 +199,7 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
 
     expect(embedded.stateHash).toBe(direct.stateHash);
     expect(embedded.facts).toEqual(direct.facts);
+    expect(embedded.text).toContain(MOOR_EDGE_PROFILE_CONTEXT);
     expect(embedded.inventory).toEqual(["hunting_knife"]);
     expect(embedded.characterContinuity).toMatchObject({
       continuity: "same_campaign_character",
@@ -304,9 +310,11 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       compact_observation: true,
     });
     expect(fullOpeningRead.character_continuity).toEqual(full.rpg_session.character_continuity);
+    expect(fullOpeningRead.observation.description).toContain(MOOR_EDGE_PROFILE_CONTEXT);
     expect(compactOpeningRead.character_continuity).toEqual(
       compact.rpg_session.character_continuity,
     );
+    expect(compactOpeningRead.context.text).toContain(MOOR_EDGE_PROFILE_CONTEXT);
     expect(compactOpeningRead).not.toHaveProperty("character_continuity_legend");
 
     const compactInitialStateHash = compactApi.sessions.get(compact.rpg_session_id).stateHash;
