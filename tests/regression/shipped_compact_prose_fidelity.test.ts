@@ -568,7 +568,14 @@ describe("shipped compact prose fidelity", () => {
 
     moveToArea(session, WORLD, ally.area);
     session.talkToCharacter(ally.contact);
-    choose(ally, ally.options, currentStoryChoice(session));
+    const allyPrompt = currentStoryChoice(session);
+    expect(allyPrompt.message).toContain(
+      "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
+    );
+    expect(allyPrompt.message).toContain(
+      'Choose "Leave with a Solo Field Team" to keep the one-rider launch.',
+    );
+    choose(ally, ally.options, allyPrompt, false);
   });
 
   it.each(QUEST_SOURCES)("keeps every player-facing RPG body exact in $name", ({ pack }) => {

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 705 -->
+<!-- historical_cycle_count: 706 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - opening_dispatch_purpose_framing
+
+- Evidence choice: the post-#229 exact-build pilot verified 3/3 but chose LURE 3/3, averaged 3.67 clarity, and repeatedly named Albany setup terminology and stage recall; the compiler selected Station planning density.
+- Surface/effect: registration, duty, source, preparation, allocation, and June's field-team prompt now each state the current choice's purpose and adjacent scope; June names the exact `Leave with a Solo Field Team` action, while terms remain pull-based.
+- Counterfactual: this shared projection changes no choices, action ids, terms, state, mechanics, RNG, saves, hashes, delayed consumers, outcomes, or causal-matrix counts.
+- Pure evidence: exact-clean Terra seed 74261 completed The Wolf-Winter bloodlessly through LURE and The Gallowmere in 58 decisions, continued twice, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, loop, or soft-lock.
+- Economy: one first-attempt Codex 0.146 run used 6.909M raw / 227.7k uncached input and 11.7k output at 96.70% cache reuse (239,397 useful / 58 decisions, about 4,128 each); no retry, recovery, fallback, or fanout ran.
+- Self-critique/follow-through: the canary still named staged terminology and earlier-effect recall dense and again chose LURE, so this earns landing but not a ten-player spend; address retained-plan recall or strategy balance first.
+- Guard: independent review found no P0/P1, pre/post crawls `20260731T052623Z` / `20260731T061208Z` have zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs.
 
 ### Cycle result - adjacent_authenticated_plan_recall
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the one-attempt canary used 2.258M raw / 103.1k uncached input and 6.9k output tokens at 95.44% cache reuse, or 109,979 useful tokens / ~3,666 per accepted decision; no retry or fallback ran.
 - Self-critique/follow-through: this proves direct navigation and removes one wasteful error turn, not Albany pacing; the player still named staged Station commitments and compact terminology dense, so keep that as the cohort-level design question rather than adding more cue copy.
 - Guard: two independent reviews found no issue, pre/post crawls `20260729T133609Z` / `20260729T134809Z` are zero-finding, and health passes 449 files/3,710 tests, both typechecks, and all 12 packs.
-
-### Cycle result - checked_action_terms
-
-- Evidence choice: the exact merged-build five-Terra cohort took the role-first standard packet 5/5 and named setup density 5/5, so its predeclared gate stopped at five; the recurring hidden-check-terms finding set this focused change.
-- Surface: legal checked actions now expose the live skill, modifier, d20, DC, and bounded authored stakes through full/compact MCP, CLI, and UI; raw effects stay hidden and executable labels/action ids are unchanged.
-- Economy: a real Drover state grows by 261 bytes (~65 tokens, 15.3%) with its action array byte-identical, cheaper than another inspect/clarification turn; the five-player adaptive stop avoided an estimated second 697k-useful-token tranche.
-- Pure evidence: exact-candidate Spark seeds 73062, 73067, and 73068 all verified The Wolf-Winter across HUNT/LURE outcomes, rated clarity/enjoyment 4/4 with replay-yes, saw live +modifier/DC checks, and raised no hidden-odds complaint.
-- Spend integrity: the three measured Spark runs used 365.3k useful tokens across 114 decisions (~3,204/decision) with no retries; five-way startup produced one verified and four unmetered client-cache failures, while serialized seed 73068 passed 1/1, so serialize Spark startup until that client defect is fixed.
-- Self-critique/follow-through: pure play exercised numeric disclosure but not the three optional preparation-stakes strings; exact transport/leakage tests prove those strings, while the next cohort must measure comprehension and the next cycle should fix the repeated compact Albany Station launch cue.
-- Guard: independent architecture, UI, and save/hash reviews found no P1/P2; post-change crawl `20260729T122241Z` is zero-finding, and health passes 449 files/3,708 tests, both typechecks, and all 12 packs.

@@ -101,7 +101,10 @@ describe("Station dispatch impact cards", () => {
     expect(rendered.indexOf("Dispatch: +5m delay → 65m, delayed.")).toBeLessThan(
       rendered.indexOf("Promise / priority:"),
     );
-    expect(rendered).not.toContain("Purpose:");
+    expect(rendered).toContain(
+      "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
+    );
+    expect(rendered.indexOf("Purpose:")).toBeLessThan(rendered.indexOf("Promise / priority:"));
 
     const api = createToolApi({ root: process.cwd() });
     const started = api.start_overworld({ compact_context: false });

@@ -1412,9 +1412,11 @@ describe("OverworldSession", () => {
       };
       const markup = renderStoryScreen(journey, departureRecap, true);
 
-      expect(markup).toContain("Mission: The Wolf-Winter");
       expect(markup).toContain(
-        "Last-mile route costs and field tradeoffs remain on its launch card.",
+        "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
+      );
+      expect(markup).toContain(
+        "Route costs and tactics remain on The Wolf-Winter&#x27;s launch card.",
       );
       expect(markup).not.toContain("Old Cade");
       expect(markup).not.toContain("wolf pack coming down with the weather");
@@ -1449,6 +1451,9 @@ describe("OverworldSession", () => {
         true,
       );
       expect(allocationMarkup).toContain("Choose what Albany can protect");
+      expect(allocationMarkup).toContain(
+        "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
+      );
       assertRecapRows(allocationMarkup, allocationRecap, 4, 2);
 
       session.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
@@ -1461,6 +1466,9 @@ describe("OverworldSession", () => {
       if (!allyRecap) throw new Error("expected Station recall beside field-team choice");
       const allyMarkup = renderStoryScreen(allyJourney, allyRecap, false);
       expect(allyMarkup).toContain("Choose who leaves Albany");
+      expect(allyMarkup).toContain(
+        "Purpose: choose June&#x27;s field-team terms or the solo team; every Wolf-Winter route stays available.",
+      );
       assertRecapRows(allyMarkup, allyRecap, 5, 1);
     } finally {
       await server.close();
