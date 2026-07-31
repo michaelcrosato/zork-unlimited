@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 710 -->
+<!-- historical_cycle_count: 711 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - strict_wrapper_rejection_diagnostic
+
+- Evidence choice: Spark 0.146 calibration verified 3/10 slots across 18 attempts; 15 attempts died at the strict wrapper gate with usage unrecoverable, so scaling could neither identify the mismatch nor account for spend honestly.
+- Surface: an already UUID/cwd/file-bound private rejection writes one exclusive ≤4 KiB mode-0600 noncanonical structural record with a closed failure enum and byte/hash plus build/client commitments; raw wrapper, provider output, prose, paths, reasoning, and token data are never retained.
+- Fleet/accounting: strict attempts archive only that validated record plus a fixed safe log, delete raw provider artifacts, and count as launched/unrecoverable with `complete:false` instead of zero or an aggregation crash.
+- Counterfactual: strict acceptance, exit-43 tree kill, canonical evidence, ordinary usage, and all game code, content, actions, mechanics, RNG, saves, hashes, and outcomes are unchanged.
+- Pure evidence: exact-clean Terra seed 73101854 completed The Wolf-Winter through whole-herd/all-wolves-alive LURE at decision 29, continued twice, won The Gallowmere at 53, rated clarity/enjoyment 4/4, replay-yes, and had no rejection, stuck state, loop, or soft-lock.
+- Economy: the first attempt used 5.393M raw / 179,037 uncached input + 12,739 output at 96.67% input-cache reuse (191,776 useful, about 3,619/decision), with no retry, fallback, or fanout.
+- Self-critique/follow-through: compact-state density, surprising local profiles, and one S1 road-event surface remain; these support the staged handoff lane rather than another tooling expansion.
+- Guard: independent least-privilege and implementation reviews are clean; crawls `20260731T210104Z` / `20260731T211549Z` have zero findings, and serial health passes 450 files/3,756 tests plus all 12 packs.
 
 ### Cycle result - spark_0146_item_id_authority
 
@@ -157,13 +168,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 73076 inspected and chose the standard packet, completed The Wolf-Winter through a recovered bloodless LURE in 32 decisions, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, or bug.
 - Economy: one attempt used 2.566M raw / 120.9k uncached input and 7.5k output tokens at 95.3% cache reuse, or 128,382 useful tokens / 32 decisions (about 4,012 each), with no retry or fallback.
 - Self-critique/guard: the player still named the accumulated pre-departure modifier stack dense, so target a lighter truthful recap rather than fewer decisions; three independent reviews are clean, pre/post crawls `20260729T210911Z` / `20260729T215403Z` have zero findings, browser parity is clean, and exact-tree health passes 449 files/3,728 tests, both typechecks, and all 12 packs.
-
-### Cycle result - character_relative_preparation_check_fit
-
-- Evidence choice: exact-clean Terra seeds 73056 and 73074 independently exposed Emery's one-use Drover Route as hiding its Streetwise dependency until use or exact inspection.
-- Surface: optional Albany preparation cards now show character-relative `Repair/Streetwise/Mediation +N vs DC 12` across compact MCP comparison/detail, terminal, and UI; exact odds, stakes, outcomes, and recovery remain field-timed.
-- Measured effect: the complete three-card compact comparison grows 1,942->2,045 bytes (+103, about 26 tokens) and exact Drover detail 357->393 (+36, about 9), cheaper than another inspect or clarification turn.
-- Counterfactual: this is presentation only; choices, checks, DC, RNG, costs, consequences, receipts, journals, hashes, saves, and world/content versions are unchanged, while absent legacy disclosure remains absent and migration hashes stay pinned.
-- Pure evidence: exact-clean Terra seed 73075 completed The Wolf-Winter through fortification in 17 decisions, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, or bug; it skipped optional preparation, so it is build/retention evidence rather than direct proof of the new line.
-- Economy: one attempt used 764.1k raw / 60.1k uncached input and 5.0k output tokens at 92.1% cache reuse, or 65,104 useful tokens / 17 decisions (about 3,830 each), with no retry or fallback.
-- Self-critique/guard: early role/duty terminology remains dense; browser verification showed the Courier's visible `Streetwise +4 vs DC 12` with no console error, three independent reviews are clean, pre/post crawls `20260729T194117Z` / `20260729T200038Z` have zero findings, and exact-tree health passes 449 files/3,723 tests, both typechecks, and all 12 packs.
