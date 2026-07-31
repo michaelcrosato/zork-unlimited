@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 702 -->
+<!-- historical_cycle_count: 703 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - standard_packet_strategy_framing
+
+- Evidence choice: the authenticated ten-Terra pilot completed The Wolf-Winter 10/10 but chose LURE 9/10, used the initially visible standard packet 7/10, and named dense Albany planning in every report.
+- Surface/effect: each role's standard packet now leads with its existing field-strategy effects, while the reveal explicitly offers FORTIFY/LURE/DRIVE duties and says the packet is convenient rather than recommended; this adds only 44–84 visible characters (about 11–21 tokens) by role.
+- Counterfactual: this is a generic projection change; doctrine/duty/source choices, actions, mechanics, RNG, saves, world and Wolf-Winter hashes, content, and outcomes are unchanged.
+- Pure evidence: exact-clean Terra seed 74231 used the new reveal, inspected and manually chose Aid-Only plus Hayden, completed The Wolf-Winter through bloodless LURE and The Gallowmere in 54 decisions, continued twice, rated clarity/enjoyment 4/4, and chose replay-yes.
+- Economy: one first-attempt Codex 0.146 run used 5.107M raw / 176.2k uncached input and 11.5k output at 96.55% cache reuse (187,670 useful / 54 decisions, about 3,475 each); no retry, recovery, fallback, or fanout ran.
+- Self-critique/follow-through: one canary proves direct comparison uptake, not a population strategy shift; it still chose LURE and named policy-dense setup, so measure distribution on the next frozen ten-player pilot before another opening change.
+- Guard: independent review found no P0/P1; combined-build crawl `20260731T010243Z` has zero findings, world/Wolf sources remain byte-identical to merged main, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
 
 ### Cycle result - gallowmere_local_profile_context
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: one canary recreated but did not select the preset, so this improves route relevance without proving uptake; measure doctrine selection only on the immutable merged-build cohort before changing the opening again.
 - Economy: the one-attempt canary used 5.559M raw / 170.1k uncached input and 10.3k output tokens at 96.94% cache reuse, or 3,469 useful tokens per accepted decision; no retry or fallback ran.
 - Guard: independent reviews closed a 44-word receipt overflow and a wrong source name, crawl `20260729T082814Z` is zero-finding, and final health passes 449 files/3,702 tests, both typechecks, and all 12 packs.
-
-### Cycle result - progressive_starting_doctrines
-
-- Evidence choice: the strict ten-Terra merged-build cohort completed 10/10 but every player called the six-choice Albany setup dense, so this cycle changes required-choice quantity and timing rather than adding more explanatory synonyms.
-- Surface: three visible Starting Doctrines commit one authored role/duty/source bundle in one player input while recording the same three canonical decisions and journals; all four custom roles and every later optional preparation remain selectable.
-- Counterfactual: doctrine routes reuse existing costs, promises, benefits, quest discovery, and save authority; exact pre-doctrine registration saves restore into the grouped choice, and unknown world hashes still fail closed.
-- Pure evidence: exact-clean Terra seed 73043 chose the preserved custom Road-Warden route, completed The Wolf-Winter through LURE at decision 30, continued twice, completed The Gallowmere at 55, rated clarity/enjoyment 4/5, stayed unstuck, and reported no S2+ issue.
-- Self-critique/follow-through: the canary proves custom-route parity, not doctrine uptake or density lift; run the strict clean merged-build cohort and measure doctrine selection before changing another opening layer.
-- Economy: the one-attempt canary used 6.166M raw / 180.4k uncached input and 14.1k output tokens at 97.08% cache reuse, or 3,535 useful tokens per accepted decision; no retry or model fallback ran.
-- Guard: three independent reviews closed receipt-cost, historical-save, projection, and minimal-fixture gaps; crawl `20260729T055922Z` is zero-finding, and health passes 449 files/3,699 tests, both typechecks, and all 12 packs.

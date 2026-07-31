@@ -249,13 +249,23 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(wordCount(oath.message)).toBeLessThanOrEqual(50);
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
+    const roadWardenPacket = oath.options.find((option) => option.id === standardPacket.id)!;
+    expect(roadWardenPacket.summary?.commitment).toBe(
+      "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT. " +
+        "Duty: Negotiate Aid-Only Duty; evidence: Take Hayden's Frost-Heave Report.",
+    );
+    expect(roadWardenPacket.summary?.commitment).not.toContain(standardPacket.summary);
+    const compactOath = compactJourneyStoryChoiceComparison(oath);
+    expect(
+      compactOath.options.find((option) => option.id === standardPacket.id)?.summary?.commitment,
+    ).toBe(roadWardenPacket.summary?.commitment);
     expect(oath.progressiveDisclosure).toEqual({
       initialOptionIds: [standardPacket.id],
       reveal: {
         id: "customize_duty_and_evidence",
-        label: "Compare individual duties",
+        label: "Compare FORTIFY, LURE, or DRIVE duties",
         description:
-          "Review individual duties without choosing; selecting one leads to its evidence choice.",
+          "The standard packet is convenient, not a recommended resolution; compare individual duties before choosing one and its evidence.",
         optionIds: RELIEF_OATH.options.map((option) => option.id),
       },
     });

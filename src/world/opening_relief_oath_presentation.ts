@@ -45,7 +45,7 @@ export function presentOpeningReliefOath(
           id: doctrine.id,
           label: `Standard packet — ${doctrine.title}`,
           commitment:
-            `${doctrine.summary} Duty: ${doctrineOath!.title}; ` +
+            `${doctrine.trigger_category} Duty: ${doctrineOath!.title}; ` +
             `evidence: ${doctrineSource!.title}.`,
           exactBenefit: doctrine.trigger_category,
           immediateCost: doctrine.immediate_cost,
@@ -92,9 +92,9 @@ export function presentOpeningReliefOath(
         ]) as JourneyStoryChoiceProgressiveDisclosure["initialOptionIds"],
         reveal: Object.freeze({
           id: "customize_duty_and_evidence",
-          label: "Compare individual duties",
+          label: "Compare FORTIFY, LURE, or DRIVE duties",
           description:
-            "Review individual duties without choosing; selecting one leads to its evidence choice.",
+            "The standard packet is convenient, not a recommended resolution; compare individual duties before choosing one and its evidence.",
           optionIds: Object.freeze(
             oathOptions.map((option) => option.id),
           ) as JourneyStoryChoiceProgressiveDisclosure["reveal"]["optionIds"],
