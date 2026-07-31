@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 701 -->
+<!-- historical_cycle_count: 702 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - gallowmere_local_profile_context
+
+- Evidence choice: verified Terra seeds 74202, 74210, and 74223 independently named Gallowmere's unexplained switch from persistent campaign state to its quest-local lore/tracking profile.
+- Surface: Moor's Edge now says `Your history remains your own; on this moor, the hunt is read in spoor, wind, and knife-work`, giving direct and embedded UI/full/compact starts an in-fiction scope cue before the local values appear.
+- Counterfactual: imports remain empty; parent health/background, child HP/skills/equipment, actions, checks, RNG, saves, hashes, outcomes, and return persistence are unchanged.
+- Pure evidence: exact-clean Terra seed 74230 completed The Wolf-Winter by bloodless LURE in 30 decisions, ended at the first goal with clarity/enjoyment 4/4 and replay-yes, and had no rejection, stuck state, loop, or soft-lock; it did not continue into The Gallowmere, so it is build evidence rather than direct copy uptake.
+- Economy: one first-attempt run used 2.164M raw / 105.7k uncached input and 8.0k output at 95.12% cache reuse (113,691 useful / 30 decisions, about 3,790 each); no retry, recovery, fallback, or fanout ran.
+- Self-critique/follow-through: deterministic regressions prove the line across direct/embedded UI and full/compact MCP, while the canary again named dense Albany planning and the standard packet's two-decision receipt; advance the authenticated pilot's strategy-framing signal next.
+- Guard: independent review replaced a misleading Albany-import claim with standalone-safe wording; crawls `20260730T230127Z` / `20260730T235110Z` have zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
 
 ### Cycle result - codex_0146_exact_capture_profile
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/follow-through: the canary proves custom-route parity, not doctrine uptake or density lift; run the strict clean merged-build cohort and measure doctrine selection before changing another opening layer.
 - Economy: the one-attempt canary used 6.166M raw / 180.4k uncached input and 14.1k output tokens at 97.08% cache reuse, or 3,535 useful tokens per accepted decision; no retry or model fallback ran.
 - Guard: three independent reviews closed receipt-cost, historical-save, projection, and minimal-fixture gaps; crawl `20260729T055922Z` is zero-finding, and health passes 449 files/3,699 tests, both typechecks, and all 12 packs.
-
-### Cycle result - roleplay_first_albany_receipts
-
-- Evidence choice: all ten exact pilot reports independently named Albany's six pre-field commitments as dense, so this cycle changes their information timing rather than adding more explanatory synonyms.
-- Surface: current registration, oath, source, preparation, relief, and ally cards share a 32-word promise/cost/boundary receipt; immediate MCP/UI/terminal results stay compact, full journals remain authoritative, and exact checks reappear at their Wolf-Winter action.
-- Counterfactual: ids, options, costs, time, dispatch receipts, legal actions, checks, RNG, pressure, outcomes, saves, and uncategorized legacy presentation are unchanged; 212 focused tests pin current/legacy and full/compact parity.
-- Pure evidence: exact-clean Terra seed 73031 diverted all three Wolf-Winter wolves with the herd whole at decision 30, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and produced no rejected action or mechanical bug.
-- Self-critique/follow-through: the one canary still called the aggregate Station sequence dense and raised an S1 compact-inspection memory issue; do not patch toward one player, and let the predeclared strict ten-player merged-build cohort measure both signals.
-- Economy: authenticated summary v8 measured 1.975M input / 92.3k uncached input and 7.6k output tokens at 95.33% cache reuse, or 3,330 useful tokens per accepted decision; 1/1 attempts was measured with no retry.
-- Guard: three independent reviews closed legacy-shape, immediate-entry, and duplicate-detail gaps; crawl `20260729T033928Z` is zero-finding, and health passes 443 files/3,685 tests, both typechecks, and all 12 packs on candidate `85a1ee81`.
