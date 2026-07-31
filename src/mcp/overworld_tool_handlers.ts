@@ -827,14 +827,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         responseOptions,
         args.session_id,
         "result",
-        (session) => {
-          if (args.story_choice_id === undefined && session.journey().storyChoice === null) {
-            throw new Error(
-              "There is no presented story consequence; optional departure stories require story_choice_id.",
-            );
-          }
-          return session.chooseJourneyStory(args.choice, args.story_choice_id);
-        },
+        (session) => session.chooseJourneyStory(args.choice, args.story_choice_id),
         compactOverworldJourneyStoryChoiceResult,
         OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.journey_story_choice,
       );

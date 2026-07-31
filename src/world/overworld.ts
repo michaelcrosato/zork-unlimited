@@ -13,6 +13,7 @@ import {
 } from "./campaign_consequences.js";
 import {
   CampaignCharacterIdSchema,
+  serializeCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
 import {
@@ -2390,6 +2391,138 @@ function assertOpeningAllyIntegrity(world: OverworldManifest): void {
   }
 }
 
+type OpeningDispatchIntegrityChoice = Readonly<
+  | { kind: "preparation"; optionId: string }
+  | { kind: "relief_allocation"; optionId: string }
+  | { kind: "ally"; optionId: string }
+>;
+
+function openingDispatchChoicePermutations(
+  choices: readonly OpeningDispatchIntegrityChoice[],
+): readonly (readonly OpeningDispatchIntegrityChoice[])[] {
+  if (choices.length < 2) return [choices];
+  return choices.flatMap((choice, index) =>
+    openingDispatchChoicePermutations(choices.filter((_, candidate) => candidate !== index)).map(
+      (tail) => [choice, ...tail],
+    ),
+  );
+}
+
+/**
+ * The complete current Station chain is an order-neutral support hub. Validate
+ * every optional subset and permutation against every reachable civic prefix,
+ * including paid terms, so content cannot quietly reintroduce P→R→J ordering.
+ */
+function assertOpeningDispatchHubIntegrity(world: OverworldManifest): void {
+  const registration = world.opening_registration;
+  const reliefOath = world.opening_relief_oath;
+  const leadSource = world.opening_lead_source;
+  const preparation = world.opening_preparation;
+  const reliefAllocation = world.opening_relief_allocation;
+  const ally = world.opening_ally;
+  if (
+    !registration ||
+    !reliefOath ||
+    !leadSource ||
+    !preparation ||
+    !reliefAllocation ||
+    !ally ||
+    reliefOath.after_registration !== registration.id ||
+    leadSource.after_registration !== registration.id ||
+    preparation.after_lead_source !== leadSource.id ||
+    reliefAllocation.after_preparation !== preparation.id ||
+    ally.after_preparation !== preparation.id ||
+    new Set([
+      reliefOath.target_quest,
+      leadSource.target_quest,
+      preparation.target_quest,
+      reliefAllocation.target_quest,
+      ally.target_quest,
+    ]).size !== 1
+  ) {
+    return;
+  }
+
+  for (const registrationProfile of registration.profiles) {
+    for (const oathOption of reliefOath.options) {
+      const afterOath = applyOpeningReliefOathOption({
+        scene: reliefOath,
+        character: registrationProfile.character,
+        optionId: oathOption.id,
+      }).characterAfter;
+      for (const leadOption of leadSource.options) {
+        const afterSource = applyOpeningLeadSourceOption({
+          scene: leadSource,
+          character: afterOath,
+          optionId: leadOption.id,
+        }).characterAfter;
+        for (const preparationOption of [null, ...preparation.profiles] as const) {
+          for (const allocationOption of [null, ...reliefAllocation.options] as const) {
+            for (const allyOption of [null, ...ally.options] as const) {
+              const selected: OpeningDispatchIntegrityChoice[] = [
+                ...(preparationOption
+                  ? [{ kind: "preparation" as const, optionId: preparationOption.id }]
+                  : []),
+                ...(allocationOption
+                  ? [
+                      {
+                        kind: "relief_allocation" as const,
+                        optionId: allocationOption.id,
+                      },
+                    ]
+                  : []),
+                ...(allyOption ? [{ kind: "ally" as const, optionId: allyOption.id }] : []),
+              ];
+              let expected: string | null = null;
+              for (const order of openingDispatchChoicePermutations(selected)) {
+                let character = afterSource;
+                let minutes = 0;
+                for (const choice of order) {
+                  if (choice.kind === "preparation") {
+                    const applied = applyOpeningPreparationProfile({
+                      scene: preparation,
+                      character,
+                      profileId: choice.optionId,
+                    });
+                    character = applied.characterAfter;
+                    minutes += applied.terms.minutes;
+                  } else if (choice.kind === "relief_allocation") {
+                    const applied = applyOpeningReliefAllocationOption({
+                      scene: reliefAllocation,
+                      character,
+                      optionId: choice.optionId,
+                    });
+                    character = applied.characterAfter;
+                    minutes += applied.terms.minutes;
+                  } else {
+                    const applied = applyOpeningAllyOption({
+                      scene: ally,
+                      character,
+                      optionId: choice.optionId,
+                    });
+                    character = applied.characterAfter;
+                    minutes += applied.terms.minutes;
+                  }
+                }
+                const signature = JSON.stringify({
+                  character: serializeCampaignCharacterState(character),
+                  minutes,
+                });
+                if (expected === null) expected = signature;
+                else if (signature !== expected) {
+                  throw new Error(
+                    `Opening dispatch support ${selected.map((choice) => choice.optionId).join(", ")} changes material state when chosen in a different order.`,
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 function assertExplorationSitesIntegrity(
   world: OverworldManifest,
   nodes: Map<string, OverworldNode>,
@@ -3539,6 +3672,7 @@ export function assertOverworldIntegrity(world: OverworldManifest): void {
   assertQuestsIntegrity(world, nodes, areaIds, areaHomes);
   assertOpeningReliefAllocationIntegrity(world);
   assertOpeningAllyIntegrity(world);
+  assertOpeningDispatchHubIntegrity(world);
 
   assertExplorationSitesIntegrity(world, nodes, regionNames, areaIds, areaHomes);
 

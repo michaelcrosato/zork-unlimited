@@ -163,7 +163,23 @@ describe("MCP server registration", () => {
     expect(
       TOOL_REGISTRATIONS.find((candidate) => candidate.name === "talk_overworld_session_contact")
         ?.description,
-    ).toContain("ready departure_contact_leads entry");
+    ).toContain("ready departure_contact_leads contact");
+    expect(
+      TOOL_REGISTRATIONS.find((candidate) => candidate.name === "talk_overworld_session_contact")
+        ?.description,
+    ).toContain("support choices are order-neutral");
+
+    const chooseStory = TOOL_REGISTRATIONS.find(
+      (candidate) => candidate.name === "choose_overworld_session_story",
+    );
+    expect(chooseStory?.description).toContain(
+      "story_choice_id disambiguates departure interactions",
+    );
+    const chooseBlock = registeredToolBlock("choose_overworld_session_story");
+    expect(chooseBlock).toContain(
+      "Visible story option id; unique departure options are inferred.",
+    );
+    expect(chooseBlock).toContain("Optional departure_interactions id for disambiguation.");
   });
 
   it("keeps exact departure terms behind the read-only compact-context request", () => {

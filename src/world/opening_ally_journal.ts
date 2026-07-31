@@ -3,7 +3,11 @@ import {
   cloneCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
+import { replayOpeningDispatchChoices } from "./opening_dispatch_choice_replay.js";
+import type { OpeningLeadSourceJournalProof } from "./opening_lead_source_journal.js";
+import type { OpeningPreparation } from "./opening_preparation.js";
 import type { OpeningPreparationJournalProof } from "./opening_preparation_journal.js";
+import type { OpeningReliefAllocation } from "./opening_relief_allocation.js";
 import type { OpeningReliefAllocationJournalProof } from "./opening_relief_allocation_journal.js";
 import {
   applyOpeningAllyOption,
@@ -178,6 +182,9 @@ export function proveOpeningAllyJournal(args: {
   scene: OpeningAlly | null | undefined;
   preparationProof: OpeningPreparationJournalProof;
   reliefAllocationProof?: OpeningReliefAllocationJournalProof;
+  leadSourceProof?: OpeningLeadSourceJournalProof;
+  preparationScene?: OpeningPreparation | null;
+  reliefAllocationScene?: OpeningReliefAllocation | null;
   journalEntries: readonly OverworldJournalEntry[];
   expectedTown: string | null;
   trustedLegacySourceWorldHash?: string | null;
@@ -190,21 +197,57 @@ export function proveOpeningAllyJournal(args: {
     args.reliefAllocationProof?.option !== null && args.reliefAllocationProof?.option !== undefined;
   const allocationJournalIndex = args.reliefAllocationProof?.journalIndex ?? null;
   const allyEvidenceIndex = selections[0]?.index ?? offers[0]?.index ?? legacies[0]?.index ?? null;
-  // Current journeys allocate relief before speaking to June. A migrated F12
-  // journey may already have committed its field team when the real F06 offer
-  // is added, so in that chronology the later allocation cannot be replayed as
-  // an input to the earlier ally choice.
-  const allocationPrecedesAlly =
-    allocationSelected &&
-    allocationJournalIndex !== null &&
-    allyEvidenceIndex !== null &&
-    allocationJournalIndex > allyEvidenceIndex;
-  const characterBeforeAlly = allocationPrecedesAlly
-    ? args.reliefAllocationProof!.characterAfterAllocation
-    : args.preparationProof.characterAfterPreparation;
-  const predecessorJournalIndex = allocationPrecedesAlly
-    ? allocationJournalIndex
-    : args.preparationProof.journalIndex;
+  const sourceSelected =
+    args.leadSourceProof?.option !== null &&
+    args.leadSourceProof?.option !== undefined &&
+    args.leadSourceProof.journalIndex !== null;
+  const preparationSelected =
+    args.preparationProof.profile !== null && args.preparationProof.journalIndex !== null;
+  const hasOrderNeutralReplay =
+    sourceSelected &&
+    args.preparationScene !== undefined &&
+    args.reliefAllocationScene !== undefined;
+  const characterBeforeAlly = hasOrderNeutralReplay
+    ? replayOpeningDispatchChoices({
+        characterAfterSource: args.leadSourceProof!.characterAfterSource,
+        choices: [
+          ...(preparationSelected && args.preparationScene
+            ? [
+                {
+                  kind: "preparation" as const,
+                  journalIndex: args.preparationProof.journalIndex!,
+                  scene: args.preparationScene,
+                  optionId: args.preparationProof.profile!.id,
+                },
+              ]
+            : []),
+          ...(allocationSelected && allocationJournalIndex !== null && args.reliefAllocationScene
+            ? [
+                {
+                  kind: "relief_allocation" as const,
+                  journalIndex: allocationJournalIndex,
+                  scene: args.reliefAllocationScene,
+                  optionId: args.reliefAllocationProof!.option!.id,
+                },
+              ]
+            : []),
+        ],
+        ...(allyEvidenceIndex === null ? {} : { beforeJournalIndex: allyEvidenceIndex }),
+      })
+    : allocationSelected &&
+        allocationJournalIndex !== null &&
+        allyEvidenceIndex !== null &&
+        allocationJournalIndex > allyEvidenceIndex
+      ? args.reliefAllocationProof!.characterAfterAllocation
+      : args.preparationProof.characterAfterPreparation;
+  const predecessorJournalIndex = sourceSelected
+    ? args.leadSourceProof!.journalIndex
+    : allocationSelected &&
+        allocationJournalIndex !== null &&
+        allyEvidenceIndex !== null &&
+        allocationJournalIndex > allyEvidenceIndex
+      ? allocationJournalIndex
+      : args.preparationProof.journalIndex;
   if (selections.length > 1 || offers.length > 1 || legacies.length > 1) {
     throw new Error(
       "Overworld session snapshot must contain at most one ally offer, choice, and legacy marker.",
@@ -216,11 +259,7 @@ export function proveOpeningAllyJournal(args: {
     );
   }
   if (selections.length === 0 && offers.length === 0 && legacies.length === 0) {
-    return emptyAllyProof(
-      allocationSelected
-        ? args.reliefAllocationProof!.characterAfterAllocation
-        : args.preparationProof.characterAfterPreparation,
-    );
+    return emptyAllyProof(characterBeforeAlly);
   }
   if (!args.scene) {
     throw new Error(
@@ -228,17 +267,23 @@ export function proveOpeningAllyJournal(args: {
     );
   }
   if (
-    (!args.preparationProof.profile && !args.preparationProof.legacy) ||
-    args.preparationProof.journalIndex === null
+    !sourceSelected &&
+    (!args.preparationProof.profile || args.preparationProof.journalIndex === null)
   ) {
     throw new Error(
-      "Overworld session snapshot opening ally evidence has no resolved preparation.",
+      "Overworld session snapshot opening ally evidence has no certified opening source.",
     );
   }
   const scene = parseOpeningAlly(args.scene);
 
   const legacy = legacies[0];
   if (legacy) {
+    if (
+      (!args.preparationProof.profile && !args.preparationProof.legacy) ||
+      args.preparationProof.journalIndex === null
+    ) {
+      throw new Error("Overworld session snapshot legacy ally has no resolved preparation.");
+    }
     const sourceWorldHash = openingAllyLegacySourceWorldHash(legacy.entry.id);
     if (
       !sourceWorldHash ||
@@ -318,7 +363,7 @@ export function proveOpeningAllyJournal(args: {
     offered.index >= predecessorJournalIndex
   ) {
     throw new Error(
-      "Overworld session snapshot ally offer is not bound to June's post-preparation contact, departure location, time, and journey proof.",
+      "Overworld session snapshot ally offer is not bound to June's post-source contact, departure location, time, and journey proof.",
     );
   }
   if (selections.length === 0) {

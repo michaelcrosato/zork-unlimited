@@ -67,18 +67,18 @@ function boundedSummary(summary: string): string {
 
 function dispatchBriefing(window: QuestDispatchPresentationWindow | undefined): string | null {
   if (!window) return null;
-  if (window.status === "june_commitment_pending") {
+  if (window.status === "support_choices_open") {
     const { minimum, maximum } = window.finalMinutes;
     const finalRange =
       minimum === maximum ? `${String(minimum)}m` : `${String(minimum)}–${String(maximum)}m`;
     const pressure =
       minimum > WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES
-        ? "Delay is already certain; choose or decline to seal the final total and pressure."
+        ? "Delay is already certain; starting now seals the current total."
         : maximum <= WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES
-          ? "It stays on time; choose or decline to seal the final total."
-          : "Choose or decline to set the final total and delay pressure.";
+          ? "Every remaining support combination stays on time; starting now declines them."
+          : "Starting now seals the current total; optional support can cross the delay threshold.";
     return (
-      `Dispatch ${String(window.committedMinutes)}m committed; June's field team is pending ` +
+      `Dispatch ${String(window.committedMinutes)}m committed; optional Station support remains ` +
       `(final ${finalRange}). ${pressure}`
     );
   }
@@ -119,7 +119,7 @@ function withDispatchBriefing(
   arrivalAlarm: number,
 ): string {
   const briefing = dispatchBriefing(window);
-  if (window?.status === "june_commitment_pending") {
+  if (window?.status === "support_choices_open") {
     return `${briefing} ${summary}`;
   }
   const failureForecast = firstCastFailureForecast(arrivalAlarm, window);

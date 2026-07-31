@@ -243,12 +243,12 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const lead = session.view().departureContactLeads[0];
     if (!lead) throw new Error("Expected June's optional departure lead.");
 
-    const unavailable = render(session.view());
-    expect(unavailable).toContain("Optional before departure:");
-    expect(unavailable).toContain(ally.title);
-    expect(unavailable).toContain(lead.guidance);
-    expect(unavailable).toContain("Available after choosing a Station preparation.");
-    expect(unavailable).not.toContain(`Command: talk ${lead.contactName}`);
+    const readyBeforePreparation = render(session.view());
+    expect(readyBeforePreparation).toContain("Optional before departure:");
+    expect(readyBeforePreparation).toContain(ally.title);
+    expect(readyBeforePreparation).toContain(lead.guidance);
+    expect(readyBeforePreparation).toContain(`Command: talk ${lead.contactName}`);
+    expect(readyBeforePreparation).not.toContain("Available after choosing a Station preparation.");
     expect(session.snapshot()).toEqual(beforeSnapshot);
     expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
     expect(session.view().questStarts).toContainEqual([
@@ -907,7 +907,7 @@ describe("overworld_play CLI (scripted mode)", () => {
         "Compare who is protected, exact cost, and what remains exposed. Field checks surface with their action before resolution.",
       );
       expect(run.output).toContain("Optional before departure:");
-      expect(run.output.match(/Command: talk June Pike/g) ?? []).toHaveLength(1);
+      expect(run.output.match(/Command: talk June Pike/g) ?? []).toHaveLength(3);
       const junePromptStart = run.output.lastIndexOf("\n! Story choice comparison\n");
       expect(junePromptStart).toBeGreaterThan(-1);
       const juneFlowOutput = run.output.slice(junePromptStart);

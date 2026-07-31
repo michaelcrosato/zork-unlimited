@@ -12,6 +12,9 @@ import {
   type OpeningReliefAllocationOption,
   type OpeningReliefAllocationTerms,
 } from "./opening_relief_allocation.js";
+import { replayOpeningDispatchChoices } from "./opening_dispatch_choice_replay.js";
+import type { OpeningLeadSourceJournalProof } from "./opening_lead_source_journal.js";
+import type { OpeningPreparation } from "./opening_preparation.js";
 import type { OpeningPreparationJournalProof } from "./opening_preparation_journal.js";
 import { parseTimeLabel } from "./session_journal_codec.js";
 import type {
@@ -194,6 +197,8 @@ function emptyAllocationProof(
 export function proveOpeningReliefAllocationJournal(args: {
   scene: OpeningReliefAllocation | null | undefined;
   preparationProof: OpeningPreparationJournalProof;
+  leadSourceProof?: OpeningLeadSourceJournalProof;
+  preparationScene?: OpeningPreparation | null;
   journalEntries: readonly OverworldJournalEntry[];
   expectedTown: string | null;
   trustedLegacySourceWorldHash?: string | null;
@@ -202,6 +207,30 @@ export function proveOpeningReliefAllocationJournal(args: {
   const selections = indexed.filter(({ entry }) => entry.kind === "relief_allocation");
   const offers = indexed.filter(({ entry }) => entry.kind === "relief_allocation_offer");
   const legacies = indexed.filter(({ entry }) => entry.kind === "relief_allocation_legacy");
+  const evidenceIndex = selections[0]?.index ?? offers[0]?.index ?? legacies[0]?.index;
+  const sourceSelected =
+    args.leadSourceProof?.option !== null &&
+    args.leadSourceProof?.option !== undefined &&
+    args.leadSourceProof.journalIndex !== null;
+  const preparationSelected =
+    args.preparationProof.profile !== null && args.preparationProof.journalIndex !== null;
+  const characterBeforeAllocation =
+    sourceSelected && args.preparationScene
+      ? replayOpeningDispatchChoices({
+          characterAfterSource: args.leadSourceProof!.characterAfterSource,
+          choices: preparationSelected
+            ? [
+                {
+                  kind: "preparation" as const,
+                  journalIndex: args.preparationProof.journalIndex!,
+                  scene: args.preparationScene,
+                  optionId: args.preparationProof.profile!.id,
+                },
+              ]
+            : [],
+          ...(evidenceIndex === undefined ? {} : { beforeJournalIndex: evidenceIndex }),
+        })
+      : args.preparationProof.characterAfterPreparation;
   if (selections.length > 1 || offers.length > 1 || legacies.length > 1) {
     throw new Error(
       "Overworld session snapshot must contain at most one relief allocation offer, choice, and legacy marker.",
@@ -213,7 +242,7 @@ export function proveOpeningReliefAllocationJournal(args: {
     );
   }
   if (selections.length === 0 && offers.length === 0 && legacies.length === 0) {
-    return emptyAllocationProof(args.preparationProof.characterAfterPreparation);
+    return emptyAllocationProof(characterBeforeAllocation);
   }
   if (!args.scene) {
     throw new Error(
@@ -221,17 +250,27 @@ export function proveOpeningReliefAllocationJournal(args: {
     );
   }
   if (
-    (!args.preparationProof.profile && !args.preparationProof.legacy) ||
-    args.preparationProof.journalIndex === null
+    !sourceSelected &&
+    (!args.preparationProof.profile || args.preparationProof.journalIndex === null)
   ) {
     throw new Error(
-      "Overworld session snapshot relief allocation evidence has no resolved opening preparation.",
+      args.leadSourceProof === undefined
+        ? "Overworld session snapshot relief allocation evidence has no resolved opening preparation."
+        : "Overworld session snapshot relief allocation evidence has no certified opening source.",
     );
   }
   const scene = parseOpeningReliefAllocation(args.scene);
 
   const legacy = legacies[0];
   if (legacy) {
+    if (
+      (!args.preparationProof.profile && !args.preparationProof.legacy) ||
+      args.preparationProof.journalIndex === null
+    ) {
+      throw new Error(
+        "Overworld session snapshot legacy relief allocation has no resolved opening preparation.",
+      );
+    }
     const sourceWorldHash = openingReliefAllocationLegacySourceWorldHash(legacy.entry.id);
     if (
       !sourceWorldHash ||
@@ -301,15 +340,19 @@ export function proveOpeningReliefAllocationJournal(args: {
     );
   }
   const offerBoundary = offered.entry.storyChoiceBoundary;
+  const predecessorJournalIndex = sourceSelected
+    ? args.leadSourceProof!.journalIndex
+    : args.preparationProof.journalIndex;
   if (
     !offerBoundary ||
     offerBoundary.townId !== scene.home ||
     offerBoundary.areaId !== scene.area ||
     offerBoundary.minutes !== parseTimeLabel(offered.entry.recordedAt) ||
-    offered.index >= args.preparationProof.journalIndex
+    predecessorJournalIndex === null ||
+    offered.index >= predecessorJournalIndex
   ) {
     throw new Error(
-      "Overworld session snapshot relief allocation offer is not bound after preparation at its authored departure location, time, and journey boundary.",
+      "Overworld session snapshot relief allocation offer is not bound after source certification at its authored departure location, time, and journey boundary.",
     );
   }
   if (!selected) {
@@ -319,7 +362,7 @@ export function proveOpeningReliefAllocationJournal(args: {
       );
     }
     return Object.freeze({
-      ...emptyAllocationProof(args.preparationProof.characterAfterPreparation),
+      ...emptyAllocationProof(characterBeforeAllocation),
       offered: true,
       offerBoundary: { ...offerBoundary },
       recordedAt: parseTimeLabel(offered.entry.recordedAt),
@@ -336,12 +379,12 @@ export function proveOpeningReliefAllocationJournal(args: {
   }
   const application = applyOpeningReliefAllocationOption({
     scene,
-    character: args.preparationProof.characterAfterPreparation,
+    character: characterBeforeAllocation,
     optionId: option.id,
   });
   const expectedSelection = openingReliefAllocationJournalDraft({
     scene,
-    character: args.preparationProof.characterAfterPreparation,
+    character: characterBeforeAllocation,
     optionId: option.id,
   });
   if (

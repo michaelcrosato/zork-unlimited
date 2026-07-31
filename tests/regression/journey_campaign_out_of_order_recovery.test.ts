@@ -80,6 +80,7 @@ function startCampaignThroughDispatch(): OverworldSession {
   expect(session.journey().storyChoice).toBeNull();
   expect(session.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
     "albany:wolf_preparation",
+    "albany:wolf_relief_allocation",
   ]);
   session.chooseJourneyStory("albany:prep_works_fortification");
   expect(session.journey().storyChoice).toBeNull();
@@ -159,6 +160,7 @@ describe("journey campaign out-of-order recovery", () => {
     expect(session.journey().storyChoice).toBeNull();
     expect(session.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
       "albany:wolf_preparation",
+      "albany:wolf_relief_allocation",
     ]);
     session.chooseJourneyStory("albany:prep_works_fortification");
     expect(session.journey().storyChoice).toBeNull();

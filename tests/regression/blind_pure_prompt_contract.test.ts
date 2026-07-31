@@ -114,8 +114,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("context.quest_starts");
     expect(prompt).toContain("pass those values unchanged");
     expect(prompt).toContain("read-only `departure_contact_leads`");
-    expect(prompt).toContain("A `requires_preparation` lead has no available");
-    expect(prompt).toContain("For a `ready` lead you may call");
+    expect(prompt).toContain("A `ready` lead is independent of any preparation");
+    expect(prompt).toContain("before or after either by calling");
+    expect(prompt).toContain("A `requires_preparation` lead is a legacy compatibility");
+    expect(prompt).toContain("state with no available action");
     expect(prompt).toContain("mcp__adventureforge__talk_overworld_session_contact");
     expect(prompt).toContain("`contact_id` as `character_id`");
     expect(prompt).toContain("only that conversation can present the actual");
@@ -133,6 +135,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("`reveal_id`");
     expect(prompt).toContain("reveals only that option");
     expect(prompt).toContain("need not expand every option");
+    expect(prompt).toContain("A unique departure option needs no");
+    expect(prompt).toContain("`story_choice_id`; add its inspected `story_choice_id` only");
+    expect(prompt).toContain("an option id shared by more than one listed interaction");
+    expect(prompt).not.toContain("with both that\n  `story_choice_id`");
     expect(prompt).toMatch(/bounded authenticated\s+`departure_recap`/);
     expect(prompt).toMatch(/never\s+the\s+exact active terms/);
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");

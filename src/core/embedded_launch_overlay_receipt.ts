@@ -20,7 +20,9 @@ export const EmbeddedLaunchOverlayReceiptSchema = z
     kind: z.literal("overworld_dispatch_opening"),
     world_quest_id: z.literal("wolf_winter"),
     overworld_session_id: z.string().min(1),
-    dispatch_window_version: z.literal(1),
+    // Version 1 remains loadable for already-started child sessions; current
+    // parent launches write the order-neutral v2 departure receipt.
+    dispatch_window_version: z.union([z.literal(1), z.literal(2)]),
     status: z.literal("delayed"),
     ledger_minutes: z
       .number()

@@ -15,6 +15,9 @@ import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.j
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
 const PREPARATION = WORLD.opening_preparation!;
+const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
+const ALLY = WORLD.opening_ally!;
+const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
 
 function moveToPreparation(session: OverworldSession): void {
   const route = session
@@ -168,6 +171,48 @@ describe("authenticated Albany preparation dispatch forecast", () => {
       classification: "on_time_guaranteed",
       line: "Dispatch forecast if chosen: 35–55m. On time for every remaining optional capacity or field-team choice; choose later to seal the total.",
     });
+  });
+
+  it("fixes already-selected support and leaves only unresolved support in each range", () => {
+    const reliefFirst = preparationSession();
+    reliefFirst.chooseJourneyStory("albany:relief_resident_shelter", RELIEF_ALLOCATION.id);
+    expect(forecastById(reliefFirst, "albany:prep_works_fortification")).toMatchObject({
+      finalMinutes: { minimum: 70, maximum: 85 },
+      classification: "delayed_guaranteed",
+    });
+    const reliefMinimum = forecastById(reliefFirst, "albany:prep_works_fortification").finalMinutes
+      .minimum;
+    reliefFirst.chooseJourneyStory("albany:prep_works_fortification", PREPARATION.id);
+    expect(
+      reliefFirst.prepareQuestStart(WOLF.id, WOLF.launch!.options[0]!.id).dispatchWindow,
+    ).toMatchObject({ ledgerMinutes: reliefMinimum });
+
+    const juneFirst = preparationSession();
+    juneFirst.talkToCharacter(ALLY.contact);
+    juneFirst.chooseJourneyStory("albany:ally_june_cattle_first", ALLY.id);
+    expect(forecastById(juneFirst, "albany:prep_drover_route")).toMatchObject({
+      finalMinutes: { minimum: 75, maximum: 80 },
+      classification: "delayed_guaranteed",
+    });
+    const juneMinimum = forecastById(juneFirst, "albany:prep_drover_route").finalMinutes.minimum;
+    juneFirst.chooseJourneyStory("albany:prep_drover_route", PREPARATION.id);
+    expect(
+      juneFirst.prepareQuestStart(WOLF.id, WOLF.launch!.options[0]!.id).dispatchWindow,
+    ).toMatchObject({ ledgerMinutes: juneMinimum });
+
+    const bothFirst = preparationSession();
+    bothFirst.chooseJourneyStory("albany:relief_resident_shelter", RELIEF_ALLOCATION.id);
+    bothFirst.talkToCharacter(ALLY.contact);
+    bothFirst.chooseJourneyStory("albany:ally_june_cattle_first", ALLY.id);
+    expect(forecastById(bothFirst, "albany:prep_relief_protocol")).toMatchObject({
+      finalMinutes: { minimum: 90, maximum: 90 },
+      classification: "delayed_guaranteed",
+      line: expect.stringContaining("90m"),
+    });
+    bothFirst.chooseJourneyStory("albany:prep_relief_protocol", PREPARATION.id);
+    expect(
+      bothFirst.prepareQuestStart(WOLF.id, WOLF.launch!.options[0]!.id).dispatchWindow,
+    ).toMatchObject({ ledgerMinutes: 90 });
   });
 
   it("stays read-only and disappears before, after, moved, legacy, selected, and tampered boundaries", () => {

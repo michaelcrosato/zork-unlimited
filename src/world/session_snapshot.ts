@@ -17,9 +17,11 @@ import {
   type OverworldRoadEncounterOption,
 } from "./travel_mechanics.js";
 import { isEmeryFullCombatMemoryPredecessorWorldHash } from "./emery_evidence_custody_legacy.js";
+import type { QuestDispatchLaunchSeal } from "./quest_dispatch_window.js";
 
 export const OVERWORLD_SESSION_LEGACY_SAVE_VERSION = 8 as const;
-export const OVERWORLD_SESSION_SAVE_VERSION = 9 as const;
+export const OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION = 9 as const;
+export const OVERWORLD_SESSION_SAVE_VERSION = 10 as const;
 const EMERY_EVIDENCE_CUSTODY_CONTACT_PREFIX = "talk:albany_city__greenway__contact";
 
 export type TravelLogEntry = {
@@ -106,6 +108,7 @@ export type OverworldQuestStartProof =
       kind: "approach";
       approachId: string;
       boundary: OverworldJournalDecisionBoundary;
+      dispatchSeal?: QuestDispatchLaunchSeal | undefined;
     }
   | {
       kind: "legacy";
@@ -231,12 +234,38 @@ const OverworldJournalRegistrationBoundarySchema = z
   })
   .strict();
 
+const QuestDispatchLaunchSealSlotSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("selected"), optionId: z.string().min(1) }).strict(),
+  z.object({ kind: z.literal("declined_at_launch") }).strict(),
+]);
+
+const QuestDispatchLaunchSealSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    questId: z.literal("wolf_winter"),
+    approachId: z.string().min(1),
+    status: z.enum(["on_time", "delayed"]),
+    ledgerMinutes: z.number().int().nonnegative().safe(),
+    windowProofHash: z.string().regex(/^[0-9a-f]{64}$/),
+    slots: z
+      .object({
+        preparation: QuestDispatchLaunchSealSlotSchema,
+        reliefAllocation: QuestDispatchLaunchSealSlotSchema,
+        fieldTeam: QuestDispatchLaunchSealSlotSchema,
+      })
+      .strict(),
+    launchBoundary: OverworldJournalRegistrationBoundarySchema,
+    proofHash: z.string().regex(/^[0-9a-f]{64}$/),
+  })
+  .strict();
+
 const OverworldQuestStartProofSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("approach"),
       approachId: z.string().min(1),
       boundary: OverworldJournalRegistrationBoundarySchema,
+      dispatchSeal: QuestDispatchLaunchSealSchema.optional(),
     })
     .strict(),
   z
@@ -421,7 +450,10 @@ export const OverworldSessionSnapshotV8Schema = z
   .strict();
 
 export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.extend({
-  version: z.literal(OVERWORLD_SESSION_SAVE_VERSION),
+  version: z.union([
+    z.literal(OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION),
+    z.literal(OVERWORLD_SESSION_SAVE_VERSION),
+  ]),
   character: CampaignCharacterStateSchema,
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrailSchema.optional(),
   questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundarySchema.optional(),
@@ -478,11 +510,14 @@ export function parseOverworldSessionSnapshot(raw: unknown): OverworldSessionSna
       character: createInitialCampaignCharacterState(),
     });
   }
-  if (version === OVERWORLD_SESSION_SAVE_VERSION) {
+  if (
+    version === OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION ||
+    version === OVERWORLD_SESSION_SAVE_VERSION
+  ) {
     return OverworldSessionSnapshotSchema.parse(raw);
   }
   throw new Error(
-    `Unsupported overworld session snapshot version ${String(version)}; expected ${String(OVERWORLD_SESSION_LEGACY_SAVE_VERSION)} or ${String(OVERWORLD_SESSION_SAVE_VERSION)}.`,
+    `Unsupported overworld session snapshot version ${String(version)}; expected ${String(OVERWORLD_SESSION_LEGACY_SAVE_VERSION)}, ${String(OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION)}, or ${String(OVERWORLD_SESSION_SAVE_VERSION)}.`,
   );
 }
 
@@ -505,6 +540,25 @@ export function cloneOverworldJournalEntry(entry: OverworldJournalEntry): Overwo
                   kind: "approach" as const,
                   approachId: entry.questStartProof.approachId,
                   boundary: { ...entry.questStartProof.boundary },
+                  ...(entry.questStartProof.dispatchSeal
+                    ? {
+                        dispatchSeal: {
+                          ...entry.questStartProof.dispatchSeal,
+                          slots: {
+                            preparation: {
+                              ...entry.questStartProof.dispatchSeal.slots.preparation,
+                            },
+                            reliefAllocation: {
+                              ...entry.questStartProof.dispatchSeal.slots.reliefAllocation,
+                            },
+                            fieldTeam: { ...entry.questStartProof.dispatchSeal.slots.fieldTeam },
+                          },
+                          launchBoundary: {
+                            ...entry.questStartProof.dispatchSeal.launchBoundary,
+                          },
+                        },
+                      }
+                    : {}),
                 }
               : {
                   kind: "legacy" as const,

@@ -213,6 +213,28 @@ function dispatchBriefing(session: OverworldSession): string {
   const ridge = session.prepareQuestStart(WOLF_ID, RIDGE_ID).dispatchWindow;
   const stockway = session.prepareQuestStart(WOLF_ID, STOCKWAY_ID).dispatchWindow;
   expect(stockway).toEqual(ridge);
+  const presentation = deriveQuestDispatchPresentationWindow({
+    questId: WOLF_ID,
+    journalEntries: session.snapshot().journalEntries,
+    openingRegistration: WORLD.opening_registration!,
+    openingReliefOath: WORLD.opening_relief_oath!,
+    openingLeadSource: WORLD.opening_lead_source!,
+    openingPreparation: WORLD.opening_preparation!,
+    openingReliefAllocation: WORLD.opening_relief_allocation!,
+    openingAlly: WORLD.opening_ally!,
+  });
+  if (presentation.status === "support_choices_open") {
+    const { minimum, maximum } = presentation.finalMinutes;
+    const finalRange =
+      minimum === maximum ? `${String(minimum)}m` : `${String(minimum)}–${String(maximum)}m`;
+    const pressure =
+      minimum > 60
+        ? "Delay is already certain; starting now seals the current total."
+        : maximum <= 60
+          ? "Every remaining support combination stays on time; starting now declines them."
+          : "Starting now seals the current total; optional support can cross the delay threshold.";
+    return `Dispatch ${String(presentation.committedMinutes)}m committed; optional Station support remains (final ${finalRange}). ${pressure}`;
+  }
   if (ridge.status === "delayed" && ridge.ledgerMinutes !== undefined) {
     return (
       `Dispatch ${String(ridge.ledgerMinutes)}m—delayed; roads change arrival, not delay. ` +
@@ -430,12 +452,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       const stockwayFailure = playForecastedFailedFirstCast(session, STOCKWAY_ID);
       expect(ridgeFailure).toEqual({ alarm: 3, recoveryAction: "set_paling_rail" });
       expect(stockwayFailure).toEqual({ alarm: 2, recoveryAction: "set_paling_rail" });
-      const expectedRidgeSummary =
-        `${briefing} ${expected.ridge.summary} ` +
-        expectedFirstCastFailureForecast(ridgeFailure.alarm, false);
-      const expectedStockwaySummary =
-        `${briefing} ${expected.stockway.summary} ` +
-        expectedFirstCastFailureForecast(stockwayFailure.alarm, false);
+      const expectedRidgeSummary = `${briefing} ${expected.ridge.summary}`;
+      const expectedStockwaySummary = `${briefing} ${expected.stockway.summary}`;
       const snapshotBeforeProjection = session.snapshot();
       const full = fullSummaries(quest);
       const compact = compactSummaries(session);
@@ -635,7 +653,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     expect(cli.split(expectedBriefing)).toHaveLength(3);
   });
 
-  it("keeps the exact 65m → pending June → 80m dispatch trace truthful on every surface", () => {
+  it("keeps the exact 65m open-support → 80m sealed dispatch trace truthful on every surface", () => {
     const { session, quest: beforeJune } = routeCard(
       "albany:oath_limited_aid_only",
       "albany:relief_resident_shelter",
@@ -646,8 +664,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       },
     );
     const beforeBriefing =
-      "Dispatch 65m—delayed; roads change arrival, not delay. " +
-      "First failure: lure/drive/hunt alarm +1; fortify +1.";
+      "Dispatch 65m committed; optional Station support remains (final 65–80m). " +
+      "Delay is already certain; starting now seals the current total.";
     for (const summary of Object.values(fullSummaries(beforeJune))) {
       expect(summary?.startsWith(beforeBriefing)).toBe(true);
     }
@@ -658,8 +676,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     const pendingQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
     if (!pendingQuest?.launch) throw new Error("Expected the pending-June Wolf route card.");
     const pendingBriefing =
-      "Dispatch 65m committed; June's field team is pending (final 65–80m). " +
-      "Delay is already certain; choose or decline to seal the final total and pressure.";
+      "Dispatch 65m committed; optional Station support remains (final 65–80m). " +
+      "Delay is already certain; starting now seals the current total.";
     const pendingFull = fullSummaries(pendingQuest);
     const pendingCompact = compactSummaries(session);
     for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
@@ -684,9 +702,10 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       openingAlly: WORLD.opening_ally!,
     });
     expect(pendingWindow).toMatchObject({
-      status: "june_commitment_pending",
+      status: "support_choices_open",
       committedMinutes: 65,
       finalMinutes: { minimum: 65, maximum: 80 },
+      receipt: { juneCommitment: { kind: "open_optional" } },
     });
     for (const knowledgeIds of [
       [],
@@ -711,7 +730,9 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
 
     const pendingMarkup = renderQuestNotice(pendingQuest);
     const pendingCli = renderQuestLaunch(pendingQuest);
-    expect(pendingMarkup.match(/Dispatch 65m committed; June/g)).toHaveLength(2);
+    expect(pendingMarkup.match(/Dispatch 65m committed; optional Station support/g)).toHaveLength(
+      2,
+    );
     expect(pendingCli.split(pendingBriefing)).toHaveLength(3);
     const api = createToolApi({ root: ROOT });
     const restored = api.restore_overworld_session({
@@ -729,8 +750,11 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     expect(fullSummaries(restoredQuest)).toEqual(pendingFull);
 
     const strictWindow = session.prepareQuestStart(WOLF_ID, RIDGE_ID).dispatchWindow;
-    expect(strictWindow).toMatchObject({ status: "legacy_neutral" });
-    expect(strictWindow).not.toHaveProperty("ledgerMinutes");
+    expect(strictWindow).toMatchObject({
+      status: "delayed",
+      ledgerMinutes: 65,
+      receipt: { juneCommitment: { kind: "declined_at_launch" } },
+    });
 
     session.chooseJourneyStory("albany:ally_june_cattle_first");
     const afterJune = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
@@ -752,7 +776,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_works_fortification",
       committedMinutes: 40,
       maximumMinutes: 55,
-      pressureCopy: "It stays on time; choose or decline to seal the final total.",
+      pressureCopy:
+        "Every remaining support combination stays on time; starting now declines them.",
     },
     {
       label: "threshold crossing",
@@ -761,7 +786,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_drover_route",
       committedMinutes: 60,
       maximumMinutes: 75,
-      pressureCopy: "Choose or decline to set the final total and delay pressure.",
+      pressureCopy:
+        "Starting now seals the current total; optional support can cross the delay threshold.",
     },
     {
       label: "guaranteed delayed",
@@ -770,11 +796,10 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_drover_route",
       committedMinutes: 65,
       maximumMinutes: 80,
-      pressureCopy:
-        "Delay is already certain; choose or decline to seal the final total and pressure.",
+      pressureCopy: "Delay is already certain; starting now seals the current total.",
     },
   ])(
-    "classifies a pending field-team range that is $label without inventing a final forecast",
+    "classifies an open field-team range that is $label without inventing a final forecast",
     ({ oathId, sourceId, preparationId, committedMinutes, maximumMinutes, pressureCopy }) => {
       const { session } = routeCard(oathId, "albany:relief_resident_shelter", {
         registrationId: "albany:road_warden",
@@ -793,9 +818,10 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         openingAlly: WORLD.opening_ally!,
       });
       expect(pendingWindow).toMatchObject({
-        status: "june_commitment_pending",
+        status: "support_choices_open",
         committedMinutes,
         finalMinutes: { minimum: committedMinutes, maximum: maximumMinutes },
+        receipt: { juneCommitment: { kind: "open_optional" } },
       });
       for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
         const summary = wolfHillRoutePresentation({

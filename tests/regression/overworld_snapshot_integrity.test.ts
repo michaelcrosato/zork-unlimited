@@ -385,7 +385,7 @@ function resolveCurrentOverworldSessionEvent(a: ReturnType<typeof api>, sessionI
     expect(stationed.journey.storyChoice).toBeNull();
     expect(
       stationed.observation.departureInteractions.map((interaction) => interaction.id),
-    ).toEqual(["albany:wolf_preparation"]);
+    ).toEqual(["albany:wolf_preparation", "albany:wolf_relief_allocation"]);
     a.choose_overworld_session_story({
       session_id: sessionId,
       story_choice_id: "albany:wolf_preparation",
@@ -1360,7 +1360,7 @@ describe("overworld snapshot restore integrity", () => {
       expect(stationed.journey.storyChoice).toBeNull();
       expect(
         stationed.observation.departureInteractions.map((interaction) => interaction.id),
-      ).toEqual(["albany:wolf_preparation"]);
+      ).toEqual(["albany:wolf_preparation", "albany:wolf_relief_allocation"]);
       a.choose_overworld_session_story({
         ...FULL_OVERWORLD_RESPONSE,
         session_id: started.session_id,
@@ -1624,7 +1624,7 @@ describe("overworld snapshot restore integrity", () => {
     expect(stationed.journey.storyChoice).toBeNull();
     expect(
       stationed.observation.departureInteractions.map((interaction) => interaction.id),
-    ).toEqual(["albany:wolf_preparation"]);
+    ).toEqual(["albany:wolf_preparation", "albany:wolf_relief_allocation"]);
     a.choose_overworld_session_story({
       ...FULL_OVERWORLD_RESPONSE,
       session_id: started.session_id,

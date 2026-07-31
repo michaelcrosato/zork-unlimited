@@ -562,7 +562,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(mcpPreparationSelected.context.departure_recap).toEqual(
       ui.compactView().departure_recap,
     );
-    expect(mcpPreparationSelected.context.departure_recap?.[4]).toBeNull();
+    expect(mcpPreparationSelected.context.departure_recap?.[4]).toEqual([
+      "committed",
+      35,
+      null,
+      ["relief_allocation", "field_team"],
+    ]);
     const uiAllocation = ui.inspectJourneyStory(RELIEF_ALLOCATION.id);
     const mcpAllocation = api.inspect_overworld_session_story({
       session_id: started.session_id,

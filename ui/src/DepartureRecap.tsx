@@ -1,10 +1,44 @@
 import type { OverworldView } from "./overworld.js";
 
+type DepartureRecapView = NonNullable<OverworldView["departureRecap"]>;
+type DepartureRecapEntry = DepartureRecapView["entries"][number];
+type DepartureRecapOptionalSlot = NonNullable<
+  DepartureRecapView["dispatch"]
+>["remainingOptional"][number];
+
+const DEPARTURE_RECAP_SLOT_LABELS: Readonly<Record<DepartureRecapOptionalSlot, string>> = {
+  preparation: "preparation",
+  relief_allocation: "relief allocation",
+  field_team: "field team",
+};
+
+function formatOptionalSlots(slots: readonly DepartureRecapOptionalSlot[]): string {
+  const labels = slots.map((slot) => DEPARTURE_RECAP_SLOT_LABELS[slot]);
+  if (labels.length < 3) return labels.join(" and ");
+  return `${labels.slice(0, -1).join(", ")}, and ${labels.at(-1)!}`;
+}
+
+function departureRecapEntryValue(entry: DepartureRecapEntry): string {
+  if (entry.title !== null) return entry.title;
+  switch (entry.status) {
+    case "open_optional":
+      return "Open (optional)";
+    case "available_after_preparation":
+      return "Available after choosing preparation";
+    case "solo_default":
+      return "Solo departure";
+    case "legacy":
+      return "Legacy choice preserved";
+    case "selected":
+      return "Selected";
+  }
+}
+
 export function DepartureRecap({
   recap,
   headingLevel = 4,
 }: {
-  recap: NonNullable<OverworldView["departureRecap"]>;
+  recap: DepartureRecapView;
   headingLevel?: 2 | 4;
 }): JSX.Element {
   const Heading = headingLevel === 2 ? "h2" : "h4";
@@ -30,10 +64,10 @@ export function DepartureRecap({
             </>
           ) : (
             <>
-              Dispatch committed: {recap.dispatch.minutes}m. Optional before launch: {" "}
-              {recap.dispatch.remainingOptional
-                .map((slot) => (slot === "relief_allocation" ? "relief allocation" : "field team"))
-                .join(" and ")}
+              Dispatch committed: {recap.dispatch.minutes}m
+              {recap.dispatch.remainingOptional.length > 0
+                ? `; ${formatOptionalSlots(recap.dispatch.remainingOptional)} ${recap.dispatch.remainingOptional.length === 1 ? "remains" : "remain"} optional`
+                : ""}
               .
             </>
           )}
@@ -44,10 +78,7 @@ export function DepartureRecap({
           <div key={entry.slot}>
             <dt>{entry.label}</dt>
             <dd>
-              {entry.title ??
-                (entry.status === "open_optional"
-                  ? "Open (optional)"
-                  : "Available after choosing preparation")}
+              {departureRecapEntryValue(entry)}
               {entry.status === "solo_default" && (
                 <>
                   <br />

@@ -69,7 +69,9 @@ export function resolveOpeningDispatchManifestChain(
     preparation.after_lead_source !== leadSource.id ||
     preparation.target_quest !== targetQuestId ||
     reliefAllocation.after_preparation !== preparation.id ||
-    reliefAllocation.target_quest !== targetQuestId
+    reliefAllocation.target_quest !== targetQuestId ||
+    reliefAllocation.home !== preparation.home ||
+    reliefAllocation.area !== preparation.area
   ) {
     return null;
   }
@@ -79,6 +81,8 @@ export function resolveOpeningDispatchManifestChain(
   const ally =
     authoredAlly?.target_quest === targetQuestId &&
     authoredAlly.after_preparation === preparation.id &&
+    authoredAlly.home === preparation.home &&
+    authoredAlly.area === preparation.area &&
     world.characters.some((candidate) => candidate.id === authoredAlly.contact)
       ? authoredAlly
       : null;

@@ -76,8 +76,13 @@ function selectSource(
     moveToArea(session, preparationArea);
   }
   expect(session.journey().storyChoice).toBeNull();
+  const orderNeutralStation =
+    preparationArea !== undefined &&
+    world.opening_relief_allocation?.area === preparationArea &&
+    world.opening_ally?.area === preparationArea;
   expect(session.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
     "albany:wolf_preparation",
+    ...(orderNeutralStation ? ["albany:wolf_relief_allocation"] : []),
   ]);
   return session;
 }
@@ -238,7 +243,7 @@ describe("opening lead-source snapshot integrity", () => {
     expect(restoredSelected.journey().storyChoice).toBeNull();
     expect(
       restoredSelected.view().departureInteractions.map((interaction) => interaction.id),
-    ).toEqual(["albany:wolf_preparation"]);
+    ).toEqual(["albany:wolf_preparation", "albany:wolf_relief_allocation"]);
   });
 
   it("rejects duplicate offer and selection evidence", () => {
@@ -487,7 +492,7 @@ describe("opening lead-source snapshot integrity", () => {
     }
     expect(restoredAgain.journey().storyChoice).toBeNull();
     expect(restoredAgain.view().departureInteractions.map((interaction) => interaction.id)).toEqual(
-      ["albany:wolf_preparation"],
+      ["albany:wolf_preparation", "albany:wolf_relief_allocation"],
     );
     expect(restoredAgain.view().quests.map((quest) => quest.id)).toContain(TARGET_QUEST);
   });
@@ -518,6 +523,7 @@ describe("opening lead-source snapshot integrity", () => {
     expect(restored.journey().storyChoice).toBeNull();
     expect(restored.view().departureInteractions.map((interaction) => interaction.id)).toEqual([
       "albany:wolf_preparation",
+      "albany:wolf_relief_allocation",
     ]);
     expect(
       restored.snapshot().journalEntries.some((entry) => entry.kind === "preparation_offer"),

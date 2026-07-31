@@ -8,7 +8,10 @@ import type {
   TravelLogEntrySnapshot,
 } from "./session_snapshot.js";
 import { overworldQuestCampaignEffectsForCharacter, type OverworldQuest } from "./overworld.js";
-import { cloneOpeningLeadSourceDecisionTrail } from "./session_snapshot.js";
+import {
+  OVERWORLD_SESSION_SAVE_VERSION,
+  cloneOpeningLeadSourceDecisionTrail,
+} from "./session_snapshot.js";
 import { hashState } from "../core/hash.js";
 import {
   cloneCampaignCharacterState,
@@ -145,6 +148,15 @@ import {
   type OpeningAllyJournalProof,
 } from "./opening_ally_journal.js";
 import {
+  replayOpeningDispatchChoices,
+  type OpeningDispatchReplayChoice,
+} from "./opening_dispatch_choice_replay.js";
+import {
+  assertQuestDispatchLaunchSeal,
+  createQuestDispatchLaunchSeal,
+  deriveQuestDispatchWindow,
+} from "./quest_dispatch_window.js";
+import {
   openingLeadSourceJournalId,
   openingLeadSourceOfferJournalId,
   proveOpeningLeadSourceJournal,
@@ -174,7 +186,6 @@ import {
   proveOpeningReliefAllocationJournal,
   type OpeningReliefAllocationJournalProof,
 } from "./opening_relief_allocation_journal.js";
-import { applyOpeningReliefAllocationOption } from "./opening_relief_allocation.js";
 import {
   openingReliefOathJournalId,
   openingReliefOathLegacyJournalEntry,
@@ -1573,6 +1584,7 @@ function assertOpeningPreparationCampaignBoundaryReplay(args: {
   leadSourceProof: OpeningLeadSourceJournalProof;
   preparationProof: OpeningPreparationJournalProof;
   preparationSceneId: string | null;
+  supportSceneIds: readonly string[];
 }): void {
   if (args.preparationProof.legacy || !args.preparationProof.offered) return;
   const boundaries = [
@@ -1594,6 +1606,13 @@ function assertOpeningPreparationCampaignBoundaryReplay(args: {
       args.preparationProof.profile !== null
         ? `campaign_story:${args.preparationSceneId}:${args.preparationProof.profile.id}`
         : null;
+    const followsSupportSelection =
+      label === "offer" &&
+      replayed?.decision?.surface === "overworld" &&
+      replayed.decision.reason === "situation_changed" &&
+      args.supportSceneIds.some((sceneId) =>
+        replayed.decision!.actionId.startsWith(`campaign_story:${sceneId}:`),
+      );
     if (
       !replayed ||
       replayed.decisionProofHash !== boundary.decisionProofHash ||
@@ -1601,6 +1620,7 @@ function assertOpeningPreparationCampaignBoundaryReplay(args: {
       replayed.areaId !== boundary.areaId ||
       (label === "offer" &&
         !sharesLeadSelectionBoundary &&
+        !followsSupportSelection &&
         (replayed.decision?.surface !== "overworld" ||
           replayed.decision.reason !== "movement" ||
           !replayed.decision.actionId.startsWith("move_area:"))) ||
@@ -2031,6 +2051,7 @@ function replaySnapshotQuestStarts(args: {
   indexes: OverworldSnapshotManifestIndex;
   journalEntries: readonly OverworldJournalEntry[];
   migrationEra: TrustedMigrationEra;
+  snapshotVersion: OverworldSessionSnapshot["version"];
   snapshotWorldHash: string;
   storedCharacter: CampaignCharacterState;
   startedQuestIds: ReadonlySet<string>;
@@ -2215,6 +2236,61 @@ function replaySnapshotQuestStarts(args: {
       throw new Error(
         `Overworld session snapshot quest launch "${questId}" is not anchored at its authored home and area.`,
       );
+    }
+    const currentDispatchChain =
+      questId === "wolf_winter" &&
+      args.indexes.openingRegistration !== null &&
+      args.indexes.openingReliefOath?.target_quest === questId &&
+      args.indexes.openingLeadSource?.target_quest === questId &&
+      args.indexes.openingPreparation?.target_quest === questId &&
+      args.indexes.openingReliefAllocation?.target_quest === questId &&
+      args.indexes.openingAlly?.target_quest === questId;
+    if (currentDispatchChain || startProof.dispatchSeal) {
+      const expectedWindow = deriveQuestDispatchWindow({
+        questId,
+        // Only evidence older than the newest-first quest boundary can
+        // authorize what was true at launch.
+        journalEntries: journalEntries.slice(journalIndex + 1),
+        openingRegistration: args.indexes.openingRegistration,
+        openingReliefOath: args.indexes.openingReliefOath,
+        openingLeadSource: args.indexes.openingLeadSource,
+        openingPreparation: args.indexes.openingPreparation,
+        openingReliefAllocation: args.indexes.openingReliefAllocation,
+        openingAlly: args.indexes.openingAlly,
+      });
+      const currentReceipt = expectedWindow.status !== "legacy_neutral";
+      if (
+        args.snapshotVersion === OVERWORLD_SESSION_SAVE_VERSION &&
+        currentReceipt &&
+        !startProof.dispatchSeal
+      ) {
+        throw new Error(
+          `Overworld session snapshot quest launch "${questId}" lacks its current dispatch seal.`,
+        );
+      }
+      if (startProof.dispatchSeal) {
+        assertQuestDispatchLaunchSeal({
+          seal: startProof.dispatchSeal,
+          expectedWindow,
+          expectedApproachId: option.id,
+          expectedLaunchBoundary: boundary,
+        });
+      } else if (currentReceipt) {
+        const migratedSeal = createQuestDispatchLaunchSeal({
+          window: expectedWindow,
+          approachId: option.id,
+          launchBoundary: boundary,
+        });
+        if (!migratedSeal) {
+          throw new Error(
+            `Overworld session snapshot quest launch "${questId}" cannot migrate its dispatch receipt.`,
+          );
+        }
+        journalEntries[journalIndex] = Object.freeze({
+          ...entry,
+          questStartProof: Object.freeze({ ...startProof, dispatchSeal: migratedSeal }),
+        });
+      }
     }
     starts.push({
       questId,
@@ -4146,6 +4222,8 @@ export function planOverworldSessionSnapshotRestore(args: {
   const reliefAllocationProof = proveOpeningReliefAllocationJournal({
     scene: indexes.openingReliefAllocation,
     preparationProof,
+    leadSourceProof,
+    preparationScene: indexes.openingPreparation,
     journalEntries: snapshot.journalEntries,
     expectedTown: indexes.openingReliefAllocationTownName,
     trustedLegacySourceWorldHash: storedReliefAllocationLegacySourceWorldHash ?? null,
@@ -4260,6 +4338,9 @@ export function planOverworldSessionSnapshotRestore(args: {
     scene: indexes.openingAlly,
     preparationProof,
     reliefAllocationProof,
+    leadSourceProof,
+    preparationScene: indexes.openingPreparation,
+    reliefAllocationScene: indexes.openingReliefAllocation,
     journalEntries: snapshot.journalEntries,
     expectedTown: indexes.openingAllyTownName,
   });
@@ -4347,6 +4428,11 @@ export function planOverworldSessionSnapshotRestore(args: {
     leadSourceProof,
     preparationProof,
     preparationSceneId: indexes.openingPreparation?.id ?? null,
+    supportSceneIds: [
+      indexes.openingPreparation?.id,
+      indexes.openingReliefAllocation?.id,
+      indexes.openingAlly?.id,
+    ].filter((sceneId): sceneId is string => sceneId !== undefined),
   });
   assertOpeningAllyCampaignBoundaryReplay({
     allyProof,
@@ -4434,34 +4520,53 @@ export function planOverworldSessionSnapshotRestore(args: {
     ? reliefOathProof.characterAfterOath
     : initialCharacter;
   const characterAfterSource = leadSourceProof.characterAfterSource;
-  const characterAfterPreparation = preparationProof.profile
-    ? preparationProof.characterAfterPreparation
-    : characterAfterSource;
-  const characterAfterReliefAllocation = reliefAllocationProof.option
-    ? reliefAllocationProof.characterAfterAllocation
-    : characterAfterPreparation;
-  const characterAfterAlly = allyProof.option
-    ? allyProof.characterAfterAlly
-    : characterAfterReliefAllocation;
-  const reliefAllocationSelectedAfterAlly =
-    reliefAllocationProof.option !== null &&
+  const openingDispatchReplayChoices: OpeningDispatchReplayChoice[] = [
+    ...(preparationProof.profile &&
+    preparationProof.journalIndex !== null &&
+    indexes.openingPreparation
+      ? [
+          {
+            kind: "preparation" as const,
+            journalIndex: preparationProof.journalIndex,
+            scene: indexes.openingPreparation,
+            optionId: preparationProof.profile.id,
+          },
+        ]
+      : []),
+    ...(reliefAllocationProof.option &&
     reliefAllocationProof.journalIndex !== null &&
-    allyProof.option !== null &&
-    allyProof.journalIndex !== null &&
-    reliefAllocationProof.journalIndex < allyProof.journalIndex;
-  const characterAfterOpeningChoices = reliefAllocationSelectedAfterAlly
-    ? applyOpeningReliefAllocationOption({
-        scene: indexes.openingReliefAllocation!,
-        character: allyProof.characterAfterAlly,
-        optionId: reliefAllocationProof.option!.id,
-      }).characterAfter
-    : characterAfterAlly;
+    indexes.openingReliefAllocation
+      ? [
+          {
+            kind: "relief_allocation" as const,
+            journalIndex: reliefAllocationProof.journalIndex,
+            scene: indexes.openingReliefAllocation,
+            optionId: reliefAllocationProof.option.id,
+          },
+        ]
+      : []),
+    ...(allyProof.option && allyProof.journalIndex !== null && indexes.openingAlly
+      ? [
+          {
+            kind: "ally" as const,
+            journalIndex: allyProof.journalIndex,
+            scene: indexes.openingAlly,
+            optionId: allyProof.option.id,
+          },
+        ]
+      : []),
+  ];
+  const characterAfterOpeningChoices = replayOpeningDispatchChoices({
+    characterAfterSource,
+    choices: openingDispatchReplayChoices,
+  });
   const questStartReplay = replaySnapshotQuestStarts({
     campaignBoundaryReplay,
     character: characterAfterOpeningChoices,
     indexes,
     journalEntries: snapshot.journalEntries,
     migrationEra,
+    snapshotVersion: snapshot.version,
     snapshotWorldHash: snapshot.worldHash,
     storedCharacter: snapshot.character,
     startedQuestIds,
@@ -4620,29 +4725,13 @@ export function planOverworldSessionSnapshotRestore(args: {
       reliefOathProof.journalIndex !== null && reliefOathProof.journalIndex > journalIndex;
     const leadSourceActive =
       leadSourceProof.journalIndex !== null && leadSourceProof.journalIndex > journalIndex;
-    const preparationActive =
-      preparationProof.profile !== null &&
-      preparationProof.journalIndex !== null &&
-      preparationProof.journalIndex > journalIndex;
-    const reliefAllocationActive =
-      reliefAllocationProof.option !== null &&
-      reliefAllocationProof.journalIndex !== null &&
-      reliefAllocationProof.journalIndex > journalIndex;
-    const allyActive =
-      allyProof.option !== null &&
-      allyProof.journalIndex !== null &&
-      allyProof.journalIndex > journalIndex;
     return registrationActive
       ? leadSourceActive
-        ? preparationActive
-          ? allyActive && reliefAllocationActive
-            ? characterAfterOpeningChoices
-            : allyActive
-              ? allyProof.characterAfterAlly
-              : reliefAllocationActive
-                ? characterAfterReliefAllocation
-                : characterAfterPreparation
-          : characterAfterSource
+        ? replayOpeningDispatchChoices({
+            characterAfterSource,
+            choices: openingDispatchReplayChoices,
+            beforeJournalIndex: journalIndex,
+          })
         : reliefOathActive
           ? characterAfterOath
           : initialCharacter

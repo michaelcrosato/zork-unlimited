@@ -142,17 +142,20 @@ WHEN TO CONTINUE OR END
   repeating the world context or comparison beyond the same bounded
   authenticated `departure_recap`. Retain the already shown state.
   You need not expand every option. If you choose an option, call
-  `mcp__adventureforge__choose_overworld_session_story` with both that
-  `story_choice_id` and the option's visible `id` as `choice`.
+  `mcp__adventureforge__choose_overworld_session_story` with the option's
+  visible `id` as `choice`. A unique departure option needs no
+  `story_choice_id`; add its inspected `story_choice_id` only to disambiguate
+  an option id shared by more than one listed interaction.
 - The context may separately list read-only `departure_contact_leads`. These
   make an optional departure conversation discoverable without creating its
-  offer or blocking launch. A `requires_preparation` lead has no available
-  action yet. For a `ready` lead you may call
+  offer or blocking launch. A `ready` lead is independent of any preparation
+  or relief-allocation choice; you may pursue it before or after either by calling
   `mcp__adventureforge__talk_overworld_session_contact` with its exact
   `contact_id` as `character_id`; only that conversation can present the actual
-  field-team choice. You may instead start its listed quest immediately as the
-  disclosed solo default. Merely seeing either lead state changes no game state
-  or decision count.
+  field-team choice. A `requires_preparation` lead is a legacy compatibility
+  state with no available action. You may instead start its listed quest
+  immediately as the disclosed solo default. Merely seeing either lead state
+  changes no game state or decision count.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, normally

@@ -4,7 +4,10 @@ import { renderTerminalStoryChoiceComparison } from "../../bin/terminal_story_ch
 import { compactJourneyStoryChoiceComparison } from "../../src/mcp/journey_projection.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { stripOpeningStationDispatchImpact } from "../../src/world/opening_station_dispatch_impact.js";
-import { deriveQuestDispatchPresentationWindow } from "../../src/world/quest_dispatch_window.js";
+import {
+  classifyQuestDispatchMinutes,
+  deriveQuestDispatchPresentationWindow,
+} from "../../src/world/quest_dispatch_window.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -15,7 +18,7 @@ const ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === PREPARATION.target_quest)!;
 
-function stationSession(): OverworldSession {
+function stationHubSession(): OverworldSession {
   const session = new OverworldSession(WORLD);
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
@@ -27,6 +30,11 @@ function stationSession(): OverworldSession {
     .areaExits.find((candidate) => candidate.destination.id === PREPARATION.area);
   if (!route) throw new Error("Expected the Station route.");
   session.moveArea(route.id);
+  return session;
+}
+
+function stationSession(): OverworldSession {
+  const session = stationHubSession();
   session.chooseJourneyStory("albany:prep_drover_route", PREPARATION.id);
   return session;
 }
@@ -45,14 +53,56 @@ function canonicalWindow(session: OverworldSession) {
 }
 
 describe("Station dispatch impact cards", () => {
+  it("uses the same committed baseline when relief or June is chosen before preparation", () => {
+    const reliefFirst = stationHubSession();
+    expect(
+      reliefFirst
+        .inspectJourneyStory(ALLOCATION.id)
+        .options.map((option) => option.dispatchImpact?.line),
+    ).toEqual([
+      "Dispatch: +5m delay → 45m committed (on time).",
+      "Dispatch: +5m delay → 45m committed (on time).",
+      "Dispatch: +5m delay → 45m committed (on time).",
+    ]);
+    reliefFirst.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
+    reliefFirst.talkToCharacter(ALLY.contact);
+    expect(
+      reliefFirst.journey().storyChoice?.options.map((option) => option.dispatchImpact?.line),
+    ).toEqual([
+      "Dispatch: +15m delay → 60m committed (on time).",
+      "Dispatch: +5m delay → 50m committed (on time).",
+      "Dispatch: no added delay → 45m committed (on time).",
+    ]);
+
+    const juneFirst = stationHubSession();
+    juneFirst.talkToCharacter(ALLY.contact);
+    expect(
+      juneFirst.journey().storyChoice?.options.map((option) => option.dispatchImpact?.line),
+    ).toEqual([
+      "Dispatch: +15m delay → 55m committed (on time).",
+      "Dispatch: +5m delay → 45m committed (on time).",
+      "Dispatch: no added delay → 40m committed (on time).",
+    ]);
+    juneFirst.chooseJourneyStory("albany:ally_june_cattle_first", ALLY.id);
+    expect(
+      juneFirst
+        .inspectJourneyStory(ALLOCATION.id)
+        .options.map((option) => option.dispatchImpact?.line),
+    ).toEqual([
+      "Dispatch: +5m delay → 60m committed (on time).",
+      "Dispatch: +5m delay → 60m committed (on time).",
+      "Dispatch: +5m delay → 60m committed (on time).",
+    ]);
+  });
+
   it("leads every live relief and field-team card with its exact canonical timing result", () => {
     const session = stationSession();
     const allocationBefore = structuredClone(session.snapshot());
     const allocation = session.inspectJourneyStory(ALLOCATION.id);
     expect(allocation.options.map((option) => option.dispatchImpact?.line)).toEqual([
-      "Dispatch: +5m delay → 65m, delayed.",
-      "Dispatch: +5m delay → 65m, delayed.",
-      "Dispatch: +5m delay → 65m, delayed.",
+      "Dispatch: +5m delay → 65m committed (delayed).",
+      "Dispatch: +5m delay → 65m committed (delayed).",
+      "Dispatch: +5m delay → 65m committed (delayed).",
     ]);
     expect(session.snapshot()).toEqual(allocationBefore);
 
@@ -61,10 +111,10 @@ describe("Station dispatch impact cards", () => {
       const counterfactual = OverworldSession.restore(WORLD, structuredClone(allocationBefore));
       counterfactual.chooseJourneyStory(option.id, ALLOCATION.id);
       const actual = canonicalWindow(counterfactual);
-      expect(actual.status).toBe(impact.timing);
-      expect(actual.status).not.toBe("june_commitment_pending");
-      if (actual.status === "june_commitment_pending") throw new Error("Expected sealed timing.");
-      expect(actual.ledgerMinutes).toBe(impact.resultingMinutes);
+      const actualMinutes =
+        actual.status === "support_choices_open" ? actual.committedMinutes : actual.ledgerMinutes;
+      expect(actualMinutes).toBe(impact.resultingMinutes);
+      expect(classifyQuestDispatchMinutes(actualMinutes!)).toBe(impact.timing);
     }
 
     session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
@@ -74,19 +124,19 @@ describe("Station dispatch impact cards", () => {
     if (!june || june.id !== ALLY.id)
       throw new Error("Expected June's live field-team comparison.");
     expect(june.options.map((option) => option.dispatchImpact?.line)).toEqual([
-      "Dispatch: +15m delay → 80m, delayed.",
-      "Dispatch: +5m delay → 70m, delayed.",
-      "Dispatch: no added delay → 65m, delayed.",
+      "Dispatch: +15m delay → 80m committed (delayed).",
+      "Dispatch: +5m delay → 70m committed (delayed).",
+      "Dispatch: no added delay → 65m committed (delayed).",
     ]);
     for (const option of june.options) {
       const impact = option.dispatchImpact!;
       const counterfactual = OverworldSession.restore(WORLD, structuredClone(juneBefore));
       counterfactual.chooseJourneyStory(option.id);
       const actual = canonicalWindow(counterfactual);
-      expect(actual.status).toBe(impact.timing);
-      expect(actual.status).not.toBe("june_commitment_pending");
-      if (actual.status === "june_commitment_pending") throw new Error("Expected sealed timing.");
-      expect(actual.ledgerMinutes).toBe(impact.resultingMinutes);
+      const actualMinutes =
+        actual.status === "support_choices_open" ? actual.committedMinutes : actual.ledgerMinutes;
+      expect(actualMinutes).toBe(impact.resultingMinutes);
+      expect(classifyQuestDispatchMinutes(actualMinutes!)).toBe(impact.timing);
     }
   });
 
@@ -98,7 +148,7 @@ describe("Station dispatch impact cards", () => {
       full.options.map((option) => option.dispatchImpact?.line),
     );
     const rendered = renderTerminalStoryChoiceComparison(full);
-    expect(rendered.indexOf("Dispatch: +5m delay → 65m, delayed.")).toBeLessThan(
+    expect(rendered.indexOf("Dispatch: +5m delay → 65m committed (delayed).")).toBeLessThan(
       rendered.indexOf("Promise / priority:"),
     );
     expect(rendered).toContain(
