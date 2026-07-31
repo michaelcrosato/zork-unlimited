@@ -74,25 +74,23 @@ function expectDepartureInteraction(
   kind: "preparation" | "relief_allocation",
 ): void {
   expect(session.journey().storyChoice).toBeNull();
-  expect(session.view().departureInteractions).toEqual([
-    {
-      id: scene.id,
-      kind,
-      title: scene.title,
-      inspect: {
-        tool: "inspect_overworld_session_story",
-        storyChoiceId: scene.id,
-        arguments: { story_choice_id: scene.id },
-      },
-      choose: {
-        tool: "choose_overworld_session_story",
-        storyChoiceId: scene.id,
-        arguments: { story_choice_id: scene.id },
-        argument: "choice",
-        valuesFrom: "story.options[*].id",
-      },
+  expect(session.view().departureInteractions).toContainEqual({
+    id: scene.id,
+    kind,
+    title: scene.title,
+    inspect: {
+      tool: "inspect_overworld_session_story",
+      storyChoiceId: scene.id,
+      arguments: { story_choice_id: scene.id },
     },
-  ]);
+    choose: {
+      tool: "choose_overworld_session_story",
+      storyChoiceId: scene.id,
+      arguments: { story_choice_id: scene.id },
+      argument: "choice",
+      valuesFrom: "story.options[*].id",
+    },
+  });
 }
 
 describe("F12 to F06 relief-allocation migration integrity", () => {

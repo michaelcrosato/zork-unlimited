@@ -94,24 +94,9 @@ function reachBreakingWeirGoalCompletion(): OverworldSession {
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);
   expect(session.journey().storyChoice).toBeNull();
-  expect(session.view().departureInteractions).toEqual([
-    {
-      id: "albany:wolf_preparation",
-      kind: "preparation",
-      title: WORLD.opening_preparation!.title,
-      inspect: {
-        tool: "inspect_overworld_session_story",
-        storyChoiceId: "albany:wolf_preparation",
-        arguments: { story_choice_id: "albany:wolf_preparation" },
-      },
-      choose: {
-        tool: "choose_overworld_session_story",
-        storyChoiceId: "albany:wolf_preparation",
-        arguments: { story_choice_id: "albany:wolf_preparation" },
-        argument: "choice",
-        valuesFrom: "story.options[*].id",
-      },
-    },
+  expect(session.view().departureInteractions.map(({ id, kind }) => [id, kind])).toEqual([
+    ["albany:wolf_preparation", "preparation"],
+    ["albany:wolf_relief_allocation", "relief_allocation"],
   ]);
   session.chooseJourneyStory("albany:prep_works_fortification");
   expect(session.journey().storyChoice).toBeNull();

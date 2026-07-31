@@ -1366,7 +1366,7 @@ tool(
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk to a local contact; a ready departure_contact_leads entry names its character_id.",
+  "Talk to a ready departure_contact_leads contact; support choices are order-neutral.",
   CONTACT_INPUT({
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -1508,14 +1508,14 @@ tool(
 );
 tool(
   "choose_overworld_session_story",
-  "Choose a current canonical story option, or an inspected departure story by story_choice_id.",
+  "Choose a visible story option; story_choice_id disambiguates departure interactions.",
   {
     ...OVERWORLD_SESSION,
-    choice: z.string().describe("Choice id from current canonical story.options."),
+    choice: z.string().describe("Visible story option id; unique departure options are inferred."),
     story_choice_id: z
       .string()
       .optional()
-      .describe("Optional story id from departure_interactions for a pull-based choice."),
+      .describe("Optional departure_interactions id for disambiguation."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.choose_overworld_session_story(defaultCompactOverworld(a)),

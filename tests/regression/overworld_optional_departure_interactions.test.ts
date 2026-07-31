@@ -25,8 +25,8 @@ function moveToStation(session: OverworldSession): void {
   session.moveArea(route.id);
 }
 
-function sessionAtStation(): OverworldSession {
-  const session = new OverworldSession(WORLD);
+function sessionAtStation(world = WORLD): OverworldSession {
+  const session = new OverworldSession(world);
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
@@ -34,6 +34,23 @@ function sessionAtStation(): OverworldSession {
   session.chooseJourneyStory(LEAD.options[0]!.id);
   moveToStation(session);
   return session;
+}
+
+type SupportSpoke = "P" | "R" | "J";
+
+function chooseSupportSpoke(session: OverworldSession, spoke: SupportSpoke): void {
+  if (spoke === "P") {
+    session.chooseJourneyStory(PREPARATION.profiles[0]!.id);
+    return;
+  }
+  if (spoke === "R") {
+    session.chooseJourneyStory(ALLOCATION.options[0]!.id);
+    return;
+  }
+  session.talkToCharacter(ALLY.contact);
+  expect(session.journey().storyChoice).toMatchObject({ id: ALLY.id, kind: "ally" });
+  expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/field-team commitment/i);
+  session.chooseJourneyStory(ALLY.options[0]!.id);
 }
 
 function startMcpAtStation() {
@@ -71,7 +88,23 @@ function startMcpAtStation() {
 }
 
 describe("optional Station departure interactions", () => {
-  it("exposes preparation then allocation as derived full and compact tool contracts", () => {
+  it("rejects an ambiguous option-only departure choice without changing session state", () => {
+    const world = structuredClone(WORLD);
+    const sharedOptionId = PREPARATION.profiles[0]!.id;
+    world.opening_relief_allocation!.options[0]!.id = sharedOptionId;
+    const session = sessionAtStation(world);
+    const before = session.snapshot();
+
+    expect(() => session.chooseJourneyStory(sharedOptionId)).toThrow(
+      /departure story option .* is ambiguous; provide story_choice_id/i,
+    );
+    expect(session.snapshot()).toEqual(before);
+    expect(session.chooseJourneyStory(sharedOptionId, PREPARATION.id).choiceId).toBe(
+      sharedOptionId,
+    );
+  });
+
+  it("exposes preparation and allocation together as derived full and compact tool contracts", () => {
     const session = sessionAtStation();
 
     expect(session.journey().storyChoice).toBeNull();
@@ -93,9 +126,27 @@ describe("optional Station departure interactions", () => {
           valuesFrom: "story.options[*].id",
         },
       },
+      {
+        id: ALLOCATION.id,
+        kind: "relief_allocation",
+        title: ALLOCATION.title,
+        inspect: {
+          tool: "inspect_overworld_session_story",
+          storyChoiceId: ALLOCATION.id,
+          arguments: { story_choice_id: ALLOCATION.id },
+        },
+        choose: {
+          tool: "choose_overworld_session_story",
+          storyChoiceId: ALLOCATION.id,
+          arguments: { story_choice_id: ALLOCATION.id },
+          argument: "choice",
+          valuesFrom: "story.options[*].id",
+        },
+      },
     ]);
     expect(session.compactView().departure_interactions).toEqual([
       [PREPARATION.id, "preparation", PREPARATION.title],
+      [ALLOCATION.id, "relief_allocation", ALLOCATION.title],
     ]);
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
       "inspect_overworld_session_story(story_choice_id)",
@@ -115,7 +166,10 @@ describe("optional Station departure interactions", () => {
       "never adds departure_recap_terms",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "choose_overworld_session_story(story_choice_id, choice)",
+      "choose_overworld_session_story(choice)",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
+      "include story_choice_id only to disambiguate overlapping option ids",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain("story.options[*].id");
 
@@ -129,10 +183,14 @@ describe("optional Station departure interactions", () => {
       story_choice_id: PREPARATION.id,
     });
 
-    expect(() => session.inspectJourneyStory(ALLOCATION.id)).toThrow(/not available/i);
-    session.talkToCharacter(ALLY.contact);
-    expect(session.journey().storyChoice).toBeNull();
-    expect(session.view().departureInteractions[0]?.id).toBe(PREPARATION.id);
+    expect(session.inspectJourneyStory(ALLOCATION.id)).toMatchObject({
+      id: ALLOCATION.id,
+      kind: "relief_allocation",
+    });
+    expect(session.view().departureContactLeads[0]).toMatchObject({
+      id: ALLY.id,
+      status: "ready",
+    });
 
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
     expect(session.journey().storyChoice).toBeNull();
@@ -148,7 +206,7 @@ describe("optional Station departure interactions", () => {
     expect(session.compactView().departure_interactions).toBeUndefined();
   });
 
-  it("surfaces June as a read-only contact lead before and after preparation", () => {
+  it("surfaces June as an actionable read-only contact lead before and after preparation", () => {
     const session = sessionAtStation();
     const june = WORLD.characters.find((character) => character.id === ALLY.contact);
     if (!june) throw new Error("Expected June at the Station.");
@@ -165,9 +223,13 @@ describe("optional Station departure interactions", () => {
         contactName: june.name,
         questId: WOLF.id,
         questTitle: WOLF.title,
-        status: "requires_preparation",
-        guidance: `Optional field team: choose a Station preparation first, then talk to ${june.name} to review the terms. You may start ${WOLF.title} now as a solo rider without this choice.`,
-        action: null,
+        status: "ready",
+        guidance: `Optional field team: talk to ${june.name} to review the terms. You may start ${WOLF.title} now as a solo rider without this choice.`,
+        action: {
+          tool: "talk_overworld_session_contact",
+          characterId: june.id,
+          arguments: { character_id: june.id },
+        },
       },
     ]);
     expect(session.compactView().departure_contact_leads).toEqual([
@@ -175,7 +237,7 @@ describe("optional Station departure interactions", () => {
         ALLY.id,
         "ally",
         ALLY.title,
-        "requires_preparation",
+        "ready",
         june.id,
         june.name,
         WOLF.id,
@@ -199,16 +261,7 @@ describe("optional Station departure interactions", () => {
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
     const afterPreparationSnapshot = session.snapshot();
     const ready = session.view().departureContactLeads[0];
-    expect(ready).toEqual({
-      ...beforePreparation[0],
-      status: "ready",
-      guidance: `Optional field team: talk to ${june.name} to review the terms. You may start ${WOLF.title} now as a solo rider without this choice.`,
-      action: {
-        tool: "talk_overworld_session_contact",
-        characterId: june.id,
-        arguments: { character_id: june.id },
-      },
-    });
+    expect(ready).toEqual(beforePreparation[0]);
     expect(session.compactView().departure_contact_leads?.[0]?.[3]).toBe("ready");
     expect(compactOverworldView(session.view()).departure_contact_leads).toEqual(
       session.compactView().departure_contact_leads,
@@ -270,14 +323,14 @@ describe("optional Station departure interactions", () => {
       api.choose_overworld_session_story({
         ...FULL,
         session_id: sessionId,
-        choice: PREPARATION.profiles[0]!.id,
+        choice: "unknown:departure_option",
       }),
     ).toThrow(/no (?:presented )?story consequence/i);
     expect(() =>
       api.choose_overworld_session_story({
         ...FULL,
         session_id: sessionId,
-        story_choice_id: ALLOCATION.id,
+        story_choice_id: "unknown:departure_story",
         choice: ALLOCATION.options[0]!.id,
       }),
     ).toThrow(/not available/i);
@@ -291,7 +344,6 @@ describe("optional Station departure interactions", () => {
     const prepared = api.choose_overworld_session_story({
       ...FULL,
       session_id: sessionId,
-      ...preparationInteraction.choose.arguments,
       [preparationInteraction.choose.argument]: preparationChoice,
     });
     expect(prepared.result.choiceId).toBe(preparationChoice);
@@ -367,9 +419,7 @@ describe("optional Station departure interactions", () => {
       session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
     }
 
-    expect(session.view().departureContactLeads).toMatchObject([
-      { id: ALLY.id, status: prepare ? "ready" : "requires_preparation" },
-    ]);
+    expect(session.view().departureContactLeads).toMatchObject([{ id: ALLY.id, status: "ready" }]);
     expect(session.view().questStarts).toContainEqual([WOLF.id, APPROACH]);
     expect(() => session.prepareQuestStart(WOLF.id, APPROACH)).not.toThrow();
     session.startQuest(WOLF.id, APPROACH);
@@ -389,6 +439,97 @@ describe("optional Station departure interactions", () => {
     expect(session.view().departureContactLeads).toEqual([]);
     const snapshot = session.snapshot();
     expect(OverworldSession.restore(WORLD, snapshot).snapshot()).toEqual(snapshot);
+  });
+
+  it("keeps all sixteen ordered support subsets legal, replayable, and materially compositional", () => {
+    const orders: readonly (readonly SupportSpoke[])[] = [
+      [],
+      ["P"],
+      ["R"],
+      ["J"],
+      ["P", "R"],
+      ["R", "P"],
+      ["P", "J"],
+      ["J", "P"],
+      ["R", "J"],
+      ["J", "R"],
+      ["P", "R", "J"],
+      ["P", "J", "R"],
+      ["R", "P", "J"],
+      ["R", "J", "P"],
+      ["J", "P", "R"],
+      ["J", "R", "P"],
+    ];
+    const signatureBySubset = new Map<string, unknown>();
+
+    for (const order of orders) {
+      let session = sessionAtStation();
+      const selected = new Set<SupportSpoke>();
+      for (const spoke of order) {
+        chooseSupportSpoke(session, spoke);
+        selected.add(spoke);
+
+        const interactionKinds = session
+          .view()
+          .departureInteractions.map((interaction) => interaction.kind);
+        expect(interactionKinds, order.join("")).toEqual([
+          ...(!selected.has("P") ? (["preparation"] as const) : []),
+          ...(!selected.has("R") ? (["relief_allocation"] as const) : []),
+        ]);
+        expect(
+          session.view().departureContactLeads.map((lead) => [lead.id, lead.status]),
+          order.join(""),
+        ).toEqual(selected.has("J") ? [] : [[ALLY.id, "ready"]]);
+        expect(session.view().questStarts).toContainEqual([WOLF.id, APPROACH]);
+
+        const snapshot = session.snapshot();
+        session = OverworldSession.restore(WORLD, structuredClone(snapshot));
+        expect(session.snapshot()).toEqual(snapshot);
+      }
+
+      const plan = session.prepareQuestStart(WOLF.id, APPROACH);
+      expect(plan.dispatchWindow).toMatchObject({ schemaVersion: 2, questId: WOLF.id });
+      if (!plan.dispatchWindow.receipt) throw new Error("Expected a v2 dispatch receipt.");
+      expect(plan.dispatchWindow.receipt.preparation.kind).toBe(
+        selected.has("P") ? "selected" : "declined_at_launch",
+      );
+      expect(plan.dispatchWindow.receipt.reliefAllocation.kind).toBe(
+        selected.has("R") ? "selected" : "declined_at_launch",
+      );
+      expect(plan.dispatchWindow.receipt.juneCommitment.kind).toBe(
+        selected.has("J") ? "selected" : "declined_at_launch",
+      );
+
+      session.startQuest(WOLF.id, APPROACH);
+      const started = session.snapshot();
+      const questEntry = started.journalEntries.find((entry) => entry.id === `quest:${WOLF.id}`);
+      if (questEntry?.questStartProof?.kind !== "approach") {
+        throw new Error("Expected the authenticated Wolf-Winter approach proof.");
+      }
+      expect(questEntry.questStartProof.dispatchSeal).toMatchObject({
+        schemaVersion: 1,
+        questId: WOLF.id,
+        approachId: APPROACH,
+        windowProofHash: plan.dispatchWindow.proofHash,
+        slots: {
+          preparation: { kind: selected.has("P") ? "selected" : "declined_at_launch" },
+          reliefAllocation: { kind: selected.has("R") ? "selected" : "declined_at_launch" },
+          fieldTeam: { kind: selected.has("J") ? "selected" : "declined_at_launch" },
+        },
+      });
+      expect(OverworldSession.restore(WORLD, structuredClone(started)).snapshot()).toEqual(started);
+
+      const subset = [...selected].sort().join("");
+      const materialSignature = {
+        character: started.character,
+        minutes: plan.dispatchWindow.ledgerMinutes,
+        timing: plan.dispatchWindow.status,
+        slots: questEntry.questStartProof.dispatchSeal?.slots,
+      };
+      const prior = signatureBySubset.get(subset);
+      if (prior === undefined) signatureBySubset.set(subset, materialSignature);
+      else expect(materialSignature, order.join("")).toEqual(prior);
+    }
   });
 
   it("keeps preparation Station-only and unavailable after Wolf-Winter begins", () => {

@@ -1764,7 +1764,11 @@ describe("MCP pure play mode", () => {
           | undefined;
         expect(storyChoiceProperties?.choice).toMatchObject({
           type: "string",
-          description: "Choice id from current canonical story.options.",
+          description: "Visible story option id; unique departure options are inferred.",
+        });
+        expect(storyChoiceProperties?.story_choice_id).toMatchObject({
+          type: "string",
+          description: "Optional departure_interactions id for disambiguation.",
         });
         expect(storyChoiceProperties?.choice).not.toHaveProperty("enum");
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
@@ -1826,7 +1830,9 @@ describe("MCP pure play mode", () => {
         expect(invalidStoryChoice.isError).toBe(true);
         expect((invalidStoryChoice.content as unknown[])[0]).toMatchObject({
           type: "text",
-          text: expect.stringMatching(/no presented story consequence|requires story_choice_id/i),
+          text: expect.stringMatching(
+            /no story consequence|no presented story consequence|requires story_choice_id/i,
+          ),
         });
 
         const second = await client.callTool({
@@ -2216,7 +2222,7 @@ describe("MCP pure play mode", () => {
         mergeLegendAndExpectContextCoverage(cumulativeLegend, stationed, "Station");
         expect((stationed.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
         expect((stationed.legend_delta as Record<string, string>).departure_contact_leads).toMatch(
-          /requires_preparation.*ready.*talk_overworld_session_contact.*solo default/i,
+          /ready.*talk_overworld_session_contact.*before or after preparation or relief allocation.*legacy requires_preparation.*solo default/i,
         );
         expect(JSON.stringify(cumulativeLegend).length).toBeLessThanOrEqual(7_200);
         expect(
@@ -2225,18 +2231,21 @@ describe("MCP pure play mode", () => {
               departure_interactions?: [string, string, string][];
             }
           ).departure_interactions,
-        ).toEqual([["albany:wolf_preparation", "preparation", expect.any(String)]]);
+        ).toEqual([
+          ["albany:wolf_preparation", "preparation", expect.any(String)],
+          ["albany:wolf_relief_allocation", "relief_allocation", expect.any(String)],
+        ]);
         expect((stationed.context as CompactAreaContext).departure_contact_leads).toEqual([
           [
             "albany:wolf_ally_commitment",
             "ally",
             "Choose the Wolf-Winter Field Team",
-            "requires_preparation",
+            "ready",
             "albany_city__transport_hub__june_pike",
             "June Pike",
             "wolf_winter",
             "The Wolf-Winter",
-            expect.stringMatching(/choose a Station preparation.*solo rider/i),
+            expect.stringMatching(/talk to June Pike.*solo rider/i),
           ],
         ]);
         expect((stationed.context as CompactAreaContext).quest_starts).toContainEqual([

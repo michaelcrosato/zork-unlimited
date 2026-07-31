@@ -198,11 +198,19 @@ export function renderDepartureRecap(
         `  Direct launch now: ${String(dispatch.minutes)}m — ${timing}. Field-team contact remains optional.`,
       );
     } else {
-      const remaining = dispatch.remainingOptional
-        .map((slot) => (slot === "relief_allocation" ? "relief allocation" : "field team"))
-        .join(" and ");
+      const remainingLabels = dispatch.remainingOptional.map((slot) =>
+        slot === "preparation"
+          ? "preparation"
+          : slot === "relief_allocation"
+            ? "relief allocation"
+            : "field team",
+      );
+      const remaining =
+        remainingLabels.length > 2
+          ? `${remainingLabels.slice(0, -1).join(", ")}, and ${remainingLabels.at(-1)!}`
+          : remainingLabels.join(" and ");
       lines.push(
-        `  Dispatch committed: ${String(dispatch.minutes)}m. Optional before launch: ${remaining}.`,
+        `  Dispatch committed: ${String(dispatch.minutes)}m; ${remaining} ${remainingLabels.length === 1 ? "remains" : "remain"} optional.`,
       );
     }
   }

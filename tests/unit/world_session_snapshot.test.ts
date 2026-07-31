@@ -201,7 +201,7 @@ describe("overworld session snapshots", () => {
     }
   });
 
-  it("migrates strict version-8 snapshots to the canonical version-9 default", () => {
+  it("migrates strict version-8 snapshots to the canonical current default", () => {
     const migrated = parseOverworldSessionSnapshot(legacySnapshot());
     const second = parseOverworldSessionSnapshot(legacySnapshot());
 
@@ -217,8 +217,8 @@ describe("overworld session snapshots", () => {
     expect(() => parseOverworldSessionSnapshot({ ...legacySnapshot(), version: 7 })).toThrow(
       /unsupported overworld session snapshot version 7/i,
     );
-    expect(() => parseOverworldSessionSnapshot({ ...baseSnapshot(), version: 10 })).toThrow(
-      /unsupported overworld session snapshot version 10/i,
+    expect(() => parseOverworldSessionSnapshot({ ...baseSnapshot(), version: 11 })).toThrow(
+      /unsupported overworld session snapshot version 11/i,
     );
     expect(() => parseOverworldSessionSnapshot({ ...legacySnapshot(), version: "8" })).toThrow();
     expect(() =>

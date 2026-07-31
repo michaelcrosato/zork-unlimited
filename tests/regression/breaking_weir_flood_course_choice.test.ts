@@ -134,25 +134,12 @@ function launchBreakingWeir(api: ToolApi): { overworldSessionId: string; rpgSess
     area_route_id: preparationRoute.id,
   });
   expect(atPreparation.journey.storyChoice).toBeNull();
-  expect(atPreparation.observation.departureInteractions).toEqual([
-    {
-      id: "albany:wolf_preparation",
-      kind: "preparation",
-      title: world.opening_preparation!.title,
-      inspect: {
-        tool: "inspect_overworld_session_story",
-        storyChoiceId: "albany:wolf_preparation",
-        arguments: { story_choice_id: "albany:wolf_preparation" },
-      },
-      choose: {
-        tool: "choose_overworld_session_story",
-        storyChoiceId: "albany:wolf_preparation",
-        arguments: { story_choice_id: "albany:wolf_preparation" },
-        argument: "choice",
-        valuesFrom: "story.options[*].id",
-      },
-    },
-  ]);
+  expect(atPreparation.observation.departureInteractions.map(({ id, kind }) => [id, kind])).toEqual(
+    [
+      ["albany:wolf_preparation", "preparation"],
+      ["albany:wolf_relief_allocation", "relief_allocation"],
+    ],
+  );
   api.choose_overworld_session_story({
     ...full,
     session_id: overworldSessionId,

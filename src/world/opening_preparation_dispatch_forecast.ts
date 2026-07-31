@@ -5,10 +5,13 @@ import type {
   JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
 import { resolveOpeningDispatchManifestChain } from "./opening_dispatch_briefing.js";
+import { replayOpeningDispatchChoices } from "./opening_dispatch_choice_replay.js";
+import { proveOpeningAllyJournal } from "./opening_ally_journal.js";
 import { openingPreparationTerms } from "./opening_preparation.js";
 import { proveOpeningLeadSourceJournal } from "./opening_lead_source_journal.js";
 import { proveOpeningPreparationJournal } from "./opening_preparation_journal.js";
 import { proveOpeningRegistrationJournal } from "./opening_registration_journal.js";
+import { proveOpeningReliefAllocationJournal } from "./opening_relief_allocation_journal.js";
 import { proveOpeningReliefOathJournal } from "./opening_relief_oath_journal.js";
 import type { OverworldManifest } from "./overworld.js";
 import type {
@@ -56,7 +59,10 @@ function forecastLine(args: {
   maximum: number;
   classification: JourneyStoryChoiceDispatchForecast["classification"];
 }): string {
-  const range = `${String(args.minimum)}–${String(args.maximum)}m`;
+  const range =
+    args.minimum === args.maximum
+      ? `${String(args.minimum)}m`
+      : `${String(args.minimum)}–${String(args.maximum)}m`;
   let line: string;
   switch (args.classification) {
     case "on_time_guaranteed":
@@ -81,8 +87,8 @@ function forecastLine(args: {
 
 /**
  * Replays only the current Albany preparation-offer boundary. The range is a
- * read-only comparison of one profile plus every still-optional allocation and
- * June term; it grants neither a selection nor launch authority.
+ * read-only comparison of one profile plus the selected or still-optional
+ * allocation and June terms; it grants neither a selection nor launch authority.
  */
 export function deriveOpeningPreparationDispatchForecasts(
   args: OpeningPreparationDispatchForecastInputs,
@@ -158,6 +164,59 @@ export function deriveOpeningPreparationDispatchForecasts(
     if (preparationProof.legacy || preparationProof.profile || preparationProof.terms) {
       return null;
     }
+    const reliefAllocationProof = proveOpeningReliefAllocationJournal({
+      scene: chain.reliefAllocation,
+      preparationProof,
+      leadSourceProof,
+      preparationScene: chain.preparation,
+      journalEntries: args.journalEntries,
+      expectedTown: null,
+      trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
+    });
+    if (
+      reliefAllocationProof.legacy ||
+      (reliefAllocationProof.offered && !reliefAllocationProof.option)
+    ) {
+      return null;
+    }
+    const allyProof = proveOpeningAllyJournal({
+      scene: chain.ally,
+      preparationProof,
+      reliefAllocationProof,
+      leadSourceProof,
+      preparationScene: chain.preparation,
+      reliefAllocationScene: chain.reliefAllocation,
+      journalEntries: args.journalEntries,
+      expectedTown: null,
+      trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
+    });
+    if (allyProof.legacy || (allyProof.offered && !allyProof.option)) return null;
+
+    const characterBeforePreparation = replayOpeningDispatchChoices({
+      characterAfterSource: leadSourceProof.characterAfterSource,
+      choices: [
+        ...(reliefAllocationProof.option && reliefAllocationProof.journalIndex !== null
+          ? [
+              {
+                kind: "relief_allocation" as const,
+                journalIndex: reliefAllocationProof.journalIndex,
+                scene: chain.reliefAllocation,
+                optionId: reliefAllocationProof.option.id,
+              },
+            ]
+          : []),
+        ...(allyProof.option && allyProof.journalIndex !== null
+          ? [
+              {
+                kind: "ally" as const,
+                journalIndex: allyProof.journalIndex,
+                scene: chain.ally,
+                optionId: allyProof.option.id,
+              },
+            ]
+          : []),
+      ],
+    });
     const virtualOfferBoundary: ForecastBoundary = Object.freeze({
       acceptedDecisions: args.acceptedDecisions,
       decisionProofHash: args.decisionProofHash,
@@ -180,12 +239,10 @@ export function deriveOpeningPreparationDispatchForecasts(
       preparationOfferBoundary.townId !== chain.preparation.home ||
       preparationOfferBoundary.areaId !== chain.preparation.area ||
       (!preparationProof.offered &&
-        (leadSourceProof.journalIndex !== 0 ||
-          (chain.preparation.area === leadSourceProof.selectionBoundary.areaId
-            ? args.acceptedDecisions !== leadSourceProof.selectionBoundary.acceptedDecisions ||
-              args.decisionProofHash !== leadSourceProof.selectionBoundary.decisionProofHash
-            : args.acceptedDecisions <= leadSourceProof.selectionBoundary.acceptedDecisions ||
-              args.decisionProofHash === leadSourceProof.selectionBoundary.decisionProofHash)))
+        (args.acceptedDecisions < leadSourceProof.selectionBoundary.acceptedDecisions ||
+          args.currentMinutes < leadSourceProof.selectionBoundary.minutes ||
+          (args.acceptedDecisions === leadSourceProof.selectionBoundary.acceptedDecisions &&
+            args.decisionProofHash !== leadSourceProof.selectionBoundary.decisionProofHash)))
     ) {
       return null;
     }
@@ -194,25 +251,36 @@ export function deriveOpeningPreparationDispatchForecasts(
       chain.preparation.profiles.map((profile) =>
         Object.freeze({
           id: profile.id,
-          minutes: openingPreparationTerms(profile, leadSourceProof.characterAfterSource).minutes,
+          minutes: openingPreparationTerms(profile, characterBeforePreparation).minutes,
         }),
       ),
     );
-    const allocationCandidates = Object.freeze([
-      Object.freeze({ id: "unassigned", minutes: 0 }),
-      ...chain.reliefAllocation.options.map((option) =>
-        Object.freeze({ id: option.id, minutes: option.terms.minutes }),
-      ),
-    ] satisfies readonly ForecastCandidate[]);
+    const allocationCandidates = Object.freeze(
+      reliefAllocationProof.option && reliefAllocationProof.terms
+        ? [
+            Object.freeze({
+              id: reliefAllocationProof.option.id,
+              minutes: reliefAllocationProof.terms.minutes,
+            }),
+          ]
+        : [
+            Object.freeze({ id: "unassigned", minutes: 0 }),
+            ...chain.reliefAllocation.options.map((option) =>
+              Object.freeze({ id: option.id, minutes: option.terms.minutes }),
+            ),
+          ],
+    ) satisfies readonly ForecastCandidate[];
     const juneCandidates = Object.freeze(
-      chain.ally.options.map((option) =>
-        Object.freeze({ id: option.id, minutes: option.terms.minutes }),
-      ),
-    );
+      allyProof.option && allyProof.terms
+        ? [Object.freeze({ id: allyProof.option.id, minutes: allyProof.terms.minutes })]
+        : chain.ally.options.map((option) =>
+            Object.freeze({ id: option.id, minutes: option.terms.minutes }),
+          ),
+    ) satisfies readonly ForecastCandidate[];
     if (
       preparationCandidates.length !== chain.preparation.profiles.length ||
-      allocationCandidates.length !== chain.reliefAllocation.options.length + 1 ||
-      juneCandidates.length !== chain.ally.options.length ||
+      allocationCandidates.length === 0 ||
+      juneCandidates.length === 0 ||
       preparationCandidates.some((candidate) => candidate.minutes < 0) ||
       allocationCandidates.some((candidate) => candidate.minutes < 0) ||
       juneCandidates.some((candidate) => candidate.minutes < 0)
@@ -254,6 +322,8 @@ export function deriveOpeningPreparationDispatchForecasts(
       preparationCandidates,
       allocationCandidates,
       juneCandidates,
+      selectedReliefAllocationId: reliefAllocationProof.option?.id ?? null,
+      selectedFieldTeamId: allyProof.option?.id ?? null,
       thresholdMinutes: OPENING_PREPARATION_DISPATCH_ON_TIME_MAX_MINUTES,
     });
 

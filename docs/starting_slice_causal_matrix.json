@@ -183,7 +183,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "After preparation, speaking with Road Warden June Pike presents three irreversible field-team terms with exact capability, condition, and cost: grant her cattle-first authority and spend 15 minutes for a companion and active promise; ask for a subordinate relay and spend 5 minutes to receive her authored refusal; or leave explicitly solo with no added time. Departing without asking June also remains a truthful solo default and invents no relationship evidence.",
+      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, speaking with Road Warden June Pike independently presents three irreversible field-team terms with exact capability, condition, and cost: grant her cattle-first authority and spend 15 minutes for a companion and active promise; ask for a subordinate relay and spend 5 minutes to receive her authored refusal; or leave explicitly solo with no added time. Preparation and relief allocation remain separately optional in either order, while departing without asking June remains a truthful solo default and invents no relationship evidence.",
       "immediate_state_delta": [
         "character.relationships",
         "character.promises",
@@ -197,7 +197,7 @@
         "Conditional quest exports resolve the cattle-first promise kept or broken in chronological replay, preserve June's ending-specific memory, and drive matching Station testimony. A living-pack return gives the kept companion one one-time 15-minute Station resupply; her negotiated relay refusal instead gives one distinct Station rest; explicit solo and relationship loss receive neither."
       ],
       "visible_feedback": [
-        "A read-only Station departure contact lead names June's optional field team before preparation, becomes an exact talk action after preparation, and keeps immediate solo launch visibly legal without creating an offer or decision. Speaking with June remains the only action that opens the blocking field-team screen and durable offer journal; that screen states her one pressure intervention, cattle-first authority, no-wolf-death condition, exact time cost, and solo consequence before confirmation, while the persistent character panel then shows companion and promise state.",
+        "A read-only Station departure contact lead names June's optional field team and is immediately actionable beside the independent preparation and relief-allocation interactions. It keeps immediate solo launch visibly legal without creating an offer or decision. Speaking with June remains the only action that opens the blocking field-team screen and durable offer journal; that screen states her one pressure intervention, cattle-first authority, no-wolf-death condition, exact time cost, and solo consequence before confirmation, while the persistent character panel then shows companion and promise state.",
         "Cade's menu and the last pre-paling June boundary distinguish guarded hunt-and-hold from the lure, drive, and fortification commitments. Explicit blocked exits, dialogue, journal, room prose, and legal actions disclose what crossing or a wolf death will do before either is chosen.",
         "After a fouled lure, state-specific room prose and legal actions distinguish the braced-rail scent-pen from the bound-split-guard scent-pen. The first spear strike irreversibly commits the hybrid line and retires every living recovery; killing that wolf then breaks June's agreement on the Albany return.",
         "On return, June's memory-conditioned Station account, companion/promise projection, and cause-named one-time service distinguish cooperation, refusal, solo travel, and relationship loss across full, compact, UI, and restored views."
@@ -248,7 +248,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, optionally inspect and commit one urgent specialist packet: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. Every card names its one-shot Wolf consumer, DC 12 check, current matching skill modifier and d20 success chance, failure consequence, provider memory, exact public or sponsored time-and-money cost, and mutually exclusive return service before confirmation. Emery's authored field terms disclose both its failed-LURE and failed-DRIVE consumers, compare failure with declining the route, and state that DRIVE still requires its loose hurdle; both hill launches remain legal without a selection.",
+      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, optionally inspect and commit one urgent specialist packet independently of relief allocation and June's field-team terms: Reese's Works fortification sequence, Emery's drover route, or Jamie's relief protocol. The three support spokes remain legal in any order and any unresolved spoke is explicitly declined only at launch. Every preparation card names its one-shot Wolf consumer, DC 12 check, current matching skill modifier and d20 success chance, failure consequence, provider memory, exact public or sponsored time-and-money cost, mutually exclusive return service, and authenticated final dispatch range with already-selected support fixed before confirmation. Emery's authored field terms disclose both its failed-LURE and failed-DRIVE consumers, compare failure with declining the route, and state that DRIVE still requires its loose hurdle; both hill launches remain legal without a selection.",
       "immediate_state_delta": [
         "character.money",
         "character.knowledge",
@@ -264,7 +264,7 @@
         "A truthful held-byre return pairs each selected plan with one different 15-minute service: Works District resupply, Campus rest, or Civic Core resupply. Paired low-supply and fatigued states include paid preparation, shortest Albany relocation, and each alternative profile's best matching service; each profile wins somewhere, so none dominates globally."
       ],
       "visible_feedback": [
-        "The pull-based Station interaction exposes all three affordable plans for all four backgrounds and all three source choices; inspection is read-only, departure remains legal, and an accepted choice records the exact paid terms, learned plan, and provider memory.",
+        "The pull-based Station hub exposes preparation and allocation together plus an actionable June lead for all four backgrounds and all three source choices. Inspection is read-only, every one of the sixteen ordered support subsets restores exactly, departure remains legal outside a pending offer, and an accepted choice records the exact paid terms, learned plan, and provider memory.",
         "Wolf room variants, legal commands, narrated skill arithmetic, cattle-alarm and pack-drive bands, shared one-shot retirement, mandatory DRIVE hurdle, prepared pressure recovery, and unprepared overrun strain name the selected plan and its actual consequence.",
         "Representative LURE and DRIVE Drover routes prove full MCP, compact MCP, browser, and RPG save parity. Paired deterministic proofs carry prepared success, prepared failure, and no-plan DRIVE states through the same three crisis priorities; core-session proofs cover all three matching return services and causes, while journal-bound story-choice proof consumes each one-time benefit across restore."
       ],
@@ -300,6 +300,8 @@
         "tests/regression/opening_preparation_snapshot_integrity.test.ts",
         "tests/regression/overworld_optional_departure_interactions.test.ts",
         "tests/starting_slice/preparation_profile_gameplay.test.ts",
+        "tests/starting_slice/preparation_dispatch_forecast.test.ts",
+        "tests/starting_slice/station_dispatch_impact.test.ts",
         "tests/starting_slice/preparation_profiles_return_e2e.test.ts",
         "traces/bugs/bug_0522_wolf_winter_preparation_profiles.yaml"
       ],
@@ -312,7 +314,7 @@
       "implementation_status": "implemented",
       "proof_status": "proven",
       "counts_toward_contract": true,
-      "visible_choice": "After accepting a preparation packet at the Station Quarter, optionally inspect a five-minute assignment of Albany's one unallocated winter-relief wagon and crew. Send fodder and drovers ahead to Cade's herd, keep Jamie's Market warm room staffed for vulnerable residents, or hold Hayden's wagon at the hill turn as a mobile failure crew. Every card names what it protects and the two needs left exposed; choosing is irreversible, while both hill launches remain legal without choosing.",
+      "visible_choice": "After certifying one Albany source and reaching the Station Quarter, optionally inspect a five-minute assignment of Albany's one unallocated winter-relief wagon and crew before or after preparation and June's field-team terms. Send fodder and drovers ahead to Cade's herd, keep Jamie's Market warm room staffed for vulnerable residents, or hold Hayden's wagon at the hill turn as a mobile failure crew. Every card names what it protects, the two needs left exposed, and the exact resulting committed dispatch time; choosing is irreversible, while both hill launches remain legal without choosing.",
       "immediate_state_delta": [
         "world.minutes",
         "character.knowledge",
@@ -323,7 +325,7 @@
         "Exactly one allocation knowledge imports as exactly one Wolf-Winter flag. On a successful first lure cast from the exposed ridge, Cade's pre-feed suppresses the ordinary alarm increase; seed 26 reaches alarm 3 and the whole-herd living-pack ending, while the same route under resident shelter reaches alarm 4 and scatters two cattle. A failed cast and the sheltered route keep their full consequences, and no feed item or retry is created.",
         "The mobile crew is legal only after the first fortification seat failed and the chosen Cade-help or Albany-authority recovery already joined the seam. It acts once, lowers Winter Siege pressure by 1, preserves the failed-check and stance-cost flags, and selects the truthful failed-then-mobile-stabilized dawn branch under either stance.",
         "Resident shelter adds no Wolf field action. Its exact story-choice proof plus the trusted byre-held return fact unlocks one 15-minute Market rest instead of the ordinary 240-minute service. Mobile reserve uses the same completion gate to unlock one 15-minute Campus resupply instead of the ordinary 45-minute service. The offers are mutually exclusive and each is consumed through the generic campaign-service journal.",
-        "The offer, equal five-minute cost, selected provider memory, quest import, field result, return fact, and service eligibility survive chronological foldback and save/restore. Exact F12 unstarted saves receive the real current offer with no retroactive effects, including saves that already selected June: a later allocation composes after the preserved ally proof and re-restores with both sets of effects. Exact started saves retain their approach proof and receive one neutral legacy marker bound to the pre-start boundary without allocation knowledge, memory, cost, field aid, or service."
+        "The offer, equal five-minute cost, selected provider memory, quest import, field result, return fact, and service eligibility survive chronological foldback and save/restore. The current hub proves allocation before or after preparation and June, with permutation-equivalent material state for the same selected subset. Exact F12 unstarted saves receive the real current offer with no retroactive effects, including saves that already selected June: a later allocation composes after the preserved ally proof and re-restores with both sets of effects. Exact started saves retain their approach proof and receive one neutral legacy marker bound to the pre-start boundary without allocation knowledge, memory, cost, field aid, or service."
       ],
       "visible_feedback": [
         "Full, compact, browser, and MCP surfaces show the optional single-wagon interaction, equal five-minute cost, named provider, protected need, two exposed needs, consequence, exact inspect/choose arguments, and legal departure before commitment; the journal and persistent character state retain an accepted allocation afterward.",
@@ -380,7 +382,7 @@
         "The selected knowledge imports as exactly one route flag. It makes exactly one last-mile action legal, and taking the exposed descent starts cattle alarm at 1 while the sheltered gate leaves it at 0; contradictory flags authorize neither route.",
         "The first committed lure cast reads the route flag: exposed ridge uses DC 10 and sheltered stockway uses DC 12. At seed 9 only the ridge succeeds; the stockway permanently fouls the cast and exposes the authored split-rail recovery instead of an identical retry.",
         "At seed 26 both first casts succeed. Under a non-aid oath and without Cade fodder, the ridge's clean three-cast line reaches alarm 4 and the two-cattle-scattered living-pack ending, while the stockway reaches alarm 3 and the whole-herd living-pack ending. Cade fodder suppresses the ridge's clean first-cast step but does not alter the stockway; Aid-Only suppresses the final clean-cast step on either road, and combines with fodder to bring the ridge to alarm 2.",
-        "Exact launch cost, Hayden route memory, route-qualified decision proof, quest import receipt, and route return summary survive quest foldback and save/restore. Remaining overworld supplies, fatigue, and clock state continue into Albany travel and services."
+        "Exact launch cost, Hayden route memory, route-qualified decision proof, quest import receipt, and route return summary survive quest foldback and save/restore. A versioned launch seal binds the actual hill approach and decision boundary to selected or explicitly declined preparation, allocation, and field-team slots plus the authenticated dispatch ledger; v10 stripping and mutation fail closed while legitimate v9 launches backfill once. Remaining overworld supplies, fatigue, and clock state continue into Albany travel and services."
       ],
       "visible_feedback": [
         "Full MCP, compact MCP, browser, and CLI show each actual time/supply/fatigue cost, projected arrival, remaining supplies, resulting condition, blocked reason, and one exact conditional field-tradeoff summary before commitment. The dedicated summary is bounded and never compact-truncated; Cade fodder and Aid-Only each replace baseline-only alarm claims with their exact combined clean-lure result while leaving authored and persisted proof unchanged.",
@@ -421,6 +423,7 @@
         "tests/unit/world_quest_launch_resource_replay.test.ts",
         "tests/regression/hill_approach_migration_integrity.test.ts",
         "tests/starting_slice/wolf_route_tradeoff_projection.test.ts",
+        "tests/unit/world_quest_launch_resource_replay.test.ts",
         "traces/bugs/bug_0526_wolf_winter_hill_approach.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/hill_approach_return_e2e.test.ts"

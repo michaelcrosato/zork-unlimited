@@ -58,6 +58,7 @@ import {
 } from "./session_quests.js";
 import {
   classifyQuestDispatchMinutes,
+  createQuestDispatchLaunchSeal,
   deriveQuestDispatchPresentationWindow,
 } from "./quest_dispatch_window.js";
 import { deriveCampaignWorldFactIds } from "./campaign_consequences.js";
@@ -930,6 +931,33 @@ export class OverworldSession {
     );
   }
 
+  private openingDispatchHubAvailable(): ReturnType<typeof resolveOpeningDispatchManifestChain> {
+    const chain = resolveOpeningDispatchManifestChain(this.world);
+    if (
+      !chain ||
+      !this.openingLeadSourceResolved() ||
+      this.journeyState.status !== "active" ||
+      this.journeyState.pendingChoice !== null ||
+      this.pendingRoadEncounter !== null ||
+      this.currentId !== chain.preparation.home ||
+      this.currentAreaId !== chain.preparation.area ||
+      !this.discoveredQuestIds.has(chain.quest.id) ||
+      this.startedQuestIds.has(chain.quest.id) ||
+      this.completedQuestIds.has(chain.quest.id)
+    ) {
+      return null;
+    }
+    return chain;
+  }
+
+  private openingDispatchSupportChoicePending(): boolean {
+    return (
+      this.openingPreparationAvailable() !== null ||
+      this.openingReliefAllocationAvailable() !== null ||
+      this.openingAllyAvailable() !== null
+    );
+  }
+
   private openingAllyAvailable(): NonNullable<OverworldManifest["opening_ally"]> | null {
     const scene = this.world.opening_ally;
     if (!scene || this.journeyState.status !== "active" || this.openingAllyResolved()) {
@@ -982,97 +1010,112 @@ export class OverworldSession {
   private openingPreparationDepartureInteractionAvailable(): NonNullable<
     OverworldManifest["opening_preparation"]
   > | null {
+    const chain = this.openingDispatchHubAvailable();
+    if (chain) {
+      return this.openingPreparationResolved() || this.openingDispatchSupportChoicePending()
+        ? null
+        : chain.preparation;
+    }
+    // Trusted predecessor manifests retain their original sequential runtime;
+    // only the complete current chain opts into the order-neutral hub.
     const scene = this.world.opening_preparation;
     const leadSource = this.world.opening_lead_source;
-    if (
-      !scene ||
-      !leadSource ||
-      scene.after_lead_source !== leadSource.id ||
-      !this.openingLeadSourceResolved() ||
-      this.openingPreparationResolved() ||
-      this.openingPreparationAvailable() !== null ||
-      this.journeyState.status !== "active" ||
-      this.journeyState.pendingChoice !== null ||
-      this.pendingRoadEncounter !== null ||
-      this.currentId !== scene.home ||
-      this.currentAreaId !== scene.area ||
-      this.startedQuestIds.has(scene.target_quest) ||
-      this.completedQuestIds.has(scene.target_quest)
-    ) {
-      return null;
-    }
-    return scene;
+    return scene &&
+      leadSource &&
+      scene.after_lead_source === leadSource.id &&
+      this.openingLeadSourceResolved() &&
+      !this.openingPreparationResolved() &&
+      this.openingPreparationAvailable() === null &&
+      this.journeyState.status === "active" &&
+      this.journeyState.pendingChoice === null &&
+      this.pendingRoadEncounter === null &&
+      this.currentId === scene.home &&
+      this.currentAreaId === scene.area &&
+      !this.startedQuestIds.has(scene.target_quest) &&
+      !this.completedQuestIds.has(scene.target_quest)
+      ? scene
+      : null;
   }
 
   private openingReliefAllocationDepartureInteractionAvailable(): NonNullable<
     OverworldManifest["opening_relief_allocation"]
   > | null {
+    const chain = this.openingDispatchHubAvailable();
+    if (chain) {
+      return this.openingReliefAllocationResolved() || this.openingDispatchSupportChoicePending()
+        ? null
+        : chain.reliefAllocation;
+    }
     const scene = this.world.opening_relief_allocation;
     const preparation = this.world.opening_preparation;
-    if (
-      !scene ||
-      !preparation ||
-      scene.after_preparation !== preparation.id ||
-      !this.openingPreparationResolved() ||
-      this.openingReliefAllocationResolved() ||
-      this.openingReliefAllocationAvailable() !== null ||
-      this.journeyState.status !== "active" ||
-      this.journeyState.pendingChoice !== null ||
-      this.pendingRoadEncounter !== null ||
-      this.currentId !== scene.home ||
-      this.currentAreaId !== scene.area ||
-      this.startedQuestIds.has(scene.target_quest) ||
-      this.completedQuestIds.has(scene.target_quest) ||
-      this.openingAllyAvailable() !== null
-    ) {
-      return null;
-    }
-    return scene;
+    return scene &&
+      preparation &&
+      scene.after_preparation === preparation.id &&
+      this.openingPreparationResolved() &&
+      !this.openingReliefAllocationResolved() &&
+      this.openingReliefAllocationAvailable() === null &&
+      this.journeyState.status === "active" &&
+      this.journeyState.pendingChoice === null &&
+      this.pendingRoadEncounter === null &&
+      this.currentId === scene.home &&
+      this.currentAreaId === scene.area &&
+      !this.startedQuestIds.has(scene.target_quest) &&
+      !this.completedQuestIds.has(scene.target_quest) &&
+      this.openingAllyAvailable() === null
+      ? scene
+      : null;
   }
 
   private departureInteractions(): OverworldDepartureInteraction[] {
+    const interactions: OverworldDepartureInteraction[] = [];
     const preparation = this.openingPreparationDepartureInteractionAvailable();
     if (preparation) {
-      return [
+      interactions.push(
         overworldDepartureInteraction({
           id: preparation.id,
           kind: "preparation",
           title: preparation.title,
         }),
-      ];
+      );
     }
     const allocation = this.openingReliefAllocationDepartureInteractionAvailable();
-    return allocation
-      ? [
-          overworldDepartureInteraction({
-            id: allocation.id,
-            kind: "relief_allocation",
-            title: allocation.title,
-          }),
-        ]
-      : [];
+    if (allocation) {
+      interactions.push(
+        overworldDepartureInteraction({
+          id: allocation.id,
+          kind: "relief_allocation",
+          title: allocation.title,
+        }),
+      );
+    }
+    return interactions;
   }
 
   private departureContactLeads(): OverworldDepartureContactLead[] {
-    const scene = this.world.opening_ally;
-    const preparation = this.world.opening_preparation;
-    if (
-      !scene ||
-      !preparation ||
-      scene.after_preparation !== preparation.id ||
-      !this.openingLeadSourceResolved() ||
-      this.openingAllyResolved() ||
-      this.openingAllyAvailable() !== null ||
-      this.openingPreparationAvailable() !== null ||
-      this.journeyState.status !== "active" ||
-      this.journeyState.pendingChoice !== null ||
-      this.pendingRoadEncounter !== null ||
-      this.currentId !== scene.home ||
-      this.currentAreaId !== scene.area ||
-      this.startedQuestIds.size > 0 ||
-      this.completedQuestIds.size > 0
-    ) {
-      return [];
+    const chain = this.openingDispatchHubAvailable();
+    const scene = chain?.ally ?? this.world.opening_ally;
+    if (!scene) return [];
+    if (chain) {
+      if (this.openingAllyResolved() || this.openingDispatchSupportChoicePending()) return [];
+    } else {
+      const preparation = this.world.opening_preparation;
+      if (
+        !preparation ||
+        scene.after_preparation !== preparation.id ||
+        !this.openingLeadSourceResolved() ||
+        this.openingAllyResolved() ||
+        this.openingAllyAvailable() !== null ||
+        this.openingPreparationAvailable() !== null ||
+        this.journeyState.status !== "active" ||
+        this.journeyState.pendingChoice !== null ||
+        this.pendingRoadEncounter !== null ||
+        this.currentId !== scene.home ||
+        this.currentAreaId !== scene.area ||
+        this.startedQuestIds.size > 0 ||
+        this.completedQuestIds.size > 0
+      ) {
+        return [];
+      }
     }
     const contact = this.charactersById.get(scene.contact);
     const quest = this.questsById.get(scene.target_quest);
@@ -1085,7 +1128,7 @@ export class OverworldSession {
         contactName: contact.name,
         questId: quest.id,
         questTitle: quest.title,
-        status: this.openingPreparationResolved() ? "ready" : "requires_preparation",
+        status: chain || this.openingPreparationResolved() ? "ready" : "requires_preparation",
       }),
     ];
   }
@@ -1161,12 +1204,6 @@ export class OverworldSession {
       areaId: this.currentAreaIdOrThrow(),
       minutes: this.minutes,
     });
-    const sameBoundary = (left: typeof boundary, right: typeof boundary) =>
-      left.acceptedDecisions === right.acceptedDecisions &&
-      left.decisionProofHash === right.decisionProofHash &&
-      left.townId === right.townId &&
-      left.areaId === right.areaId &&
-      left.minutes === right.minutes;
     try {
       const journalEntries =
         kind === "relief_allocation" &&
@@ -1192,17 +1229,12 @@ export class OverworldSession {
         openingAlly: chain.ally,
       });
       const baseline =
-        kind === "relief_allocation" &&
-        window.status !== "june_commitment_pending" &&
-        window.receipt?.reliefAllocation.kind === "unassigned" &&
-        window.receipt.juneCommitment.kind === "solo_unasked" &&
-        sameBoundary(boundary, window.receipt.reliefAllocation.boundary)
-          ? window.ledgerMinutes
-          : kind === "ally" &&
-              window.status === "june_commitment_pending" &&
-              sameBoundary(boundary, window.receipt.juneCommitment.boundary)
-            ? window.committedMinutes
-            : undefined;
+        window.status === "support_choices_open" &&
+        ((kind === "relief_allocation" &&
+          window.receipt.reliefAllocation.kind === "open_optional") ||
+          (kind === "ally" && window.receipt.juneCommitment.kind === "open_optional"))
+          ? window.committedMinutes
+          : undefined;
       if (baseline === undefined) return sanitized();
       const sourceOptions =
         kind === "relief_allocation" ? chain.reliefAllocation.options : chain.ally!.options;
@@ -1222,7 +1254,7 @@ export class OverworldSession {
             const timing = classifyQuestDispatchMinutes(resultingMinutes);
             const line = `Dispatch: ${
               addedMinutes === 0 ? "no added delay" : `+${String(addedMinutes)}m delay`
-            } → ${String(resultingMinutes)}m, ${timing === "on_time" ? "on time" : "delayed"}.`;
+            } → ${String(resultingMinutes)}m committed (${timing === "on_time" ? "on time" : "delayed"}).`;
             if (line.length > 78)
               throw new Error("Opening Station dispatch impact exceeds card limit.");
             return Object.freeze({
@@ -1290,25 +1322,35 @@ export class OverworldSession {
 
   private departureStoryChoiceForOption(choiceId: string): JourneyStoryChoicePrompt | null {
     const preparation = this.openingPreparationDepartureInteractionAvailable();
-    const allocation = preparation
-      ? null
-      : this.openingReliefAllocationDepartureInteractionAvailable();
-    const storyChoice = preparation
-      ? this.withOpeningStationDispatchImpact(
-          withOpeningDispatchBriefing(
-            this.world,
-            this.presentOpeningPreparationAtCurrentBoundary(preparation),
-          ),
-        )
-      : allocation
+    const allocation = this.openingReliefAllocationDepartureInteractionAvailable();
+    const storyChoices = [
+      preparation
+        ? this.withOpeningStationDispatchImpact(
+            withOpeningDispatchBriefing(
+              this.world,
+              this.presentOpeningPreparationAtCurrentBoundary(preparation),
+            ),
+          )
+        : null,
+      allocation
         ? this.withOpeningStationDispatchImpact(
             withOpeningDispatchBriefing(
               this.world,
               presentOpeningReliefAllocation(allocation, this.characterState),
             ),
           )
-        : null;
-    return storyChoice?.options.some((option) => option.id === choiceId) ? storyChoice : null;
+        : null,
+    ];
+    const matchingStoryChoices = storyChoices.filter(
+      (storyChoice): storyChoice is JourneyStoryChoicePrompt =>
+        storyChoice?.options.some((option) => option.id === choiceId) === true,
+    );
+    if (matchingStoryChoices.length > 1) {
+      throw new Error(
+        `Departure story option "${choiceId}" is ambiguous; provide story_choice_id.`,
+      );
+    }
+    return matchingStoryChoices[0] ?? null;
   }
 
   private openingReliefOathAvailable(): NonNullable<
@@ -1491,19 +1533,21 @@ export class OverworldSession {
   }
 
   private offerOpeningReliefAllocationAtDeparture(): void {
-    const scene = this.world.opening_relief_allocation;
+    const chain = this.openingDispatchHubAvailable();
+    const scene = chain?.reliefAllocation ?? this.world.opening_relief_allocation;
     const preparation = this.world.opening_preparation;
     if (
       !scene ||
-      !preparation ||
-      scene.after_preparation !== preparation.id ||
-      !this.openingPreparationResolved() ||
+      (!chain &&
+        (!preparation ||
+          scene.after_preparation !== preparation.id ||
+          !this.openingPreparationResolved() ||
+          this.startedQuestIds.has(scene.target_quest) ||
+          this.completedQuestIds.has(scene.target_quest) ||
+          this.journeyState.status !== "active" ||
+          this.currentId !== scene.home ||
+          this.currentAreaId !== scene.area)) ||
       this.openingReliefAllocationResolved() ||
-      this.startedQuestIds.has(scene.target_quest) ||
-      this.completedQuestIds.has(scene.target_quest) ||
-      this.journeyState.status !== "active" ||
-      this.currentId !== scene.home ||
-      this.currentAreaId !== scene.area ||
       this.openingAllyAvailable() !== null
     ) {
       return;
@@ -1529,20 +1573,24 @@ export class OverworldSession {
   private openingAllyOfferAfterContact(
     characterId: string,
   ): NonNullable<OverworldManifest["opening_ally"]> | null {
-    const scene = this.world.opening_ally;
+    const chain = this.openingDispatchHubAvailable();
+    const scene = chain?.ally ?? this.world.opening_ally;
     const preparation = this.world.opening_preparation;
     if (
       !scene ||
-      !preparation ||
-      scene.after_preparation !== preparation.id ||
       characterId !== scene.contact ||
-      !this.openingPreparationResolved() ||
+      (!chain &&
+        (!preparation ||
+          scene.after_preparation !== preparation.id ||
+          !this.openingPreparationResolved() ||
+          this.startedQuestIds.size > 0 ||
+          this.completedQuestIds.size > 0 ||
+          this.journeyState.status !== "active" ||
+          this.currentId !== scene.home ||
+          this.currentAreaId !== scene.area)) ||
       this.openingAllyResolved() ||
-      this.startedQuestIds.size > 0 ||
-      this.completedQuestIds.size > 0 ||
-      this.journeyState.status !== "active" ||
-      this.currentId !== scene.home ||
-      this.currentAreaId !== scene.area
+      this.openingPreparationAvailable() !== null ||
+      this.openingReliefAllocationAvailable() !== null
     ) {
       return null;
     }
@@ -2864,6 +2912,28 @@ export class OverworldSession {
     ) {
       throw new Error("Quest start plan is stale; prepare the quest start again.");
     }
+    const requiresCurrentDispatchSeal =
+      canonicalPlan.quest.id === "wolf_winter" &&
+      Boolean(resolveOpeningDispatchManifestChain(this.world)?.ally);
+    if (
+      requiresCurrentDispatchSeal &&
+      (canonicalPlan.approachId === null ||
+        createQuestDispatchLaunchSeal({
+          window: canonicalPlan.dispatchWindow,
+          approachId: canonicalPlan.approachId,
+          // This probe checks receipt completeness before any session mutation;
+          // the durable seal below binds the actual post-decision boundary.
+          launchBoundary: {
+            acceptedDecisions: this.journeyState.acceptedDecisions,
+            decisionProofHash: this.journeyState.decisionProof.hash,
+            townId: this.currentId,
+            areaId: this.currentAreaIdOrThrow(),
+            minutes: this.minutes,
+          },
+        }) === null)
+    ) {
+      throw new Error("Wolf-Winter launch lacks an authenticated current dispatch receipt.");
+    }
     const applied = applyOverworldSessionQuestStart(
       this.questStartState(
         canonicalPlan.quest.id,
@@ -2882,16 +2952,28 @@ export class OverworldSession {
       false,
     );
     if (canonicalPlan.approachId !== null) {
+      const boundary = {
+        acceptedDecisions: this.journeyState.acceptedDecisions,
+        decisionProofHash: this.journeyState.decisionProof.hash,
+        townId: this.currentId,
+        areaId: this.currentAreaIdOrThrow(),
+        minutes: this.minutes,
+      };
+      const dispatchSeal = requiresCurrentDispatchSeal
+        ? createQuestDispatchLaunchSeal({
+            window: canonicalPlan.dispatchWindow,
+            approachId: canonicalPlan.approachId,
+            launchBoundary: boundary,
+          })
+        : null;
+      if (requiresCurrentDispatchSeal && !dispatchSeal) {
+        throw new Error("Wolf-Winter launch lacks an authenticated current dispatch receipt.");
+      }
       applied.result.entry.questStartProof = {
         kind: "approach",
         approachId: canonicalPlan.approachId,
-        boundary: {
-          acceptedDecisions: this.journeyState.acceptedDecisions,
-          decisionProofHash: this.journeyState.decisionProof.hash,
-          townId: this.currentId,
-          areaId: this.currentAreaIdOrThrow(),
-          minutes: this.minutes,
-        },
+        boundary,
+        ...(dispatchSeal ? { dispatchSeal } : {}),
       };
     }
     this.clearSessionCaches();

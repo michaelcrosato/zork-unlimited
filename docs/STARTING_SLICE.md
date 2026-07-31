@@ -193,7 +193,12 @@ it is **not yet milestone-certified**:
   three named needs, changing the field or the truthful return. The opening
   relief oath now has paired proof for three binding terms, three different
   field consumers, unchanged failure recoveries, promise resolution, and three
-  conditional return services;
+  conditional return services. Preparation, relief allocation, and June now
+  form an order-neutral support hub: all sixteen ordered subsets preserve legal
+  launch and exact restore, timing cards fix prior selections while leaving only
+  unresolved support optional, and launch persists a proof-bound selected-or-
+  declined seal tied to the actual hill approach. Current v10 saves reject a
+  stripped or altered seal; legitimate v9 launches backfill it once;
 - four early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.

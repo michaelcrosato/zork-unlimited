@@ -369,7 +369,7 @@ describe("overworld quest launch", () => {
         "test:exposed_ridge",
       ],
     ]);
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(37);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(38);
 
     const focused = compactOverworldQuestRef(
       {

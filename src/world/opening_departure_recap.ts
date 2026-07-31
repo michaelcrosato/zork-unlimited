@@ -3,6 +3,10 @@ import {
   type QuestDispatchPresentationWindow,
 } from "./quest_dispatch_window.js";
 import { resolveOpeningDispatchManifestChain } from "./opening_dispatch_briefing.js";
+import {
+  replayOpeningDispatchChoices,
+  type OpeningDispatchReplayChoice,
+} from "./opening_dispatch_choice_replay.js";
 import { proveOpeningAllyJournal } from "./opening_ally_journal.js";
 import { proveOpeningLeadSourceJournal } from "./opening_lead_source_journal.js";
 import { proveOpeningPreparationJournal } from "./opening_preparation_journal.js";
@@ -19,7 +23,7 @@ import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
-export const OPENING_DEPARTURE_RECAP_VERSION = 5 as const;
+export const OPENING_DEPARTURE_RECAP_VERSION = 6 as const;
 export const OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT = 120;
 
 export type OpeningDepartureRecapSlot =
@@ -55,10 +59,7 @@ export type OpeningDepartureRecapDispatch = Readonly<{
   state: "committed" | "direct_launch" | "sealed";
   minutes: number;
   timing: "on_time" | "delayed" | null;
-  remainingOptional: readonly Exclude<
-    OpeningDepartureRecapSlot,
-    "role" | "duty" | "evidence" | "preparation"
-  >[];
+  remainingOptional: readonly Exclude<OpeningDepartureRecapSlot, "role" | "duty" | "evidence">[];
 }>;
 
 export type OpeningDepartureRecap = Readonly<{
@@ -116,12 +117,19 @@ function recapEntry(
 function deriveDispatchRecap(
   window: QuestDispatchPresentationWindow,
 ): OpeningDepartureRecapDispatch | null {
-  if (window.status === "june_commitment_pending") {
+  if (window.status === "support_choices_open") {
+    const remainingOptional = Object.freeze([
+      ...(window.receipt.preparation.kind === "open_optional" ? (["preparation"] as const) : []),
+      ...(window.receipt.reliefAllocation.kind === "open_optional"
+        ? (["relief_allocation"] as const)
+        : []),
+      ...(window.receipt.juneCommitment.kind === "open_optional" ? (["field_team"] as const) : []),
+    ]);
     return Object.freeze({
       state: "committed",
       minutes: window.committedMinutes,
       timing: null,
-      remainingOptional: Object.freeze(["field_team"] as const),
+      remainingOptional,
     });
   }
   if (
@@ -129,14 +137,6 @@ function deriveDispatchRecap(
     window.ledgerMinutes === undefined
   ) {
     return null;
-  }
-  if (window.receipt?.juneCommitment.kind === "solo_unasked") {
-    return Object.freeze({
-      state: "direct_launch",
-      minutes: window.ledgerMinutes,
-      timing: window.status,
-      remainingOptional: Object.freeze(["field_team"] as const),
-    });
   }
   return Object.freeze({
     state: "sealed",
@@ -219,6 +219,8 @@ export function deriveOpeningDepartureRecap(
     const reliefAllocationProof = proveOpeningReliefAllocationJournal({
       scene: chain.reliefAllocation,
       preparationProof,
+      leadSourceProof,
+      preparationScene: chain.preparation,
       journalEntries: args.journalEntries,
       expectedTown: null,
       trustedLegacySourceWorldHash,
@@ -227,11 +229,13 @@ export function deriveOpeningDepartureRecap(
       scene: chain.ally,
       preparationProof,
       reliefAllocationProof,
+      leadSourceProof,
+      preparationScene: chain.preparation,
+      reliefAllocationScene: chain.reliefAllocation,
       journalEntries: args.journalEntries,
       expectedTown: null,
       trustedLegacySourceWorldHash,
     });
-    const preparationResolved = Boolean(preparationProof.profile || preparationProof.legacy);
     const dispatchWindow = deriveQuestDispatchPresentationWindow({
       questId: chain.quest.id,
       journalEntries: args.journalEntries,
@@ -244,10 +248,44 @@ export function deriveOpeningDepartureRecap(
       trustedLegacySourceWorldHash,
     });
     const dispatch = deriveDispatchRecap(dispatchWindow);
-    const soloUnasked =
-      (dispatchWindow.status === "on_time" || dispatchWindow.status === "delayed") &&
-      dispatchWindow.receipt?.juneCommitment.kind === "solo_unasked";
-
+    const selectedSupport: OpeningDispatchReplayChoice[] = [
+      ...(preparationProof.profile && preparationProof.journalIndex !== null
+        ? [
+            {
+              kind: "preparation" as const,
+              journalIndex: preparationProof.journalIndex,
+              scene: chain.preparation,
+              optionId: preparationProof.profile.id,
+            },
+          ]
+        : []),
+      ...(reliefAllocationProof.option && reliefAllocationProof.journalIndex !== null
+        ? [
+            {
+              kind: "relief_allocation" as const,
+              journalIndex: reliefAllocationProof.journalIndex,
+              scene: chain.reliefAllocation,
+              optionId: reliefAllocationProof.option.id,
+            },
+          ]
+        : []),
+      ...(allyProof.option && allyProof.journalIndex !== null
+        ? [
+            {
+              kind: "ally" as const,
+              journalIndex: allyProof.journalIndex,
+              scene: chain.ally,
+              optionId: allyProof.option.id,
+            },
+          ]
+        : []),
+    ];
+    const characterBeforeSupport = (journalIndex: number) =>
+      replayOpeningDispatchChoices({
+        characterAfterSource: leadSourceProof.characterAfterSource,
+        choices: selectedSupport,
+        beforeJournalIndex: journalIndex,
+      });
     const entries = Object.freeze([
       recapEntry(
         "role",
@@ -288,7 +326,10 @@ export function deriveOpeningDepartureRecap(
             "selected",
             preparationProof.profile.title,
             selectedFieldTerm(
-              presentOpeningPreparation(chain.preparation, leadSourceProof.characterAfterSource),
+              presentOpeningPreparation(
+                chain.preparation,
+                characterBeforeSupport(preparationProof.journalIndex!),
+              ),
               preparationProof.profile.id,
             ),
           )
@@ -304,7 +345,7 @@ export function deriveOpeningDepartureRecap(
             selectedFieldTerm(
               presentOpeningReliefAllocation(
                 chain.reliefAllocation,
-                preparationProof.characterAfterPreparation,
+                characterBeforeSupport(reliefAllocationProof.journalIndex!),
               ),
               reliefAllocationProof.option.id,
             ),
@@ -316,12 +357,7 @@ export function deriveOpeningDepartureRecap(
               "legacy",
               "Legacy relief allocation preserved",
             )
-          : recapEntry(
-              "relief_allocation",
-              "Relief allocation",
-              preparationResolved ? "open_optional" : "available_after_preparation",
-              null,
-            ),
+          : recapEntry("relief_allocation", "Relief allocation", "open_optional", null),
       allyProof.option
         ? recapEntry(
             "field_team",
@@ -329,20 +365,13 @@ export function deriveOpeningDepartureRecap(
             "selected",
             allyProof.option.title,
             selectedFieldTerm(
-              presentOpeningAlly(chain.ally, reliefAllocationProof.characterAfterAllocation),
+              presentOpeningAlly(chain.ally, characterBeforeSupport(allyProof.journalIndex!)),
               allyProof.option.id,
             ),
           )
         : allyProof.legacy
           ? recapEntry("field_team", "Field team", "legacy", "Legacy solo team preserved")
-          : soloUnasked
-            ? recapEntry("field_team", "Field team", "solo_default", "Solo departure")
-            : recapEntry(
-                "field_team",
-                "Field team",
-                preparationResolved ? "open_optional" : "available_after_preparation",
-                null,
-              ),
+          : recapEntry("field_team", "Field team", "open_optional", null),
     ]);
 
     return Object.freeze({

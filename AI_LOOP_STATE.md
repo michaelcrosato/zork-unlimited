@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 707 -->
+<!-- historical_cycle_count: 708 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - order_neutral_station_dispatch_hub
+
+- Evidence choice: Albany's Station chained preparation → relief allocation → June and could not authenticate support declined at launch, while blind feedback kept naming front-loaded planning density.
+- Surface/effect: after source certification, preparation, relief allocation, and June's field team are independent optional spokes; every hill route can launch immediately, unresolved support is explicitly declined, and recaps show the committed/final dispatch window.
+- Integrity: a v10 launch seal binds selected/declined P/R/J, timing proof, the actual launch boundary, and hill approach; exact v9 receipts backfill once, while non-co-located historical manifests remain on their authenticated legacy path.
+- Counterfactual/proof: all 16 P/R/J ordered subsets restore after every selection, launch with a sealed receipt, and preserve canonical material equivalence across full/compact MCP, CLI, and UI.
+- Pure evidence: Terra seed 73101604 completed The Wolf-Winter and The Gallowmere in 52 decisions; Spark seed 73101605 completed The Wolf-Winter in 20; both rated clarity/enjoyment 4/4, replay-yes, and found no game bug, loop, or soft-lock.
+- Economy: Terra used 5.509M raw / 186.9k uncached input + 9.8k output at 96.61% cache reuse (3,782 useful/decision); Spark used 788.1k / 54.6k + 10.6k at 93.07% (3,260/decision).
+- Self-critique/follow-through: order-neutrality removes false prerequisite pressure without reducing mechanical depth, but Terra still rated Station density S1; progressive disclosure remains an evidence target, not a solved claim.
+- Guard: pre/post crawls `20260731T143421Z` / `20260731T160233Z` have zero findings; two independent reviews found no P0/P1, one malformed Spark run failed closed unpublished, and health passes 450 files/3,750 tests plus all 12 packs.
 
 ### Cycle result - drover_drive_recovery
 
@@ -154,13 +165,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 73073 completed The Wolf-Winter nonlethally and The Gallowmere in 56 accepted decisions, continued at both earlier boundaries, had no rejected action/loop/soft-lock, rated clarity/enjoyment 4/4, and chose replay-yes.
 - Economy: one attempt used 5.913M raw / 176.4k uncached input and 12.5k output tokens at 97.0% cache reuse, or 188,830 useful tokens / 56 decisions (~3,372 each), with no retry or fallback.
 - Self-critique/guard: the player still named compact terminology and raw parent/child handles dense, so progressive legend disclosure is next rather than removing state needed for play; three independent reviews are clean, crawl `20260729T161030Z` has zero findings, and exact-tree health passes 449 files/3,710 tests, both typechecks, and all 12 packs.
-
-### Cycle result - legal_launch_decision_focus
-
-- Evidence choice: ten recent verified reports named Albany/Station density in 6/10 and compact terminology in 5/10; the real legal Station context spent 34% of its bytes on two launch rows whose preview, consequence, and strategic comparison repeated the same road decision.
-- Surface: compact v35 nulls duplicate preview/consequence only for a currently legal option with a dedicated strategic comparison; exact costs, availability, projected arrival, causal route tradeoff, tuple positions, and every generic option remain complete, while full/UI/terminal and accepted-action receipts keep authored prose.
-- Measured effect: the real focused Station launch card removes 960 characters (~240 tokens, 14.6% of its prior compact context) without adding an inspection turn; open crest now explains visible wind/cattle alarm and hedges explain calm cattle/hidden wind rather than presenting only a numeric table.
-- Counterfactual: `quest_starts` alone authorizes focus; blocked terms, quest/start/completion results, state/hash, accepted decisions, saves, content mechanics, RNG, and outcomes are unchanged, with full/session/clone/MCP parity pinned and generic no-tradeoff quests failing open to full prose.
-- Pure evidence: exact-clean Terra seeds 73070–73072 verified 3/3, completed Wolf-Winter nonlethally and Gallowmere, had no rejection/loop/soft-lock, rated clarity/enjoyment 4/4, and chose replay-yes; the corrected compile now has 826 verified reports and 75 eligible pure exits.
-- Economy: three parallel one-attempt runs used 16.817M raw / 515.7k uncached input and 33.8k output at 96.93% cache reuse, or 549,443 useful tokens / 166 accepted decisions (~3,310 each), with no retry or fallback.
-- Self-critique/guard: 3/3 still named the broader legend/setup or parent-child handoff dense, so the next cycle should target that repeated layer rather than delete informed choices; independent reviews are clean, crawl `20260729T153325Z` has zero findings, and health passes 449 files/3,710 tests, both typechecks, and all 12 packs.

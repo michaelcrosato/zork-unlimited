@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { OverworldSession } from "../../src/world/session.js";
 import {
+  assertQuestDispatchLaunchSeal,
+  createQuestDispatchLaunchSeal,
   deriveQuestDispatchPresentationWindow,
   deriveQuestDispatchWindow,
 } from "../../src/world/quest_dispatch_window.js";
@@ -100,7 +102,7 @@ describe("Wolf-Winter quest dispatch window", () => {
       openingAlly: ALLY,
     });
 
-    expect(window).toMatchObject({ schemaVersion: 1, status: "legacy_neutral" });
+    expect(window).toMatchObject({ schemaVersion: 2, status: "legacy_neutral" });
     expect(window).not.toHaveProperty("ledgerMinutes");
     expect(window).not.toHaveProperty("receipt");
   });
@@ -113,7 +115,7 @@ describe("Wolf-Winter quest dispatch window", () => {
     const window = session.prepareQuestStart(WOLF.id, WOLF.launch!.options[0]!.id).dispatchWindow;
 
     expect(window).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       questId: WOLF.id,
       status: "on_time",
       ledgerMinutes: 60,
@@ -125,6 +127,10 @@ describe("Wolf-Winter quest dispatch window", () => {
     expect(window.proofHash).toMatch(/^[0-9a-f]{64}$/);
     expect(Object.isFrozen(window)).toBe(true);
     expect(Object.isFrozen(window.receipt)).toBe(true);
+    expect(window.receipt!.preparation.kind).toBe("selected");
+    if (window.receipt!.preparation.kind !== "selected") {
+      throw new Error("Expected a selected preparation receipt.");
+    }
     expect(Object.isFrozen(window.receipt!.preparation.boundary)).toBe(true);
   });
 
@@ -166,7 +172,7 @@ describe("Wolf-Winter quest dispatch window", () => {
     expect(stockway).toEqual(ridge);
   });
 
-  it("proves the exact 65m pending-June presentation without granting launch authority", () => {
+  it("keeps every unresolved support open in presentation and seals a direct launch decline", () => {
     const session = preparedDispatch({
       registrationId: "albany:road_warden",
       oathId: "albany:oath_limited_aid_only",
@@ -182,39 +188,39 @@ describe("Wolf-Winter quest dispatch window", () => {
       ledgerMinutes: 65,
     });
 
-    session.talkToCharacter(ALLY.contact);
-    const pending = presentationWindow(session);
-    expect(pending).toMatchObject({
-      schemaVersion: 1,
+    const open = presentationWindow(session);
+    expect(open).toMatchObject({
+      schemaVersion: 2,
       questId: WOLF.id,
-      status: "june_commitment_pending",
+      status: "support_choices_open",
       committedMinutes: 65,
       finalMinutes: { minimum: 65, maximum: 80 },
       receipt: {
-        juneCommitment: {
-          kind: "pending",
-          journalId: `ally_offer:${ALLY.id}`,
-          optionMinutes: [0, 5, 15],
-        },
+        juneCommitment: { kind: "open_optional", minutes: 0 },
       },
     });
-    expect(pending.proofHash).toMatch(/^[0-9a-f]{64}$/);
-    if (pending.status !== "june_commitment_pending") {
-      throw new Error("Expected the pending June presentation proof.");
+    expect(open.proofHash).toMatch(/^[0-9a-f]{64}$/);
+    if (open.status !== "support_choices_open") {
+      throw new Error("Expected the open support presentation proof.");
     }
-    expect(Object.isFrozen(pending)).toBe(true);
-    expect(Object.isFrozen(pending.receipt)).toBe(true);
-    expect(Object.isFrozen(pending.receipt.juneCommitment.optionMinutes)).toBe(true);
+    expect(Object.isFrozen(open)).toBe(true);
+    expect(Object.isFrozen(open.receipt)).toBe(true);
+
+    session.talkToCharacter(ALLY.contact);
+    expect(presentationWindow(session)).toEqual(open);
 
     const launchWindow = session.prepareQuestStart(
       WOLF.id,
       WOLF.launch!.options[0]!.id,
     ).dispatchWindow;
-    expect(launchWindow).toMatchObject({ status: "legacy_neutral" });
-    expect(launchWindow).not.toHaveProperty("ledgerMinutes");
+    expect(launchWindow).toMatchObject({
+      status: "delayed",
+      ledgerMinutes: 65,
+      receipt: { juneCommitment: { kind: "declined_at_launch", minutes: 0 } },
+    });
 
     const restored = OverworldSession.restore(WORLD, structuredClone(session.snapshot()));
-    expect(presentationWindow(restored)).toEqual(pending);
+    expect(presentationWindow(restored)).toEqual(open);
   });
 
   it.each([
@@ -236,7 +242,7 @@ describe("Wolf-Winter quest dispatch window", () => {
       ledgerMinutes,
       receipt: { juneCommitment: { kind: "selected", optionId: allyId } },
     });
-    expect(window.status).not.toBe("june_commitment_pending");
+    expect(window.status).not.toBe("support_choices_open");
   });
 
   it("rejects a tampered pending June boundary instead of inventing provisional timing", () => {
@@ -268,16 +274,56 @@ describe("Wolf-Winter quest dispatch window", () => {
     expect(() => OverworldSession.restore(WORLD, snapshot)).toThrow();
   });
 
-  it("records a direct post-preparation departure as the proven solo/unasked zero", () => {
-    const window = preparedDispatch({ allyId: null }).prepareQuestStart(
-      WOLF.id,
-      WOLF.launch!.options[0]!.id,
-    ).dispatchWindow;
+  it("records a direct post-source departure as three explicit launch declines", () => {
+    const session = new OverworldSession(WORLD);
+    session.scoutPoi(session.view().pois[0]!.id);
+    session.talkToCharacter(REGISTRATION.contact);
+    session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
+    session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
+    moveToArea(session, PREPARATION.area);
+    const window = session.prepareQuestStart(WOLF.id, WOLF.launch!.options[0]!.id).dispatchWindow;
 
     expect(window).toMatchObject({
       status: "on_time",
-      receipt: { juneCommitment: { kind: "solo_unasked", minutes: 0 } },
+      receipt: {
+        preparation: { kind: "declined_at_launch", minutes: 0 },
+        reliefAllocation: { kind: "declined_at_launch", minutes: 0 },
+        juneCommitment: { kind: "declined_at_launch", minutes: 0 },
+      },
     });
+    const launchBoundary = {
+      acceptedDecisions: session.journey().acceptedDecisions + 1,
+      decisionProofHash: "a".repeat(64),
+      townId: "albany_city",
+      areaId: PREPARATION.area,
+      minutes: session.snapshot().minutes + WOLF.launch!.options[0]!.terms.minutes,
+    };
+    const seal = createQuestDispatchLaunchSeal({
+      window,
+      approachId: WOLF.launch!.options[0]!.id,
+      launchBoundary,
+    });
+    expect(seal).toMatchObject({
+      schemaVersion: 1,
+      questId: WOLF.id,
+      approachId: WOLF.launch!.options[0]!.id,
+      slots: {
+        preparation: { kind: "declined_at_launch" },
+        reliefAllocation: { kind: "declined_at_launch" },
+        fieldTeam: { kind: "declined_at_launch" },
+      },
+      launchBoundary,
+    });
+    if (!seal) throw new Error("Expected an authenticated launch seal.");
+    expect(() =>
+      assertQuestDispatchLaunchSeal({
+        seal,
+        expectedWindow: window,
+        expectedApproachId: WOLF.launch!.options[0]!.id,
+        expectedLaunchBoundary: launchBoundary,
+      }),
+    ).not.toThrow();
   });
 
   it("rejects a tampered current boundary on restore and never infers a zero-minute window", () => {

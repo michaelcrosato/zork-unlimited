@@ -942,7 +942,7 @@ describe("OverworldSession", () => {
     }
   });
 
-  it("renders June's optional departure lead as focusable guidance and then an exact talk action", async () => {
+  it("renders June's optional departure lead as an exact talk action before and after preparation", async () => {
     const session = new OverworldSession(world);
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(world.opening_registration!.contact);
@@ -952,8 +952,8 @@ describe("OverworldSession", () => {
     moveToOpeningPreparation(session);
     const recap = session.view().departureRecap;
     if (!recap) throw new Error("expected the accumulated departure recap");
-    const requiresPreparation = session.view().departureContactLeads[0];
-    if (!requiresPreparation) throw new Error("expected June's departure contact lead");
+    const initiallyReady = session.view().departureContactLeads[0];
+    if (!initiallyReady?.action) throw new Error("expected June's ready departure contact action");
     session.chooseJourneyStory(
       world.opening_preparation!.profiles[0]!.id,
       world.opening_preparation!.id,
@@ -1008,20 +1008,21 @@ describe("OverworldSession", () => {
       const reactDomServer = requireFromUi("react-dom/server") as {
         renderToStaticMarkup: (element: unknown) => string;
       };
-      const unavailableMarkup = reactDomServer.renderToStaticMarkup(
+      const initiallyReadyMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.DepartureContactLead, {
-          lead: requiresPreparation,
+          lead: initiallyReady,
           onTalk: () => undefined,
         }),
       );
-      expect(unavailableMarkup).toContain('aria-disabled="true"');
-      expect(unavailableMarkup).not.toContain('disabled=""');
-      expect(unavailableMarkup).toContain(
+      expect(initiallyReadyMarkup).toContain('aria-disabled="false"');
+      expect(initiallyReadyMarkup).not.toContain('disabled=""');
+      expect(initiallyReadyMarkup).toContain(
         `aria-describedby="departure-contact-lead-${world.opening_ally!.id.replaceAll(":", "-")}"`,
       );
-      expect(unavailableMarkup).toContain("choose a Station preparation first");
-      expect(unavailableMarkup).toContain("may start The Wolf-Winter now as a solo rider");
-      expect(unavailableMarkup).toContain("Talk to June Pike after choosing preparation");
+      expect(initiallyReadyMarkup).toContain("Optional field team: talk to June Pike");
+      expect(initiallyReadyMarkup).toContain("may start The Wolf-Winter now as a solo rider");
+      expect(initiallyReadyMarkup).toContain("Talk to June Pike about the field team");
+      expect(initiallyReadyMarkup).not.toContain("choose a Station preparation first");
 
       const recapMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.DepartureRecap, { recap }),
@@ -1033,7 +1034,7 @@ describe("OverworldSession", () => {
         world.opening_lead_source!.options[0]!.title.replace("'", "&#x27;"),
       );
       expect(recapMarkup).toContain("Open (optional)");
-      expect(recapMarkup).toContain("Available after choosing preparation");
+      expect(recapMarkup).not.toContain("Available after choosing preparation");
       expect(recapMarkup).toContain('<details class="departure-recap-terms">');
       expect(recapMarkup).toContain("<summary>Review exact active terms</summary>");
       expect(recapMarkup).not.toMatch(/<details[^>]*\sopen(?:=|>)/);
@@ -1049,6 +1050,73 @@ describe("OverworldSession", () => {
       expect(readyMarkup).toContain("Optional field team: talk to June Pike");
       expect(readyMarkup).toContain("Talk to June Pike about the field team");
       expect(readyMarkup).not.toContain("choose a Station preparation first");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("renders current departure recap slots independently while preserving legacy copy", async () => {
+    const session = new OverworldSession(world);
+    session.scoutPoi(session.view().pois[0]!.id);
+    session.talkToCharacter(world.opening_registration!.contact);
+    session.chooseJourneyStory(world.opening_registration!.profiles[0]!.id);
+    session.chooseJourneyStory(world.opening_relief_oath!.options[0]!.id);
+    session.chooseJourneyStory(world.opening_lead_source!.options[0]!.id);
+    moveToOpeningPreparation(session);
+    const recap = session.view().departureRecap;
+    if (!recap?.dispatch) throw new Error("expected the authenticated open departure recap");
+    const dispatch = recap.dispatch;
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/DepartureRecap.tsx")) as {
+        DepartureRecap: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (type: unknown, props: Record<string, unknown>) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const renderRecap = (value: typeof recap): string =>
+        reactDomServer.renderToStaticMarkup(
+          react.createElement(module.DepartureRecap, { recap: value }),
+        );
+      const renderSlots = (remainingOptional: typeof dispatch.remainingOptional): string =>
+        renderRecap({
+          ...recap,
+          dispatch: { ...dispatch, remainingOptional },
+        });
+
+      const allOpen = renderSlots(["preparation", "relief_allocation", "field_team"]);
+      expect(allOpen).toContain(
+        `Dispatch committed: ${String(dispatch.minutes)}m; preparation, relief allocation, and field team remain optional.`,
+      );
+      expect(allOpen.match(/Open \(optional\)/g) ?? []).toHaveLength(3);
+      expect(allOpen).not.toContain("Available after choosing preparation");
+      expect(renderSlots(["preparation", "field_team"])).toContain(
+        "preparation and field team remain optional.",
+      );
+      expect(renderSlots(["relief_allocation"])).toContain("relief allocation remains optional.");
+
+      const legacy = renderRecap({
+        ...recap,
+        entries: recap.entries.map((entry) =>
+          entry.slot === "relief_allocation"
+            ? { ...entry, status: "available_after_preparation" as const, title: null }
+            : entry,
+        ),
+      });
+      expect(legacy).toContain("Available after choosing preparation");
     } finally {
       await server.close();
     }
@@ -1424,7 +1492,7 @@ describe("OverworldSession", () => {
       expect(markup).not.toContain("Take the Sheltered Stockway");
       expect(markup).toContain("Cost / give up:");
       expect(markup).toContain("The Wolf-Winter dispatch recap");
-      assertRecapRows(markup, departureRecap, 3, 1);
+      assertRecapRows(markup, departureRecap, 3, 3);
       expect(markup).not.toContain("clean three-cast lure line");
       expect(markup).toContain("Return to the Station without choosing");
       expect(markup.match(/<button/g)).toHaveLength(4);
