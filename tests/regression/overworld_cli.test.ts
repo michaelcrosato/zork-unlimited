@@ -651,7 +651,7 @@ describe("overworld_play CLI (scripted mode)", () => {
 
     expect(run.status, run.output).toBe(0);
     expect(run.output).toContain(
-      "Guidance: Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves.",
+      "Guidance: Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves. Wolf-Winter is a complete opening chapter. End closes the journey there; Continue carries its consequences into the optional Gallowmere chapter.",
     );
     expect(run.output).toContain(
       "No road passage is available from here. Follow the visible local guidance above.",

@@ -12,8 +12,11 @@ export const INITIAL_JOURNEY_GOAL = Object.freeze({
   text: "Find one local lead in Albany and see it through.",
 } as const);
 
+export const OPENING_CHAPTER_HORIZON =
+  "Wolf-Winter is a complete opening chapter. End closes the journey there; Continue carries its consequences into the optional Gallowmere chapter." as const;
+
 export const INITIAL_JOURNEY_GOAL_GUIDANCE =
-  "Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves." as const;
+  `Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves. ${OPENING_CHAPTER_HORIZON}` as const;
 
 export type JourneyChoice = "continue" | "end";
 export type JourneyChoiceReason = "checkpoint" | "goal_completed" | "character_died";

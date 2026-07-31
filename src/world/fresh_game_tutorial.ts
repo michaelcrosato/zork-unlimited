@@ -1,4 +1,4 @@
-import { INITIAL_JOURNEY_GOAL } from "./journey_contract.js";
+import { INITIAL_JOURNEY_GOAL, OPENING_CHAPTER_HORIZON } from "./journey_contract.js";
 
 export type FreshGameTutorialStep = Readonly<{
   id: "read" | "discover" | "follow" | "remember";
@@ -38,12 +38,12 @@ export const FRESH_GAME_TUTORIAL = Object.freeze({
     Object.freeze({
       id: "follow",
       title: "Follow it on foot",
-      text: "Walk to a lead's local area before starting it. Roads cost time and supplies; towns offer rest and resupply. For distant goals, Goal Passage applies each road's cost and pauses at choices or resource strain.",
+      text: "Reach a lead's area first. Roads cost time and supplies; towns offer rest/resupply. Goal Passage applies road costs and pauses at choices or strain.",
     }),
     Object.freeze({
       id: "remember",
       title: "Choose your horizon",
-      text: "Journal: save, export, resume. Changes count; reads/repeats do not. Thresholds 40, 80, then each 40 pause at the first safe break — never mid-combat or dialogue. Goals may pause sooner. Continue to goal completion or the next checkpoint.",
+      text: `Journal: save/export/resume. Changes count; reads/repeats do not. Completed goals or thresholds (40, 80, then every 40) pause safely—never mid-combat/dialogue. ${OPENING_CHAPTER_HORIZON}`,
     }),
   ]),
   start_label: "Explore Albany",
