@@ -368,6 +368,33 @@ function codex0146TerraRollout(gameplayRows = forwardingRollout(undefined, { con
   return rows;
 }
 
+function codex0146SparkRollout(gameplayRows = forwardingRollout(undefined, { content: [] })) {
+  const rows = completeRollout(gameplayRows, "spark_disabled") as Array<{
+    type?: string;
+    payload?: Record<string, unknown>;
+  }>;
+  let inputOrdinal = 0;
+  let outputOrdinal = 0;
+  for (const row of rows) {
+    const payload = row.payload;
+    if (!payload) continue;
+    if (row.type === "session_meta") payload.cli_version = "0.146.0";
+    if (
+      row.type === "response_item" &&
+      payload.type === "message" &&
+      (payload.role === "developer" || payload.role === "user")
+    ) {
+      inputOrdinal += 1;
+      payload.id = `msg-current-${inputOrdinal}`;
+    }
+    if (row.type === "response_item" && payload.type === "custom_tool_call_output") {
+      outputOrdinal += 1;
+      payload.id = `output-current-${outputOrdinal}`;
+    }
+  }
+  return rows;
+}
+
 function environmentInputContent(
   rows: unknown[],
 ): Array<{ type?: string; text?: string; [key: string]: unknown }> {
@@ -1284,6 +1311,91 @@ describe("Codex pure blind provider envelope", () => {
     expect(
       inspectCodexPureEvidence(validRows(), legacyWithCurrentId, "gpt-5.6-terra"),
     ).toMatchObject({ ok: false });
+  });
+
+  it("accepts only the exact Codex 0.146 Spark capture profile", () => {
+    const rows = codex0146SparkRollout();
+    expect(
+      inspectCodexPureEvidence(validRows(), rows, SPARK_MODEL, {
+        cliVersion: "0.146.0",
+      }),
+    ).toMatchObject({ ok: true, completedMcpCalls: 1 });
+    expect(
+      buildCodexPureEnvelope({
+        rows: validRows(),
+        rolloutRows: rows,
+        report: "report",
+        model: SPARK_MODEL,
+        cliVersion: "0.146.0",
+        durationMs: 1,
+      }),
+    ).toMatchObject({ ok: true, envelope: { requested_model: SPARK_MODEL } });
+
+    const wrongExpectedVersion = codex0146SparkRollout();
+    expect(
+      inspectCodexPureEvidence(validRows(), wrongExpectedVersion, SPARK_MODEL, {
+        cliVersion: "0.146.1",
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/capture profile is unsupported/i),
+    });
+
+    const wrongCapturedVersion = codex0146SparkRollout();
+    const session = wrongCapturedVersion.find((row) => row.type === "session_meta")?.payload;
+    if (!session) throw new Error("missing current session fixture");
+    session.cli_version = "0.146.1";
+    expect(
+      inspectCodexPureEvidence(validRows(), wrongCapturedVersion, SPARK_MODEL, {
+        cliVersion: "0.146.0",
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/capture profile is unsupported/i),
+    });
+  });
+
+  it("requires unique item ids throughout the Codex 0.146 Spark profile", () => {
+    const inspectCurrent = (rows: ReturnType<typeof codex0146SparkRollout>) =>
+      inspectCodexPureEvidence(validRows(), rows, SPARK_MODEL, {
+        cliVersion: "0.146.0",
+      });
+    const findInput = (rows: ReturnType<typeof codex0146SparkRollout>) => {
+      const payload = rows.find(
+        (row) =>
+          row.payload?.type === "message" &&
+          (row.payload.role === "developer" || row.payload.role === "user"),
+      )?.payload;
+      if (!payload) throw new Error("missing current input fixture");
+      return payload;
+    };
+    const findOutput = (rows: ReturnType<typeof codex0146SparkRollout>) => {
+      const payload = rows.find((row) => row.payload?.type === "custom_tool_call_output")?.payload;
+      if (!payload) throw new Error("missing current output fixture");
+      return payload;
+    };
+
+    for (const locate of [findInput, findOutput]) {
+      const missing = codex0146SparkRollout();
+      delete locate(missing).id;
+      expect(inspectCurrent(missing)).toMatchObject({ ok: false });
+    }
+
+    const duplicate = codex0146SparkRollout();
+    findOutput(duplicate).id = findInput(duplicate).id;
+    expect(inspectCurrent(duplicate)).toMatchObject({ ok: false });
+  });
+
+  it("retains Spark's legacy capture profile without item ids", () => {
+    const legacy = completeRollout(forwardingRollout(undefined, { content: [] }), "spark_disabled");
+    expect(inspectCodexPureEvidence(validRows(), legacy, SPARK_MODEL)).toMatchObject({ ok: true });
+
+    const legacyInput = (legacy as Array<{ payload?: Record<string, unknown> }>).find(
+      (row) => row.payload?.type === "message" && row.payload.role === "developer",
+    )?.payload;
+    if (!legacyInput) throw new Error("missing legacy Spark input fixture");
+    legacyInput.id = "unexpected-current-id";
+    expect(inspectCodexPureEvidence(validRows(), legacy, SPARK_MODEL)).toMatchObject({ ok: false });
   });
 
   it("accepts only the exact empty-audio user event added by Codex 0.145", () => {

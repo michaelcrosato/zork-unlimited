@@ -747,12 +747,29 @@ function codexCaptureProfile(turnContext, expectedModel, expectedCliVersion, cap
   if (
     turnContext.model === SPARK_DISABLED_MODEL &&
     turnContext.multi_agent_version === "disabled" &&
-    !Object.hasOwn(turnContext, "multi_agent_mode")
+    !Object.hasOwn(turnContext, "multi_agent_mode") &&
+    !(
+      expectedCliVersion === CODEX_0146_CLI_VERSION || capturedCliVersion === CODEX_0146_CLI_VERSION
+    )
   ) {
     return {
       kind: "spark_disabled",
       preludeCount: 2,
       requiresItemIds: false,
+      exactModeBlock: null,
+    };
+  }
+  if (
+    turnContext.model === SPARK_DISABLED_MODEL &&
+    turnContext.multi_agent_version === "disabled" &&
+    !Object.hasOwn(turnContext, "multi_agent_mode") &&
+    expectedCliVersion === CODEX_0146_CLI_VERSION &&
+    capturedCliVersion === CODEX_0146_CLI_VERSION
+  ) {
+    return {
+      kind: "spark_disabled_0146",
+      preludeCount: 2,
+      requiresItemIds: true,
       exactModeBlock: null,
     };
   }

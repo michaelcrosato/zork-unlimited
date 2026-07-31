@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 709 -->
+<!-- historical_cycle_count: 710 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - spark_0146_item_id_authority
+
+- Evidence choice: five completed Spark Codex 0.146 sessions failed final authority solely because the exact-version capture profile still forbade the client's new response-item ids.
+- Surface: exact expected/captured CLI 0.146 Spark now requires bounded globally unique response-item ids; legacy ID-less Spark remains readable, while version mismatch, missing ids, and duplicates fail closed.
+- Historical proof: all five archived lifecycle-only failures now replay through the complete evidence audit; 105 focused provider tests and an independent review pin acceptance, both mismatch directions, missing/duplicate ids, and legacy behavior.
+- Counterfactual: Terra and legacy profiles, provider/model binding, wrapper grammar, tool allowlist, reports, game code, content, actions, mechanics, RNG, saves, hashes, and outcomes are unchanged.
+- Pure canary: exact-clean Spark seed 73101853 completed The Wolf-Winter through FORTIFY/`ending_held` in 19 decisions, rated clarity/enjoyment 4/4, replay-yes, ended at the first goal, and compiled with no rejection, bug, loop, or soft-lock.
+- Frozen cohort: latest-build seeds 73101860–69 verified 3/10 slots across 18 attempts; all three completed The Wolf-Winter through FORTIFY in 20–21 decisions and ended, while 15 attempts failed the separate strict wrapper gate and one retry rescued a slot.
+- Economy/self-critique: verified cohort evidence used 201,399 useful tokens at 92.74% cache reuse (about 67,133/player, 3,302/decision), but rejected attempts made 443 call starts with unrecoverable usage; mass Spark is not efficient until exact rejection diagnostics identify the wrapper mismatch.
+- Guard/follow-through: crawls `20260731T193135Z` / `20260731T193405Z` and combined `20260731T202500Z` have zero findings; health passes 450 files/3,753 tests plus all 12 packs, and the next tooling cycles are strict-rejection capture then pure clean-build admission.
 
 ### Cycle result - two_tier_station_briefing
 
@@ -156,13 +167,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 73075 completed The Wolf-Winter through fortification in 17 decisions, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, or bug; it skipped optional preparation, so it is build/retention evidence rather than direct proof of the new line.
 - Economy: one attempt used 764.1k raw / 60.1k uncached input and 5.0k output tokens at 92.1% cache reuse, or 65,104 useful tokens / 17 decisions (about 3,830 each), with no retry or fallback.
 - Self-critique/guard: early role/duty terminology remains dense; browser verification showed the Courier's visible `Streetwise +4 vs DC 12` with no console error, three independent reviews are clean, pre/post crawls `20260729T194117Z` / `20260729T200038Z` have zero findings, and exact-tree health passes 449 files/3,723 tests, both typechecks, and all 12 packs.
-
-### Cycle result - progressive_compact_legend
-
-- Evidence choice: repeated blind feedback named compact terminology dense, while fresh sessions paid the complete legend before most positional fields appeared.
-- Surface/effect: compact sessions now disclose exact context and result-path definitions on first use, with same-response `legend_delta` ordered before its tuple; fresh start falls 13,647→6,097 bytes (55.3%), and the decoder accumulated through Albany Station is 7,109 bytes, 45.5% below the complete 13,046-byte context/result dictionary.
-- Counterfactual: the transport-only disclosure ledger is excluded from snapshots and hashes; choices, legal actions, mechanics, RNG, content, saves, outcomes, full responses, and journey state are unchanged, while unknown compact fields fail closed.
-- Pure evidence: exact-clean Terra seed 73074 completed The Wolf-Winter through nonlethal LURE in 33 decisions, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and produced no rejected action, loop, or soft-lock.
-- Economy: one measured attempt used 2.806M raw / 115.5k uncached input and 8.1k output tokens at 95.9% cache reuse, or 123,589 useful tokens / 33 decisions (~3,745 each), with no retry or fallback.
-- Self-critique/follow-through: the canary still named Emery's undisclosed Streetwise recovery dependency and staged setup confirmations; preserve both as gameplay-cycle evidence rather than expanding this transport-only increment.
-- Guard: independent reviews are clean, pre/post crawls `20260729T170557Z` / `20260729T180914Z` have zero findings, and exact-tree health passes 449 files/3,722 tests, both typechecks, and all 12 packs.
