@@ -369,6 +369,17 @@ comparison, and the browser already renders it before the option cards. Exact
 active terms remain an explicit read-only expansion, alternatives never leak,
 and inspection changes no snapshot, hash, clock, or decision.
 
+The stage-purpose follow-up keeps those six Albany comparisons intact while
+making the current commitment explicit in the vocabulary the cards already use.
+Registration, duty, evidence, preparation, relief priority, and June's
+field-team prompt each state what is being chosen and which adjacent decision
+remains open or separate. June's prompt names the authored
+`Leave with a Solo Field Team` choice instead of implying that an active story
+choice can be dismissed. Route costs and tactics remain on Wolf-Winter's launch
+card. This is a read-only terminal, full/compact MCP, and UI projection:
+choices, action ids, exact terms, state, mechanics, RNG, saves, hashes, delayed
+consumers, and outcomes are unchanged.
+
 Legacy migration is deliberately fail-closed at this causal boundary. An
 untouched registration-era save receives the real source prompt. Every progressed
 post-registration suffix is rejected rather than being falsely certified as

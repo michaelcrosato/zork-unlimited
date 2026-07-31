@@ -895,12 +895,16 @@ describe("overworld_play CLI (scripted mode)", () => {
         expect(run.output).toContain(`! Story choice detail — ${option.title}`);
       }
       expect(run.output.match(/Back to the story choice comparison/g)?.length ?? 0).toBe(2);
-      expect(run.output).toContain(
-        "Choose one relief priority, or close this and leave capacity unassigned.",
-      );
+      for (const purpose of [
+        "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
+        "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
+        "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
+      ]) {
+        expect(run.output).toContain(purpose);
+      }
       expect(run.output).not.toContain("final required departure-board choice");
       expect(run.output).toContain(
-        "Compare each priority's exact cost and what remains exposed. Field checks surface with their action before resolution.",
+        "Compare who is protected, exact cost, and what remains exposed. Field checks surface with their action before resolution.",
       );
       expect(run.output).toContain("Optional before departure:");
       expect(run.output.match(/Command: talk June Pike/g) ?? []).toHaveLength(1);
@@ -909,6 +913,9 @@ describe("overworld_play CLI (scripted mode)", () => {
       const juneFlowOutput = run.output.slice(junePromptStart);
       expect(juneFlowOutput).toContain(`Inspect: \`inspect ${allyOption.id}\``);
       expect(run.output).toContain("Choose the Wolf-Winter Field Team");
+      expect(juneFlowOutput).toContain(
+        'Choose "Leave with a Solo Field Team" to keep the one-rider launch.',
+      );
       expect(run.output).toContain(`Chosen: ${allyOption.title}.`);
       expect(run.output).toContain(`Consequence: ${presentedAllyOption.consequence}`);
       expect(outputSnapshotHashes(run.output)).toEqual([expected.snapshotHash()]);

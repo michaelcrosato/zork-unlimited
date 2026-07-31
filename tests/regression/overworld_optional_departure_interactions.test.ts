@@ -249,12 +249,13 @@ describe("optional Station departure interactions", () => {
     expect(inspected.story).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
     expect(inspected.story.message).toContain(`${WOLF.title} · optional preparation.`);
     expect(inspected.story.message).toContain(
-      `Mission: ${WOLF.title}. Last-mile route costs and field tradeoffs remain on its launch card.`,
+      "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
     );
-    expect(inspected.story.message).toContain(`launch ${WOLF.title} without one`);
     expect(inspected.story.message).toContain(
-      "Choose one optional field priority, or leave without one. " +
-        "Compare exact cost and what it gives up. " +
+      `Route costs and tactics remain on ${WOLF.title}'s launch card.`,
+    );
+    expect(inspected.story.message).toContain(
+      "Compare field priority, exact cost, and tradeoff. " +
         "Field checks surface with their action before resolution.",
     );
     expect(inspected.story.message).not.toMatch(
@@ -320,11 +321,10 @@ describe("optional Station departure interactions", () => {
     });
     expect(allocationStory.story.message).toContain(`${WOLF.title} · optional relief priority.`);
     expect(allocationStory.story.message).toContain(
-      "Choose one relief priority, or close this and leave capacity unassigned.",
+      "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
     );
     expect(allocationStory.story.message).toContain(
-      "Choose whom Albany protects, or leave capacity unassigned. " +
-        "Compare each priority's exact cost and what remains exposed. " +
+      "Compare who is protected, exact cost, and what remains exposed. " +
         "Field checks surface with their action before resolution.",
     );
     expect(allocationStory.story.message).not.toMatch(/relief-capacity choice|inspect a card/i);
