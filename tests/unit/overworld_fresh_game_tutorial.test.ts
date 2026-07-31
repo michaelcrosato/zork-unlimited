@@ -14,7 +14,7 @@ function api() {
 }
 
 describe("fresh-game tutorial", () => {
-  it("is a compact, immutable, spoiler-free orientation for the opening loop", () => {
+  it("is a compact, immutable orientation for the opening loop and its horizon", () => {
     expect(Object.isFrozen(FRESH_GAME_TUTORIAL)).toBe(true);
     expect(Object.isFrozen(FRESH_GAME_TUTORIAL.steps)).toBe(true);
     expect(FRESH_GAME_TUTORIAL.steps).toHaveLength(4);
@@ -29,13 +29,15 @@ describe("fresh-game tutorial", () => {
     expect(copy).toMatch(/local lead.*Albany/is);
     expect(copy).toMatch(/supplies.*fatigue/is);
     expect(copy).toMatch(/scout.*talk.*investigate.*explore/is);
-    expect(copy).toMatch(/local area.*roads.*rest.*resupply/is);
-    expect(copy).toMatch(/Goal Passage.*each road.*pauses/is);
+    expect(copy).toMatch(/lead's area.*roads.*rest.*resupply/is);
+    expect(copy).toMatch(/Goal Passage.*road costs.*pauses/is);
     expect(copy).toMatch(/journal.*save.*export.*resume/is);
-    expect(copy).toMatch(/thresholds 40.*80.*each 40/is);
-    expect(copy).toMatch(/safe break.*never mid-combat or dialogue/is);
-    expect(copy).toMatch(/goals may pause sooner/is);
-    expect(copy).toContain("Continue to goal completion or the next checkpoint.");
+    expect(copy).toMatch(/thresholds.*40.*80.*every 40/is);
+    expect(copy).toMatch(/pause safely.*never mid-combat.*dialogue/is);
+    expect(copy).toContain("Wolf-Winter is a complete opening chapter.");
+    expect(copy).toContain("End closes the journey there");
+    expect(copy).toContain("Continue carries its consequences");
+    expect(copy).toContain("optional Gallowmere chapter");
     expect(copy).not.toMatch(/another goal completion/i);
     expect(copy).not.toMatch(/wolf_winter|world_quest_id|session_id|mcp__/i);
   });

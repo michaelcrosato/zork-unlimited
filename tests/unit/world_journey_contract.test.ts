@@ -8,6 +8,7 @@ import {
   JOURNEY_CONTRACT_VERSION,
   JOURNEY_EXIT_REASON,
   JourneyContractSnapshotSchema,
+  OPENING_CHAPTER_HORIZON,
   activateJourneyGoal,
   chooseJourney,
   cloneJourneyContractSnapshot,
@@ -85,7 +86,10 @@ describe("journey contract v3 goals", () => {
     const view = journeyPresentation(state);
 
     expect(INITIAL_JOURNEY_GOAL_GUIDANCE).toBe(
-      "Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves.",
+      "Complete Albany's Wolf-Winter quest to satisfy this goal. Jobs, events, and sites may reveal leads, but do not finish the goal themselves. Wolf-Winter is a complete opening chapter. End closes the journey there; Continue carries its consequences into the optional Gallowmere chapter.",
+    );
+    expect(OPENING_CHAPTER_HORIZON).toBe(
+      "Wolf-Winter is a complete opening chapter. End closes the journey there; Continue carries its consequences into the optional Gallowmere chapter.",
     );
     expect(JourneyContractSnapshotSchema.parse(state)).toEqual(state);
     expect(view).toMatchObject({

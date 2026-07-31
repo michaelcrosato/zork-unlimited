@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 703 -->
+<!-- historical_cycle_count: 704 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - opening_optional_chapter_horizon
+
+- Evidence choice: the authenticated ten-Terra pilot completed The Wolf-Winter 10/10 but ended 8/10, while the fresh tutorial framed only thresholds and goals rather than the complete opening chapter and its optional consequence-reactive follow-on.
+- Surface/effect: one shared 144-character horizon now tells fresh tutorial and initial-goal surfaces that Wolf-Winter is complete, End closes there, and Continue carries consequences into optional Gallowmere; the four-step tutorial remains 718/720 characters.
+- Counterfactual: the existing completion preview and equal Continue/End choices are untouched; content, goals, decisions, actions, mechanics, RNG, saves, hashes, campaign activation, and receipts are unchanged.
+- Pure evidence: exact-clean Terra seed 74232 completed The Wolf-Winter through bloodless LURE in 30 decisions and explicitly ended rather than begin the Gallowmere chapter, with clarity/enjoyment 4/4, replay-yes, and no rejection, stuck state, loop, or soft-lock.
+- Economy: one first-attempt Codex 0.146 run used 1.898M raw / 103.3k uncached input and 6.1k output at 94.56% cache reuse (109,358 useful / 30 decisions, about 3,645 each); no retry, recovery, fallback, or fanout ran.
+- Self-critique/follow-through: the canary proves informed horizon comprehension, not continuation lift; the player knowingly chose the satisfying completed chapter, so pair the next ten-player continuation rate with replay intent and enjoyment rather than reading it as retention alone.
+- Guard: independent review found no P0/P1/P2, post-change crawl `20260731T013924Z` has zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
 
 ### Cycle result - standard_packet_strategy_framing
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - New finding/follow-through: the canary raised one S2 that Emery's one-use Drover Route resolves an optional Streetwise check only after use unless its staged terms or field object are inspected; carry this field-action disclosure into the next focused cycle and test recurrence in the merged-build cohort.
 - Economy: the exact canary used 2.216M raw / 102.8k uncached input and 7.3k output tokens at 95.36% cache reuse, or 3,338 useful tokens per accepted decision; one earlier 108.0k-useful provisional canary was invalidated after review improved pre-choice packet disclosure, with no retry or model fallback.
 - Guard: independent reviews closed checkpoint atomicity, oath-id collision, label-coupled UI, no-doctrine false guidance, and hidden source mapping; final crawl `20260729T101507Z` is zero-finding.
-
-### Cycle result - dominant_road_warden_doctrine
-
-- Evidence choice: the exact merged-build ten-Terra cohort completed The Wolf-Winter 10/10 but chose doctrines 0/10, Road-Warden 9/10, Ledger 0/10, and Road-Warden/Aid-Only/Hayden as its plurality exact triple, while clarity/enjoyment remained 3.8/4.1.
-- Surface: the unused Ledger/Aid-Only/Rowan preset is replaced—not added to the seven-card opening—by a one-input Road-Warden/Aid-Only/Hayden route; Ledger and every later optional choice remain available through the custom path.
-- Counterfactual: the preset records the same three canonical decisions, costs 10 minutes/$0, truthfully separates Aid-Only LURE from Hayden's conditional HUNT brace, and exact pending or selected predecessor saves restore while unknown hashes fail closed.
-- Pure evidence: verified Terra seed 73054 independently assembled the same custom triple, completed The Wolf-Winter through LURE at decision 29, continued twice, completed The Gallowmere at 52, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and reported one setup-density S1.
-- Self-critique/follow-through: one canary recreated but did not select the preset, so this improves route relevance without proving uptake; measure doctrine selection only on the immutable merged-build cohort before changing the opening again.
-- Economy: the one-attempt canary used 5.559M raw / 170.1k uncached input and 10.3k output tokens at 96.94% cache reuse, or 3,469 useful tokens per accepted decision; no retry or fallback ran.
-- Guard: independent reviews closed a 44-word receipt overflow and a wrong source name, crawl `20260729T082814Z` is zero-finding, and final health passes 449 files/3,702 tests, both typechecks, and all 12 packs.
