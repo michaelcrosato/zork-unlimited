@@ -1,6 +1,15 @@
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,6 +23,7 @@ const {
   createCompleteJsonlDecoder,
   providerExitCodeFor,
   terminateOwnedProviderTree,
+  writeStrictRejectionDiagnostic,
 } = strictStream;
 
 function bashPath(path: string): string {
@@ -154,9 +164,10 @@ describe("Codex strict streaming fail-fast", () => {
     expect(activeTimeoutCount()).toBe(baseline);
   });
 
-  it("rejects a malformed private gameplay wrapper before the provider finishes", () => {
+  it("writes only a bounded noncanonical diagnostic for a bound private wrapper rejection", async () => {
     const root = mkdtempSync(join(tmpdir(), "af-strict-stream-private-"));
     const out = join(root, "reports", "attempt");
+    const survived = join(root, "provider-descendant-survived");
     const threadId = "55555555-5555-4555-8555-555555555555";
     const fixture = installFakeCodex(
       root,
@@ -172,22 +183,92 @@ rollout="\${rollout_dir}/rollout-2026-07-26T12-01-00-${threadId}.jsonl"
 printf '{"type":"session_meta","payload":{"id":"%s","cwd":"%s"}}\\n' "${threadId}" "\${cwd}" > "\${rollout}"
 printf '{"type":"turn_context","payload":{"cwd":"%s","model":"gpt-5.3-codex-spark"}}\\n' "\${cwd}" >> "\${rollout}"
 printf '%s\\n' '{"type":"response_item","payload":{"type":"custom_tool_call","id":"wrapper-item-1","status":"completed","call_id":"call-wrapper-1","name":"exec","input":"// @exec: {\\"yield_time_ms\\":120000}\\ntext(await tools.mcp__adventureforge__start_overworld({}));\\n"}}' >> "\${rollout}"
+(
+  sleep 2
+  printf 'escaped\\n' > "\${FAKE_MCP_SURVIVED}"
+) &
 printf '%s\\n' '{"type":"thread.started","thread_id":"${threadId}"}'
 while :; do sleep 1; done
 `,
     );
     try {
-      const result = launchFakeCodex(fixture, out, "73652");
+      const result = launchFakeCodex(fixture, out, "73652", {
+        FAKE_MCP_SURVIVED: bashPath(survived),
+      });
       const output = combinedOutput(result);
       expect(result.error, output).toBeUndefined();
       expect(result.status, output).toBe(43);
       expect(output).toMatch(/strict stream rejected/i);
       expect(output).toMatch(/forbidden wrapper program/i);
       expectNoPublishedEvidence(out);
+      const diagnosticPath = `${out}.strict-rejection.json`;
+      const rawWrapper = "text(await tools.mcp__adventureforge__start_overworld({}));";
+      const diagnostic = readFileSync(diagnosticPath, "utf8");
+      expect(Buffer.byteLength(diagnostic, "utf8")).toBeLessThanOrEqual(4 * 1024);
+      expect(diagnostic).not.toContain(rawWrapper);
+      expect(diagnostic).not.toContain("wrapper-item-1");
+      expect(diagnostic).not.toContain("call-wrapper-1");
+      expect(diagnostic).not.toMatch(/reasoning|token|cwd|path|result/i);
+      expect(JSON.parse(diagnostic)).toMatchObject({
+        acceptance_eligible: false,
+        canonical: false,
+        code_mode_contract: "strict-code-mode-v2",
+        ignored: true,
+        kind: "strict_wrapper_rejection_diagnostic",
+        surface: "private_rollout",
+        binding: {
+          thread_id: threadId,
+          wrapper_item_id_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+          wrapper_call_id_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+        },
+        wrapper: {
+          failure: "strict_yield_pragma_not_exact",
+          input_bytes: expect.any(Number),
+          input_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+        },
+      });
+      if (process.platform !== "win32") expect(statSync(diagnosticPath).mode & 0o777).toBe(0o600);
+      await delay(2_500);
+      expect(existsSync(survived)).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   }, 30_000);
+
+  it("leaves an exclusive diagnostic collision noncanonical without changing strict rejection handling", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-strict-stream-diagnostic-collision-"));
+    const diagnosticPath = join(root, "attempt.strict-rejection.json");
+    const config = {
+      path: diagnosticPath,
+      seed: "73654",
+      buildCommit: "a".repeat(40),
+      trackedWorktreeClean: true,
+      model: "gpt-5.3-codex-spark",
+      cliVersion: "0.144.1",
+      clientAuthoritySha256: "b".repeat(64),
+    };
+    const watch = {
+      threadId: "77777777-7777-4777-8777-777777777777",
+      identity: { dev: 7n, ino: 9n },
+    };
+    const row = {
+      payload: {
+        type: "custom_tool_call",
+        id: "wrapper-item-7",
+        call_id: "call-wrapper-7",
+        input: "private wrapper source must never be published",
+      },
+    };
+    try {
+      expect(writeStrictRejectionDiagnostic(config, watch, row, "syntax_error")).toBe(true);
+      const initial = readFileSync(diagnosticPath, "utf8");
+      expect(writeStrictRejectionDiagnostic(config, watch, row, "syntax_error")).toBe(false);
+      expect(readFileSync(diagnosticPath, "utf8")).toBe(initial);
+      expect(JSON.parse(initial)).toMatchObject({ acceptance_eligible: false, canonical: false });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 
   it("kills an owned descendant when the provider exits immediately after a violation", async () => {
     const root = mkdtempSync(join(tmpdir(), "af-strict-stream-exit-race-"));
@@ -284,6 +365,7 @@ while :; do sleep 1; done
       expect(output).toMatch(/strict stream rejected/i);
       expect(output).toMatch(/forbidden MCP server codex/i);
       expectNoPublishedEvidence(out);
+      expect(existsSync(`${out}.strict-rejection.json`)).toBe(false);
 
       await delay(2_500);
       expect(existsSync(survived)).toBe(false);

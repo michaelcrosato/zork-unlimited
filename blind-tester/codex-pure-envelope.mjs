@@ -158,8 +158,20 @@ function validMcpError(value) {
   );
 }
 
-function rolloutReject(reason) {
-  return { ok: false, reason: `Codex gameplay-result forwarding audit failed: ${reason}` };
+function rolloutReject(reason, strictRejection = undefined) {
+  const rejection = {
+    ok: false,
+    reason: `Codex gameplay-result forwarding audit failed: ${reason}`,
+  };
+  // Keep this watcher-only detail non-enumerable so established inspection
+  // objects retain their exact public shape.
+  if (strictRejection !== undefined) {
+    Object.defineProperty(rejection, "strictRejection", {
+      value: strictRejection,
+      enumerable: false,
+    });
+  }
+  return rejection;
 }
 
 function gameplayResult(payload) {
@@ -443,14 +455,40 @@ function hasOnlyExactLeadingYieldPragma(input) {
   );
 }
 
-export function parseCodexGameplayWrapper(
+// This is intentionally a closed vocabulary: strict-stream diagnostics must
+// never turn parser details, wrapper source, or game output into a new output
+// channel. Keep failures structural and review additions as contract changes.
+export const CODEX_GAMEPLAY_WRAPPER_FAILURES = Object.freeze([
+  "strict_yield_pragma_not_exact",
+  "syntax_error",
+  "single_statement_shape",
+  "tool_call_shape",
+  "tool_not_allowed",
+  "arguments_shape",
+  "two_statement_shape",
+  "declaration_shape",
+  "emitter_shape",
+]);
+
+function wrapperFailure(failure) {
+  return { ok: false, failure };
+}
+
+/**
+ * Classify the exact gameplay wrapper grammar without exposing its source.
+ * `parseCodexGameplayWrapper` remains the compatibility parser for all
+ * acceptance paths; this classifier only gives strict rejection handling a
+ * fixed, non-prose failure shape.
+ */
+export function classifyCodexGameplayWrapper(
   input,
   { allowArgumentlessFreshStart = false, codeModeContract = null } = {},
 ) {
+  if (typeof input !== "string") return wrapperFailure("syntax_error");
   const requireStrict = codeModeContract !== null;
   const requireV2 = codeModeContract === CODEX_STRICT_CURRENT_CONTRACT;
   if (requireStrict && !hasOnlyExactLeadingYieldPragma(input)) {
-    return null;
+    return wrapperFailure("strict_yield_pragma_not_exact");
   }
   const source = ts.createSourceFile(
     "blind-wrapper.js",
@@ -459,12 +497,12 @@ export function parseCodexGameplayWrapper(
     true,
     ts.ScriptKind.JS,
   );
-  if (source.parseDiagnostics.length > 0) return null;
+  if (source.parseDiagnostics.length > 0) return wrapperFailure("syntax_error");
   if (requireV2 || (codeModeContract === null && source.statements.length === 1)) {
-    if (source.statements.length !== 1) return null;
+    if (source.statements.length !== 1) return wrapperFailure("single_statement_shape");
     const statement = source.statements[0];
     if (!ts.isExpressionStatement(statement) || !ts.isCallExpression(statement.expression))
-      return null;
+      return wrapperFailure("single_statement_shape");
     const output = statement.expression;
     if (
       output.questionDotToken !== undefined ||
@@ -474,7 +512,7 @@ export function parseCodexGameplayWrapper(
       !ts.isAwaitExpression(output.arguments[0]) ||
       !ts.isCallExpression(output.arguments[0].expression)
     ) {
-      return null;
+      return wrapperFailure("single_statement_shape");
     }
     const call = output.arguments[0].expression;
     if (
@@ -486,7 +524,7 @@ export function parseCodexGameplayWrapper(
       !call.expression.name.text.startsWith("mcp__adventureforge__") ||
       call.arguments.length > 1
     ) {
-      return null;
+      return wrapperFailure("tool_call_shape");
     }
     const tool = call.expression.name.text.slice("mcp__adventureforge__".length);
     const args =
@@ -495,12 +533,11 @@ export function parseCodexGameplayWrapper(
         : call.arguments.length === 0 && allowArgumentlessFreshStart && tool === "start_overworld"
           ? { ok: true, value: {} }
           : { ok: false };
-    if (!CODEX_PURE_PLAYER_TOOLS.has(tool) || !args.ok || !isRecord(args.value)) {
-      return null;
-    }
-    return { tool, arguments: args.value, emitter: "await_text" };
+    if (!CODEX_PURE_PLAYER_TOOLS.has(tool)) return wrapperFailure("tool_not_allowed");
+    if (!args.ok || !isRecord(args.value)) return wrapperFailure("arguments_shape");
+    return { ok: true, wrapper: { tool, arguments: args.value, emitter: "await_text" } };
   }
-  if (source.statements.length !== 2) return null;
+  if (source.statements.length !== 2) return wrapperFailure("two_statement_shape");
   const declarationStatement = source.statements[0];
   if (
     !ts.isVariableStatement(declarationStatement) ||
@@ -508,7 +545,7 @@ export function parseCodexGameplayWrapper(
     (declarationStatement.declarationList.flags & ts.NodeFlags.Const) === 0 ||
     declarationStatement.declarationList.declarations.length !== 1
   ) {
-    return null;
+    return wrapperFailure("declaration_shape");
   }
   const declaration = declarationStatement.declarationList.declarations[0];
   if (
@@ -518,7 +555,7 @@ export function parseCodexGameplayWrapper(
     !ts.isAwaitExpression(declaration.initializer) ||
     !ts.isCallExpression(declaration.initializer.expression)
   ) {
-    return null;
+    return wrapperFailure("declaration_shape");
   }
   const call = declaration.initializer.expression;
   if (
@@ -529,7 +566,7 @@ export function parseCodexGameplayWrapper(
     call.expression.expression.text !== "tools" ||
     !call.expression.name.text.startsWith("mcp__adventureforge__")
   ) {
-    return null;
+    return wrapperFailure("tool_call_shape");
   }
   const tool = call.expression.name.text.slice("mcp__adventureforge__".length);
   const args =
@@ -538,12 +575,18 @@ export function parseCodexGameplayWrapper(
       : call.arguments.length === 0 && allowArgumentlessFreshStart && tool === "start_overworld"
         ? { ok: true, value: {} }
         : { ok: false };
-  if (!CODEX_PURE_PLAYER_TOOLS.has(tool) || !args.ok || !isRecord(args.value)) {
-    return null;
-  }
+  if (!CODEX_PURE_PLAYER_TOOLS.has(tool)) return wrapperFailure("tool_not_allowed");
+  if (!args.ok || !isRecord(args.value)) return wrapperFailure("arguments_shape");
   const emitter = exactResultEmitter(source.statements[1], declaration.name.text);
-  if (emitter === null || (requireStrict && emitter !== "json_stringify")) return null;
-  return { tool, arguments: args.value, emitter };
+  if (emitter === null || (requireStrict && emitter !== "json_stringify")) {
+    return wrapperFailure("emitter_shape");
+  }
+  return { ok: true, wrapper: { tool, arguments: args.value, emitter } };
+}
+
+export function parseCodexGameplayWrapper(input, options = {}) {
+  const classified = classifyCodexGameplayWrapper(input, options);
+  return classified.ok ? classified.wrapper : null;
 }
 
 const WRAPPER_BANNER_RE = /^Script completed\nWall time \d+(?:\.\d+)? seconds\nOutput:\n$/u;
@@ -1151,13 +1194,18 @@ function scanCodexGameplayResultForwarding(
     ) {
       return rolloutReject(`gameplay call ${ordinal} has an invalid or duplicate wrapper start`);
     }
-    const wrapper = parseCodexGameplayWrapper(rowPayload.input, {
+    const wrapperClassification = classifyCodexGameplayWrapper(rowPayload.input, {
       allowArgumentlessFreshStart: gameplayCalls.length === 0,
       codeModeContract,
     });
-    if (!wrapper) {
-      return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`);
+    if (!wrapperClassification.ok) {
+      return rolloutReject(`gameplay call ${ordinal} used a forbidden wrapper program`, {
+        kind: "wrapper",
+        failure: wrapperClassification.failure,
+        rowIndex: index,
+      });
     }
+    const wrapper = wrapperClassification.wrapper;
     wrapperCallIds.add(rowPayload.call_id);
     wrapperItemIds.add(rowPayload.id);
 

@@ -10,6 +10,8 @@ import { PURE_PLAYER_TOOLS } from "../../src/mcp/server.js";
 
 const {
   buildCodexPureEnvelope,
+  classifyCodexGameplayWrapper,
+  CODEX_GAMEPLAY_WRAPPER_FAILURES,
   CODEX_PURE_PLAYER_TOOLS,
   inspectCodexGameplayResultForwarding,
   inspectCodexGameplayResultForwardingPrefix,
@@ -784,6 +786,35 @@ describe("Codex pure blind provider envelope", () => {
       ok: false,
       reason: expect.stringMatching(/forbidden wrapper program/i),
     });
+  });
+
+  it("classifies wrapper rejection with a fixed structural enum while preserving parser acceptance", () => {
+    const strict = { codeModeContract: "strict-code-mode-v2" };
+    const accepted = `${CODEX_EXEC_YIELD_PRAGMA}\ntext(await tools.mcp__adventureforge__start_overworld({}));\n`;
+    const classified = classifyCodexGameplayWrapper(accepted, strict);
+    expect(CODEX_GAMEPLAY_WRAPPER_FAILURES).toEqual([
+      "strict_yield_pragma_not_exact",
+      "syntax_error",
+      "single_statement_shape",
+      "tool_call_shape",
+      "tool_not_allowed",
+      "arguments_shape",
+      "two_statement_shape",
+      "declaration_shape",
+      "emitter_shape",
+    ]);
+    expect(classified).toEqual({
+      ok: true,
+      wrapper: parseCodexGameplayWrapper(accepted, strict),
+    });
+    const rejected = classifyCodexGameplayWrapper(
+      "text(await tools.mcp__adventureforge__start_overworld({}));\n",
+      strict,
+    );
+    expect(rejected).toEqual({ ok: false, failure: "strict_yield_pragma_not_exact" });
+    expect(CODEX_GAMEPLAY_WRAPPER_FAILURES).toContain(rejected.failure);
+    expect(rejected).not.toHaveProperty("reason");
+    expect(rejected).not.toHaveProperty("input");
   });
 
   it("differentially rejects complete malformed wrappers exactly as the terminal audit does", () => {

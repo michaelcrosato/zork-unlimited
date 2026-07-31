@@ -32,6 +32,7 @@ import { clearTimeout, setTimeout } from "node:timers";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { codexClientAuthorityRecord, validateOutputPrefix } from "./codex-rollout.mjs";
+import { CODEX_GAMEPLAY_WRAPPER_FAILURES } from "./codex-pure-envelope.mjs";
 import {
   acquireFleetCohortLease,
   assertFleetCohortOverlapAllowed,
@@ -1563,6 +1564,28 @@ function firstErrorLine(text) {
   return lines.find((l) => /error/i.test(l)) ?? lines[0] ?? "(empty stderr)";
 }
 
+/**
+ * A strict-stream rejection can include provider-controlled stderr, so its
+ * fleet archive receives only this fixed structural diagnostic. Keep this
+ * separate from ordinary failed-attempt tails: this record is noncanonical
+ * and contains commitments, never provider output or paths.
+ */
+export function strictRejectionFleetDiagnostic({ run, attempt, exit, fleetClient }) {
+  return (
+    [
+      "schema_version=1",
+      "diagnostic=strict_stream_rejection",
+      `classification=strict_stream_rejected`,
+      `attempt=${attempt}`,
+      `seed=${run.seed}`,
+      `run.sh_exit=${exit}`,
+      `model=${run.model}`,
+      `cli_version=${fleetClient.cli_version}`,
+      `client_authority_sha256=${fleetClient.authority_sha256}`,
+    ].join("\n") + "\n"
+  );
+}
+
 export const FLEET_ATTEMPT_CLASSIFICATIONS = Object.freeze([
   "technical_timeout",
   "strict_stream_rejected",
@@ -1615,6 +1638,125 @@ function sha256Bytes(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function hasExactKeys(value, expectedKeys) {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    isDeepStrictEqual(Object.keys(value).sort(), [...expectedKeys].sort())
+  );
+}
+
+function isSafeStrictRejectionDiagnostic(bytes) {
+  if (!Buffer.isBuffer(bytes) || bytes.byteLength > 4 * 1024) return false;
+  const text = bytes.toString("utf8");
+  if (!Buffer.from(text, "utf8").equals(bytes)) return false;
+  const parsed = parseJsonRejectingDuplicateKeys(text, "strict rejection diagnostic");
+  if (
+    !parsed.ok ||
+    !hasExactKeys(parsed.value, [
+      "acceptance_eligible",
+      "binding",
+      "canonical",
+      "code_mode_contract",
+      "commitments",
+      "ignored",
+      "kind",
+      "schema_version",
+      "surface",
+      "wrapper",
+    ])
+  ) {
+    return false;
+  }
+  const diagnostic = parsed.value;
+  if (
+    diagnostic.schema_version !== 1 ||
+    diagnostic.acceptance_eligible !== false ||
+    diagnostic.canonical !== false ||
+    diagnostic.code_mode_contract !== "strict-code-mode-v2" ||
+    diagnostic.ignored !== true ||
+    diagnostic.kind !== "strict_wrapper_rejection_diagnostic" ||
+    diagnostic.surface !== "private_rollout" ||
+    !hasExactKeys(diagnostic.commitments, [
+      "build_commit",
+      "cli_version",
+      "client_authority_sha256",
+      "model",
+      "seed",
+      "tracked_worktree_clean",
+    ]) ||
+    !/^-?[0-9]+$/u.test(diagnostic.commitments.seed) ||
+    !Number.isSafeInteger(Number(diagnostic.commitments.seed)) ||
+    String(Number(diagnostic.commitments.seed)) !== diagnostic.commitments.seed ||
+    !/^[0-9a-f]{40}$/u.test(diagnostic.commitments.build_commit) ||
+    typeof diagnostic.commitments.tracked_worktree_clean !== "boolean" ||
+    !/^[A-Za-z0-9._-]{1,128}$/u.test(diagnostic.commitments.model) ||
+    !/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(diagnostic.commitments.cli_version) ||
+    !/^[0-9a-f]{64}$/u.test(diagnostic.commitments.client_authority_sha256) ||
+    !hasExactKeys(diagnostic.binding, [
+      "rollout_file_identity",
+      "thread_id",
+      "wrapper_call_id_sha256",
+      "wrapper_item_id_sha256",
+    ]) ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      diagnostic.binding.thread_id,
+    ) ||
+    !/^[0-9a-f]{64}$/u.test(diagnostic.binding.wrapper_item_id_sha256) ||
+    !/^[0-9a-f]{64}$/u.test(diagnostic.binding.wrapper_call_id_sha256) ||
+    !hasExactKeys(diagnostic.binding.rollout_file_identity, ["device_id", "file_id"]) ||
+    !/^\d+$/u.test(diagnostic.binding.rollout_file_identity.device_id) ||
+    !/^\d+$/u.test(diagnostic.binding.rollout_file_identity.file_id) ||
+    !hasExactKeys(diagnostic.wrapper, ["failure", "input_bytes", "input_sha256"]) ||
+    !CODEX_GAMEPLAY_WRAPPER_FAILURES.includes(diagnostic.wrapper.failure) ||
+    !Number.isSafeInteger(diagnostic.wrapper.input_bytes) ||
+    diagnostic.wrapper.input_bytes < 0 ||
+    !/^[0-9a-f]{64}$/u.test(diagnostic.wrapper.input_sha256)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function isSafeStrictFleetDiagnostic(diagnostic) {
+  if (typeof diagnostic !== "string" || Buffer.byteLength(diagnostic, "utf8") > 4 * 1024) {
+    return false;
+  }
+  const lines = diagnostic.split("\n");
+  if (lines.length !== 10 || lines.at(-1) !== "") return false;
+  const expected = [
+    "schema_version=1",
+    "diagnostic=strict_stream_rejection",
+    "classification=strict_stream_rejected",
+  ];
+  if (!isDeepStrictEqual(lines.slice(0, 3), expected)) return false;
+  const values = Object.fromEntries(
+    lines.slice(3, -1).map((line) => {
+      const separator = line.indexOf("=");
+      return [line.slice(0, separator), line.slice(separator + 1)];
+    }),
+  );
+  return (
+    isDeepStrictEqual(Object.keys(values).sort(), [
+      "attempt",
+      "cli_version",
+      "client_authority_sha256",
+      "model",
+      "run.sh_exit",
+      "seed",
+    ]) &&
+    /^[1-9][0-9]*$/u.test(values.attempt) &&
+    /^-?[0-9]+$/u.test(values.seed) &&
+    Number.isSafeInteger(Number(values.seed)) &&
+    String(Number(values.seed)) === values.seed &&
+    /^[0-9]+$/u.test(values["run.sh_exit"]) &&
+    /^[A-Za-z0-9._-]{1,128}$/u.test(values.model) &&
+    /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(values.cli_version) &&
+    /^[0-9a-f]{64}$/u.test(values.client_authority_sha256)
+  );
+}
+
 function fleetRelativePath(fleetDir, path) {
   return relative(fleetDir, path).split(sep).join("/");
 }
@@ -1629,6 +1771,7 @@ export function archiveFailedFleetAttemptArtifacts({
   seed,
   attempt,
   diagnostic,
+  diagnosticOnly = false,
 }) {
   const sourceDir = dirname(outPrefix);
   const sourceBase = basename(outPrefix);
@@ -1636,7 +1779,7 @@ export function archiveFailedFleetAttemptArtifacts({
   mkdirSync(dirname(attemptDir), { recursive: true });
   mkdirSync(attemptDir);
 
-  const sources = readdirSync(sourceDir, { withFileTypes: true })
+  const ownedSources = readdirSync(sourceDir, { withFileTypes: true })
     .filter((entry) => entry.name.startsWith(`${sourceBase}.`))
     .sort((left, right) => left.name.localeCompare(right.name))
     .map((entry) => {
@@ -1651,17 +1794,31 @@ export function archiveFailedFleetAttemptArtifacts({
       ) {
         throw new Error(`fleet: failed-attempt artifact is not a private regular file: ${source}`);
       }
-      return { source, name: entry.name, bytes: readFileSync(source) };
+      return { source, name: entry.name };
     });
+  // A strict-stream rejection is never retention or usage evidence. Preserve
+  // only its bounded structural diagnostic. Filter names before any source
+  // bytes are read, then discard every owned raw provider artifact after the
+  // fleet log is sealed so a retry cannot inherit it.
+  const sources = diagnosticOnly
+    ? ownedSources.filter((source) => source.name === `${sourceBase}.strict-rejection.json`)
+    : ownedSources;
+  if (diagnosticOnly && !isSafeStrictFleetDiagnostic(diagnostic)) {
+    throw new Error("fleet: strict rejection archive requires one safe structural diagnostic");
+  }
 
   const usageArtifacts = {
     primary_envelope: null,
     provider_events: null,
   };
   const archived = [];
-  for (const source of sources) {
+  for (const candidate of sources) {
+    const source = { ...candidate, bytes: readFileSync(candidate.source) };
+    if (diagnosticOnly && !isSafeStrictRejectionDiagnostic(source.bytes)) {
+      throw new Error("fleet: strict rejection diagnostic is malformed or unsafe");
+    }
     const destination = join(attemptDir, source.name);
-    writeFileSync(destination, source.bytes, { flag: "wx" });
+    writeFileSync(destination, source.bytes, { flag: "wx", mode: 0o600 });
     if (source.name === `${sourceBase}.json`) usageArtifacts.primary_envelope = source.name;
     if (source.name === `${sourceBase}.codex.jsonl`) usageArtifacts.provider_events = source.name;
     archived.push({
@@ -1672,14 +1829,14 @@ export function archiveFailedFleetAttemptArtifacts({
   }
   const diagnosticName = "fleet-diagnostic.log";
   const diagnosticBytes = Buffer.from(diagnostic, "utf8");
-  writeFileSync(join(attemptDir, diagnosticName), diagnosticBytes, { flag: "wx" });
+  writeFileSync(join(attemptDir, diagnosticName), diagnosticBytes, { flag: "wx", mode: 0o600 });
   archived.push({
     name: diagnosticName,
     bytes: diagnosticBytes.byteLength,
     sha256: sha256Bytes(diagnosticBytes),
   });
 
-  for (const source of sources) unlinkSync(source.source);
+  for (const source of ownedSources) unlinkSync(source.source);
   archived.sort((left, right) => left.name.localeCompare(right.name));
   return {
     directory: fleetRelativePath(fleetDir, attemptDir),
@@ -2034,29 +2191,41 @@ async function executeRun(
       verifierAttempted,
       verified: false,
     });
-    const sections = [
-      `attempt=${attempt + 1}`,
-      `classification=${classification}`,
-      `run.sh exit=${bashResult.status ?? "null"}`,
-      "--- run.sh stdout (tail) ---",
-      tail(bashResult.stdout),
-      "--- run.sh stderr (tail) ---",
-      tail(bashResult.stderr),
-    ];
-    if (verifyResult) {
-      sections.push(
-        "--- verify stdout (tail) ---",
-        tail(verifyResult.stdout),
-        "--- verify stderr (tail) ---",
-        tail(verifyResult.stderr),
-      );
-    }
+    const strictRejection = classification === "strict_stream_rejected";
+    const diagnostic = strictRejection
+      ? strictRejectionFleetDiagnostic({
+          run,
+          attempt: attempt + 1,
+          exit: lastExit,
+          fleetClient,
+        })
+      : (() => {
+          const sections = [
+            `attempt=${attempt + 1}`,
+            `classification=${classification}`,
+            `run.sh exit=${bashResult.status ?? "null"}`,
+            "--- run.sh stdout (tail) ---",
+            tail(bashResult.stdout),
+            "--- run.sh stderr (tail) ---",
+            tail(bashResult.stderr),
+          ];
+          if (verifyResult) {
+            sections.push(
+              "--- verify stdout (tail) ---",
+              tail(verifyResult.stdout),
+              "--- verify stderr (tail) ---",
+              tail(verifyResult.stderr),
+            );
+          }
+          return `${sections.join("\n")}\n`;
+        })();
     const archive = archiveFailedFleetAttemptArtifacts({
       outPrefix,
       fleetDir,
       seed: run.seed,
       attempt: attempt + 1,
-      diagnostic: `${sections.join("\n")}\n`,
+      diagnostic,
+      diagnosticOnly: strictRejection,
     });
     lastLogPath = join(fleetDir, archive.directory, "fleet-diagnostic.log");
     attemptHistory.push({
@@ -2068,10 +2237,17 @@ async function executeRun(
       archive,
       ...(opts.mock
         ? {}
-        : { usage: usageRecordFromFailedFleetAttemptArchive({ archive, fleetDir }) }),
+        : {
+            usage: strictRejection
+              ? usageRecordFromFailedAttempt()
+              : usageRecordFromFailedFleetAttemptArchive({ archive, fleetDir }),
+          }),
     });
-    const summarySource =
-      verifyResult && verifyResult.stderr ? verifyResult.stderr : bashResult.stderr;
+    const summarySource = strictRejection
+      ? "strict stream rejected"
+      : verifyResult && verifyResult.stderr
+        ? verifyResult.stderr
+        : bashResult.stderr;
     console.error(
       `[fleet] seed=${run.seed} attempt=${attempt + 1} failed (exit ${lastExit}): ${firstErrorLine(summarySource)}`,
     );
