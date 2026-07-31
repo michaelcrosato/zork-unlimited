@@ -1501,6 +1501,23 @@ dd {
   white-space: pre-wrap;
 }
 
+.quest-dialogue {
+  border-left: 3px solid var(--accent);
+  margin: 1rem 0;
+  padding: 0.25rem 0 0.25rem 1rem;
+}
+
+.quest-dialogue h3,
+.quest-dialogue p {
+  margin: 0;
+}
+
+.quest-dialogue p {
+  color: #d8d8cc;
+  margin-top: 0.4rem;
+  white-space: pre-wrap;
+}
+
 .choices button {
   background: #20281b;
 }

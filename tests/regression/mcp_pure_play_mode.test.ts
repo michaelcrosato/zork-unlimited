@@ -1909,6 +1909,7 @@ describe("MCP pure play mode", () => {
     type RpgObservation = {
       exits: { direction: string; to?: string }[];
       available_actions: { id: string; command?: string }[];
+      dialogue: { npc: string; npc_text: string } | null;
     };
     type RpgCompactContext = { actions?: string[]; dialogue?: [string, string] };
     const areaView = (payload: Record<string, unknown>): AreaView => {
@@ -2691,7 +2692,7 @@ describe("MCP pure play mode", () => {
         const talkContext = talked.context as RpgCompactContext;
         const talkActions = talkContext.actions;
         expect(talkContext.dialogue?.[1]).toBe(
-          "Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE: herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line; crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help. Name HUNT here, or cross uncommitted into it; crossing north commits it and closes the other plans.",
+          "Albany sent you. Any of the four plans can finish Wolf-Winter, but each protects something by spending something else. Choose the cost you accept; I will not name a best answer.\n\nHUNT — protects herd and stores; wolves may die.\nLURE — protects herd and wolves; spends the last feed, leaves the paling broken, and a foul can cost cattle.\nDRIVE — protects people and wolves; gives up the outer line, then a crisis costs a wound, two cattle, or the rig.\nFORTIFY — protects byre, herd, and wolves; trades Cade's outer property against public seals and his aid.\n\nAsk about any plan before committing; asking does not commit your strategy. Name HUNT here, or cross uncommitted into it. Cross north uncommitted and HUNT becomes final; the other plans close.",
         );
         expect(talkActions).toEqual(
           expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
@@ -2704,7 +2705,24 @@ describe("MCP pure play mode", () => {
             arguments: { session_id: rpgSessionId, include_actions: false },
           }),
         );
+        expect(currentRead.state_hash).toBe(talked.state_hash);
+        expect((currentRead.context as RpgCompactContext).dialogue).toEqual(talkContext.dialogue);
         expect((currentRead.context as RpgCompactContext).actions).toEqual(talkActions);
+
+        const fullCurrentRead = textPayload(
+          await client.callTool({
+            name: "get_observation",
+            arguments: {
+              session_id: rpgSessionId,
+              compact_observation: false,
+              include_actions: false,
+            },
+          }),
+        );
+        expect(fullCurrentRead.state_hash).toBe(talked.state_hash);
+        expect((fullCurrentRead.observation as RpgObservation).dialogue?.npc_text).toBe(
+          talkContext.dialogue?.[1],
+        );
 
         const labeledMenu = textPayload(
           await client.callTool({

@@ -1337,6 +1337,15 @@ export default function App(): JSX.Element {
             </div>
             <p className="quest-origin">{activeQuest.discovery}</p>
             <p className="text">{questView.text}</p>
+            {questView.dialogue && (
+              <section
+                aria-label={`Conversation with ${questView.dialogue.npc}`}
+                className="quest-dialogue"
+              >
+                <h3>{questView.dialogue.npc}</h3>
+                <p>{questView.dialogue.text}</p>
+              </section>
+            )}
 
             {questView.ended ? (
               <p className="ending">{questView.endingId} - The End</p>

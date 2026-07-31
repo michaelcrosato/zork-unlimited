@@ -125,7 +125,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootDialogue = observation(uncommitted);
     expect(rootDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
     expect(rootDialogue.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*name HUNT[^]*cross uncommitted[^]*crossing north commits it[^]*closes the other plans/i,
+      /Albany sent you[^]*four plans can finish[^]*choose the cost[^]*hunt[^]*protects herd and stores[^]*wolves may die[^]*lure[^]*protects herd and wolves[^]*last feed[^]*paling broken[^]*foul can cost cattle[^]*drive[^]*protects people and wolves[^]*outer line[^]*crisis costs a wound, two cattle, or the rig[^]*fortify[^]*protects byre, herd, and wolves[^]*Cade's outer property[^]*public seals[^]*his aid[^]*name HUNT[^]*cross uncommitted[^]*cross north uncommitted[^]*HUNT becomes final[^]*other plans close/i,
     );
     const rootCommands = rootDialogue.available_actions.map((action) => action.command).join("\n");
     expect(rootCommands).toMatch(/hunt[^]*hold breach[^]*cattle\/reserves safe[^]*wolves may die/i);

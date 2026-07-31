@@ -23,12 +23,12 @@ import {
   isOpen,
   locateObject,
   nodeOrdinal,
-  nodeText,
   objectDescription,
   objectName,
   roomDescription,
   visibleObjectIds,
 } from "./model.js";
+import { dialogueNodeText } from "./dialogue_presentation.js";
 
 // A USE action that carries a `skill_check` (resolved by the runner as a d20 + skill
 // roll, parser/RPG alike) is annotated with the rolled stat + difficulty + die type, so a
@@ -351,7 +351,7 @@ function resolveRpgActionCore(
         effects: [
           { set_var: { name: dlgVar(npc.id), value: ord } },
           ...root.effects,
-          { narrate: `${npc.name}: "${nodeText(root, state)}"` },
+          { narrate: `${npc.name}: "${dialogueNodeText(state, root)}"` },
         ],
       };
     }
@@ -414,7 +414,9 @@ function resolveRpgActionCore(
         effects: [
           { set_var: { name: dlgVar(active.npc.id), value: targetOrd } },
           ...target.effects,
-          { narrate: `${active.npc.name}: "${nodeText(target, state)}"` },
+          {
+            narrate: `${active.npc.name}: "${dialogueNodeText(state, target)}"`,
+          },
           ...(autoResumesRoot
             ? [{ set_var: { name: dlgVar(active.npc.id), value: rootOrd } } satisfies Effect]
             : []),

@@ -187,6 +187,53 @@ describe("GameSession — RPG-only structured play", () => {
     });
   });
 
+  it("projects Cade's strategy scorecard identically through the UI and MCP observations", () => {
+    const source = read("content/rpg/quests/wolf_winter.yaml");
+    const ui = GameSession.start(source, 541);
+    const api = createToolApi({ root: process.cwd() });
+    const mcp = api.start_world_quest({
+      world_quest_id: "wolf_winter",
+      seed: 541,
+      compact_observation: false,
+    });
+    let talkNarration: string[] = [];
+
+    for (const actionId of ["go_north", "talk_houndsman"]) {
+      const uiOutcome = ui.choose(actionId);
+      expect(uiOutcome.ok, actionId).toBe(true);
+      if (actionId === "talk_houndsman") talkNarration = uiOutcome.narration;
+      expect(
+        api.step_action({
+          session_id: mcp.session_id,
+          action_id: actionId,
+          compact_observation: false,
+          compact_events: false,
+        }).ok,
+        actionId,
+      ).toBe(true);
+    }
+
+    const uiView = ui.view();
+    const uiHash = uiView.stateHash;
+    const mcpRead = api.get_observation({
+      session_id: mcp.session_id,
+      compact_observation: false,
+    });
+    expect(uiView.dialogue).toEqual({
+      npc: "old Cade the houndsman",
+      text: mcpRead.observation.dialogue?.npc_text,
+    });
+    expect(uiView.dialogue?.text).toContain("Any of the four plans can finish Wolf-Winter");
+    expect(talkNarration).toEqual([`old Cade the houndsman: "${uiView.dialogue?.text}"`]);
+    expect(talkNarration.join(" ")).not.toContain("Save/cost—HUNT");
+    expect(uiView.choices.map((choice) => choice.id)).toEqual(
+      mcpRead.observation.available_actions.map((action) => action.id),
+    );
+    expect(uiHash).toBe(api.sessions.get(mcp.session_id).stateHash);
+    expect(mcpRead.state_hash).toBe(uiHash.slice(0, 24));
+    expect(ui.view().stateHash).toBe(uiHash);
+  });
+
   it("keeps a mixed clue/dialogue sequence count-and-proof identical in UI and MCP", () => {
     const source = read("content/rpg/quests/falconers_ransom.yaml");
     const ui = GameSession.start(source, 1);
