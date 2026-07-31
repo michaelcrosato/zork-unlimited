@@ -10,6 +10,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -53,6 +54,7 @@ import {
   resumeCandidatesFor,
   runPool,
   runSidecarPathFor,
+  strictRejectionFleetDiagnostic,
   summarizeFleetAttemptHistory,
   usageRecordFromFailedFleetAttemptArchive,
   validateFleetLabel,
@@ -62,6 +64,8 @@ import {
   writeFreshPureFleetAttestation,
   // @ts-expect-error — plain .mjs module without type declarations
 } from "../../blind-tester/fleet.mjs";
+// @ts-expect-error — runner helper is intentionally plain ESM.
+import { writeStrictRejectionDiagnostic } from "../../blind-tester/codex-strict-stream.mjs";
 import {
   codexClientAuthorityRecord,
   resolveCodexClientBinary,
@@ -1284,6 +1288,177 @@ describe("fleet attempt evidence", () => {
         report_recovered_runs: 1,
         receipt_bound_runs: 0,
       });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("archives a strict rejection as diagnostic-only and excludes it from usage evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-fleet-strict-diagnostic-"));
+    const reportsDir = join(root, "reports");
+    const fleetDir = join(root, "fleet");
+    mkdirSync(reportsDir);
+    mkdirSync(fleetDir);
+    const outPrefix = join(reportsDir, "20260716T120000Z_overworld_seed43");
+    const diagnosticPath = `${outPrefix}.strict-rejection.json`;
+    const eventsPath = `${outPrefix}.codex.jsonl`;
+    const rawWrapper = "raw wrapper source must not be archived";
+    const rawProviderStderr = "provider stderr sentinel C:/private/report-prefix";
+    try {
+      const resolved = resolveCodexClientBinary(process.execPath);
+      const client = codexClientAuthorityRecord(resolved.identity_token, "0.144.1");
+      expect(
+        writeStrictRejectionDiagnostic(
+          {
+            path: diagnosticPath,
+            seed: "43",
+            buildCommit: "a".repeat(40),
+            trackedWorktreeClean: true,
+            model: "gpt-5.3-codex-spark",
+            cliVersion: "0.144.1",
+            clientAuthoritySha256: client.authority_sha256,
+          },
+          {
+            threadId: "77777777-7777-4777-8777-777777777777",
+            identity: { dev: 7n, ino: 9n },
+          },
+          {
+            payload: {
+              type: "custom_tool_call",
+              id: "wrapper-item-7",
+              call_id: "call-wrapper-7",
+              input: rawWrapper,
+            },
+          },
+          "syntax_error",
+        ),
+      ).toBe(true);
+      writeFileSync(eventsPath, `${rawWrapper}\n`);
+      writeFileSync(`${outPrefix}.json`, '{"usage":{"input_tokens":999}}\n');
+      const archive = archiveFailedFleetAttemptArtifacts({
+        outPrefix,
+        fleetDir,
+        seed: 43,
+        attempt: 1,
+        diagnostic: strictRejectionFleetDiagnostic({
+          run: { seed: 43, model: "gpt-5.3-codex-spark" },
+          attempt: 1,
+          exit: 43,
+          fleetClient: client,
+        }),
+        diagnosticOnly: true,
+      });
+      expect(archive.usage_artifacts).toEqual({ primary_envelope: null, provider_events: null });
+      expect(archive.artifacts.map((artifact: { name: string }) => artifact.name)).toEqual([
+        "20260716T120000Z_overworld_seed43.strict-rejection.json",
+        "fleet-diagnostic.log",
+      ]);
+      expect(
+        readFileSync(
+          join(
+            fleetDir,
+            archive.directory,
+            "20260716T120000Z_overworld_seed43.strict-rejection.json",
+          ),
+          "utf8",
+        ),
+      ).not.toContain(rawWrapper);
+      const fleetDiagnostic = readFileSync(
+        join(fleetDir, archive.directory, "fleet-diagnostic.log"),
+        "utf8",
+      );
+      expect(fleetDiagnostic).not.toContain(rawProviderStderr);
+      expect(fleetDiagnostic).not.toContain("C:/private/report-prefix");
+      if (process.platform !== "win32") {
+        expect(
+          statSync(
+            join(
+              fleetDir,
+              archive.directory,
+              "20260716T120000Z_overworld_seed43.strict-rejection.json",
+            ),
+          ).mode & 0o777,
+        ).toBe(0o600);
+        expect(
+          statSync(join(fleetDir, archive.directory, "fleet-diagnostic.log")).mode & 0o777,
+        ).toBe(0o600);
+      }
+      const summary = pureFleetSummaryAccounting(
+        [
+          {
+            attempt_history: [
+              {
+                usage: {
+                  source: "unrecoverable",
+                  input_tokens: null,
+                  cached_input_tokens: null,
+                  output_tokens: null,
+                  reasoning_output_tokens: null,
+                },
+              },
+            ],
+            resume_usage: null,
+          },
+        ],
+        client,
+      );
+      expect(summary.usage).toMatchObject({
+        attempt_count: 1,
+        launched_attempt_count: 1,
+        unrecoverable_attempt_count: 1,
+        complete: false,
+        observed_input_tokens: 0,
+        useful_tokens: 0,
+      });
+      expect(usageRecordFromFailedFleetAttemptArchive({ archive, fleetDir })).toMatchObject({
+        source: "unrecoverable",
+      });
+      expect(existsSync(diagnosticPath)).toBe(false);
+      expect(existsSync(eventsPath)).toBe(false);
+      expect(existsSync(`${outPrefix}.json`)).toBe(false);
+      const malformedPrefix = join(reportsDir, "20260716T120000Z_overworld_seed44");
+      writeFileSync(`${malformedPrefix}.strict-rejection.json`, "{}\n");
+      expect(() =>
+        archiveFailedFleetAttemptArtifacts({
+          outPrefix: malformedPrefix,
+          fleetDir,
+          seed: 44,
+          attempt: 2,
+          diagnostic: strictRejectionFleetDiagnostic({
+            run: { seed: 44, model: "gpt-5.3-codex-spark" },
+            attempt: 2,
+            exit: 43,
+            fleetClient: client,
+          }),
+          diagnosticOnly: true,
+        }),
+      ).toThrow(/strict rejection diagnostic is malformed or unsafe/i);
+      const tailedPrefix = join(reportsDir, "20260716T120000Z_overworld_seed45");
+      writeFileSync(
+        `${tailedPrefix}.strict-rejection.json`,
+        readFileSync(
+          join(
+            fleetDir,
+            archive.directory,
+            "20260716T120000Z_overworld_seed43.strict-rejection.json",
+          ),
+        ),
+      );
+      expect(() =>
+        archiveFailedFleetAttemptArtifacts({
+          outPrefix: tailedPrefix,
+          fleetDir,
+          seed: 45,
+          attempt: 3,
+          diagnostic: `${strictRejectionFleetDiagnostic({
+            run: { seed: 45, model: "gpt-5.3-codex-spark" },
+            attempt: 3,
+            exit: 43,
+            fleetClient: client,
+          })}${rawProviderStderr}\n`,
+          diagnosticOnly: true,
+        }),
+      ).toThrow(/strict rejection archive requires one safe structural diagnostic/i);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

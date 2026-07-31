@@ -2,19 +2,24 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
 import {
   closeSync,
+  fchmodSync,
+  fsyncSync,
   fstatSync,
   lstatSync,
   openSync,
   readFileSync,
   readSync,
   realpathSync,
+  writeSync,
 } from "node:fs";
 import { clearTimeout, setTimeout } from "node:timers";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL, URL } from "node:url";
 import {
+  CODEX_GAMEPLAY_WRAPPER_FAILURES,
   CODEX_STRICT_CURRENT_CONTRACT,
   inspectCodexGameplayResultForwardingPrefix,
   inspectCodexPureEventPrefix,
@@ -30,7 +35,9 @@ import {
 export const CODEX_STRICT_STREAM_REJECT_EXIT = 43;
 const DEFAULT_POLL_MS = 50;
 const TERMINATION_GRACE_MS = 2_000;
+export const STRICT_REJECTION_DIAGNOSTIC_MAX_BYTES = 4 * 1024;
 const PROCESS_ANCHOR = fileURLToPath(new URL("./codex-process-anchor.mjs", import.meta.url));
+const THREAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function option(argv, name) {
   const index = argv.indexOf(name);
@@ -39,6 +46,163 @@ function option(argv, name) {
 
 function failure(message) {
   throw new Error(message);
+}
+
+function strictRejectionConfig(options) {
+  const path = option(options, "--strict-rejection");
+  const seed = option(options, "--diagnostic-seed");
+  const buildCommit = option(options, "--diagnostic-build-commit");
+  const trackedWorktreeClean = option(options, "--diagnostic-tracked-worktree-clean");
+  const model = option(options, "--model");
+  const cliVersion = option(options, "--diagnostic-cli-version");
+  const clientAuthoritySha256 = option(options, "--diagnostic-client-authority-sha256");
+  const values = [
+    path,
+    seed,
+    buildCommit,
+    trackedWorktreeClean,
+    model,
+    cliVersion,
+    clientAuthoritySha256,
+  ];
+  if (values.every((value) => value === undefined)) return null;
+  if (values.some((value) => typeof value !== "string" || value.length === 0)) {
+    failure("strict rejection diagnostic requires its complete safe commitment set");
+  }
+  if (
+    !/^-?[0-9]+$/u.test(seed) ||
+    !Number.isSafeInteger(Number(seed)) ||
+    String(Number(seed)) !== seed ||
+    !/^[0-9a-f]{40}$/u.test(buildCommit) ||
+    !["true", "false"].includes(trackedWorktreeClean) ||
+    !/^[A-Za-z0-9._-]{1,128}$/u.test(model) ||
+    !/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(cliVersion) ||
+    !/^[0-9a-f]{64}$/u.test(clientAuthoritySha256)
+  ) {
+    failure("strict rejection diagnostic commitment is malformed");
+  }
+  return {
+    path,
+    seed,
+    buildCommit,
+    trackedWorktreeClean: trackedWorktreeClean === "true",
+    model,
+    cliVersion,
+    clientAuthoritySha256,
+  };
+}
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function validStrictRejectionDiagnosticConfig(config) {
+  return (
+    config !== null &&
+    typeof config === "object" &&
+    typeof config.path === "string" &&
+    /^-?[0-9]+$/u.test(config.seed) &&
+    Number.isSafeInteger(Number(config.seed)) &&
+    String(Number(config.seed)) === config.seed &&
+    /^[0-9a-f]{40}$/u.test(config.buildCommit) &&
+    typeof config.trackedWorktreeClean === "boolean" &&
+    /^[A-Za-z0-9._-]{1,128}$/u.test(config.model) &&
+    /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(config.cliVersion) &&
+    /^[0-9a-f]{64}$/u.test(config.clientAuthoritySha256)
+  );
+}
+
+/**
+ * Best-effort, diagnostic-only evidence for an already bound private wrapper
+ * rejection. This must never affect fail-closed termination or canonical
+ * publication, and intentionally serializes no source, prose, result, path,
+ * token count, or rejection reason.
+ */
+export function writeStrictRejectionDiagnostic(config, watch, row, failureKind) {
+  if (
+    !validStrictRejectionDiagnosticConfig(config) ||
+    !CODEX_GAMEPLAY_WRAPPER_FAILURES.includes(failureKind) ||
+    typeof watch?.threadId !== "string" ||
+    !THREAD_ID_RE.test(watch.threadId) ||
+    typeof watch?.identity?.dev !== "bigint" ||
+    typeof watch.identity.ino !== "bigint"
+  ) {
+    return false;
+  }
+  const payload = row?.payload;
+  if (
+    payload?.type !== "custom_tool_call" ||
+    typeof payload.input !== "string" ||
+    typeof payload.id !== "string" ||
+    payload.id.length === 0 ||
+    typeof payload.call_id !== "string" ||
+    payload.call_id.length === 0
+  ) {
+    return false;
+  }
+  const input = Buffer.from(payload.input, "utf8");
+  const bytes = Buffer.from(
+    JSON.stringify({
+      schema_version: 1,
+      acceptance_eligible: false,
+      canonical: false,
+      code_mode_contract: CODEX_STRICT_CURRENT_CONTRACT,
+      ignored: true,
+      kind: "strict_wrapper_rejection_diagnostic",
+      surface: "private_rollout",
+      commitments: {
+        seed: config.seed,
+        build_commit: config.buildCommit,
+        tracked_worktree_clean: config.trackedWorktreeClean,
+        model: config.model,
+        cli_version: config.cliVersion,
+        client_authority_sha256: config.clientAuthoritySha256,
+      },
+      binding: {
+        thread_id: watch.threadId,
+        rollout_file_identity: {
+          device_id: String(watch.identity.dev),
+          file_id: String(watch.identity.ino),
+        },
+        wrapper_item_id_sha256: sha256(Buffer.from(payload.id, "utf8")),
+        wrapper_call_id_sha256: sha256(Buffer.from(payload.call_id, "utf8")),
+      },
+      wrapper: {
+        failure: failureKind,
+        input_bytes: input.byteLength,
+        input_sha256: sha256(input),
+      },
+    }) + "\n",
+    "utf8",
+  );
+  if (bytes.byteLength > STRICT_REJECTION_DIAGNOSTIC_MAX_BYTES) return false;
+  let descriptor;
+  try {
+    descriptor = openSync(config.path, "wx", 0o600);
+    fchmodSync(descriptor, 0o600);
+    let offset = 0;
+    while (offset < bytes.byteLength) offset += writeSync(descriptor, bytes, offset);
+    fsyncSync(descriptor);
+    const written = fstatSync(descriptor, { bigint: true });
+    const linked = lstatSync(config.path, { bigint: true });
+    if (
+      !written.isFile() ||
+      written.nlink !== 1n ||
+      linked.isSymbolicLink() ||
+      !linked.isFile() ||
+      linked.nlink !== 1n ||
+      written.dev !== linked.dev ||
+      written.ino !== linked.ino ||
+      written.size !== BigInt(bytes.byteLength)
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
 }
 
 export function createCompleteJsonlDecoder(label) {
@@ -307,6 +471,7 @@ export async function superviseCodexStrictStream({
   providerStderrPath,
   model,
   timeoutSeconds,
+  strictRejection = null,
   testShell = null,
   pollMs = DEFAULT_POLL_MS,
 }) {
@@ -405,6 +570,18 @@ export async function superviseCodexStrictStream({
           );
           if (!privateInspection.ok) {
             rejection = privateInspection.reason;
+            if (privateInspection.strictRejection?.kind === "wrapper") {
+              // `turnBound` proves the public UUID, isolated cwd, and pinned
+              // private file identity before this noncanonical write is even
+              // considered. Writer failure is deliberately ignored: rejection
+              // and owned-tree termination below remain unchanged.
+              writeStrictRejectionDiagnostic(
+                strictRejection,
+                privateWatch,
+                privateDecoder.rows[privateInspection.strictRejection.rowIndex],
+                privateInspection.strictRejection.failure,
+              );
+            }
             break;
           }
         }
@@ -450,6 +627,7 @@ async function main() {
   const providerStderrPath = option(options, "--provider-stderr");
   const model = option(options, "--model");
   const timeoutSeconds = Number(option(options, "--timeout-seconds"));
+  const strictRejection = strictRejectionConfig(options);
   const testShell = option(options, "--test-shell") ?? null;
   if (
     !binary ||
@@ -481,6 +659,7 @@ async function main() {
     providerStderrPath,
     model,
     timeoutSeconds,
+    strictRejection,
     testShell,
   });
 }

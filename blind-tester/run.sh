@@ -917,6 +917,12 @@ record_playthrough_terminal() {
   CODEX_ROLLOUT_ARG="$(node_path_arg "$CODEX_ROLLOUT")"
   CODEX_CAPTURE="$OUT.codex-capture.json"
   CODEX_CAPTURE_ARG="$(node_path_arg "$CODEX_CAPTURE")"
+  # This is an intentionally noncanonical, rejection-only record. It receives
+  # commitments rather than client authority bytes so it cannot disclose an
+  # executable path or become a second Codex-home inspection channel.
+  CODEX_STRICT_REJECTION="$OUT.strict-rejection.json"
+  CODEX_STRICT_REJECTION_ARG="$(node_path_arg "$CODEX_STRICT_REJECTION")"
+  CODEX_CLIENT_AUTHORITY_SHA256="$("$NODE_CMD" -e 'const { createHash } = require("node:crypto"); process.stdout.write(createHash("sha256").update(process.argv[1]).digest("hex"));' -- "$CODEX_BIN_IDENTITY")"
   CODEX_ENVELOPE_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-pure-envelope.mjs")"
   CODEX_PROVIDER_LOG_ARG="$(node_path_arg "$OUT.log")"
   CODEX_STARTED_AT_MS="$("$NODE_CMD" -e 'process.stdout.write(String(Date.now()))')"
@@ -935,6 +941,12 @@ set +e
     --provider-stderr "$CODEX_PROVIDER_LOG_ARG" \
     --model "$MODEL" \
     --timeout-seconds "$TIMEOUT" \
+    --strict-rejection "$CODEX_STRICT_REJECTION_ARG" \
+    --diagnostic-seed "$SEED" \
+    --diagnostic-build-commit "$BUILD_COMMIT" \
+    --diagnostic-tracked-worktree-clean "$TRACKED_WORKTREE_CLEAN" \
+    --diagnostic-cli-version "$CODEX_CLI_VERSION" \
+    --diagnostic-client-authority-sha256 "$CODEX_CLIENT_AUTHORITY_SHA256" \
     "${CODEX_STREAM_TEST_SHELL_ARGS[@]}" \
     -- \
     exec \
