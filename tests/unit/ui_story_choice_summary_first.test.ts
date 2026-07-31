@@ -401,6 +401,13 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(standardPacketButtons).toHaveLength(
         standardPacketChoice.progressiveDisclosure.initialOptionIds.length,
       );
+      const standardPacketOption = standardPacketChoice.options[0]!;
+      expect(standardPacketButtons[0]!.textContent).toContain(
+        standardPacketOption.summary!.commitment,
+      );
+      expect(standardPacketButtons[0]!.textContent).toContain(
+        "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
+      );
       const customize = rootElement.querySelector(
         ".journey-choice-progressive-disclosure > button",
       ) as {

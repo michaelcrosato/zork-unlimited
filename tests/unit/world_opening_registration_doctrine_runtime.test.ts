@@ -78,6 +78,7 @@ describe("Albany role-first standard packet runtime", () => {
         )!;
         expect(packetOption.summary?.commitment).toContain(`Duty: ${mappedOath.title}`);
         expect(packetOption.summary?.commitment).toContain(`evidence: ${mappedSource.title}`);
+        expect(packetOption.summary?.commitment).toContain(matchedPacket.trigger_category);
       }
       expect(
         REGISTRATION.doctrines!.filter((doctrine) =>
