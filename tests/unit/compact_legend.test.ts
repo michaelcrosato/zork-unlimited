@@ -54,7 +54,7 @@ function expectLegendCovers(legend: Record<string, string>, context: Record<stri
 describe("compact legends", () => {
   it("pins each overworld positional schema signature to an explicit version", () => {
     const expectedSignatureByVersion = {
-      38: "12eb7ffe5569d8e9354404daf71b4e7ed8a114f45c89c491609e71966d49571a",
+      39: "dcdb52cf89e077fd51909c97a4cee51967e289b2b51e0099503801b5ef677634",
     } as const;
     const signature = createHash("sha256")
       .update(
@@ -65,7 +65,7 @@ describe("compact legends", () => {
       )
       .digest("hex");
 
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(38);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(39);
     expect(signature).toBe(expectedSignatureByVersion[OVERWORLD_COMPACT_VIEW_VERSION]);
   });
 
@@ -151,7 +151,10 @@ describe("compact legends", () => {
     expect(OVERWORLD_COMPACT_LEGEND.departure_contact_leads).toContain(
       "legacy requires_preparation has no available action",
     );
-    expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain("independent open_optional choices");
+    expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain("independent optional choices");
+    expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain(
+      "omits their redundant open_optional rows",
+    );
     expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain("in any order or skipped at launch");
     expect(OVERWORLD_COMPACT_LEGEND.departure_recap).toContain(
       "available_after_preparation remain legacy sequential values",

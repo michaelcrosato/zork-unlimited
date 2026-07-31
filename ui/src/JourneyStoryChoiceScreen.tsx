@@ -111,9 +111,6 @@ export function JourneyStoryChoiceScreen({
       <div key={option.id} className="journey-choice-card">
         <button type="button" onClick={() => onChoose(option.id)}>
           <strong>{option.label}</strong>
-          {option.dispatchImpact && (
-            <small className="journey-choice-dispatch-impact">{option.dispatchImpact.line}</small>
-          )}
           {conciseSummary ? (
             <span className="journey-choice-summary">
               <b>
@@ -138,11 +135,6 @@ export function JourneyStoryChoiceScreen({
               {conciseSummary.fieldTrigger}
             </small>
           )}
-          {conciseSummary?.checkFit && (
-            <small className="journey-choice-check-fit">
-              <b>Check fit:</b> {conciseSummary.checkFit}
-            </small>
-          )}
           {conciseSummary && usesRoleplayReceipt && (
             <small className="journey-choice-cost">
               <b>Cost / give up:</b> {conciseSummary.immediateCost}; {conciseSummary.tradeoff}
@@ -158,11 +150,6 @@ export function JourneyStoryChoiceScreen({
               <b>Tradeoff:</b> {conciseSummary.tradeoff}
             </small>
           )}
-          {option.dispatchForecast && (
-            <small className="journey-choice-dispatch-forecast">
-              {option.dispatchForecast.line}
-            </small>
-          )}
         </button>
         {conciseSummary && (
           <details className="journey-choice-details">
@@ -171,6 +158,19 @@ export function JourneyStoryChoiceScreen({
                 ? `Inspect exact receipt for ${option.label}`
                 : `Full terms and consequence for ${option.label}`}
             </summary>
+            {conciseSummary.checkFit && (
+              <p className="journey-choice-check-fit">
+                <b>Check fit:</b> {conciseSummary.checkFit}
+              </p>
+            )}
+            {option.dispatchImpact && (
+              <p className="journey-choice-dispatch-impact">{option.dispatchImpact.line}</p>
+            )}
+            {option.dispatchForecast && (
+              <p className="journey-choice-dispatch-forecast">
+                {option.dispatchForecast.line}
+              </p>
+            )}
             <p>{option.consequence}</p>
           </details>
         )}

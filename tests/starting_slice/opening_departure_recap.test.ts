@@ -111,7 +111,7 @@ describe("Albany opening departure recap", () => {
     );
 
     expect(full.departureRecap).toEqual({
-      version: 6,
+      version: 7,
       questId: WOLF.id,
       questTitle: WOLF.title,
       entries: [
@@ -167,15 +167,17 @@ describe("Albany opening departure recap", () => {
     });
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.departure_recap).toEqual([
-      6,
+      7,
       WOLF.id,
       WOLF.title,
-      full.departureRecap!.entries.map((entry) => [entry.slot, entry.status, entry.title]),
+      full
+        .departureRecap!.entries.filter((entry) => entry.status !== "open_optional")
+        .map((entry) => [entry.slot, entry.status, entry.title]),
       ["committed", 10, null, ["preparation", "relief_allocation", "field_team"]],
     ]);
     expect(compact).not.toHaveProperty("departure_recap_terms");
     expect(compactOpeningDepartureRecapTerms(full.departureRecap!)).toEqual([
-      6,
+      7,
       WOLF.id,
       [
         ["role", REGISTRATION.profiles[0]!.tradeoff],
@@ -303,16 +305,17 @@ describe("Albany opening departure recap", () => {
     expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
     expect(terminal).not.toContain(REGISTRATION.profiles[0]!.tradeoff);
-    expect(terminal).toContain("Exact selected terms: `review dispatch`.");
+    expect(terminal).toContain("Plan slots and exact selected terms: `review dispatch`.");
     expect(renderDepartureRecap(authenticatedRecap).join("\n")).not.toContain(
       REGISTRATION.profiles[0]!.tradeoff,
     );
     const reviewedTerms = renderDepartureRecapTerms(authenticatedRecap).join("\n");
-    expect(reviewedTerms).toContain(`Role: ${REGISTRATION.profiles[0]!.tradeoff}`);
-    expect(reviewedTerms).toContain(`Duty: ${dutyFieldTerm}`);
-    expect(reviewedTerms).toContain(`Evidence: ${evidenceFieldTerm}`);
+    expect(reviewedTerms).toContain(`Active term: ${REGISTRATION.profiles[0]!.tradeoff}`);
+    expect(reviewedTerms).toContain(`Active term: ${dutyFieldTerm}`);
+    expect(reviewedTerms).toContain(`Active term: ${evidenceFieldTerm}`);
+    expect(reviewedTerms).toContain("Preparation: Open (optional)");
     expect(reviewedTerms).not.toContain(PREPARATION.profiles[0]!.tradeoff);
-    expect(terminal).toContain("Preparation: Open (optional)");
+    expect(terminal).not.toContain("Preparation: Open (optional)");
     expect(terminal).toContain(
       "Dispatch committed: 10m; preparation, relief allocation, and field team remain optional.",
     );
@@ -414,9 +417,12 @@ describe("Albany opening departure recap", () => {
         action: { arguments: { character_id: ALLY.contact } },
       },
     ]);
-    expect(render(first.view())).toContain("Field team: Open (optional)");
+    expect(render(first.view())).not.toContain("Field team: Open (optional)");
     expect(render(first.view())).toContain(
       `Dispatch committed: ${String(openWindow.committedMinutes)}m; field team remains optional.`,
+    );
+    expect(render(first.view())).toContain(
+      "Plan slots and exact selected terms: `review dispatch`.",
     );
     first.talkToCharacter(ALLY.contact);
     expect(first.journey().storyChoice?.kind).toBe("ally");
@@ -690,7 +696,9 @@ describe("Albany opening departure recap", () => {
         recap.version,
         recap.questId,
         recap.questTitle,
-        recap.entries.map((entry) => [entry.slot, entry.status, entry.title]),
+        recap.entries
+          .filter((entry) => entry.status !== "open_optional")
+          .map((entry) => [entry.slot, entry.status, entry.title]),
         recap.dispatch
           ? [
               recap.dispatch.state,

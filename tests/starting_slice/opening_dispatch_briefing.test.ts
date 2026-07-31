@@ -176,10 +176,10 @@ function expectProgressivePreparationComparison(
     const option = storyChoice.options.find((candidate) => candidate.id === profile.id);
     expect(option?.summary).toEqual({
       commitment: profile.summary,
-      checkFit: expectedPreparationCheckFit(profile),
       immediateCost: expect.any(String),
       tradeoff: profile.tradeoff,
     });
+    expect(option?.summary).not.toHaveProperty("checkFit");
     expect(option).not.toHaveProperty("consequence");
   }
 }
@@ -518,7 +518,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(compactJourney.storyChoice).toEqual(ui.journey().storyChoice);
     expect(compactJourney.storyChoice).toBeNull();
     expect(mcpStation.context.departure_recap).toEqual(ui.compactView().departure_recap);
-    expect(mcpStation.context.departure_recap?.[3]).toHaveLength(6);
+    expect(mcpStation.context.departure_recap?.[3]).toHaveLength(3);
     expect(
       Object.keys(mcpStation.context).filter((key) =>
         [

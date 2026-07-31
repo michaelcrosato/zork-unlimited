@@ -198,7 +198,13 @@ it is **not yet milestone-certified**:
   launch and exact restore, timing cards fix prior selections while leaving only
   unresolved support optional, and launch persists a proof-bound selected-or-
   declined seal tied to the actual hill approach. Current v10 saves reject a
-  stripped or altered seal; legitimate v9 launches backfill it once;
+  stripped or altered seal; legitimate v9 launches backfill it once. The
+  human, CLI, and compact Station surfaces now use the same two-tier briefing:
+  direct launch, one compressed selected-plan clock, and the three optional
+  spoke names lead; opening a spoke shows human stakes, cost, and give-up, while
+  check math, authenticated timing proof, and full consequence stay behind an
+  exact read-only expansion. No action, outcome, or meaningful decision is
+  removed;
 - four early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.

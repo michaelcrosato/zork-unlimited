@@ -133,9 +133,7 @@ export function renderTerminalStoryChoiceComparison(
       throw new Error(`Story choice "${prompt.id}" lost a structured comparison summary.`);
     }
     lines.push(`    ${String(index + 1)}. ${option.label}`);
-    if (option.dispatchImpact) lines.push(`       ${option.dispatchImpact.line}`);
     lines.push(...renderSummaryLines(option.summary, "       "));
-    if (option.dispatchForecast) lines.push(`       ${option.dispatchForecast.line}`);
     lines.push(`       Inspect: \`inspect ${option.id}\``);
     lines.push(`       Choose: \`choose ${option.id}\``);
   };

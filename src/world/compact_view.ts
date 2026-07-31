@@ -45,7 +45,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 38 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 39 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -437,7 +437,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_contact_leads:
     "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; ready may be pursued with talk_overworld_session_contact(character_id: contact_id) before or after preparation or relief allocation, while legacy requires_preparation has no available action; either status leaves quest_id launch legal as the explicitly disclosed solo default",
   departure_recap:
-    "[version, quest_id, quest_title, [[slot, status, selected_title|null], ...], dispatch|null] read-only Station plan summary. dispatch is [state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]; committed has null timing and lists every unresolved support slot. preparation, relief_allocation, and field_team are independent open_optional choices that may be taken in any order or skipped at launch. sealed has final timing and no remaining optional slots; direct_launch and available_after_preparation remain legacy sequential values. Slots are role, duty, evidence, preparation, relief_allocation, field_team. For exact selected terms, call get_overworld_session_context(include_departure_recap_terms:true)",
+    "[version, quest_id, quest_title, [[slot, status, selected_title|null], ...], dispatch|null] read-only Station plan summary. dispatch is [state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]; committed lists every unresolved support slot and omits their redundant open_optional rows, leaving only selected or legacy plan rows in the default tier. preparation, relief_allocation, and field_team remain independent optional choices that may be taken in any order or skipped at launch. sealed has final timing and no remaining optional slots; direct_launch and available_after_preparation remain legacy sequential values. For exact selected terms, call get_overworld_session_context(include_departure_recap_terms:true)",
   departure_recap_terms:
     "[version, quest_id, [[slot, active_field_term], ...]] exact authenticated terms for selected Station plan slots, returned only by explicit read-only include_departure_recap_terms; no alternatives, outcomes, or actions",
   opportunity_guidance:

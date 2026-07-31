@@ -293,21 +293,15 @@ function expectOpeningPromptExact(
       expect(inspectedJson).not.toContain(sibling.consequence);
     }
 
-    expect(comparisonOption!.summary).toEqual(canonicalOption!.summary);
     expect(comparisonOption!.summary).toEqual({
       commitment: sourceOption.summary,
-      ...(canonicalOption!.summary!.checkFit === undefined
-        ? {}
-        : { checkFit: canonicalOption!.summary!.checkFit }),
       immediateCost: canonicalOption!.summary!.immediateCost,
       tradeoff: canonicalOption!.summary!.tradeoff,
     });
-    expect(Object.keys(comparisonOption!.summary!).sort()).toEqual([
-      ...(canonicalOption!.summary!.checkFit === undefined ? [] : ["checkFit"]),
-      "commitment",
-      "immediateCost",
-      "tradeoff",
-    ]);
+    expect(comparisonOption!.summary).not.toHaveProperty("checkFit");
+    expect(Object.keys(comparisonOption!.summary!).sort()).toEqual(
+      ["commitment", "immediateCost", "tradeoff"].sort(),
+    );
     expect(inspectedOption!.consequence).toMatch(/^Benefit: \S/);
     expect(inspectedOption!.consequence).toContain(
       ` Cost: ${canonicalOption!.summary!.immediateCost}. ` +

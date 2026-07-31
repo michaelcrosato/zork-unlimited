@@ -183,6 +183,19 @@ export function render(view: OverworldView): string {
 }
 
 /** Bounded authenticated recall shared by status and an active Station choice. */
+function departureRecapValue(
+  entry: NonNullable<OverworldView["departureRecap"]>["entries"][number],
+): string {
+  if (entry.title !== null) return entry.title;
+  if (entry.status === "open_optional") return "Open (optional)";
+  if (entry.status === "available_after_preparation") {
+    return "Available after choosing preparation";
+  }
+  if (entry.status === "solo_default") return "Solo departure";
+  if (entry.status === "legacy") return "Legacy choice preserved";
+  return "Selected";
+}
+
 export function renderDepartureRecap(
   recap: NonNullable<OverworldView["departureRecap"]>,
 ): string[] {
@@ -214,14 +227,17 @@ export function renderDepartureRecap(
       );
     }
   }
+  if (recap.dispatch?.state === "committed") {
+    const selected = recap.entries
+      .filter((entry) => entry.title !== null)
+      .map((entry) => `${entry.label}: ${entry.title!}`);
+    if (selected.length > 0) lines.push(`  Selected plan: ${selected.join(" · ")}.`);
+    lines.push("  Plan slots and exact selected terms: `review dispatch`.");
+    return lines;
+  }
   for (const entry of recap.entries) {
-    const value =
-      entry.title ??
-      (entry.status === "open_optional"
-        ? "Open (optional)"
-        : "Available after choosing preparation");
     lines.push(
-      `  ${entry.label}: ${value}${entry.status === "solo_default" ? " (direct-launch default; field-team contact remains optional)" : ""}`,
+      `  ${entry.label}: ${departureRecapValue(entry)}${entry.status === "solo_default" ? " (direct-launch default; field-team contact remains optional)" : ""}`,
     );
   }
   if (recap.entries.some((entry) => entry.activeFieldTerm)) {
@@ -234,12 +250,13 @@ export function renderDepartureRecap(
 export function renderDepartureRecapTerms(
   recap: NonNullable<OverworldView["departureRecap"]>,
 ): string[] {
-  const terms = recap.entries.flatMap((entry) =>
-    entry.activeFieldTerm ? [`  ${entry.label}: ${entry.activeFieldTerm}`] : [],
-  );
-  return terms.length > 0
-    ? [`${recap.questTitle} exact active terms:`, ...terms]
-    : [`${recap.questTitle} has no selected active terms yet.`];
+  return [
+    `${recap.questTitle} exact active terms and plan slots:`,
+    ...recap.entries.flatMap((entry) => [
+      `  ${entry.label}: ${departureRecapValue(entry)}`,
+      ...(entry.activeFieldTerm ? [`    Active term: ${entry.activeFieldTerm}`] : []),
+    ]),
+  ];
 }
 
 function printDepartureRecapTerms(session: OverworldSession): void {

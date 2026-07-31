@@ -975,6 +975,28 @@ h3 {
   padding: 0.55rem 0.65rem;
 }
 
+.departure-recap-slots {
+  border-top: 1px solid var(--line);
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+}
+
+.departure-recap-slots summary {
+  color: var(--road);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.departure-recap-slots .departure-recap {
+  margin-top: 0.65rem;
+}
+
+.departure-recap-selected {
+  color: var(--muted);
+  margin: 0;
+}
+
 .departure-recap-terms {
   border-top: 1px solid var(--line);
   margin-top: 0.65rem;

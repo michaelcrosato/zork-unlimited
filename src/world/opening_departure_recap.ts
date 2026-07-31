@@ -23,7 +23,7 @@ import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
 import type { OverworldManifest } from "./overworld.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
-export const OPENING_DEPARTURE_RECAP_VERSION = 6 as const;
+export const OPENING_DEPARTURE_RECAP_VERSION = 7 as const;
 export const OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT = 120;
 
 export type OpeningDepartureRecapSlot =
@@ -399,11 +399,15 @@ export function cloneOpeningDepartureRecap(recap: OpeningDepartureRecap): Openin
 export function compactOpeningDepartureRecap(
   recap: OpeningDepartureRecap,
 ): OpeningCompactDepartureRecap {
+  const entries =
+    recap.dispatch?.state === "committed"
+      ? recap.entries.filter((entry) => entry.status !== "open_optional")
+      : recap.entries;
   return [
     recap.version,
     recap.questId,
     recap.questTitle,
-    recap.entries.map((entry) => [entry.slot, entry.status, entry.title] as const),
+    entries.map((entry) => [entry.slot, entry.status, entry.title] as const),
     recap.dispatch
       ? [
           recap.dispatch.state,

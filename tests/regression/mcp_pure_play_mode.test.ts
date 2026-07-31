@@ -2317,7 +2317,7 @@ describe("MCP pure play mode", () => {
         );
         if (!worksFortification)
           throw new Error("expected visible works-fortification preparation");
-        expect(worksFortification.summary?.checkFit).toBe("Repair +4 vs DC 12");
+        expect(worksFortification.summary).not.toHaveProperty("checkFit");
         const detailed = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2341,13 +2341,14 @@ describe("MCP pure play mode", () => {
         expect(detailedPreparation.inspectedOption).toMatchObject({
           id: worksFortification.id,
           checkFit: "Repair +4 vs DC 12",
+          dispatchForecast: { proofHash: expect.stringMatching(/^[0-9a-f]{64}$/) },
           consequence:
             "Benefit: Opening repair at Cade's first loose paling rail. " +
             "Cost: 10 minutes and $0. " +
             "Boundary: Replaces the ordinary wedge and forfeits Hayden's frost-brace line.",
         });
         expect(Object.keys(detailedPreparation.inspectedOption ?? {}).sort()).toEqual(
-          ["checkFit", "consequence", "id", "label"].sort(),
+          ["checkFit", "consequence", "dispatchForecast", "id", "label"].sort(),
         );
         const prepared = textPayload(
           await client.callTool({

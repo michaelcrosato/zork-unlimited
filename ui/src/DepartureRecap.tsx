@@ -46,6 +46,29 @@ export function DepartureRecap({
     (entry): entry is typeof entry & { activeFieldTerm: string } =>
       entry.activeFieldTerm !== null,
   );
+  const selectedPlan = recap.entries
+    .flatMap((entry) => (entry.title === null ? [] : [`${entry.label}: ${entry.title}`]))
+    .join(" · ");
+  const entryList = (
+    <dl className="departure-recap">
+      {recap.entries.map((entry) => (
+        <div key={entry.slot}>
+          <dt>{entry.label}</dt>
+          <dd>
+            {departureRecapEntryValue(entry)}
+            {entry.status === "solo_default" && (
+              <>
+                <br />
+                <small className="departure-recap-field-term">
+                  Direct-launch default; field-team contact remains optional.
+                </small>
+              </>
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
   return (
     <section aria-label={`${recap.questTitle} dispatch recap`}>
       <Heading>{recap.questTitle} dispatch recap</Heading>
@@ -73,24 +96,17 @@ export function DepartureRecap({
           )}
         </p>
       )}
-      <dl className="departure-recap">
-        {recap.entries.map((entry) => (
-          <div key={entry.slot}>
-            <dt>{entry.label}</dt>
-            <dd>
-              {departureRecapEntryValue(entry)}
-              {entry.status === "solo_default" && (
-                <>
-                  <br />
-                  <small className="departure-recap-field-term">
-                    Direct-launch default; field-team contact remains optional.
-                  </small>
-                </>
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {recap.dispatch?.state === "committed" && selectedPlan.length > 0 && (
+        <p className="departure-recap-selected">Selected plan: {selectedPlan}.</p>
+      )}
+      {recap.dispatch?.state === "committed" ? (
+        <details className="departure-recap-slots">
+          <summary>Review selected and optional plan slots</summary>
+          {entryList}
+        </details>
+      ) : (
+        entryList
+      )}
       {selectedTerms.length > 0 && (
         <details className="departure-recap-terms">
           <summary>Review exact active terms</summary>

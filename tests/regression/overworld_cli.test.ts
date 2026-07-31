@@ -277,11 +277,11 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
 
     expect(render(session.view())).toContain(bounded);
     expect(bounded).toContain(`${recap.questTitle} dispatch recap:`);
-    expect(bounded).toContain("Exact selected terms: `review dispatch`.");
+    expect(bounded).toContain("Plan slots and exact selected terms: `review dispatch`.");
     for (const entry of recap.entries) {
       if (!entry.activeFieldTerm) continue;
       expect(bounded).not.toContain(entry.activeFieldTerm);
-      expect(terms).toContain(`${entry.label}: ${entry.activeFieldTerm}`);
+      expect(terms).toContain(`Active term: ${entry.activeFieldTerm}`);
     }
     expect(bounded).not.toContain("Roads:");
     expect(bounded).not.toContain("Supplies ");
@@ -507,7 +507,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       expect(option.summary).not.toHaveProperty("fieldTrigger");
       expect(option.summary).not.toHaveProperty("fieldTriggerScope");
       expect(text).toContain(`Promise / priority: ${option.summary!.commitment}`);
-      expect(text).toContain(`Check fit: ${option.summary!.checkFit}`);
+      expect(text).not.toContain(`Check fit: ${option.summary!.checkFit}`);
       expect(text).toContain(
         `Cost / give up: ${option.summary!.immediateCost}; ${option.summary!.tradeoff}`,
       );
@@ -582,9 +582,9 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.output).toContain(
         "Start with `start The Wolf-Winter`; route selection follows before commitment.",
       );
-      expect(run.output).toContain("The Wolf-Winter exact active terms:");
+      expect(run.output).toContain("The Wolf-Winter exact active terms and plan slots:");
       expect(run.output).toContain(
-        `Role: ${stationed.view().departureRecap!.entries[0]!.activeFieldTerm!}`,
+        `Active term: ${stationed.view().departureRecap!.entries[0]!.activeFieldTerm!}`,
       );
       expect(run.output).not.toContain("A scripted command was rejected.");
       expect(outputSnapshotHashes(run.output)).toEqual([baselineHash]);
@@ -888,9 +888,11 @@ describe("overworld_play CLI (scripted mode)", () => {
         );
         const adjacentRecall = run.output.slice(commandIndex, comparisonIndex);
         expect(adjacentRecall).toContain("The Wolf-Winter dispatch recap:");
-        expect(adjacentRecall).not.toContain("The Wolf-Winter exact active terms:");
+        expect(adjacentRecall).not.toContain("The Wolf-Winter exact active terms and plan slots:");
       }
-      expect(run.output.match(/The Wolf-Winter exact active terms:/g) ?? []).toHaveLength(1);
+      expect(
+        run.output.match(/The Wolf-Winter exact active terms and plan slots:/g) ?? [],
+      ).toHaveLength(1);
       for (const option of [preparationOption, allocationOption]) {
         expect(run.output).toContain(`! Story choice detail — ${option.title}`);
       }
