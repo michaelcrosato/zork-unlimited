@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 704 -->
+<!-- historical_cycle_count: 705 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - adjacent_authenticated_plan_recall
+
+- Evidence choice: 8/9 recent verified reports named Albany cross-screen planning density or memory; the compact Station comparison previously separated the available field choices from the authenticated titles already selected.
+- Surface/effect: preparation, allocation, and ally comparisons plus one selected-card inspection now repeat the same bounded title/status/timing departure recap; exact active terms remain pull-based, and no other world context is repeated.
+- Measured effect: the three real compact comparisons grow by 1,092 bytes total (13.2%, about 273–364 tokens), keeping selected plans adjacent without another inspection turn; compact contract advances to v37.
+- Counterfactual: choices, action ids, terms, state, mechanics, RNG, saves, content/world hashes, outcomes, and full/UI projections are unchanged.
+- Pure evidence: exact-clean Terra seed 74250 completed The Wolf-Winter bloodlessly through LURE in 32 decisions after a failed cast, rated clarity/enjoyment 4/4, replay-yes, had no rejection or stuck state, and did not repeat the cross-screen recall complaint.
+- Economy: one first-attempt Codex 0.146 run used 2.418M raw / 112.4k uncached input and 7.4k output at 95.35% cache reuse (119,805 useful / 32 decisions, about 3,744 each); no retry, recovery, fallback, or fanout ran.
+- Self-critique/guard: one canary supports recall, not causality, and still names Station jargon density; independent review found no P0/P1, pre/post crawls `20260731T023424Z` / `20260731T031531Z` have zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs.
 
 ### Cycle result - opening_optional_chapter_horizon
 
@@ -154,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Spend integrity: the three measured Spark runs used 365.3k useful tokens across 114 decisions (~3,204/decision) with no retries; five-way startup produced one verified and four unmetered client-cache failures, while serialized seed 73068 passed 1/1, so serialize Spark startup until that client defect is fixed.
 - Self-critique/follow-through: pure play exercised numeric disclosure but not the three optional preparation-stakes strings; exact transport/leakage tests prove those strings, while the next cohort must measure comprehension and the next cycle should fix the repeated compact Albany Station launch cue.
 - Guard: independent architecture, UI, and save/hash reviews found no P1/P2; post-change crawl `20260729T122241Z` is zero-finding, and health passes 449 files/3,708 tests, both typechecks, and all 12 packs.
-
-### Cycle result - role_first_standard_packet
-
-- Evidence choice: the exact merged-build ten-Terra cohort completed The Wolf-Winter 10/10 but chose the old doctrine-first shortcuts 0/10, chose Road-Warden 9/10, and named setup density in 10/10 reports, so this cycle changes commitment order instead of adding more copy.
-- Surface: registration now compares only four roles; after a role, its one matching standard packet appears before the three ordinary duties and explicitly names the bound duty and evidence source, while Ledger and every custom path remain ordinary choices.
-- Canonical guard: a packet still records the same role, oath, and source decisions/journals as manual play; packet execution defers checkpoint 40 until both internal choices finish, malformed mappings fail atomically, and world content, hashes, and save format remain unchanged.
-- Pure evidence: exact-candidate Terra seed 73056 selected the Road-Warden packet, completed The Wolf-Winter through a recovered nonlethal LURE at decision 33, rated clarity/enjoyment 4/4, stayed unstuck, chose replay-yes, and encountered no rejected action or loop.
-- New finding/follow-through: the canary raised one S2 that Emery's one-use Drover Route resolves an optional Streetwise check only after use unless its staged terms or field object are inspected; carry this field-action disclosure into the next focused cycle and test recurrence in the merged-build cohort.
-- Economy: the exact canary used 2.216M raw / 102.8k uncached input and 7.3k output tokens at 95.36% cache reuse, or 3,338 useful tokens per accepted decision; one earlier 108.0k-useful provisional canary was invalidated after review improved pre-choice packet disclosure, with no retry or model fallback.
-- Guard: independent reviews closed checkpoint atomicity, oath-id collision, label-coupled UI, no-doctrine false guidance, and hidden source mapping; final crawl `20260729T101507Z` is zero-finding.

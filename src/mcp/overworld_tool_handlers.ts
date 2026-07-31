@@ -4,6 +4,7 @@ import {
   type OverworldCompactQuestRef,
   type OverworldCompactRouteOption,
 } from "../world/compact_view.js";
+import type { OpeningCompactDepartureRecap } from "../world/opening_departure_recap.js";
 import type { OverworldManifest, OverworldNode } from "../world/overworld.js";
 import {
   type OverworldActionResult,
@@ -250,6 +251,7 @@ type OverworldCompactJourneyStoryInspection<Story extends JourneyStoryChoiceComp
   snapshot_hash: string;
   unchanged: true;
   story: Story;
+  departure_recap?: OpeningCompactDepartureRecap;
 }>;
 
 type JourneyStoryInspectionForArgs<Args> = Args extends { option_id: string }
@@ -874,11 +876,13 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       }
       const story = inspectStory(guarded.session);
       validateInspectionArgs(story);
+      const departureRecap = guarded.session.compactView().departure_recap;
       return {
         ok: true,
         session_id: args.session_id,
         snapshot_hash: overworldSessions.snapshotHash(guarded.session),
         unchanged: true,
+        ...(departureRecap ? { departure_recap: departureRecap } : {}),
         story:
           args.option_id !== undefined
             ? compactJourneyStoryChoiceComparison(story, args.option_id)

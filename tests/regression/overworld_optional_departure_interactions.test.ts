@@ -106,7 +106,13 @@ describe("optional Station departure interactions", () => {
       "only that option's new detail",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "does not repeat world context",
+      "same bounded authenticated departure_recap",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
+      "repeats no other world context",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
+      "never adds departure_recap_terms",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
       "choose_overworld_session_story(story_choice_id, choice)",

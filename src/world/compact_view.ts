@@ -45,7 +45,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 36 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 37 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -433,7 +433,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   service_actions:
     "[[action, source, offer_id|null, available, changed, minutes, [supplies_before, supplies_after], [fatigue_before, fatigue_after], message, blocked_reason|null], ...] current town service choices; use care_overworld_session for care, resupply_overworld_session for resupply, and rest_overworld_session for rest. campaign_override with a non-null offer_id means matching service_offers terms replace ordinary timing for this action, unavailable ordinary choices are still listed, and the field is omitted while gameplay actions are paused",
   departure_interactions:
-    "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id) for a versioned short comparison and unchanged receipt, then optionally inspect one story.options[*].id as option_id for only that option's new detail; compact inspection does not repeat world context. Choose with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
+    "[[story_choice_id, kind, title], ...] optional Station departure interactions; inspect with inspect_overworld_session_story(story_choice_id) for a versioned short comparison, unchanged receipt, and the same bounded authenticated departure_recap when available, then optionally inspect one story.options[*].id as option_id for only that option's new detail; compact inspection repeats no other world context and never adds departure_recap_terms. Choose with choose_overworld_session_story(story_choice_id, choice), or depart without choosing",
   departure_contact_leads:
     "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; requires_preparation has no available action, ready may be pursued with talk_overworld_session_contact(character_id: contact_id), and either status leaves quest_id launch legal as the explicitly disclosed solo default",
   departure_recap:

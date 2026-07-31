@@ -133,6 +133,8 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("`reveal_id`");
     expect(prompt).toContain("reveals only that option");
     expect(prompt).toContain("need not expand every option");
+    expect(prompt).toMatch(/bounded authenticated\s+`departure_recap`/);
+    expect(prompt).toMatch(/never\s+the\s+exact active terms/);
     expect(prompt).toContain("mcp__adventureforge__start_world_quest");
     expect(prompt).toContain("not part of this playthrough");
     expect(prompt).toContain("Only then conduct the exit interview");

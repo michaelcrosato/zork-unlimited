@@ -876,6 +876,20 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.status, run.output).toBe(0);
       expect(run.output).not.toContain("A scripted command was rejected.");
       expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(3);
+      for (const storyChoiceId of [preparation.id, allocation.id]) {
+        const commandIndex = run.output.indexOf(`> inspect ${storyChoiceId}`);
+        expect(
+          commandIndex,
+          `missing scripted inspection for ${storyChoiceId}`,
+        ).toBeGreaterThanOrEqual(0);
+        const comparisonIndex = run.output.indexOf("! Story choice comparison", commandIndex);
+        expect(comparisonIndex, `missing comparison after ${storyChoiceId}`).toBeGreaterThan(
+          commandIndex,
+        );
+        const adjacentRecall = run.output.slice(commandIndex, comparisonIndex);
+        expect(adjacentRecall).toContain("The Wolf-Winter dispatch recap:");
+        expect(adjacentRecall).not.toContain("The Wolf-Winter exact active terms:");
+      }
       expect(run.output.match(/The Wolf-Winter exact active terms:/g) ?? []).toHaveLength(1);
       for (const option of [preparationOption, allocationOption]) {
         expect(run.output).toContain(`! Story choice detail — ${option.title}`);

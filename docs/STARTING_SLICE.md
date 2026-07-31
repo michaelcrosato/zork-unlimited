@@ -359,6 +359,16 @@ still fail closed. Contract proof lives in
 [`mcp_journey_surface.test.ts`](../tests/unit/mcp_journey_surface.test.ts), and
 [`comparison_card_manifest_snapshot_integrity.test.ts`](../tests/regression/comparison_card_manifest_snapshot_integrity.test.ts).
 
+The adjacent-plan-recall follow-up keeps that summary-first boundary while
+removing the remaining cross-screen memory test at Albany Station. Every
+Preparation, Relief Allocation, and June comparison now carries the same
+journal-authenticated title/status/timing recap as its surrounding launch
+surface. Compact MCP inspection repeats only that bounded recap with its
+unchanged receipt; terminal inspection prints it immediately before the
+comparison, and the browser already renders it before the option cards. Exact
+active terms remain an explicit read-only expansion, alternatives never leak,
+and inspection changes no snapshot, hash, clock, or decision.
+
 Legacy migration is deliberately fail-closed at this causal boundary. An
 untouched registration-era save receives the real source prompt. Every progressed
 post-registration suffix is rejected rather than being falsely certified as
