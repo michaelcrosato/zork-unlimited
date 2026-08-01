@@ -290,7 +290,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
         id: "customize_duty_and_evidence",
         label: "Compare FORTIFY, LURE, or DRIVE duties",
         description:
-          "The standard packet is convenient, not a recommended resolution; compare individual duties before choosing one and its evidence.",
+          "The packet is convenient, not recommended. Compass — Full duty (10m): public-seal FORTIFY; Aid-only (5m): LURE; Cade-terms FORTIFY is duty-compatible; bond (0m): DRIVE; HUNT is source-led.",
         optionIds: RELIEF_OATH.options.map((option) => option.id),
       },
     });

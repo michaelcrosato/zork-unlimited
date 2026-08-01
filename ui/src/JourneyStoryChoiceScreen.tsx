@@ -242,26 +242,6 @@ export function JourneyStoryChoiceScreen({
           headingId="journey-story-opportunities-title"
         />
 
-        {registrationGroups ? (
-          <div className="journey-choice-option-groups">
-            {registrationGroups.map((group) => (
-              <section key={group.label} className="journey-choice-option-group">
-                <h2>{group.label}</h2>
-                <div className="journey-choice-actions journey-choice-actions-registration">
-                  {group.options.map(renderOption)}
-                </div>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div
-            className={`journey-choice-actions${
-              keepsCurrentObjective ? " journey-choice-actions-registration" : ""
-            }`}
-          >
-            {initialOptions.map(renderOption)}
-          </div>
-        )}
         {progressiveDisclosure && (
           <section className="journey-choice-progressive-disclosure">
             <button
@@ -284,17 +264,37 @@ export function JourneyStoryChoiceScreen({
             <p id={`journey-story-choice-${progressiveDisclosure.reveal.id}-description`}>
               {progressiveDisclosure.reveal.description}
             </p>
-            {revealedOptions.length > 0 && (
-              <section
-                id={`journey-story-choice-${progressiveDisclosure.reveal.id}`}
-                className="journey-choice-option-group"
-              >
-                <h2>{progressiveDisclosure.reveal.label}</h2>
+          </section>
+        )}
+        {registrationGroups ? (
+          <div className="journey-choice-option-groups">
+            {registrationGroups.map((group) => (
+              <section key={group.label} className="journey-choice-option-group">
+                <h2>{group.label}</h2>
                 <div className="journey-choice-actions journey-choice-actions-registration">
-                  {revealedOptions.map(renderOption)}
+                  {group.options.map(renderOption)}
                 </div>
               </section>
-            )}
+            ))}
+          </div>
+        ) : (
+          <div
+            className={`journey-choice-actions${
+              keepsCurrentObjective ? " journey-choice-actions-registration" : ""
+            }`}
+          >
+            {initialOptions.map(renderOption)}
+          </div>
+        )}
+        {progressiveDisclosure && revealedOptions.length > 0 && (
+          <section
+            id={`journey-story-choice-${progressiveDisclosure.reveal.id}`}
+            className="journey-choice-option-group"
+          >
+            <h2>{progressiveDisclosure.reveal.label}</h2>
+            <div className="journey-choice-actions journey-choice-actions-registration">
+              {revealedOptions.map(renderOption)}
+            </div>
           </section>
         )}
         {onDismiss && (

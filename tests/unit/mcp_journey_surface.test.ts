@@ -1318,6 +1318,9 @@ describe("MCP journey surface", () => {
     expect(compactOath.options.map((option) => option.id)).toEqual(disclosure.initialOptionIds);
     expect(compactOath).not.toHaveProperty("progressiveDisclosure");
     const initialJourneyJson = JSON.stringify(compactOath);
+    expect(initialJourneyJson.indexOf('"revealOption"')).toBeLessThan(
+      initialJourneyJson.indexOf('"options"'),
+    );
     for (const hiddenIdOrLabel of disclosure.reveal.optionIds) {
       const hidden = canonical.options.find((option) => option.id === hiddenIdOrLabel)!;
       expect(initialJourneyJson).not.toContain(hidden.id);
@@ -1338,6 +1341,7 @@ describe("MCP journey surface", () => {
     });
     expect(initial.story.options.map((option) => option.id)).toEqual(disclosure.initialOptionIds);
     const initialJson = JSON.stringify(initial.story);
+    expect(initialJson.indexOf('"revealOption"')).toBeLessThan(initialJson.indexOf('"options"'));
     for (const hiddenIdOrLabel of disclosure.reveal.optionIds) {
       const hidden = canonical.options.find((option) => option.id === hiddenIdOrLabel)!;
       expect(initialJson).not.toContain(hidden.id);

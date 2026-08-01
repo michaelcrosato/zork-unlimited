@@ -137,6 +137,12 @@ export function renderTerminalStoryChoiceComparison(
     lines.push(`       Inspect: \`inspect ${option.id}\``);
     lines.push(`       Choose: \`choose ${option.id}\``);
   };
+  const progressiveDisclosure = prompt.progressiveDisclosure;
+  if (progressiveDisclosure && config.revealId !== progressiveDisclosure.reveal.id) {
+    lines.push(
+      `  Customize: \`customize\` — ${progressiveDisclosure.reveal.label}. ${progressiveDisclosure.reveal.description}`,
+    );
+  }
   const grouped = groupedRegistrationOptions(prompt);
   if (grouped) {
     let index = 0;
@@ -155,12 +161,6 @@ export function renderTerminalStoryChoiceComparison(
     }
   } else {
     visibleComparisonOptions.forEach(renderOption);
-  }
-  const progressiveDisclosure = prompt.progressiveDisclosure;
-  if (progressiveDisclosure && config.revealId !== progressiveDisclosure.reveal.id) {
-    lines.push(
-      `  Customize: \`customize\` — ${progressiveDisclosure.reveal.label}. ${progressiveDisclosure.reveal.description}`,
-    );
   }
   lines.push(
     config.allowComparisonExit

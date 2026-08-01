@@ -284,9 +284,13 @@ describe("compact journey projection", () => {
       id: "test:standard-packet",
       consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
     });
-    expect(JSON.stringify(compactJourney)).not.toContain("test:custom-duty-a");
-    expect(JSON.stringify(compactJourney)).not.toContain("Custom duty A");
-    expect(JSON.stringify(compactJourney)).not.toContain("The first custom duty awaits evidence.");
+    const compactJourneyJson = JSON.stringify(compactJourney);
+    expect(compactJourneyJson.indexOf('"revealOption"')).toBeLessThan(
+      compactJourneyJson.indexOf('"options"'),
+    );
+    expect(compactJourneyJson).not.toContain("test:custom-duty-a");
+    expect(compactJourneyJson).not.toContain("Custom duty A");
+    expect(compactJourneyJson).not.toContain("The first custom duty awaits evidence.");
 
     const initial = compactJourneyStoryChoiceComparison(prompt);
     expect(initial.options.map((option) => option.id)).toEqual(["test:standard-packet"]);
@@ -304,6 +308,7 @@ describe("compact journey projection", () => {
       },
     });
     const initialJson = JSON.stringify(initial);
+    expect(initialJson.indexOf('"revealOption"')).toBeLessThan(initialJson.indexOf('"options"'));
     expect(initialJson).not.toContain("test:custom-duty-a");
     expect(initialJson).not.toContain("Custom duty A");
     expect(initialJson).not.toContain("Carry the first custom duty.");

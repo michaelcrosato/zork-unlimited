@@ -141,6 +141,9 @@ describe("terminal registration story-choice groups", () => {
     const initial = renderTerminalStoryChoiceComparison(prompt);
     expect(initial).toContain("1. Standard packet");
     expect(initial).toContain("Customize: `customize` — Compare individual duties.");
+    expect(initial.indexOf("Customize: `customize`")).toBeLessThan(
+      initial.indexOf("1. Standard packet"),
+    );
     expect(initial).not.toContain("Full duty");
     expect(initial).not.toContain("custom-full");
 
