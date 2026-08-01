@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 713 -->
+<!-- historical_cycle_count: 714 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - indivisible_blind_wrapper_prompt
+
+- Evidence choice: a pre-fix Terra pilot produced one verified member plus a 32-byte incomplete-wrapper rejection; because that cohort could never certify, it was stopped without retry instead of spending the remaining slots.
+- Surface/effect: the pure prompt now shows the concrete initial `start_overworld({})` wrapper as one byte-copyable 96-byte input at column zero, says later calls replace only tool/arguments, and forbids either line alone; the strict parser remains unchanged and fail-closed.
+- Measured effect: the live prompt is 57 bytes smaller; regression coverage feeds its exact displayed source through the real strict-v2 classifier and separately rejects canonical-comment-only plus representative 32-byte malformed inputs.
+- Counterfactual: game content, choices, actions, mechanics, RNG, saves, hashes, outcomes, model/client authority, result cross-binding, and historical evidence acceptance are unchanged.
+- Pure evidence: exact-clean Terra seed 7314010 diverted every wolf alive after recovering a failed LURE cast, continued at decisions 31/40, won The Gallowmere at 56, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, bug, loop, stuck state, or soft-lock.
+- Frozen pilot: seeds 7314020–29 verified 10/10 first attempts with no resume/retry/failure and all continued; readiness correctly failed at clarity/enjoyment 4.00 and only two strategies (LURE 7, FORTIFY 3), so no 100-player fleet launched.
+- Economy: the final canary plus pilot used 49.150M raw / 1.667M uncached input + 120,665 output at 96.60% input-cache reuse (1.787M useful, about 162,488/run); the aborted pre-fix cohort remains non-authoritative rather than guessed into this total.
+- Self-critique/guard: Albany's cumulative planning density recurred in 5/10 reports and HUNT/DRIVE stayed unused, so combined comparison and strategy discoverability are next; independent byte/security reviews, 112 focused tests, crawl `20260801T054037Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.
 
 ### Cycle result - staged_wolf_handoff
 
@@ -160,13 +171,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: one first-attempt run used 5.885M raw / 196.5k uncached input and 11.4k output at 96.66% cache reuse (207,951 useful / 56 decisions, about 3,713 each); no retry, recovery, Spark admission, or fallback ran.
 - Self-critique/follow-through: one canary supports the mechanism but does not close causality; it still named staged setup density plus S1 packet-scope/checkpoint timing, so measure recurrence in the predeclared ten-player pilot rather than patching one report.
 - Guard: two independent audits and final review are clean; crawls `20260730T190959Z` / `20260730T193323Z` have zero findings, and exact-tree health passes 449 files/3,730 tests plus all 12 packs before this state-only amend.
-
-### Cycle result - named_embedded_character_continuity
-
-- Evidence choice: persistent-versus-quest-local comprehension appeared in exact Terra seed 73078 and compact/setup density in 7 of the latest 12 reports; clarify scope without flattening either character layer.
-- Surface: compact embedded quests now expose named `persistent_record`, `quest_local_profile`, exact named import provenance, and `cross_boundary: authored_imports_exports_only`; the repeated positional decoder is gone.
-- Measured effect: importless Gallowmere continuity falls 761->388 bytes (49.0%), while the real five-import Wolf-Winter launch falls 1,279->1,126 (12.0%); launch/read/accepted/rejected/reload/resume values remain full-projection exact.
-- Counterfactual: this changes only compact projection; full continuity, saves and save bytes, engine state, hashes, legal actions, events, mechanics, RNG, imports, outcomes, and UI are unchanged.
-- Pure evidence: exact-clean Terra seed 73079 completed The Wolf-Winter with every wolf alive, continued, won The Gallowmere, and ended at decision 56 with clarity/enjoyment 4/5, replay-yes, no rejection or bug, and no persistent-versus-local confusion.
-- Economy/admission: one attempt used 5.553M raw / 187.9k uncached input and 10.7k output at 96.62% cache reuse (198,622 useful / 56 decisions, about 3,547 each); unchanged Codex 0.144.1 Spark admission remains quarantined, so no known-failure retry or fanout ran.
-- Self-critique/guard: one canary is not causal and still named broad overworld density, sequential setup, and dialogue closure; final review is clean, crawls `20260730T180354Z` / `20260730T183820Z` have zero findings, and exact-tree health passes 449 files/3,730 tests plus all 12 packs before this state-only amend.

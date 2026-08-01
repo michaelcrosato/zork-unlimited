@@ -233,7 +233,9 @@ gameplay wrapper must begin with the exact transport comment
 `// @exec: {"yield_time_ms": 120000}`. The comment changes only the code-mode yield
 boundary and adds no executable statement. Current v2 forwarding contains exactly
 one expression: `text(await tools.mcp__adventureforge__<tool>({literalArgs}));`.
-The invocation is allowlisted, its object-literal arguments contain only
+The exact comment and awaited expression form one two-line wrapper input; a
+comment-only `exec` is incomplete and is rejected. The invocation is allowlisted,
+and its object-literal arguments contain only
 JSON-valued literals (prefer `{}` for fresh start), cross-bind exactly to the MCP call, and its output is the exact
 JSON.stringify-equivalent MCP result. No alias, intermediate statement, extra
 statement, comment, malformed literal, or truncation is accepted.
