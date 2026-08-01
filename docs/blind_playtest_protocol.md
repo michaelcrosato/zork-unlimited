@@ -326,7 +326,10 @@ use session ids and state hashes, recognize game-presented continue/end and
 authored story choices, and copy the returned receipt. It may not restate hidden
 content, recommend an opening route, require particular mechanics or locations,
 list defects to hunt, or impose a call/turn/time budget. Gameplay behavior must
-come from the game contract.
+come from the game contract. A visible optional-Station `reviewOption` is
+transport instruction only: it may return one candidate's consequence/timing
+beside authenticated already-selected departure terms, without directing the
+player to inspect more candidates or choose either one.
 
 For an embedded quest, pure mode enforces `hide_graph = true`. State-bearing
 compact quest start, read, and `step_action` responses default to

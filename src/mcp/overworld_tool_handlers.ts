@@ -4,7 +4,11 @@ import {
   type OverworldCompactQuestRef,
   type OverworldCompactRouteOption,
 } from "../world/compact_view.js";
-import type { OpeningCompactDepartureRecap } from "../world/opening_departure_recap.js";
+import {
+  compactOpeningDepartureRecapTerms,
+  type OpeningCompactDepartureRecap,
+  type OpeningCompactDepartureRecapTerms,
+} from "../world/opening_departure_recap.js";
 import type { OverworldManifest, OverworldNode } from "../world/overworld.js";
 import {
   type OverworldActionResult,
@@ -85,6 +89,7 @@ import {
   embeddedJourneyFocus,
   journeyStoryChoiceOptionById,
   journeyBlocksGameplay,
+  storyChoiceSupportsDepartureRecapTerms,
   suppressRpgGameplayActions,
   type EmbeddedJourneyField,
   type EmbeddedJourneyFocus,
@@ -275,6 +280,8 @@ type OverworldCompactJourneyStoryInspection<Story extends JourneyStoryChoiceComp
   unchanged: true;
   story: Story;
   departure_recap?: OpeningCompactDepartureRecap;
+  departure_recap_terms?: OpeningCompactDepartureRecapTerms;
+  legend_delta?: OverworldMcpLegendPatch;
 }>;
 
 type JourneyStoryInspectionForArgs<Args> = Args extends { option_id: string }
@@ -912,12 +919,25 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       const story = inspectStory(guarded.session);
       validateInspectionArgs(story);
       const departureRecap = guarded.session.compactView().departure_recap;
+      const fullDepartureRecap = guarded.session.view().departureRecap;
+      const departureRecapTerms =
+        args.option_id !== undefined &&
+        storyChoiceSupportsDepartureRecapTerms(story) &&
+        fullDepartureRecap
+          ? compactOpeningDepartureRecapTerms(fullDepartureRecap)
+          : null;
       return {
         ok: true,
         session_id: args.session_id,
         snapshot_hash: overworldSessions.snapshotHash(guarded.session),
         unchanged: true,
         ...(departureRecap ? { departure_recap: departureRecap } : {}),
+        ...(departureRecapTerms
+          ? {
+              ...overworldSessions.resultLegendField(guarded.session, ["departure_recap_terms"]),
+              departure_recap_terms: departureRecapTerms,
+            }
+          : {}),
         story:
           args.option_id !== undefined
             ? compactJourneyStoryChoiceComparison(story, args.option_id)

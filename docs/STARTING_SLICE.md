@@ -380,6 +380,13 @@ comparison, and the browser already renders it before the option cards. Exact
 active terms remain an explicit read-only expansion, alternatives never leak,
 and inspection changes no snapshot, hash, clock, or decision.
 
+The cumulative-review follow-up makes that one-option expansion sufficient for
+an optional Station decision. Its visible `reviewOption` action returns the
+candidate consequence and timing beside the authenticated departure terms
+already selected, avoiding a separate recap/context read. It remains read-only,
+shows no sibling's full terms, and neither recommends a route nor requires
+reviewing every candidate.
+
 The embedded launch handoff then makes the Station-to-field transition explicit
 without flattening it. A compact Wolf-Winter start names `Albany Station -> The
 Wolf-Winter`, the accepted road, the imported or declined preparation, and the

@@ -115,6 +115,7 @@ function expectPureStoryInspectionEnvelope(
   payload: Record<string, unknown>,
   sessionId: string,
   expectedDepartureRecap?: unknown,
+  expectsDepartureRecapTerms = false,
 ): void {
   expect(payload).toMatchObject({
     ok: true,
@@ -132,6 +133,7 @@ function expectPureStoryInspectionEnvelope(
     "story",
     "unchanged",
     ...(expectedDepartureRecap === undefined ? [] : ["departure_recap"]),
+    ...(expectsDepartureRecapTerms ? ["departure_recap_terms", "legend_delta"] : []),
   ];
   expect(Object.keys(payload).sort()).toEqual(expectedKeys.sort());
   if (expectedDepartureRecap === undefined) {
@@ -139,7 +141,12 @@ function expectPureStoryInspectionEnvelope(
   } else {
     expect(payload.departure_recap).toEqual(expectedDepartureRecap);
   }
-  expect(payload).not.toHaveProperty("departure_recap_terms");
+  if (expectsDepartureRecapTerms) {
+    expect(payload.departure_recap_terms).toEqual(expect.any(Array));
+    expect(payload.legend_delta).toHaveProperty("departure_recap_terms");
+  } else {
+    expect(payload).not.toHaveProperty("departure_recap_terms");
+  }
   expect(payload).not.toHaveProperty("journey");
   expect(payload).not.toHaveProperty("context");
   expect(payload).not.toHaveProperty("observation");
@@ -2306,6 +2313,7 @@ describe("MCP pure play mode", () => {
           ].sort(),
         );
         expect(preparationChoice?.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
+        expect(JOURNEY_STORY_CHOICE_COMPARISON_VERSION).toBe(10);
         expect(preparationChoice?.kind).toBe("preparation");
         expect(preparationChoice?.inspectedOption).toBeNull();
         expect(preparationChoice?.reviewOption).toEqual({
@@ -2335,7 +2343,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        expectPureStoryInspectionEnvelope(detailed, sessionId, stationedDepartureRecap);
+        expectPureStoryInspectionEnvelope(detailed, sessionId, stationedDepartureRecap, true);
         expect(detailed.snapshot_hash).toBe(inspected.snapshot_hash);
         const detailedPreparation = detailed.story as Record<string, unknown> & {
           inspectedOption?: Record<string, unknown> & { id?: string; consequence?: string };

@@ -54,7 +54,7 @@ function expectLegendCovers(legend: Record<string, string>, context: Record<stri
 describe("compact legends", () => {
   it("pins each overworld positional schema signature to an explicit version", () => {
     const expectedSignatureByVersion = {
-      39: "dcdb52cf89e077fd51909c97a4cee51967e289b2b51e0099503801b5ef677634",
+      40: "33b1acb50ded446f991f6022dbacd78786587cab50ee844246a23fdd3ec6a304",
     } as const;
     const signature = createHash("sha256")
       .update(
@@ -65,7 +65,7 @@ describe("compact legends", () => {
       )
       .digest("hex");
 
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(39);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(40);
     expect(signature).toBe(expectedSignatureByVersion[OVERWORLD_COMPACT_VIEW_VERSION]);
   });
 

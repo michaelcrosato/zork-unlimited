@@ -1479,7 +1479,7 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect a currently presented journey.storyChoice or optional story listed in departure_interactions without changing state. The default compact read returns a short comparison and unchanged receipt; when available it also repeats the bounded authenticated departure_recap, never the exact terms. Pass option_id for only that option's new detail or reveal_id for a staged expansion. It omits all other repeated world context. Developer compact_result:false intentionally returns the canonical full story.",
+  "Inspect a currently presented journey.storyChoice or optional story listed in departure_interactions without changing state. The default compact read returns a short comparison and unchanged receipt; when available it also repeats the bounded authenticated departure_recap. Pass option_id for only that option's new detail or reveal_id for a staged expansion. Preparation, relief-allocation, and ally option reviews also return authenticated selected terms in that response. It omits all other repeated world context. Developer compact_result:false intentionally returns the canonical full story.",
   z
     .object({
       ...OVERWORLD_SESSION,
