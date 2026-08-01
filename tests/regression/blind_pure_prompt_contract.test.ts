@@ -56,6 +56,13 @@ describe("pure blind prompt + runner contract", () => {
       }),
     ).toMatchObject({ ok: true });
     expect(transport).toContain("exact initial two-line wrapper as one indivisible input");
+    expect(transport).toContain(
+      "Markdown fence and its `text` language tag below are display-only",
+    );
+    expect(transport).toContain("first character `/`, last non-newline character `;`");
+    expect(transport).toContain(
+      "Add no Markdown fence, language label, prose, or literal `functions.exec(...)` call",
+    );
     expect(prompt).toContain("Never submit either source line alone");
     expect(prompt).toContain("Add no other comment or executable statement");
     for (const contract of [prompt, protocol, readme]) {
@@ -167,7 +174,8 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("an option id shared by more than one listed interaction");
     expect(prompt).not.toContain("with both that\n  `story_choice_id`");
     expect(prompt).toMatch(/bounded authenticated\s+`departure_recap`/);
-    expect(prompt).toContain("mcp__adventureforge__start_world_quest");
+    expect(prompt).not.toContain("mcp__adventureforge__start_world_quest");
+    expect(prompt).toContain("direct quest drop-in bypasses the overworld");
     expect(prompt).toContain("not part of this playthrough");
     expect(prompt).toContain("Only then conduct the exit interview");
     expect(prompt).toContain("`exitReceipt`");

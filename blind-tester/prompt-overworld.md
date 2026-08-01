@@ -19,7 +19,10 @@ PLAY AS A NEW PLAYER
   prompt or shown by the current game response. `tool_search` is not a gameplay
   action.
 - For every Codex `functions.exec` AdventureForge gameplay wrapper, submit this
-  exact initial two-line wrapper as one indivisible input:
+  exact initial two-line wrapper as one indivisible input. The Markdown fence and
+  its `text` language tag below are display-only, not input. Submit only the two raw
+  source lines: first character `/`, last non-newline character `;`. Add no
+  Markdown fence, language label, prose, or literal `functions.exec(...)` call:
 
 ```text
 // @exec: {"yield_time_ms": 120000}
@@ -38,8 +41,7 @@ text(await tools.mcp__adventureforge__start_overworld({}));
   bridge into a quest currently shown by the overworld. Use it only when
   `context.quest_starts` presents an exact `[quest_id, approach_id|null]` tuple;
   pass those values unchanged, omitting `approach_id` when it is null. The separate
-  `mcp__adventureforge__start_world_quest` direct drop-in bypasses the overworld
-  and is not part of this playthrough.
+  direct quest drop-in bypasses the overworld and is not part of this playthrough.
 - An authored local job is described in `context.job_scenes`. Work it only when
   `context.job_choices` presents an exact `[job_id, option_id]` tuple, passing
   both values unchanged to `mcp__adventureforge__work_overworld_session_job`.

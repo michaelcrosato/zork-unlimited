@@ -1066,7 +1066,8 @@ printf 'codex-cli 0.144.1\\n'
     expect(owPrompt).not.toContain("resolve_overworld_session_road_encounter");
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld_session_quest");
     expect(owPrompt).toContain("context.quest_starts");
-    expect(owPrompt).toContain("mcp__adventureforge__start_world_quest");
+    expect(owPrompt).not.toContain("mcp__adventureforge__start_world_quest");
+    expect(owPrompt).toContain("direct quest drop-in bypasses the overworld");
     expect(owPrompt).toContain("not part of this playthrough");
     expect(owPrompt).toContain("game presents its actual journey choice");
     expect(owPrompt).toContain("After the game confirms the end");
