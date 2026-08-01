@@ -100,6 +100,10 @@ export const WOLF_WINTER_STRATEGY_BY_ENDING = Object.freeze({
     strategy: "hunt_and_hold",
     variant: "bloodied_evacuation",
   },
+  ending_bloodied_byre_evacuated_june_released: {
+    strategy: "hunt_and_hold",
+    variant: "bloodied_evacuation",
+  },
   ending_drive_cattle_wounded: {
     strategy: "drive_and_evacuate",
     variant: "cattle_wounded",
@@ -121,8 +125,17 @@ export const WOLF_WINTER_STRATEGY_BY_ENDING = Object.freeze({
     variant: "albany_authority",
   },
   ending_held_gate_barred: { strategy: "hunt_and_hold", variant: "gate_barred" },
+  ending_held_gate_barred_june_released: {
+    strategy: "hunt_and_hold",
+    variant: "gate_barred",
+  },
   ending_held_timber_saved: { strategy: "hunt_and_hold", variant: "timber_saved" },
+  ending_held_timber_saved_june_released: {
+    strategy: "hunt_and_hold",
+    variant: "timber_saved",
+  },
   ending_held: { strategy: "hunt_and_hold", variant: "line_held" },
+  ending_held_june_released: { strategy: "hunt_and_hold", variant: "line_held" },
 } as const satisfies Record<
   WolfEndingId,
   Readonly<{ strategy: WolfStrategy; variant: WolfStrategyVariant }>

@@ -227,6 +227,12 @@ export const WOLF_WINTER_CAMPAIGN_OUTCOMES = Object.freeze({
     albanyReturnContext:
       "The yearling and flank wolf are dead, and the old grey remains in Cade's abandoned byre. Cade and every person escaped, but two cattle are still missing and the outer line stands abandoned.",
   }),
+  ending_bloodied_byre_evacuated_june_released: Object.freeze({
+    id: "bloodied_byre_evacuated",
+    endingId: "ending_bloodied_byre_evacuated_june_released",
+    albanyReturnContext:
+      "The yearling and flank wolf are dead, and the old grey remains in Cade's abandoned byre. Cade and every person escaped, but two cattle are still missing and the outer line stands abandoned. June returned separately after you released her before HUNT; her cattle-first promise remains intact without a field-aid claim.",
+  }),
   ending_drive_cattle_wounded: Object.freeze({
     id: "drive_cattle_wounded",
     endingId: "ending_drive_cattle_wounded",
@@ -263,17 +269,35 @@ export const WOLF_WINTER_CAMPAIGN_OUTCOMES = Object.freeze({
     albanyReturnContext:
       "Cade's cattle are alive behind the inner gate you barred, but the broken outer paling still leaves the steading on one last line.",
   }),
+  ending_held_gate_barred_june_released: Object.freeze({
+    id: "gate_barred",
+    endingId: "ending_held_gate_barred_june_released",
+    albanyReturnContext:
+      "Cade's cattle are alive behind the inner gate you barred, but the broken outer paling still leaves the steading on one last line. June returned separately after you released her before HUNT; her cattle-first promise remains intact without a field-aid claim.",
+  }),
   ending_held_timber_saved: Object.freeze({
     id: "timber_saved",
     endingId: "ending_held_timber_saved",
     albanyReturnContext:
       "Cade's cattle are alive, and the sound timber you carried out gives him the first piece of the broken outer paling's repair.",
   }),
+  ending_held_timber_saved_june_released: Object.freeze({
+    id: "timber_saved",
+    endingId: "ending_held_timber_saved_june_released",
+    albanyReturnContext:
+      "Cade's cattle are alive, and the sound timber you carried out gives him the first piece of the broken outer paling's repair. June returned separately after you released her before HUNT; her cattle-first promise remains intact without a field-aid claim.",
+  }),
   ending_held: Object.freeze({
     id: "held",
     endingId: "ending_held",
     albanyReturnContext:
       "Cade's cattle are alive, but the guard wood was spent in the fighting; the broken outer paling has no sound repair timber waiting.",
+  }),
+  ending_held_june_released: Object.freeze({
+    id: "held",
+    endingId: "ending_held_june_released",
+    albanyReturnContext:
+      "Cade's cattle are alive, but the guard wood was spent in the fighting; the broken outer paling has no sound repair timber waiting. June returned separately after you released her before HUNT; her cattle-first promise remains intact without a field-aid claim.",
   }),
 } as const satisfies Record<string, WolfWinterCampaignOutcomeContext>);
 

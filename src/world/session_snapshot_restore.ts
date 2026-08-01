@@ -494,8 +494,11 @@ export const JUNE_FORTIFY_DAWN_PREDECESSOR_COPY = Object.freeze({
 /** Exact manifest before June's FORTIFY cattle line prevented Strained-dawn HP loss. */
 export const OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH =
   "fbb3b0e57fdbada4a690921e8d321689dfe261deafa4c52192bbde04bb5bb2f6";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest before June could be released amicably at the pre-HUNT boundary. */
+export const OVERWORLD_JUNE_HUNT_RELEASE_PREDECESSOR_WORLD_HASH =
   "ef222da19b289d9a32377e9ed2df0c38fa7af37f252fa87a63f3a58cb69ca486";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "271f39351a549c0491c057dc372a80b8ecc899d0b9948d6c90df8ebc0729bd5a";
 /** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
 export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
@@ -3005,6 +3008,12 @@ const EMERY_FULL_COMBAT_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
   "ending_held_gate_barred",
   "ending_held_timber_saved",
 ]);
+const JUNE_HUNT_RELEASE_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
+  "ending_bloodied_byre_evacuated_june_released",
+  "ending_held_gate_barred_june_released",
+  "ending_held_timber_saved_june_released",
+  "ending_held_june_released",
+]);
 const EMERY_FULL_COMBAT_MEMORY_ID = "albany:memory_emery_wolf_full_combat_bloodshed";
 const EMERY_FULL_COMBAT_NPC_ID = "albany:emery_sloane";
 const EMERY_CONTACT_PREFIX = "talk:albany_city__greenway__contact";
@@ -3321,6 +3330,11 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesJuneFortifyDawnCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH;
+  // This predecessor adds only future quest outcomes and a matching return
+  // presentation. Existing snapshots need no journal or campaign-state rewrite.
+  const migratesJuneHuntRelease =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_JUNE_HUNT_RELEASE_PREDECESSOR_WORLD_HASH;
   const migratesEmeryEvidenceCustody =
     migrationTargetsCurrentManifest &&
     EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES.has(sourceSnapshot.worldHash);
@@ -3401,6 +3415,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesStartingDoctrineReplacement &&
     !migratesJuneDriveOverrunCopy &&
     !migratesJuneFortifyDawnCopy &&
+    !migratesJuneHuntRelease &&
     !migratesEmeryEvidenceCustody &&
     !migratesWoundCare &&
     !migratesBloodiedByreEvacuation &&
@@ -3566,7 +3581,7 @@ export function planOverworldSessionSnapshotRestore(args: {
           return Object.freeze({ ...snapshotWithCampaignCopy, journalEntries });
         })()
       : snapshotWithCampaignCopy;
-  if (sourceSnapshot.worldHash !== worldHash) {
+  if (sourceSnapshot.worldHash !== worldHash && !migratesJuneHuntRelease) {
     if (indexes.openingAlly === null) {
       throw new Error("June cattle-line copy migration target has no opening ally scene.");
     }
@@ -3743,6 +3758,14 @@ export function planOverworldSessionSnapshotRestore(args: {
   ) {
     throw new Error(
       "Pre-bloodied-byre snapshot has a Wolf-Winter quest outcome introduced by a later manifest.",
+    );
+  }
+  if (
+    sourceSnapshot.worldHash !== worldHash &&
+    JUNE_HUNT_RELEASE_WOLF_OUTCOME_IDS.has(questOutcomeIds.get("wolf_winter") ?? "")
+  ) {
+    throw new Error(
+      "Historical snapshot has a June-release Wolf-Winter outcome introduced by the current manifest.",
     );
   }
   assertJourneyCampaignGoalCompletionProof({

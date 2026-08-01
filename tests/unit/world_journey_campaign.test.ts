@@ -201,7 +201,7 @@ const COMPLETED_THROUGH_BREAKING_WEIR = new Set([
 ]);
 
 describe("journey campaign", () => {
-  it("maps the twelve supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
+  it("maps all sixteen supported Wolf-Winter victories to truthful, distinct Albany returns", () => {
     const expected = [
       {
         endingId: "ending_pack_diverted",
@@ -222,6 +222,11 @@ describe("journey campaign", () => {
         endingId: "ending_bloodied_byre_evacuated",
         id: "bloodied_byre_evacuated",
         phrase: "old grey remains in Cade's abandoned byre",
+      },
+      {
+        endingId: "ending_bloodied_byre_evacuated_june_released",
+        id: "bloodied_byre_evacuated",
+        phrase: "June returned separately",
       },
       {
         endingId: "ending_drive_cattle_wounded",
@@ -254,14 +259,29 @@ describe("journey campaign", () => {
         phrase: "inner gate you barred",
       },
       {
+        endingId: "ending_held_gate_barred_june_released",
+        id: "gate_barred",
+        phrase: "June returned separately",
+      },
+      {
         endingId: "ending_held_timber_saved",
         id: "timber_saved",
         phrase: "sound timber you carried out",
       },
       {
+        endingId: "ending_held_timber_saved_june_released",
+        id: "timber_saved",
+        phrase: "June returned separately",
+      },
+      {
         endingId: "ending_held",
         id: "held",
         phrase: "guard wood was spent",
+      },
+      {
+        endingId: "ending_held_june_released",
+        id: "held",
+        phrase: "June returned separately",
       },
     ] as const;
 
@@ -272,7 +292,7 @@ describe("journey campaign", () => {
       expect(outcome?.albanyReturnContext).toContain(row.phrase);
       returnContexts.add(outcome!.albanyReturnContext);
     }
-    expect(returnContexts.size).toBe(12);
+    expect(returnContexts.size).toBe(16);
     expect(wolfWinterCampaignOutcome(new Map())).toBeNull();
     expect(wolfWinterCampaignOutcome(outcomeIds("ending_pulled_down"))).toBeNull();
     expect(() =>

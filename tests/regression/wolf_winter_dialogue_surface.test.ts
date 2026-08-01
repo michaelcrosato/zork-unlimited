@@ -247,10 +247,10 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(stepAction("ask_byre").ok).toBe(true);
     expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
     expect(mcpDialogueIds()).toEqual([
-      "ask_commit_hunt_and_hold",
       "ask_lure",
       "ask_drive",
       "ask_fortify",
+      "ask_byre_back",
       "ask_leave",
     ]);
   });

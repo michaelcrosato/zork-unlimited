@@ -90,7 +90,7 @@ describe("June DRIVE Overrun snapshot integrity", () => {
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
     expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "ef222da19b289d9a32377e9ed2df0c38fa7af37f252fa87a63f3a58cb69ca486",
+      "271f39351a549c0491c057dc372a80b8ecc899d0b9948d6c90df8ebc0729bd5a",
     );
   });
 

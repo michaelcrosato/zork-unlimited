@@ -10,6 +10,7 @@
  * enemy id/name/HP).
  */
 import { describe, expect, it } from "vitest";
+import { evalConditions } from "../../src/core/conditions.js";
 import type { Effect } from "../../src/core/effects.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
@@ -32,6 +33,7 @@ import {
   compactRpgObservation,
 } from "../../src/mcp/compact_rpg_observation.js";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { rpgActionOptionForInputId } from "../../src/rpg/legal_actions.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -240,9 +242,43 @@ describe("Wolf-Winter compact authored prose", () => {
     const cade = pack.npcs.find((npc) => npc.id === "houndsman");
     const root = cade?.dialogue.nodes.find((node) => node.id === cade.dialogue.root);
     if (!root) throw new Error("expected Cade's root node");
-    const expectedChoices = root.topics.map((topic) => [`ask_${topic.id}`, topic.prompt] as const);
+
+    const rules = buildRpgRules(index);
+    const directStep = makeStep(rules);
+    const act = (state: GameState, id: string): GameState => {
+      const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === id);
+      expect(option, `expected ${id}`).toBeDefined();
+      if (!option) throw new Error(`missing ${id}`);
+      const result = directStep(state, option.action);
+      expect(result.ok, result.rejectionReason).toBe(true);
+      if (!result.ok) throw new Error(`rejected ${id}`);
+      return result.state;
+    };
+    const legalRootChoices = (state: GameState) =>
+      root.topics
+        .filter((topic) => evalConditions(topic.conditions ?? [], state))
+        .map((topic) => [`ask_${topic.id}`, topic.prompt] as const);
+    const dialogueChoices = (state: GameState) =>
+      enumerateRpgActions(index, state)
+        .filter((option) => option.action.type === "ASK" && option.action.npc === "houndsman")
+        .map((option) => [option.id, option.command.replace(/^ask: /, "")] as const);
+
+    let ordinary = initStateForRpgPack(index, 9821);
+    ordinary = act(ordinary, "go_north");
+    ordinary = act(ordinary, "talk_houndsman");
+    const expectedChoices = legalRootChoices(ordinary);
 
     expect(talked.context.choices).toEqual(expectedChoices);
+    expect(dialogueChoices(ordinary)).toEqual(expectedChoices);
+    expect(expectedChoices.map(([id]) => id)).toEqual([
+      "ask_wolves",
+      "ask_byre",
+      "ask_commit_hunt_and_hold",
+      "ask_lure",
+      "ask_drive",
+      "ask_fortify",
+      "ask_leave",
+    ]);
     expect(talked.context.actions).toEqual(
       expect.arrayContaining(expectedChoices.map(([id]) => id)),
     );
@@ -255,6 +291,22 @@ describe("Wolf-Winter compact authored prose", () => {
       ]),
     );
     expect(talked.context.choices?.some(([id]) => id === "go_west")).toBe(false);
+
+    let released = initStateForRpgPack(index, 9822);
+    released = act(released, "go_north");
+    released.flags.june_hunt_released = true;
+    released = act(released, "talk_houndsman");
+    const releasedOptions = enumerateRpgActions(index, released);
+    const expectedReleasedChoices = legalRootChoices(released);
+    expect(dialogueChoices(released)).toEqual(expectedReleasedChoices);
+    expect(expectedReleasedChoices.map(([id]) => id)).toEqual([
+      "ask_wolves_after_june_release",
+      "ask_byre",
+      "ask_leave",
+    ]);
+    expect(rpgActionOptionForInputId(releasedOptions, "ask_wolves")?.id).toBe(
+      "ask_wolves_after_june_release",
+    );
   });
 
   it("keeps every journal beat complete in both the recent-journal and event projections", () => {

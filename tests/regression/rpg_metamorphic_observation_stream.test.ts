@@ -102,7 +102,7 @@ import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { join } from "node:path";
-import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { compileRpgSource, loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   indexRpgPack,
   buildRpgRules,
@@ -473,21 +473,19 @@ function relabelObservation(
   };
 }
 
-/** Re-sort the id-sorted (hence relabel-order-unstable) arrays by id so the two
- *  observations are compared as SETS on those fields. Applied identically to both sides,
- *  so a real content divergence still fails. See the file header. */
+/** Re-sort the id-sorted (hence relabel-order-unstable) arrays by id so the two fresh,
+ *  disposable observations are compared as SETS on those fields. Applied identically to
+ *  both sides, so a real content divergence still fails. See the file header. */
 function canonical(o: RpgObservation): RpgObservation {
   const byId = (a: { id: string }, b: { id: string }): number => a.id.localeCompare(b.id);
-  return {
-    ...o,
-    visible_objects: [...o.visible_objects].sort(byId),
-    npcs_present: [...o.npcs_present].sort(byId),
-    enemies_present: [...o.enemies_present].sort(byId),
-    ...(o.pressure_tracks ? { pressure_tracks: [...o.pressure_tracks].sort(byId) } : {}),
-    inventory: [...o.inventory].sort(),
-    state: { ...o.state, flags: [...o.state.flags].sort() },
-    available_actions: [...o.available_actions].sort(byId),
-  };
+  o.visible_objects.sort(byId);
+  o.npcs_present.sort(byId);
+  o.enemies_present.sort(byId);
+  o.pressure_tracks?.sort(byId);
+  o.inventory.sort();
+  o.state.flags.sort();
+  o.available_actions.sort(byId);
+  return o;
 }
 
 type WalkResult = { compared: number; cappedOut: boolean };
@@ -600,6 +598,73 @@ function walkInLockStep(
 describe("bug_0215 — RPG per-step observation stream is invariant under a consistent identifier relabeling", () => {
   it("discovers the shipped RPG packs", () => {
     expect(packFiles.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("relabels ordered win ending_overrides before walking the twin", () => {
+    const source = `
+meta:
+  id: overrides
+  title: Overrides
+  start_room: a
+  flags_init: [claimed, first_override, later_override]
+  vars_init: { hp: 10, attack: 3, defense: 1 }
+rooms:
+  - id: a
+    name: A
+    description: "start"
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: B
+    description: "finish"
+    exits: [{ direction: south, to: a }]
+win_conditions:
+  - id: claimed
+    conditions: [{ has_flag: claimed }]
+    ending: ordinary
+    ending_overrides:
+      - conditions: [{ has_flag: first_override }]
+        ending: first
+      - conditions: [{ has_flag: later_override }]
+        ending: later
+endings:
+  - { id: ordinary, title: Ordinary, text: "ordinary" }
+  - { id: first, title: First, text: "first" }
+  - { id: later, title: Later, text: "later" }
+`;
+    const compiled = compileRpgSource(source);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const original = compiled.compiled.pack;
+    const { pack: twin, relabeler } = relabelRpgPack(original);
+    const mapId = mapIdFn(relabeler);
+    const overrides = twin.win_conditions[0]?.ending_overrides;
+    expect(overrides).toEqual([
+      {
+        conditions: [{ has_flag: mapId("first_override") }],
+        ending: mapId("first"),
+      },
+      {
+        conditions: [{ has_flag: mapId("later_override") }],
+        ending: mapId("later"),
+      },
+    ]);
+
+    const origIndex = indexRpgPack(original);
+    const twinIndex = indexRpgPack(twin);
+    const walked = walkInLockStep(
+      origIndex,
+      twinIndex,
+      buildRpgRules(origIndex, bestRng),
+      buildRpgRules(origIndex, worstRng),
+      buildRpgRules(twinIndex, bestRng),
+      buildRpgRules(twinIndex, worstRng),
+      initStateForRpgPack(origIndex, SEED),
+      initStateForRpgPack(twinIndex, SEED),
+      mapId,
+    );
+    expect(walked.cappedOut).toBe(false);
+    expect(walked.compared).toBeGreaterThan(1);
   });
 
   for (const file of packFiles) {

@@ -73,16 +73,16 @@ a separate game mode.
 
 The starting cast grows from Albany's existing six district contacts and Cade:
 
-| Character                         | Starting-slice agenda and memory                                                                                                                                        |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rowan Quill — Municipal Ledger    | Wants a defensible public record; remembers certified claims, lies, and unauthorized dispatch.                                                                          |
-| Jamie Tanner — Merchants Exchange | Protects scarce winter stock; remembers purchases, coercion, credit, and diverted goods.                                                                                |
-| Hayden Hale — Road Wardens        | Prioritizes corridor relief; remembers wagon promises and abandoned travellers.                                                                                         |
-| Reese Pryce — Ironhands Local     | Protects workers and the only repair shift; remembers which asset received it.                                                                                          |
-| Emery Sloane — Greenway Stewards  | Protects people without destroying the wildlife corridor; remembers evidence custody and needless killing.                                                              |
-| Blair Drake — Survey College      | Wants accurate hazard evidence published; remembers findings shared or concealed.                                                                                       |
-| Old Cade — hill steading          | Protects household and cattle; remembers truth, demands, promises, trespass, and violence.                                                                              |
-| June Pike — Road Warden ally      | Has independent cattle-first authority; she can refuse unequal terms, leave after the first wolf death, solve herd pressure differently, and change return opportunity. |
+| Character                         | Starting-slice agenda and memory                                                                                                                                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rowan Quill — Municipal Ledger    | Wants a defensible public record; remembers certified claims, lies, and unauthorized dispatch.                                                                                                                           |
+| Jamie Tanner — Merchants Exchange | Protects scarce winter stock; remembers purchases, coercion, credit, and diverted goods.                                                                                                                                 |
+| Hayden Hale — Road Wardens        | Prioritizes corridor relief; remembers wagon promises and abandoned travellers.                                                                                                                                          |
+| Reese Pryce — Ironhands Local     | Protects workers and the only repair shift; remembers which asset received it.                                                                                                                                           |
+| Emery Sloane — Greenway Stewards  | Protects people without destroying the wildlife corridor; remembers evidence custody and needless killing.                                                                                                               |
+| Blair Drake — Survey College      | Wants accurate hazard evidence published; remembers findings shared or concealed.                                                                                                                                        |
+| Old Cade — hill steading          | Protects household and cattle; remembers truth, demands, promises, trespass, and violence.                                                                                                                               |
+| June Pike — Road Warden ally      | Has independent cattle-first authority; she can refuse unequal terms, accept an amicable pre-HUNT release, leave after the first wolf death if retained, solve herd pressure differently, and change return opportunity. |
 
 At least five of these people must remain mechanically relevant after
 Wolf-Winter. June is the initial ally grammar; implementation may rename her
@@ -481,7 +481,8 @@ abandoned byre, two cattle go missing, the outer line is lost, and the journey
 returns that exact account to Albany. HP 13, either younger wolf still living,
 any redirected/defeated leader state, a committed lure/drive/fortification, or
 any old-grey maneuver withholds the exit. Quest legality, terminal replay,
-campaign facts and memories, June's broken cattle-first agreement, Albany dawn
+campaign facts and memories, June's broken cattle-first agreement when retained
+(or her intact amicable release when released before HUNT), Albany dawn
 dispatch, and save migration are proved by
 [`wolf_winter_bloodied_byre_evacuation.test.ts`](../tests/regression/wolf_winter_bloodied_byre_evacuation.test.ts)
 and
@@ -546,6 +547,22 @@ it. A clean pressure-2 line already costs no HP. A mobile-stabilized line also
 costs no HP and gains no extra June benefit, including when delayed dispatch
 leaves its displayed pressure at 3. The opening terms and field dialogue
 disclose both conditions before their resolution actions.
+At that same pre-HUNT boundary, the player can instead release June amicably and
+commit HUNT immediately. This preserves the relationship but closes LURE, DRIVE,
+and FORTIFY at once, removes June's later lure, drive, and fortify interventions,
+and grants no combat or cattle bonus. Ordinary yard preparation, Cade's two HUNT
+lessons, store gear, and backtracking remain. The bloodied evacuation plus the
+three held-byre resource outcomes retain their exact non-June
+consequences and tactical ending reactivity under four explicit release ending
+identities. Albany then records the cattle-first promise
+`released`, removes June from the party, preserves her distinct amicable
+testimony, and offers no kept-companion service. Retaining June through the
+crossing keeps the original first-death breakage instead. The release boundary,
+all four HUNT consequences, save/restore, intervention loss, export truth, and
+historical-hash rejection are proven in
+[`june_hunt_release_counterfactual.test.ts`](../tests/starting_slice/june_hunt_release_counterfactual.test.ts)
+and
+[`june_hunt_release_snapshot_integrity.test.ts`](../tests/regression/june_hunt_release_snapshot_integrity.test.ts).
 The first wolf death removes the action but preserves hybrid/combat completion, then
 resolves the promise broken and June out of the party. Clean cooperation,
 negotiated refusal, explicit solo, and relationship loss produce distinct
@@ -1144,16 +1161,16 @@ cohort that misses a quality threshold exits 1; a pass exits 0.
 
 Wolf-Winter outcomes map to strategy families as follows:
 
-| Strategy family       | Accepted Wolf-Winter ending ids                                                                        |
-| --------------------- | ------------------------------------------------------------------------------------------------------ |
-| `hunt_and_hold`       | `ending_bloodied_byre_evacuated`, `ending_held_gate_barred`, `ending_held_timber_saved`, `ending_held` |
-| `lure_and_divert`     | `ending_pack_diverted`, `ending_pack_diverted_cattle_scattered`, `ending_pack_diverted_after_blood`    |
-| `fortify_and_outlast` | `ending_fortified_cade_terms`, `ending_fortified_albany_authority`                                     |
-| `drive_and_evacuate`  | `ending_drive_cattle_wounded`, `ending_drive_person_cattle_lost`, `ending_drive_reserve_spent`         |
+| Strategy family       | Accepted Wolf-Winter ending ids                                                                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hunt_and_hold`       | `ending_bloodied_byre_evacuated`, `ending_held_gate_barred`, `ending_held_timber_saved`, `ending_held`, and the four corresponding `*_june_released` identities |
+| `lure_and_divert`     | `ending_pack_diverted`, `ending_pack_diverted_cattle_scattered`, `ending_pack_diverted_after_blood`                                                             |
+| `fortify_and_outlast` | `ending_fortified_cade_terms`, `ending_fortified_albany_authority`                                                                                              |
+| `drive_and_evacuate`  | `ending_drive_cattle_wounded`, `ending_drive_person_cattle_lost`, `ending_drive_reserve_spent`                                                                  |
 
 `ending_pack_diverted_after_blood` is the lure family's bounded hybrid recovery,
-and `ending_bloodied_byre_evacuated` is the hunt family's costly terminal
-failure-forward exit; neither is a fifth strategy. A missing Wolf-Winter outcome is an incomplete
+and `ending_bloodied_byre_evacuated` (including its June-release identity) is the
+hunt family's costly terminal failure-forward exit; neither is a fifth strategy. A missing Wolf-Winter outcome is an incomplete
 starting-goal run. A death ending or any unknown Wolf-Winter ending invalidates
 the certification bundle rather than being silently bucketed.
 

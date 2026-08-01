@@ -277,7 +277,7 @@ describe("Winter Return Docket", () => {
     const wolf = WORLD.quests.find((quest) => quest.id === "wolf_winter");
     const scene = WORLD.local_jobs.find((job) => job.id === JOB_ID)?.authored_scene;
     if (!wolf?.campaign_exports || !scene) throw new Error("expected Wolf exports and Civic scene");
-    expect(wolf.campaign_exports).toHaveLength(12);
+    expect(wolf.campaign_exports).toHaveLength(16);
     for (const campaignExport of wolf.campaign_exports) {
       const facts = new Set(deriveCampaignWorldFactIds([campaignExport.effects]));
       const held = facts.has("fact:wolf_winter_byre_held");

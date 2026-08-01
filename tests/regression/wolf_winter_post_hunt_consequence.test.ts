@@ -352,6 +352,12 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
     const generic = pack.win_conditions.at(-1);
     expect(generic).toMatchObject({ id: "hold_the_byre", ending: "ending_held" });
     expect(generic?.conditions).toEqual([{ visited: "cattle_stand" }]);
+    expect(generic?.ending_overrides).toEqual([
+      {
+        conditions: [{ has_flag: "june_hunt_released" }],
+        ending: "ending_held_june_released",
+      },
+    ]);
 
     const special = pack.win_conditions.slice(0, -1).map((condition) => condition.ending);
     expect(special).toEqual([

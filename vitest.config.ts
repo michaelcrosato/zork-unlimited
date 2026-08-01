@@ -1,31 +1,83 @@
 import { availableParallelism } from "node:os";
 import { defineConfig } from "vitest/config";
 
-const localWorkerCap = Math.min(8, availableParallelism());
+const STANDARD_TESTS = "tests/**/*.test.ts";
+const METAMORPHIC_OBSERVATION_PROOF = "tests/regression/rpg_metamorphic_observation_stream.test.ts";
+const ENDING_RENDER_PROOF = "tests/regression/rpg_all_endings_reachable.test.ts";
+const EXHAUSTIVE_RPG_PROOFS = [
+  "tests/regression/rpg_action_id_unique.test.ts",
+  "tests/regression/rpg_variant_liveness.test.ts",
+  "tests/regression/rpg_score_economy_sound.test.ts",
+  "tests/regression/rpg_metamorphic_relabel.test.ts",
+];
+const ALL_EXHAUSTIVE_RPG_PROOFS = [
+  METAMORPHIC_OBSERVATION_PROOF,
+  ENDING_RENDER_PROOF,
+  ...EXHAUSTIVE_RPG_PROOFS,
+];
+const standardWorkerCap =
+  process.env.CI === "true"
+    ? Math.min(2, availableParallelism())
+    : Math.min(8, availableParallelism());
+const exhaustiveWorkerCap = Math.min(2, availableParallelism());
+const commonProject = {
+  environment: "node" as const,
+  // Determinism: tests must not depend on wall-clock ordering or shared state.
+  isolate: true,
+  // The exhaustive ground-truth regression proofs BFS the full reachable state space of
+  // the largest packs. Their state caps, rather than the clock, bound proof completeness;
+  // this shared default retains fail-fast headroom for the rest of the suite.
+  testTimeout: 60_000,
+};
 
 export default defineConfig({
   test: {
-    include: ["tests/**/*.test.ts"],
-    environment: "node",
-    // Determinism: tests must not depend on wall-clock ordering or shared state.
-    isolate: true,
-    // The suite mixes bounded exhaustive state-graph proofs with real subprocess/job
-    // lifecycle checks. Letting Vitest mirror every logical CPU can starve both classes:
-    // on a 28-thread developer host, the same files repeatedly crossed their fail-fast
-    // ceilings while passing together in less than half that time. Keep two isolated
-    // workers on GitHub's two-vCPU runner and cap developer hosts at eight. Every file
-    // and assertion still runs; the cap removes oversubscription and lowers peak heap.
-    maxWorkers: process.env.CI === "true" ? 2 : localWorkerCap,
-    // The exhaustive ground-truth regression proofs (e.g. rpg_all_endings_reachable,
-    // rpg_score_economy_sound, rpg_variant_liveness, rpg_action_id_unique) BFS the full
-    // reachable state space of the largest packs — deterministic but compute-heavy,
-    // ~6-12s on the big RPG packs. The vitest default (5000ms) sits right on that edge,
-    // so they flake under CPU load; 30000ms still flaked when the full 262-file suite runs
-    // ~28-way in parallel ON TOP OF a concurrent AFK loop, starving these census `it`s
-    // past 30s (bug_0237 — three sibling RPG census suites timed out together under that
-    // contention, while each passes in ~12s isolated). Raised to 60000ms: a generous
-    // explicit timeout removes the flake without loosening correctness — a real hang still
-    // fails, just with headroom (the solvers are bounded by an internal state cap).
-    testTimeout: 60000,
+    projects: [
+      {
+        test: {
+          ...commonProject,
+          name: "standard",
+          include: [STANDARD_TESTS],
+          exclude: ALL_EXHAUSTIVE_RPG_PROOFS,
+          maxWorkers: standardWorkerCap,
+          sequence: { groupOrder: 0 },
+        },
+      },
+      {
+        test: {
+          ...commonProject,
+          name: "exhaustive-rpg",
+          include: EXHAUSTIVE_RPG_PROOFS,
+          maxWorkers: exhaustiveWorkerCap,
+          // Keep the exact proofs and caps, but do not launch all six memory-heavy BFS
+          // files together. Under an eight-worker pool each became 44-70% slower and five
+          // crossed their established fail-fast limits.
+          sequence: { groupOrder: 1 },
+        },
+      },
+      {
+        test: {
+          ...commonProject,
+          name: "ending-render-proof",
+          include: [ENDING_RENDER_PROOF],
+          maxWorkers: 1,
+          // This unified proof consumes each terminal witness while traversing Wolf's full
+          // graph. Its measured solo headroom is intentional; do not erase it with a peer.
+          sequence: { groupOrder: 2 },
+        },
+      },
+      {
+        test: {
+          ...commonProject,
+          name: "metamorphic-observation",
+          include: [METAMORPHIC_OBSERVATION_PROOF],
+          maxWorkers: 1,
+          // This proof renders and compares both a pack and its relabeled twin over the
+          // full graph. Isolate it from the other exhaustive workers instead of weakening
+          // its state cap or inflating its 25-minute per-test timeout.
+          sequence: { groupOrder: 3 },
+        },
+      },
+    ],
   },
 });
