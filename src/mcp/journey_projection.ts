@@ -20,7 +20,7 @@ import type { McpObservation } from "./types.js";
 const COMPACT_MORE_ACTIONS_INDEX = 4;
 const COMPACT_MORE_UNAVAILABLE_INDEX = 10;
 const COMPACT_MORE_CHOICES_INDEX = 12;
-export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 9 as const;
+export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 10 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Technical detail and complete terms are staged; inspect this exact option before choosing if you need them." as const;
 
@@ -50,6 +50,15 @@ export type JourneyStoryChoiceReviewAffordance = Readonly<{
   valuesFrom: typeof OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM;
   readOnly: true;
 }>;
+
+/** Optional Station choices can compare one candidate beside the committed plan. */
+export function storyChoiceSupportsDepartureRecapTerms(
+  prompt: Pick<JourneyStoryChoicePrompt, "kind">,
+): boolean {
+  return (
+    prompt.kind === "preparation" || prompt.kind === "relief_allocation" || prompt.kind === "ally"
+  );
+}
 
 /** Read-only expansion for deliberately staged story-choice cards. */
 export type JourneyStoryChoiceRevealAffordance = Readonly<{

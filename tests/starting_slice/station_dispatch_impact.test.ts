@@ -6,6 +6,7 @@ import {
 } from "../../bin/terminal_story_choice.js";
 import { compactJourneyStoryChoiceComparison } from "../../src/mcp/journey_projection.js";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { compactOpeningDepartureRecapTerms } from "../../src/world/opening_departure_recap.js";
 import { stripOpeningStationDispatchImpact } from "../../src/world/opening_station_dispatch_impact.js";
 import {
   classifyQuestDispatchMinutes,
@@ -207,13 +208,42 @@ describe("Station dispatch impact cards", () => {
       compact_context: false,
       compact_result: false,
     });
-    const compactMcp = api.inspect_overworld_session_story({
+    const compactMcpInspection = api.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: ALLOCATION.id,
       compact_context: true,
       compact_result: true,
-    }).story;
+    });
+    const compactMcp = compactMcpInspection.story;
     expect(compactMcp.options.every((option) => !("dispatchImpact" in option))).toBe(true);
+    expect(compactMcpInspection).not.toHaveProperty("departure_recap_terms");
+    expect(compactMcp.reviewOption).toMatchObject({
+      arguments: {
+        story_choice_id: ALLOCATION.id,
+      },
+      argument: "option_id",
+      readOnly: true,
+    });
+    const beforeTermReview = api.export_overworld_session({ session_id: started.session_id });
+    if (!beforeTermReview.ok) throw new Error("Expected an exportable MCP Station session.");
+    const pulledMcp = api.inspect_overworld_session_story({
+      session_id: started.session_id,
+      ...compactMcp.reviewOption.arguments,
+      option_id: compactMcp.options[0]!.id,
+      compact_context: true,
+      compact_result: true,
+    });
+    const expectedRecap = OverworldSession.restore(WORLD, beforeTermReview.snapshot).view()
+      .departureRecap;
+    if (!expectedRecap) throw new Error("Expected authenticated Station recap terms.");
+    expect(pulledMcp.departure_recap_terms).toEqual(
+      compactOpeningDepartureRecapTerms(expectedRecap),
+    );
+    expect(pulledMcp.legend_delta).toHaveProperty("departure_recap_terms");
+    expect(JSON.stringify(pulledMcp).length).toBeLessThanOrEqual(2_048);
+    expect(api.export_overworld_session({ session_id: started.session_id })).toEqual(
+      beforeTermReview,
+    );
     expect(
       api.inspect_overworld_session_story({
         session_id: started.session_id,

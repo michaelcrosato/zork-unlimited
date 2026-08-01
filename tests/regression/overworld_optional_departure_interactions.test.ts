@@ -160,10 +160,13 @@ describe("optional Station departure interactions", () => {
       "same bounded authenticated departure_recap",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "repeats no other world context",
+      "option detail also returns authenticated selected terms",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
-      "never adds departure_recap_terms",
+      "other option detail adds no exact terms",
+    );
+    expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
+      "or world context beyond that recap",
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
       "choose_overworld_session_story(choice)",

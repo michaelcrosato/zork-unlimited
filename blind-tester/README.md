@@ -418,7 +418,10 @@ This mirrors the canonical procedure in [`docs/blind_playtest_protocol.md`](../d
 the live [`prompt-overworld.md`](./prompt-overworld.md) carries only the MCP
 transport boundary and schema-V2 interview format; current journey contract v3
 and the game carry every objective, authored handoff, consequence, and session
-rhythm. The structural-only [`prompt.md`](./prompt.md) is a QA fixture.
+rhythm. At an optional Station comparison, its visible read-only `reviewOption`
+returns one candidate's consequence/timing and the already-selected departure
+terms together; it does not prescribe a route or extra inspection. The
+structural-only [`prompt.md`](./prompt.md) is a QA fixture.
 
 ## Files
 

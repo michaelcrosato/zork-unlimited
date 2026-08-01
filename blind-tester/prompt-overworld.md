@@ -119,9 +119,10 @@ WHEN TO CONTINUE OR END
   option `id` as `option_id` to read only that option's new detail. Reading
   either view does not change the game. When a departure plan is available, its
   compact unchanged receipt repeats the bounded authenticated
-  `departure_recap`, but never the exact active terms; it deliberately omits all
-  other world context and the prior comparison. Retain the current state and
-  comparison already shown, and do not expand every option.
+  `departure_recap`; a preparation, relief-allocation, or ally option detail may
+  also include authenticated selected terms. It omits all other world context
+  and the prior comparison. Retain the current state and comparison already
+  shown, and do not expand every option.
   If a visible `revealOption` is present, it is a read-only comparison expansion,
   not a choice. You may call its named tool with its exact `story_choice_id` and
   `reveal_id` arguments, then choose only from the expanded visible
@@ -140,12 +141,12 @@ WHEN TO CONTINUE OR END
   You may leave without choosing one. To consider one, first call
   `mcp__adventureforge__inspect_overworld_session_story` with its visible
   `story_choice_id`; the versioned comparison contains short option summaries
-  and inspection does not change the game. To read one option's new detail,
-  call the same inspection tool again with that exact option `id` as
-  `option_id`. It reveals only that option and an unchanged receipt, without
-  repeating the world context or comparison beyond the same bounded
-  authenticated `departure_recap`. Retain the already shown state.
-  You need not expand every option. If you choose an option, call
+  and inspection does not change the game. To compare one candidate, use its
+  visible `reviewOption`: call its named tool with its arguments and that
+  option's exact `id` at the declared argument. It returns that candidate's
+  consequence/timing and authenticated already-selected departure terms. Do not
+  separately read recap or terms to compare it. You need not expand every
+  option. If you choose an option, call
   `mcp__adventureforge__choose_overworld_session_story` with the option's
   visible `id` as `choice`. A unique departure option needs no
   `story_choice_id`; add its inspected `story_choice_id` only to disambiguate
