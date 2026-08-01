@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 716 -->
+<!-- historical_cycle_count: 717 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - duty_comparison_first
+
+- Evidence choice: all nine verified members of the latest Terra diagnostic chose LURE, 8/9 named opening-planning density, and the preceding exact canary specifically called the hidden duty alternatives S1; default-first rendering made the optional comparison easiest to miss.
+- Surface/effect: compact MCP, terminal, and UI now lead with the read-only `Compare FORTIFY, LURE, or DRIVE duties` control and a neutral cost/strategy compass before the standard packet; expanded cards retain their prior order and direct legality.
+- Measured effect: the description grows 62 UTF-8 bytes (about 16 one-time input tokens) with no new field, card, decision, or tool call; hidden duty cards still do not leak before inspection.
+- Counterfactual: duty/evidence choices, standard packet, mechanics, RNG, state, saves, hashes, outcomes, content, and full canonical projections are unchanged.
+- Pure evidence: exact-clean Terra seed 7314061 took Aid-Only/Hayden, diverted every wolf alive, continued twice, won The Gallowmere at decision 53, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, broken state, loop, stuck state, or soft-lock.
+- Economy: the first attempt used 4.104M raw / 149,190 uncached input + 9,858 output at 96.36% input-cache reuse (159,048 useful); no retry, fallback, cohort, or fanout ran.
+- Self-critique/follow-through: the public report cannot prove comparison uptake and this player still chose the standard packet and named compact-state density; one canary validates the build, not strategy diversity, while a fresh S1 submenu reset and repeated stale LURE narration supply the next gameplay candidates.
+- Guard: two independent reviews, 36 focused tests, UI visual/expanded-control smoke, crawls `20260801T101605Z` / `20260801T102707Z`, and exact-tree health (450 files/3,764 tests plus all 12 packs) are clean.
 
 ### Cycle result - raw_wrapper_input_boundary
 
@@ -163,13 +174,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: one first-attempt Codex 0.146 run used 5.107M raw / 176.2k uncached input and 11.5k output at 96.55% cache reuse (187,670 useful / 54 decisions, about 3,475 each); no retry, recovery, fallback, or fanout ran.
 - Self-critique/follow-through: one canary proves direct comparison uptake, not a population strategy shift; it still chose LURE and named policy-dense setup, so measure distribution on the next frozen ten-player pilot before another opening change.
 - Guard: independent review found no P0/P1; combined-build crawl `20260731T010243Z` has zero findings, world/Wolf sources remain byte-identical to merged main, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
-
-### Cycle result - gallowmere_local_profile_context
-
-- Evidence choice: verified Terra seeds 74202, 74210, and 74223 independently named Gallowmere's unexplained switch from persistent campaign state to its quest-local lore/tracking profile.
-- Surface: Moor's Edge now says `Your history remains your own; on this moor, the hunt is read in spoor, wind, and knife-work`, giving direct and embedded UI/full/compact starts an in-fiction scope cue before the local values appear.
-- Counterfactual: imports remain empty; parent health/background, child HP/skills/equipment, actions, checks, RNG, saves, hashes, outcomes, and return persistence are unchanged.
-- Pure evidence: exact-clean Terra seed 74230 completed The Wolf-Winter by bloodless LURE in 30 decisions, ended at the first goal with clarity/enjoyment 4/4 and replay-yes, and had no rejection, stuck state, loop, or soft-lock; it did not continue into The Gallowmere, so it is build evidence rather than direct copy uptake.
-- Economy: one first-attempt run used 2.164M raw / 105.7k uncached input and 8.0k output at 95.12% cache reuse (113,691 useful / 30 decisions, about 3,790 each); no retry, recovery, fallback, or fanout ran.
-- Self-critique/follow-through: deterministic regressions prove the line across direct/embedded UI and full/compact MCP, while the canary again named dense Albany planning and the standard packet's two-decision receipt; advance the authenticated pilot's strategy-framing signal next.
-- Guard: independent review replaced a misleading Albany-import claim with standalone-safe wording; crawls `20260730T230127Z` / `20260730T235110Z` have zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
