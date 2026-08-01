@@ -1155,6 +1155,8 @@ describe("overworld_play CLI (scripted mode)", () => {
     }
   });
 
+  // Four independent CLI subprocesses preserve the fresh-restore counterfactual.
+  // Loaded GitHub shards repeatedly exceed the global 60 s timeout; assertions stay exact.
   it("restores a pending Continue/End gate without auto-picking and keeps safe commands usable", () => {
     const session = sessionAtFixedCheckpoint();
     const pending = session.journey().pendingChoice;
@@ -1198,7 +1200,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       rmSync(savedPath, { force: true });
       rmSync(temp, { recursive: true, force: true });
     }
-  });
+  }, 120_000);
 
   it("restores an ended journey as a truthful read-only receipt instead of a live town", () => {
     const session = sessionAtFixedCheckpoint();

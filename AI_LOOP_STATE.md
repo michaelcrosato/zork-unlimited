@@ -24,7 +24,7 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 73101856 completed The Wolf-Winter through whole-herd/all-wolves-alive LURE at decision 29, continued at 29 and 40, won The Gallowmere at 52, rated clarity/enjoyment 4/4, replay-yes, and had no rejection, bug, loop, stuck state, or soft-lock.
 - Economy: the first attempt used 5.409M raw / 186,876 uncached input + 11,486 output at 96.54% input-cache reuse (198,362 useful, about 3,815/decision), with no retry, fallback, or fanout.
 - Self-critique/follow-through: Station density and quest-local stat continuity repeated; this guard makes future feedback admissible but does not claim experiential certification, while the staged Wolf handoff directly addresses those two presentation costs.
-- Guard: two independent reviews and 127 affected tests are clean; crawls `20260731T205523Z` / `20260731T233054Z` have zero findings, and serial health passes 450 files/3,762 tests plus all 12 packs.
+- Guard: two independent reviews and 127 affected tests are clean; crawls `20260731T205523Z` / `20260731T233054Z` have zero findings, serial health passes 450 files/3,762 tests plus all 12 packs, and the four-subprocess CLI regression keeps every assertion with 120 s of loaded-CI headroom after four false-red timeouts.
 
 ### Cycle result - strict_wrapper_rejection_diagnostic
 
