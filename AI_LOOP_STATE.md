@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 715 -->
+<!-- historical_cycle_count: 716 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - raw_wrapper_input_boundary
+
+- Evidence choice: exact-build diagnostics had nine varied strict rejections (Spark eight, Terra one; 176–287 bytes), while the canonical 96-byte source passed the real parser, so neither one corrupt runner serialization nor a parser relaxation was supported.
+- Surface/effect: the prompt now says its Markdown fence/language tag are display-only, bounds the raw two-line input by first/last characters, forbids fence/prose/literal wrapper-name calls, and removes the forbidden direct-quest tool identifier; strict-v2, stream supervision, flags, and fail-closed behavior are unchanged.
+- Measured effect: the instruction costs 227 UTF-8 bytes (about 57 input tokens) per run; regressions prove the displayed source still parses, fenced input fails closed, and neither pure prompt contract exposes the forbidden tool.
+- Counterfactual: game content, actions, choices, mechanics, RNG, state, saves, hashes, outcomes, model/client authority, result binding, historical evidence, and ordinary MCP responses are unchanged.
+- Pure evidence: exact-clean Terra seed 7314060 completed The Wolf-Winter through LURE and The Gallowmere in 53 decisions, continued twice, rated clarity/enjoyment 4/4 and replay-yes, and reported no rejection, bug, loop, stuck state, or soft-lock.
+- Economy: that one first-attempt canary used 4.557M raw / 150,858 uncached input + 12,343 output at 96.69% input-cache reuse (163,201 useful); no retry, fallback, pilot, or fanout ran.
+- Self-critique/follow-through: one Terra success validates this build, not a transport rate; it again chose LURE and named dense Albany setup plus hidden duty alternatives S1, so save the next cohort for a gameplay increment rather than spending it on this prompt alone.
+- Guard: independent diagnosis/final review, 149 focused tests, crawls `20260801T090021Z` / `20260801T090319Z`, and exact-tree health (450 files/3,764 tests plus all 12 packs) are clean.
 
 ### Cycle result - cumulative_station_option_review
 
@@ -162,13 +173,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: one first-attempt run used 2.164M raw / 105.7k uncached input and 8.0k output at 95.12% cache reuse (113,691 useful / 30 decisions, about 3,790 each); no retry, recovery, fallback, or fanout ran.
 - Self-critique/follow-through: deterministic regressions prove the line across direct/embedded UI and full/compact MCP, while the canary again named dense Albany planning and the standard packet's two-decision receipt; advance the authenticated pilot's strategy-framing signal next.
 - Guard: independent review replaced a misleading Albany-import claim with standalone-safe wording; crawls `20260730T230127Z` / `20260730T235110Z` have zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
-
-### Cycle result - codex_0146_exact_capture_profile
-
-- Evidence choice: Codex 0.144.1 began failing Terra/Spark admission on refreshed model metadata; stable 0.146.0 restored admission but correctly failed the old strict audit after adding private item ids and omitting its redundant mode echo.
-- Surface: live pure authority now binds Terra's exact 0.146.0 preflight and captured session versions, absent `multi_agent_mode`, exact no-delegation block, and required bounded globally unique input/output ids; the runner and later fleet authority both forward the version.
-- Counterfactual: the legacy profiles, sandbox/read-only proof, model/effort binding, tool allowlist, wrapper/result cross-binding, game code, content, actions, mechanics, saves, hashes, and outcomes are unchanged; a stripped-id legacy downgrade under 0.146 fails closed.
-- Pure evidence: exact-clean Terra seed 74012 completed The Wolf-Winter by fortified cattle-first terms and won The Gallowmere, continued twice, ended at decision 44, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, loop, or soft-lock.
-- Economy: one first-attempt run used 4.459M raw / 165.5k uncached input and 12.0k output at 96.29% cache reuse (177,573 useful / 44 decisions, about 4,036 each); no retry, recovery, fallback, or fanout ran.
-- Self-critique/follow-through: the canary repeated dense staged planning and checkpoint-timing hypotheses plus Queensbury lead discovery, but no item has a current three-report cluster; measure the frozen ten-player pilot rather than patching one run.
-- Guard: two independent integrity reviews are incorporated; the archived 65-call 0.146 rollout replays cleanly, final crawl `20260730T212017Z` has zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
