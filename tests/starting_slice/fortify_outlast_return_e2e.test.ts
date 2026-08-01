@@ -168,7 +168,11 @@ function moveToArea(api: ToolApi, sessionId: string, areaId: string): void {
   });
 }
 
-function launchAlbanyWolf(api: ToolApi, seed: number) {
+function launchAlbanyWolf(
+  api: ToolApi,
+  seed: number,
+  options: { leadSource?: string; preparation?: string; reliefAllocation?: string } = {},
+) {
   const started = api.start_overworld({ compact_context: false });
   const overworldSessionId = started.session_id;
   const civicPoi = started.observation.pois[0];
@@ -196,7 +200,7 @@ function launchAlbanyWolf(api: ToolApi, seed: number) {
   const sourced = api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
-    choice: "albany:source_rowan_civic_docket",
+    choice: options.leadSource ?? "albany:source_rowan_civic_docket",
   });
   const preparationArea = WORLD.opening_preparation?.area;
   if (!preparationArea) throw new Error("Albany requires opening preparation");
@@ -213,13 +217,13 @@ function launchAlbanyWolf(api: ToolApi, seed: number) {
     ...FULL,
     session_id: overworldSessionId,
     story_choice_id: "albany:wolf_preparation",
-    choice: "albany:prep_works_fortification",
+    choice: options.preparation ?? "albany:prep_works_fortification",
   });
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,
     story_choice_id: "albany:wolf_relief_allocation",
-    choice: RESIDENT_SHELTER,
+    choice: options.reliefAllocation ?? RESIDENT_SHELTER,
   });
 
   moveToArea(api, overworldSessionId, ALLY.area);
@@ -532,6 +536,115 @@ function playFortify(stance: Stance) {
 }
 
 describe("SS-F08 — fortify conduct survives the full Albany return", () => {
+  it.each(["cade", "authority"] as const)(
+    "keeps the %s delayed mobile-stabilized pressure-3 watch legal and free of synthetic June injury help",
+    (stance) => {
+      const contract = CASES[stance];
+      const recovery =
+        stance === "cade"
+          ? "use_cade_failed_seal_help"
+          : "use_albany_relief_seals_on_authority_emergency_bind";
+      const api = createToolApi({ root: ROOT });
+      const { launched } = launchAlbanyWolf(api, 3, {
+        leadSource: "albany:source_jamie_market_testimony",
+        preparation: "albany:prep_relief_protocol",
+        reliefAllocation: "albany:relief_mobile_reserve",
+      });
+      const sessionId = launched.rpg_session_id;
+      const step = (actionId: string) => {
+        const result = api.step_action({
+          session_id: sessionId,
+          action_id: actionId,
+          compact_observation: false,
+          compact_events: false,
+        });
+        expect(result.ok, result.rejection_reason).toBe(true);
+        return result;
+      };
+
+      for (const actionId of [
+        "use_sheltered_stockway_last_mile",
+        "talk_houndsman",
+        "ask_fortify",
+        contract.choice,
+        "ask_leave",
+        contract.take,
+        "go_north",
+        contract.outer,
+        recovery,
+        "use_mobile_relief_failure_crew",
+        "go_north",
+        contract.threshold,
+        "go_north",
+      ]) {
+        step(actionId);
+      }
+
+      const boundaryState = api.get_state({ session_id: sessionId, include_state: true }).state;
+      expect(boundaryState.flags).toMatchObject({
+        dispatch_opening_delayed: true,
+        fortify_outer_seal_failed: true,
+        fortify_mobile_crew_stabilized: true,
+        june_pike_present: true,
+      });
+      expect(boundaryState.vars).toMatchObject({ fortification_pressure: 3, hp: 30 });
+
+      const boundary = api.get_observation({
+        session_id: sessionId,
+        compact_observation: false,
+        hide_graph: true,
+      }).observation;
+      expect(boundary.pressure_tracks).toContainEqual(
+        expect.objectContaining({
+          id: "winter_siege",
+          value: 3,
+          band: expect.objectContaining({ label: "Strained" }),
+        }),
+      );
+      expect(boundary.available_actions.map((action) => action.id)).toContain(
+        "talk_june_pike_fortify",
+      );
+      expect(boundary.available_actions.map((action) => action.id)).not.toContain(
+        "use_fortify_dawn_watch",
+      );
+      expect(boundary.blocked_actions).toContainEqual(
+        expect.objectContaining({
+          id: "use_fortify_dawn_watch",
+          reason: expect.stringMatching(
+            /mobile-stabilized watch[^]*costs no HP even at pressure 3[^]*no injury benefit/i,
+          ),
+        }),
+      );
+
+      const june = step("talk_june_pike_fortify");
+      expect(june.observation.dialogue?.npc_text).toMatch(
+        stance === "cade"
+          ? /Cade's household terms[^]*outer property[^]*preserve Albany's seals[^]*mobile crew[^]*costs you no HP[^]*delay leaves pressure at 3[^]*no injury benefit[^]*Cade's ending/i
+          : /Albany's public seals[^]*cover Cade's property[^]*spend public stock[^]*refusal standing[^]*mobile crew[^]*costs you no HP[^]*delay leaves pressure at 3[^]*no injury benefit[^]*pressure nor ending/i,
+      );
+      step("ask_acknowledge");
+      const completed = step("use_fortify_dawn_watch");
+      const finalState = api.get_state({ session_id: sessionId, include_state: true }).state;
+      expect(completed.questCompletion?.endingId).toBe(contract.ending);
+      expect(finalState).toMatchObject({
+        ended: true,
+        endingId: contract.ending,
+        vars: { fortification_pressure: 6, hp: 30 },
+        flags: {
+          fortify_outer_seal_failed: true,
+          fortify_mobile_crew_stabilized: true,
+          june_fortify_cattle_line_taken: true,
+        },
+      });
+      expect(finalState.journal.join("\n")).toMatch(
+        /mobile-stabilized seals hold through dawn without HP loss[^]*delayed pressure 3[^]*June adds no injury benefit/i,
+      );
+      expect(finalState.journal.join("\n")).not.toMatch(
+        /June's lower cattle brace absorbs the Strained dawn watch|persistent -2 HP watch strain/i,
+      );
+    },
+  );
+
   it("keeps consent and authority distinct across replay, exports, and bounded services", () => {
     const cade = playFortify("cade");
     const authority = playFortify("authority");

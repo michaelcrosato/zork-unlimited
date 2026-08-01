@@ -5,13 +5,13 @@ import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
   OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH,
-  OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH,
 } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactJuneDriveOverrunPredecessor } from "./fixtures/historical_overworlds.js";
+import { exactJuneFortifyDawnPredecessor } from "./fixtures/historical_overworlds.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
-const PREDECESSOR = exactJuneDriveOverrunPredecessor(WORLD);
+const PREDECESSOR = exactJuneFortifyDawnPredecessor(WORLD);
 const JUNE = "albany:ally_june_cattle_first";
 const DEFAULT_OATH = "albany:oath_full_compact_duty";
 const RESIDENT_SHELTER = "albany:relief_resident_shelter";
@@ -82,16 +82,13 @@ function selectedJuneSession(world: OverworldManifest): OverworldSession {
   return session;
 }
 
-describe("June DRIVE Overrun snapshot integrity", () => {
+describe("June FORTIFY dawn snapshot integrity", () => {
   it("pins the exact copy-only predecessor and current manifest hashes", () => {
-    expect(hashState(PREDECESSOR)).toBe(OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH);
-    expect(OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH).toBe(
-      "7b517d0a2ccae01b9548b415465391c51176c6357facc513c506808e7a115590",
+    expect(hashState(PREDECESSOR)).toBe(OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH);
+    expect(OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH).toBe(
+      "fbb3b0e57fdbada4a690921e8d321689dfe261deafa4c52192bbde04bb5bb2f6",
     );
     expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    expect(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH).toBe(
-      "ef222da19b289d9a32377e9ed2df0c38fa7af37f252fa87a63f3a58cb69ca486",
-    );
   });
 
   it("normalizes a pending field-team offer without changing its journey boundary", () => {
@@ -128,13 +125,13 @@ describe("June DRIVE Overrun snapshot integrity", () => {
     predecessor.journalEntries[offerIndex] = structuredClone(currentOffer);
 
     expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
-      /June DRIVE Overrun predecessor ally journal entry.*exact authored copy/i,
+      /June FORTIFY dawn predecessor ally journal entry.*exact authored copy/i,
     );
   });
 
   it("rejects an adjacent unknown manifest even when the old receipts are genuine", () => {
     const unknown = pendingAllySession(PREDECESSOR).snapshot();
-    unknown.worldHash = `e${OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH.slice(1)}`;
+    unknown.worldHash = `e${OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH.slice(1)}`;
     expect(() => OverworldSession.restore(WORLD, unknown)).toThrow(/different world manifest/i);
   });
 });

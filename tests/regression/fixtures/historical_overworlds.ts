@@ -8,7 +8,10 @@ import {
 import { DROVER_ROUTE_FAIL_FORWARD_PREDECESSOR_PREVIEW } from "../../../src/world/drover_route_fail_forward_legacy.js";
 import type { OverworldManifest } from "../../../src/world/overworld.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "../../../src/world/frost_jamb_signpost_legacy.js";
-import { JUNE_DRIVE_OVERRUN_PREDECESSOR_COPY } from "../../../src/world/session_snapshot_restore.js";
+import {
+  JUNE_DRIVE_OVERRUN_PREDECESSOR_COPY,
+  JUNE_FORTIFY_DAWN_PREDECESSOR_COPY,
+} from "../../../src/world/session_snapshot_restore.js";
 import { AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE } from "../../../src/world/local_job_scene_legacy.js";
 import {
   RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW,
@@ -27,6 +30,18 @@ function comparisonCardOptionGroups(world: OverworldManifest): ComparisonCardOpt
     world.opening_preparation?.profiles ?? [],
     world.opening_ally?.options ?? [],
   ];
+}
+
+/** Reconstruct the exact manifest before June gained her FORTIFY dawn-strain consumer. */
+export function exactJuneFortifyDawnPredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const ally = predecessor.opening_ally;
+  const june = ally?.options.find((option) => option.id === "albany:ally_june_cattle_first");
+  if (!ally || !june) throw new Error("Albany must retain June's cattle-first field-team term.");
+  ally.capability = JUNE_FORTIFY_DAWN_PREDECESSOR_COPY.capability;
+  june.preview = JUNE_FORTIFY_DAWN_PREDECESSOR_COPY.preview;
+  june.tradeoff = JUNE_FORTIFY_DAWN_PREDECESSOR_COPY.tradeoff;
+  return predecessor;
 }
 
 /** Reconstruct the exact manifest before June gained her failed-DRIVE Overrun consumer. */

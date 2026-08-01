@@ -536,6 +536,16 @@ recovery; June's agreement breaks only when the wolf dies. On a living recovery,
 named legal conversation blocks the final cast until she refuses the old-grey
 line, independently takes the lower cattle rail, and lowers cattle alarm by 1.
 That changes the identical route from a scattered herd to a whole-herd return.
+Her already-paid authority has two more pressure-specific consumers. A failed
+DRIVE signal that reaches Overrun uses June's lower swing-gate instead of the
+solo rider's persistent 2 HP brace; a clean signal gains nothing. An
+unstabilized failed FORTIFY seal reaches Strained pressure 3 at the dawn watch.
+June's lower cattle brace absorbs that persistent 2 HP strain without lowering
+pressure or changing the stance ending, while solo or broken-June routes pay
+it. A clean pressure-2 line already costs no HP. A mobile-stabilized line also
+costs no HP and gains no extra June benefit, including when delayed dispatch
+leaves its displayed pressure at 3. The opening terms and field dialogue
+disclose both conditions before their resolution actions.
 The first wolf death removes the action but preserves hybrid/combat completion, then
 resolves the promise broken and June out of the party. Clean cooperation,
 negotiated refusal, explicit solo, and relationship loss produce distinct
@@ -616,8 +626,13 @@ track then advances through an outer repair and a separate threshold seal. The
 outer Repair check is one-shot: a miss raises pressure and opens only the
 stance-specific deterministic recovery, never an identical retry. June, when
 present, independently holds the lower cattle brace without erasing or changing
-the siege pressure. Both routes outlast all three living wolves and keep the
-whole herd safe.
+the siege pressure. At the dawn boundary, a failed unstabilized line at pressure
+3 costs the solo or broken-June rider 2 persistent HP; intact June absorbs that
+strain under the cattle-first authority already paid for. A clean pressure-2
+line costs neither route HP. A mobile-stabilized line also costs no HP and
+creates no synthetic June benefit, even when delayed dispatch leaves it at
+displayed pressure 3. Both counterfactuals retain the same legal dawn action,
+pressure-6 completion, stance ending, living wolves, and whole herd.
 
 Cade's route truthfully leaves outer property exposed and returns Albany's
 public seals unused; the authority route protects that property by spending the

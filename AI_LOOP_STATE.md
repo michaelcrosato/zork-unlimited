@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 718 -->
+<!-- historical_cycle_count: 719 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - june_fortify_dawn_strain
+
+- Evidence choice: June's paid cattle-first field seat named FORTIFY but only blocked the dawn boundary; an unstabilized failed first seal already reached Strained pressure 3 while the otherwise identical solo watch had no persistent consumer.
+- Surface/effect: at that exact failed, unstabilized pressure 3+, intact June's lower cattle brace prevents the rider's persistent 2 HP dawn strain; solo or broken June pays it, while pressure, stance ending, herd, and living pack stay unchanged.
+- Counterfactual: Cade/Albany × clean/strained/mobile are directly pinned; delayed mobile stabilization may still display pressure 3 but costs no HP and gains no synthetic June benefit, and all six stance/provenance dialogue variants preserve their authority/property account.
+- Integrity: the copy-only world change migrates only exact `fbb3b0e5…` predecessor receipts to `ef222da1…`; save/restore, historical composition, altered receipts, and adjacent manifests remain exact or fail closed.
+- Pure evidence: exact-clean Terra seed 84017293 chose June but LURE, diverted all three wolves with the whole herd, continued at decisions 30/40, won The Gallowmere at 54, rated clarity 4/enjoyment 5, replay-yes, and reported no rejection, loop, stuck state, or mechanical bug.
+- Economy: the first attempt used 4.950M raw / 159,823 uncached input + 11,783 output at 96.77% input-cache reuse (171,606 useful, about 3,178/decision); no retry, fallback, cohort, or fanout ran.
+- Self-critique/follow-through: this proves clean-build safety and retention, not FORTIFY uptake; Albany setup density and Queensbury scout-to-route signposting repeated as S1, so they remain accumulated presentation evidence rather than grounds to widen this consequence increment.
+- Guard: review caught and corrected the reachable mobile-stabilized pressure-3 edge plus first-match dialogue shadowing before landing; final independent review is clean, crawl `20260801T143335Z` has zero findings, and exact-tree health passes 452 files/3,784 tests plus all 12 packs.
 
 ### Cycle result - june_drive_overrun
 
@@ -165,13 +176,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 74250 completed The Wolf-Winter bloodlessly through LURE in 32 decisions after a failed cast, rated clarity/enjoyment 4/4, replay-yes, had no rejection or stuck state, and did not repeat the cross-screen recall complaint.
 - Economy: one first-attempt Codex 0.146 run used 2.418M raw / 112.4k uncached input and 7.4k output at 95.35% cache reuse (119,805 useful / 32 decisions, about 3,744 each); no retry, recovery, fallback, or fanout ran.
 - Self-critique/guard: one canary supports recall, not causality, and still names Station jargon density; independent review found no P0/P1, pre/post crawls `20260731T023424Z` / `20260731T031531Z` have zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs.
-
-### Cycle result - opening_optional_chapter_horizon
-
-- Evidence choice: the authenticated ten-Terra pilot completed The Wolf-Winter 10/10 but ended 8/10, while the fresh tutorial framed only thresholds and goals rather than the complete opening chapter and its optional consequence-reactive follow-on.
-- Surface/effect: one shared 144-character horizon now tells fresh tutorial and initial-goal surfaces that Wolf-Winter is complete, End closes there, and Continue carries consequences into optional Gallowmere; the four-step tutorial remains 718/720 characters.
-- Counterfactual: the existing completion preview and equal Continue/End choices are untouched; content, goals, decisions, actions, mechanics, RNG, saves, hashes, campaign activation, and receipts are unchanged.
-- Pure evidence: exact-clean Terra seed 74232 completed The Wolf-Winter through bloodless LURE in 30 decisions and explicitly ended rather than begin the Gallowmere chapter, with clarity/enjoyment 4/4, replay-yes, and no rejection, stuck state, loop, or soft-lock.
-- Economy: one first-attempt Codex 0.146 run used 1.898M raw / 103.3k uncached input and 6.1k output at 94.56% cache reuse (109,358 useful / 30 decisions, about 3,645 each); no retry, recovery, fallback, or fanout ran.
-- Self-critique/follow-through: the canary proves informed horizon comprehension, not continuation lift; the player knowingly chose the satisfying completed chapter, so pair the next ten-player continuation rate with replay intent and enjoyment rather than reading it as retention alone.
-- Guard: independent review found no P0/P1/P2, post-change crawl `20260731T013924Z` has zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
