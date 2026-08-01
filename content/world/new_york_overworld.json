@@ -840,15 +840,15 @@
     "solo_option_id": "albany:ally_travel_solo",
     "title": "Choose the Wolf-Winter Field Team",
     "message": "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch.",
-    "capability": "On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure, catches a failed DRIVE signal's extra Overrun beat at the lower swing gate without the rider's -2 HP brace, or takes the lower cattle brace before a fortification dawn watch. A clean DRIVE signal is already at Crisis and gains no extra reduction.",
+    "capability": "On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure; on DRIVE she catches a failed signal's Overrun beat and prevents the rider's -2 HP brace; on FORTIFY only an unstabilized failed first seal at pressure 3+ lets her prevent the persistent -2 HP dawn strain without lowering pressure or changing the ending. Clean DRIVE, pressure-2 FORTIFY, and a mobile-stabilized FORTIFY line—even at displayed pressure 3—cost no HP and gain no extra reduction.",
     "condition": "June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
     "options": [
       {
       "id": "albany:ally_june_cattle_first",
         "title": "Grant June Cattle-First Authority",
         "summary": "Ask June Pike to ride as an independent Road-Warden ally.",
-      "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. On DRIVE, her lower gate absorbs only a failed signal's extra Overrun beat and prevents the rider's -2 HP brace; a clean signal gains no extra reduction. Her help is one cattle-line intervention, never a combat bonus; any wolf death ends the agreement.",
-      "tradeoff": "June controls one cattle line; failed-signal DRIVE Overrun avoids the 2 HP brace. Any wolf death ends the agreement.",
+      "preview": "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. On DRIVE, her lower gate prevents the rider's -2 HP brace only after a failed signal reaches Overrun. On FORTIFY, her lower brace prevents the persistent -2 HP dawn strain only after an unstabilized failed first seal reaches pressure 3+; it does not lower pressure or change the ending. Clean DRIVE, pressure-2 FORTIFY, and a mobile-stabilized line—even at pressure 3—cost no HP and gain no extra reduction. Her help is one cattle-line intervention, never a combat bonus; any wolf death ends the agreement.",
+      "tradeoff": "June controls one line: DRIVE Overrun or unstabilized FORTIFY 3+ avoids 2 HP; stabilized/clean gains nothing.",
       "consequence": "June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
         "terms": { "minutes": 15 },
         "effects": [

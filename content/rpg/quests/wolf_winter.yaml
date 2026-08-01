@@ -136,7 +136,7 @@ pressure_tracks:
         description: "The pack is hammering at two fixed pressure steps. The current seal state makes the disclosed first-seat recovery, threshold seal, or dawn watch the next legal beat."
       - min: 3
         label: "Strained"
-        description: "A failed first seat left the completed line under harder pressure; dawn must be held without another repair attempt."
+        description: "An unstabilized failed first seat left the completed line under harder pressure; solo or broken-June dawn costs 2 HP unless intact June takes the cattle brace. A mobile-stabilized delayed line can still display Strained pressure 3, but costs no HP and gains no June injury benefit."
       - min: 6
         label: "Outlasted"
         description: "Dawn has broken the siege; the living pack withdraws from people and the whole herd."
@@ -2657,15 +2657,21 @@ objects:
 
   # Beat three reads the accumulated pressure instead of rolling again. A clean outer seat
   # reaches Hammering (2); an ordinary recovery reaches Strained (3); a mobile-stabilized
-  # failed seat returns to Hammering without erasing the failed state. Every branch remains
-  # fully noncombat and awards the same completion score.
+  # failed seat removes one pressure step without erasing the failed state, so a delayed
+  # dispatch can still leave it at Strained (3). Every branch remains fully noncombat and
+  # awards the same completion score.
   - id: fortify_dawn_watch
     name: "sealed-byre dawn watch"
     aliases: [dawn watch, outlast the pack, hold seals, sealed watch]
     description: >
       Hold the joined seals until grey dawn breaks the living pack's siege. This is the
-      third committed spatial beat, not another Repair check. Current winter-siege pressure
-      determines whether the watch is measured or strained; neither line can reopen combat.
+      third committed spatial beat, not another Repair check. After an unstabilized failed
+      first seat, Strained pressure 3 or higher makes a solo rider or broken June agreement
+      pay a persistent 2 HP dawn strain; intact June's already-paid cattle-first authority
+      absorbs it after you hear her decision. A mobile-stabilized line costs no HP even when
+      delayed dispatch leaves it at pressure 3, and gains no June injury benefit. Clean
+      Hammering pressure 2 likewise costs no HP. Pressure does not decrease, the same stance
+      ending remains, and neither line can reopen combat.
     visible_when:
       - { has_flag: strategy_fortify_committed }
       - { has_flag: fortify_threshold_sealed }
@@ -2679,7 +2685,7 @@ objects:
           - { has_flag: fortify_threshold_sealed }
           - { has_flag: fortify_outer_seal_failed }
           - { has_flag: fortify_mobile_crew_stabilized }
-          - { var_lte: { name: fortification_pressure, value: 2 } }
+          - { var_lte: { name: fortification_pressure, value: 3 } }
           - any_of:
               - { not_flag: june_pike_present }
               - { has_flag: june_blood_condition_broken }
@@ -2690,19 +2696,21 @@ objects:
             - { has_flag: june_pike_present }
             - { not_flag: june_blood_condition_broken }
             - { not_flag: june_fortify_cattle_line_taken }
-          reason: "June has reached the lower cattle brace under her independent authority. Hear her decision before taking the stabilized seals into the dawn watch."
+            - { has_flag: fortify_mobile_crew_stabilized }
+          reason: "Hear June's cattle-line decision first. This mobile-stabilized watch costs no HP even at pressure 3, so June adds no injury benefit."
         effects:
           - set_flag: fortify_dawn_held
           - set_flag: fortify_pack_outlasted
           - set_var: { name: fortification_pressure, value: 6 }
           - inc_var: { name: score, by: 20 }
           - set_quest_stage: { quest: the_watch, stage: byre_outlasted }
-          - add_journal: "The mobile-stabilized seals hold through dawn. All three wolves withdraw alive; the failed seat stays recorded and herd whole."
+          - add_journal: "The mobile-stabilized seals hold through dawn without HP loss, including delayed pressure 3. The failed seat stays recorded; June adds no injury benefit and the herd remains whole."
           - narrate: >
-              The recovered outer seat takes the first blows; the mobile crew's braces keep
-              its joined seam from straining again. You hold the honestly failed line until
-              grey dawn. All three wolves withdraw alive; every person and the whole herd
-              remain safe.
+              The recovered outer seat takes the first blows; the mobile crew already removed
+              one pressure step before the threshold joined it. A delayed dispatch may leave
+              the displayed line at Strained pressure 3, but its stabilized provenance costs
+              no HP and asks no injury benefit from June. You hold until grey dawn; all three
+              wolves withdraw alive, with every person and the whole herd safe.
           - goto: cattle_stand
       - verb: USE
         target: fortify_dawn_watch
@@ -2722,6 +2730,7 @@ objects:
             - { has_flag: june_pike_present }
             - { not_flag: june_blood_condition_broken }
             - { not_flag: june_fortify_cattle_line_taken }
+            - { var_lte: { name: fortification_pressure, value: 2 } }
           reason: "June has reached the lower cattle brace under her independent authority. Hear her decision before taking the joined seals into the dawn watch."
         effects:
           - set_flag: fortify_dawn_held
@@ -2741,29 +2750,61 @@ objects:
         conditions:
           - { has_flag: strategy_fortify_committed }
           - { has_flag: fortify_threshold_sealed }
+          - { has_flag: fortify_outer_seal_failed }
           - { var_gte: { name: fortification_pressure, value: 3 } }
-          - any_of:
-              - { not_flag: june_pike_present }
-              - { has_flag: june_blood_condition_broken }
-              - { has_flag: june_fortify_cattle_line_taken }
+          - { not_flag: fortify_mobile_crew_stabilized }
+          - { has_flag: june_pike_present }
+          - { not_flag: june_blood_condition_broken }
+          - { has_flag: june_fortify_cattle_line_taken }
           - { not_flag: fortify_dawn_held }
-        blocked_hint:
-          visible_when:
-            - { has_flag: june_pike_present }
-            - { not_flag: june_blood_condition_broken }
-            - { not_flag: june_fortify_cattle_line_taken }
-          reason: "June has reached the lower cattle brace under her independent authority. Hear her decision before taking the strained seals into the dawn watch."
         effects:
           - set_flag: fortify_dawn_held
           - set_flag: fortify_pack_outlasted
           - set_var: { name: fortification_pressure, value: 6 }
           - inc_var: { name: score, by: 20 }
           - set_quest_stage: { quest: the_watch, stage: byre_outlasted }
-          - add_journal: "The recovered seals strain but hold through dawn. All three wolves withdraw alive; people and the whole herd remain safe."
+          - add_journal: "June's lower cattle brace absorbs the Strained dawn watch. The player avoids the persistent -2 HP strain; the failed-seat provenance stays recorded, and both routes reach the same pressure-6 completion and chosen ending."
+          - narrate: >
+              The recovered outer seat shudders under every return, but June keeps the herd's
+              weight off your slats from the lower cattle brace. Her already-paid authority
+              absorbs the Strained watch instead of your body taking its 2 HP cost. Pressure
+              remains honest; grey dawn breaks the living pack with people and herd whole.
+          - goto: cattle_stand
+      - verb: USE
+        target: fortify_dawn_watch
+        command_verb: hold
+        conditions:
+          - { has_flag: strategy_fortify_committed }
+          - { has_flag: fortify_threshold_sealed }
+          - { has_flag: fortify_outer_seal_failed }
+          - { var_gte: { name: fortification_pressure, value: 3 } }
+          - { not_flag: fortify_mobile_crew_stabilized }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_blood_condition_broken }
+          - { not_flag: fortify_dawn_held }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_fortify_cattle_line_taken }
+            - { has_flag: fortify_outer_seal_failed }
+            - { var_gte: { name: fortification_pressure, value: 3 } }
+            - { not_flag: fortify_mobile_crew_stabilized }
+          reason: "At Strained pressure, June's intact cattle-first brace absorbs the persistent -2 HP dawn strain. Hear her decision before entering the same pressure-6 completion band and ending."
+        effects:
+          - dec_var: { name: hp, by: 2 }
+          - set_flag: fortify_dawn_held
+          - set_flag: fortify_pack_outlasted
+          - set_var: { name: fortification_pressure, value: 6 }
+          - inc_var: { name: score, by: 20 }
+          - set_quest_stage: { quest: the_watch, stage: byre_outlasted }
+          - add_journal: "The recovered seals strain but hold through dawn. You pay a persistent -2 HP watch strain; the failed-seat provenance stays recorded, and both routes reach the same pressure-6 completion and chosen ending."
           - narrate: >
               The recovered outer seat shudders under every return. You rotate brace and
-              weight through the strained watch without rerolling or opening a spear line.
-              Grey dawn reaches the slats first; all three wolves withdraw alive, with herd whole.
+              weight through the Strained watch without rerolling or opening a spear line,
+              taking its persistent 2 HP cost yourself. Grey dawn reaches the slats first;
+              all three wolves withdraw alive, with people and herd whole.
           - goto: cattle_stand
 
   # Cade owns one finite noncombat resource. Accepting his plan before entering the
@@ -4225,25 +4266,34 @@ npcs:
           npc_text: >
             FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD TERMS: property risk,
             seals saved, Cade aid. ALBANY: property safe, seals spent, no Cade aid. Works eases
-            first DC; mobile stabilizes a recovered miss. Till dawn.
+            first DC; mobile stabilizes a recovered miss. If intact June rides, her paid line
+            prevents 2 HP only after an unstabilized failed seal reaches pressure 3+; solo or
+            broken June pays it. Mobile-stabilized or pressure-2 dawn costs no HP. Till dawn.
           variants:
             - when: [{ has_flag: relief_oath_full_duty }]
               text: >
                 Commit north; no retreat/lure/drive/combat switch. HOUSEHOLD exposes property,
                 saves seals, failed-seat aid; breach full duty. ALBANY covers property, spends
                 seals, no aid; first Albany Repair 2 easier. Mobile stabilizes a recovered miss.
-                Reach dawn.
+                If intact June rides, her paid line prevents 2 HP only after an unstabilized
+                failed seal reaches pressure 3+; solo or broken June pays it. Mobile-stabilized
+                or pressure-2 dawn costs no HP. Reach dawn.
             - when: [{ has_flag: relief_oath_limited_duty }]
               text: >
                 AID-ONLY CADE-TERMS FORTIFY FIT: FORTIFY saves lives/herd/byre; no retreat/switch.
                 HOUSEHOLD fits duty: exposes property, saves public seals, gains Cade aid. ALBANY
                 exceeds duty: saves property, spends seals, no Cade aid. Works/mobile support
-                first seam.
+                first seam. If intact June rides, her paid line prevents 2 HP only after an
+                unstabilized failed seal reaches pressure 3+; solo or broken June pays it.
+                Mobile-stabilized or pressure-2 dawn costs no HP.
             - when: [{ has_flag: relief_oath_unaffiliated_bond }]
               text: >
                 BOND MATCH: FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD fits
                 bond: exposes property, saves public seals, gains Cade aid. ALBANY breaks bond:
                 saves property, spends seals, no Cade aid. Works/mobile support first seam.
+                If intact June rides, her paid line prevents 2 HP only after an unstabilized
+                failed seal reaches pressure 3+; solo or broken June pays it. Mobile-stabilized
+                or pressure-2 dawn costs no HP.
           topics:
             - id: commit_cade_terms
               aliases: [accept_terms, accept_household_terms, take_shutters]
@@ -4487,7 +4537,10 @@ npcs:
     description: >
       June Pike reaches the lower cattle brace while the living pack hammers both sealed
       lines. Her cattle-first authority still governs her: she will secure that separate
-      brace, not become Cade's labor or alter the pressure already fixed at the byre.
+      brace, not become Cade's labor or alter the pressure already fixed at the byre. After
+      an unstabilized failed seal reaches pressure 3 or higher, her line prevents the rider's
+      persistent -2 HP dawn strain. A mobile-stabilized line costs no HP even at pressure 3;
+      clean pressure 2 also costs nothing, and neither gains a June injury benefit.
     room: byre_mouth
     conditions:
       - { has_flag: june_pike_present }
@@ -4505,19 +4558,64 @@ npcs:
             my own authority. I will keep the herd off your slats while you hold to dawn;
             I do not change the pressure already on them.
           variants:
-            - when: [{ has_flag: fortify_cade_terms_accepted }]
+            - when:
+                - { has_flag: fortify_cade_terms_accepted }
+                - { has_flag: fortify_mobile_crew_stabilized }
               text: >
-                Cade granted household terms; I honor that boundary. I am taking the lower
-                cattle brace under my own authority, not his shutters. Keep his joined seals
-                to dawn. I keep the herd off them without changing their pressure.
-            - when: [{ has_flag: fortify_albany_authority_invoked }]
+                Cade's household terms still expose his outer property and preserve Albany's
+                seals. The mobile crew already stabilized the recovered shutter seam, so this
+                dawn costs you no HP even if delay leaves pressure at 3. I take the cattle brace,
+                but add no injury benefit and change neither pressure nor Cade's ending.
+            - when:
+                - { has_flag: fortify_albany_authority_invoked }
+                - { has_flag: fortify_mobile_crew_stabilized }
               text: >
-                Albany's order is lawful, and Cade's refusal is his. I am taking the lower
-                cattle brace under my own authority, not joining his labor. Hold the public
-                seals to dawn; I keep the herd off them without changing their pressure.
+                Albany's public seals still cover Cade's property, spend public stock, and leave
+                his refusal standing. The mobile crew already stabilized the recovered seam,
+                so this dawn costs you no HP even if delay leaves pressure at 3. I take the
+                cattle brace, but add no injury benefit and change neither pressure nor ending.
+            - when:
+                - { has_flag: fortify_cade_terms_accepted }
+                - { not_flag: fortify_mobile_crew_stabilized }
+                - { has_flag: fortify_outer_seal_failed }
+                - { var_gte: { name: fortification_pressure, value: 3 } }
+              text: >
+                Cade's household shutters are Strained after an unstabilized failed first seat.
+                His outer property remains exposed and Albany's seals remain public. Under the
+                cattle-first authority you paid for, I keep the herd off his slats: you avoid
+                the persistent 2 HP dawn strain without lowering pressure or changing Cade's ending.
+            - when:
+                - { has_flag: fortify_albany_authority_invoked }
+                - { not_flag: fortify_mobile_crew_stabilized }
+                - { has_flag: fortify_outer_seal_failed }
+                - { var_gte: { name: fortification_pressure, value: 3 } }
+              text: >
+                Albany's public seals are Strained after an unstabilized failed first seat.
+                Cade's property stays covered, public stock pays, and his refusal stands. Under
+                the cattle-first authority you paid for, I keep the herd off those bands: you
+                avoid the persistent 2 HP dawn strain without lowering pressure or changing
+                Albany's ending.
+            - when:
+                - { has_flag: fortify_cade_terms_accepted }
+                - { not_flag: fortify_mobile_crew_stabilized }
+                - { var_lte: { name: fortification_pressure, value: 2 } }
+              text: >
+                Cade's household shutters hold at pressure 2; his outer property remains exposed
+                and Albany's seals remain public. I still take the cattle brace under my own
+                authority, but this watch already costs no HP. My line adds no injury benefit
+                and changes neither pressure nor Cade's ending.
+            - when:
+                - { has_flag: fortify_albany_authority_invoked }
+                - { not_flag: fortify_mobile_crew_stabilized }
+                - { var_lte: { name: fortification_pressure, value: 2 } }
+              text: >
+                Albany's public seals hold at pressure 2; Cade's property stays covered, public
+                stock pays, and his refusal stands. I still take the cattle brace under my own
+                authority, but this watch already costs no HP. My line adds no injury benefit
+                and changes neither pressure nor Albany's ending.
           effects:
             - set_flag: june_fortify_cattle_line_taken
-            - add_journal: "June independently takes the lower cattle brace. Her cattle-first promise holds; winter-siege pressure does not change."
+            - add_journal: "June independently takes the lower cattle brace. At unstabilized failed pressure 3+, she prevents the rider's -2 HP strain; mobile-stabilized or pressure-2 lines cost no HP and gain no injury benefit. Winter-siege pressure does not change."
           topics:
             - id: acknowledge
               aliases: [leave_june, take_cattle_line]

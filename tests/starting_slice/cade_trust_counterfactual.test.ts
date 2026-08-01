@@ -13,6 +13,8 @@ import { hashState } from "../../src/core/hash.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
 import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
+import { load, save } from "../../src/persist/save_load.js";
+import { objectDescription } from "../../src/rpg/model.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -128,7 +130,7 @@ function optionState(optionId: string, seed = 1108): GameState {
 function fresh(withJune = false): GameState {
   return withJune
     ? optionState("albany:ally_june_cattle_first")
-    : optionState("albany:ally_travel_solo", 1109);
+    : optionState("albany:ally_travel_solo");
 }
 
 function expectFortifyWithholdsCombat(state: GameState): void {
@@ -180,6 +182,9 @@ function commitFortify(stance: Stance, withJune = false): GameState {
   expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
     /household terms[^]*(?:Albany|authority)[^]*(?:dawn|outlast)/i,
   );
+  expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
+    /If intact June rides[^]*prevents 2 HP only after an unstabilized failed seal reaches pressure 3\+[^]*solo or broken June pays it[^]*Mobile-stabilized or pressure-2 dawn costs no HP/i,
+  );
 
   state = act(state, contract.choice);
   expect(state.flags[contract.flag]).toBe(true);
@@ -200,7 +205,7 @@ function commitFortify(stance: Stance, withJune = false): GameState {
   return state;
 }
 
-function finishFortify(args: { stance: Stance; roll: Roll; withJune?: boolean }): GameState {
+function reachFortifyDawn(args: { stance: Stance; roll: Roll; withJune?: boolean }): GameState {
   const contract = STANCES[args.stance];
   let state = commitFortify(args.stance, args.withJune ?? false);
   state = act(state, "go_north");
@@ -234,6 +239,12 @@ function finishFortify(args: { stance: Stance; roll: Roll; withJune?: boolean })
   expect(state.vars.fortification_pressure).toBe(args.roll === "best" ? 2 : 3);
   state = act(state, "go_north");
   expectFortifyWithholdsCombat(state);
+  return state;
+}
+
+function finishFortify(args: { stance: Stance; roll: Roll; withJune?: boolean }): GameState {
+  const contract = STANCES[args.stance];
+  let state = reachFortifyDawn(args);
 
   if (args.withJune) {
     expect(actionIds(state)).toContain("talk_june_pike_fortify");
@@ -256,7 +267,11 @@ function finishFortify(args: { stance: Stance; roll: Roll; withJune?: boolean })
       fortify_dawn_held: true,
       fortify_pack_outlasted: true,
     },
-    vars: { fortification_pressure: 6, score: 35 },
+    vars: {
+      fortification_pressure: 6,
+      hp: args.roll === "worst" && !args.withJune ? 28 : 30,
+      score: 35,
+    },
   });
   expect(state.flags.yearling_down).not.toBe(true);
   expect(state.flags.flank_wolf_down).not.toBe(true);
@@ -319,6 +334,15 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
     }
   });
 
+  it.each([false, true])(
+    "frames June's FORTIFY benefit conditionally before either a solo or June commitment (%s)",
+    (withJune) => {
+      const state = commitFortify("cade", withJune);
+      expect(state.flags.june_pike_present === true).toBe(withJune);
+      expect(state.flags.strategy_fortify_committed).toBe(true);
+    },
+  );
+
   it.each([
     ["cade", "best"],
     ["cade", "worst"],
@@ -364,14 +388,127 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
     ).toEqual(["ending_fortified_cade_terms", "ending_fortified_albany_authority"]);
   });
 
-  it("lets June take the cattle line independently while the solo route remains viable", () => {
-    const withJune = finishFortify({ stance: "authority", roll: "worst", withJune: true });
-    const solo = finishFortify({ stance: "authority", roll: "worst" });
+  it("lets June absorb the Strained dawn watch while the identical solo route pays 2 HP", () => {
+    let withJune = reachFortifyDawn({
+      stance: "authority",
+      roll: "worst",
+      withJune: true,
+    });
+    let solo = reachFortifyDawn({ stance: "authority", roll: "worst" });
+
+    expect(withJune.vars).toMatchObject({ fortification_pressure: 3, hp: 30 });
+    expect(solo.vars).toMatchObject({ fortification_pressure: 3, hp: 30 });
+    const juneObservation = buildRpgObservation(index, withJune);
+    expect(juneObservation.pressure_tracks).toContainEqual(
+      expect.objectContaining({
+        id: "winter_siege",
+        value: 3,
+        band: expect.objectContaining({ label: "Strained" }),
+      }),
+    );
+    expect(objectDescription(index.objects.get("fortify_dawn_watch")!, withJune)).toMatch(
+      /unstabilized failed first seat[^]*Strained pressure 3 or higher[^]*solo rider or broken June[^]*persistent 2 HP[^]*intact June[^]*mobile-stabilized line costs no HP[^]*pressure 3[^]*no June injury benefit[^]*pressure 2 likewise costs no HP[^]*same stance ending/i,
+    );
+    expect(actionIds(withJune)).toContain("talk_june_pike_fortify");
+    expect(actionIds(withJune)).not.toContain("use_fortify_dawn_watch");
+    expect(juneObservation.blocked_actions).toContainEqual(
+      expect.objectContaining({
+        id: "use_fortify_dawn_watch",
+        reason: expect.stringMatching(
+          /Strained pressure[^]*June's intact cattle-first brace[^]*persistent -2 HP dawn strain[^]*same pressure-6 completion band and ending/i,
+        ),
+      }),
+    );
+    expect(actionIds(solo)).toContain("use_fortify_dawn_watch");
+
+    withJune = act(withJune, "talk_june_pike_fortify");
+    expect(buildRpgObservation(index, withJune).dialogue?.npc_text).toMatch(
+      /Albany's public seals are Strained[^]*unstabilized failed first seat[^]*Cade's property stays covered[^]*public stock pays[^]*refusal stands[^]*avoid the persistent 2 HP dawn strain[^]*without lowering pressure[^]*Albany's ending/i,
+    );
+    withJune = act(withJune, "ask_acknowledge");
+    expect(actionIds(withJune)).toEqual(actionIds(solo));
+
+    withJune = act(withJune, "use_fortify_dawn_watch");
+    solo = act(solo, "use_fortify_dawn_watch");
+    expect(withJune).toMatchObject({
+      ended: true,
+      endingId: "ending_fortified_albany_authority",
+      vars: { fortification_pressure: 6, hp: 30 },
+    });
+    expect(solo).toMatchObject({
+      ended: true,
+      endingId: "ending_fortified_albany_authority",
+      vars: { fortification_pressure: 6, hp: 28 },
+    });
+    expect(withJune.journal.join("\n")).toMatch(
+      /June's lower cattle brace absorbs the Strained dawn watch[^]*avoids the persistent -2 HP strain[^]*failed-seat provenance stays recorded[^]*same pressure-6 completion and chosen ending/i,
+    );
+    expect(solo.journal.join("\n")).toMatch(
+      /pay a persistent -2 HP watch strain[^]*failed-seat provenance stays recorded[^]*same pressure-6 completion and chosen ending/i,
+    );
+  });
+
+  it.each(["cade", "authority"] as const)(
+    "preserves the %s stance's conduct copy in both June pressure variants",
+    (stance) => {
+      for (const roll of ["best", "worst"] as const) {
+        let state = reachFortifyDawn({ stance, roll, withJune: true });
+        state = act(state, "talk_june_pike_fortify");
+        const text = buildRpgObservation(index, state).dialogue?.npc_text ?? "";
+        if (stance === "cade") {
+          expect(text).toMatch(
+            /Cade's household (?:shutters|terms)[^]*(?:pressure 2|unstabilized failed first seat)[^]*outer property remains exposed[^]*Albany's seals remain public[^]*(?:no injury benefit|avoid the persistent 2 HP dawn strain)[^]*Cade's ending/i,
+          );
+        } else {
+          expect(text).toMatch(
+            /Albany's public seals[^]*(?:pressure 2|unstabilized failed first seat)[^]*Cade's property stays covered[^]*public stock pays[^]*refusal stands[^]*(?:no injury benefit|avoid the persistent 2 HP dawn strain)[^]*Albany's ending/i,
+          );
+        }
+      }
+    },
+  );
+
+  it("gives clean pressure 2 no extra benefit and preserves the same legal ending", () => {
+    const withJune = finishFortify({ stance: "authority", roll: "best", withJune: true });
+    const solo = finishFortify({ stance: "authority", roll: "best" });
     expect(withJune.flags.june_fortify_cattle_line_taken).toBe(true);
     expect(solo.flags.june_fortify_cattle_line_taken).not.toBe(true);
     expect(withJune.endingId).toBe(solo.endingId);
-    expect(withJune.vars.fortification_pressure).toBe(6);
-    expect(solo.vars.fortification_pressure).toBe(6);
+    expect(withJune.vars).toMatchObject({ fortification_pressure: 6, hp: 30 });
+    expect(solo.vars).toMatchObject({ fortification_pressure: 6, hp: 30 });
+    expect(withJune.journal.join("\n")).toMatch(
+      /pressure 3\+[^]*prevents[^]*pressure-2[^]*no injury benefit/i,
+    );
+  });
+
+  it("restores June's blocked dawn boundary and makes a broken agreement pay the solo strain", () => {
+    const june = reachFortifyDawn({ stance: "authority", roll: "worst", withJune: true });
+    const bytes = save(june, loaded.compiled.contentHash, "rpg", {
+      worldQuestId: "wolf_winter",
+    });
+    const restored = load(bytes, loaded.compiled.contentHash, "rpg").state;
+    expect(restored).toEqual(june);
+    expect(buildRpgObservation(index, restored)).toEqual(buildRpgObservation(index, june));
+
+    const broken = structuredClone(restored);
+    broken.flags.june_blood_condition_broken = true;
+    expect(actionIds(broken)).not.toContain("talk_june_pike_fortify");
+    expect(actionIds(broken)).toContain("use_fortify_dawn_watch");
+    const strained = act(broken, "use_fortify_dawn_watch");
+    expect(strained).toMatchObject({
+      ended: true,
+      endingId: "ending_fortified_albany_authority",
+      vars: { fortification_pressure: 6, hp: 28 },
+    });
+
+    let helped = act(restored, "talk_june_pike_fortify");
+    helped = act(helped, "ask_acknowledge");
+    helped = act(helped, "use_fortify_dawn_watch");
+    expect(helped).toMatchObject({
+      ended: true,
+      endingId: "ending_fortified_albany_authority",
+      vars: { fortification_pressure: 6, hp: 30 },
+    });
   });
 
   it("projects the siege consistently and preserves ordinary combat only before commitment", () => {

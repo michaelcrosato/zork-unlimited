@@ -267,10 +267,10 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       [SOLO, 0],
     ]);
     expect(ally.capability).toMatch(
-      /failed DRIVE signal[^]*Overrun[^]*without the rider's -2 HP brace[^]*clean DRIVE signal[^]*no extra reduction/i,
+      /DRIVE[^]*failed signal's Overrun[^]*prevents the rider's -2 HP brace[^]*FORTIFY only an unstabilized failed first seal at pressure 3\+[^]*persistent -2 HP dawn strain[^]*without lowering pressure or changing the ending[^]*pressure-2 FORTIFY[^]*mobile-stabilized FORTIFY line[^]*displayed pressure 3[^]*cost no HP and gain no extra reduction/i,
     );
     expect(ally.options.find((option) => option.id === ACCEPT)?.preview).toMatch(
-      /DRIVE[^]*failed signal's extra Overrun[^]*prevents the rider's -2 HP brace[^]*clean signal gains no extra reduction/i,
+      /DRIVE[^]*-2 HP brace[^]*failed signal reaches Overrun[^]*FORTIFY[^]*persistent -2 HP dawn strain only after an unstabilized failed first seal reaches pressure 3\+[^]*does not lower pressure or change the ending[^]*pressure-2 FORTIFY[^]*mobile-stabilized line[^]*pressure 3[^]*cost no HP and gain no extra reduction/i,
     );
 
     const accepted = applyOpeningAllyOption({
