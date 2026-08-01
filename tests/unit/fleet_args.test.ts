@@ -71,6 +71,9 @@ import {
   resolveCodexClientBinary,
   // @ts-expect-error — plain .mjs module without type declarations
 } from "../../blind-tester/codex-rollout.mjs";
+import { useCleanTrackedGitCheckout } from "../regression/support/clean_git_checkout.js";
+
+const cleanGit = useCleanTrackedGitCheckout();
 
 it("keeps the fleet resume contract pinned to the engine journey contract", () => {
   expect(PURE_SESSION_CONTRACT_VERSION).toBe(JOURNEY_CONTRACT_VERSION);
@@ -327,7 +330,7 @@ it("runs one fleet-wide executable preflight before directories and never retrie
   const loginPath = join(home, loginFilename);
   const loginBytes = '{"sentinel":"fleet-preflight-auth"}\n';
   const label = `codex-preflight-${process.pid}-${Date.now()}`;
-  const fleetDir = join(process.cwd(), "ai-runs", "fleet", label);
+  const fleetDir = join(cleanGit.path, "ai-runs", "fleet", label);
   const bashPath = (path: string): string =>
     path
       .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
@@ -360,7 +363,7 @@ printf 'not-codex 0.144.1\\n'
         label,
       ],
       {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env: {
           ...process.env,

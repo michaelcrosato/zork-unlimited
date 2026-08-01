@@ -262,6 +262,108 @@ case "$TIMEOUT" in
   ''|*[!0-9]*|0) echo "BLIND_TIMEOUT requires a positive whole number of seconds." >&2; exit 2 ;;
 esac
 
+# Bind private evidence to the exact launch commit and tracked checkout bytes.
+# Caller-controlled Git repository/index/object redirection is removed, and the
+# actual script checkout is explicit, so provenance can never be borrowed from
+# another clean repository. Untracked local notes remain outside this signal.
+CURRENT_BUILD_COMMIT=""
+CURRENT_TRACKED_WORKTREE_CLEAN=""
+game_git() {
+  command env \
+    -u GIT_DIR \
+    -u GIT_WORK_TREE \
+    -u GIT_INDEX_FILE \
+    -u GIT_COMMON_DIR \
+    -u GIT_OBJECT_DIRECTORY \
+    -u GIT_ALTERNATE_OBJECT_DIRECTORIES \
+    -u GIT_NAMESPACE \
+    -u GIT_SHALLOW_FILE \
+    -u GIT_REPLACE_REF_BASE \
+    git --git-dir="$GAME_DIR/.git" --work-tree="$GAME_DIR" "$@"
+}
+
+read_current_tracked_provenance() {
+  local hidden_index_flags staged_status unstaged_status
+  if ! CURRENT_BUILD_COMMIT="$(game_git rev-parse --verify 'HEAD^{commit}')"; then
+    return 1
+  fi
+  if [[ ! "$CURRENT_BUILD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+    return 1
+  fi
+
+  # `git diff` intentionally trusts assume-unchanged and skip-worktree bits.
+  # Parse NUL-delimited Git-native status records so arbitrary path bytes cannot
+  # hide either bit or become shell syntax. Lowercase means assume-unchanged;
+  # uppercase S means skip-worktree (lowercase s is already covered).
+  if ! hidden_index_flags="$(
+    game_git ls-files -v -z -- |
+      {
+        found=false
+        while IFS= read -r -d '' index_record; do
+          case "${index_record:0:1}" in
+            S|[a-z]) found=true ;;
+          esac
+        done
+        printf '%s' "$found"
+      }
+  )"; then
+    return 1
+  fi
+  if [[ "$hidden_index_flags" != "true" && "$hidden_index_flags" != "false" ]]; then
+    return 1
+  fi
+
+  if game_git diff --quiet --no-ext-diff --no-textconv --ignore-submodules=untracked --; then
+    unstaged_status=0
+  else
+    unstaged_status=$?
+  fi
+  if game_git diff --cached --quiet --no-ext-diff --no-textconv \
+    --ignore-submodules=untracked --; then
+    staged_status=0
+  else
+    staged_status=$?
+  fi
+  if [[ "$unstaged_status" -gt 1 || "$staged_status" -gt 1 ]]; then
+    return 1
+  fi
+  CURRENT_TRACKED_WORKTREE_CLEAN=true
+  if [[ "$hidden_index_flags" == "true" || "$unstaged_status" -eq 1 || \
+        "$staged_status" -eq 1 ]]; then
+    CURRENT_TRACKED_WORKTREE_CLEAN=false
+  fi
+}
+
+if ! read_current_tracked_provenance; then
+  echo "Git failed while reading tracked blind-run provenance." >&2
+  exit 4
+fi
+BUILD_COMMIT="$CURRENT_BUILD_COMMIT"
+TRACKED_WORKTREE_CLEAN="$CURRENT_TRACKED_WORKTREE_CLEAN"
+
+# Pure retention evidence must start from the exact committed build it names.
+# Structural mock/smoke runs intentionally retain their existing provenance
+# capture behavior so they can inspect in-progress changes without claiming
+# human-equivalent evidence.
+if [[ "$PLAY_MODE" == "pure" && "$TRACKED_WORKTREE_CLEAN" != "true" ]]; then
+  echo "Pure blind runs require a clean tracked worktree; no provider was launched." >&2
+  exit 4
+fi
+
+assert_launch_provenance_unchanged() {
+  if ! read_current_tracked_provenance; then
+    echo "Git failed while rechecking blind-run provenance." >&2
+    return 1
+  fi
+  if [[ "$CURRENT_BUILD_COMMIT" != "$BUILD_COMMIT" || \
+        "$CURRENT_TRACKED_WORKTREE_CLEAN" != "$TRACKED_WORKTREE_CLEAN" ]]; then
+    echo "Blind-run provenance changed after launch; refusing to publish retention evidence." >&2
+    echo "  launch:  commit=$BUILD_COMMIT tracked_clean=$TRACKED_WORKTREE_CLEAN" >&2
+    echo "  current: commit=$CURRENT_BUILD_COMMIT tracked_clean=$CURRENT_TRACKED_WORKTREE_CLEAN" >&2
+    return 1
+  fi
+}
+
 ACTIVE_CODEX_HOME=""
 ACTIVE_CODEX_HOME_ARG=""
 RAW_CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
@@ -575,60 +677,6 @@ if [[ "$OVERWORLD" != "1" ]] && ! ( cd "$GAME_DIR" && npm --silent run validate 
   exit 2
 fi
 
-# Bind private evidence to the exact launch commit and to staged/unstaged
-# tracked state. Untracked local notes are deliberately outside this signal.
-# The same probe is repeated after the provider exits and before artifacts publish so
-# a long run cannot silently outlive the code/build identity it claims.
-CURRENT_BUILD_COMMIT=""
-CURRENT_TRACKED_WORKTREE_CLEAN=""
-read_current_tracked_provenance() {
-  local unstaged_status staged_status
-  if ! CURRENT_BUILD_COMMIT="$(git -C "$GAME_DIR" rev-parse --verify 'HEAD^{commit}')"; then
-    return 1
-  fi
-  if [[ ! "$CURRENT_BUILD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-    return 1
-  fi
-  if git -C "$GAME_DIR" diff --quiet --ignore-submodules=untracked --; then
-    unstaged_status=0
-  else
-    unstaged_status=$?
-  fi
-  if git -C "$GAME_DIR" diff --cached --quiet --ignore-submodules=untracked --; then
-    staged_status=0
-  else
-    staged_status=$?
-  fi
-  if [[ "$unstaged_status" -gt 1 || "$staged_status" -gt 1 ]]; then
-    return 1
-  fi
-  CURRENT_TRACKED_WORKTREE_CLEAN=true
-  if [[ "$unstaged_status" -eq 1 || "$staged_status" -eq 1 ]]; then
-    CURRENT_TRACKED_WORKTREE_CLEAN=false
-  fi
-}
-
-if ! read_current_tracked_provenance; then
-  echo "Git failed while reading tracked blind-run provenance." >&2
-  exit 4
-fi
-BUILD_COMMIT="$CURRENT_BUILD_COMMIT"
-TRACKED_WORKTREE_CLEAN="$CURRENT_TRACKED_WORKTREE_CLEAN"
-
-assert_launch_provenance_unchanged() {
-  if ! read_current_tracked_provenance; then
-    echo "Git failed while rechecking blind-run provenance." >&2
-    return 1
-  fi
-  if [[ "$CURRENT_BUILD_COMMIT" != "$BUILD_COMMIT" || \
-        "$CURRENT_TRACKED_WORKTREE_CLEAN" != "$TRACKED_WORKTREE_CLEAN" ]]; then
-    echo "Blind-run provenance changed after launch; refusing to publish retention evidence." >&2
-    echo "  launch:  commit=$BUILD_COMMIT tracked_clean=$TRACKED_WORKTREE_CLEAN" >&2
-    echo "  current: commit=$CURRENT_BUILD_COMMIT tracked_clean=$CURRENT_TRACKED_WORKTREE_CLEAN" >&2
-    return 1
-  fi
-}
-
 case "$GAME_DIR" in
   *\'*|*\"*) echo "Refusing: game path contains a quote, which breaks the MCP launch command." >&2; exit 4 ;;
 esac
@@ -931,6 +979,12 @@ record_playthrough_terminal() {
   # in case the selected file changed after the early gate.
   if ! preflight_codex_client 1; then
     exit "$CODEX_PREFLIGHT_EXIT"
+  fi
+  # Setup may run for long enough that the committed build changes after the
+  # admission gate. Recheck after the final client probe and immediately before
+  # the strict-stream/model process so drift cannot spend gameplay tokens.
+  if ! assert_launch_provenance_unchanged; then
+    exit 4
   fi
 set +e
   printf "%s" "$PROMPT" | "$NODE_CMD" "$CODEX_STRICT_STREAM_SCRIPT" \

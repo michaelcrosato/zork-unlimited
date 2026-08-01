@@ -12,8 +12,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join, relative } from "node:path";
+import { basename, delimiter, dirname, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { useCleanTrackedGitCheckout } from "./support/clean_git_checkout.js";
 
 const CODEX_LOGIN_FILENAME = ["auth", ".json"].join("");
 const RETIRED_CLAUDE_LOGIN_FILENAME = [".credentials", ".json"].join("");
@@ -22,7 +24,110 @@ const RETIRED_HOME_COMMAND = ["prepare", "-home"].join("");
 const RETIRED_SOURCE_OPTION = ["--source", "-auth"].join("");
 const RETIRED_PERMISSION_MODE = ["bypass", "Permissions"].join("");
 
+interface PurePreflightTripwire {
+  home: string;
+  providerMarker: string;
+  selected: string;
+  versionMarker: string;
+}
+
+function bashPath(path: string): string {
+  return path
+    .replace(/^([A-Za-z]):\\/u, (_match, drive: string) => `/${drive.toLowerCase()}/`)
+    .replaceAll("\\", "/");
+}
+
+function installPurePreflightTripwire(root: string): PurePreflightTripwire {
+  const home = join(root, "codex-home");
+  const selected = join(root, "preflight-tripwire-codex");
+  const versionMarker = join(root, "selected-binary-version.txt");
+  const providerMarker = join(root, "provider-exec.txt");
+  mkdirSync(home);
+  writeFileSync(
+    selected,
+    `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  printf 'version\\n' >> "\${FAKE_VERSION_MARKER}"
+  probe=0
+  if [[ -n "\${FAKE_PROBE_COUNT:-}" ]]; then
+    if [[ -f "\${FAKE_PROBE_COUNT}" ]]; then read -r probe < "\${FAKE_PROBE_COUNT}"; fi
+    probe=$((probe + 1))
+    printf '%s' "\${probe}" > "\${FAKE_PROBE_COUNT}"
+  fi
+  if [[ -n "\${FAKE_DRIFT_TARGET:-}" && "\${probe}" == "\${FAKE_DRIFT_ON_PROBE:-0}" ]]; then
+    printf '\\ntracked setup drift\\n' >> "\${FAKE_DRIFT_TARGET}"
+  fi
+  printf 'codex-cli 0.144.1\\n'
+  exit 0
+fi
+printf 'provider-exec\\n' > "\${FAKE_PROVIDER_MARKER}"
+exit 93
+`,
+    "utf8",
+  );
+  chmodSync(selected, 0o755);
+  return { home, providerMarker, selected, versionMarker };
+}
+
+function launchPureTripwire(
+  checkout: string,
+  tripwire: PurePreflightTripwire,
+  out: string,
+  extraEnv: NodeJS.ProcessEnv = {},
+  extraArgs: string[] = [],
+) {
+  return spawnSync(
+    process.execPath,
+    ["blind-tester/blind-launch.mjs", "--out", out, ...extraArgs],
+    {
+      cwd: checkout,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        NODE_ENV: "test",
+        CODEX_HOME: tripwire.home,
+        BLIND_CODEX_BIN: bashPath(tripwire.selected),
+        BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+        FAKE_PROVIDER_MARKER: bashPath(tripwire.providerMarker),
+        FAKE_VERSION_MARKER: bashPath(tripwire.versionMarker),
+        ...extraEnv,
+      },
+      timeout: 30_000,
+    },
+  );
+}
+
+function expectNoOutputArtifacts(out: string): void {
+  const directory = dirname(out);
+  if (!existsSync(directory)) return;
+  const ownedPrefix = `${basename(out)}.`;
+  expect(readdirSync(directory).filter((name) => name.startsWith(ownedPrefix))).toEqual([]);
+}
+
+function expectRejectedBeforeSelectedBinary(
+  result: ReturnType<typeof spawnSync>,
+  tripwire: PurePreflightTripwire,
+  out: string,
+): void {
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+  expect(result.status, output).toBe(4);
+  expect(output).toContain(
+    "Pure blind runs require a clean tracked worktree; no provider was launched.",
+  );
+  expect(existsSync(tripwire.versionMarker)).toBe(false);
+  expect(existsSync(tripwire.providerMarker)).toBe(false);
+  expectNoOutputArtifacts(out);
+}
+
+function runGit(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", env });
+  expect(result.status, `${args.join(" ")}\n${result.stderr}`).toBe(0);
+  return result;
+}
+
 describe("blind runner MCP config contract", () => {
+  const cleanGit = useCleanTrackedGitCheckout();
+
   it("resolves caller-relative report prefixes before entering the isolated provider cwd", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
 
@@ -94,12 +199,12 @@ exit 0
         process.execPath,
         ["blind-tester/blind-launch.mjs", "--out", relativeOut],
         {
-          cwd: process.cwd(),
+          cwd: cleanGit.path,
           encoding: "utf8",
           env: {
             ...process.env,
             PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
-            CODEX_HOME: relative(process.cwd(), linkedHome).replaceAll("\\", "/"),
+            CODEX_HOME: relative(cleanGit.path, linkedHome).replaceAll("\\", "/"),
             BLIND_CODEX_BIN: bashPath(fakeCodex),
             BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
             FAKE_CODEX_CAPTURE: bashPath(capture),
@@ -138,7 +243,7 @@ exit 0
       expect(existsSync(fallbackCapture)).toBe(false);
       expect(readFileSync(auth, "utf8")).toBe(authBytes);
     } finally {
-      rmSync(join(process.cwd(), relativeDirectory), { recursive: true, force: true });
+      rmSync(join(cleanGit.path, relativeDirectory), { recursive: true, force: true });
       rmSync(dir, { recursive: true, force: true });
     }
   }, 30_000);
@@ -175,7 +280,7 @@ exit 93
       );
       chmodSync(selected, 0o755);
       const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env: {
           ...process.env,
@@ -225,7 +330,7 @@ exit 0
       );
       chmodSync(selected, 0o755);
       const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env: {
           ...process.env,
@@ -298,7 +403,7 @@ exit 0
           out,
         ],
         {
-          cwd: process.cwd(),
+          cwd: cleanGit.path,
           encoding: "utf8",
           env: {
             ...process.env,
@@ -367,7 +472,7 @@ printf 'codex-cli 0.144.1\\n'
       chmodSync(fallback, 0o755);
 
       const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs"], {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env: {
           ...process.env,
@@ -441,7 +546,7 @@ printf 'codex-cli 0.144.1\\n'
           process.execPath,
           ["blind-tester/blind-launch.mjs", "--out", out],
           {
-            cwd: process.cwd(),
+            cwd: cleanGit.path,
             encoding: "utf8",
             env: {
               ...process.env,
@@ -485,7 +590,7 @@ printf 'codex-cli 0.144.1\\n'
           process.execPath,
           ["blind-tester/blind-launch.mjs", ...modeArgs, "--out", join(home, "reports", "attempt")],
           {
-            cwd: process.cwd(),
+            cwd: cleanGit.path,
             encoding: "utf8",
             env: { ...process.env, CODEX_HOME: home },
             timeout: 30_000,
@@ -521,7 +626,7 @@ printf 'codex-cli 0.144.1\\n'
           process.execPath,
           ["blind-tester/blind-launch.mjs", "--out", unsafeOut],
           {
-            cwd: process.cwd(),
+            cwd: cleanGit.path,
             encoding: "utf8",
             env: { ...process.env, CODEX_HOME: home },
             timeout: 30_000,
@@ -552,7 +657,7 @@ printf 'codex-cli 0.144.1\\n'
         process.execPath,
         ["blind-tester/blind-launch.mjs", "--mock", "--out", `${home}:audit`],
         {
-          cwd: process.cwd(),
+          cwd: cleanGit.path,
           encoding: "utf8",
           env: { ...process.env, CODEX_HOME: home },
           timeout: 30_000,
@@ -605,18 +710,46 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner).toContain("RUN_PROVENANCE_ARGS_JSON");
     expect(runner).toContain("RUN_PROVENANCE_CMD_SUFFIX");
     expect(runner).toContain("cmd.exe metacharacter");
-    expect(runner).toContain('git -C "$GAME_DIR" diff --quiet --ignore-submodules=untracked --');
-    expect(runner).toContain(
-      'git -C "$GAME_DIR" diff --cached --quiet --ignore-submodules=untracked --',
-    );
+    expect(runner).toContain('git --git-dir="$GAME_DIR/.git" --work-tree="$GAME_DIR"');
+    for (const key of [
+      "GIT_DIR",
+      "GIT_WORK_TREE",
+      "GIT_INDEX_FILE",
+      "GIT_COMMON_DIR",
+      "GIT_OBJECT_DIRECTORY",
+      "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    ]) {
+      expect(runner).toContain(`-u ${key}`);
+    }
+    expect(runner).toContain("game_git ls-files -v -z --");
+    expect(runner).toContain("S|[a-z]) found=true");
+    expect(runner).toContain("game_git diff --quiet --no-ext-diff --no-textconv");
+    expect(runner).toContain("game_git diff --cached --quiet --no-ext-diff --no-textconv");
     expect(runner).not.toContain("git status --porcelain");
+
+    const initialGuard = runner.indexOf(
+      'if [[ "$PLAY_MODE" == "pure" && "$TRACKED_WORKTREE_CLEAN" != "true" ]]',
+    );
+    expect(initialGuard).toBeGreaterThan(0);
+    expect(initialGuard).toBeLessThan(runner.indexOf('ACTIVE_CODEX_HOME=""'));
+    expect(initialGuard).toBeLessThan(runner.indexOf('SELECTED_CODEX_BIN=""'));
+
+    const gameplaySpawn = runner.indexOf('printf "%s" "$PROMPT" | "$NODE_CMD"');
+    const finalClientProbe = runner.lastIndexOf("if ! preflight_codex_client 1", gameplaySpawn);
+    const preSpawnProvenance = runner.indexOf(
+      "if ! assert_launch_provenance_unchanged",
+      finalClientProbe,
+    );
+    expect(finalClientProbe).toBeGreaterThan(initialGuard);
+    expect(preSpawnProvenance).toBeGreaterThan(finalClientProbe);
+    expect(preSpawnProvenance).toBeLessThan(gameplaySpawn);
   });
 
   it("emits canonical private provenance while ignoring untracked files", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-blind-provenance-"));
     const out = join(dir, "capture");
     const untracked = join(
-      process.cwd(),
+      cleanGit.path,
       `.af-untracked-provenance-${process.pid}-${Date.now()}.tmp`,
     );
     try {
@@ -625,7 +758,7 @@ printf 'codex-cli 0.144.1\\n'
         process.execPath,
         ["blind-tester/blind-launch.mjs", "--mock", "--seed", "-17", "--out", out],
         {
-          cwd: process.cwd(),
+          cwd: cleanGit.path,
           encoding: "utf8",
           env: {
             ...process.env,
@@ -645,19 +778,19 @@ printf 'codex-cli 0.144.1\\n'
       const valueAfter = (flag: string) => args[args.indexOf(flag) + 1];
 
       const head = spawnSync("git", ["rev-parse", "--verify", "HEAD^{commit}"], {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
       });
       expect(head.status).toBe(0);
       const unstaged = spawnSync(
         "git",
         ["diff", "--quiet", "--ignore-submodules=untracked", "--"],
-        { cwd: process.cwd() },
+        { cwd: cleanGit.path },
       );
       const staged = spawnSync(
         "git",
         ["diff", "--cached", "--quiet", "--ignore-submodules=untracked", "--"],
-        { cwd: process.cwd() },
+        { cwd: cleanGit.path },
       );
       const expectedClean = unstaged.status === 0 && staged.status === 0;
 
@@ -670,13 +803,222 @@ printf 'codex-cli 0.144.1\\n'
     }
   }, 30_000);
 
+  it("rejects staged pure and fleet preflight before client execution while structural QA stays available", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-pure-staged-preflight-"));
+    const tripwire = installPurePreflightTripwire(dir);
+    const pureOut = join(dir, "pure", "attempt");
+    const fleetOut = join(dir, "fleet", "attempt");
+    const structuralOut = join(dir, "structural", "attempt");
+    const structuralMarker = join(dir, "structural-launch.txt");
+    const fixtureName = `.af-pure-clean-preflight-${process.pid}-${Date.now()}`;
+    const untracked = join(cleanGit.path, `${fixtureName}.tmp`);
+    const ignored = join(cleanGit.path, "ai-runs", `${fixtureName}.tmp`);
+    let indexRestored = false;
+    try {
+      writeFileSync(untracked, "untracked files are outside tracked provenance\n", "utf8");
+      mkdirSync(join(cleanGit.path, "ai-runs"), { recursive: true });
+      writeFileSync(ignored, "ignored files are outside tracked provenance\n", "utf8");
+      expect(
+        spawnSync("git", ["check-ignore", "-q", "--", ignored], {
+          cwd: cleanGit.path,
+        }).status,
+      ).toBe(0);
+
+      runGit(cleanGit.path, ["update-index", "--force-remove", "--", "AGENTS.md"]);
+      expectRejectedBeforeSelectedBinary(
+        launchPureTripwire(cleanGit.path, tripwire, pureOut),
+        tripwire,
+        pureOut,
+      );
+      expectRejectedBeforeSelectedBinary(
+        launchPureTripwire(cleanGit.path, tripwire, fleetOut, {}, ["--preflight-only"]),
+        tripwire,
+        fleetOut,
+      );
+
+      const structural = spawnSync(
+        process.execPath,
+        ["blind-tester/blind-launch.mjs", "--mock", "--out", structuralOut],
+        {
+          cwd: cleanGit.path,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            BLIND_MOCK_AGENT_CMD:
+              'printf structural-launch > "$STRUCTURAL_LAUNCH"; cat "$BLIND_MCP_CONFIG"; exit 93',
+            STRUCTURAL_LAUNCH: bashPath(structuralMarker),
+          },
+          timeout: 30_000,
+        },
+      );
+      const structuralOutput = `${structural.stdout ?? ""}\n${structural.stderr ?? ""}\n${structural.error?.message ?? ""}`;
+      expect(structural.status, structuralOutput).toBe(93);
+      expect(readFileSync(structuralMarker, "utf8")).toBe("structural-launch");
+      const structuralConfig = JSON.parse(readFileSync(`${structuralOut}.md`, "utf8")) as {
+        mcpServers: { adventureforge: { args: string[] } };
+      };
+      const structuralArgs = structuralConfig.mcpServers.adventureforge.args;
+      expect(structuralArgs[structuralArgs.indexOf("--tracked-worktree-clean") + 1]).toBe("false");
+
+      const smoke = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--smoke"], {
+        cwd: cleanGit.path,
+        encoding: "utf8",
+        env: { ...process.env },
+        timeout: 30_000,
+      });
+      const smokeOutput = `${smoke.stdout ?? ""}\n${smoke.stderr ?? ""}\n${smoke.error?.message ?? ""}`;
+      expect(smoke.status, smokeOutput).toBe(0);
+
+      runGit(cleanGit.path, ["read-tree", "HEAD"]);
+      indexRestored = true;
+      const allowed = launchPureTripwire(cleanGit.path, tripwire, join(dir, "allowed", "attempt"));
+      const allowedOutput = `${allowed.stdout ?? ""}\n${allowed.stderr ?? ""}\n${allowed.error?.message ?? ""}`;
+      expect(allowed.status, allowedOutput).toBe(93);
+      expect(existsSync(tripwire.versionMarker)).toBe(true);
+      expect(existsSync(tripwire.providerMarker)).toBe(true);
+    } finally {
+      if (!indexRestored) runGit(cleanGit.path, ["read-tree", "HEAD"]);
+      rmSync(untracked, { force: true });
+      rmSync(ignored, { force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects ordinary unstaged tracked bytes before selected-client execution", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-pure-unstaged-preflight-"));
+    const tripwire = installPurePreflightTripwire(dir);
+    const out = join(dir, "reports", "attempt");
+    const target = join(cleanGit.path, "AGENTS.md");
+    const original = readFileSync(target, "utf8");
+    try {
+      writeFileSync(target, `${original}\nunstaged provenance fixture\n`, "utf8");
+      expectRejectedBeforeSelectedBinary(
+        launchPureTripwire(cleanGit.path, tripwire, out),
+        tripwire,
+        out,
+      );
+    } finally {
+      writeFileSync(target, original, "utf8");
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects modified assume-unchanged tracked bytes before selected-client execution", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-pure-assume-unchanged-"));
+    const tripwire = installPurePreflightTripwire(dir);
+    const out = join(dir, "reports", "attempt");
+    const target = join(cleanGit.path, "AGENTS.md");
+    const original = readFileSync(target, "utf8");
+    try {
+      runGit(cleanGit.path, ["update-index", "--assume-unchanged", "--", "AGENTS.md"]);
+      writeFileSync(target, `${original}\nassume-unchanged provenance fixture\n`, "utf8");
+      expectRejectedBeforeSelectedBinary(
+        launchPureTripwire(cleanGit.path, tripwire, out),
+        tripwire,
+        out,
+      );
+    } finally {
+      writeFileSync(target, original, "utf8");
+      runGit(cleanGit.path, ["update-index", "--no-assume-unchanged", "--", "AGENTS.md"]);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rejects modified skip-worktree tracked bytes before selected-client execution", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-pure-skip-worktree-"));
+    const tripwire = installPurePreflightTripwire(dir);
+    const out = join(dir, "reports", "attempt");
+    const target = join(cleanGit.path, "AGENTS.md");
+    const original = readFileSync(target, "utf8");
+    try {
+      runGit(cleanGit.path, ["update-index", "--skip-worktree", "--", "AGENTS.md"]);
+      writeFileSync(target, `${original}\nskip-worktree provenance fixture\n`, "utf8");
+      expectRejectedBeforeSelectedBinary(
+        launchPureTripwire(cleanGit.path, tripwire, out),
+        tripwire,
+        out,
+      );
+    } finally {
+      writeFileSync(target, original, "utf8");
+      runGit(cleanGit.path, ["update-index", "--no-skip-worktree", "--", "AGENTS.md"]);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("ignores hostile Git repository redirection and checks the script checkout", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-pure-hostile-git-env-"));
+    const tripwire = installPurePreflightTripwire(dir);
+    const out = join(dir, "reports", "attempt");
+    const hostile = join(dir, "hostile-clean-repo");
+    const target = join(cleanGit.path, "AGENTS.md");
+    const original = readFileSync(target, "utf8");
+    try {
+      mkdirSync(hostile);
+      runGit(hostile, ["init"]);
+      writeFileSync(join(hostile, "sentinel.txt"), "clean hostile repository\n", "utf8");
+      runGit(hostile, ["add", "sentinel.txt"]);
+      runGit(hostile, [
+        "-c",
+        "user.name=AdventureForge test",
+        "-c",
+        "user.email=tests@example.invalid",
+        "commit",
+        "--no-gpg-sign",
+        "-m",
+        "clean hostile repository",
+      ]);
+      writeFileSync(target, `${original}\nhostile Git environment fixture\n`, "utf8");
+      expectRejectedBeforeSelectedBinary(
+        launchPureTripwire(cleanGit.path, tripwire, out, {
+          GIT_DIR: bashPath(join(hostile, ".git")),
+          GIT_WORK_TREE: bashPath(hostile),
+          GIT_INDEX_FILE: bashPath(join(hostile, ".git", "index")),
+          GIT_COMMON_DIR: bashPath(join(hostile, ".git")),
+          GIT_OBJECT_DIRECTORY: bashPath(join(hostile, ".git", "objects")),
+          GIT_ALTERNATE_OBJECT_DIRECTORIES: bashPath(join(hostile, ".git", "objects")),
+        }),
+        tripwire,
+        out,
+      );
+    } finally {
+      writeFileSync(target, original, "utf8");
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("rechecks provenance after setup and before the gameplay process", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-pure-setup-drift-"));
+    const tripwire = installPurePreflightTripwire(dir);
+    const out = join(dir, "reports", "attempt");
+    const target = join(cleanGit.path, "AGENTS.md");
+    const original = readFileSync(target, "utf8");
+    const probeCount = join(dir, "probe-count.txt");
+    try {
+      const result = launchPureTripwire(cleanGit.path, tripwire, out, {
+        FAKE_PROBE_COUNT: bashPath(probeCount),
+        FAKE_DRIFT_TARGET: bashPath(target),
+        FAKE_DRIFT_ON_PROBE: "2",
+      });
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(4);
+      expect(output).toContain("Blind-run provenance changed after launch");
+      expect(readFileSync(probeCount, "utf8")).toBe("2");
+      expect(readFileSync(tripwire.versionMarker, "utf8")).toBe("version\nversion\n");
+      expect(existsSync(tripwire.providerMarker)).toBe(false);
+      expectNoOutputArtifacts(out);
+    } finally {
+      writeFileSync(target, original, "utf8");
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   it("rejects non-integer and unsafe seeds before constructing MCP argv", () => {
     for (const seed of ["7&whoami", "1.5", "9007199254740992"]) {
       const result = spawnSync(
         process.execPath,
         ["blind-tester/blind-launch.mjs", "--mock", "--seed", seed],
         {
-          cwd: process.cwd(),
+          cwd: cleanGit.path,
           encoding: "utf8",
           env: { ...process.env, BLIND_MOCK_AGENT_CMD: "exit 93" },
           timeout: 30_000,
@@ -767,7 +1109,7 @@ printf 'codex-cli 0.144.1\\n'
 
   it("rejects an arbitrary agent override instead of labeling it pure", () => {
     const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs"], {
-      cwd: process.cwd(),
+      cwd: cleanGit.path,
       encoding: "utf8",
       env: { ...process.env, BLIND_AGENT_CMD: "exit 93" },
       timeout: 30_000,
@@ -904,7 +1246,7 @@ printf 'codex-cli 0.144.1\\n'
       process.execPath,
       ["blind-tester/blind-launch.mjs", "--provider", "not-a-provider"],
       {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env: { ...process.env, BLIND_PROVIDER: "claude" },
         timeout: 30_000,
@@ -920,7 +1262,7 @@ printf 'codex-cli 0.144.1\\n'
       [[], { ...process.env, BLIND_PROVIDER: "claude" }],
     ] as const) {
       const retired = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", ...args], {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env,
         timeout: 30_000,
@@ -964,7 +1306,7 @@ printf 'codex-cli 0.144.1\\n'
         "--delay-ms=0",
       ],
       {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env: baseEnv,
         timeout: 30_000,
@@ -980,7 +1322,7 @@ printf 'codex-cli 0.144.1\\n'
       process.execPath,
       ["blind-tester/blind-launch.mjs", "--seed=72525", "--bogus=value"],
       {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env: baseEnv,
         timeout: 30_000,
@@ -1020,7 +1362,7 @@ printf 'codex-cli 0.144.1\\n'
         process.execPath,
         ["blind-tester/blind-launch.mjs", ...source.args],
         {
-          cwd: process.cwd(),
+          cwd: cleanGit.path,
           encoding: "utf8",
           env: source.env,
           timeout: 30_000,
@@ -1040,7 +1382,7 @@ printf 'codex-cli 0.144.1\\n'
       process.execPath,
       ["blind-tester/blind-launch.mjs", "--persona", "breaker"],
       {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env: { ...process.env, BLIND_AGENT_CMD: "exit 93", BLIND_PERSONA: "default" },
         timeout: 30_000,
@@ -1061,7 +1403,7 @@ printf 'codex-cli 0.144.1\\n'
         process.execPath,
         ["blind-tester/blind-launch.mjs", "--mock", "--out", join(dir, "timed-out")],
         {
-          cwd: process.cwd(),
+          cwd: cleanGit.path,
           encoding: "utf8",
           env: {
             ...process.env,
@@ -1093,7 +1435,7 @@ printf 'codex-cli 0.144.1\\n'
       delete env.BLIND_AGENT_CMD;
       delete env.BLIND_MOCK_AGENT_CMD;
       const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
-        cwd: process.cwd(),
+        cwd: cleanGit.path,
         encoding: "utf8",
         env,
         timeout: 30_000,
