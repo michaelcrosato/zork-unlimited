@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 714 -->
+<!-- historical_cycle_count: 715 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - cumulative_station_option_review
+
+- Evidence choice: the prior exact Terra pilot named Albany planning or selected-term recall in 5/10 reports; an optional candidate inspection still returned that candidate alone and could force another context call before departure.
+- Surface/effect: optional preparation, relief-allocation, and ally detail now co-return the candidate's full consequence/timing plus authenticated selected departure terms and a one-time legend delta; the default short comparison is unchanged and sibling alternatives never leak.
+- Measured effect: the pure prompt is about 182 UTF-8 bytes smaller and points to visible `reviewOption` instead of a separate recap/terms pull; default comparison stays ≤1,700 bytes, cumulative legend ≤7,200, pulled details ≤2,048, with review v10 and compact v40.
+- Counterfactual: choices, order, terms, mechanics, RNG, state, saves, hashes, content, outcomes, full/UI projections, and default comparison shape are unchanged.
+- Pure evidence: exact-clean Spark seed 7314030 skipped optional Station planning, completed The Wolf-Winter through FORTIFY in 16 decisions, rated clarity/enjoyment 4/4 and replay-yes, and reported no rejection, bug, loop, stuck state, or soft-lock.
+- Frozen diagnostics: no-retry exact-build pilots verified Spark 2/10 and Terra 9/10 but had eight plus one wrapper failures; all nine Terra players chose LURE, both cohorts are invalid, and no replacement or 100-player fleet ran.
+- Economy: canary plus measured pilot members used a 41.514M raw-input / 1.600M uncached-input + 139,359 output lower bound at 96.15% input-cache reuse (1.740M useful); nine rejected attempts lack trustworthy usage and are not guessed into the total.
+- Self-critique/guard: 8/9 Terra reports still flagged dense opening planning (six as S1), the canary skipped this pull path, and public evidence cannot prove `reviewOption` uptake; independent reviews, crawl `20260801T072902Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.
 
 ### Cycle result - indivisible_blind_wrapper_prompt
 
@@ -161,13 +172,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: one first-attempt run used 4.459M raw / 165.5k uncached input and 12.0k output at 96.29% cache reuse (177,573 useful / 44 decisions, about 4,036 each); no retry, recovery, fallback, or fanout ran.
 - Self-critique/follow-through: the canary repeated dense staged planning and checkpoint-timing hypotheses plus Queensbury lead discovery, but no item has a current three-report cluster; measure the frozen ten-player pilot rather than patching one run.
 - Guard: two independent integrity reviews are incorporated; the archived 65-call 0.146 rollout replays cleanly, final crawl `20260730T212017Z` has zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
-
-### Cycle result - active_dialogue_movement_affordance
-
-- Evidence choice: exact Terra seeds 73078 and 73079 both named close/return navigation overhead; their traces used no-effect leave replies before already-legal movement in The Wolf-Winter and The Gallowmere.
-- Surface/effect: the one-time compact legend now distinguishes dialogue replies from other listed legal actions and says leaving the room ends the exchange; the terminal speaker panel points to the complete `actions` menu, while the UI already showed every legal action. This costs 133 one-time legend bytes.
-- Counterfactual: action ids, menus, dialogue nodes, content/world hashes, engine state, steps, RNG, checkpoints, saves, outcomes, full MCP, and UI are unchanged; compact version remains compatible and truncation remains explicit.
-- Pure evidence: exact-clean Terra seed 73080 skipped both redundant closures (`ask_commit_lure -> go_west`, `ask_ask_father -> go_east`), completed both quests at decision 56, continued twice, rated clarity/enjoyment 4/4, replay-yes, and raised no dialogue friction, rejection, loop, or soft-lock.
-- Economy: one first-attempt run used 5.885M raw / 196.5k uncached input and 11.4k output at 96.66% cache reuse (207,951 useful / 56 decisions, about 3,713 each); no retry, recovery, Spark admission, or fallback ran.
-- Self-critique/follow-through: one canary supports the mechanism but does not close causality; it still named staged setup density plus S1 packet-scope/checkpoint timing, so measure recurrence in the predeclared ten-player pilot rather than patching one report.
-- Guard: two independent audits and final review are clean; crawls `20260730T190959Z` / `20260730T193323Z` have zero findings, and exact-tree health passes 449 files/3,730 tests plus all 12 packs before this state-only amend.
