@@ -401,6 +401,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         standardPacketChoice.progressiveDisclosure.initialOptionIds.length,
       );
       const standardPacketOption = standardPacketChoice.options[0]!;
+      const dutySurfaceOrder = Array.from(
+        rootElement.querySelectorAll(
+          ".journey-choice-progressive-disclosure, .journey-choice-actions",
+        ),
+      ) as Array<{ getAttribute: (name: string) => string | null }>;
+      expect(dutySurfaceOrder[0]?.getAttribute("class")).toContain(
+        "journey-choice-progressive-disclosure",
+      );
       expect(standardPacketButtons[0]!.textContent).toContain(
         standardPacketOption.summary!.commitment,
       );
@@ -442,9 +450,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         customize.click();
       });
       const revealedCards = Array.from(
-        rootElement.querySelectorAll(
-          ".journey-choice-progressive-disclosure .journey-choice-option-group .journey-choice-card > button",
-        ),
+        rootElement.querySelectorAll(`[id="${customSectionId}"] .journey-choice-card > button`),
       ) as Array<{ textContent: string | null; click: () => void }>;
       expect(revealedCards).toHaveLength(
         standardPacketChoice.progressiveDisclosure.reveal.optionIds.length,

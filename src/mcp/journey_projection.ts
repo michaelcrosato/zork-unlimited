@@ -260,12 +260,16 @@ export function compactJourneyStoryChoicePrompt(
       consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
     }),
   );
-  const { progressiveDisclosure: _progressiveDisclosure, ...withoutProgressiveDisclosure } = prompt;
+  const {
+    progressiveDisclosure: _progressiveDisclosure,
+    options: _canonicalOptions,
+    ...withoutProgressiveDisclosure
+  } = prompt;
   const revealOption = progressiveDisclosureRevealAffordance(prompt);
   return Object.freeze({
     ...withoutProgressiveDisclosure,
-    options: Object.freeze(options),
     ...(revealOption ? { revealOption } : {}),
+    options: Object.freeze(options),
   }) as CompactJourneyStoryChoicePrompt;
 }
 
@@ -349,6 +353,7 @@ export function compactJourneyStoryChoiceComparison(
   return Object.freeze({
     ...base,
     message: prompt.message,
+    ...(revealOption ? { revealOption } : {}),
     options: Object.freeze(options),
     reviewOption: Object.freeze({
       tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
@@ -358,7 +363,6 @@ export function compactJourneyStoryChoiceComparison(
       valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
       readOnly: true,
     }),
-    ...(revealOption ? { revealOption } : {}),
     inspectedOption: null,
   });
 }
