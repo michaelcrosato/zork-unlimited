@@ -18,18 +18,22 @@ PLAY AS A NEW PLAYER
   contains exactly one `mcp__adventureforge__...` action permitted by this
   prompt or shown by the current game response. `tool_search` is not a gameplay
   action.
-- For every Codex `functions.exec` AdventureForge gameplay wrapper, make the
-  first source line exactly `// @exec: {"yield_time_ms": 120000}`. After that
-  comment, use exactly one executable expression:
-  `text(await tools.mcp__adventureforge__<tool>({literalArgs}));`. The tool must
-  be one legal AdventureForge gameplay tool and `{literalArgs}` must be an object
-  literal containing only JSON-valued literals (prefer `{}` for
-  `start_overworld`). A bare `text`
-  forwards nothing. Never call `functions.wait`; the MCP completion and visible
-  output must remain in that single wrapper lifecycle. A truly wedged or yielded
-  wrapper remains an invalid run. The pragma key is spelled `yield_time_ms`
-  exactly (never `yield-time`). Make the next game choice
-  only after you have seen that response.
+- For every Codex `functions.exec` AdventureForge gameplay wrapper, submit this
+  exact initial two-line wrapper as one indivisible input:
+
+```text
+// @exec: {"yield_time_ms": 120000}
+text(await tools.mcp__adventureforge__start_overworld({}));
+```
+
+- For later calls, replace only the tool and arguments with current legal values.
+  Never submit either source line alone. Use an object literal containing only
+  JSON-valued literals. Add no other comment or executable statement. Never call
+  `functions.wait`; completion and visible output must stay in that wrapper
+  lifecycle. A wedge or yield invalidates the run. Spell the pragma key
+  `yield_time_ms` exactly (never `yield-time`). Make the next game choice only after
+  seeing the response.
+
 - `mcp__adventureforge__start_overworld_session_quest` is the normal player
   bridge into a quest currently shown by the overworld. Use it only when
   `context.quest_starts` presents an exact `[quest_id, approach_id|null]` tuple;

@@ -238,8 +238,10 @@ npm run fleet -- --help             # list accepted flags; unknown arguments abo
 output` lifecycle. For current live runs, every Codex `functions.exec` wrapper
   begins with the exact transport comment
   `// @exec: {"yield_time_ms": 120000}`; it changes only the code-mode yield
-  boundary and adds no executable statement. The wrapper then invokes only that
-  allowlisted gameplay tool with an object literal containing only JSON-valued
+  boundary and adds no executable statement. The exact comment and awaited
+  expression form one two-line wrapper input; a comment-only `exec` is incomplete
+  and is rejected. The wrapper invokes only that allowlisted gameplay tool with an
+  object literal containing only JSON-valued
   literals and emits the exact result
   bytes. `functions.wait` is forbidden, and a yielded or wedged wrapper remains
   invalid. Historical evidence is not retroactively required to contain the

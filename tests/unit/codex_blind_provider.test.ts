@@ -815,6 +815,17 @@ describe("Codex pure blind provider envelope", () => {
     expect(CODEX_GAMEPLAY_WRAPPER_FAILURES).toContain(rejected.failure);
     expect(rejected).not.toHaveProperty("reason");
     expect(rejected).not.toHaveProperty("input");
+
+    expect(classifyCodexGameplayWrapper(`${CODEX_EXEC_YIELD_PRAGMA}\n`, strict)).toEqual({
+      ok: false,
+      failure: "single_statement_shape",
+    });
+    const malformedCommentOnly = '//@exec:{"yield_time_ms":120000}';
+    expect(Buffer.byteLength(malformedCommentOnly, "utf8")).toBe(32);
+    expect(classifyCodexGameplayWrapper(malformedCommentOnly, strict)).toEqual({
+      ok: false,
+      failure: "strict_yield_pragma_not_exact",
+    });
   });
 
   it("differentially rejects complete malformed wrappers exactly as the terminal audit does", () => {
