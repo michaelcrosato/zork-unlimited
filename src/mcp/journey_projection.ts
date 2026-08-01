@@ -112,11 +112,42 @@ export type JourneyStoryChoiceComparison =
   | JourneyStoryChoiceDetail;
 
 export type EmbeddedJourneyField<
-  Journey extends JourneyPresentation | CompactJourneyPresentation = JourneyPresentation,
+  Journey extends JourneyPresentation | CompactJourneyPresentation | EmbeddedJourneyFocus =
+    JourneyPresentation,
 > = {
   journey: Journey;
   overworld_snapshot_hash: string;
 };
+
+/**
+ * The parent journey facts needed while a child quest owns the active gameplay
+ * surface. The full parent context remains available through the echoed
+ * overworld session handle; repeating its route, opportunity, proof, and history
+ * payload on every child turn only obscures the quest state that is actionable.
+ */
+export type EmbeddedJourneyFocus = Readonly<{
+  status: JourneyPresentation["status"];
+  goal: JourneyPresentation["goal"];
+  acceptedDecisions: number;
+  nextCheckpoint: number | null;
+  /** Null while child play is active; otherwise the complete Continue / End choice. */
+  pendingChoice: JourneyPresentation["pendingChoice"];
+  /** Present only when the complete compact parent story surface blocks child play. */
+  storyChoice?: CompactJourneyStoryChoicePrompt;
+}>;
+
+export function embeddedJourneyFocus(journey: JourneyPresentation): EmbeddedJourneyFocus {
+  return Object.freeze({
+    status: journey.status,
+    goal: journey.goal,
+    acceptedDecisions: journey.acceptedDecisions,
+    nextCheckpoint: journey.nextCheckpoint,
+    pendingChoice: journey.pendingChoice,
+    ...(journey.storyChoice
+      ? { storyChoice: compactJourneyStoryChoicePrompt(journey.storyChoice) }
+      : {}),
+  });
+}
 
 function progressiveDisclosureRevealAffordance(
   prompt: JourneyStoryChoicePrompt,

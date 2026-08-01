@@ -10,11 +10,13 @@ import {
   type JourneyStoryChoiceDetail,
   type JourneyStoryChoiceRevealAffordance,
   type JourneyStoryChoiceSummaryComparison,
+  type EmbeddedJourneyFocus,
 } from "../../src/mcp/journey_projection.js";
 import {
   INITIAL_JOURNEY_GOAL,
   INITIAL_JOURNEY_GOAL_GUIDANCE,
   JOURNEY_CONTRACT_VERSION,
+  type JourneyPresentation,
   type JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
 import {
@@ -1751,6 +1753,21 @@ describe("MCP journey surface", () => {
     });
     expect(blocked.observation.available_actions).toEqual([]);
 
+    const compactPending = a.get_observation({
+      session_id: rpgSessionId,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(compactPending.journey).toEqual({
+      status: checkpointJourney.status,
+      goal: checkpointJourney.goal,
+      acceptedDecisions: checkpointJourney.acceptedDecisions,
+      nextCheckpoint: checkpointJourney.nextCheckpoint,
+      pendingChoice: checkpointJourney.pendingChoice,
+    });
+    expect(compactPending.journey).not.toHaveProperty("decisionProof");
+    expect(compactPending.context).not.toHaveProperty("actions");
+
     const continued = a.choose_overworld_session_journey({
       ...FULL_OVERWORLD,
       compact_observation: false,
@@ -1775,6 +1792,7 @@ describe("MCP journey surface", () => {
     expect(continued.rpg_session_id).toBe(rpgSessionId);
     const resumed = continued.rpg_session;
     if (!resumed) throw new Error("expected Continue to resume the embedded quest");
+    expectTypeOf(resumed.journey).toEqualTypeOf<JourneyPresentation>();
     expect(resumed).toMatchObject({
       session_id: rpgSessionId,
       state_hash: checkpointRpgHash,
@@ -1782,7 +1800,11 @@ describe("MCP journey surface", () => {
       journey: continued.journey,
       overworld_snapshot_hash: continued.snapshot_hash,
     });
-    expect(resumed.character_continuity).toEqual(checkpoint.character_continuity);
+    expect(resumed.character_continuity).toMatchObject({
+      continuity: "same_campaign_character",
+      quest_local_profile: { hp: a.sessions.get(rpgSessionId).state.vars.hp },
+    });
+    expect(checkpoint).not.toHaveProperty("character_continuity");
 
     const resumedIds = resumed.observation.available_actions.map((action) => action.id);
     const listed = a.list_legal_actions({ session_id: rpgSessionId, compact_actions: true });
@@ -1827,6 +1849,7 @@ describe("MCP journey surface", () => {
     expect(continued.rpg_session_id).toBe(continuedRun.rpgSessionId);
     const resumed = continued.rpg_session;
     if (!resumed) throw new Error("expected compact Continue to resume the embedded quest");
+    expectTypeOf(resumed.journey).toEqualTypeOf<EmbeddedJourneyFocus>();
     expect(resumed.state_hash).toBe(continuedRun.checkpoint.state_hash);
     expect(resumed.context.actions).toEqual([
       "go_north",
@@ -1843,7 +1866,16 @@ describe("MCP journey surface", () => {
       include_actions: true,
     });
     expect(resumed.context).toEqual(compactReread.context);
-    expect(resumed.journey).toEqual(continued.journey);
+    expect(resumed.journey).toEqual(compactReread.journey);
+    expect(resumed.journey).toMatchObject({
+      status: "active",
+      goal: continued.journey.goal,
+      acceptedDecisions: continued.journey.acceptedDecisions,
+      nextCheckpoint: continued.journey.nextCheckpoint,
+    });
+    expect(resumed.journey).not.toHaveProperty("decisionProof");
+    expect(resumed.journey.pendingChoice).toBeNull();
+    expect(continued.journey).toHaveProperty("decisionProof");
     expect(resumed.overworld_snapshot_hash).toBe(continued.snapshot_hash);
     expect(resumed.character_continuity).toMatchObject({
       continuity: "same_campaign_character",
@@ -1864,6 +1896,32 @@ describe("MCP journey surface", () => {
       applied_campaign_import_effects: expect.any(Array),
     });
     expect(resumed).not.toHaveProperty("character_continuity_legend");
+
+    const compactUnchanged = continuedRun.a.get_observation({
+      session_id: continuedRun.rpgSessionId,
+      compact_observation: true,
+      if_state_hash: compactReread.state_hash,
+    });
+    expect(compactUnchanged).toMatchObject({
+      unchanged: true,
+      journey: { pendingChoice: null },
+    });
+    if (!("unchanged" in compactUnchanged)) throw new Error("expected compact unchanged read");
+    expectTypeOf(compactUnchanged.journey).toEqualTypeOf<EmbeddedJourneyFocus | undefined>();
+
+    const compactActionsUnchanged = continuedRun.a.list_legal_actions({
+      session_id: continuedRun.rpgSessionId,
+      compact_actions: true,
+      if_state_hash: compactReread.state_hash,
+    });
+    expect(compactActionsUnchanged).toMatchObject({
+      unchanged: true,
+      journey: { pendingChoice: null },
+    });
+    if (!("unchanged" in compactActionsUnchanged)) {
+      throw new Error("expected compact unchanged action read");
+    }
+    expectTypeOf(compactActionsUnchanged.journey).toEqualTypeOf<EmbeddedJourneyFocus | undefined>();
 
     const endedRun = mcpWolfWinterCheckpointInsideQuest();
     const ended = endedRun.a.choose_overworld_session_journey({

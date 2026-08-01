@@ -7,8 +7,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { RPG_STATE_HASH_MISMATCH_REASON } from "../../src/mcp/rpg_state_guards.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
 import { COMPACT_DESCRIPTION_CHAR_LIMIT } from "../../src/mcp/compact_rpg_observation.js";
+import { JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE } from "../../src/mcp/journey_projection.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import type { EmbeddedQuestCharacterContinuity } from "../../src/rpg/embedded_quest_character_continuity.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -249,8 +251,14 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       seed: 2218,
       compact_observation: true,
       compact_actions: true,
-      compact_result: false,
     });
+
+    expect(compact).toHaveProperty("context");
+    expect(compact).not.toHaveProperty("launch_handoff");
+    expect(compact.quest).toEqual(["gallowmere", "The Gallowmere", "queensbury_town__market"]);
+    if (!compact.context) throw new Error("expected generic compact parent context");
+    expect(compact.context.here[0]).toBe("queensbury_town");
+    expect(compact.journey).toHaveProperty("decisionProof");
 
     expect(full.rpg_session.character_continuity).toMatchObject({
       continuity: "same_campaign_character",
@@ -309,13 +317,54 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       session_id: compact.rpg_session_id,
       compact_observation: true,
     });
-    expect(fullOpeningRead.character_continuity).toEqual(full.rpg_session.character_continuity);
+    expect(fullOpeningRead).not.toHaveProperty("character_continuity");
     expect(fullOpeningRead.observation.description).toContain(MOOR_EDGE_PROFILE_CONTEXT);
-    expect(compactOpeningRead.character_continuity).toEqual(
-      compact.rpg_session.character_continuity,
-    );
+    expect(compactOpeningRead).not.toHaveProperty("character_continuity");
     expect(compactOpeningRead.context.text).toContain(MOOR_EDGE_PROFILE_CONTEXT);
     expect(compactOpeningRead).not.toHaveProperty("character_continuity_legend");
+
+    const fullContinuityRecovery = fullApi.get_observation({
+      session_id: full.rpg_session_id,
+      compact_observation: false,
+      include_character_continuity: true,
+      if_state_hash: full.rpg_session.state_hash,
+    });
+    expect(fullContinuityRecovery.character_continuity).toEqual(
+      full.rpg_session.character_continuity,
+    );
+    const compactContinuityRecovery = compactApi.get_observation({
+      session_id: compact.rpg_session_id,
+      compact_observation: true,
+      include_character_continuity: true,
+      if_state_hash: compact.rpg_session.state_hash,
+    });
+    expect(compactContinuityRecovery).not.toHaveProperty("unchanged");
+    expect(compactContinuityRecovery.character_continuity).toEqual(
+      compact.rpg_session.character_continuity,
+    );
+
+    const directApi = createToolApi({ root: process.cwd() });
+    const directStart = directApi.start_world_quest({
+      world_quest_id: "gallowmere",
+      seed: 2218,
+      compact_observation: true,
+    });
+    const directContinuityPull = directApi.get_observation({
+      session_id: directStart.session_id,
+      compact_observation: true,
+      include_character_continuity: true,
+      if_state_hash: directStart.state_hash,
+    });
+    expect(directContinuityPull).not.toHaveProperty("unchanged");
+    expect(directContinuityPull).not.toHaveProperty("character_continuity");
+    const directStale = directApi.step_action({
+      session_id: directStart.session_id,
+      action_id: "look_around",
+      expected_state_hash: "stale",
+      compact_observation: true,
+    });
+    expect(directStale.ok).toBe(false);
+    expect(directStale.rejection_reason).toBe(RPG_STATE_HASH_MISMATCH_REASON);
 
     const compactInitialStateHash = compactApi.sessions.get(compact.rpg_session_id).stateHash;
     const compactRejected = compactApi.step_action({
@@ -326,8 +375,22 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     });
     expect(compactRejected.ok).toBe(false);
     expect(compactRejected.state_hash).toBe(compact.rpg_session.state_hash);
-    expect(compactRejected.character_continuity).toEqual(compact.rpg_session.character_continuity);
+    expect(compactRejected).not.toHaveProperty("character_continuity");
     expect(compactRejected).not.toHaveProperty("character_continuity_legend");
+    expect(compactApi.sessions.get(compact.rpg_session_id).stateHash).toBe(compactInitialStateHash);
+
+    const staleRecovery = compactApi.step_action({
+      session_id: compact.rpg_session_id,
+      action_id: "look_around",
+      expected_state_hash: "stale",
+      compact_observation: true,
+      compact_events: true,
+    });
+    expect(staleRecovery.ok).toBe(false);
+    expect(staleRecovery.rejection_reason).toContain(
+      "get_observation include_character_continuity:true",
+    );
+    expect(staleRecovery).not.toHaveProperty("character_continuity");
     expect(compactApi.sessions.get(compact.rpg_session_id).stateHash).toBe(compactInitialStateHash);
 
     expect(
@@ -353,10 +416,8 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       compact_events: false,
     });
     expect(fullLoreStep.ok).toBe(true);
-    expect(fullLoreStep.character_continuity?.quest_local_profile.skills).toContainEqual({
-      id: "lore",
-      value: 8,
-    });
+    expect(fullLoreStep).not.toHaveProperty("character_continuity");
+    expect(fullApi.sessions.get(full.rpg_session_id).state.vars.lore).toBe(8);
 
     expect(
       compactApi.step_action({
@@ -381,13 +442,8 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       compact_events: true,
     });
     expect(compactLoreStep.ok).toBe(true);
-    expect(compactLoreStep.character_continuity?.quest_local_profile.skills).toContainEqual({
-      id: "lore",
-      value: 8,
-    });
-    expect(compactLoreStep.character_continuity).toEqual(
-      namedCompactContinuity(fullLoreStep.character_continuity),
-    );
+    expect(compactLoreStep).not.toHaveProperty("character_continuity");
+    expect(compactApi.sessions.get(compact.rpg_session_id).state.vars.lore).toBe(8);
     expect(compactLoreStep.state_hash).toBe(fullLoreStep.state_hash);
     expect(compactLoreStep).not.toHaveProperty("character_continuity_legend");
 
@@ -399,8 +455,8 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       session_id: compact.rpg_session_id,
       compact_observation: true,
     });
-    expect(fullReread.character_continuity).toEqual(fullLoreStep.character_continuity);
-    expect(compactReread.character_continuity).toEqual(compactLoreStep.character_continuity);
+    expect(fullReread).not.toHaveProperty("character_continuity");
+    expect(compactReread).not.toHaveProperty("character_continuity");
 
     const saved = fullApi.save_game({ session_id: full.rpg_session_id });
     expect(JSON.parse(saved.save)).toMatchObject({
@@ -434,6 +490,104 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     expect(reloadedSession.overworldSessionId).toBeUndefined();
     expect(Object.isFrozen(reloadedSession.embeddedCharacterContinuity)).toBe(true);
     expect(fullApi.save_game({ session_id: fullReload.session_id }).save).toBe(saved.save);
+  });
+
+  it("surfaces a reachable parent story gate while suppressing Gallowmere actions", () => {
+    const a = createToolApi({ root: process.cwd() });
+    const parent = a.restore_overworld_session({
+      snapshot: registeredQueensburyMarketSession().snapshot(),
+      compact_context: true,
+    });
+    const launched = a.start_overworld_session_quest({
+      session_id: parent.session_id,
+      quest_id: "gallowmere",
+      seed: 2218,
+      compact_observation: true,
+      include_actions: true,
+    });
+
+    for (const roadId of [
+      "road_saratoga_springs_city__queensbury_town",
+      "road_albany_city__saratoga_springs_city",
+    ]) {
+      a.travel_overworld_session({ session_id: parent.session_id, road_id: roadId });
+      const view = a.get_overworld_session({
+        session_id: parent.session_id,
+        include_observation: true,
+      }).observation;
+      if (view.pendingRoadEncounter) {
+        a.resolve_overworld_session_road_encounter({
+          session_id: parent.session_id,
+          strategy: "press_on",
+        });
+      }
+    }
+    const returned = a.get_overworld_session({
+      session_id: parent.session_id,
+      include_observation: true,
+    }).observation;
+    const stationRoute = returned.areaExits.find(
+      (route) => route.destination.id === "albany_city__transport_hub",
+    );
+    if (!stationRoute) throw new Error("expected the Albany Station route");
+    a.move_overworld_session_area({
+      session_id: parent.session_id,
+      area_route_id: stationRoute.id,
+    });
+    a.choose_overworld_session_story({
+      session_id: parent.session_id,
+      story_choice_id: "albany:wolf_preparation",
+      choice: "albany:prep_works_fortification",
+    });
+    const june = a.talk_overworld_session_contact({
+      session_id: parent.session_id,
+      character_id: "albany_city__transport_hub__june_pike",
+      compact_context: false,
+      compact_result: false,
+    });
+    const fullStory = june.journey.storyChoice;
+    if (!fullStory) throw new Error("expected June's reachable parent story gate");
+
+    const rpgHash = a.sessions.get(launched.rpg_session_id).stateHash;
+    const read = a.get_observation({
+      session_id: launched.rpg_session_id,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(read.context).not.toHaveProperty("actions");
+    expect(read.journey?.storyChoice).toMatchObject({
+      id: "albany:wolf_ally_commitment",
+      kind: "ally",
+      options: expect.arrayContaining([
+        expect.objectContaining({
+          id: "albany:ally_june_cattle_first",
+          consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+        }),
+      ]),
+    });
+    expect(JSON.stringify(read.journey?.storyChoice)).not.toContain(
+      fullStory.options[0]!.consequence,
+    );
+
+    const listed = a.list_legal_actions({
+      session_id: launched.rpg_session_id,
+      compact_actions: true,
+    });
+    expect(listed.actions).toEqual([]);
+    expect(listed.journey).toEqual(read.journey);
+
+    const rejected = a.step_action({
+      session_id: launched.rpg_session_id,
+      action_id: "look_around",
+      expected_state_hash: launched.rpg_session.state_hash,
+      compact_observation: true,
+    });
+    expect(rejected.ok).toBe(false);
+    if (!("context" in rejected)) throw new Error("expected the blocked child context");
+    expect(rejected.context).not.toHaveProperty("actions");
+    expect(rejected.journey?.storyChoice).toEqual(read.journey?.storyChoice);
+    expect(rejected.state_hash).toBe(launched.rpg_session.state_hash);
+    expect(a.sessions.get(launched.rpg_session_id).stateHash).toBe(rpgHash);
   });
 
   it("keeps quest-local combat damage out of the persistent parent record", () => {

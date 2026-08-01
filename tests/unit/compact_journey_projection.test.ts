@@ -4,7 +4,9 @@ import {
   compactJourneyPresentation,
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
+  embeddedJourneyFocus,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  type EmbeddedJourneyFocus,
   type JourneyStoryChoiceRevealAffordance,
 } from "../../src/mcp/journey_projection.js";
 import {
@@ -546,6 +548,48 @@ describe("compact journey projection", () => {
 
     const withoutStory = Object.freeze({ ...journey, storyChoice: null });
     expect(compactJourneyPresentation(withoutStory)).toBe(withoutStory);
+  });
+
+  it("keeps explicit active null and the staged story blocker in embedded focus", () => {
+    const prompt = twoOptionPrompt(
+      Object.freeze({
+        id: "test:embedded-blocker",
+        label: "Choose the parent consequence",
+        consequence: "The complete authored consequence remains actionable.",
+      }),
+    );
+    const storyChoice = structuredPrompt(prompt.options[0]!);
+    const journey = Object.freeze({
+      status: "active",
+      goal: Object.freeze({ id: "goal" }),
+      acceptedDecisions: 12,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+      storyChoice,
+    }) as unknown as JourneyPresentation;
+
+    const focus = embeddedJourneyFocus(journey);
+
+    expectTypeOf(focus).toEqualTypeOf<EmbeddedJourneyFocus>();
+    expect(focus).toMatchObject({
+      status: "active",
+      goal: journey.goal,
+      acceptedDecisions: 12,
+      nextCheckpoint: 40,
+      pendingChoice: null,
+    });
+    expect(focus.storyChoice).not.toBe(storyChoice);
+    expect(focus.storyChoice).toMatchObject({
+      id: storyChoice.id,
+      message: storyChoice.message,
+    });
+    expect(focus.storyChoice?.options).toHaveLength(storyChoice.options.length);
+    expect(focus.storyChoice?.options[0]?.consequence).toBe(
+      JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+    );
+    expect(JSON.stringify(focus.storyChoice)).not.toContain(
+      "The complete authored consequence remains actionable.",
+    );
   });
 
   it("preserves the exact Wolf-Winter continuation card in compact play", () => {

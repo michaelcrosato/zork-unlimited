@@ -556,8 +556,9 @@ export function compactOverworldJobLeadRef(value: {
 /**
  * Compact one public quest reference. Context builders opt into decision focus for
  * currently legal launches and omit the obsolete launch card after acceptance.
- * Discovery and start-action receipts use both defaults so their launch prose remains
- * self-contained; completed quest sources already omit launch at the domain boundary.
+ * Discovery uses both defaults. An accepted start can retain only its selected route:
+ * alternatives were actionable before commitment, while the receipt owns the exact
+ * route that was actually imported. Completed quest sources already omit launch.
  */
 export function compactOverworldQuestRef(
   value: {
@@ -568,13 +569,20 @@ export function compactOverworldQuestRef(
   },
   focusLaunchDecision = false,
   omitLaunch = false,
+  acceptedLaunchOnly = false,
 ): OverworldCompactQuestRef {
   const base = [value.id, compactOverworldTitle(value.title), value.area] as const;
   if (!value.launch || omitLaunch) return base;
+  const launchOptions = acceptedLaunchOnly
+    ? value.launch.options.filter((option) => option.id === value.launch?.selected?.optionId)
+    : value.launch.options;
+  if (acceptedLaunchOnly && launchOptions.length !== 1) {
+    throw new Error("Accepted compact quest launch is missing its selected route.");
+  }
   const launch: OverworldCompactQuestLaunch = [
     value.launch.id,
     compactText(value.launch.prompt, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
-    value.launch.options.map((option) => {
+    launchOptions.map((option) => {
       const projection = option.projection;
       const focusOption = focusLaunchDecision && option.tradeoffSummary !== undefined;
       return [

@@ -1011,24 +1011,60 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(JSON.stringify(compactStartedQuest).indexOf('"legend_delta"')).toBeLessThan(
       JSON.stringify(compactStartedQuest).indexOf('"quest":['),
     );
-    expect(compactStartedQuest.context.here[0]).toBe(started.observation.current.id);
+    expect(compactStartedQuest).not.toHaveProperty("context");
     expect("observation" in compactStartedQuest).toBe(false);
     expect(compactStartedQuest.quest[3]).toBeDefined();
+    expect(compactStartedQuest.quest[3]?.[2]).toHaveLength(1);
+    expect(compactStartedQuest.launch_handoff).toMatchObject({
+      transition: "Albany Station -> The Wolf-Winter",
+      route: [SHELTERED_APPROACH_ID, "Take the Sheltered Stockway"],
+      preparation: {
+        status: "imported",
+        title: "Reese's Works Fortification",
+      },
+      childState: "actionable",
+    });
+    expect(compactStartedQuest.journey).toMatchObject({
+      status: "active",
+      acceptedDecisions: expect.any(Number),
+      nextCheckpoint: expect.any(Number),
+    });
+    expect(compactStartedQuest.journey).not.toHaveProperty("decisionProof");
+    expect(compactStartedQuest.journey.pendingChoice).toBeNull();
+    const pulledParent = a.get_overworld_session_context({
+      session_id: compactSource.session_id,
+    });
+    expect(pulledParent.context.here[0]).toBe(started.observation.current.id);
     expect(
-      compactStartedQuest.context.quests?.find(([questId]) => questId === discoveredQuest.id),
+      pulledParent.context.quests?.find(([questId]) => questId === discoveredQuest.id),
     ).toEqual([discoveredQuest.id, discoveredQuest.title, discoveredQuest.area]);
-    const duplicatedParentContext = {
-      ...compactStartedQuest.context,
-      quests: compactStartedQuest.context.quests?.map((quest) =>
-        quest[0] === discoveredQuest.id ? compactStartedQuest.quest : quest,
-      ),
-    };
-    expect(
-      JSON.stringify(duplicatedParentContext).length -
-        JSON.stringify(compactStartedQuest.context).length,
-    ).toBeGreaterThan(1_500);
     expect(compactStartedQuest.rpg_session.context.actions?.[0]).toEqual(expect.any(String));
     expect("observation" in compactStartedQuest.rpg_session).toBe(false);
+    const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
+    expect(compactLaunchBytes).toBe(6_620);
+    expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
+    const fieldHandoff = a.step_action({
+      session_id: compactStartedQuest.rpg_session_id,
+      action_id: "use_sheltered_stockway_last_mile",
+      expected_state_hash: compactStartedQuest.rpg_session.state_hash,
+      compact_observation: true,
+      include_actions: true,
+    });
+    expect(fieldHandoff.ok).toBe(true);
+    if (!fieldHandoff.ok) throw new Error("Expected the selected last-mile route to succeed.");
+    expect(fieldHandoff.context.text).toMatch(/Cade[^]*HUNT[^]*LURE[^]*DRIVE[^]*FORTIFY/i);
+    expect(fieldHandoff).not.toHaveProperty("character_continuity");
+    expect(fieldHandoff.journey).toMatchObject({
+      status: "active",
+      acceptedDecisions: compactStartedQuest.journey.acceptedDecisions + 1,
+      nextCheckpoint: compactStartedQuest.journey.nextCheckpoint,
+    });
+    if (!fieldHandoff.journey) throw new Error("Expected the embedded journey focus.");
+    expect(fieldHandoff.journey).not.toHaveProperty("decisionProof");
+    expect(fieldHandoff.journey.pendingChoice).toBeNull();
+    const compactFieldTurnBytes = Buffer.byteLength(JSON.stringify(fieldHandoff));
+    expect(compactFieldTurnBytes).toBe(2_194);
+    expect(compactFieldTurnBytes).toBeLessThanOrEqual(3_500);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,
     );

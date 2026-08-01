@@ -48,6 +48,7 @@ import {
   type OverworldMcpExportResponse,
   type OverworldMcpJourneyField,
   type OverworldMcpJourneyForArgs,
+  type OverworldMcpLegendPatch,
   type OverworldMcpReadArgs,
   type OverworldMcpReadResponse,
   type OverworldMcpRejectedSessionPayload,
@@ -81,14 +82,20 @@ import type { SessionStore } from "./sessions.js";
 import {
   compactJourneyStoryChoiceComparison,
   compactJourneyPresentation,
+  embeddedJourneyFocus,
   journeyStoryChoiceOptionById,
   journeyBlocksGameplay,
   suppressRpgGameplayActions,
   type EmbeddedJourneyField,
+  type EmbeddedJourneyFocus,
   type JourneyStoryChoiceComparison,
   type JourneyStoryChoiceDetail,
   type JourneyStoryChoiceSummaryComparison,
 } from "./journey_projection.js";
+import {
+  embeddedQuestLaunchHandoff,
+  type EmbeddedQuestLaunchHandoff,
+} from "./embedded_quest_launch_handoff.js";
 import type {
   JourneyDecisionClassification,
   JourneyStoryChoicePrompt,
@@ -215,18 +222,31 @@ type OverworldDesignNotes = {
 type OverworldListResponse<Args extends OverworldListOptions> = OverworldListSummary &
   (Args extends { include_design_notes: true } ? OverworldDesignNotes : Record<string, never>);
 
+type OverworldQuestStartViewField<Args extends OverworldResponseOptions> = Args extends {
+  compact_context: true;
+}
+  ? Partial<OverworldViewField<Args>> & { legend_delta?: OverworldMcpLegendPatch }
+  : OverworldViewField<Args>;
+
+type OverworldQuestStartJourney<Args extends OverworldResponseOptions> = Args extends {
+  compact_context: true;
+}
+  ? EmbeddedJourneyFocus | OverworldMcpJourneyForArgs<Args>
+  : OverworldMcpJourneyForArgs<Args>;
+
 type OverworldQuestStartResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
   | ({
       ok: true;
       session_id: string;
       snapshot_hash: string;
       overworld_snapshot_hash: string;
+      journey: OverworldQuestStartJourney<Args>;
       quest: OverworldResultValue<Args, OverworldQuestView, OverworldCompactQuestRef>;
+      launch_handoff?: EmbeddedQuestLaunchHandoff;
       rpg_session_id: string;
       rpg_session: RpgSessionPayload<Args>;
       journeyDecision: JourneyDecisionClassification;
-    } & OverworldMcpJourneyField<Args> &
-      OverworldViewField<Args>)
+    } & OverworldQuestStartViewField<Args>)
   | OverworldGuardedRejection<Args>;
 
 type OverworldSessionResponse<
@@ -236,9 +256,12 @@ type OverworldSessionResponse<
   CompactValue = Value,
 > = OverworldMcpSessionResponse<Key, Value, Args, CompactValue>;
 
+type ResumedEmbeddedJourneyForArgs<Args extends RpgViewOptions & OverworldResponseOptions> =
+  Args extends { compact_context: true } ? EmbeddedJourneyFocus : OverworldMcpJourneyForArgs<Args>;
+
 type ResumedEmbeddedRpgField<Args extends RpgViewOptions & OverworldResponseOptions> = {
   rpg_session_id: string;
-  rpg_session: RpgSessionPayload<Args> & EmbeddedJourneyField<OverworldMcpJourneyForArgs<Args>>;
+  rpg_session: RpgSessionPayload<Args> & EmbeddedJourneyField<ResumedEmbeddedJourneyForArgs<Args>>;
 };
 
 type OverworldJourneyChoiceResponse<Args extends OverworldResponseOptions & RpgViewOptions> =
@@ -712,6 +735,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       }
       const { session } = guarded;
       session.assertJourneyAcceptingDecision();
+      const departureRecap = session.view().departureRecap;
       const started = startOverworldQuestThroughRpg({
         session,
         overworldSessionId: args.session_id,
@@ -720,13 +744,21 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         startOptions: responseOptions,
         startEmbeddedWorldQuest: deps.startEmbeddedWorldQuest,
       });
+      const launchHandoff = embeddedQuestLaunchHandoff({
+        quest: started.quest,
+        departureRecap,
+      });
       const questResult =
         responseOptions.compact_result === true
-          ? compactOverworldQuestRef(started.quest)
+          ? compactOverworldQuestRef(started.quest, false, false, launchHandoff !== null)
           : started.quest;
       const journey = session.journey();
       const responseJourney =
-        responseOptions.compact_context === true ? compactJourneyPresentation(journey) : journey;
+        responseOptions.compact_context === true
+          ? launchHandoff
+            ? embeddedJourneyFocus(journey)
+            : compactJourneyPresentation(journey)
+          : journey;
       if (journey.pendingChoice !== null) {
         sessions.markEmbeddedJourneyPause(started.rpgSession.session_id);
       }
@@ -734,13 +766,17 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         ? suppressRpgGameplayActions(started.rpgSession)
         : started.rpgSession;
       const overworldSnapshotHash = overworldSessions.snapshotHash(session);
-      const view = overworldSessions.resultViewFields(
-        responseOptions,
-        session,
+      const resultLegendKeys =
         responseOptions.compact_result === true
           ? OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.quest_start
-          : [],
-      );
+          : [];
+      const view =
+        responseOptions.compact_context === true && launchHandoff !== null
+          ? {
+              beforeResult: overworldSessions.resultLegendField(session, resultLegendKeys),
+              afterResult: {},
+            }
+          : overworldSessions.resultViewFields(responseOptions, session, resultLegendKeys);
       return {
         ok: true,
         session_id: args.session_id,
@@ -750,6 +786,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         journeyDecision: started.quest.journeyDecision,
         ...view.beforeResult,
         quest: questResult,
+        ...(launchHandoff ? { launch_handoff: launchHandoff } : {}),
         rpg_session_id: rpgSession.session_id,
         rpg_session: rpgSession,
         ...view.afterResult,
@@ -790,8 +827,13 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         { sessions, rpgRuntime: deps.rpgRuntime },
         { ...responseOptions, session_id: pausedRpgSession.id },
       );
-      const embeddedJourney: EmbeddedJourneyField<typeof response.journey> = {
-        journey: response.journey,
+      const liveJourney = overworldSessions.get(args.session_id).journey();
+      const embeddedJourney: EmbeddedJourneyField<
+        ResumedEmbeddedJourneyForArgs<typeof responseOptions>
+      > = {
+        journey: (responseOptions.compact_context === true
+          ? embeddedJourneyFocus(liveJourney)
+          : liveJourney) as ResumedEmbeddedJourneyForArgs<typeof responseOptions>,
         overworld_snapshot_hash: response.snapshot_hash,
       };
       sessions.clearEmbeddedJourneyPause(args.session_id);

@@ -1600,12 +1600,13 @@ tool(
 
 tool(
   "get_observation",
-  "Re-read the current RPG context without acting; embedded quests also return the parent journey.",
+  "Read RPG context; embedded quests include parent journey.",
   RPG_SESSION_INPUT({
     ...PLAYER_HIDE_GRAPH,
     ...IF_STATE_HASH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
+    include_character_continuity: B("Recover embedded continuity."),
   }),
   (a) => api.get_observation(defaultCompactRpg(a)),
 );
