@@ -1041,7 +1041,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(compactStartedQuest.rpg_session.context.actions?.[0]).toEqual(expect.any(String));
     expect("observation" in compactStartedQuest.rpg_session).toBe(false);
     const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
-    expect(compactLaunchBytes).toBe(6_620);
+    expect(compactLaunchBytes).toBe(6_724);
     expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
     const fieldHandoff = a.step_action({
       session_id: compactStartedQuest.rpg_session_id,

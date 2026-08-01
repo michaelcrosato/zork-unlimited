@@ -8,7 +8,10 @@ import { RpgMcpSessionRuntime } from "../../src/mcp/rpg_session_runtime.js";
 import { SessionStore } from "../../src/mcp/sessions.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import type { CampaignCharacterImports } from "../../src/rpg/campaign_character_import.js";
-import type { EmbeddedQuestCharacterContinuity } from "../../src/rpg/embedded_quest_character_continuity.js";
+import {
+  EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
+  type EmbeddedQuestCharacterContinuity,
+} from "../../src/rpg/embedded_quest_character_continuity.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
@@ -541,6 +544,7 @@ describe("trusted campaign-character quest launch bridge", () => {
         inventory: fullSession.state.inventory,
       },
       applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
+      scope_note: EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
     });
     expect(compact.launched.rpg_session).not.toHaveProperty("character_continuity_legend");
     const fullContinuity = fullSession.embeddedCharacterContinuity;
@@ -610,6 +614,7 @@ describe("trusted campaign-character quest launch bridge", () => {
         inventory: fullSession.state.inventory,
       },
       applied_campaign_import_effects: fullSession.state.campaignImportReceipt?.effects,
+      scope_note: EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
     });
     expect(embeddedCompactReload).not.toHaveProperty("character_continuity_legend");
     const reloadedSession = fullApi.sessions.get(embeddedFullReload.session_id);

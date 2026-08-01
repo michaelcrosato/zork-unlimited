@@ -14,6 +14,9 @@ import type { RpgPack } from "./schema.js";
 export const EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
   "Scenario-local numbers and issued kit govern this quest. Your persistent record remains intact; only authored campaign import and export effects cross the quest boundary.";
 
+export const EMBEDDED_QUEST_COMPACT_SCOPE_NOTE =
+  "Quest stats and kit are local; quest HP does not reduce or replace your campaign health.";
+
 export type EmbeddedQuestLocalSkill = {
   id: string;
   value: number;
@@ -93,6 +96,7 @@ export type CompactEmbeddedQuestCharacterContinuity = {
     inventory: string[];
   };
   applied_campaign_import_effects: CampaignImportReceiptEffect[];
+  scope_note: typeof EMBEDDED_QUEST_COMPACT_SCOPE_NOTE;
 };
 
 const CORE_RPG_VARS = new Set(["hp", "attack", "defense", "score", "max_score"]);
@@ -213,5 +217,6 @@ export function compactEmbeddedQuestCharacterContinuity(
       inventory: [...continuity.quest_local_profile.inventory],
     },
     applied_campaign_import_effects: continuity.applied_campaign_import_effects.map(cloneEffect),
+    scope_note: EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
   };
 }

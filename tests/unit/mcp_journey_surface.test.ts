@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
+import { EMBEDDED_QUEST_COMPACT_SCOPE_NOTE } from "../../src/rpg/embedded_quest_character_continuity.js";
 import {
   compactJourneyStoryChoiceComparison,
   compactJourneyPresentation,
@@ -1867,6 +1868,7 @@ describe("MCP journey surface", () => {
     });
     expect(resumed.context).toEqual(compactReread.context);
     expect(resumed.journey).toEqual(compactReread.journey);
+    expect(compactReread).not.toHaveProperty("character_continuity");
     expect(resumed.journey).toMatchObject({
       status: "active",
       goal: continued.journey.goal,
@@ -1894,8 +1896,10 @@ describe("MCP journey surface", () => {
         inventory: expect.any(Array),
       },
       applied_campaign_import_effects: expect.any(Array),
+      scope_note: EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
     });
     expect(resumed).not.toHaveProperty("character_continuity_legend");
+    expect(continuedRun.checkpoint).not.toHaveProperty("character_continuity");
 
     const compactUnchanged = continuedRun.a.get_observation({
       session_id: continuedRun.rpgSessionId,

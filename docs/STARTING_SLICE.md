@@ -394,12 +394,13 @@ Continue/End prompt or compact staged story-choice surface only when that blocke
 is actually due. Character continuity appears at launch and at genuine restore
 or resume boundaries; an explicit `get_observation` recovery read can request
 it, while ordinary turns omit the repeated continuity recap and quest-profile
-projection.
+projection. Its compact scope note states that quest stats and kit are local
+and that quest HP does not reduce or replace campaign health.
 Cade's Byre-Yard arrival copy now points directly to his optional HUNT, LURE,
 DRIVE, and FORTIFY comparison before commitment, without adding a seventh
 Albany decision or forcing a strategy choice. On the same restored compact
-launch fixture, the launch response falls from 11,044 to 6,620 UTF-8 JSON bytes
-(40.1%) and the first field turn from 3,909 to 2,194 bytes (43.9%); actions,
+launch fixture, the launch response falls from 11,044 to 6,724 UTF-8 JSON bytes
+(39.1%) and the first field turn from 3,909 to 2,194 bytes (43.9%); actions,
 state hashes, pressure, vitals, inventory, consequences, RNG, decisions,
 foldback, and truthful parent return remain unchanged.
 

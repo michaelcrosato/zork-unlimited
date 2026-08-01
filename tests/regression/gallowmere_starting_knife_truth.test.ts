@@ -12,7 +12,10 @@ import { compactText } from "../../src/mcp/compact_truncation.js";
 import { COMPACT_DESCRIPTION_CHAR_LIMIT } from "../../src/mcp/compact_rpg_observation.js";
 import { JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE } from "../../src/mcp/journey_projection.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
-import type { EmbeddedQuestCharacterContinuity } from "../../src/rpg/embedded_quest_character_continuity.js";
+import {
+  EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
+  type EmbeddedQuestCharacterContinuity,
+} from "../../src/rpg/embedded_quest_character_continuity.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
@@ -56,6 +59,7 @@ function namedCompactContinuity(continuity: EmbeddedQuestCharacterContinuity | u
     applied_campaign_import_effects: continuity.applied_campaign_import_effects.map((effect) => ({
       ...effect,
     })),
+    scope_note: EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
   };
 }
 
@@ -297,6 +301,7 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
         inventory: ["hunting_knife"],
       },
       applied_campaign_import_effects: [],
+      scope_note: EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
     });
     expect(compact.rpg_session.character_continuity).toEqual(
       namedCompactContinuity(full.rpg_session.character_continuity),
