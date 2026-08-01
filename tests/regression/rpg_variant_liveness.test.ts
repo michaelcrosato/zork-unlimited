@@ -405,6 +405,30 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     "talk_june_pike_drive",
     "ask_acknowledge",
   ];
+  const driveOverrun = run(
+    ["june_pike_present"],
+    [
+      "go_north",
+      "talk_houndsman",
+      "ask_drive",
+      "ask_commit_drive",
+      "ask_leave",
+      "take_drive_signal_rope_kit",
+      "go_north",
+      ["use_drive_signal_rope_kit_on_drive_breach_signal", "worst"],
+      "use_drive_hurdle_recovery",
+      "go_north",
+      "use_drive_signal_rope_kit_on_drive_threshold_line",
+      "go_north",
+    ],
+  );
+  if (
+    driveOverrun.current !== "byre_mouth" ||
+    driveOverrun.vars.pack_drive !== 3 ||
+    driveOverrun.vars.hp !== 30
+  ) {
+    throw new Error("June failed-DRIVE witness did not reach its intact Overrun gate.");
+  }
   const driveCattle = run(
     ["june_pike_present"],
     [...reachDriveCrisis, "use_cattle_crisis_priority", "use_cattle_first_evacuation"],
@@ -486,6 +510,7 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     "room:steading_yard#2",
     "room:steading_yard#4",
     "room:steading_yard#6",
+    "room:byre_mouth#3",
     "room:byre_mouth#5",
     "ending:ending_pack_diverted#0",
     "ending:ending_pack_diverted_cattle_scattered#0",

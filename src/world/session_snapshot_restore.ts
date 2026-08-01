@@ -454,8 +454,29 @@ export const OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH =
 /** Exact manifest immediately before the bounded-Aid Starting Doctrine route was replaced. */
 export const OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH =
   "56577688e463b98883aea1c9063a6e577d6a5d2bb4fa412ee32b0f47576d849c";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/**
+ * Exact June field-team copy from the manifest immediately before her DRIVE
+ * cattle line gained a disclosed failed-signal Overrun consumer. Restore code
+ * and historical manifest fixtures share this data so the accepted predecessor
+ * cannot drift into a broad copy migration.
+ */
+export const JUNE_DRIVE_OVERRUN_PREDECESSOR_COPY = Object.freeze({
+  capability:
+    "On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure, opens the lower swing gate during a committed drive, or takes the lower cattle brace before a fortification dawn watch.",
+  preview:
+    "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
+  tradeoff:
+    "June controls the one cattle-pressure intervention; any wolf death ends the agreement.",
+  offerJournalText:
+    "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch. Capability: On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure, opens the lower swing gate during a committed drive, or takes the lower cattle brace before a fortification dawn watch. Condition: June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
+  juneSelectionJournalText:
+    "Ask June Pike to ride as an independent Road-Warden ally. The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement. Actual cost: 15 minutes. June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
+});
+/** Exact manifest before June's DRIVE gate disclosed and absorbed failed-signal Overrun. */
+export const OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH =
   "7b517d0a2ccae01b9548b415465391c51176c6357facc513c506808e7a115590";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "fbb3b0e57fdbada4a690921e8d321689dfe261deafa4c52192bbde04bb5bb2f6";
 /** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
 export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
@@ -1129,6 +1150,54 @@ function normalizeFortifyOutlastPredecessorAllyJournalCopy(args: {
     if (current?.id !== canonicalEntryId) {
       throw new Error(
         `Fortify-outlast predecessor ally journal entry "${entry.id}" has no current authored counterpart.`,
+      );
+    }
+    return Object.freeze({ ...entry, title: current.title, text: current.text });
+  });
+}
+
+const OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER = Object.freeze({
+  id: "ally_offer:albany:wolf_ally_commitment",
+  kind: "ally_offer" as const,
+  title: "Choose the Wolf-Winter Field Team",
+  text: JUNE_DRIVE_OVERRUN_PREDECESSOR_COPY.offerJournalText,
+});
+const OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_JUNE_SELECTION = Object.freeze({
+  id: "ally:albany:wolf_ally_commitment:albany:ally_june_cattle_first",
+  kind: "ally" as const,
+  title: "Field team: Grant June Cattle-First Authority",
+  text: JUNE_DRIVE_OVERRUN_PREDECESSOR_COPY.juneSelectionJournalText,
+});
+
+function normalizeJuneDriveOverrunPredecessorAllyJournalCopy(args: {
+  currentJuneSelection: Readonly<{ id: string; text: string; title: string }>;
+  currentOffer: Readonly<{ id: string; text: string; title: string }>;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  return args.journalEntries.map((entry) => {
+    const predecessor =
+      entry.id === OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER.id
+        ? OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER
+        : entry.id === OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_JUNE_SELECTION.id
+          ? OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_JUNE_SELECTION
+          : null;
+    if (predecessor === null) return entry;
+    if (
+      entry.kind !== predecessor.kind ||
+      entry.title !== predecessor.title ||
+      entry.text !== predecessor.text
+    ) {
+      throw new Error(
+        `June DRIVE Overrun predecessor ally journal entry "${entry.id}" does not match its exact authored copy.`,
+      );
+    }
+    const current =
+      entry.id === OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER.id
+        ? args.currentOffer
+        : args.currentJuneSelection;
+    if (current.id !== entry.id) {
+      throw new Error(
+        `June DRIVE Overrun predecessor ally journal entry "${entry.id}" has no current authored counterpart.`,
       );
     }
     return Object.freeze({ ...entry, title: current.title, text: current.text });
@@ -3179,6 +3248,9 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesStartingDoctrineReplacement =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH;
+  const migratesJuneDriveOverrunCopy =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH;
   const migratesEmeryEvidenceCustody =
     migrationTargetsCurrentManifest &&
     EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES.has(sourceSnapshot.worldHash);
@@ -3257,6 +3329,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesComparisonCardContract &&
     !migratesStartingDoctrine &&
     !migratesStartingDoctrineReplacement &&
+    !migratesJuneDriveOverrunCopy &&
     !migratesEmeryEvidenceCustody &&
     !migratesWoundCare &&
     !migratesBloodiedByreEvacuation &&
@@ -3407,12 +3480,12 @@ export function planOverworldSessionSnapshotRestore(args: {
           );
           const normalizerArgs = {
             currentContacts,
-            currentOffer: openingAllyOfferJournalDraft(indexes.openingAlly),
-            currentJuneSelection: openingAllyJournalDraft({
-              scene: indexes.openingAlly,
-              character: createInitialCampaignCharacterState(),
-              optionId: "albany:ally_june_cattle_first",
-            }),
+            // Compose the older F04/F10 ally migrations through the exact
+            // pre-Overrun receipts. The June DRIVE step below then advances that
+            // trusted intermediate copy to the current manifest without widening
+            // either historical source's admission gate.
+            currentOffer: OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER,
+            currentJuneSelection: OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_JUNE_SELECTION,
             journalEntries: snapshotWithCampaignCopy.journalEntries,
           };
           const journalEntries =
@@ -3422,6 +3495,23 @@ export function planOverworldSessionSnapshotRestore(args: {
           return Object.freeze({ ...snapshotWithCampaignCopy, journalEntries });
         })()
       : snapshotWithCampaignCopy;
+  if (sourceSnapshot.worldHash !== worldHash) {
+    if (indexes.openingAlly === null) {
+      throw new Error("June DRIVE Overrun migration target has no opening ally scene.");
+    }
+    snapshot = Object.freeze({
+      ...snapshot,
+      journalEntries: normalizeJuneDriveOverrunPredecessorAllyJournalCopy({
+        currentOffer: openingAllyOfferJournalDraft(indexes.openingAlly),
+        currentJuneSelection: openingAllyJournalDraft({
+          scene: indexes.openingAlly,
+          character: createInitialCampaignCharacterState(),
+          optionId: "albany:ally_june_cattle_first",
+        }),
+        journalEntries: snapshot.journalEntries,
+      }),
+    });
+  }
   if (migratesEmeryEvidenceCustody || migratesEmeryContactPrecedence) {
     snapshot = migrateEmeryEvidenceCustodyPredecessorSnapshot({
       indexes,

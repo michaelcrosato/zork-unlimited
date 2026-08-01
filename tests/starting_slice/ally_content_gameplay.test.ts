@@ -266,6 +266,12 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       [RELAY, 5],
       [SOLO, 0],
     ]);
+    expect(ally.capability).toMatch(
+      /failed DRIVE signal[^]*Overrun[^]*without the rider's -2 HP brace[^]*clean DRIVE signal[^]*no extra reduction/i,
+    );
+    expect(ally.options.find((option) => option.id === ACCEPT)?.preview).toMatch(
+      /DRIVE[^]*failed signal's extra Overrun[^]*prevents the rider's -2 HP brace[^]*clean signal gains no extra reduction/i,
+    );
 
     const accepted = applyOpeningAllyOption({
       scene: ally,

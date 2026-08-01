@@ -580,7 +580,10 @@ keep the whole herd and returned rig by taking an untreated gate wound, save
 every person and return the rig while two cattle scatter, or keep people and
 the whole herd unharmed by sacrificing the rig. All three drive the living pack
 away bloodlessly. June, when present, first exercises her remembered
-cattle-first authority at the lower gate. The hard commitment withholds every
+cattle-first authority at the lower gate. A failed first signal otherwise leaves
+Pack Drive at Overrun and forces a persistent -2 HP swing-gate brace; June's line
+absorbs only that extra beat and returns pressure to Crisis without the injury. A
+clean signal is already at Crisis and gains no extra reduction. The hard commitment withholds every
 enemy and combat action before the first signal, through failed-signal recovery,
 and at the threshold. The ordinary spear route remains available only when the
 player declines the drive before the cattle move, so combat cannot be sampled

@@ -19,7 +19,7 @@ import { GameSession } from "../../ui/src/engine.js";
 
 const SOURCE_PATH = "content/rpg/quests/wolf_winter.yaml";
 const PREDECESSOR_SOURCE_HASH = "2087a622fc0e26d904759ca602f87577eea857706908879468c5a92512fe044d";
-const SOURCE_HASH = "32b1f3a94fe58df7f9a61ccc666b082aa7aa83f6a91cd9ece0e2ea36168104c6";
+const SOURCE_HASH = "0e8681d8ee1e898fadbe6c1b8e6af662fb7cf45fda96efe140ba16b612a302cf";
 const loaded = loadRpgSourceFile(SOURCE_PATH);
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);

@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 717 -->
+<!-- historical_cycle_count: 718 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - june_drive_overrun
+
+- Evidence choice: June's paid 15-minute cattle-first field seat named DRIVE but had no distinct DRIVE consequence, while an unrecovered failed first signal already produced a pressure-3 Overrun and solo recovery cost.
+- Surface/effect: at that exact Overrun, intact June independently catches the extra lower-gate beat, returns pack pressure 3→2, and prevents the rider's persistent 2 HP brace; a clean signal gains nothing, and broken June falls back to the solo recovery.
+- Counterfactual: identical failed-signal routes end at HP 30 with June versus HP 28 solo, then expose the same three irreversible crisis priorities; save/restore, visible pressure, blocked-action truth, and the liveness witness are pinned.
+- Integrity: the copy-only world change has one exact-hash predecessor migration; older trusted June receipts compose through that exact intermediate, while altered or adjacent manifests still fail closed.
+- Pure evidence: exact-clean Terra seed 73126081 chose June but LURE, completed The Wolf-Winter bloodlessly at decision 32, continued at 32/41, won The Gallowmere at 56, rated clarity/enjoyment 4/4, got-stuck-no, and ended at the second goal.
+- Economy: the first attempt used 4.941M raw / 163,847 uncached input + 11,640 output at 96.68% input-cache reuse (175,487 useful, about 3,134/decision); no retry, fallback, cohort, or fanout ran.
+- Self-critique/follow-through: this proves clean-build safety and retention, not DRIVE uptake; the player again named Albany planning density and chose replay-no, while its Queensbury/Gallowmere S1 notes stay outside this focused starting-slice increment pending accumulated feedback.
+- Guard: two independent reviews found no actionable issue; crawls `20260801T112656Z` / `20260801T130256Z` have zero findings, and exact-tree health passes 451 files/3,771 tests plus all 12 packs.
 
 ### Cycle result - duty_comparison_first
 
@@ -164,13 +175,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: one first-attempt Codex 0.146 run used 1.898M raw / 103.3k uncached input and 6.1k output at 94.56% cache reuse (109,358 useful / 30 decisions, about 3,645 each); no retry, recovery, fallback, or fanout ran.
 - Self-critique/follow-through: the canary proves informed horizon comprehension, not continuation lift; the player knowingly chose the satisfying completed chapter, so pair the next ten-player continuation rate with replay intent and enjoyment rather than reading it as retention alone.
 - Guard: independent review found no P0/P1/P2, post-change crawl `20260731T013924Z` has zero findings, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
-
-### Cycle result - standard_packet_strategy_framing
-
-- Evidence choice: the authenticated ten-Terra pilot completed The Wolf-Winter 10/10 but chose LURE 9/10, used the initially visible standard packet 7/10, and named dense Albany planning in every report.
-- Surface/effect: each role's standard packet now leads with its existing field-strategy effects, while the reveal explicitly offers FORTIFY/LURE/DRIVE duties and says the packet is convenient rather than recommended; this adds only 44–84 visible characters (about 11–21 tokens) by role.
-- Counterfactual: this is a generic projection change; doctrine/duty/source choices, actions, mechanics, RNG, saves, world and Wolf-Winter hashes, content, and outcomes are unchanged.
-- Pure evidence: exact-clean Terra seed 74231 used the new reveal, inspected and manually chose Aid-Only plus Hayden, completed The Wolf-Winter through bloodless LURE and The Gallowmere in 54 decisions, continued twice, rated clarity/enjoyment 4/4, and chose replay-yes.
-- Economy: one first-attempt Codex 0.146 run used 5.107M raw / 176.2k uncached input and 11.5k output at 96.55% cache reuse (187,670 useful / 54 decisions, about 3,475 each); no retry, recovery, fallback, or fanout ran.
-- Self-critique/follow-through: one canary proves direct comparison uptake, not a population strategy shift; it still chose LURE and named policy-dense setup, so measure distribution on the next frozen ten-player pilot before another opening change.
-- Guard: independent review found no P0/P1; combined-build crawl `20260731T010243Z` has zero findings, world/Wolf sources remain byte-identical to merged main, and exact-tree health passes 449 files/3,733 tests plus all 12 packs before this state-only amend.
