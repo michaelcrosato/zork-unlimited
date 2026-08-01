@@ -12,6 +12,7 @@ import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
 import { objectDescription } from "../../src/rpg/model.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { load, save } from "../../src/persist/save_load.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -66,7 +67,7 @@ function act(state: GameState, actionId: string, roll: Roll = "best"): GameState
 }
 
 function fresh(withJune = false): GameState {
-  const state = initStateForRpgPack(index, withJune ? 1010 : 1009);
+  const state = initStateForRpgPack(index, 1009);
   if (withJune) state.flags.june_pike_present = true;
   return state;
 }
@@ -168,11 +169,8 @@ function reachCrisis(
   expect(state.flags.flank_wolf_down).not.toBe(true);
   state = act(state, "go_north");
 
-  if (state.vars.pack_drive === 3) {
-    expect(actionIds(state)).toContain("use_drive_overrun_recovery");
-    expect(actionIds(state)).not.toContain("use_cattle_crisis_priority");
-    expect(actionIds(state)).not.toContain("use_person_crisis_priority");
-    expect(actionIds(state)).not.toContain("use_reserve_crisis_priority");
+  const overrun = state.vars.pack_drive === 3;
+  if (overrun) {
     expect(buildRpgObservation(index, state).pressure_tracks).toContainEqual(
       expect.objectContaining({
         id: "pack_drive",
@@ -180,10 +178,29 @@ function reachCrisis(
         band: expect.objectContaining({ label: "Overrun" }),
       }),
     );
-    state = act(state, "use_drive_overrun_recovery");
-    expect(state).toMatchObject({
-      vars: { hp: 28, pack_drive: 2 },
-    });
+    expect(actionIds(state)).not.toContain("use_cattle_crisis_priority");
+    expect(actionIds(state)).not.toContain("use_person_crisis_priority");
+    expect(actionIds(state)).not.toContain("use_reserve_crisis_priority");
+    if (withJune) {
+      expect(actionIds(state)).not.toContain("use_drive_overrun_recovery");
+      const observation = buildRpgObservation(index, state);
+      expect(observation.description).toMatch(
+        /June[^]*lower swing-gate[^]*-2 HP self-brace is blocked[^]*hear her independent decision/i,
+      );
+      expect(
+        observation.pressure_tracks?.find((track) => track.id === "pack_drive")?.band.description,
+      ).toMatch(/June's intact cattle-first lower gate can absorb it[^]*otherwise brace[^]*2 HP/i);
+      expect(observation.blocked_actions).toContainEqual(
+        expect.objectContaining({
+          id: "use_drive_overrun_recovery",
+          reason: expect.stringMatching(/June[^]*absorbs[^]*without your -2 HP brace/i),
+        }),
+      );
+    } else {
+      expect(actionIds(state)).toContain("use_drive_overrun_recovery");
+      state = act(state, "use_drive_overrun_recovery");
+      expect(state).toMatchObject({ vars: { hp: 28, pack_drive: 2 } });
+    }
   } else {
     expect(actionIds(state)).not.toContain("use_drive_overrun_recovery");
     expect(state.vars.hp).toBe(30);
@@ -198,6 +215,10 @@ function reachCrisis(
     state = act(state, "talk_june_pike_drive");
     expect(state.flags.june_drive_cattle_line_taken).toBe(true);
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
+    expect(state.vars).toMatchObject({ hp: 30, pack_drive: 2 });
+    expect(buildRpgObservation(index, state).dialogue?.npc_text).toMatch(
+      /hold Pack Drive at Crisis[^]*first signal folded[^]*instead of your hands taking the brace[^]*clean signal gains nothing/i,
+    );
     state = act(state, "ask_acknowledge");
   }
 
@@ -410,6 +431,61 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
       expect(actionIds(state)).toEqual(expect.arrayContaining(priorities));
       expect(actionIds(state)).not.toContain("use_drive_overrun_recovery");
     }
+  });
+
+  it("lets June absorb a failed-signal Overrun while the identical solo route pays the brace", () => {
+    const withJune = reachCrisis("worst", true);
+    const solo = reachCrisis("worst");
+
+    expect(withJune).toMatchObject({
+      flags: { june_drive_cattle_line_taken: true },
+      vars: { pack_drive: 2, hp: 30 },
+    });
+    expect(solo).toMatchObject({ vars: { pack_drive: 2, hp: 28 } });
+    expect(solo.flags.june_drive_cattle_line_taken).not.toBe(true);
+    expect(withJune.journal.join("\n")).toMatch(
+      /June[^]*failed-signal Overrun[^]*without the player's -2 HP brace/i,
+    );
+    expect(solo.journal.join("\n")).toMatch(/overrun at the swing-gate \(-2 HP\)/i);
+    expect(actionIds(withJune)).toEqual(actionIds(solo));
+  });
+
+  it("restores June's blocked Overrun exactly and lets a broken condition fall back to the solo brace", () => {
+    let june = commitDrive(true);
+    june = act(june, "go_north");
+    june = act(june, "use_drive_signal_rope_kit_on_drive_breach_signal", "worst");
+    june = act(june, "use_drive_hurdle_recovery");
+    june = act(june, "go_north");
+    june = act(june, "use_drive_signal_rope_kit_on_drive_threshold_line");
+    june = act(june, "go_north");
+
+    expect(june.vars).toMatchObject({ pack_drive: 3, hp: 30 });
+    expect(actionIds(june)).toContain("talk_june_pike_drive");
+    expect(actionIds(june)).not.toContain("use_drive_overrun_recovery");
+    const bytes = save(june, loaded.compiled.contentHash, "rpg", {
+      worldQuestId: "wolf_winter",
+    });
+    const restored = load(bytes, loaded.compiled.contentHash, "rpg").state;
+    expect(restored).toEqual(june);
+    expect(buildRpgObservation(index, restored)).toEqual(buildRpgObservation(index, june));
+
+    const broken = structuredClone(restored);
+    broken.flags.june_blood_condition_broken = true;
+    expect(actionIds(broken)).not.toContain("talk_june_pike_drive");
+    expect(actionIds(broken)).toContain("use_drive_overrun_recovery");
+    const braced = act(broken, "use_drive_overrun_recovery");
+    expect(braced.vars).toMatchObject({ pack_drive: 2, hp: 28 });
+
+    let helped = act(restored, "talk_june_pike_drive");
+    expect(helped.vars).toMatchObject({ pack_drive: 2, hp: 30 });
+    helped = act(helped, "ask_acknowledge");
+    expect(actionIds(helped)).toEqual(
+      expect.arrayContaining([
+        "use_cattle_crisis_priority",
+        "use_person_crisis_priority",
+        "use_reserve_crisis_priority",
+      ]),
+    );
   });
 
   it("spends two finite charges on two different drive actions and fails forward without a retry", () => {

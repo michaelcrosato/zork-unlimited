@@ -117,7 +117,7 @@ pressure_tracks:
         description: "Signal pressure is at crisis; the next unresolved drive commitment cannot be delayed, or its chosen evacuation line remains to be finished."
       - min: 3
         label: "Overrun"
-        description: "The folded opening has put one extra beat into the driven pack. Brace the swing-gate at a persistent 2 HP strain before choosing the crisis priority."
+        description: "The folded opening has put one extra beat into the driven pack. June's intact cattle-first lower gate can absorb it; otherwise brace the swing-gate at a persistent 2 HP strain before choosing the crisis priority."
       - min: 6
         label: "Cleared"
         description: "The chosen evacuation line has separated the living pack from people and cattle; its wound, herd loss, or spent reserve is now fixed."
@@ -1243,6 +1243,23 @@ rooms:
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_flank_turned }
           - { var_gte: { name: pack_drive, value: 3 } }
+          - { has_flag: june_pike_present }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: june_drive_cattle_line_taken }
+          - none_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+              - { has_flag: drive_reserve_spent }
+        text: >
+          The folded shutter's extra beat has driven the pack past Crisis into Overrun.
+          June has reached the lower swing-gate under the cattle-first authority you gave
+          her. Your -2 HP self-brace is blocked while her intact line can catch that extra
+          beat: hear her independent decision, then choose the same shoulder, cattle, or
+          rig priority at Crisis.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+          - { var_gte: { name: pack_drive, value: 3 } }
           - none_of:
               - { has_flag: drive_courier_wounded }
               - { has_flag: drive_cattle_lost }
@@ -1890,15 +1907,18 @@ objects:
               lines together. Both charges are spent. Crisis waits at the byre mouth.
 
   # A failed first shutter adds one extra pack-drive beat. Emery's route can remove it at
-  # the paling; otherwise this authored complication takes a small persistent strain and
-  # returns pressure to Crisis before the unchanged three-way priority becomes legal.
+  # the paling; June's intact cattle-first line can catch it at the lower gate. Otherwise
+  # this authored complication takes a small persistent strain and returns pressure to
+  # Crisis before the unchanged three-way priority becomes legal.
   - id: drive_overrun_recovery
     name: "overrun swing-gate brace"
     aliases: [overrun brace, swing gate, brace gate, rope burn, overrun recovery]
     description: >
-      The failed shutter's extra pressure has driven the living pack past Crisis. Catch
-      the swinging gate on Cade's rope and take the strain yourself (-2 HP); pack pressure
-      returns to Crisis, then the same shoulder, cattle, or finite-rig priorities open.
+      The failed shutter's extra pressure has driven the living pack past Crisis. Alone,
+      catch the swinging gate on Cade's rope and take the strain yourself (-2 HP). If June
+      is present under her intact cattle-first authority, hear her lower-gate decision
+      first: her line can absorb this extra beat. Either recovery returns pack pressure to
+      Crisis, then the same shoulder, cattle, or finite-rig priorities open.
     visible_when:
       - { has_flag: strategy_drive_committed }
       - { has_flag: drive_flank_turned }
@@ -1919,6 +1939,16 @@ objects:
               - { has_flag: drive_courier_wounded }
               - { has_flag: drive_cattle_lost }
               - { has_flag: drive_reserve_spent }
+          - any_of:
+              - { not_flag: june_pike_present }
+              - { has_flag: june_blood_condition_broken }
+              - { has_flag: june_drive_cattle_line_taken }
+        blocked_hint:
+          visible_when:
+            - { has_flag: june_pike_present }
+            - { not_flag: june_blood_condition_broken }
+            - { not_flag: june_drive_cattle_line_taken }
+          reason: "June has reached the lower swing-gate under cattle-first authority. Hear her decision first: her cattle line absorbs the failed signal's extra beat without your -2 HP brace."
         effects:
           - dec_var: { name: hp, by: 2 }
           - dec_var: { name: pack_drive, by: 1 }
@@ -4406,13 +4436,18 @@ npcs:
 
   # On the drive family June remains cattle-first rather than becoming a second
   # player-controlled tool. Her separate NPC surface preserves the established lure
-  # conversation unchanged. When present she independently takes the lower swing-gate;
-  # the crisis menu waits for that decision, but every solo route remains complete.
+  # conversation unchanged. When present she independently takes the lower swing-gate:
+  # Pack Drive stays at Crisis on a clean opening, while her line absorbs the failed
+  # opening's extra Overrun beat without the solo route's -2 HP brace. The crisis menu
+  # waits for that decision, but every solo route remains complete.
   - id: june_pike_drive
     name: "Road Warden June Pike"
     description: >
       June Pike reaches the lower swing-gate with her cattle rope already set. She will
-      not take over the player's signal line; her Albany authority is cattle-first.
+      not take over the player's signal line; her Albany authority is cattle-first. If
+      the first signal folded, her lower-gate line can absorb its extra Overrun beat
+      without the player's -2 HP brace. A clean signal is already at Crisis and gains no
+      extra reduction.
     room: byre_mouth
     conditions:
       - { has_flag: june_pike_present }
@@ -4430,11 +4465,14 @@ npcs:
         - id: june_drive_cattle_first
           npc_text: >
             I take the lower swing-gate under your cattle-first authority, not command of
-            your signals. I can hold the herd's rear. You still choose the front crisis
-            cost: your shoulder, two cattle, or Albany's rig.
+            your signals. I hold Pack Drive at Crisis: if your first signal folded, my
+            lower line catches that extra beat instead of your hands taking the brace.
+            A clean signal gains nothing extra. You still choose the front crisis cost:
+            your shoulder, two cattle, or Albany's rig.
           effects:
             - set_flag: june_drive_cattle_line_taken
-            - add_journal: "June takes the lower cattle gate under her authority. Her promise holds; your front crisis priority remains due."
+            - set_var: { name: pack_drive, value: 2 }
+            - add_journal: "June takes the lower cattle gate under her authority and holds Pack Drive at Crisis. Any failed-signal Overrun is absorbed without the player's -2 HP brace; a clean signal gains no extra reduction. Her promise holds, and the front crisis priority remains due."
           topics:
             - id: acknowledge
               aliases: [leave_june, take_cattle_line]
