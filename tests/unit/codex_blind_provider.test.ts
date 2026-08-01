@@ -816,6 +816,12 @@ describe("Codex pure blind provider envelope", () => {
     expect(rejected).not.toHaveProperty("reason");
     expect(rejected).not.toHaveProperty("input");
 
+    const fenced = "```text\n" + accepted + "```\n";
+    expect(classifyCodexGameplayWrapper(fenced, strict)).toEqual({
+      ok: false,
+      failure: "strict_yield_pragma_not_exact",
+    });
+
     expect(classifyCodexGameplayWrapper(`${CODEX_EXEC_YIELD_PRAGMA}\n`, strict)).toEqual({
       ok: false,
       failure: "single_statement_shape",
