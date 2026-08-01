@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 711 -->
+<!-- historical_cycle_count: 712 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - pure_clean_build_preflight
+
+- Evidence choice: the 72-hour repo-local audit found that all four completed usage-bearing reports carried dirty tracked-build provenance and were compiler-ineligible; a live provider could previously start before that failure was known.
+- Surface: pure single runs and fleet preflight now bind Git to the physical script checkout, clear repository/index/object redirection, and reject staged, unstaged, assume-unchanged, or skip-worktree state before Codex resolution; untracked notes stay outside provenance and structural mock/smoke remain available.
+- Race closure: the exact commit/clean signal is rechecked after the final pinned-client probe immediately before the strict model process, while the established post-run and pre-publication rechecks remain.
+- Counterfactual: game code/content/actions/mechanics/RNG/saves/hashes/outcomes, strict evidence, ordinary clean-run usage, and structural QA semantics are unchanged.
+- Pure evidence: exact-clean Terra seed 73101856 completed The Wolf-Winter through whole-herd/all-wolves-alive LURE at decision 29, continued at 29 and 40, won The Gallowmere at 52, rated clarity/enjoyment 4/4, replay-yes, and had no rejection, bug, loop, stuck state, or soft-lock.
+- Economy: the first attempt used 5.409M raw / 186,876 uncached input + 11,486 output at 96.54% input-cache reuse (198,362 useful, about 3,815/decision), with no retry, fallback, or fanout.
+- Self-critique/follow-through: Station density and quest-local stat continuity repeated; this guard makes future feedback admissible but does not claim experiential certification, while the staged Wolf handoff directly addresses those two presentation costs.
+- Guard: two independent reviews and 127 affected tests are clean; crawls `20260731T205523Z` / `20260731T233054Z` have zero findings, serial health passes 450 files/3,762 tests plus all 12 packs, and the four-subprocess CLI regression keeps every assertion with 120 s of loaded-CI headroom after four false-red timeouts.
 
 ### Cycle result - strict_wrapper_rejection_diagnostic
 
@@ -158,13 +169,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 73078 completed The Wolf-Winter with a whole-herd, all-wolves-alive LURE, continued into The Gallowmere, then ended at decision 40 with clarity/enjoyment 4/5, replay-yes, no rejection or bug, and no departure-recap complaint.
 - Economy/admission: Terra used 3.137M raw / 146.2k uncached input and 9.7k output at 95.34% cache reuse (155,875 useful / 40 decisions, about 3,897 each); one exact-build Spark admission probe failed pre-report with exit 43 and no retry, preventing wasteful fanout.
 - Self-critique/guard: compact state density and persistent-versus-quest stats remain next-cycle evidence; independent review is clean, crawls `20260730T162003Z` / `20260730T171341Z` have zero findings, browser disclosure is console-clean, and exact-tree health passes 449 files/3,729 tests plus all 12 packs before this state-only amend.
-
-### Cycle result - progressive_custom_duty_disclosure
-
-- Evidence choice: the prior exact Terra canary still named early role/duty terminology dense, while the role-first standard packet had become the common path; reduce first-view load without deleting custom terms.
-- Surface: a standard-packet role now shows its one packet first and a read-only `Compare individual duties` affordance; expansion restores all three canonical duties, and choosing one still leads to its evidence choice.
-- Measured effect: the real Road-Warden compact comparison falls 2,045->1,376 bytes (32.7%); the expanded comparison is 2,009 bytes, still 1.8% below the former always-expanded view.
-- Counterfactual: disclosure is presentation-only; canonical choices, direct/revealed selection results, costs, accepted decisions, saves, hashes, mechanics, and outcomes are unchanged, while unsupported story-card kinds fail closed.
-- Pure evidence: exact-clean Terra seed 73076 inspected and chose the standard packet, completed The Wolf-Winter through a recovered bloodless LURE in 32 decisions, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, or bug.
-- Economy: one attempt used 2.566M raw / 120.9k uncached input and 7.5k output tokens at 95.3% cache reuse, or 128,382 useful tokens / 32 decisions (about 4,012 each), with no retry or fallback.
-- Self-critique/guard: the player still named the accumulated pre-departure modifier stack dense, so target a lighter truthful recap rather than fewer decisions; three independent reviews are clean, pre/post crawls `20260729T210911Z` / `20260729T215403Z` have zero findings, browser parity is clean, and exact-tree health passes 449 files/3,728 tests, both typechecks, and all 12 packs.

@@ -15,6 +15,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import {
+  type CleanTrackedGitCheckout,
+  useCleanTrackedGitCheckout,
+} from "./support/clean_git_checkout.js";
+
 // @ts-expect-error — runner helper is intentionally plain ESM.
 import * as strictStream from "../../blind-tester/codex-strict-stream.mjs";
 
@@ -50,6 +55,7 @@ ${body}`,
 }
 
 function launchFakeCodex(
+  cleanGit: CleanTrackedGitCheckout,
   fixture: { home: string; selected: string },
   out: string,
   seed: string,
@@ -59,7 +65,7 @@ function launchFakeCodex(
     process.execPath,
     ["blind-tester/blind-launch.mjs", "--out", out, "--seed", seed],
     {
-      cwd: process.cwd(),
+      cwd: cleanGit.path,
       encoding: "utf8",
       env: {
         ...process.env,
@@ -87,6 +93,8 @@ function expectNoPublishedEvidence(out: string): void {
 }
 
 describe("Codex strict streaming fail-fast", () => {
+  const cleanGit = useCleanTrackedGitCheckout();
+
   it("parses only complete JSONL lines and leaves an in-flight row undecided", () => {
     const decoder = createCompleteJsonlDecoder("test stream");
     expect(
@@ -111,7 +119,7 @@ describe("Codex strict streaming fail-fast", () => {
     const fixture = installFakeCodex(root, "exit 43\n");
     try {
       expect(providerExitCodeFor(43, null)).toBe(4);
-      const result = launchFakeCodex(fixture, out, "73651");
+      const result = launchFakeCodex(cleanGit, fixture, out, "73651");
       const output = combinedOutput(result);
       expect(result.error, output).toBeUndefined();
       expect(result.status, output).toBe(4);
@@ -192,7 +200,7 @@ while :; do sleep 1; done
 `,
     );
     try {
-      const result = launchFakeCodex(fixture, out, "73652", {
+      const result = launchFakeCodex(cleanGit, fixture, out, "73652", {
         FAKE_MCP_SURVIVED: bashPath(survived),
       });
       const output = combinedOutput(result);
@@ -287,7 +295,7 @@ exit 0
 `,
     );
     try {
-      const result = launchFakeCodex(fixture, out, "73653", {
+      const result = launchFakeCodex(cleanGit, fixture, out, "73653", {
         FAKE_MCP_SURVIVED: bashPath(survived),
       });
       const output = combinedOutput(result);
@@ -346,7 +354,7 @@ while :; do sleep 1; done
         process.execPath,
         ["blind-tester/blind-launch.mjs", "--out", out, "--seed", "73650"],
         {
-          cwd: process.cwd(),
+          cwd: cleanGit.path,
           encoding: "utf8",
           env: {
             ...process.env,
