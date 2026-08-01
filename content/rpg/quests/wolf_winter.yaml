@@ -226,7 +226,8 @@ rooms:
     description: >
       The cattle-byre yard. Old Cade props its door, too stiff for a spear, and turns his
       lantern on the day-book: its last wolf-count is worth reading before you leave the
-      yard. Store-shed west. North, a young wolf is through the broken paling; gate south.
+      yard. Talk to Cade here to compare HUNT, LURE, DRIVE, and FORTIFY before crossing
+      north. A young wolf is through the broken paling north; store-shed west; gate south.
     objects:
       [
         day_book,
@@ -310,8 +311,9 @@ rooms:
           permanently retires his feed lure, signal drive, and seal-and-outlast plan.
           Hayden's report is conditional, not a general advantage: Reese's Works packet
           replaces the ordinary public wedge with its Repair set and marked splice, so
-          this dispatch forgoes the frost-brace line. Young wolf at the broken paling
-          north; store west; gate south.
+          this dispatch forgoes the frost-brace line. Talk to Cade here to compare HUNT,
+          LURE, DRIVE, and FORTIFY. Young wolf at the broken paling north; store west;
+          gate south.
       - when:
           - { has_flag: hayden_frost_report_certified }
           - { not_flag: works_fortification_prepared }
@@ -326,7 +328,8 @@ rooms:
           Hayden's report is conditional: on that ordinary hunt, attempt the public wedge.
           Only if frozen ground splits that attempted rail, leave its lengths unbound;
           kill the yearling, then go north with the bare spear for the frost brace. Skipping
-          the wedge makes no split, and binding the rail forgoes that line. Store west; gate south.
+          the wedge makes no split, and binding the rail forgoes that line. Talk to Cade here
+          to compare HUNT, LURE, DRIVE, and FORTIFY. Store west; gate south.
       - when:
           - { has_flag: june_pike_present }
           - { not_flag: june_blood_condition_broken }
@@ -343,7 +346,7 @@ rooms:
           drive rig, or seals means hunt-and-hold; any wolf death ends her agreement. Hayden's
           frost line would require that ordinary hunt's failed public wedge, but Reese's Works
           packet replaces the wedge, so this dispatch forgoes the frost brace. Ask June/Cade
-          now. Store west.
+          now; Cade compares HUNT, LURE, DRIVE, and FORTIFY here. Store west.
       - when:
           - { has_flag: june_pike_present }
           - { not_flag: june_blood_condition_broken }
@@ -360,7 +363,7 @@ rooms:
           drive rig, or seals means hunt-and-hold; any wolf death ends her agreement. On that
           ordinary hunt, Hayden's frost line requires you to attempt the public wedge; only if
           frozen ground splits it, leave the lengths unbound, kill the yearling, then go north.
-          Ask June/Cade now. Store west.
+          Ask June/Cade now; Cade compares HUNT, LURE, DRIVE, and FORTIFY here. Store west.
       - when:
           - { has_flag: june_pike_present }
           - { not_flag: june_blood_condition_broken }
@@ -373,7 +376,7 @@ rooms:
           June holds the north gate. Rail now: spear funnel, not a living turn. If a committed
           first feed cast fouls, a brace can pen the yearling alive. Cross without Cade's feed,
           drive rig, or seals means hunt-and-hold; any wolf death ends her agreement. Ask
-          June/Cade now. Store west.
+          June/Cade now; Cade compares HUNT, LURE, DRIVE, and FORTIFY here. Store west.
       # The ordinary no-June entry must name the same irreversible choice the optional
       # June gate speaks aloud. A first visit to the paling retires all three Cade topics,
       # so this warning is deliberately before both the north exit and the generic tally prose.
@@ -387,8 +390,8 @@ rooms:
         text: >
           Cade's lantern marks the day-book: its wolf-count is worth reading before you leave
           the yard. Cross north uncommitted: hunt-and-hold permanently retires his feed lure,
-          signal drive, and seal-and-outlast plan. Young wolf at the broken paling north;
-          store west; gate south.
+          signal drive, and seal-and-outlast plan. Talk to Cade here to compare HUNT, LURE,
+          DRIVE, and FORTIFY. Young wolf at the broken paling north; store west; gate south.
       - when:
           - { not_flag: june_pike_present }
           - { not_flag: strategy_lure_committed }
@@ -399,7 +402,8 @@ rooms:
         text: >
           You checked its last wolf-count in Cade's day-book. Cross north uncommitted:
           hunt-and-hold permanently retires his feed lure, signal drive, and seal-and-outlast
-          plan. Young wolf at the broken paling north; store west; gate south.
+          plan. Talk to Cade here to compare HUNT, LURE, DRIVE, and FORTIFY. Young wolf at
+          the broken paling north; store west; gate south.
       - when: [{ has_flag: read_tally }, { not_flag: strategy_fortify_committed }]
         text: >
           The trampled byre-yard. Old Cade waits by the day-book where you checked its

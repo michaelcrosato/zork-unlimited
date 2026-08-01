@@ -582,6 +582,20 @@ export class OverworldMcpSessionStore {
     };
   }
 
+  /**
+   * Disclose a compact result's tuple definition without also projecting or
+   * marking the whole parent context as seen. Embedded quest launch hands the
+   * active surface to the child, and the parent remains pull-available by its
+   * echoed session handle.
+   */
+  resultLegendField(
+    session: OverworldSession,
+    additionalLegendKeys: readonly OverworldMcpLegendKey[],
+  ): { legend_delta?: OverworldMcpLegendPatch } {
+    const patch = this.takeLegendPatch(session, undefined, additionalLegendKeys);
+    return patch ? { legend_delta: patch } : {};
+  }
+
   startResponse<Args extends OverworldMcpResponseOptions>(
     args: Args,
   ): OverworldMcpStartResponse<Args> {

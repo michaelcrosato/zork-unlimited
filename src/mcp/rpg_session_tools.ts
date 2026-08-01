@@ -51,18 +51,27 @@ export type RpgGetObservationToolArgs = {
   session_id: string;
   hide_graph?: boolean;
   if_state_hash?: string;
+  include_character_continuity?: boolean;
 } & RpgViewOptions;
 
-type RpgObservationToolPayload<Args extends RpgViewOptions> = {
+type RequestedCharacterContinuity<Args extends RpgGetObservationToolArgs> = Args extends {
+  include_character_continuity: true;
+}
+  ? EmbeddedQuestCharacterContinuityField<Args>
+  : Record<string, never>;
+
+type RpgObservationToolPayload<Args extends RpgGetObservationToolArgs> = {
   state_hash: string;
 } & RpgViewField<Args> &
-  EmbeddedQuestCharacterContinuityField<Args>;
+  RequestedCharacterContinuity<Args>;
 
 export type RpgObservationToolResponse<Args extends RpgGetObservationToolArgs> = Args extends {
-  if_state_hash: string;
+  include_character_continuity: true;
 }
-  ? RpgObservationToolPayload<Args> | RpgStateUnchanged
-  : RpgObservationToolPayload<Args>;
+  ? RpgObservationToolPayload<Args>
+  : Args extends { if_state_hash: string }
+    ? RpgObservationToolPayload<Args> | RpgStateUnchanged
+    : RpgObservationToolPayload<Args>;
 
 export type RpgLegalActionsToolArgs = {
   session_id: string;
@@ -200,7 +209,11 @@ export function runRpgGetObservation<Args extends RpgGetObservationToolArgs>(
   const { sessions, rpgRuntime } = deps;
   const s = sessions.get(args.session_id);
   const stateHash = s.stateHash;
-  if (args.if_state_hash !== undefined && rpgStateHashMatches(args.if_state_hash, stateHash)) {
+  if (
+    args.include_character_continuity !== true &&
+    args.if_state_hash !== undefined &&
+    rpgStateHashMatches(args.if_state_hash, stateHash)
+  ) {
     return rpgStateUnchanged(stateHash) as RpgObservationToolResponse<Args>;
   }
   const obsOpts = {
@@ -215,7 +228,9 @@ export function runRpgGetObservation<Args extends RpgGetObservationToolArgs>(
       args,
       obsOpts,
     ),
-    ...embeddedQuestCharacterContinuityField(s, args),
+    ...(args.include_character_continuity === true
+      ? embeddedQuestCharacterContinuityField(s, args)
+      : {}),
     state_hash: publicRpgStateHash(stateHash),
   } as RpgObservationToolResponse<Args>;
 }

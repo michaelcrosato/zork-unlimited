@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
 import {
+  EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
   EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
   buildEmbeddedQuestCharacterContinuity,
   compactEmbeddedQuestCharacterContinuity,
@@ -102,6 +103,7 @@ describe("embedded quest character continuity contract", () => {
           value: 30,
         },
       ],
+      scope_note: EMBEDDED_QUEST_COMPACT_SCOPE_NOTE,
     });
     expect(compact).not.toHaveProperty("profile_scope");
     expect(compact).not.toHaveProperty("explanation");

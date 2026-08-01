@@ -380,6 +380,30 @@ comparison, and the browser already renders it before the option cards. Exact
 active terms remain an explicit read-only expansion, alternatives never leak,
 and inspection changes no snapshot, hash, clock, or decision.
 
+The embedded launch handoff then makes the Station-to-field transition explicit
+without flattening it. A compact Wolf-Winter start names `Albany Station -> The
+Wolf-Winter`, the accepted road, the imported or declined preparation, and the
+actionable child state. Its accepted receipt retains the chosen route instead of
+repeating the rejected route or a duplicate parent context; the full parent
+journey remains pullable through its unchanged session handle. This launch-only
+suppression is Wolf-Winter-specific; compact starts for other embedded quests
+retain their established parent context and receipt. Active compact
+quest turns carry a small parent focus—goal, status, accepted-decision count,
+next checkpoint, and explicit `pendingChoice: null`—then carry the complete
+Continue/End prompt or compact staged story-choice surface only when that blocker
+is actually due. Character continuity appears at launch and at genuine restore
+or resume boundaries; an explicit `get_observation` recovery read can request
+it, while ordinary turns omit the repeated continuity recap and quest-profile
+projection. Its compact scope note states that quest stats and kit are local
+and that quest HP does not reduce or replace campaign health.
+Cade's Byre-Yard arrival copy now points directly to his optional HUNT, LURE,
+DRIVE, and FORTIFY comparison before commitment, without adding a seventh
+Albany decision or forcing a strategy choice. On the same restored compact
+launch fixture, the launch response falls from 11,044 to 6,724 UTF-8 JSON bytes
+(39.1%) and the first field turn from 3,909 to 2,194 bytes (43.9%); actions,
+state hashes, pressure, vitals, inventory, consequences, RNG, decisions,
+foldback, and truthful parent return remain unchanged.
+
 The stage-purpose follow-up keeps those six Albany comparisons intact while
 making the current commitment explicit in the vocabulary the cards already use.
 Registration, duty, evidence, preparation, relief priority, and June's

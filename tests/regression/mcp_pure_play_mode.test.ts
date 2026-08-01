@@ -311,18 +311,16 @@ async function launchPreparedPureWolf(client: Client): Promise<{
     quest_id: "wolf_winter",
     approach_id: "albany:wolf_approach_sheltered_stockway",
   });
-  expect(
-    (launched.context as { quest_starts?: unknown } | undefined)?.quest_starts,
-  ).toBeUndefined();
-  expect(
-    (launched.context as { quest_start_locations?: unknown } | undefined)?.quest_start_locations,
-  ).toBeUndefined();
-  const launchedQuest = (
-    launched.context as {
-      quests?: Array<[string, string, string] | [string, string, string, unknown]>;
-    }
-  ).quests?.find(([questId]) => questId === "wolf_winter");
-  expect(launchedQuest).toEqual(["wolf_winter", "The Wolf-Winter", "albany_city__transport_hub"]);
+  expect(launched).not.toHaveProperty("context");
+  expect(launched.launch_handoff).toMatchObject({
+    transition: "Albany Station -> The Wolf-Winter",
+    route: ["albany:wolf_approach_sheltered_stockway", "Take the Sheltered Stockway"],
+    preparation: {
+      status: "imported",
+      title: "Reese's Works Fortification",
+    },
+    childState: "actionable",
+  });
   expect((launched.quest as unknown[])[3]).toBeDefined();
   const rpgSession = launched.rpg_session as { state_hash: string };
   return {
@@ -1776,6 +1774,15 @@ describe("MCP pure play mode", () => {
         );
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
           /send_wagon_to_cade|send_wardens_north|keep_household_correction|publish_dosage_warning|advocate|cold_forge|Edric|Godwin|wormwood|public scrutiny|family's trust/i,
+        );
+
+        const observationTool = listed.tools.find((tool) => tool.name === "get_observation");
+        expect(observationTool?.inputSchema.properties).toHaveProperty(
+          "include_character_continuity",
+          expect.objectContaining({
+            type: "boolean",
+            description: "Recover embedded continuity.",
+          }),
         );
 
         const goalPassageTool = listed.tools.find(

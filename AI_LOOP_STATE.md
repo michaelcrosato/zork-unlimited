@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 712 -->
+<!-- historical_cycle_count: 713 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - staged_wolf_handoff
+
+- Evidence choice: repeated verified reports named dense Albany setup and Gallowmere's quest-local HP as campaign damage, while Wolf's compact launch repeated a large parent receipt instead of prioritizing the playable child.
+- Surface/effect: Wolf-only compact launch now gives one bounded handoff with selected route/commitments; active child turns carry only parent goal/checkpoint focus and complete blockers, while generic Gallowmere launch context stays unchanged.
+- Continuity: launch/load/resume and explicit recovery carry a compact scope note that quest HP cannot reduce campaign health; ordinary reads/steps omit the repeated profile, and full/UI retain their richer explanation.
+- Measured effect: the exact Wolf launch falls 11,044→6,724 bytes (39.1%) and its first field turn 3,909→2,194 (43.9%) with identical actions, state hashes, pressure, vitals, inventory, RNG, consequences, and foldback.
+- Counterfactual: route choices, Albany decisions, mechanics, content, saves, outcomes, full parent pull access, and non-Wolf compact launch behavior are unchanged; Cade's arrival copy only exposes the existing HUNT/LURE/DRIVE/FORTIFY comparison.
+- Pure evidence: final Terra seed 73101859 diverted every wolf alive with the whole herd, continued at decisions 29/41, won The Gallowmere at 53, rated clarity/enjoyment 4/4 and replay-yes, had no rejection/bug/loop/soft-lock, and did not repeat the campaign-HP-loss confusion.
+- Economy: one unpublished Spark interview failure plus pre/final Terra canaries used 12.340M raw / 425,384 uncached input + 45,797 output at 96.54% cache reuse (471,181 useful total); no failed attempt was retried and no cohort ran.
+- Self-critique/guard: the final player still rated Station density and the two-layer state concept S1, so broader uptake remains open; two independent reviews, 116 focused tests, crawl `20260801T033045Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.
 
 ### Cycle result - pure_clean_build_preflight
 
@@ -159,13 +170,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 73079 completed The Wolf-Winter with every wolf alive, continued, won The Gallowmere, and ended at decision 56 with clarity/enjoyment 4/5, replay-yes, no rejection or bug, and no persistent-versus-local confusion.
 - Economy/admission: one attempt used 5.553M raw / 187.9k uncached input and 10.7k output at 96.62% cache reuse (198,622 useful / 56 decisions, about 3,547 each); unchanged Codex 0.144.1 Spark admission remains quarantined, so no known-failure retry or fanout ran.
 - Self-critique/guard: one canary is not causal and still named broad overworld density, sequential setup, and dialogue closure; final review is clean, crawls `20260730T180354Z` / `20260730T183820Z` have zero findings, and exact-tree health passes 449 files/3,730 tests plus all 12 packs before this state-only amend.
-
-### Cycle result - summary_first_departure_recap
-
-- Evidence choice: three consecutive exact Terra canaries named Albany setup density, most recently the accumulated pre-departure modifier stack; reduce repeated recap load without removing the decisions that define the character and relief plan.
-- Surface: the default Albany Station departure recap now leads with selected titles, open slots, status, and dispatch; exact active role, duty, oath, source, preparation, allocation, and ally terms remain deliberately reviewable through compact MCP, terminal `review dispatch`, and a closed UI disclosure.
-- Measured effect: initial/sealed recap payloads fall 634->333 bytes (47.5%) and 923->395 (57.2%), reducing their complete compact contexts 5.3% and 8.5%; exact detail costs 264/559 bytes only when requested.
-- Counterfactual: the full journal-derived model remains authenticated; choices, legal actions, mechanics, RNG, saves, hashes, accepted decisions, and outcomes are unchanged, while a requested transport detail bypasses only the current-hash no-change shortcut.
-- Pure evidence: exact-clean Terra seed 73078 completed The Wolf-Winter with a whole-herd, all-wolves-alive LURE, continued into The Gallowmere, then ended at decision 40 with clarity/enjoyment 4/5, replay-yes, no rejection or bug, and no departure-recap complaint.
-- Economy/admission: Terra used 3.137M raw / 146.2k uncached input and 9.7k output at 95.34% cache reuse (155,875 useful / 40 decisions, about 3,897 each); one exact-build Spark admission probe failed pre-report with exit 43 and no retry, preventing wasteful fanout.
-- Self-critique/guard: compact state density and persistent-versus-quest stats remain next-cycle evidence; independent review is clean, crawls `20260730T162003Z` / `20260730T171341Z` have zero findings, browser disclosure is console-clean, and exact-tree health passes 449 files/3,729 tests plus all 12 packs before this state-only amend.
