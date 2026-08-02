@@ -5,14 +5,14 @@ import type { DialogueNode } from "./schema.js";
 const WOLF_WINTER_INITIAL_STRATEGY_SOURCE =
   "Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE: herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line; crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help. Name HUNT here, or cross uncommitted into it; crossing north commits it and closes the other plans.";
 
-const WOLF_WINTER_INITIAL_STRATEGY_SCORECARD = `Albany sent you. Any of the four plans can finish Wolf-Winter, but each protects something by spending something else. Choose the cost you accept; I will not name a best answer.
+const WOLF_WINTER_INITIAL_STRATEGY_SCORECARD = `Albany sent you. Choose what must stand at dawn. Every plan can finish Wolf-Winter; none saves everything, and I name no best answer.
 
-HUNT — protects herd and stores; wolves may die.
-LURE — protects herd and wolves; spends the last feed, leaves the paling broken, and a foul can cost cattle.
-DRIVE — protects people and wolves; gives up the outer line, then a crisis costs a wound, two cattle, or the rig.
-FORTIFY — protects byre, herd, and wolves; trades Cade's outer property against public seals and his aid.
+HUNT — Tonight: hold the breach to protect herd and stores. Cost: wolves may die; defeat can cost cattle and the line. Albany: bloodshed changes Greenway work; any damage remains.
+LURE — Tonight: draw off the pack; herd and wolves can live. Cost: last feed, broken paling, cattle risk on a foul. Albany: broken boundary or scattered cattle change the Station response.
+DRIVE — Tonight: clear people and pack from the byre. Cost: abandon the outer line; the crisis takes a wound, two cattle, or the rig. Albany: the abandoned line and chosen loss remain.
+FORTIFY — Tonight: hold byre, herd, and pack to dawn. Cost: risk Cade's property or Albany's seals and aid; no retreat. Albany: those terms remain; a no-loss hold opens no Cade repair dispatch.
 
-Ask about any plan before committing; asking does not commit your strategy. Name HUNT here, or cross uncommitted into it. Cross north uncommitted and HUNT becomes final; the other plans close.`;
+Asking may teach; it never commits a strategy. HUNT commits on an uncommitted north crossing. LURE, DRIVE, and FORTIFY commit in their branches. Any commitment closes the other three.`;
 
 /**
  * Resolve one player-visible dialogue line for both action narration and the

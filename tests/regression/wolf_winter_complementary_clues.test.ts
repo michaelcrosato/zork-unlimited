@@ -207,7 +207,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*name HUNT[^]*cross uncommitted/i,
+      /Albany sent you[^]*hunt[^]*lure[^]*drive[^]*fortify[^]*HUNT commits[^]*north crossing/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_wolves",

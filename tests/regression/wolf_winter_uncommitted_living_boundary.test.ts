@@ -22,7 +22,7 @@ if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
 const FULL = { compact_context: false, compact_result: false } as const;
 const LIVING_BOUNDARY =
-  /(?:name hunt[^]*cross uncommitted|cross (?:north )?uncommitted[^]*hunt)[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast|closes[^]*other plans)/i;
+  /(?:name hunt[^]*cross uncommitted|cross (?:north )?uncommitted[^]*hunt|hunt commits[^]*north crossing)[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast|closes[^]*(?:other plans|other three))/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string): GameState {
@@ -125,7 +125,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootDialogue = observation(uncommitted);
     expect(rootDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
     expect(rootDialogue.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*four plans can finish[^]*choose the cost[^]*hunt[^]*protects herd and stores[^]*wolves may die[^]*lure[^]*protects herd and wolves[^]*last feed[^]*paling broken[^]*foul can cost cattle[^]*drive[^]*protects people and wolves[^]*outer line[^]*crisis costs a wound, two cattle, or the rig[^]*fortify[^]*protects byre, herd, and wolves[^]*Cade's outer property[^]*public seals[^]*his aid[^]*name HUNT[^]*cross uncommitted[^]*cross north uncommitted[^]*HUNT becomes final[^]*other plans close/i,
+      /Albany sent you[^]*Every plan can finish[^]*hunt[^]*protect herd and stores[^]*wolves may die[^]*defeat can cost cattle and the line[^]*lure[^]*herd and wolves can live[^]*last feed[^]*broken paling[^]*cattle risk[^]*drive[^]*people and pack[^]*outer line[^]*wound, two cattle, or the rig[^]*fortify[^]*byre, herd, and pack[^]*Cade's property[^]*seals and aid[^]*Asking may teach[^]*never commits[^]*HUNT commits[^]*north crossing[^]*commitment closes the other three/i,
     );
     const rootCommands = rootDialogue.available_actions.map((action) => action.command).join("\n");
     expect(rootCommands).toMatch(/hunt[^]*hold breach[^]*cattle\/reserves safe[^]*wolves may die/i);
@@ -146,7 +146,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     }).dialogue?.[1];
     expect(compactRootDialogue).toBe(rootDialogue.dialogue?.npc_text.trimEnd());
     expect(compactRootDialogue).toMatch(
-      /hunt[^]*lure[^]*drive[^]*fortify[^]*name HUNT[^]*cross uncommitted/i,
+      /hunt[^]*lure[^]*drive[^]*fortify[^]*HUNT commits[^]*north crossing/i,
     );
     expect(compactRootDialogue).not.toMatch(TRUNCATION_MARKER);
     uncommitted = act(uncommitted, "ask_lure");
