@@ -263,7 +263,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
     expect(oath.message).toContain(
-      "Role chosen. Quick setup binds duty + evidence; compare first.",
+      "Role chosen. Quick setup binds duty + evidence; compare duties first.",
     );
     expectBoundedPurpose(oath, PURPOSES.relief_oath);
     expect(oath.options.map((option) => option.id)).toEqual([
@@ -298,9 +298,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       initialOptionIds: [standardPacket.id],
       reveal: {
         id: "customize_duty_and_evidence",
-        label: "Compare duty + evidence before choosing",
+        label: "Compare duties before choosing",
         description:
-          "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle; DRIVE risks cattle or rig; FORTIFY risks property or public terms. Each protects something different. No plan is recommended, and setup does not commit one.",
+          "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle; DRIVE risks cattle or rig; FORTIFY risks property or public terms. Each protects something different. No plan is recommended, and setup does not commit one. Choose a duty here; its evidence source follows.",
         optionIds: RELIEF_OATH.options.map((option) => option.id),
       },
     });

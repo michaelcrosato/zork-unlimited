@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { openingLeadSourceJournalId } from "../../src/world/opening_lead_source_journal.js";
 import { openingRegistrationJournalId } from "../../src/world/opening_registration_journal.js";
+import { presentOpeningRegistration } from "../../src/world/opening_registration_presentation.js";
 import { openingReliefOathJournalId } from "../../src/world/opening_relief_oath_journal.js";
+import { presentOpeningReliefOath } from "../../src/world/opening_relief_oath_presentation.js";
 import { assertOverworldIntegrity, type OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -39,11 +41,14 @@ describe("Albany role-first standard packet runtime", () => {
   it("presents four roles first, then only the selected role's matched packet before ordinary oaths", () => {
     const opening = atRegistration();
     const registrationPrompt = opening.journey().storyChoice!;
+    const registrationPresentation = presentOpeningRegistration(REGISTRATION);
 
     expect(registrationPrompt.options.map((option) => option.id)).toEqual(
       REGISTRATION.profiles.map((profile) => profile.id),
     );
     expect(registrationPrompt.options).toHaveLength(4);
+    expect(registrationPresentation.message).toContain("authored quick setup");
+    expect(registrationPresentation.message.toLowerCase()).not.toContain("standard packet");
     expect(registrationPrompt.options.every((option) => option.group === undefined)).toBe(true);
     expect(registrationPrompt.options.map((option) => option.id)).not.toEqual(
       expect.arrayContaining(REGISTRATION.doctrines!.map((doctrine) => doctrine.id)),
@@ -70,6 +75,13 @@ describe("Albany role-first standard packet runtime", () => {
       expect(oathPrompt.options).toHaveLength(matchedPacket ? 4 : 3);
       if (matchedPacket) {
         const packetOption = oathPrompt.options[0]!;
+        const oathPresentation = presentOpeningReliefOath(
+          RELIEF_OATH,
+          session.snapshot().character,
+          { registration: REGISTRATION, leadSource: LEAD_SOURCE },
+        );
+        expect(oathPresentation.message).toContain("role's quick setup");
+        expect(oathPresentation.message.toLowerCase()).not.toContain("standard packet");
         const mappedOath = RELIEF_OATH.options.find(
           (option) => option.id === matchedPacket.relief_oath_option_id,
         )!;
@@ -108,6 +120,27 @@ describe("Albany role-first standard packet runtime", () => {
     }
   });
 
+  it("falls back to authoritative support when a known doctrine's mechanics change", () => {
+    const revisedWorld = structuredClone(WORLD);
+    const revisedDoctrine = revisedWorld.opening_registration!.doctrines!.find(
+      (doctrine) => doctrine.id === "albany:doctrine_road_warden_aid_route",
+    )!;
+    const revisedCategory =
+      "Fieldcraft 5; revised dispatch support applies only after a road survey.";
+    revisedDoctrine.trigger_category = revisedCategory;
+
+    expect(() => assertOverworldIntegrity(revisedWorld)).not.toThrow();
+    const session = atRegistration(revisedWorld);
+    session.chooseJourneyStory(revisedDoctrine.profile_id);
+    const option = session
+      .journey()
+      .storyChoice!.options.find((candidate) => candidate.id === revisedDoctrine.id)!;
+
+    expect(option.summary?.commitment).toBe(`No field plan is chosen. Support: ${revisedCategory}`);
+    expect(option.summary?.commitment).not.toContain("a bloodless LURE skips one alarm");
+    expect(option.consequence).toContain(`Benefit: ${revisedCategory}`);
+  });
+
   it("runs every matched packet as exactly two canonical oath and source decisions", () => {
     for (const doctrine of REGISTRATION.doctrines!) {
       const packetSession = atRegistration();
@@ -127,6 +160,8 @@ describe("Albany role-first standard packet runtime", () => {
         storyChoiceId: RELIEF_OATH.id,
         choiceId: doctrine.id,
       });
+      expect(receipt.entry.title).toBe(`Quick setup confirmed: ${doctrine.title}`);
+      expect(receipt.entry.title.toLowerCase()).not.toContain("standard packet");
       expect(receipt.consequence).toContain(doctrine.preview);
       expect(receipt.consequence).toContain(`Exact opening cost: ${doctrine.immediate_cost}.`);
       expect(receipt.consequence).toContain(doctrine.consequence);

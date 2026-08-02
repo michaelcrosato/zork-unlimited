@@ -86,7 +86,7 @@ export function JourneyStoryChoiceScreen({
   const currentObjectiveGuidance = registrationGroups
     ? "A doctrine commits your role, oath, and source; a custom role continues step-by-step."
     : hasStandardPacket
-      ? "The standard card binds duty and evidence together; the comparison control is read-only."
+      ? "The quick-setup card binds duty and evidence together; the duty comparison is read-only."
     : usesRoleplayReceipts
       ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
       : isRegistration
@@ -217,7 +217,7 @@ export function JourneyStoryChoiceScreen({
                     ? "Choose what Albany can protect"
                     : isReliefOath
                       ? hasStandardPacket
-                        ? "Choose the standard packet or customize"
+                        ? "Choose quick setup or compare duties"
                         : "Choose one binding term"
                       : "Choose what follows"}
         </h1>
