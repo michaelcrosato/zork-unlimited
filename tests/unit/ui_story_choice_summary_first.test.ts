@@ -412,8 +412,18 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(standardPacketButtons[0]!.textContent).toContain(
         standardPacketOption.summary!.commitment,
       );
+      expect(standardPacketButtons[0]!.textContent).toContain("Quick setup —");
       expect(standardPacketButtons[0]!.textContent).toContain(
+        "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
+      );
+      expect(standardPacketButtons[0]!.textContent).not.toContain(
         "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
+      );
+      const standardPacketDetails = rootElement.querySelector(".journey-choice-card details") as {
+        textContent: string | null;
+      } | null;
+      expect(standardPacketDetails?.textContent).toContain(
+        "Benefit: Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
       );
       const customize = rootElement.querySelector(
         ".journey-choice-progressive-disclosure > button",

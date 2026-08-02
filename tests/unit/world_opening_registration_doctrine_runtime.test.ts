@@ -76,9 +76,24 @@ describe("Albany role-first standard packet runtime", () => {
         const mappedSource = LEAD_SOURCE.options.find(
           (option) => option.id === matchedPacket.lead_source_option_id,
         )!;
-        expect(packetOption.summary?.commitment).toContain(`Duty: ${mappedOath.title}`);
-        expect(packetOption.summary?.commitment).toContain(`evidence: ${mappedSource.title}`);
-        expect(packetOption.summary?.commitment).toContain(matchedPacket.trigger_category);
+        expect(packetOption.label).toBe(
+          `Quick setup — ${mappedOath.title} + ${mappedSource.title}`,
+        );
+        const expectedSupport =
+          matchedPacket.profile_id === "albany:ironhands_repairer"
+            ? "Repair 4; FORTIFY's first public-seal check is 2 DC easier."
+            : matchedPacket.profile_id === "albany:road_warden"
+              ? "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace."
+              : "Streetwise 4; DRIVE's first shutter-signal check is 2 DC easier.";
+        expect(packetOption.summary?.commitment).toBe(
+          `No field plan is chosen. Support: ${expectedSupport}`,
+        );
+        expect(packetOption.summary?.tradeoff).toBe(
+          "Other duty/evidence pairs close; every field plan stays open.",
+        );
+        expect(packetOption.consequence).toContain(`Benefit: ${matchedPacket.trigger_category}`);
+        expect(packetOption.summary?.commitment).not.toContain(matchedPacket.trigger_category);
+        expect(packetOption.summary?.commitment).toContain(expectedSupport);
       }
       expect(
         REGISTRATION.doctrines!.filter((doctrine) =>

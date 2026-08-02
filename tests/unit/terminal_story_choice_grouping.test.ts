@@ -5,6 +5,23 @@ import {
   runTerminalStoryChoiceController,
 } from "../../bin/terminal_story_choice.js";
 import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
+import { OverworldSession } from "../../src/world/session.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
+
+const WORLD = loadOverworldManifest(process.cwd());
+
+function roadWardenReliefOathPrompt(): JourneyStoryChoicePrompt {
+  const session = new OverworldSession(WORLD);
+  const registration = WORLD.opening_registration!;
+  session.scoutPoi(session.view().pois[0]!.id);
+  session.talkToCharacter(registration.contact);
+  session.chooseJourneyStory("albany:road_warden");
+  const storyChoice = session.journey().storyChoice;
+  if (!storyChoice?.progressiveDisclosure) {
+    throw new Error("Expected the Road-Warden quick setup and comparison affordance.");
+  }
+  return storyChoice;
+}
 
 function prompt(kind: JourneyStoryChoicePrompt["kind"]): JourneyStoryChoicePrompt {
   return {
@@ -104,6 +121,32 @@ function progressiveReliefOathPrompt(): JourneyStoryChoicePrompt {
 }
 
 describe("terminal registration story-choice groups", () => {
+  it("shows the honest quick-setup pair and four-plan compass before disclosure", () => {
+    const prompt = roadWardenReliefOathPrompt();
+    const initial = renderTerminalStoryChoiceComparison(prompt);
+
+    expect(initial).toContain(
+      "Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+    );
+    expect(initial).toContain("No field plan is chosen");
+    expect(initial).toContain(
+      "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace",
+    );
+    expect(initial).toContain("Compare duty + evidence before choosing");
+    expect(initial).toContain(
+      "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle",
+    );
+    expect(initial).toContain("setup does not commit one");
+    expect(initial).not.toContain("2. Take Full Compact Duty");
+
+    const revealed = renderTerminalStoryChoiceComparison(prompt, {
+      revealId: prompt.progressiveDisclosure!.reveal.id,
+    });
+    expect(revealed).toContain("2. Take Full Compact Duty");
+    expect(revealed).toContain("3. Negotiate Aid-Only Duty");
+    expect(revealed).toContain("4. Remain an Unaffiliated Helper");
+  });
+
   it("labels doctrine and custom-role cards without changing generic comparisons", async () => {
     const grouped = renderTerminalStoryChoiceComparison(prompt("registration"));
 
