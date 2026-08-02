@@ -429,12 +429,21 @@ export function validateRpgFoundation(
         if (v) winRooms.add(v);
       }
     }
-    if (wc.ending && !pack.endings.some((e) => e.id === wc.ending)) {
+    const endingTargets = [
+      { ending: wc.ending, where: [`win:${wc.id}`], label: `win_condition "${wc.id}"` },
+      ...(wc.ending_overrides ?? []).map((override, index) => ({
+        ending: override.ending,
+        where: [`win:${wc.id}`, `ending_override:${index}`],
+        label: `win_condition "${wc.id}" ending override #${index + 1}`,
+      })),
+    ];
+    for (const target of endingTargets) {
+      if (pack.endings.some((ending) => ending.id === target.ending)) continue;
       findings.push(
         err(
           "ENDING_UNDECLARED",
-          `win_condition "${wc.id}" ends in "${wc.ending}", which is not a declared ending.`,
-          [`win:${wc.id}`],
+          `${target.label} ends in "${target.ending}", which is not a declared ending.`,
+          target.where,
         ),
       );
     }
@@ -615,7 +624,11 @@ export function validateRpgFoundation(
       checkConds(maneuver.conditions, [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`]);
     }
   }
-  for (const wc of pack.win_conditions) checkConds(wc.conditions, [`win:${wc.id}`]);
+  for (const wc of pack.win_conditions) {
+    checkConds(wc.conditions, [`win:${wc.id}`]);
+    for (const [index, override] of (wc.ending_overrides ?? []).entries())
+      checkConds(override.conditions, [`win:${wc.id}`, `ending_override:${index}`]);
+  }
   for (const npc of pack.npcs) {
     checkConds(npc.conditions ?? [], [`npc:${npc.id}`]);
     for (const node of npc.dialogue.nodes) {
@@ -667,8 +680,11 @@ export function validateRpgFoundation(
   }
   for (const room of pack.rooms)
     for (const exit of room.exits) for (const id of itemReqs(exit.conditions)) noteHeld(id, false);
-  for (const wc of pack.win_conditions)
+  for (const wc of pack.win_conditions) {
     for (const id of itemReqs(wc.conditions)) noteHeld(id, false);
+    for (const override of wc.ending_overrides ?? [])
+      for (const id of itemReqs(override.conditions)) noteHeld(id, false);
+  }
   for (const enemy of pack.enemies) {
     for (const maneuver of enemy.maneuvers ?? []) {
       const consumes = new Set(
@@ -818,12 +834,21 @@ export function validateRpgFoundation(
   // A win condition must not resolve to a death/failure ending — that would be
   // an unwinnable game dressed as a win.
   for (const wc of pack.win_conditions) {
-    if (declaredEndings.get(wc.ending)?.death) {
+    const endingTargets = [
+      { ending: wc.ending, where: [`win:${wc.id}`], label: `win_condition "${wc.id}"` },
+      ...(wc.ending_overrides ?? []).map((override, index) => ({
+        ending: override.ending,
+        where: [`win:${wc.id}`, `ending_override:${index}`],
+        label: `win_condition "${wc.id}" ending override #${index + 1}`,
+      })),
+    ];
+    for (const target of endingTargets) {
+      if (!declaredEndings.get(target.ending)?.death) continue;
       findings.push(
         err(
           "WIN_IS_DEATH",
-          `win_condition "${wc.id}" ends in "${wc.ending}", which is flagged as a death ending.`,
-          [`win:${wc.id}`],
+          `${target.label} ends in "${target.ending}", which is flagged as a death ending.`,
+          target.where,
         ),
       );
     }
@@ -1037,8 +1062,22 @@ export function validateRpgFoundation(
   // mask a true SOFTLOCK. The `winRooms` construction above now EXCLUDES such dead
   // wins from the escape graph (bug_0092); this warning still names the contradictory
   // win so the author can fix or remove it.
-  for (const wc of pack.win_conditions)
+  for (const wc of pack.win_conditions) {
     checkUnsatisfiable(wc.conditions, [`win:${wc.id}`], `win_condition "${wc.id}"`, findings);
+    const overrides = wc.ending_overrides ?? [];
+    checkVariantShadowing(
+      overrides.map((override) => ({ when: [...wc.conditions, ...override.conditions] })),
+      `win:${wc.id}:ending_overrides`,
+      findings,
+    );
+    for (const [index, override] of overrides.entries())
+      checkUnsatisfiable(
+        [...wc.conditions, ...override.conditions],
+        [`win:${wc.id}`, `ending_override:${index}`],
+        `win_condition "${wc.id}" ending override #${index + 1} together with its parent win guard`,
+        findings,
+      );
+  }
 
   // ── Inert flags (set but never read) ─────────────────────────────────────────
   // The flag-side port of the CYOA validator's INERT_FLAG check (bug_0104) and the
@@ -1866,7 +1905,10 @@ function collectFlagReads(pack: RpgPack): Set<string> {
   }
   for (const enemy of pack.enemies)
     for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
-  for (const wc of pack.win_conditions) walkAll(wc.conditions);
+  for (const wc of pack.win_conditions) {
+    walkAll(wc.conditions);
+    for (const override of wc.ending_overrides ?? []) walkAll(override.conditions);
+  }
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when); // reactive epilogue guards
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);
@@ -1914,7 +1956,10 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
   }
   for (const enemy of pack.enemies)
     for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
-  for (const wc of pack.win_conditions) walkAll(wc.conditions);
+  for (const wc of pack.win_conditions) {
+    walkAll(wc.conditions);
+    for (const override of wc.ending_overrides ?? []) walkAll(override.conditions);
+  }
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);
@@ -1965,7 +2010,10 @@ function collectRoomRefs(pack: RpgPack, extraEffects: readonly Effect[] = []): S
   }
   for (const enemy of pack.enemies)
     for (const maneuver of enemy.maneuvers ?? []) walkAll(maneuver.conditions);
-  for (const wc of pack.win_conditions) walkAll(wc.conditions);
+  for (const wc of pack.win_conditions) {
+    walkAll(wc.conditions);
+    for (const override of wc.ending_overrides ?? []) walkAll(override.conditions);
+  }
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);

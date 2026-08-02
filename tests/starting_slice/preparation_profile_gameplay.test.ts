@@ -1008,6 +1008,7 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
 
   it("includes the evacuation and fortify outcomes while preserving every ending identity", () => {
     expect(pack.endings.map((ending) => ending.id)).toEqual([
+      "ending_bloodied_byre_evacuated_june_released",
       "ending_bloodied_byre_evacuated",
       "ending_fortified_cade_terms",
       "ending_fortified_albany_authority",
@@ -1017,8 +1018,11 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
       "ending_pack_diverted_after_blood",
       "ending_pack_diverted_cattle_scattered",
       "ending_pack_diverted",
+      "ending_held_gate_barred_june_released",
       "ending_held_gate_barred",
+      "ending_held_timber_saved_june_released",
       "ending_held_timber_saved",
+      "ending_held_june_released",
       "ending_held",
       "ending_pulled_down",
     ]);

@@ -313,6 +313,10 @@ describe("New York overworld graph", () => {
       "ending_held_gate_barred",
       "ending_held_timber_saved",
       "ending_held",
+      "ending_held_gate_barred_june_released",
+      "ending_held_timber_saved_june_released",
+      "ending_held_june_released",
+      "ending_bloodied_byre_evacuated_june_released",
     ]);
     expect(wolfWinter.campaign_exports?.map((entry) => entry.ending_title)).toEqual([
       "The Bloodied Byre Evacuated",
@@ -327,6 +331,10 @@ describe("New York overworld graph", () => {
       "The Byre Held, Inner Gate Barred",
       "The Byre Held, Paling Timber Saved",
       "The Byre Held",
+      "The Byre Held, Inner Gate Barred — June Released",
+      "The Byre Held, Paling Timber Saved — June Released",
+      "The Byre Held — June Released",
+      "The Bloodied Byre Evacuated — June Released",
     ]);
     expect(overworldQuestCampaignExportForEnding(wolfWinter, "ending_pulled_down")).toBeNull();
 
@@ -429,6 +437,36 @@ describe("New York overworld graph", () => {
         "fact:wolf_winter_outer_paling_broken",
         "fact:wolf_winter_repair_timber_spent",
       ],
+      ending_held_gate_barred_june_released: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_bloodshed",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_inner_gate_barred_at_dawn",
+        "fact:wolf_winter_guard_wood_committed",
+      ],
+      ending_held_timber_saved_june_released: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_bloodshed",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_repair_timber_available",
+      ],
+      ending_held_june_released: [
+        "fact:wolf_winter_byre_held",
+        "fact:wolf_winter_bloodshed",
+        "fact:wolf_winter_outer_paling_broken",
+        "fact:wolf_winter_repair_timber_spent",
+      ],
+      ending_bloodied_byre_evacuated_june_released: [
+        "fact:wolf_winter_bloodshed",
+        "fact:wolf_winter_yearling_killed",
+        "fact:wolf_winter_flank_wolf_killed",
+        "fact:wolf_winter_old_grey_leader_remains",
+        "fact:wolf_winter_steading_evacuated",
+        "fact:wolf_winter_outer_line_abandoned",
+        "fact:wolf_winter_people_safe",
+        "fact:wolf_winter_cattle_scattered",
+        "fact:wolf_winter_bloodied_byre_evacuated",
+      ],
     } as const;
     const expectedMemories = {
       ending_bloodied_byre_evacuated: [
@@ -479,6 +517,22 @@ describe("New York overworld graph", () => {
         ["npc:old_cade", "memory:wolf_winter_guard_wood_spent", 10, 10, 1],
         ["albany:emery_sloane", "albany:memory_emery_wolf_full_combat_bloodshed", 4, 5, 0],
       ],
+      ending_held_gate_barred_june_released: [
+        ["npc:old_cade", "memory:wolf_winter_inner_gate_barred", 10, 10, 1],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_full_combat_bloodshed", 4, 5, 0],
+      ],
+      ending_held_timber_saved_june_released: [
+        ["npc:old_cade", "memory:wolf_winter_repair_timber_saved", 10, 10, 1],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_full_combat_bloodshed", 4, 5, 0],
+      ],
+      ending_held_june_released: [
+        ["npc:old_cade", "memory:wolf_winter_guard_wood_spent", 10, 10, 1],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_full_combat_bloodshed", 4, 5, 0],
+      ],
+      ending_bloodied_byre_evacuated_june_released: [
+        ["npc:old_cade", "memory:wolf_winter_bloodied_byre_evacuated", 3, 4, 0],
+        ["albany:emery_sloane", "albany:memory_emery_wolf_bloodied_byre_evacuated", 2, 3, 0],
+      ],
     } as const;
 
     for (const [endingId, facts] of Object.entries(expectedOutcomeFacts)) {
@@ -515,6 +569,44 @@ describe("New York overworld graph", () => {
           : [],
       );
     }
+  });
+
+  it("keeps the released bloodied-byre export identical outside June's disposition", () => {
+    const wolfWinter = world.quests.find((quest) => quest.id === "wolf_winter")!;
+    const retained = overworldQuestCampaignExportForEnding(
+      wolfWinter,
+      "ending_bloodied_byre_evacuated",
+    );
+    const released = overworldQuestCampaignExportForEnding(
+      wolfWinter,
+      "ending_bloodied_byre_evacuated_june_released",
+    );
+    expect(released?.effects).toEqual(retained?.effects);
+    expect(released?.conditional_effects?.filter((group) => !group.id.includes("june_"))).toEqual(
+      retained?.conditional_effects?.filter((group) => !group.id.includes("june_")),
+    );
+    expect(released?.conditional_effects?.find((group) => group.id.includes("june_"))).toEqual({
+      id: "albany:june_released_before_bloodied_byre_hunt",
+      when: {
+        requires_all_companions: ["albany:june_pike"],
+        requires_all_promises: [
+          { promise_id: "albany:promise_june_cattle_first", status: "active" },
+        ],
+      },
+      effects: [
+        {
+          type: "resolve_promise",
+          promise_id: "albany:promise_june_cattle_first",
+          status: "released",
+        },
+        { type: "remove_companion", npc_id: "albany:june_pike" },
+        {
+          type: "remember_relationship",
+          npc_id: "albany:june_pike",
+          memory_id: "albany:memory_june_released_before_hunt",
+        },
+      ],
+    });
   });
 
   it("exports the bloodied-byre evacuation as an honest loss and exposes Emery's exact count", () => {

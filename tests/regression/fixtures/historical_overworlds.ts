@@ -32,9 +32,33 @@ function comparisonCardOptionGroups(world: OverworldManifest): ComparisonCardOpt
   ];
 }
 
+const JUNE_HUNT_RELEASE_ENDING_IDS: ReadonlySet<string> = new Set([
+  "ending_bloodied_byre_evacuated_june_released",
+  "ending_held_gate_barred_june_released",
+  "ending_held_timber_saved_june_released",
+  "ending_held_june_released",
+]);
+
+/** Reconstruct the exact manifest before June could be released amicably before HUNT. */
+export function exactJuneHuntReleasePredecessor(current: OverworldManifest): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const wolf = predecessor.quests.find((quest) => quest.id === "wolf_winter");
+  const june = predecessor.characters.find(
+    (character) => character.id === "albany_city__transport_hub__june_pike",
+  );
+  if (!wolf?.campaign_exports || !june?.variants) {
+    throw new Error("June HUNT release predecessor requires Wolf-Winter and June's return copy.");
+  }
+  wolf.campaign_exports = wolf.campaign_exports.filter(
+    (campaignExport) => !JUNE_HUNT_RELEASE_ENDING_IDS.has(campaignExport.ending_id),
+  );
+  june.variants = june.variants.filter((variant) => variant.id !== "released_before_hunt");
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before June gained her FORTIFY dawn-strain consumer. */
 export function exactJuneFortifyDawnPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactJuneHuntReleasePredecessor(current);
   const ally = predecessor.opening_ally;
   const june = ally?.options.find((option) => option.id === "albany:ally_june_cattle_first");
   if (!ally || !june) throw new Error("Albany must retain June's cattle-first field-team term.");
@@ -46,7 +70,7 @@ export function exactJuneFortifyDawnPredecessor(current: OverworldManifest): Ove
 
 /** Reconstruct the exact manifest before June gained her failed-DRIVE Overrun consumer. */
 export function exactJuneDriveOverrunPredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = exactJuneFortifyDawnPredecessor(current);
   const ally = predecessor.opening_ally;
   const june = ally?.options.find((option) => option.id === "albany:ally_june_cattle_first");
   if (!ally || !june) throw new Error("Albany must retain June's cattle-first field-team term.");

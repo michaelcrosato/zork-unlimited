@@ -96,7 +96,11 @@ function enemyManeuver(enemy: Enemy, maneuverId: string): EnemyManeuver | undefi
 
 export function winningRpgEnding(index: RpgIndex, state: GameState): string | null {
   for (const wc of index.pack.win_conditions) {
-    if (evalConditions(wc.conditions, state)) return wc.ending;
+    if (!evalConditions(wc.conditions, state)) continue;
+    const override = wc.ending_overrides?.find((candidate) =>
+      evalConditions(candidate.conditions, state),
+    );
+    return override?.ending ?? wc.ending;
   }
   return null;
 }

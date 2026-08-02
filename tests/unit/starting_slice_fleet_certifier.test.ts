@@ -170,6 +170,10 @@ describe("Wolf-Winter strategy taxonomy", () => {
         strategy: "hunt_and_hold",
         variant: "bloodied_evacuation",
       },
+      ending_bloodied_byre_evacuated_june_released: {
+        strategy: "hunt_and_hold",
+        variant: "bloodied_evacuation",
+      },
       ending_drive_cattle_wounded: {
         strategy: "drive_and_evacuate",
         variant: "cattle_wounded",
@@ -191,8 +195,17 @@ describe("Wolf-Winter strategy taxonomy", () => {
         variant: "albany_authority",
       },
       ending_held_gate_barred: { strategy: "hunt_and_hold", variant: "gate_barred" },
+      ending_held_gate_barred_june_released: {
+        strategy: "hunt_and_hold",
+        variant: "gate_barred",
+      },
       ending_held_timber_saved: { strategy: "hunt_and_hold", variant: "timber_saved" },
+      ending_held_timber_saved_june_released: {
+        strategy: "hunt_and_hold",
+        variant: "timber_saved",
+      },
       ending_held: { strategy: "hunt_and_hold", variant: "line_held" },
+      ending_held_june_released: { strategy: "hunt_and_hold", variant: "line_held" },
     });
     expect(wolfStrategyMappingDrift(ROOT)).toEqual([]);
   });

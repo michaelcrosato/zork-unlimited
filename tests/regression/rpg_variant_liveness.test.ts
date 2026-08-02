@@ -86,6 +86,11 @@ import { makeStep } from "../../src/core/engine.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
+import {
+  isWolfReleasedHuntSolverAction,
+  replayRpgCampaignSeed,
+  WOLF_JUNE_PREPARED_RELEASE_SEED,
+} from "./support/rpg_campaign_seed.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -237,6 +242,45 @@ function creditViewedState(
 }
 
 type WitnessAction = string | readonly [id: string, rolls: "best" | "worst"];
+
+type VariantWitness = { displayed: Set<string>; present: Set<string> };
+
+// This module loads Wolf-Winter twice: once for its focused import witness and once for the
+// auto-discovered corpus proof. The prepared release replay and its bounded HUNT crawl are
+// deterministic over that same source, so retain that concrete witness once without sharing
+// mutable sets with either caller.
+let cachedWolfJuneReleasedHuntWitness: VariantWitness | undefined;
+
+function wolfJuneReleasedHuntWitness(index: RpgIndex): VariantWitness {
+  const cached = cachedWolfJuneReleasedHuntWitness;
+  if (cached) {
+    return { displayed: new Set(cached.displayed), present: new Set(cached.present) };
+  }
+
+  // The direct quest seed intentionally has no companion import. Replay June's declared
+  // campaign import and the real release dialogue, crediting every prefix view (including
+  // the released byre-yard), then exhaust the now-committed HUNT action subset. This keeps
+  // all tactical branches concrete without multiplying unrelated yard conversations and
+  // clothing permutations into another full Wolf-Winter crawl.
+  const releasedSeed = replayRpgCampaignSeed(index, WORLD, WOLF_JUNE_PREPARED_RELEASE_SEED);
+  const displayed = new Set<string>();
+  const present = new Set<string>();
+  for (const state of releasedSeed.states) creditViewedState(index, state, displayed, present);
+  const releasedHunt = analyze(
+    index,
+    isWolfReleasedHuntSolverAction,
+    releasedSeed.final,
+    IMPORT_WITNESS_MAX_STATES,
+  );
+  if (releasedHunt.cappedOut) {
+    throw new Error("Concrete June-release HUNT variant search hit its bounded state cap.");
+  }
+  for (const key of releasedHunt.displayed) displayed.add(key);
+  for (const key of releasedHunt.present) present.add(key);
+
+  cachedWolfJuneReleasedHuntWitness = { displayed, present };
+  return { displayed: new Set(displayed), present: new Set(present) };
+}
 
 /** Replay an authored action-id route through the real engine and credit every view. */
 function replayConcreteWitness(
@@ -506,6 +550,21 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     );
   }
 
+  const releasedHunt = wolfJuneReleasedHuntWitness(index);
+  for (const key of releasedHunt.displayed) displayed.add(key);
+  for (const key of releasedHunt.present) present.add(key);
+
+  const releasedHeldEndingIds = [
+    "ending_held_gate_barred_june_released",
+    "ending_held_timber_saved_june_released",
+    "ending_held_june_released",
+  ] as const;
+  const releasedHeldVariantKeys = releasedHeldEndingIds.flatMap((endingId) => {
+    const ending = index.pack.endings.find((candidate) => candidate.id === endingId);
+    if (!ending) throw new Error(`June-release witness cannot resolve ending "${endingId}".`);
+    return (ending.variants ?? []).map((_, variantIndex) => `ending:${endingId}#${variantIndex}`);
+  });
+
   const required = [
     "room:steading_yard#2",
     "room:steading_yard#4",
@@ -520,6 +579,14 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     "ending:ending_drive_reserve_spent#0",
     "ending:ending_fortified_cade_terms#0",
     "ending:ending_fortified_albany_authority#0",
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "byre_yard",
+      "June's amicable pre-HUNT release",
+      "June has taken the cattle-first return with your agreement intact",
+    ),
+    ...releasedHeldVariantKeys,
   ];
   const missing = required.filter((key) => !displayed.has(key));
   if (missing.length > 0) {

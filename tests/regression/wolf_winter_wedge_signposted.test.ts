@@ -17,7 +17,8 @@
  * This pins:
  *   (1) SIGNPOST — Cade's byre counsel names the rail + the wedge + the half-shut-breach
  *       payoff (in both the spoken reply event AND the persisted journal note), then
- *       returns to Cade's post-effect root, so the affordance is discoverable naturally;
+ *       offers an explicit return to Cade's post-effect root, so the affordance remains
+ *       discoverable without hiding the reply node's exact legal actions;
  *   (2) DISCOVERABILITY — at the paling, target-only USE "wedge" is immediately legal and
  *       TAKE is not; the affordance cannot hide behind inventory ceremony;
  *   (3) CONTEXTUAL PAYOFF — breach_braced alone satisfies no exit/win/ending. Ordinary
@@ -135,14 +136,31 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     expect(spoken).toContain("combat funnel");
     expect(spoken).toContain("neither turns a wolf alive");
 
-    const obs = buildRpgObservation(index, d.state());
+    let obs = buildRpgObservation(index, d.state());
+    expect(activeDialogue(index, d.state())?.node.id).toBe("cade_byre");
+    expect(obs.dialogue?.npc_text).toMatch(
+      /Guarded spear line[^]*wedge[^]*combat funnel[^]*patient alternative/i,
+    );
+    expect(
+      obs.available_actions.map((action) => action.id).filter((id) => id.startsWith("ask_")),
+    ).toEqual(["ask_wolves", "ask_lure", "ask_drive", "ask_fortify", "ask_byre_back", "ask_leave"]);
+
+    d.act({ type: "ASK", npc: "houndsman", topic: "byre_back" });
+    obs = buildRpgObservation(index, d.state());
     expect(activeDialogue(index, d.state())?.node.id).toBe("cade_root");
     expect(obs.dialogue?.npc_text).toMatch(
       /guarded spear-fighting plan[^]*quick spear-hand is still yours to learn[^]*Ask for it/i,
     );
-    const resumedIds = obs.available_actions.map((action) => action.id);
-    expect(resumedIds).toEqual(expect.arrayContaining(["ask_wolves", "ask_leave"]));
-    expect(resumedIds).not.toContain("ask_byre_back");
+    expect(
+      obs.available_actions.map((action) => action.id).filter((id) => id.startsWith("ask_")),
+    ).toEqual([
+      "ask_wolves",
+      "ask_commit_hunt_and_hold",
+      "ask_lure",
+      "ask_drive",
+      "ask_fortify",
+      "ask_leave",
+    ]);
     expect(d.state().flags["heard_plan"]).toBe(true);
     const journal = d.state().journal.join(" ").toLowerCase();
     expect(journal).toContain("guarded/patient combat");

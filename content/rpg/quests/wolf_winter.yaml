@@ -247,6 +247,14 @@ rooms:
           Go north through the settled paling, empty threshold, and byre mouth; standing
           among the cattle closes the exact count Albany still needs.
       - when:
+          - { has_flag: june_hunt_released }
+          - { not_visited: paling_gap }
+        text: >
+          June has taken the cattle-first return with your agreement intact. HUNT is
+          committed now: LURE, DRIVE, and FORTIFY are closed, and no June field intervention
+          or combat/cattle bonus remains. The north gate is open under your hand alone.
+          Cade's ordinary lessons, store gear, yard preparation, and backtracking remain.
+      - when:
           - { has_flag: strategy_drive_committed }
           - { not_visited: paling_gap }
         text: >
@@ -3875,6 +3883,14 @@ npcs:
                 and north past the spent scent. Stand among the cattle and take the exact
                 count; then Albany gets the truth.
             - when:
+                - { has_flag: june_hunt_released }
+                - { not_visited: paling_gap }
+              text: >
+                June's amicable release committed HUNT and closed LURE, DRIVE, and FORTIFY.
+                I can still teach the quick or guarded spear line, and the store gear remains
+                ordinary preparation. North is open; backtracking does not reopen a strategy
+                or return June to the field.
+            - when:
                 - { has_flag: strategy_drive_committed }
                 - { not_visited: paling_gap }
               text: >
@@ -3936,6 +3952,17 @@ npcs:
               prompt: "HUNT — Hold breach: cattle/reserves safe; wolves may die. Learn +2 attack/+5 tally. Leave; if June, acknowledge; north = HUNT; close LURE/DRIVE/FORTIFY."
               conditions:
                 - { not_flag: heard_counsel }
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+              goto: cade_wolves
+            - id: wolves_after_june_release
+              aliases: [ask_wolves, ask_hunt_support]
+              prompt: "HUNT support — Learn Cade's quick spear line (+2 attack/+5 tally). This teaches tactics only; it does not choose or reopen a strategy."
+              conditions:
+                - { not_flag: heard_counsel }
+                - { has_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -3953,6 +3980,7 @@ npcs:
               aliases: [choose_hunt_and_hold, commit_hunt]
               prompt: "Commit HUNT when you cross north — Hold breach: cattle/reserves safe; wolves may die; LURE/DRIVE/FORTIFY then close."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -3962,6 +3990,7 @@ npcs:
               aliases: [ask_lure, ask_feed, ask_alive]
               prompt: "LURE — Draw the pack out; protects cattle and wolves; spends finite feed, leaves the paling broken, and a foul risks cattle. Inspect."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -3971,6 +4000,7 @@ npcs:
               aliases: [ask_drive, ask_evacuate, ask_signal]
               prompt: "DRIVE — Move herd and pack; protects people and wolves; abandons the outer line, then a crisis costs wound, cattle, or rig. Inspect."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -3980,6 +4010,7 @@ npcs:
               aliases: [ask_fortify, ask_outlast, ask_seal]
               prompt: "FORTIFY — Seal until dawn; protects byre, cattle, and wolves; trade outer property against public seals and Cade's aid. Inspect."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4021,6 +4052,7 @@ npcs:
               aliases: [ask_lure, ask_feed, ask_alive]
               prompt: "Ask how Cade could draw the pack out alive instead."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4030,6 +4062,7 @@ npcs:
               aliases: [ask_drive, ask_evacuate, ask_signal]
               prompt: "Ask how the two-charge signal drive works."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4039,6 +4072,7 @@ npcs:
               aliases: [ask_fortify, ask_outlast, ask_seal]
               prompt: "Ask how the seal-and-outlast line works."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4074,6 +4108,7 @@ npcs:
               aliases: [ask_lure, ask_feed, ask_alive]
               prompt: "Ask how Cade could draw the pack out alive instead."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4083,6 +4118,7 @@ npcs:
               aliases: [ask_drive, ask_evacuate, ask_signal]
               prompt: "Ask how the two-charge signal drive works."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4092,6 +4128,7 @@ npcs:
               aliases: [ask_fortify, ask_outlast, ask_seal]
               prompt: "Ask how the seal-and-outlast line works."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4153,6 +4190,7 @@ npcs:
               aliases: [commit_feed, commit_alive]
               prompt: "Commit to the finite feed-and-hounds line now."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4231,6 +4269,7 @@ npcs:
               aliases: [commit_evacuate, commit_signal]
               prompt: "Commit to the finite drive-and-evacuate line now; start the herd, close preparation and retreat, and forfeit the outer steading defense line."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4299,6 +4338,7 @@ npcs:
               aliases: [accept_terms, accept_household_terms, take_shutters]
               prompt: "Commit Cade's terms: no retreat; no strategy switch to lure, drive, or combat. Expose outer property; preserve public seals; gain one failed-seat aid."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4308,6 +4348,7 @@ npcs:
               aliases: [invoke_authority, order_public_seals, invoke_albany]
               prompt: "Commit Albany authority: no retreat; no strategy switch to lure, drive, or combat. Preserve property; spend public seals; no aid after a failed seat."
               conditions:
+                - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
@@ -4414,9 +4455,13 @@ npcs:
             Name HUNT here to hold the breach, or choose a living plan; crossing north commits
             it, and first wolf down ends our agreement.
           topics:
+            - id: release_june_for_hunt
+              aliases: [release_june, preserve_june_agreement, choose_hunt_without_june]
+              prompt: "Release June and commit HUNT now — Preserve the relationship; close LURE/DRIVE/FORTIFY; forfeit every later June field intervention; gain no combat or cattle bonus."
+              goto: june_released_before_hunt
             - id: commit_hunt_and_hold
               aliases: [accept_wolf_line, choose_hunt_and_hold, acknowledge_combat_line]
-              prompt: "Commit HUNT when you cross north — Hold breach; LURE/DRIVE/FORTIFY then close; first wolf death ends June's agreement."
+              prompt: "Commit HUNT when you cross north and keep June — Hold breach; LURE/DRIVE/FORTIFY then close; first wolf death ends June's agreement by breaking it."
               goto: june_combat_line_disclosed
             - id: keep_cattle_terms
               aliases: [choose_living_plan, ask_cade]
@@ -4444,6 +4489,23 @@ npcs:
             - id: return_to_cade
               aliases: [leave_june_boundary, ask_cade]
               prompt: "End the exchange and return to Cade beside the day-book; all three living plans remain open, and north remains closed."
+              end: true
+        - id: june_released_before_hunt
+          npc_text: >
+            Agreed. I take the cattle-first return before your spear crosses. Our word
+            stays intact, but my rope, lower gate, and dawn brace go with me: no later
+            LURE, DRIVE, or FORTIFY intervention, and no help against a wolf. Choosing
+            release commits HUNT now and closes those three living plans. North opens under
+            your hand alone; ordinary yard preparation and backtracking remain available.
+          effects:
+            - set_flag: june_hunt_released
+            - set_flag: june_combat_line_acknowledged
+            - clear_flag: june_pike_present
+            - add_journal: "June released before HUNT: relationship preserved; HUNT committed now; LURE/DRIVE/FORTIFY closed; no companion intervention or combat/cattle bonus remains."
+          topics:
+            - id: leave_after_june_release
+              aliases: [cross_to_paling, leave_june]
+              prompt: "End the exchange; HUNT is committed and north is open. Yard preparation remains, but June and the three living plans do not reopen."
               end: true
 
   # June is an optional campaign companion, never a direct-start assumption or
@@ -5030,6 +5092,9 @@ win_conditions:
       - { not_flag: leader_down }
       - { not_flag: leader_redirected }
     ending: ending_bloodied_byre_evacuated
+    ending_overrides:
+      - conditions: [{ has_flag: june_hunt_released }]
+        ending: ending_bloodied_byre_evacuated_june_released
   - id: fortify_outlast_cade_terms
     conditions:
       - { visited: cattle_stand }
@@ -5117,20 +5182,44 @@ win_conditions:
   - id: hold_the_byre_gate_barred_split_guard
     conditions: [{ visited: cattle_stand }, { has_flag: cattle_gate_barred_with_split_guard }]
     ending: ending_held_gate_barred
+    ending_overrides:
+      - conditions: [{ has_flag: june_hunt_released }]
+        ending: ending_held_gate_barred_june_released
   - id: hold_the_byre_gate_barred_brace_stake
     conditions: [{ visited: cattle_stand }, { has_flag: cattle_gate_barred_with_brace_stake }]
     ending: ending_held_gate_barred
+    ending_overrides:
+      - conditions: [{ has_flag: june_hunt_released }]
+        ending: ending_held_gate_barred_june_released
   - id: hold_the_byre_timber_saved_split_guard
     conditions: [{ visited: cattle_stand }, { has_item: split_rail_guard }]
     ending: ending_held_timber_saved
+    ending_overrides:
+      - conditions: [{ has_flag: june_hunt_released }]
+        ending: ending_held_timber_saved_june_released
   - id: hold_the_byre_timber_saved_brace_stake
     conditions: [{ visited: cattle_stand }, { has_item: saved_brace_stake }]
     ending: ending_held_timber_saved
+    ending_overrides:
+      - conditions: [{ has_flag: june_hunt_released }]
+        ending: ending_held_timber_saved_june_released
   - id: hold_the_byre
     conditions: [{ visited: cattle_stand }]
     ending: ending_held
+    ending_overrides:
+      - conditions: [{ has_flag: june_hunt_released }]
+        ending: ending_held_june_released
 
 endings:
+  - id: ending_bloodied_byre_evacuated_june_released
+    title: "The Bloodied Byre Evacuated — June Released"
+    text: >
+      Cade and every rider escape the byre, but old grey remains in its straw-dark
+      heart. Two cattle are missing in the lower pasture. The outer defense line and
+      the byre are abandoned to keep the people clear. Albany receives the living count
+      and the cost. June had already returned cattle-first after you released her before
+      HUNT, with your agreement intact and no field aid. *** You have won, by evacuation
+      and with loss. ***
   - id: ending_bloodied_byre_evacuated
     title: "The Bloodied Byre Evacuated"
     text: >
@@ -5285,6 +5374,71 @@ endings:
           was only partly followed: you wore the byre-jerkin, but left Cade's quick wolf
           lesson unheard. That missed lesson is the five-point gap in this otherwise
           unbloodied watch. *** You have won. ***
+  - id: ending_held_gate_barred_june_released
+    title: "The Byre Held, Inner Gate Barred — June Released"
+    text: >
+      Grey dawn finds the cattle whole behind a barred inner gate. Wood carried through
+      the fighting now holds one last line against the dark byre. Cade sees the choice at
+      the slats; the pack is going, and the steading will see spring. June had already
+      taken the cattle-first return to Albany with your agreement intact and no field aid.
+      *** You have won. ***
+    variants:
+      - when:
+          - { has_flag: cattle_gate_barred_with_split_guard }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You crossed the
+          fodder-loft, dropped behind the flank-wolf, then waited out old grey without
+          spending the split guard. Now that failed rail bars the inner gate; Cade sees
+          both roads in the wood. June had already returned cattle-first to Albany with
+          your agreement intact and no field aid. *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_split_guard }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You crossed the
+          fodder-loft, dropped behind the flank-wolf, then closed through old grey's feint
+          without spending the split guard. Now that failed rail bars the inner gate;
+          Cade sees both roads in the wood. June had already returned cattle-first to
+          Albany with your agreement intact and no field aid. *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_split_guard }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You waited out old grey,
+          then spent the split-rail guard across the inner gate instead of on her. Rawhide
+          and broken paling bar the dark byre; Cade sees a failed wedge made useful twice.
+          June had already returned cattle-first to Albany with your agreement intact and
+          no field aid. *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_split_guard }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You closed through old
+          grey's feint, keeping the split-rail guard clear of her teeth; now rawhide and
+          broken paling bar the inner gate. Cade sees a failed wedge made useful twice.
+          June had already returned cattle-first to Albany with your agreement intact and
+          no field aid. *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_brace_stake }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You waited out old grey
+          and kept the brace-stake unbroken; now that sound hardwood locks the inner gate
+          against the dark byre. Cade sees the choice standing square at the slats. June
+          had already returned cattle-first to Albany with your agreement intact and no
+          field aid. *** You have won. ***
+      - when:
+          - { has_flag: cattle_gate_barred_with_brace_stake }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole behind one last line. You closed through old
+          grey's feint and kept the brace-stake unbroken; now that sound hardwood locks the
+          inner gate against the dark byre. Cade sees the choice standing square at the
+          slats. June had already returned cattle-first to Albany with your agreement
+          intact and no field aid. *** You have won. ***
   - id: ending_held_gate_barred
     title: "The Byre Held, Inner Gate Barred"
     text: >
@@ -5343,6 +5497,71 @@ endings:
           grey's feint and kept the brace-stake unbroken; now that sound hardwood locks the
           inner gate against the dark byre. Cade sees the choice standing square at the
           slats. *** You have won. ***
+  - id: ending_held_timber_saved_june_released
+    title: "The Byre Held, Paling Timber Saved — June Released"
+    text: >
+      Grey dawn finds the cattle whole, with sound paling wood still in your hands. You
+      chose another line for old grey and carried this cross-piece through for daylight
+      repair at the breach. Cade sees tomorrow's work already saved. June had already
+      taken the cattle-first return to Albany with your agreement intact and no field aid.
+      *** You have won. ***
+    variants:
+      - when:
+          - { has_item: split_rail_guard }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole. You crossed the fodder-loft, dropped behind
+          the flank-wolf, then waited out old grey; the split guard still rides across
+          your spear for daylight paling repair. Cade sees the open hatch and unspent
+          rawhide. June had already returned cattle-first to Albany with your agreement
+          intact and no field aid. *** You have won. ***
+      - when:
+          - { has_item: split_rail_guard }
+          - { has_flag: flank_dropped_from_loft }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole. You crossed the fodder-loft, dropped behind
+          the flank-wolf, then closed through old grey's feint; the split guard still
+          rides across your spear for daylight paling repair. Cade sees the open hatch
+          and unspent rawhide. June had already returned cattle-first to Albany with your
+          agreement intact and no field aid. *** You have won. ***
+      - when:
+          - { has_item: split_rail_guard }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole, and the bound split rail still rides across
+          your spear. You waited out old grey without spending it, preserving a rough guard
+          for daylight repair at the broken paling. Cade sees unspent rawhide and tomorrow's
+          work. June had already returned cattle-first to Albany with your agreement intact
+          and no field aid. *** You have won. ***
+      - when:
+          - { has_item: split_rail_guard }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole, and the bound split rail still rides across
+          your spear. You closed through old grey's feint without spending it, preserving
+          a rough guard for daylight repair at the broken paling. Cade sees unspent rawhide
+          and tomorrow's work. June had already returned cattle-first to Albany with your
+          agreement intact and no field aid. *** You have won. ***
+      - when:
+          - { has_item: saved_brace_stake }
+          - { has_flag: leader_waited_out }
+        text: >
+          Grey dawn finds the cattle whole, and the brace-stake won at the door remains
+          unbroken in your hand. You waited out old grey without spending it, preserving
+          sound hardwood for daylight repair at the broken paling. Cade sees tomorrow's
+          work already saved. June had already returned cattle-first to Albany with your
+          agreement intact and no field aid. *** You have won. ***
+      - when:
+          - { has_item: saved_brace_stake }
+          - { has_flag: leader_closed_on }
+        text: >
+          Grey dawn finds the cattle whole, and the brace-stake won at the door remains
+          unbroken in your hand. You closed through old grey's feint without spending it,
+          preserving sound hardwood for daylight repair at the broken paling. Cade sees
+          tomorrow's work already saved. June had already returned cattle-first to Albany
+          with your agreement intact and no field aid. *** You have won. ***
   - id: ending_held_timber_saved
     title: "The Byre Held, Paling Timber Saved"
     text: >
@@ -5401,6 +5620,103 @@ endings:
           unbroken in your hand. You closed through old grey's feint without spending it,
           preserving sound hardwood for daylight repair at the broken paling. Cade sees
           tomorrow's work already saved. *** You have won. ***
+  - id: ending_held_june_released
+    title: "The Byre Held — June Released"
+    text: >
+      Grey dawn finds you among warm, whole cattle; the broken pack is silent in the high
+      wood. With only the spear, you held the line between wolves and winter. Cade sees
+      you below and knows. The steading faces a hard spring, not its last. June had already
+      taken the cattle-first return to Albany with your agreement intact and no field aid.
+      *** You have won. ***
+    variants:
+      - when: [{ has_flag: leader_split_guard_set }]
+        text: >
+          Grey dawn finds the cattle whole. At the door you chose an open stroke and kept
+          the failed rail bound across your spear. At the back wall that saved guard
+          caught the grey leader's heavier rush and spent itself under the spear. Cade
+          sees where the rawhide went. June had already returned cattle-first to Albany
+          with your agreement intact and no field aid. *** You have won. ***
+      - when:
+          - { has_flag: flank_brace_stake_saved }
+          - { has_flag: leader_turned_over_crossbrace }
+        text: >
+          Grey dawn finds the cattle whole. At the door you traded the quick pin for the
+          paling's brace-stake; at the back wall you set that wood across the spear and
+          turned the grey leader over it. Cade sees the empty brace and knows why it was
+          spent. June had already returned cattle-first to Albany with your agreement
+          intact and no field aid. *** You have won. ***
+      - when:
+          - { has_flag: flank_pinned_at_rail }
+          - { has_flag: leader_true_rush_taken }
+        text: >
+          Grey dawn finds you among the whole cattle. At the door the braced rail held
+          the flank-wolf for your pinning thrust; at the back wall you let the old
+          leader's patience break and took her true rush on the spear. The high-wood
+          pack is silent and going. Below, Cade reads both guarded lines without being
+          told. June had already returned cattle-first to Albany with your agreement
+          intact and no field aid. *** You have won. ***
+      - when:
+          - { has_flag: flank_pinned_at_rail }
+          - { has_flag: leader_driven_before_recovery }
+        text: >
+          Grey dawn finds you among the whole cattle. The braced rail held the
+          flank-wolf for your pinning thrust, while the old leader died under the second
+          drive before she could recover from your close. The high-wood pack is silent
+          and going. Below, Cade sees the guarded door and the bloodied spear and knows.
+          June had already returned cattle-first to Albany with your agreement intact and
+          no field aid. *** You have won. ***
+      - when:
+          - { has_flag: flank_turned_through_return }
+          - { has_flag: leader_true_rush_taken }
+        text: >
+          Grey dawn finds you among the whole cattle. You beat the flank-wolf by turning
+          through its off-side return, then held still enough to take the old leader's
+          true rush on the spear. The high-wood pack is silent and going; the byre is
+          whole. Below, Cade leans on his stick and needs no telling. June had already
+          returned cattle-first to Albany with your agreement intact and no field aid.
+          *** You have won. ***
+      - when:
+          - { has_flag: flank_turned_through_return }
+          - { has_flag: leader_driven_before_recovery }
+        text: >
+          Grey dawn finds you among the whole cattle, both violent lines still running
+          in your arms: the turn through the flank-wolf's return and the second drive
+          before the old leader could recover. The high-wood pack is silent and going;
+          the byre is whole. Below, Cade sees the spear and knows. June had already
+          returned cattle-first to Albany with your agreement intact and no field aid.
+          *** You have won. ***
+      - when:
+          - { has_flag: flank_hooked_over_guard }
+          - { has_flag: leader_true_rush_taken }
+        text: >
+          Grey dawn finds the cattle whole. The failed rail was not wasted: bound
+          splinters caught the flank-wolf for your hook. Deeper in, you waited out the old
+          leader and took her true rush on the held spear. Cade reads the rawhide. The
+          byre is won. June had already returned cattle-first to Albany with your
+          agreement intact and no field aid. *** You have won. ***
+      - when:
+          - { has_flag: flank_hooked_over_guard }
+          - { has_flag: leader_driven_before_recovery }
+        text: >
+          Grey dawn finds the cattle whole. The failed rail was not wasted: bound
+          splinters caught the flank-wolf for your hook. Deeper in, you closed through the
+          old leader's feint and drove before she recovered. Cade sees rawhide and blood.
+          The byre is won. June had already returned cattle-first to Albany with your
+          agreement intact and no field aid. *** You have won. ***
+      - when: [{ has_flag: leader_waited_out }]
+        text: >
+          Grey dawn warms the whole cattle. You won by the patient line: the old leader's
+          feint spent itself against your held spear, and her true rush broke there. Her
+          pack is silent in the high wood; the byre will see spring. Cade reads the guarded
+          ending. June had already returned cattle-first to Albany with your agreement
+          intact and no field aid. *** You have won. ***
+      - when: [{ has_flag: leader_closed_on }]
+        text: >
+          Grey dawn warms the whole cattle. You won by the close-on-feint line, denying
+          the old leader the instant she needed and breaking her pack with her. The byre
+          will see spring. Cade sees the bloodied spear and knows. June had already
+          returned cattle-first to Albany with your agreement intact and no field aid.
+          *** You have won. ***
   - id: ending_held
     title: "The Byre Held"
     text: >

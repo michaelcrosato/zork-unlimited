@@ -296,11 +296,22 @@ export const NpcSchema = z
   })
   .strict();
 
+export const WinConditionEndingOverrideSchema = z
+  .object({
+    conditions: z.array(ConditionSchema).min(1),
+    ending: z.string().min(1),
+  })
+  .strict();
+
 export const WinConditionSchema = z
   .object({
     id: z.string().min(1),
     conditions: z.array(ConditionSchema).min(1),
     ending: z.string().min(1),
+    // Optional with no default: legacy pack shapes and content hashes remain
+    // byte-stable. Authored order is significant because the first matching
+    // override selects the terminal ending after this win condition fires.
+    ending_overrides: z.array(WinConditionEndingOverrideSchema).min(1).optional(),
   })
   .strict();
 
@@ -490,6 +501,7 @@ export type DialogueTopic = z.infer<typeof DialogueTopicSchema>;
 export type DialogueNodeVariant = z.infer<typeof DialogueNodeVariantSchema>;
 export type DialogueNode = z.infer<typeof DialogueNodeSchema>;
 export type Npc = z.infer<typeof NpcSchema>;
+export type WinConditionEndingOverride = z.infer<typeof WinConditionEndingOverrideSchema>;
 export type WinCondition = z.infer<typeof WinConditionSchema>;
 export type EndingVariant = z.infer<typeof EndingVariantSchema>;
 export type Ending = z.infer<typeof EndingSchema>;

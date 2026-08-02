@@ -291,6 +291,14 @@ function relabelWinCondition(
     id: r(w.id),
     conditions: w.conditions.map((c) => relabelCondition(c, r, rv)),
     ending: r(w.ending),
+    ...(w.ending_overrides
+      ? {
+          ending_overrides: w.ending_overrides.map((override) => ({
+            conditions: override.conditions.map((condition) => relabelCondition(condition, r, rv)),
+            ending: r(override.ending),
+          })),
+        }
+      : {}),
   };
 }
 

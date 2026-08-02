@@ -159,7 +159,33 @@ function analyze(
   let statesChecked = 0;
   let actionsSeen = 0;
 
-  const ruleSets = [buildRpgRules(index, bestRng), buildRpgRules(index, worstRng)];
+  // The callback below and the solver's primary rule set inspect the same immutable state
+  // back-to-back. Keep the exact production options (and their action projection) together
+  // so this oracle still inspects what `enumerateRpgActions` emits without building its menu
+  // twice per reachable state.
+  const menus = new WeakMap<
+    GameState,
+    { options: ReturnType<typeof enumerateRpgActions>; actions: Action[] }
+  >();
+  const menuFor = (state: GameState) => {
+    const cached = menus.get(state);
+    if (cached) return cached;
+    const options = enumerateRpgActions(index, state);
+    const menu = { options, actions: options.map((option) => option.action) };
+    menus.set(state, menu);
+    return menu;
+  };
+
+  const bestRules = buildRpgRules(index, bestRng);
+  const ruleSets = [
+    {
+      ...bestRules,
+      // This is byte-for-byte the production `buildRpgRules().legalActions` projection,
+      // only memoized alongside the production option list above.
+      legalActions: (state: GameState): Action[] => menuFor(state).actions,
+    },
+    buildRpgRules(index, worstRng),
+  ];
   const result = exhaustiveEndingsMulti(
     ruleSets,
     initStateForRpgPack(index, 7),
@@ -167,7 +193,7 @@ function analyze(
     (s: GameState) => {
       // Terminal states offer no live menu (the BFS stops at `s.ended`).
       if (s.ended) return;
-      const opts = enumerateRpgActions(index, s);
+      const opts = menuFor(s).options;
       statesChecked++;
       actionsSeen += opts.length;
       const seen = new Set<string>();

@@ -25149,6 +25149,15 @@
           "agenda": "The cattle-first authority remained intact despite the loss. She stays on the roster and will release one bounded Station resupply claim."
         },
         {
+          "id": "released_before_hunt",
+          "after_relationship_memories": [
+            "albany:memory_june_joined_cattle_first",
+            "albany:memory_june_released_before_hunt"
+          ],
+          "summary": "June has returned separately with the cattle rope and an amicable account: you released her before crossing into HUNT, then held the byre without claiming her field aid.",
+          "agenda": "The cattle-first promise is recorded released, not broken. June is no longer your companion and offers no kept-line service, but the relationship remains intact and her testimony distinguishes consent from bloodshed abandonment."
+        },
+        {
           "id": "left_after_blood",
           "after_relationship_memories": [
             "albany:memory_june_joined_cattle_first",
@@ -51480,6 +51489,100 @@
                 }
               ]
             }
+          ]
+        },
+        {
+          "ending_id": "ending_held_gate_barred_june_released",
+          "ending_title": "The Byre Held, Inner Gate Barred — June Released",
+          "effects": [
+            { "type": "remember_relationship", "npc_id": "npc:old_cade", "memory_id": "memory:wolf_winter_inner_gate_barred", "trust_at_least": 10, "regard_at_least": 10, "owes_player_at_least": 1 },
+            { "type": "remember_relationship", "npc_id": "albany:emery_sloane", "memory_id": "albany:memory_emery_wolf_full_combat_bloodshed", "trust_at_least": 4, "regard_at_least": 5, "owes_player_at_least": 0 },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_byre_held" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_bloodshed" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_outer_paling_broken" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_inner_gate_barred_at_dawn" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_guard_wood_committed" }
+          ],
+          "conditional_effects": [
+            { "id": "albany:close_road_warden_return_packet", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_return_hayden_packet", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_return_hayden_packet", "status": "kept" }] },
+            { "id": "albany:close_ledger_advocate_relief_account", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_truthful_relief_account", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_truthful_relief_account", "status": "kept" }] },
+            { "id": "albany:close_ironhands_repairer_tools", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_return_reese_tools", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_return_reese_tools", "status": "kept" }] },
+            { "id": "albany:close_unaffiliated_courier_emergency_tag", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_close_emergency_tag", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_close_emergency_tag", "status": "kept" }] },
+            { "id": "albany:resolve_full_relief_oath", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_full_compact_duty", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_full_compact_duty", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_full_duty_kept" }] },
+            { "id": "albany:resolve_limited_relief_oath", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_limited_aid_only", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_limited_aid_only", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_limited_duty_kept" }] },
+            { "id": "albany:resolve_unaffiliated_relief_bond", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_unaffiliated_bond", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_unaffiliated_bond", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_unaffiliated_bond_kept" }] },
+            { "id": "albany:june_released_before_gate_hunt", "when": { "requires_all_companions": ["albany:june_pike"], "requires_all_promises": [{ "promise_id": "albany:promise_june_cattle_first", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_june_cattle_first", "status": "released" }, { "type": "remove_companion", "npc_id": "albany:june_pike" }, { "type": "remember_relationship", "npc_id": "albany:june_pike", "memory_id": "albany:memory_june_released_before_hunt" }] }
+          ]
+        },
+        {
+          "ending_id": "ending_held_timber_saved_june_released",
+          "ending_title": "The Byre Held, Paling Timber Saved — June Released",
+          "effects": [
+            { "type": "remember_relationship", "npc_id": "npc:old_cade", "memory_id": "memory:wolf_winter_repair_timber_saved", "trust_at_least": 10, "regard_at_least": 10, "owes_player_at_least": 1 },
+            { "type": "remember_relationship", "npc_id": "albany:emery_sloane", "memory_id": "albany:memory_emery_wolf_full_combat_bloodshed", "trust_at_least": 4, "regard_at_least": 5, "owes_player_at_least": 0 },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_byre_held" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_bloodshed" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_outer_paling_broken" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_repair_timber_available" }
+          ],
+          "conditional_effects": [
+            { "id": "albany:close_road_warden_return_packet", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_return_hayden_packet", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_return_hayden_packet", "status": "kept" }] },
+            { "id": "albany:close_ledger_advocate_relief_account", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_truthful_relief_account", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_truthful_relief_account", "status": "kept" }] },
+            { "id": "albany:close_ironhands_repairer_tools", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_return_reese_tools", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_return_reese_tools", "status": "kept" }] },
+            { "id": "albany:close_unaffiliated_courier_emergency_tag", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_close_emergency_tag", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_close_emergency_tag", "status": "kept" }] },
+            { "id": "albany:resolve_full_relief_oath", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_full_compact_duty", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_full_compact_duty", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_full_duty_kept" }] },
+            { "id": "albany:resolve_limited_relief_oath", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_limited_aid_only", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_limited_aid_only", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_limited_duty_kept" }] },
+            { "id": "albany:resolve_unaffiliated_relief_bond", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_unaffiliated_bond", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_unaffiliated_bond", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_unaffiliated_bond_kept" }] },
+            { "id": "albany:june_released_before_timber_hunt", "when": { "requires_all_companions": ["albany:june_pike"], "requires_all_promises": [{ "promise_id": "albany:promise_june_cattle_first", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_june_cattle_first", "status": "released" }, { "type": "remove_companion", "npc_id": "albany:june_pike" }, { "type": "remember_relationship", "npc_id": "albany:june_pike", "memory_id": "albany:memory_june_released_before_hunt" }] }
+          ]
+        },
+        {
+          "ending_id": "ending_held_june_released",
+          "ending_title": "The Byre Held — June Released",
+          "effects": [
+            { "type": "remember_relationship", "npc_id": "npc:old_cade", "memory_id": "memory:wolf_winter_guard_wood_spent", "trust_at_least": 10, "regard_at_least": 10, "owes_player_at_least": 1 },
+            { "type": "remember_relationship", "npc_id": "albany:emery_sloane", "memory_id": "albany:memory_emery_wolf_full_combat_bloodshed", "trust_at_least": 4, "regard_at_least": 5, "owes_player_at_least": 0 },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_byre_held" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_bloodshed" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_outer_paling_broken" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_repair_timber_spent" }
+          ],
+          "conditional_effects": [
+            { "id": "albany:close_road_warden_return_packet", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_return_hayden_packet", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_return_hayden_packet", "status": "kept" }] },
+            { "id": "albany:close_ledger_advocate_relief_account", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_truthful_relief_account", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_truthful_relief_account", "status": "kept" }] },
+            { "id": "albany:close_ironhands_repairer_tools", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_return_reese_tools", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_return_reese_tools", "status": "kept" }] },
+            { "id": "albany:close_unaffiliated_courier_emergency_tag", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_close_emergency_tag", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_close_emergency_tag", "status": "kept" }] },
+            { "id": "albany:resolve_full_relief_oath", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_full_compact_duty", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_full_compact_duty", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_full_duty_kept" }] },
+            { "id": "albany:resolve_limited_relief_oath", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_limited_aid_only", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_limited_aid_only", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_limited_duty_kept" }] },
+            { "id": "albany:resolve_unaffiliated_relief_bond", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_unaffiliated_bond", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_unaffiliated_bond", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_unaffiliated_bond_kept" }] },
+            { "id": "albany:june_released_before_watch_hunt", "when": { "requires_all_companions": ["albany:june_pike"], "requires_all_promises": [{ "promise_id": "albany:promise_june_cattle_first", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_june_cattle_first", "status": "released" }, { "type": "remove_companion", "npc_id": "albany:june_pike" }, { "type": "remember_relationship", "npc_id": "albany:june_pike", "memory_id": "albany:memory_june_released_before_hunt" }] }
+          ]
+        },
+        {
+          "ending_id": "ending_bloodied_byre_evacuated_june_released",
+          "ending_title": "The Bloodied Byre Evacuated — June Released",
+          "effects": [
+            { "type": "remember_relationship", "npc_id": "npc:old_cade", "memory_id": "memory:wolf_winter_bloodied_byre_evacuated", "trust_at_least": 3, "regard_at_least": 4, "owes_player_at_least": 0 },
+            { "type": "remember_relationship", "npc_id": "albany:emery_sloane", "memory_id": "albany:memory_emery_wolf_bloodied_byre_evacuated", "trust_at_least": 2, "regard_at_least": 3, "owes_player_at_least": 0 },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_bloodshed" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_yearling_killed" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_flank_wolf_killed" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_old_grey_leader_remains" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_steading_evacuated" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_outer_line_abandoned" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_people_safe" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_cattle_scattered" },
+            { "type": "set_world_fact", "fact_id": "fact:wolf_winter_bloodied_byre_evacuated" }
+          ],
+          "conditional_effects": [
+            { "id": "albany:close_road_warden_return_packet", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_return_hayden_packet", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_return_hayden_packet", "status": "kept" }] },
+            { "id": "albany:close_ledger_advocate_relief_account", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_truthful_relief_account", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_truthful_relief_account", "status": "kept" }] },
+            { "id": "albany:close_ironhands_repairer_tools", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_return_reese_tools", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_return_reese_tools", "status": "kept" }] },
+            { "id": "albany:close_unaffiliated_courier_emergency_tag", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_close_emergency_tag", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_close_emergency_tag", "status": "kept" }] },
+            { "id": "albany:resolve_full_relief_oath", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_full_compact_duty", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_full_compact_duty", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_full_duty_kept" }] },
+            { "id": "albany:resolve_limited_relief_oath", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_limited_aid_only", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_limited_aid_only", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_limited_duty_kept" }] },
+            { "id": "albany:resolve_unaffiliated_relief_bond", "when": { "requires_all_promises": [{ "promise_id": "albany:promise_wolf_unaffiliated_bond", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_wolf_unaffiliated_bond", "status": "kept" }, { "type": "remember_relationship", "npc_id": "albany:rowan_quill", "memory_id": "albany:memory_rowan_unaffiliated_bond_kept" }] },
+            { "id": "albany:june_released_before_bloodied_byre_hunt", "when": { "requires_all_companions": ["albany:june_pike"], "requires_all_promises": [{ "promise_id": "albany:promise_june_cattle_first", "status": "active" }] }, "effects": [{ "type": "resolve_promise", "promise_id": "albany:promise_june_cattle_first", "status": "released" }, { "type": "remove_companion", "npc_id": "albany:june_pike" }, { "type": "remember_relationship", "npc_id": "albany:june_pike", "memory_id": "albany:memory_june_released_before_hunt" }] }
           ]
         }
       ]
