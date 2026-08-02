@@ -223,7 +223,7 @@ describe("GameSession — RPG-only structured play", () => {
       npc: "old Cade the houndsman",
       text: mcpRead.observation.dialogue?.npc_text,
     });
-    expect(uiView.dialogue?.text).toContain("Any of the four plans can finish Wolf-Winter");
+    expect(uiView.dialogue?.text).toContain("Choose what must stand at dawn");
     expect(talkNarration).toEqual([`old Cade the houndsman: "${uiView.dialogue?.text}"`]);
     expect(talkNarration.join(" ")).not.toContain("Save/cost—HUNT");
     expect(uiView.choices.map((choice) => choice.id)).toEqual(

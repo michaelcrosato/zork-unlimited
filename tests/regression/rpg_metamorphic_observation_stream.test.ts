@@ -492,6 +492,29 @@ type WalkResult = { compared: number; cappedOut: boolean };
 type RpgStep = (state: GameState, action: RpgAction) => StepResult;
 
 /**
+ * `makeStep` defensively checks membership in `rules.legalActions(state)` on every
+ * transition. This oracle deliberately steps every displayed action under two roll
+ * regimes on both packs, while RPG legality is RNG-independent. Cache the production
+ * enumeration by immutable state identity so those four checks inspect the same exact
+ * action list instead of rebuilding it once per action and regime.
+ */
+function memoizeLegalActions(
+  rules: Rules<RpgAction>,
+  cache: WeakMap<GameState, RpgAction[]>,
+): Rules<RpgAction> {
+  return {
+    ...rules,
+    legalActions(state) {
+      const cached = cache.get(state);
+      if (cached !== undefined) return cached;
+      const actions = rules.legalActions(state);
+      cache.set(state, actions);
+      return actions;
+    },
+  };
+}
+
+/**
  * BFS over state PAIRS, stepping every explored action under BOTH roll regimes (best /
  * worst), deduping on the ORIGINAL fingerprint. The legal-action set is rng-independent, so
  * it is read from the best-roll rules; each action is then stepped under both regimes on
@@ -508,9 +531,17 @@ function walkInLockStep(
   twinStart: GameState,
   mapId: (id: string) => string,
 ): WalkResult {
+  const origLegalActions = new WeakMap<GameState, RpgAction[]>();
+  const twinLegalActions = new WeakMap<GameState, RpgAction[]>();
   const regimes: [RpgStep, RpgStep][] = [
-    [makeStep(origRulesBest), makeStep(twinRulesBest)],
-    [makeStep(origRulesWorst), makeStep(twinRulesWorst)],
+    [
+      makeStep(memoizeLegalActions(origRulesBest, origLegalActions)),
+      makeStep(memoizeLegalActions(twinRulesBest, twinLegalActions)),
+    ],
+    [
+      makeStep(memoizeLegalActions(origRulesWorst, origLegalActions)),
+      makeStep(memoizeLegalActions(twinRulesWorst, twinLegalActions)),
+    ],
   ];
   const startKey = stateKey(origStart);
   const scheduled = new Set<string>([startKey]);

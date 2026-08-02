@@ -121,21 +121,24 @@ describe("Wolf-Winter dialogue surface", () => {
     const scorecard = observation.dialogue?.npc_text;
 
     expect(scorecard).toContain(
-      "Any of the four plans can finish Wolf-Winter, but each protects something by spending something else.",
+      "Choose what must stand at dawn. Every plan can finish Wolf-Winter",
     );
-    expect(scorecard).toContain("Choose the cost you accept; I will not name a best answer.");
-    expect(scorecard).toContain("HUNT — protects herd and stores; wolves may die.");
+    expect(scorecard).toContain("none saves everything");
     expect(scorecard).toContain(
-      "LURE — protects herd and wolves; spends the last feed, leaves the paling broken, and a foul can cost cattle.",
-    );
-    expect(scorecard).toContain(
-      "DRIVE — protects people and wolves; gives up the outer line, then a crisis costs a wound, two cattle, or the rig.",
+      "HUNT — Tonight: hold the breach to protect herd and stores. Cost: wolves may die; defeat can cost cattle and the line. Albany: bloodshed changes Greenway work; any damage remains.",
     );
     expect(scorecard).toContain(
-      "FORTIFY — protects byre, herd, and wolves; trades Cade's outer property against public seals and his aid.",
+      "LURE — Tonight: draw off the pack; herd and wolves can live. Cost: last feed, broken paling, cattle risk on a foul. Albany: broken boundary or scattered cattle change the Station response.",
     );
-    expect(scorecard).toContain("asking does not commit your strategy");
-    expect(scorecard).toContain("Cross north uncommitted and HUNT becomes final");
+    expect(scorecard).toContain(
+      "DRIVE — Tonight: clear people and pack from the byre. Cost: abandon the outer line; the crisis takes a wound, two cattle, or the rig. Albany: the abandoned line and chosen loss remain.",
+    );
+    expect(scorecard).toContain(
+      "FORTIFY — Tonight: hold byre, herd, and pack to dawn. Cost: risk Cade's property or Albany's seals and aid; no retreat. Albany: those terms remain; a no-loss hold opens no Cade repair dispatch.",
+    );
+    expect(scorecard).toContain("Asking may teach; it never commits a strategy");
+    expect(scorecard).toContain("HUNT commits on an uncommitted north crossing");
+    expect(scorecard).toContain("Any commitment closes the other three");
     expect(scorecard!.indexOf("HUNT —")).toBeLessThan(scorecard!.indexOf("LURE —"));
     expect(scorecard!.indexOf("LURE —")).toBeLessThan(scorecard!.indexOf("DRIVE —"));
     expect(scorecard!.indexOf("DRIVE —")).toBeLessThan(scorecard!.indexOf("FORTIFY —"));
@@ -463,7 +466,7 @@ describe("Wolf-Winter dialogue surface", () => {
     );
     expect(obs.dialogue?.npc_text).not.toContain("Old Cade shifts");
     expect(obs.dialogue?.npc_text).not.toMatch(/: "Old Cade\b/);
-    expect(obs.dialogue?.npc_text).not.toContain("Any of the four plans can finish Wolf-Winter");
+    expect(obs.dialogue?.npc_text).not.toContain("Choose what must stand at dawn");
     expect(obs.available_actions.map((option) => option.id)).not.toContain("ask_wolves_back");
     expect(obs.available_actions.map((option) => option.id)).toEqual(
       expect.arrayContaining(["ask_byre", "ask_leave"]),
