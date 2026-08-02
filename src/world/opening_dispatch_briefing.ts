@@ -221,7 +221,7 @@ export function withOpeningDispatchBriefing(
       civicStageIndex === 0
         ? `Mission preview — ${plan.questDiscovery} Civic order: role → duty → evidence.`
         : civicStageIndex === 1 && offersStandardPacket
-          ? "Role chosen. Quick setup binds duty + evidence; compare first."
+          ? "Role chosen. Quick setup binds duty + evidence; compare duties first."
           : civicStageIndex === 2
             ? "Role and duty chosen. Next stop: Hayden's Station launch board."
             : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;

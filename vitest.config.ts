@@ -4,15 +4,16 @@ import { defineConfig } from "vitest/config";
 const STANDARD_TESTS = "tests/**/*.test.ts";
 const METAMORPHIC_OBSERVATION_PROOF = "tests/regression/rpg_metamorphic_observation_stream.test.ts";
 const ENDING_RENDER_PROOF = "tests/regression/rpg_all_endings_reachable.test.ts";
+const VARIANT_LIVENESS_PROOF = "tests/regression/rpg_variant_liveness.test.ts";
 const EXHAUSTIVE_RPG_PROOFS = [
   "tests/regression/rpg_action_id_unique.test.ts",
-  "tests/regression/rpg_variant_liveness.test.ts",
   "tests/regression/rpg_score_economy_sound.test.ts",
   "tests/regression/rpg_metamorphic_relabel.test.ts",
 ];
 const ALL_EXHAUSTIVE_RPG_PROOFS = [
   METAMORPHIC_OBSERVATION_PROOF,
   ENDING_RENDER_PROOF,
+  VARIANT_LIVENESS_PROOF,
   ...EXHAUSTIVE_RPG_PROOFS,
 ];
 const standardWorkerCap =
@@ -58,12 +59,24 @@ export default defineConfig({
       {
         test: {
           ...commonProject,
+          name: "variant-liveness-proof",
+          include: [VARIANT_LIVENESS_PROOF],
+          maxWorkers: 1,
+          // Wolf-Winter now consumes nearly all of this proof's unchanged 12-minute
+          // per-pack timeout. Keep its exact 800k-state search and best/worst bracket,
+          // but do not make it compete with another memory-heavy exhaustive proof.
+          sequence: { groupOrder: 2 },
+        },
+      },
+      {
+        test: {
+          ...commonProject,
           name: "ending-render-proof",
           include: [ENDING_RENDER_PROOF],
           maxWorkers: 1,
           // This unified proof consumes each terminal witness while traversing Wolf's full
           // graph. Its measured solo headroom is intentional; do not erase it with a peer.
-          sequence: { groupOrder: 2 },
+          sequence: { groupOrder: 3 },
         },
       },
       {
@@ -75,7 +88,7 @@ export default defineConfig({
           // This proof renders and compares both a pack and its relabeled twin over the
           // full graph. Isolate it from the other exhaustive workers instead of weakening
           // its state cap or inflating its 25-minute per-test timeout.
-          sequence: { groupOrder: 3 },
+          sequence: { groupOrder: 4 },
         },
       },
     ],

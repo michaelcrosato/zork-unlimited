@@ -788,7 +788,7 @@ export class OverworldSession {
   }
 
   /**
-   * Resolve every authored reference before a role-anchored standard packet
+   * Resolve every authored reference before a role-anchored quick setup
    * starts the canonical oath → source sequence. The sequence itself deliberately
    * reuses chooseJourneyStory so its durable proof boundaries remain identical
    * to two ordinary selections after the already-recorded role choice.
@@ -809,7 +809,7 @@ export class OverworldSession {
     }
     if (this.characterState.background !== profile.id) {
       throw new Error(
-        `Opening standard packet "${doctrine.id}" does not match registered role "${String(this.characterState.background)}".`,
+        `Opening quick setup "${doctrine.id}" does not match registered role "${String(this.characterState.background)}".`,
       );
     }
 
@@ -1968,7 +1968,7 @@ export class OverworldSession {
           goal: leadSourceSelection.goal,
           entry: Object.freeze({
             ...leadSourceSelection.entry,
-            title: `Standard packet confirmed: ${standardPacket.doctrine.title}`,
+            title: `Quick setup confirmed: ${standardPacket.doctrine.title}`,
             text: consequence,
           }),
           // The two canonical calls above each record their own counted

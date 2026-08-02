@@ -132,11 +132,13 @@ describe("terminal registration story-choice groups", () => {
     expect(initial).toContain(
       "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace",
     );
-    expect(initial).toContain("Compare duty + evidence before choosing");
+    expect(initial).toContain("Compare duties before choosing");
+    expect(initial).not.toContain("Compare duty + evidence before choosing");
     expect(initial).toContain(
       "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle",
     );
     expect(initial).toContain("setup does not commit one");
+    expect(initial).toContain("Choose a duty here; its evidence source follows");
     expect(initial).not.toContain("2. Take Full Compact Duty");
 
     const revealed = renderTerminalStoryChoiceComparison(prompt, {

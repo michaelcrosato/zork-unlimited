@@ -18,16 +18,36 @@ export type OpeningReliefOathStandardPacketContext = Readonly<{
   leadSource: OpeningLeadSource;
 }>;
 
-const STANDARD_PACKET_SUPPORT_COPY: Readonly<Record<string, string>> = Object.freeze({
-  "albany:doctrine_fortify_breach": "Repair 4; FORTIFY's first public-seal check is 2 DC easier.",
-  "albany:doctrine_road_warden_aid_route":
-    "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
-  "albany:doctrine_independent_drive":
-    "Streetwise 4; DRIVE's first shutter-signal check is 2 DC easier.",
+const STANDARD_PACKET_SUPPORT_COPY: Readonly<
+  Record<
+    string,
+    Readonly<{
+      expectedTriggerCategory: string;
+      support: string;
+    }>
+  >
+> = Object.freeze({
+  "albany:doctrine_fortify_breach": Object.freeze({
+    expectedTriggerCategory: "Repair 4; first public-seal fortification check is 2 DC easier.",
+    support: "Repair 4; FORTIFY's first public-seal check is 2 DC easier.",
+  }),
+  "albany:doctrine_road_warden_aid_route": Object.freeze({
+    expectedTriggerCategory:
+      "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
+    support:
+      "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
+  }),
+  "albany:doctrine_independent_drive": Object.freeze({
+    expectedTriggerCategory: "Streetwise 4; first shutter-signal check drops from DC 12 to DC 10.",
+    support: "Streetwise 4; DRIVE's first shutter-signal check is 2 DC easier.",
+  }),
 });
 
 function summarizeStartingDoctrineSupport(doctrine: OpeningStartingDoctrine): string {
-  return STANDARD_PACKET_SUPPORT_COPY[doctrine.id] ?? doctrine.trigger_category;
+  const copy = STANDARD_PACKET_SUPPORT_COPY[doctrine.id];
+  return copy?.expectedTriggerCategory === doctrine.trigger_category
+    ? copy.support
+    : doctrine.trigger_category;
 }
 
 /** Project Albany's disclosed access-and-duty terms onto the journey choice surface. */
@@ -49,7 +69,7 @@ export function presentOpeningReliefOath(
       )
     : undefined;
   if (doctrine && (!doctrineOath || !doctrineSource)) {
-    throw new Error(`Opening standard packet "${doctrine.id}" has an invalid duty/source mapping.`);
+    throw new Error(`Opening quick setup "${doctrine.id}" has an invalid duty/source mapping.`);
   }
   const standardPacket = doctrine
     ? Object.freeze({
@@ -102,9 +122,9 @@ export function presentOpeningReliefOath(
         ]) as JourneyStoryChoiceProgressiveDisclosure["initialOptionIds"],
         reveal: Object.freeze({
           id: "customize_duty_and_evidence",
-          label: "Compare duty + evidence before choosing",
+          label: "Compare duties before choosing",
           description:
-            "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle; DRIVE risks cattle or rig; FORTIFY risks property or public terms. Each protects something different. No plan is recommended, and setup does not commit one.",
+            "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle; DRIVE risks cattle or rig; FORTIFY risks property or public terms. Each protects something different. No plan is recommended, and setup does not commit one. Choose a duty here; its evidence source follows.",
           optionIds: Object.freeze(
             oathOptions.map((option) => option.id),
           ) as JourneyStoryChoiceProgressiveDisclosure["reveal"]["optionIds"],
@@ -116,7 +136,7 @@ export function presentOpeningReliefOath(
     id: parsed.id,
     kind: "relief_oath" as const,
     message: standardPacket
-      ? `${parsed.title}. Use your role's standard packet to bind duty and evidence together, or customize duty and evidence; an individual duty is chosen now and its evidence source follows. ${parsed.message}`
+      ? `${parsed.title}. Use your role's quick setup to bind duty and evidence together, or choose a duty separately; its evidence source follows. ${parsed.message}`
       : `${parsed.title}. ${parsed.message}`,
     options,
     ...(progressiveDisclosure ? { progressiveDisclosure } : {}),

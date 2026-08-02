@@ -1305,6 +1305,11 @@ describe("MCP journey surface", () => {
     expectTypeOf(compactOath.revealOption).toEqualTypeOf<
       JourneyStoryChoiceRevealAffordance | undefined
     >();
+    expect(compactOath.revealOption).toMatchObject({
+      label: "Compare duties before choosing",
+      description: expect.stringContaining("its evidence source follows"),
+    });
+    expect(JSON.stringify(compactOath).toLowerCase()).not.toContain("standard packet");
     const canonical = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,

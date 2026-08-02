@@ -42,7 +42,7 @@ export function presentOpeningRegistration(
     kind: "registration" as const,
     message:
       (parsed.doctrines?.length ?? 0) > 0
-        ? `${parsed.title}. Choose your role now; Wolf-Winter duty and evidence follow. A role with an authored standard packet may bind both together at the next step. ${parsed.message}`
+        ? `${parsed.title}. Choose your role now; Wolf-Winter duty and evidence follow. A role with an authored quick setup may bind both together at the next step. ${parsed.message}`
         : `${parsed.title}. ${parsed.message}`,
     options: Object.freeze(profileOptions) as JourneyRegistrationStoryChoiceOptions,
   });

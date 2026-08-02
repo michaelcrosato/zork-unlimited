@@ -221,6 +221,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const rootElement = container as {
         querySelector: (selector: string) => unknown;
         querySelectorAll: (selector: string) => ArrayLike<unknown>;
+        textContent: string | null;
       };
       const card = rootElement.querySelector(".journey-choice-card") as {
         querySelector: (selector: string) => unknown;
@@ -409,6 +410,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(dutySurfaceOrder[0]?.getAttribute("class")).toContain(
         "journey-choice-progressive-disclosure",
       );
+      const quickSetupHeading = rootElement.querySelector("h1") as {
+        textContent: string | null;
+      } | null;
+      expect(quickSetupHeading?.textContent).toBe("Choose quick setup or compare duties");
+      expect(rootElement.textContent).toContain(
+        "The quick-setup card binds duty and evidence together; the duty comparison is read-only.",
+      );
+      expect(rootElement.textContent?.toLowerCase()).not.toContain("standard packet");
       expect(standardPacketButtons[0]!.textContent).toContain(
         standardPacketOption.summary!.commitment,
       );
