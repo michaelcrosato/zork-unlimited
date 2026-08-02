@@ -5,7 +5,7 @@ import type {
   JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
 import type { OpeningLeadSource } from "./opening_lead_source.js";
-import type { OpeningRegistration } from "./opening_registration.js";
+import type { OpeningRegistration, OpeningStartingDoctrine } from "./opening_registration.js";
 import {
   formatOpeningReliefOathCost,
   parseOpeningReliefOath,
@@ -17,6 +17,18 @@ export type OpeningReliefOathStandardPacketContext = Readonly<{
   registration: OpeningRegistration;
   leadSource: OpeningLeadSource;
 }>;
+
+const STANDARD_PACKET_SUPPORT_COPY: Readonly<Record<string, string>> = Object.freeze({
+  "albany:doctrine_fortify_breach": "Repair 4; FORTIFY's first public-seal check is 2 DC easier.",
+  "albany:doctrine_road_warden_aid_route":
+    "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
+  "albany:doctrine_independent_drive":
+    "Streetwise 4; DRIVE's first shutter-signal check is 2 DC easier.",
+});
+
+function summarizeStartingDoctrineSupport(doctrine: OpeningStartingDoctrine): string {
+  return STANDARD_PACKET_SUPPORT_COPY[doctrine.id] ?? doctrine.trigger_category;
+}
 
 /** Project Albany's disclosed access-and-duty terms onto the journey choice surface. */
 export function presentOpeningReliefOath(
@@ -43,13 +55,11 @@ export function presentOpeningReliefOath(
     ? Object.freeze({
         ...presentOpeningChoiceOption({
           id: doctrine.id,
-          label: `Standard packet — ${doctrine.title}`,
-          commitment:
-            `${doctrine.trigger_category} Duty: ${doctrineOath!.title}; ` +
-            `evidence: ${doctrineSource!.title}.`,
+          label: `Quick setup — ${doctrineOath!.title} + ${doctrineSource!.title}`,
+          commitment: `No field plan is chosen. Support: ${summarizeStartingDoctrineSupport(doctrine)}`,
           exactBenefit: doctrine.trigger_category,
           immediateCost: doctrine.immediate_cost,
-          giveUp: "Other duty/source choices close; later field planning remains open.",
+          giveUp: "Other duty/evidence pairs close; every field plan stays open.",
         }),
       })
     : null;
@@ -92,9 +102,9 @@ export function presentOpeningReliefOath(
         ]) as JourneyStoryChoiceProgressiveDisclosure["initialOptionIds"],
         reveal: Object.freeze({
           id: "customize_duty_and_evidence",
-          label: "Compare FORTIFY, LURE, or DRIVE duties",
+          label: "Compare duty + evidence before choosing",
           description:
-            "The packet is convenient, not recommended. Compass — Full duty (10m): public-seal FORTIFY; Aid-only (5m): LURE; Cade-terms FORTIFY is duty-compatible; bond (0m): DRIVE; HUNT is source-led.",
+            "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle; DRIVE risks cattle or rig; FORTIFY risks property or public terms. Each protects something different. No plan is recommended, and setup does not commit one.",
           optionIds: Object.freeze(
             oathOptions.map((option) => option.id),
           ) as JourneyStoryChoiceProgressiveDisclosure["reveal"]["optionIds"],

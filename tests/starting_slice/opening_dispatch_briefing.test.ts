@@ -263,7 +263,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
     expect(oath.message).toContain(
-      "Role chosen. Take its duty + evidence packet, or compare duties.",
+      "Role chosen. Quick setup binds duty + evidence; compare first.",
     );
     expectBoundedPurpose(oath, PURPOSES.relief_oath);
     expect(oath.options.map((option) => option.id)).toEqual([
@@ -275,10 +275,20 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     const roadWardenPacket = oath.options.find((option) => option.id === standardPacket.id)!;
-    expect(roadWardenPacket.summary?.commitment).toBe(
-      "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT. " +
-        "Duty: Negotiate Aid-Only Duty; evidence: Take Hayden's Frost-Heave Report.",
+    expect(roadWardenPacket.label).toBe(
+      "Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
     );
+    expect(roadWardenPacket.summary?.commitment).toBe(
+      "No field plan is chosen. Support: Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
+    );
+    expect(roadWardenPacket.summary?.tradeoff).toBe(
+      "Other duty/evidence pairs close; every field plan stays open.",
+    );
+    expect(roadWardenPacket.consequence).toContain(
+      "Benefit: Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
+    );
+    expect(roadWardenPacket.summary?.commitment).not.toContain("DEF");
+    expect(roadWardenPacket.summary?.commitment).not.toContain("split-rail");
     expect(roadWardenPacket.summary?.commitment).not.toContain(standardPacket.summary);
     const compactOath = compactJourneyStoryChoiceComparison(oath);
     expect(
@@ -288,9 +298,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       initialOptionIds: [standardPacket.id],
       reveal: {
         id: "customize_duty_and_evidence",
-        label: "Compare FORTIFY, LURE, or DRIVE duties",
+        label: "Compare duty + evidence before choosing",
         description:
-          "The packet is convenient, not recommended. Compass — Full duty (10m): public-seal FORTIFY; Aid-only (5m): LURE; Cade-terms FORTIFY is duty-compatible; bond (0m): DRIVE; HUNT is source-led.",
+          "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle; DRIVE risks cattle or rig; FORTIFY risks property or public terms. Each protects something different. No plan is recommended, and setup does not commit one.",
         optionIds: RELIEF_OATH.options.map((option) => option.id),
       },
     });
