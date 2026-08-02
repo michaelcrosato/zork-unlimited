@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 721 -->
+<!-- historical_cycle_count: 722 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_quick_setup_review
+
+- Evidence choice: PR review caught a duty-only reveal labeled as duty + evidence, residual `Standard packet` copy, and condensed role support that could outlive an edited manifest trigger.
+- Surface/effect: Albany now consistently names `Quick setup`, compares duties before the separate evidence step, and keeps the neutral four-plan risk compass without claiming that setup commits a field plan.
+- Counterfactual/integrity: condensed support requires both the known doctrine id and its exact authoritative trigger text; changed manifests fall back to their live text, while choices, mechanics, RNG, state, saves, hashes, and outcomes remain unchanged.
+- Pure evidence: exact-clean Terra seed 682002 chose Road-Warden/Aid-Only/Hayden/June, completed The Wolf-Winter through whole-herd/all-wolves-alive LURE, continued twice, won The Gallowmere at decision 53, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, loop, soft-lock, or stuck state.
+- Economy: the accepted first attempt used 4.604M raw / 157,475 uncached input + 11,073 output at 96.58% input-cache reuse (168,548 useful, about 3,180/decision); an earlier fresh seed failed closed before gameplay on a noncanonical wrapper pragma and published no report.
+- Self-critique/follow-through: the canary proves truthful copy and clean-build safety, not strategy diversity; it again chose LURE and named Station density S1, so the next decisive evidence remains a fresh landed-build 10-player Terra pilot.
+- Guard: review regressions pin raw presenter, MCP, terminal, UI, receipt, and manifest-drift behavior; pre/post crawls `20260802T091005Z` / `20260802T105904Z` have zero findings, and exact health passes 456 files/3,786 tests plus all 12 packs with liveness isolated but otherwise unchanged.
 
 ### Cycle result - albany_plan_compass
 
@@ -167,13 +177,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: Terra used 5.509M raw / 186.9k uncached input + 9.8k output at 96.61% cache reuse (3,782 useful/decision); Spark used 788.1k / 54.6k + 10.6k at 93.07% (3,260/decision).
 - Self-critique/follow-through: order-neutrality removes false prerequisite pressure without reducing mechanical depth, but Terra still rated Station density S1; progressive disclosure remains an evidence target, not a solved claim.
 - Guard: pre/post crawls `20260731T143421Z` / `20260731T160233Z` have zero findings; two independent reviews found no P0/P1, one malformed Spark run failed closed unpublished, and health passes 450 files/3,750 tests plus all 12 packs.
-
-### Cycle result - drover_drive_recovery
-
-- Evidence choice: Emery's one-use Drover Route recovered a failed LURE cast but had no DRIVE consumer, while a failed first shutter accumulated pack pressure that never changed the final crisis.
-- Surface/effect: after that failed shutter, the prepared DC 12 Streetwise route can remove one pack-pressure beat; success or failure retires it, the loose hurdle remains mandatory, and neither the shutter nor combat reopens.
-- Consequence: unrecovered pressure 3 now forces a persistent 2 HP Overrun before the unchanged cattle/person/reserve priorities; recovery reaches the established pressure-2 crisis without that cost.
-- Counterfactual/proof: prepared success/failure/decline and unprepared routes pin exact state, the shared LURE latch, three ending costs, save/replay, compact/full MCP and UI parity, and exact migration/rejection across 266 historical snapshot tests.
-- Pure evidence: exact-clean Terra seed 7312603 completed The Wolf-Winter through LURE at decision 34, continued through The Gallowmere at 58, rated clarity/enjoyment 4/4, chose replay-yes, and had no rejection, stuck state, loop, or soft-lock.
-- Self-critique/follow-through: the canary did not organically exercise DRIVE and repeated the known six-choice planning-density S1, so this lands deterministic depth while strategy distribution and setup compression remain open.
-- Guard: pre/post crawls `20260731T091843Z` / `20260731T101317Z` have zero findings; the new save-copy era remains exact-hash-bound and rejects tampered or adjacent manifests.
