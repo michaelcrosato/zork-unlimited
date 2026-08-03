@@ -50,7 +50,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 41 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 42 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -447,7 +447,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_recap_terms:
     "[version, quest_id, [[slot, active_field_term], ...]] exact authenticated terms for selected Station plan slots, returned by explicit read-only include_departure_recap_terms or a preparation, relief_allocation, or ally option detail; no alternatives, outcomes, or actions",
   station_dispatch_board:
-    "[version, guidance, [[support_slot, purpose], ...]]. Read-only Station overview. Plan: departure_recap; exact terms (opt-in/action detail): departure_recap_terms; inspect/talk: departure_interactions/departure_contact_leads; launch: quests + quest_starts.",
+    "[2, quest_id, guidance, dispatch|null, [[plan_slot, status, selected_title|null, purpose|null, action|null], ...]]. Consolidated Station departure surface: role, duty, and evidence rows have no optional action; dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. Selected exact terms remain opt-in departure_recap_terms. action is ['inspect', story_choice_id] for inspect_overworld_session_story or ['talk', character_id, contact_name] for talk_overworld_session_contact; inspect reveals legal story.options[*].id choices. Canonical quest title and launch approaches remain in quests + quest_starts.",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
@@ -1355,7 +1355,10 @@ function cloneCompactDepartureFields(
 }
 
 export function cloneOverworldCompactView(view: OverworldCompactView): OverworldCompactView {
-  const departureQuestId = view.departure_recap?.[1];
+  const departureQuestId =
+    view.station_dispatch_board?.[0] === 2
+      ? view.station_dispatch_board[1]
+      : view.departure_recap?.[1];
   const departureLaunchReady =
     departureQuestId !== undefined &&
     (view.quest_starts?.some(([questId]) => questId === departureQuestId) ?? false);
@@ -1534,8 +1537,10 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const stationDispatchBoard = view.stationDispatchBoard
     ? compactStationDispatchBoard(view.stationDispatchBoard)
     : null;
+  const hasStationDispatchBoard = stationDispatchBoard?.[0] === 2;
+  const departureQuestId = hasStationDispatchBoard ? stationDispatchBoard[1] : departureRecap?.[1];
   const departureLaunchReady =
-    departureRecap !== null && questStarts.some(([questId]) => questId === departureRecap[1]);
+    departureQuestId !== undefined && questStarts.some(([questId]) => questId === departureQuestId);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: view.areas.length,
     poi: view.pois.length,
@@ -1582,13 +1587,15 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     vitals: [view.supplies, view.maxSupplies, view.fatigue, view.travelCondition],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
-    ...(!departureLaunchReady && departureInteractions.length > 0
+    ...(!departureLaunchReady && !hasStationDispatchBoard && departureInteractions.length > 0
       ? { departure_interactions: departureInteractions }
       : {}),
-    ...(!departureLaunchReady && departureContactLeads.length > 0
+    ...(!departureLaunchReady && !hasStationDispatchBoard && departureContactLeads.length > 0
       ? { departure_contact_leads: departureContactLeads }
       : {}),
-    ...(!departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
+    ...(!departureLaunchReady && !hasStationDispatchBoard && departureRecap
+      ? { departure_recap: departureRecap }
+      : {}),
     ...(!departureLaunchReady && stationDispatchBoard
       ? { station_dispatch_board: stationDispatchBoard }
       : {}),
@@ -1626,11 +1633,13 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(departureLaunchReady && stationDispatchBoard
       ? { station_dispatch_board: stationDispatchBoard }
       : {}),
-    ...(departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
-    ...(departureLaunchReady && departureInteractions.length > 0
+    ...(departureLaunchReady && !hasStationDispatchBoard && departureRecap
+      ? { departure_recap: departureRecap }
+      : {}),
+    ...(departureLaunchReady && !hasStationDispatchBoard && departureInteractions.length > 0
       ? { departure_interactions: departureInteractions }
       : {}),
-    ...(departureLaunchReady && departureContactLeads.length > 0
+    ...(departureLaunchReady && !hasStationDispatchBoard && departureContactLeads.length > 0
       ? { departure_contact_leads: departureContactLeads }
       : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),

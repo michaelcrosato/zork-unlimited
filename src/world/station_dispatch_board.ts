@@ -5,20 +5,25 @@ import type {
 } from "./opening_departure_recap.js";
 import type { OverworldQuestView } from "./session_local_discovery.js";
 import type { OverworldCompactQuestStart } from "./compact_view.js";
-import type { OverworldDepartureContactLead } from "./session_departure_interactions.js";
+import type {
+  OverworldDepartureContactLead,
+  OverworldDepartureInteraction,
+} from "./session_departure_interactions.js";
 
-/** A read-only arrangement of the existing Albany Station dispatch surfaces. */
-export const STATION_DISPATCH_BOARD_VERSION = 1 as const;
+/** A read-only, coverage-complete index of the current Station dispatch. */
+export const STATION_DISPATCH_BOARD_VERSION = 2 as const;
 export const STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT = 240;
 export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
 
 const SUPPORT_SLOTS = ["preparation", "relief_allocation", "field_team"] as const;
 type StationDispatchSupportSlot = (typeof SUPPORT_SLOTS)[number];
+const PLAN_SLOTS = ["role", "duty", "evidence", ...SUPPORT_SLOTS] as const;
+type StationDispatchPlanSlot = (typeof PLAN_SLOTS)[number];
 
 const READY_GUIDANCE =
-  "A wolf pack is pressing Cade's byre. You can leave now. Field kit, relief wagon, and a second rider are separate and optional; your answer to the pack waits for Cade.";
+  "Cade's herd is under pressure. Depart now, or review independent optional support below. Support changes dispatch cost and aftermath, not which Wolf-Winter strategy Cade will offer.";
 const WAITING_GUIDANCE =
-  "A wolf pack is pressing Cade's byre. No departure road is open yet. Field kit, relief wagon, and a second rider remain separate and optional; your answer to the pack waits for Cade.";
+  "Cade's herd is under pressure. No departure road is open yet. Review independent optional support below; it changes dispatch cost and aftermath, not which Wolf-Winter strategy Cade will offer.";
 
 const SUPPORT_COPY: Readonly<
   Record<
@@ -45,6 +50,27 @@ const SUPPORT_COPY: Readonly<
   },
 });
 
+export type StationDispatchBoardAction =
+  | Readonly<{
+      kind: "inspect";
+      tool: "inspect_overworld_session_story";
+      storyChoiceId: string;
+      title: string;
+    }>
+  | Readonly<{
+      kind: "talk";
+      tool: "talk_overworld_session_contact";
+      characterId: string;
+      contactName: string;
+    }>;
+
+export type StationDispatchBoardPlanRow = Readonly<{
+  slot: StationDispatchPlanSlot;
+  label: string;
+  status: OpeningDepartureRecapStatus;
+  selectedTitle: string | null;
+}>;
+
 export type StationDispatchBoardSupport = Readonly<{
   slot: StationDispatchSupportSlot;
   label: string;
@@ -52,6 +78,7 @@ export type StationDispatchBoardSupport = Readonly<{
   selectedTitle: string | null;
   purpose: string;
   detailHint: string;
+  action: StationDispatchBoardAction | null;
 }>;
 
 export type StationDispatchBoardApproach = Readonly<{
@@ -60,11 +87,20 @@ export type StationDispatchBoardApproach = Readonly<{
   availableNow: boolean;
 }>;
 
+export type StationDispatchBoardDispatch = Readonly<{
+  state: "committed" | "direct_launch" | "sealed";
+  minutes: number;
+  timing: "on_time" | "delayed" | null;
+  remainingOptional: readonly StationDispatchSupportSlot[];
+}>;
+
 export type StationDispatchBoard = Readonly<{
   version: typeof STATION_DISPATCH_BOARD_VERSION;
   questId: string;
   questTitle: string;
   guidance: string;
+  dispatch: StationDispatchBoardDispatch | null;
+  plan: readonly StationDispatchBoardPlanRow[];
   support: readonly StationDispatchBoardSupport[];
   launch: Readonly<{
     id: string;
@@ -73,15 +109,31 @@ export type StationDispatchBoard = Readonly<{
   }>;
 }>;
 
-export type OpeningCompactStationDispatchBoardSupport = readonly [
-  slot: StationDispatchSupportSlot,
-  purpose: string,
+export type OpeningCompactStationDispatchBoardAction =
+  | readonly [kind: "inspect", storyChoiceId: string]
+  | readonly [kind: "talk", characterId: string, contactName: string];
+
+export type OpeningCompactStationDispatchBoardPlanRow = readonly [
+  slot: StationDispatchBoardPlanRow["slot"],
+  status: OpeningDepartureRecapStatus,
+  selectedTitle: string | null,
+  purpose: string | null,
+  action: OpeningCompactStationDispatchBoardAction | null,
+];
+
+export type OpeningCompactStationDispatchBoardDispatch = readonly [
+  state: StationDispatchBoardDispatch["state"],
+  minutes: number,
+  timing: StationDispatchBoardDispatch["timing"],
+  remainingOptional: readonly StationDispatchSupportSlot[],
 ];
 
 export type OpeningCompactStationDispatchBoard = readonly [
   version: typeof STATION_DISPATCH_BOARD_VERSION,
+  questId: string,
   guidance: string,
-  support: readonly OpeningCompactStationDispatchBoardSupport[],
+  dispatch: OpeningCompactStationDispatchBoardDispatch | null,
+  rows: readonly OpeningCompactStationDispatchBoardPlanRow[],
 ];
 
 function bounded(
@@ -95,53 +147,211 @@ function bounded(
   return value;
 }
 
-function supportEntry(
-  recap: OpeningDepartureRecap,
-  slot: StationDispatchSupportSlot,
-  fieldTeamContactName: string | null,
-): StationDispatchBoardSupport | null {
-  const entry = recap.entries.find((candidate) => candidate.slot === slot);
-  if (!entry) return null;
-  const copy = SUPPORT_COPY[slot];
+function cloneDispatch(
+  dispatch: OpeningDepartureRecap["dispatch"],
+): StationDispatchBoardDispatch | null {
+  return dispatch
+    ? Object.freeze({
+        state: dispatch.state,
+        minutes: dispatch.minutes,
+        timing: dispatch.timing,
+        remainingOptional: Object.freeze([...dispatch.remainingOptional]),
+      })
+    : null;
+}
+
+function matchingInteraction(
+  interactions: readonly OverworldDepartureInteraction[],
+  slot: Exclude<StationDispatchSupportSlot, "field_team">,
+): OverworldDepartureInteraction | null {
+  const matches = interactions.filter((interaction) => interaction.kind === slot);
+  if (matches.length !== 1) return null;
+  const interaction = matches[0]!;
+  if (
+    interaction.id !== interaction.inspect.storyChoiceId ||
+    interaction.inspect.arguments.story_choice_id !== interaction.id
+  ) {
+    return null;
+  }
+  return interaction;
+}
+
+function inspectAction(interaction: OverworldDepartureInteraction): StationDispatchBoardAction {
   return Object.freeze({
-    slot,
-    label:
-      slot === "field_team" && fieldTeamContactName
-        ? `${fieldTeamContactName}, second rider`
-        : copy.label,
-    status: entry.status,
-    selectedTitle: entry.title,
-    purpose: bounded(copy.purpose, `${slot} purpose`),
-    detailHint: bounded(copy.detailHint, `${slot} detail hint`),
+    kind: "inspect",
+    tool: interaction.inspect.tool,
+    storyChoiceId: interaction.inspect.storyChoiceId,
+    title: interaction.title,
   });
 }
 
+function talkAction(lead: OverworldDepartureContactLead): StationDispatchBoardAction | null {
+  if (lead.status !== "ready" || !lead.action) return null;
+  if (
+    lead.action.characterId !== lead.contactId ||
+    lead.action.arguments.character_id !== lead.contactId
+  ) {
+    return null;
+  }
+  return Object.freeze({
+    kind: "talk",
+    tool: lead.action.tool,
+    characterId: lead.action.characterId,
+    contactName: lead.contactName,
+  });
+}
+
+function supportEntry(args: {
+  recap: OpeningDepartureRecap;
+  slot: StationDispatchSupportSlot;
+  interactions: readonly OverworldDepartureInteraction[];
+  fieldTeamLead: OverworldDepartureContactLead | null;
+}): StationDispatchBoardSupport | null {
+  const entry = args.recap.entries.find((candidate) => candidate.slot === args.slot);
+  if (!entry) return null;
+  const copy = SUPPORT_COPY[args.slot];
+  let action: StationDispatchBoardAction | null = null;
+  if (args.slot === "field_team") {
+    action = args.fieldTeamLead ? talkAction(args.fieldTeamLead) : null;
+  } else {
+    const interaction = matchingInteraction(args.interactions, args.slot);
+    if (interaction) action = inspectAction(interaction);
+  }
+  return Object.freeze({
+    slot: args.slot,
+    label:
+      args.slot === "field_team" && args.fieldTeamLead
+        ? `${args.fieldTeamLead.contactName}, second rider`
+        : copy.label,
+    status: entry.status,
+    selectedTitle: entry.title,
+    purpose: bounded(copy.purpose, `${args.slot} purpose`),
+    detailHint: bounded(copy.detailHint, `${args.slot} detail hint`),
+    action,
+  });
+}
+
+function planRows(recap: OpeningDepartureRecap): readonly StationDispatchBoardPlanRow[] {
+  return Object.freeze(
+    recap.entries.map((entry) =>
+      Object.freeze({
+        slot: entry.slot,
+        label: entry.label,
+        status: entry.status,
+        selectedTitle: entry.title,
+      }),
+    ),
+  );
+}
+
+function hasExactPlanCoverage(recap: OpeningDepartureRecap): boolean {
+  const slots = recap.entries.map((entry) => entry.slot);
+  return (
+    slots.length === PLAN_SLOTS.length &&
+    new Set(slots).size === PLAN_SLOTS.length &&
+    PLAN_SLOTS.every((slot) => slots.includes(slot))
+  );
+}
+
+function actionMatchesStatus(entry: StationDispatchBoardSupport): boolean {
+  const requiresAction = entry.status === "open_optional";
+  if (requiresAction !== (entry.action !== null)) return false;
+  if (!entry.action) return true;
+  return entry.slot === "field_team"
+    ? entry.action.kind === "talk"
+    : entry.action.kind === "inspect";
+}
+
+function actionsExactlyCovered(args: {
+  support: readonly StationDispatchBoardSupport[];
+  interactions: readonly OverworldDepartureInteraction[];
+  fieldTeamLeads: readonly OverworldDepartureContactLead[];
+}): boolean {
+  if (!args.support.every(actionMatchesStatus)) return false;
+  const indexedInteractionIds = new Set(
+    args.support
+      .map((entry) => entry.action)
+      .filter(
+        (action): action is Extract<StationDispatchBoardAction, { kind: "inspect" }> =>
+          action?.kind === "inspect",
+      )
+      .map((action) => action.storyChoiceId),
+  );
+  if (
+    indexedInteractionIds.size !== args.interactions.length ||
+    args.interactions.some((interaction) => !indexedInteractionIds.has(interaction.id))
+  ) {
+    return false;
+  }
+  const indexedContactIds = new Set(
+    args.support
+      .map((entry) => entry.action)
+      .filter(
+        (action): action is Extract<StationDispatchBoardAction, { kind: "talk" }> =>
+          action?.kind === "talk",
+      )
+      .map((action) => action.characterId),
+  );
+  const actionableLeads = args.fieldTeamLeads.filter((lead) => lead.action !== null);
+  return (
+    indexedContactIds.size === actionableLeads.length &&
+    actionableLeads.every((lead) => indexedContactIds.has(lead.contactId))
+  );
+}
+
 /**
- * Build no new authority: all source values are already public, authenticated
- * view projections. A malformed pairing simply withholds the board.
+ * Build no new authority: every row and action is an exact clone of existing
+ * authenticated view data. A missing, duplicate, or unindexed input withholds
+ * the board so the fallback Station surfaces remain authoritative.
  */
 export function deriveStationDispatchBoard(args: {
   recap: OpeningDepartureRecap | null;
   quests: readonly OverworldQuestView[];
   questStarts: readonly OverworldCompactQuestStart[];
+  departureInteractions: readonly OverworldDepartureInteraction[];
   departureContactLeads: readonly OverworldDepartureContactLead[];
 }): StationDispatchBoard | null {
   const recap = args.recap;
   if (!recap) return null;
+  if (!hasExactPlanCoverage(recap)) return null;
   const quest = args.quests.find((candidate) => candidate.id === recap.questId);
   if (!quest?.launch || quest.title !== recap.questTitle || quest.launch.options.length === 0) {
     return null;
   }
-  const matchingContacts = args.departureContactLeads.filter(
+  if (
+    args.departureInteractions.some(
+      (interaction) =>
+        interaction.kind !== "preparation" && interaction.kind !== "relief_allocation",
+    ) ||
+    args.departureContactLeads.some(
+      (lead) => lead.kind !== "ally" || lead.questId !== recap.questId,
+    )
+  ) {
+    return null;
+  }
+  const fieldTeamLeads = args.departureContactLeads.filter(
     (lead) => lead.questId === recap.questId && lead.kind === "ally",
   );
-  if (matchingContacts.length > 1) return null;
-  const fieldTeamContactName = matchingContacts[0]?.contactName ?? null;
-  const support = SUPPORT_SLOTS.map((slot) => supportEntry(recap, slot, fieldTeamContactName));
-  const selectedSupport: StationDispatchBoardSupport[] = [];
-  for (const entry of support) {
-    if (!entry) return null;
-    selectedSupport.push(entry);
+  if (fieldTeamLeads.length > 1) return null;
+  const fieldTeamLead = fieldTeamLeads[0] ?? null;
+  const support = SUPPORT_SLOTS.map((slot) =>
+    supportEntry({
+      recap,
+      slot,
+      interactions: args.departureInteractions,
+      fieldTeamLead,
+    }),
+  );
+  if (support.some((entry) => entry === null)) return null;
+  const selectedSupport = support as StationDispatchBoardSupport[];
+  if (
+    !actionsExactlyCovered({
+      support: selectedSupport,
+      interactions: args.departureInteractions,
+      fieldTeamLeads,
+    })
+  ) {
+    return null;
   }
   const optionIds = new Set(quest.launch.options.map((option) => option.id));
   const legalApproachIds = new Set<string>();
@@ -159,6 +369,8 @@ export function deriveStationDispatchBoard(args: {
       "guidance",
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
     ),
+    dispatch: cloneDispatch(recap.dispatch),
+    plan: planRows(recap),
     support: Object.freeze(selectedSupport),
     launch: Object.freeze({
       id: quest.launch.id,
@@ -176,10 +388,18 @@ export function deriveStationDispatchBoard(args: {
   });
 }
 
+function cloneAction(action: StationDispatchBoardAction | null): StationDispatchBoardAction | null {
+  return action ? { ...action } : null;
+}
+
 export function cloneStationDispatchBoard(board: StationDispatchBoard): StationDispatchBoard {
   return {
     ...board,
-    support: board.support.map((entry) => ({ ...entry })),
+    dispatch: board.dispatch
+      ? { ...board.dispatch, remainingOptional: [...board.dispatch.remainingOptional] }
+      : null,
+    plan: board.plan.map((entry) => ({ ...entry })),
+    support: board.support.map((entry) => ({ ...entry, action: cloneAction(entry.action) })),
     launch: {
       ...board.launch,
       approaches: board.launch.approaches.map((approach) => ({ ...approach })),
@@ -187,19 +407,43 @@ export function cloneStationDispatchBoard(board: StationDispatchBoard): StationD
   };
 }
 
+function compactAction(
+  action: StationDispatchBoardAction | null,
+): OpeningCompactStationDispatchBoardAction | null {
+  if (!action) return null;
+  return action.kind === "inspect"
+    ? ["inspect", action.storyChoiceId]
+    : ["talk", action.characterId, action.contactName];
+}
+
 export function compactStationDispatchBoard(
   board: StationDispatchBoard,
 ): OpeningCompactStationDispatchBoard {
+  const supportBySlot = new Map(board.support.map((entry) => [entry.slot, entry]));
   return [
     board.version,
+    board.questId,
     compactText(board.guidance, STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT),
-    board.support.map(
-      (entry) =>
-        [
-          entry.slot,
-          compactText(entry.purpose, STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT),
-        ] as const,
-    ),
+    board.dispatch
+      ? [
+          board.dispatch.state,
+          board.dispatch.minutes,
+          board.dispatch.timing,
+          [...board.dispatch.remainingOptional],
+        ]
+      : null,
+    board.plan.map((entry) => {
+      const support = supportBySlot.get(entry.slot as StationDispatchSupportSlot);
+      return [
+        entry.slot,
+        entry.status,
+        entry.selectedTitle,
+        support
+          ? compactText(support.purpose, STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT)
+          : null,
+        support ? compactAction(support.action) : null,
+      ] as const;
+    }),
   ];
 }
 
@@ -209,6 +453,17 @@ export function cloneCompactStationDispatchBoard(
   return [
     board[0],
     board[1],
-    board[2].map((entry) => [...entry] as OpeningCompactStationDispatchBoardSupport),
+    board[2],
+    board[3] ? [board[3][0], board[3][1], board[3][2], [...board[3][3]]] : null,
+    board[4].map(
+      (row) =>
+        [
+          row[0],
+          row[1],
+          row[2],
+          row[3],
+          row[4] ? [...row[4]] : null,
+        ] as OpeningCompactStationDispatchBoardPlanRow,
+    ),
   ];
 }

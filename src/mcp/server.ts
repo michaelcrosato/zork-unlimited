@@ -1366,7 +1366,7 @@ tool(
 );
 tool(
   "talk_overworld_session_contact",
-  "Talk to a ready departure_contact_leads contact; support choices are order-neutral.",
+  "Talk via Station ['talk', character_id, contact_name] or legacy lead; support is order-neutral.",
   CONTACT_INPUT({
     ...OVERWORLD_SESSION,
     ...OVERWORLD_ACTION_CONTEXT,
@@ -1479,13 +1479,15 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect a currently presented journey.storyChoice or optional story listed in departure_interactions; read-only. The default compact read returns a comparison, unchanged receipt, and bounded authenticated departure_recap when available. Pass option_id for only that option's new detail after it is visible, or reveal_id to expand. A successful reveal authorizes its choices for this live session/story; new/restored sessions must reveal again. Setup details include authenticated selected terms. It omits all other repeated world context. Developer compact_result:false returns the canonical full story; successful reveals still authorize choices.",
+  "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions; read-only. Compact returns comparison + unchanged receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands. Reveal authority is session-local; restore resets it. Detail may include selected terms. compact_result:false returns full story and preserves reveals.",
   z
     .object({
       ...OVERWORLD_SESSION,
       story_choice_id: z
         .string()
-        .describe("Story choice id from journey.storyChoice or departure_interactions."),
+        .describe(
+          "Id from journey.storyChoice, Station inspect action, or legacy departure_interactions.",
+        ),
       option_id: z
         .string()
         .optional()
@@ -1508,14 +1510,11 @@ tool(
 );
 tool(
   "choose_overworld_session_story",
-  "Choose a visible option; reveal staged choices first. story_choice_id disambiguates departure interactions.",
+  "Choose a visible option; reveal first. story_choice_id disambiguates Station support.",
   {
     ...OVERWORLD_SESSION,
     choice: z.string().describe("Visible option id; departure options are inferred."),
-    story_choice_id: z
-      .string()
-      .optional()
-      .describe("Optional departure_interactions id for disambiguation."),
+    story_choice_id: z.string().optional().describe("Optional Station support story id."),
     ...OVERWORLD_ACTION_CONTEXT,
   },
   (a) => api.choose_overworld_session_story(defaultCompactOverworld(a)),

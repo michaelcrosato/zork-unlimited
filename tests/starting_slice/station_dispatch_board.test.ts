@@ -5,6 +5,11 @@ import {
   compactStationDispatchBoard,
   deriveStationDispatchBoard,
 } from "../../src/world/station_dispatch_board.js";
+import {
+  compactOverworldDepartureContactLeads,
+  compactOverworldDepartureInteractions,
+} from "../../src/world/session_departure_interactions.js";
+import { compactOpeningDepartureRecap } from "../../src/world/opening_departure_recap.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -43,17 +48,27 @@ describe("Station dispatch board", () => {
     if (!board || !view.departureRecap) throw new Error("Expected the Station dispatch board.");
 
     expect(board).toMatchObject({
-      version: 1,
+      version: 2,
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
-        "A wolf pack is pressing Cade's byre. You can leave now. Field kit, relief wagon, and a second rider are separate and optional; your answer to the pack waits for Cade.",
+        "Cade's herd is under pressure. Depart now, or review independent optional support below. Support changes dispatch cost and aftermath, not which Wolf-Winter strategy Cade will offer.",
     });
     expect(board.support.map((entry) => [entry.slot, entry.status, entry.selectedTitle])).toEqual(
       view.departureRecap.entries
         .filter((entry) => ["preparation", "relief_allocation", "field_team"].includes(entry.slot))
         .map((entry) => [entry.slot, entry.status, entry.title]),
     );
+    expect(board.dispatch).toEqual(view.departureRecap.dispatch);
+    expect(board.plan).toEqual(
+      view.departureRecap.entries.map((entry) => ({
+        slot: entry.slot,
+        label: entry.label,
+        status: entry.status,
+        selectedTitle: entry.title,
+      })),
+    );
+    expect(board.plan).not.toHaveProperty("activeFieldTerm");
     expect(board.support.map((entry) => entry.label)).toEqual([
       "One field kit",
       "Albany's last relief wagon",
@@ -68,6 +83,26 @@ describe("Station dispatch board", () => {
       "Compare kits only if you want their exact cost and field use.",
       "Compare destinations only if you want to decide who is protected.",
       "Talk only to compare exact terms; this adds no combat power.",
+    ]);
+    expect(board.support.map((entry) => entry.action)).toEqual([
+      {
+        kind: "inspect",
+        tool: "inspect_overworld_session_story",
+        storyChoiceId: PREPARATION.id,
+        title: PREPARATION.title,
+      },
+      {
+        kind: "inspect",
+        tool: "inspect_overworld_session_story",
+        storyChoiceId: RELIEF_ALLOCATION.id,
+        title: RELIEF_ALLOCATION.title,
+      },
+      {
+        kind: "talk",
+        tool: "talk_overworld_session_contact",
+        characterId: ALLY.contact,
+        contactName: "June Pike",
+      },
     ]);
     const quest = view.quests.find((candidate) => candidate.id === WOLF.id);
     if (!quest?.launch) throw new Error("Expected the projected Wolf launch card.");
@@ -91,7 +126,63 @@ describe("Station dispatch board", () => {
     expect(cloneOverworldCompactView(compact).station_dispatch_board).toEqual(
       compact.station_dispatch_board,
     );
-    expect(JSON.stringify(compact.station_dispatch_board).length).toBeLessThanOrEqual(520);
+    // V2 replaces the dispatch recap and current action index without carrying
+    // duplicated title, launch, label, or detail-hint payloads.
+    expect(JSON.stringify(compact.station_dispatch_board).length).toBeLessThanOrEqual(1_000);
+    expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
+      2,
+      WOLF.id,
+      board.guidance,
+      [
+        "committed",
+        board.dispatch?.minutes,
+        null,
+        ["preparation", "relief_allocation", "field_team"],
+      ],
+    ]);
+    expect(compact.station_dispatch_board?.[4]).toEqual([
+      ["role", "selected", REGISTRATION.profiles[0]!.title, null, null],
+      ["duty", "selected", RELIEF_OATH.options[0]!.title, null, null],
+      ["evidence", "selected", LEAD_SOURCE.options[0]!.title, null, null],
+      [
+        "preparation",
+        "open_optional",
+        null,
+        "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
+        ["inspect", PREPARATION.id],
+      ],
+      [
+        "relief_allocation",
+        "open_optional",
+        null,
+        "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
+        ["inspect", RELIEF_ALLOCATION.id],
+      ],
+      [
+        "field_team",
+        "open_optional",
+        null,
+        "Second rider: optionally ask about cattle-first authority, or ride alone.",
+        ["talk", ALLY.contact, "June Pike"],
+      ],
+    ]);
+    expect(compact).not.toHaveProperty("departure_recap");
+    expect(compact).not.toHaveProperty("departure_interactions");
+    expect(compact).not.toHaveProperty("departure_contact_leads");
+    const legacyStationBlock = JSON.stringify({
+      station_dispatch_board: [
+        1,
+        board.guidance,
+        board.support.map((entry) => [entry.slot, entry.purpose]),
+      ],
+      departure_recap: compactOpeningDepartureRecap(view.departureRecap),
+      departure_interactions: compactOverworldDepartureInteractions(view.departureInteractions),
+      departure_contact_leads: compactOverworldDepartureContactLeads(view.departureContactLeads),
+    });
+    const v2StationBlock = JSON.stringify({
+      station_dispatch_board: compact.station_dispatch_board,
+    });
+    expect(v2StationBlock.length).toBeLessThan(legacyStationBlock.length);
 
     expect(session.snapshot()).toEqual(before);
     expect(session.snapshotHash()).toBe(beforeHash);
@@ -110,6 +201,7 @@ describe("Station dispatch board", () => {
         recap,
         quests: [],
         questStarts: view.questStarts,
+        departureInteractions: view.departureInteractions,
         departureContactLeads: view.departureContactLeads,
       }),
     ).toBeNull();
@@ -118,6 +210,7 @@ describe("Station dispatch board", () => {
         recap,
         quests: view.quests,
         questStarts: [[WOLF.id, "forged:road"]],
+        departureInteractions: view.departureInteractions,
         departureContactLeads: view.departureContactLeads,
       }),
     ).toBeNull();
@@ -128,6 +221,7 @@ describe("Station dispatch board", () => {
           quest.id === WOLF.id ? { ...quest, title: "Forged quest title" } : quest,
         ),
         questStarts: view.questStarts,
+        departureInteractions: view.departureInteractions,
         departureContactLeads: view.departureContactLeads,
       }),
     ).toBeNull();
@@ -136,10 +230,35 @@ describe("Station dispatch board", () => {
         recap,
         quests: view.quests,
         questStarts: view.questStarts,
+        departureInteractions: view.departureInteractions,
         departureContactLeads: [
           ...view.departureContactLeads,
           { ...fieldLead, id: `${fieldLead.id}:duplicate` },
         ],
+      }),
+    ).toBeNull();
+    expect(
+      deriveStationDispatchBoard({
+        recap: {
+          ...recap,
+          entries: recap.entries.filter((entry) => entry.slot !== "duty"),
+        },
+        quests: view.quests,
+        questStarts: view.questStarts,
+        departureInteractions: view.departureInteractions,
+        departureContactLeads: view.departureContactLeads,
+      }),
+    ).toBeNull();
+    expect(
+      deriveStationDispatchBoard({
+        recap: {
+          ...recap,
+          entries: [...recap.entries, recap.entries[0]!],
+        },
+        quests: view.quests,
+        questStarts: view.questStarts,
+        departureInteractions: view.departureInteractions,
+        departureContactLeads: view.departureContactLeads,
       }),
     ).toBeNull();
 
@@ -147,15 +266,38 @@ describe("Station dispatch board", () => {
       recap,
       quests: view.quests,
       questStarts: [],
+      departureInteractions: view.departureInteractions,
       departureContactLeads: view.departureContactLeads,
     });
     expect(waiting?.launch.approaches.every((approach) => !approach.availableNow)).toBe(true);
     expect(waiting?.guidance).toBe(
-      "A wolf pack is pressing Cade's byre. No departure road is open yet. Field kit, relief wagon, and a second rider remain separate and optional; your answer to the pack waits for Cade.",
+      "Cade's herd is under pressure. No departure road is open yet. Review independent optional support below; it changes dispatch cost and aftermath, not which Wolf-Winter strategy Cade will offer.",
     );
     expect(waiting?.guidance).not.toContain("You can leave now");
     expect(fieldLead).toMatchObject({ status: "ready" });
     expect(fieldLead.guidance).not.toContain("choose a field kit first");
+
+    expect(
+      deriveStationDispatchBoard({
+        recap,
+        quests: view.quests,
+        questStarts: view.questStarts,
+        departureInteractions: view.departureInteractions.slice(1),
+        departureContactLeads: view.departureContactLeads,
+      }),
+    ).toBeNull();
+    expect(
+      deriveStationDispatchBoard({
+        recap,
+        quests: view.quests,
+        questStarts: view.questStarts,
+        departureInteractions: [
+          ...view.departureInteractions,
+          { ...view.departureInteractions[0]!, id: "forged:duplicate" },
+        ],
+        departureContactLeads: view.departureContactLeads,
+      }),
+    ).toBeNull();
 
     const visible = JSON.stringify(view.stationDispatchBoard);
     for (const alternative of [

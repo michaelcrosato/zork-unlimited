@@ -114,7 +114,8 @@ export function render(view: OverworldView): string {
     ? view.quests.filter((quest) => quest.id !== departureQuest.id)
     : view.quests;
   if (view.stationDispatchBoard) {
-    lines.push(...renderStationDispatchBoard(view));
+    lines.push(`${view.stationDispatchBoard.questTitle} field briefing:`);
+    lines.push(`  ${view.stationDispatchBoard.guidance}`);
   }
   if (departureQuest) {
     lines.push("Depart now:");
@@ -130,6 +131,9 @@ export function render(view: OverworldView): string {
           .map((line) => `  ${line}`),
       );
     }
+  }
+  if (view.stationDispatchBoard) {
+    lines.push(...renderStationDispatchBoard(view));
   }
   if (
     !view.stationDispatchBoard &&
@@ -210,61 +214,22 @@ function stationDispatchStatus(support: StationDispatchBoardView["support"][numb
 export function renderStationDispatchBoard(view: OverworldView): string[] {
   const board = view.stationDispatchBoard;
   if (!board) return [];
-  const lines = [`${board.questTitle} field briefing:`, `  ${board.guidance}`];
-  const mappedInteractionIds = new Set<string>();
-  const mappedContactLeadIds = new Set<string>();
+  const lines = ["Optional dispatch support (independent):"];
   for (const support of board.support) {
     lines.push(`  ${support.label} — ${stationDispatchStatus(support)}.`);
     lines.push(`    ${support.purpose}`);
     lines.push(`    ${support.detailHint}`);
-    if (support.slot === "preparation" || support.slot === "relief_allocation") {
-      const interaction = view.departureInteractions.find(
-        (candidate) => candidate.kind === support.slot,
-      );
-      if (interaction) {
-        mappedInteractionIds.add(interaction.id);
-        const label =
-          support.slot === "preparation" ? "Compare field kits" : "Compare wagon destinations";
-        lines.push(`    ${label}: \`inspect ${interaction.id}\``);
-      }
-      continue;
-    }
-    if (support.slot === "field_team") {
-      const lead = view.departureContactLeads.find(
-        (candidate) => candidate.kind === "ally" && candidate.questId === board.questId,
-      );
-      if (lead) {
-        mappedContactLeadIds.add(lead.id);
-        lines.push(`    ${lead.guidance}`);
-        lines.push(
-          lead.action
-            ? `    Command: talk ${lead.contactName}`
-            : "    Available after choosing a Station preparation.",
-        );
-      }
-    }
-  }
-  const otherInteractions = view.departureInteractions.filter(
-    (interaction) => !mappedInteractionIds.has(interaction.id),
-  );
-  const otherContactLeads = view.departureContactLeads.filter(
-    (lead) => !mappedContactLeadIds.has(lead.id),
-  );
-  if (otherInteractions.length || otherContactLeads.length) {
-    lines.push("  Other departure options:");
-    for (const interaction of otherInteractions) {
-      lines.push(`    ${interaction.title} — \`inspect ${interaction.id}\``);
-    }
-    for (const lead of otherContactLeads) {
-      lines.push(`    ${lead.title} — ${lead.guidance}`);
+    if (support.action?.kind === "inspect") {
       lines.push(
-        lead.action
-          ? `      Command: talk ${lead.contactName}`
-          : "      Available after choosing a Station preparation.",
+        `    Inspect ${support.action.title}: \`inspect ${support.action.storyChoiceId}\``,
+      );
+    } else if (support.action?.kind === "talk") {
+      lines.push(
+        `    Talk to ${support.action.contactName}: \`talk ${support.action.contactName}\``,
       );
     }
   }
-  if (view.departureRecap) lines.push(...renderDepartureRecap(view.departureRecap));
+  lines.push("  Current commitments: `review dispatch`.");
   return lines;
 }
 

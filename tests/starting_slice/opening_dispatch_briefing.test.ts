@@ -579,25 +579,18 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     compactJourney = mcpStation.journey;
     expect(compactJourney.storyChoice).toEqual(ui.journey().storyChoice);
     expect(compactJourney.storyChoice).toBeNull();
-    expect(mcpStation.context.departure_recap).toEqual(ui.compactView().departure_recap);
-    expect(mcpStation.context.departure_recap?.[3]).toHaveLength(3);
+    expect(mcpStation.context.station_dispatch_board).toEqual(
+      ui.compactView().station_dispatch_board,
+    );
+    expect(mcpStation.context.station_dispatch_board?.[4]).toHaveLength(6);
+    expect(mcpStation.context).not.toHaveProperty("departure_recap");
+    expect(mcpStation.context).not.toHaveProperty("departure_interactions");
+    expect(mcpStation.context).not.toHaveProperty("departure_contact_leads");
     expect(
       Object.keys(mcpStation.context).filter((key) =>
-        [
-          "quests",
-          "quest_starts",
-          "departure_recap",
-          "departure_interactions",
-          "departure_contact_leads",
-        ].includes(key),
+        ["quests", "quest_starts", "station_dispatch_board"].includes(key),
       ),
-    ).toEqual([
-      "quests",
-      "quest_starts",
-      "departure_recap",
-      "departure_interactions",
-      "departure_contact_leads",
-    ]);
+    ).toEqual(["quests", "quest_starts", "station_dispatch_board"]);
     expect(ui.view().departureInteractions[0]?.id).toBe(PREPARATION.id);
     const uiPreparation = ui.inspectJourneyStory(PREPARATION.id);
     const mcpPreparation = api.inspect_overworld_session_story({
@@ -621,10 +614,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       choice: PREPARATION.profiles[0]!.id,
       compact_context: true,
     });
-    expect(mcpPreparationSelected.context.departure_recap).toEqual(
-      ui.compactView().departure_recap,
+    expect(mcpPreparationSelected.context.station_dispatch_board).toEqual(
+      ui.compactView().station_dispatch_board,
     );
-    expect(mcpPreparationSelected.context.departure_recap?.[4]).toEqual([
+    expect(mcpPreparationSelected.context.station_dispatch_board?.[3]).toEqual([
       "committed",
       35,
       null,

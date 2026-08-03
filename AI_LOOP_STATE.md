@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 727 -->
+<!-- historical_cycle_count: 728 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - launch_first_station_dispatch
+
+- Evidence choice: the 20-report compile and two exact-clean Terra canaries independently named Station planning density, so this increment changes information hierarchy without deleting a causal choice.
+- Surface/effect: terminal and browser clients put both legal Wolf-Winter roads before optional support; board v2 indexes all six plan rows and exact inspect/talk handles, while malformed or unmapped sources fail closed to the established recap/interaction/contact surfaces.
+- Economy: compact v42 replaces four overlapping Station structures with `[2, questId, guidance, dispatch|null, rows]`, reducing the exact Station slice 2,470→2,107 bytes (14.7%); the one-shot final Terra run used 4.477M input / 4.328M cache-read + 11,172 output tokens.
+- Counterfactual: focused full/compact, UI/CLI, clone, malformed-source, save/hash, and action-parity proofs keep terms, state, RNG, outcomes, legal launch/support actions, and accepted-decision counts unchanged.
+- Pure evidence: exact-clean Terra seed 682747 on `e0550be5` diverted every wolf with the full herd after two failure-forward recoveries, continued at decisions 30/41, won The Gallowmere, ended naturally at 55, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, loop, soft-lock, or stuck state.
+- Self-critique/follow-through: Station nested tradeoffs, campaign-versus-quest state boundaries, and one Gallowmere recovery label remain S1; one new verified report is below the recompile threshold, so no fleet or premature compile ran.
+- Guard: pre/post crawls `20260803T173108Z` / `20260803T182348Z` cover all 247 nodes/344 edges/12 quests; exact health passes 459 files/3,797 tests, UI typecheck, and all 12 packs.
 
 ### Cycle result - station_crisis_briefing
 
@@ -161,14 +171,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Frozen pilot: seeds 7314020–29 verified 10/10 first attempts with no resume/retry/failure and all continued; readiness correctly failed at clarity/enjoyment 4.00 and only two strategies (LURE 7, FORTIFY 3), so no 100-player fleet launched.
 - Economy: the final canary plus pilot used 49.150M raw / 1.667M uncached input + 120,665 output at 96.60% input-cache reuse (1.787M useful, about 162,488/run); the aborted pre-fix cohort remains non-authoritative rather than guessed into this total.
 - Self-critique/guard: Albany's cumulative planning density recurred in 5/10 reports and HUNT/DRIVE stayed unused, so combined comparison and strategy discoverability are next; independent byte/security reviews, 112 focused tests, crawl `20260801T054037Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.
-
-### Cycle result - staged_wolf_handoff
-
-- Evidence choice: repeated verified reports named dense Albany setup and Gallowmere's quest-local HP as campaign damage, while Wolf's compact launch repeated a large parent receipt instead of prioritizing the playable child.
-- Surface/effect: Wolf-only compact launch now gives one bounded handoff with selected route/commitments; active child turns carry only parent goal/checkpoint focus and complete blockers, while generic Gallowmere launch context stays unchanged.
-- Continuity: launch/load/resume and explicit recovery carry a compact scope note that quest HP cannot reduce campaign health; ordinary reads/steps omit the repeated profile, and full/UI retain their richer explanation.
-- Measured effect: the exact Wolf launch falls 11,044→6,724 bytes (39.1%) and its first field turn 3,909→2,194 (43.9%) with identical actions, state hashes, pressure, vitals, inventory, RNG, consequences, and foldback.
-- Counterfactual: route choices, Albany decisions, mechanics, content, saves, outcomes, full parent pull access, and non-Wolf compact launch behavior are unchanged; Cade's arrival copy only exposes the existing HUNT/LURE/DRIVE/FORTIFY comparison.
-- Pure evidence: final Terra seed 73101859 diverted every wolf alive with the whole herd, continued at decisions 29/41, won The Gallowmere at 53, rated clarity/enjoyment 4/4 and replay-yes, had no rejection/bug/loop/soft-lock, and did not repeat the campaign-HP-loss confusion.
-- Economy: one unpublished Spark interview failure plus pre/final Terra canaries used 12.340M raw / 425,384 uncached input + 45,797 output at 96.54% cache reuse (471,181 useful total); no failed attempt was retried and no cohort ran.
-- Self-critique/guard: the final player still rated Station density and the two-layer state concept S1, so broader uptake remains open; two independent reviews, 116 focused tests, crawl `20260801T033045Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.

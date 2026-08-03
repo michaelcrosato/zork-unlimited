@@ -26,6 +26,7 @@ import {
 } from "../../src/mcp/journey_projection.js";
 import { OVERWORLD_COMPACT_RESULT_LEGEND } from "../../src/mcp/compact_overworld_result.js";
 import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
+import type { OpeningCompactStationDispatchBoard } from "../../src/world/station_dispatch_board.js";
 import {
   INSPECT_OVERWORLD_SESSION_STORY_TOOL,
   OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
@@ -1773,7 +1774,7 @@ describe("MCP pure play mode", () => {
         });
         expect(storyChoiceProperties?.story_choice_id).toMatchObject({
           type: "string",
-          description: "Optional departure_interactions id for disambiguation.",
+          description: "Optional Station support story id.",
         });
         expect(storyChoiceProperties?.choice).not.toHaveProperty("enum");
         expect(JSON.stringify(storyChoiceTool)).not.toMatch(
@@ -1925,6 +1926,7 @@ describe("MCP pure play mode", () => {
         string,
       ][];
       departure_recap?: unknown;
+      station_dispatch_board?: OpeningCompactStationDispatchBoard;
     };
     type RpgObservation = {
       exits: { direction: string; to?: string }[];
@@ -2233,41 +2235,44 @@ describe("MCP pure play mode", () => {
         );
         mergeLegendAndExpectContextCoverage(cumulativeLegend, stationed, "Station");
         expect((stationed.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
-        expect((stationed.legend_delta as Record<string, string>).departure_contact_leads).toMatch(
-          /ready.*talk_overworld_session_contact.*before or after preparation or relief allocation.*legacy requires_preparation.*solo default/i,
+        expect((stationed.legend_delta as Record<string, string>).station_dispatch_board).toMatch(
+          /consolidated Station departure surface.*inspect_overworld_session_story.*talk_overworld_session_contact/i,
         );
         expect(JSON.stringify(cumulativeLegend).length).toBeLessThanOrEqual(7_200);
-        expect(
-          (
-            stationed.context as {
-              departure_interactions?: [string, string, string][];
-            }
-          ).departure_interactions,
-        ).toEqual([
-          ["albany:wolf_preparation", "preparation", expect.any(String)],
-          ["albany:wolf_relief_allocation", "relief_allocation", expect.any(String)],
-        ]);
-        expect((stationed.context as CompactAreaContext).departure_contact_leads).toEqual([
-          [
-            "albany:wolf_ally_commitment",
-            "ally",
-            "Choose the Wolf-Winter Field Team",
-            "ready",
-            "albany_city__transport_hub__june_pike",
-            "June Pike",
-            "wolf_winter",
-            "The Wolf-Winter",
-            expect.stringMatching(/ask June Pike.*leave.*alone now/i),
-          ],
-        ]);
+        const stationedContext = stationed.context as CompactAreaContext;
+        expect(stationedContext.departure_contact_leads).toBeUndefined();
+        expect(stationedContext.departure_recap).toBeUndefined();
+        const stationedBoard = stationedContext.station_dispatch_board;
+        expect(stationedBoard?.slice(0, 2)).toEqual([2, "wolf_winter"]);
+        expect(stationedBoard?.[4]).toEqual(
+          expect.arrayContaining([
+            [
+              "preparation",
+              "open_optional",
+              null,
+              expect.any(String),
+              ["inspect", "albany:wolf_preparation"],
+            ],
+            [
+              "relief_allocation",
+              "open_optional",
+              null,
+              expect.any(String),
+              ["inspect", "albany:wolf_relief_allocation"],
+            ],
+            [
+              "field_team",
+              "open_optional",
+              null,
+              expect.any(String),
+              ["talk", "albany_city__transport_hub__june_pike", "June Pike"],
+            ],
+          ]),
+        );
         expect((stationed.context as CompactAreaContext).quest_starts).toContainEqual([
           "wolf_winter",
           expect.any(String),
         ]);
-        const stationedDepartureRecap = (stationed.context as CompactAreaContext).departure_recap;
-        if (!stationedDepartureRecap) {
-          throw new Error("expected the authenticated Station departure recap");
-        }
         const inspected = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2279,7 +2284,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        expectPureStoryInspectionEnvelope(inspected, sessionId, stationedDepartureRecap);
+        expectPureStoryInspectionEnvelope(inspected, sessionId);
         const preparationChoice = inspected.story as {
           comparisonVersion?: number;
           kind?: string;
@@ -2341,7 +2346,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        expectPureStoryInspectionEnvelope(detailed, sessionId, stationedDepartureRecap, true);
+        expectPureStoryInspectionEnvelope(detailed, sessionId, undefined, true);
         expect(detailed.snapshot_hash).toBe(inspected.snapshot_hash);
         const detailedPreparation = detailed.story as Record<string, unknown> & {
           inspectedOption?: Record<string, unknown> & { id?: string; consequence?: string };
@@ -2375,21 +2380,18 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        const readyDepartureLead = (prepared.context as CompactAreaContext)
-          .departure_contact_leads?.[0];
-        expect(readyDepartureLead).toEqual([
-          "albany:wolf_ally_commitment",
-          "ally",
-          "Choose the Wolf-Winter Field Team",
-          "ready",
+        const readyFieldTeam = (
+          prepared.context as CompactAreaContext
+        ).station_dispatch_board?.[4].find(([slot]) => slot === "field_team")?.[4];
+        expect(readyFieldTeam).toEqual([
+          "talk",
           "albany_city__transport_hub__june_pike",
           "June Pike",
-          "wolf_winter",
-          "The Wolf-Winter",
-          expect.stringMatching(/ask June Pike.*leave.*alone now/i),
         ]);
-        if (!readyDepartureLead) throw new Error("expected June's ready departure contact lead");
-        const juneContactId = readyDepartureLead[4];
+        if (readyFieldTeam?.[0] !== "talk") {
+          throw new Error("expected June's ready Station board action");
+        }
+        const juneContactId = readyFieldTeam[1];
         const juneConversation = textPayload(
           await client.callTool({
             name: "talk_overworld_session_contact",
@@ -2475,10 +2477,7 @@ describe("MCP pure play mode", () => {
         ]);
         const wolfWinter = areaView(prepared).quests.find((quest) => quest.id === "wolf_winter");
         if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
-        const allocationDepartureRecap = (allied.context as CompactAreaContext).departure_recap;
-        if (!allocationDepartureRecap) {
-          throw new Error("expected the authenticated recap beside relief allocation");
-        }
+        expect((allied.context as CompactAreaContext).station_dispatch_board?.[0]).toBe(2);
         const inspectedAllocation = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2488,7 +2487,7 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        expectPureStoryInspectionEnvelope(inspectedAllocation, sessionId, allocationDepartureRecap);
+        expectPureStoryInspectionEnvelope(inspectedAllocation, sessionId);
         expect((inspectedAllocation.story as { kind?: string }).kind).toBe("relief_allocation");
         const allocated = textPayload(
           await client.callTool({

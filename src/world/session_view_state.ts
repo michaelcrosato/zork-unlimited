@@ -324,6 +324,7 @@ export function buildOverworldSessionViewModelState(
     recap: source.departureRecap,
     quests: localView.quests,
     questStarts: source.questStarts,
+    departureInteractions: source.departureInteractions,
     departureContactLeads: source.departureContactLeads,
   });
 
