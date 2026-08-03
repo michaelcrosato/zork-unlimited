@@ -231,7 +231,8 @@ export type JourneyStoryChoiceOption = Readonly<{
  * initially compared and the read-only affordance that reveals the remainder.
  */
 export type JourneyStoryChoiceProgressiveDisclosure = Readonly<{
-  initialOptionIds: readonly [string, ...string[]];
+  /** Empty for a reveal-first briefing that offers no commitment before comparison. */
+  initialOptionIds: readonly string[];
   reveal: Readonly<{
     id: string;
     label: string;
@@ -352,15 +353,23 @@ export function journeyStoryChoiceOptionsForPresentation(
     }
     return prompt.options;
   }
-  if (revealId === undefined) {
-    return prompt.options.filter((option) => disclosure.initialOptionIds.includes(option.id));
-  }
+  const orderedOptions = (optionIds: readonly string[]): readonly JourneyStoryChoiceOption[] =>
+    optionIds.map((optionId) => {
+      const option = prompt.options.find((candidate) => candidate.id === optionId);
+      if (!option) {
+        throw new Error(
+          `Journey progressive disclosure references unknown story choice option "${optionId}".`,
+        );
+      }
+      return option;
+    });
+  if (revealId === undefined) return orderedOptions(disclosure.initialOptionIds);
   if (revealId !== disclosure.reveal.id) {
     throw new Error(
       `Journey story choice "${prompt.id}" has no progressive disclosure "${revealId}".`,
     );
   }
-  return prompt.options;
+  return orderedOptions([...disclosure.initialOptionIds, ...disclosure.reveal.optionIds]);
 }
 
 export type JourneyGoalCompletionPresentationContext = Readonly<{
@@ -1274,7 +1283,6 @@ function freezeStoryChoice(
         const initialOptionIds = progressiveDisclosure.initialOptionIds;
         const reveal = progressiveDisclosure.reveal;
         if (
-          initialOptionIds.length === 0 ||
           reveal.optionIds.length === 0 ||
           reveal.id.trim().length === 0 ||
           reveal.label.trim().length === 0 ||

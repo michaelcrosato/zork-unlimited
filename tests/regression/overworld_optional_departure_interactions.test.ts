@@ -66,7 +66,18 @@ function startMcpAtStation() {
     session_id: started.session_id,
     character_id: REGISTRATION.contact,
   });
-  for (const choice of [REGISTRATION.profiles[0]!.id, OATH.options[0]!.id, LEAD.options[0]!.id]) {
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: started.session_id,
+    choice: REGISTRATION.profiles[0]!.id,
+  });
+  api.inspect_overworld_session_story({
+    ...FULL,
+    session_id: started.session_id,
+    story_choice_id: OATH.id,
+    reveal_id: "customize_duty_and_evidence",
+  });
+  for (const choice of [OATH.options[0]!.id, LEAD.options[0]!.id]) {
     api.choose_overworld_session_story({
       ...FULL,
       session_id: started.session_id,

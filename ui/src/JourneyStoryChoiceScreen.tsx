@@ -30,6 +30,12 @@ export function JourneyStoryChoiceScreen({
   const [revealedStoryChoice, setRevealedStoryChoice] = useState<
     Readonly<{ storyChoiceId: string; revealId: string }> | null
   >(null);
+  const storyChoicePresentationKey = [
+    journey.decisionProof.hash,
+    storyChoice?.id ?? "",
+    storyChoice?.progressiveDisclosure?.reveal.id ?? "",
+    ...(storyChoice?.progressiveDisclosure?.reveal.optionIds ?? []),
+  ].join("\u0000");
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -37,7 +43,7 @@ export function JourneyStoryChoiceScreen({
 
   useEffect(() => {
     setRevealedStoryChoice(null);
-  }, [storyChoice?.id]);
+  }, [storyChoicePresentationKey]);
 
   if (!storyChoice) {
     throw new Error("JourneyStoryChoiceScreen requires a pending story choice.");
@@ -49,7 +55,8 @@ export function JourneyStoryChoiceScreen({
   const isReliefAllocation = storyChoice.kind === "relief_allocation";
   const isReliefOath = storyChoice.kind === "relief_oath";
   const progressiveDisclosure = storyChoice.progressiveDisclosure;
-  const hasStandardPacket = progressiveDisclosure !== undefined;
+  const hasRoleShortcut = progressiveDisclosure !== undefined;
+  const requiresOutcomeComparison = progressiveDisclosure?.initialOptionIds.length === 0;
   const initialOptions = journeyStoryChoiceOptionsForPresentation(storyChoice);
   const isProgressiveDisclosureRevealed =
     progressiveDisclosure !== undefined &&
@@ -85,8 +92,10 @@ export function JourneyStoryChoiceScreen({
       : null;
   const currentObjectiveGuidance = registrationGroups
     ? "A doctrine commits your role, oath, and source; a custom role continues step-by-step."
-    : hasStandardPacket
-      ? "The quick-setup card binds duty and evidence together; the duty comparison is read-only."
+    : requiresOutcomeComparison
+      ? "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a duty or role shortcut."
+      : hasRoleShortcut
+        ? "The role-shortcut card binds duty and evidence together; the duty comparison is read-only."
     : usesRoleplayReceipts
       ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
       : isRegistration
@@ -216,8 +225,10 @@ export function JourneyStoryChoiceScreen({
                   : isReliefAllocation
                     ? "Choose what Albany can protect"
                     : isReliefOath
-                      ? hasStandardPacket
-                        ? "Choose quick setup or compare duties"
+                      ? requiresOutcomeComparison
+                        ? "Compare what must stand at dawn"
+                        : hasRoleShortcut
+                          ? "Choose a role shortcut or compare duties"
                         : "Choose one binding term"
                       : "Choose what follows"}
         </h1>

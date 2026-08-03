@@ -175,6 +175,12 @@ function launchPreparedWolf(api: ToolApi, seed = 5) {
     session_id: overworldSessionId,
     choice: "albany:unaffiliated_courier",
   });
+  api.inspect_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    story_choice_id: "albany:wolf_relief_oath",
+    reveal_id: "customize_duty_and_evidence",
+  });
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,

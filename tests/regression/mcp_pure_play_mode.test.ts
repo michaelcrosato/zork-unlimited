@@ -1769,7 +1769,7 @@ describe("MCP pure play mode", () => {
           | undefined;
         expect(storyChoiceProperties?.choice).toMatchObject({
           type: "string",
-          description: "Visible story option id; unique departure options are inferred.",
+          description: "Visible option id; departure options are inferred.",
         });
         expect(storyChoiceProperties?.story_choice_id).toMatchObject({
           type: "string",
@@ -2141,9 +2141,7 @@ describe("MCP pure play mode", () => {
               typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
-        expect(oathChoice?.options?.map((option) => option.id)).toEqual([
-          "albany:doctrine_fortify_breach",
-        ]);
+        expect(oathChoice?.options).toEqual([]);
         expect(JSON.stringify(oathChoice)).not.toContain("albany:oath_limited_aid_only");
         const reveal = oathChoice?.revealOption;
         if (!reveal) throw new Error("expected pure compact oath reveal affordance");

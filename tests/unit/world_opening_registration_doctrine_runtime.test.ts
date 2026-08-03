@@ -80,7 +80,7 @@ describe("Albany role-first standard packet runtime", () => {
           session.snapshot().character,
           { registration: REGISTRATION, leadSource: LEAD_SOURCE },
         );
-        expect(oathPresentation.message).toContain("role's quick setup");
+        expect(oathPresentation.message).toContain("role shortcut");
         expect(oathPresentation.message.toLowerCase()).not.toContain("standard packet");
         const mappedOath = RELIEF_OATH.options.find(
           (option) => option.id === matchedPacket.relief_oath_option_id,
@@ -89,7 +89,7 @@ describe("Albany role-first standard packet runtime", () => {
           (option) => option.id === matchedPacket.lead_source_option_id,
         )!;
         expect(packetOption.label).toBe(
-          `Quick setup — ${mappedOath.title} + ${mappedSource.title}`,
+          `Role shortcut — ${mappedOath.title} + ${mappedSource.title}`,
         );
         const expectedSupport =
           matchedPacket.profile_id === "albany:ironhands_repairer"
@@ -98,7 +98,7 @@ describe("Albany role-first standard packet runtime", () => {
               ? "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace."
               : "Streetwise 4; DRIVE's first shutter-signal check is 2 DC easier.";
         expect(packetOption.summary?.commitment).toBe(
-          `No field plan is chosen. Support: ${expectedSupport}`,
+          `Skips the separate evidence choice; no field plan is chosen. Support: ${expectedSupport}`,
         );
         expect(packetOption.summary?.tradeoff).toBe(
           "Other duty/evidence pairs close; every field plan stays open.",
@@ -136,7 +136,9 @@ describe("Albany role-first standard packet runtime", () => {
       .journey()
       .storyChoice!.options.find((candidate) => candidate.id === revisedDoctrine.id)!;
 
-    expect(option.summary?.commitment).toBe(`No field plan is chosen. Support: ${revisedCategory}`);
+    expect(option.summary?.commitment).toBe(
+      `Skips the separate evidence choice; no field plan is chosen. Support: ${revisedCategory}`,
+    );
     expect(option.summary?.commitment).not.toContain("a bloodless LURE skips one alarm");
     expect(option.consequence).toContain(`Benefit: ${revisedCategory}`);
   });

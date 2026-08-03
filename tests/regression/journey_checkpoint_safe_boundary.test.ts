@@ -425,6 +425,11 @@ describe("journey checkpoints wait for embedded RPG safe boundaries", () => {
       session_id: overworldSessionId,
       choice: "albany:road_warden",
     });
+    api.inspect_overworld_session_story({
+      session_id: overworldSessionId,
+      story_choice_id: "albany:wolf_relief_oath",
+      reveal_id: "customize_duty_and_evidence",
+    });
     api.choose_overworld_session_story({
       session_id: overworldSessionId,
       choice: "albany:oath_limited_aid_only",

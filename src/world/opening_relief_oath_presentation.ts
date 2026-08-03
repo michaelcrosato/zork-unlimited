@@ -75,8 +75,8 @@ export function presentOpeningReliefOath(
     ? Object.freeze({
         ...presentOpeningChoiceOption({
           id: doctrine.id,
-          label: `Quick setup — ${doctrineOath!.title} + ${doctrineSource!.title}`,
-          commitment: `No field plan is chosen. Support: ${summarizeStartingDoctrineSupport(doctrine)}`,
+          label: `Role shortcut — ${doctrineOath!.title} + ${doctrineSource!.title}`,
+          commitment: `Skips the separate evidence choice; no field plan is chosen. Support: ${summarizeStartingDoctrineSupport(doctrine)}`,
           exactBenefit: doctrine.trigger_category,
           immediateCost: doctrine.immediate_cost,
           giveUp: "Other duty/evidence pairs close; every field plan stays open.",
@@ -116,27 +116,33 @@ export function presentOpeningReliefOath(
     ...oathOptions,
   ]) as JourneyReliefOathStoryChoiceOptions;
   const progressiveDisclosure: JourneyStoryChoiceProgressiveDisclosure | undefined = standardPacket
-    ? Object.freeze({
-        initialOptionIds: Object.freeze([
-          standardPacket.id,
-        ]) as JourneyStoryChoiceProgressiveDisclosure["initialOptionIds"],
-        reveal: Object.freeze({
-          id: "customize_duty_and_evidence",
-          label: "Compare duties before choosing",
-          description:
-            "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle; DRIVE risks cattle or rig; FORTIFY risks property or public terms. Each protects something different. No plan is recommended, and setup does not commit one. Choose a duty here; its evidence source follows.",
-          optionIds: Object.freeze(
-            oathOptions.map((option) => option.id),
-          ) as JourneyStoryChoiceProgressiveDisclosure["reveal"]["optionIds"],
-        }),
-      })
+    ? (() => {
+        const firstOathOption = oathOptions[0];
+        if (!firstOathOption) throw new Error("Opening relief oath requires at least one duty.");
+        const optionIds: JourneyStoryChoiceProgressiveDisclosure["reveal"]["optionIds"] =
+          Object.freeze([
+            firstOathOption.id,
+            ...oathOptions.slice(1).map((option) => option.id),
+            standardPacket.id,
+          ]);
+        return Object.freeze({
+          initialOptionIds: Object.freeze([]),
+          reveal: Object.freeze({
+            id: "customize_duty_and_evidence",
+            label: "What must stand at dawn? Compare all four field outcomes",
+            description:
+              "HUNT defends herd and relief stores, but wolves may die and a failed hold can lose cattle or the line. LURE aims to keep herd and pack alive, but spends Cade's last feed and risks the paling and cattle. DRIVE moves people and the living pack clear, but abandons the outer line and its Crisis costs a wound, cattle, or the rig. FORTIFY keeps home, herd, and pack through dawn, but exposes Cade's property or spends public seals. No plan is recommended or committed. After this read-only comparison, choose one duty or the role shortcut; evidence follows unless the shortcut binds it.",
+            optionIds,
+          }),
+        });
+      })()
     : undefined;
 
   return Object.freeze({
     id: parsed.id,
     kind: "relief_oath" as const,
     message: standardPacket
-      ? `${parsed.title}. Use your role's quick setup to bind duty and evidence together, or choose a duty separately; its evidence source follows. ${parsed.message}`
+      ? `${parsed.title}. First compare what each field plan is trying to preserve. Then choose one duty, or use your role shortcut to bind its duty and evidence together. ${parsed.message}`
       : `${parsed.title}. ${parsed.message}`,
     options,
     ...(progressiveDisclosure ? { progressiveDisclosure } : {}),

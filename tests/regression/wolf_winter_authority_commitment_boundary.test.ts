@@ -101,9 +101,22 @@ function launchSeed4177Imports(): GameState {
     session_id: sessionId,
     character_id: "albany_city__civic_core__contact",
   });
-  for (const choice of ["albany:road_warden", "albany:oath_full_compact_duty"]) {
-    api.choose_overworld_session_story({ ...FULL, session_id: sessionId, choice });
-  }
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: sessionId,
+    choice: "albany:road_warden",
+  });
+  api.inspect_overworld_session_story({
+    ...FULL,
+    session_id: sessionId,
+    story_choice_id: "albany:wolf_relief_oath",
+    reveal_id: "customize_duty_and_evidence",
+  });
+  api.choose_overworld_session_story({
+    ...FULL,
+    session_id: sessionId,
+    choice: "albany:oath_full_compact_duty",
+  });
   const sourced = api.choose_overworld_session_story({
     ...FULL,
     session_id: sessionId,
