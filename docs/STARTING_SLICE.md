@@ -767,8 +767,9 @@ The three field consumers are narrow and nonexclusive. Full Duty lowers only the
 first Albany-authority public-seal Repair check by 2 DC: ordinary DC 14 becomes
 12 and Works-prepared DC 12 becomes 10. Cade still refuses the failed-seat hand,
 the attempt and public stock are still spent, and the Albany-strip recovery is
-unchanged. Aid-Only suppresses only the final ordinary +1 cattle-alarm step on a
-wholly bloodless lure; it erases no approach pressure, failed cast, or recovery
+unchanged. Aid-Only suppresses only the final ordinary +1 cattle-alarm step when
+the first lure cast stayed clean; a fouled opening keeps that final pressure even
+after a living recovery. It erases no approach pressure, failed cast, or recovery
 cost. The Unaffiliated Bond lowers only the first drive
 shutter from DC 12 to 10; its finite charge, miss pressure, no-retry rule, and
 loose-hurdle recovery stay intact. Hunt, lure, drive, fortify, June, and solo

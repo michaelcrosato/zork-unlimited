@@ -356,7 +356,7 @@
         "title": "Take the Road-Warden Aid Route",
         "summary": "Begin as a Road-Warden under Aid-Only Duty with Hayden's sponsored frost report.",
         "trigger_category": "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
-        "preview": "Starts as a Road-Warden Relief Hand under Aid-Only Duty with Hayden's sponsored frost report. Fieldcraft 4 raises Wolf-Winter's starting DEF floor to 4. Aid-Only skips only the final alarm step of a wholly bloodless ordinary lure. Hayden's report enables the ordinary-hunt frost brace only after the attempted public wedge splits; it never helps LURE.",
+        "preview": "Starts as a Road-Warden Relief Hand under Aid-Only Duty with Hayden's sponsored frost report. Fieldcraft 4 raises Wolf-Winter's starting DEF floor to 4. Aid-Only skips only the final alarm step when LURE's first cast stayed clean; a fouled opening keeps it. Hayden's report enables the ordinary-hunt frost brace only after the attempted public wedge splits; it never helps LURE.",
         "tradeoff": "Rowan/Jamie sources omitted; prep, allocation, June, road remain open.",
         "consequence": "Optional preparation, relief allocation, June's field-team commitment, and road approach remain unselected and available later.",
         "immediate_cost": "10 minutes and $0",
@@ -437,8 +437,8 @@
         "kind": "limited",
         "title": "Negotiate Aid-Only Duty",
         "summary": "Accept a bounded public duty to protect and testify without taking authority over Cade's property.",
-        "trigger_category": "LURE benefit: final bloodless cast skips +1 alarm; Cade-terms FORTIFY fit.",
-      "preview": "Jamie's witnessed count slip suppresses only the final ordinary cattle-alarm step on a wholly bloodless lure; it never repairs a failed cast or changes another strategy's mechanics. Cade-terms FORTIFY fits the duty, keeps the promise, and retains Cade's ordinary failed-seat help; Aid-Only adds no FORTIFY check bonus. Every strategy remains legal. A kept living-pack, whole-herd return creates one fast Market-rest claim. Invoking Albany authority releases the promise with a public bend on record.",
+        "trigger_category": "LURE: clean first cast skips final +1 alarm; FORTIFY: Cade terms fit.",
+      "preview": "Jamie's witnessed count slip suppresses only the final ordinary cattle-alarm step when the first lure cast stayed clean; a fouled opening keeps that final pressure even after a living recovery. It never repairs a failed cast or changes another strategy's mechanics. Cade-terms FORTIFY fits the duty, keeps the promise, and retains Cade's ordinary failed-seat help; Aid-Only adds no FORTIFY check bonus. Every strategy remains legal. A kept living-pack, whole-herd return creates one fast Market-rest claim. Invoking Albany authority releases the promise with a public bend on record.",
       "tradeoff": "Property authority stays with Cade; invoking Albany authority records a bend and releases the promise.",
       "consequence": "Rowan seals the limit into the dispatch. Bounded authority becomes a named value, the Relief Compact records limited standing, and any later overstep must survive as part of the return account.",
         "access": "A witnessed count slip and one Market cot after a whole-herd living-pack return. A Resident Shelter cot consolidates into that same rest.",
@@ -24904,7 +24904,7 @@
             "albany:memory_rowan_limited_aid_only"
           ],
           "summary": "Rowan remembers the aid-only limit: protect and testify, but leave authority over Cade's property with Cade.",
-          "agenda": "Jamie's named-count slip suppresses only the last ordinary pressure step on a wholly bloodless lure. Invoking Albany authority records a bend and releases the promise."
+          "agenda": "Jamie's named-count slip suppresses only the last ordinary pressure step when the first lure cast stayed clean. Invoking Albany authority records a bend and releases the promise."
         },
         {
           "id": "wolf_unaffiliated_bond_selected",

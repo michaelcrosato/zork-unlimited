@@ -139,7 +139,8 @@ const DROVER_OATH_CASES = [
     label: "aid-only duty",
     optionId: "albany:oath_limited_aid_only",
     flag: "relief_oath_limited_duty",
-    finalAlarmStep: 0,
+    // This matrix always fouls the opening; Aid-Only suppresses only a clean line.
+    finalAlarmStep: 1,
   },
   {
     label: "unaffiliated personal bond",

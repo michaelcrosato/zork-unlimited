@@ -1,0 +1,41 @@
+id: bug_0535
+title: "Aid-Only erased the final consequence of a fouled Wolf-Winter lure"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: strategy-payoff audit and repeated blind-playtest cohorts
+reports:
+  - AI_LOOP_STATE.md
+  - docs/STARTING_SLICE.md
+severity: S2
+symptom: >
+  The common Road-Warden Aid-Only route could foul its first lure cast, recover the
+  living yearling, and still suppress the final ordinary cattle-alarm step. At alarm
+  3 this produced the same whole-herd, all-wolves-alive ending and Albany services as
+  a clean lure. Recent blind cohorts selected LURE 10/10, 9/10, 9/9, and 7/10.
+root_cause: >
+  Aid-Only's final-cast interaction checked only that the pack remained alive. It did
+  not check lure_trail_fouled, so a living recovery converted the authored no-retry
+  failure into the clean route's capstone benefit. The ordinary final-cast interaction
+  simultaneously excluded all living-pack Aid-Only states.
+fix: >
+  Require the first cast to remain clean before Aid-Only suppresses the final +1 alarm,
+  and route fouled Aid-Only states through the ordinary final cast. A prior Drover or
+  June alarm reduction can still keep a recovered foul below the cattle-loss threshold,
+  so preparation remains materially useful without erasing the foul.
+deterministic_witnesses:
+  - route: "Aid-Only clean cast -> loft cast -> final cast"
+    ending: ending_pack_diverted
+    state: "final ordinary alarm suppressed; whole herd and living pack"
+  - route: "Aid-Only fouled cast -> living rail recovery -> loft cast -> final cast"
+    ending: ending_pack_diverted_cattle_scattered
+    state: "ordinary final +1 retained; alarm 4; two cattle scattered"
+  - counterfactual: "same fouled Aid-Only state after June lowers alarm from 3 to 2"
+    ending: ending_pack_diverted
+    state: "ordinary final +1 retained; alarm 3; whole herd; June support remains valuable"
+  - return: "scattered herd omits cattle-whole fact, Aid-Only Market rest, and Greenway live-pack cache"
+tests:
+  - tests/starting_slice/relief_oath_counterfactual.test.ts
+  - tests/regression/wolf_winter_complementary_clues.test.ts
+verification:
+  - npm run validate -- wolf_winter
+  - npm run crawl:smoke
+  - npm run health
