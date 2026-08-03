@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 726 -->
+<!-- historical_cycle_count: 727 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - station_crisis_briefing
+
+- Evidence choice: three exact merged-board players still described Station setup density, so this increment replaces administrative framing with the immediate Wolf-Winter crisis and optional-support boundaries instead of removing any causal choice.
+- Surface/effect: the field briefing now names Cade's threatened byre, conditionally says when departure is legal, and presents one field kit, Albany's last relief wagon, and June as second rider with plain compare actions across compact MCP, terminal, and UI.
+- Truthfulness: June remains available before a kit on the current path, the legacy gated path stays explicit, and a no-road projection no longer promises departure; choices, terms, mechanics, state, saves, world hash, action ids, and decision count are unchanged.
+- Economy: compact briefing stays ≤520 bytes, while stale `CURRENT_PLAN.md` became a 23-line router to the authoritative contract, causal matrix, loop state, and newest verified feedback.
+- Pure evidence: exact-clean Terra seed 682742 completed The Wolf-Winter by all-wolves-alive/full-herd LURE at decision 30, ended naturally, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, bug, loop, soft-lock, or stuck state.
+- Self-critique/follow-through: broader early terminology and required Wolf navigation remain S1; only one new verified report exists since compile, so no premature recompile or fleet ran and the next change must wait for accumulated causal evidence.
+- Guard: independent review caught and closed two copy-truth edges; pre/post crawls `20260803T130751Z` / `20260803T133303Z` cover all 247 nodes/344 edges/12 quests, and exact health passes 459 files/3,797 tests, UI typecheck, and all 12 packs.
 
 ### Cycle result - station_dispatch_board
 
@@ -162,14 +172,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: final Terra seed 73101859 diverted every wolf alive with the whole herd, continued at decisions 29/41, won The Gallowmere at 53, rated clarity/enjoyment 4/4 and replay-yes, had no rejection/bug/loop/soft-lock, and did not repeat the campaign-HP-loss confusion.
 - Economy: one unpublished Spark interview failure plus pre/final Terra canaries used 12.340M raw / 425,384 uncached input + 45,797 output at 96.54% cache reuse (471,181 useful total); no failed attempt was retried and no cohort ran.
 - Self-critique/guard: the final player still rated Station density and the two-layer state concept S1, so broader uptake remains open; two independent reviews, 116 focused tests, crawl `20260801T033045Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.
-
-### Cycle result - pure_clean_build_preflight
-
-- Evidence choice: the 72-hour repo-local audit found that all four completed usage-bearing reports carried dirty tracked-build provenance and were compiler-ineligible; a live provider could previously start before that failure was known.
-- Surface: pure single runs and fleet preflight now bind Git to the physical script checkout, clear repository/index/object redirection, and reject staged, unstaged, assume-unchanged, or skip-worktree state before Codex resolution; untracked notes stay outside provenance and structural mock/smoke remain available.
-- Race closure: the exact commit/clean signal is rechecked after the final pinned-client probe immediately before the strict model process, while the established post-run and pre-publication rechecks remain.
-- Counterfactual: game code/content/actions/mechanics/RNG/saves/hashes/outcomes, strict evidence, ordinary clean-run usage, and structural QA semantics are unchanged.
-- Pure evidence: exact-clean Terra seed 73101856 completed The Wolf-Winter through whole-herd/all-wolves-alive LURE at decision 29, continued at 29 and 40, won The Gallowmere at 52, rated clarity/enjoyment 4/4, replay-yes, and had no rejection, bug, loop, stuck state, or soft-lock.
-- Economy: the first attempt used 5.409M raw / 186,876 uncached input + 11,486 output at 96.54% input-cache reuse (198,362 useful, about 3,815/decision), with no retry, fallback, or fanout.
-- Self-critique/follow-through: Station density and quest-local stat continuity repeated; this guard makes future feedback admissible but does not claim experiential certification, while the staged Wolf handoff directly addresses those two presentation costs.
-- Guard: two independent reviews and 127 affected tests are clean; crawls `20260731T205523Z` / `20260731T233054Z` have zero findings, serial health passes 450 files/3,762 tests plus all 12 packs, and the four-subprocess CLI regression keeps every assertion with 120 s of loaded-CI headroom after four false-red timeouts.
