@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 724 -->
+<!-- historical_cycle_count: 725 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - albany_outcome_compass
+
+- Evidence choice: repeated landed pilots remained LURE-heavy while Albany put a role shortcut before field-duty alternatives; the oath now requires one read-only `What must stand at dawn?` comparison that gives HUNT, LURE, DRIVE, and FORTIFY equal preservation-and-cost framing before any duty or shortcut is legal.
+- Surface/effect: compact MCP, terminal, and UI reveal duties first and the shortcut last; canonical ids/order, numeric aliases, and `customize` stay stable, while an exact-session ephemeral MCP receipt prevents guessed hidden choices without changing snapshots, hashes, clock, journal, RNG, or decision count.
+- Counterfactual: 16 fresh-overworld fixed-roll witnesses prove Road-Warden, Ironhands, Courier, and Ledger concepts each own one stateful strategy advantage and lose the other three; the existing Road-Warden HUNT rail/DEF witness remains intact, so no concept dominates the reachable matrix.
+- Pure evidence: exact-clean Terra seed 682719 chose Road-Warden/Aid-Only/Hayden/June, won The Wolf-Winter by whole-herd/all-wolves-alive LURE, continued, won The Gallowmere by HUNT at decision 53, rated clarity 4/enjoyment 5, replay-yes, and reported no rejection, loop, soft-lock, or stuck state.
+- Economy: the accepted first attempt used 4.470M raw / 174,804 uncached input + 10,757 output at 96.09% input-cache reuse (185,561 useful, about 3,501/decision); no retry, fallback, cohort, or fanout ran.
+- Self-critique/follow-through: one more organic LURE does not prove diversity; Station technical sequencing repeated as S1 and dense compact state reached S2 once, so compile them with the next landed-build cohort rather than widening this increment from one report.
+- Guard: two independent final audits are clean, 120 changed tests and crawl `20260803T031540Z` pass, exact health is 458 files/3,794 tests plus all 12 packs, and the unchanged 800k liveness proof passed in 713s with only its wall-clock guard raised to measured 15-minute headroom.
 
 ### Cycle result - aid_only_clean_cast_gate
 
@@ -164,14 +174,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the first attempt used 5.393M raw / 179,037 uncached input + 12,739 output at 96.67% input-cache reuse (191,776 useful, about 3,619/decision), with no retry, fallback, or fanout.
 - Self-critique/follow-through: compact-state density, surprising local profiles, and one S1 road-event surface remain; these support the staged handoff lane rather than another tooling expansion.
 - Guard: independent least-privilege and implementation reviews are clean; crawls `20260731T210104Z` / `20260731T211549Z` have zero findings, and serial health passes 450 files/3,756 tests plus all 12 packs.
-
-### Cycle result - spark_0146_item_id_authority
-
-- Evidence choice: five completed Spark Codex 0.146 sessions failed final authority solely because the exact-version capture profile still forbade the client's new response-item ids.
-- Surface: exact expected/captured CLI 0.146 Spark now requires bounded globally unique response-item ids; legacy ID-less Spark remains readable, while version mismatch, missing ids, and duplicates fail closed.
-- Historical proof: all five archived lifecycle-only failures now replay through the complete evidence audit; 105 focused provider tests and an independent review pin acceptance, both mismatch directions, missing/duplicate ids, and legacy behavior.
-- Counterfactual: Terra and legacy profiles, provider/model binding, wrapper grammar, tool allowlist, reports, game code, content, actions, mechanics, RNG, saves, hashes, and outcomes are unchanged.
-- Pure canary: exact-clean Spark seed 73101853 completed The Wolf-Winter through FORTIFY/`ending_held` in 19 decisions, rated clarity/enjoyment 4/4, replay-yes, ended at the first goal, and compiled with no rejection, bug, loop, or soft-lock.
-- Frozen cohort: latest-build seeds 73101860–69 verified 3/10 slots across 18 attempts; all three completed The Wolf-Winter through FORTIFY in 20–21 decisions and ended, while 15 attempts failed the separate strict wrapper gate and one retry rescued a slot.
-- Economy/self-critique: verified cohort evidence used 201,399 useful tokens at 92.74% cache reuse (about 67,133/player, 3,302/decision), but rejected attempts made 443 call starts with unrecoverable usage; mass Spark is not efficient until exact rejection diagnostics identify the wrapper mismatch.
-- Guard/follow-through: crawls `20260731T193135Z` / `20260731T193405Z` and combined `20260731T202500Z` have zero findings; health passes 450 files/3,753 tests plus all 12 packs, and the next tooling cycles are strict-rejection capture then pure clean-build admission.
