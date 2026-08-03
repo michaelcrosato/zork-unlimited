@@ -1069,7 +1069,7 @@ describe("OverworldSession", () => {
     }
   });
 
-  it("groups Station support and the two legal Wolf-Winter roads on one read-only board", async () => {
+  it("leads the Station board with departure and keeps support and commitments collapsed", async () => {
     const session = new OverworldSession(world);
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(world.opening_registration!.contact);
@@ -1115,8 +1115,6 @@ describe("OverworldSession", () => {
           {
             board,
             recap: view.departureRecap,
-            interactions: view.departureInteractions,
-            contactLeads: view.departureContactLeads,
             onInspect: () => undefined,
             onTalk: () => undefined,
           },
@@ -1129,14 +1127,25 @@ describe("OverworldSession", () => {
       );
       expect(markup).toContain(`${board.questTitle} field briefing`);
       expect(markup).toContain(`${board.questTitle} dispatch recap`);
+      expect(markup).toContain("Optional dispatch support (independent)");
+      expect(markup).toContain("Current commitments");
+      expect(markup.indexOf("Depart now")).toBeLessThan(
+        markup.indexOf("Optional dispatch support (independent)"),
+      );
+      expect(markup.indexOf("Optional dispatch support (independent)")).toBeLessThan(
+        markup.indexOf("Current commitments"),
+      );
       for (const support of board.support) {
         expect(markup).toContain(support.label.replaceAll("'", "&#x27;"));
         expect(markup).toContain(support.purpose.replaceAll("'", "&#x27;"));
         expect(markup).toContain(support.detailHint.replaceAll("'", "&#x27;"));
+        if (support.action?.kind === "inspect") {
+          expect(markup).toContain(`Inspect ${support.action.title.replaceAll("'", "&#x27;")}`);
+        }
+        if (support.action?.kind === "talk") {
+          expect(markup).toContain(`Ask ${support.action.contactName} about riding`);
+        }
       }
-      expect(markup).toContain("Compare field kits");
-      expect(markup).toContain("Compare wagon destinations");
-      expect(markup).toContain("Ask June Pike about riding");
       expect(markup).toContain("Depart now");
       for (const approach of board.launch.approaches) {
         expect(markup).toContain(approach.title);

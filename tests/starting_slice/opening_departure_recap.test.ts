@@ -167,15 +167,18 @@ describe("Albany opening departure recap", () => {
       },
     });
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
-    expect(compact.departure_recap).toEqual([
-      7,
+    expect(compact.departure_recap).toBeUndefined();
+    expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
+      2,
       WOLF.id,
-      WOLF.title,
-      full
-        .departureRecap!.entries.filter((entry) => entry.status !== "open_optional")
-        .map((entry) => [entry.slot, entry.status, entry.title]),
+      expect.any(String),
       ["committed", 10, null, ["preparation", "relief_allocation", "field_team"]],
     ]);
+    expect(compact.station_dispatch_board?.[4].map((row) => row.slice(0, 3))).toEqual(
+      full.departureRecap!.entries.map((entry) => [entry.slot, entry.status, entry.title]),
+    );
+    expect(compact).not.toHaveProperty("departure_interactions");
+    expect(compact).not.toHaveProperty("departure_contact_leads");
     expect(compact).not.toHaveProperty("departure_recap_terms");
     expect(compactOpeningDepartureRecapTerms(full.departureRecap!)).toEqual([
       7,
@@ -194,15 +197,10 @@ describe("Albany opening departure recap", () => {
           "departure_recap",
           "departure_interactions",
           "departure_contact_leads",
+          "station_dispatch_board",
         ].includes(key),
       );
-    const expectedLaunchFirstKeys = [
-      "quests",
-      "quest_starts",
-      "departure_recap",
-      "departure_interactions",
-      "departure_contact_leads",
-    ];
+    const expectedLaunchFirstKeys = ["quests", "quest_starts", "station_dispatch_board"];
     expect(launchFirstKeys(compact)).toEqual(expectedLaunchFirstKeys);
     const projectedFull = compactOverworldView(full);
     expect(launchFirstKeys(projectedFull)).toEqual(expectedLaunchFirstKeys);
@@ -220,7 +218,7 @@ describe("Albany opening departure recap", () => {
     expect(
       JSON.stringify(defaultWolfRef).length - JSON.stringify(focusedWolfRef).length,
     ).toBeGreaterThan(700);
-    const gatedView = { ...full, questStarts: [] };
+    const gatedView = { ...full, questStarts: [], stationDispatchBoard: null };
     const gatedCompact = compactOverworldView(gatedView);
     const expectedPlanningFirstKeys = [
       "departure_interactions",
@@ -279,19 +277,14 @@ describe("Albany opening departure recap", () => {
         entries: Array<{ activeFieldTerm: string | null }>;
       }
     ).entries[0]!.activeFieldTerm = "forged full field term";
-    (
-      compact.departure_recap as unknown as [
-        number,
-        string,
-        string,
-        Array<[string, string, string | null]>,
-      ]
-    )[3][0]![2] = "forged compact title";
+    const compactRole = compact.station_dispatch_board?.[4].find(([slot]) => slot === "role");
+    if (!compactRole) throw new Error("Expected compact Station role row.");
+    (compactRole as unknown as [string, string, string | null])[2] = "forged compact title";
     expect(selectedTitle(session, "role")).toBe(REGISTRATION.profiles[0]!.title);
-    expect(session.compactView().departure_recap?.[3][0]?.[2]).toBe(
-      REGISTRATION.profiles[0]!.title,
-    );
-    expect(JSON.stringify(session.compactView().departure_recap)).not.toContain(
+    expect(
+      session.compactView().station_dispatch_board?.[4].find(([slot]) => slot === "role")?.[2],
+    ).toBe(REGISTRATION.profiles[0]!.title);
+    expect(JSON.stringify(session.compactView().station_dispatch_board)).not.toContain(
       REGISTRATION.profiles[0]!.tradeoff,
     );
 
@@ -311,8 +304,7 @@ describe("Albany opening departure recap", () => {
       WOLF.launch!.options.map((option) => option.id),
     );
     const renderedBoard = renderStationDispatchBoard(session.view()).join("\n");
-    expect(renderedBoard).toContain(`${WOLF.title} field briefing:`);
-    expect(renderedBoard).toContain(board.guidance);
+    expect(renderedBoard).toContain("Optional dispatch support (independent):");
     for (const support of board.support) {
       expect(renderedBoard).toContain(`${support.label} —`);
       expect(renderedBoard).toContain(support.purpose);
@@ -320,14 +312,17 @@ describe("Albany opening departure recap", () => {
     }
     expect(renderedBoard).toContain(`inspect ${PREPARATION.id}`);
     expect(renderedBoard).toContain(`inspect ${RELIEF_ALLOCATION.id}`);
-    expect(renderedBoard).toContain("Command: talk June Pike");
+    expect(renderedBoard).toContain("Talk to June Pike: `talk June Pike`");
     expect(terminal).toContain(`${WOLF.title} field briefing:`);
-    expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
-    expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
-    expect(terminal).toContain("Plan slots and exact selected terms: `review dispatch`.");
-    expect(renderDepartureRecap(authenticatedRecap).join("\n")).not.toContain(
-      REGISTRATION.profiles[0]!.tradeoff,
-    );
+    expect(terminal).toContain(board.guidance);
+    expect(terminal).not.toContain(`${WOLF.title} dispatch recap:`);
+    expect(terminal).not.toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
+    expect(terminal).toContain("Current commitments: `review dispatch`.");
+    const boundedRecap = renderDepartureRecap(authenticatedRecap).join("\n");
+    expect(boundedRecap).toContain(`${WOLF.title} dispatch recap:`);
+    expect(boundedRecap).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
+    expect(boundedRecap).toContain("Plan slots and exact selected terms: `review dispatch`.");
+    expect(boundedRecap).not.toContain(REGISTRATION.profiles[0]!.tradeoff);
     const reviewedTerms = renderDepartureRecapTerms(authenticatedRecap).join("\n");
     expect(reviewedTerms).toContain(`Active term: ${REGISTRATION.profiles[0]!.tradeoff}`);
     expect(reviewedTerms).toContain(`Active term: ${dutyFieldTerm}`);
@@ -335,10 +330,13 @@ describe("Albany opening departure recap", () => {
     expect(reviewedTerms).toContain("Preparation: Open (optional)");
     expect(reviewedTerms).not.toContain(PREPARATION.profiles[0]!.tradeoff);
     expect(terminal.indexOf(`${WOLF.title} field briefing:`)).toBeLessThan(
-      terminal.indexOf(`${WOLF.title} dispatch recap:`),
-    );
-    expect(terminal.indexOf(`${WOLF.title} dispatch recap:`)).toBeLessThan(
       terminal.indexOf("Depart now:"),
+    );
+    expect(terminal.indexOf("Depart now:")).toBeLessThan(
+      terminal.indexOf("Optional dispatch support (independent):"),
+    );
+    expect(terminal.indexOf("Optional dispatch support (independent):")).toBeLessThan(
+      terminal.indexOf("Current commitments: `review dispatch`."),
     );
     expect(terminal.indexOf("Take the Exposed Ridge Road")).toBeGreaterThan(
       terminal.indexOf(`${WOLF.title} field briefing:`),
@@ -429,13 +427,12 @@ describe("Albany opening departure recap", () => {
         action: { arguments: { character_id: ALLY.contact } },
       },
     ]);
-    expect(render(first.view())).not.toContain("Field team: Open (optional)");
-    expect(render(first.view())).toContain(
-      `Dispatch committed: ${String(openWindow.committedMinutes)}m; field team remains optional.`,
+    const openTerminal = render(first.view());
+    expect(openTerminal).not.toContain("Field team: Open (optional)");
+    expect(openTerminal).toContain(
+      `Dispatch ${String(openWindow.committedMinutes)}m committed; optional Station support remains`,
     );
-    expect(render(first.view())).toContain(
-      "Plan slots and exact selected terms: `review dispatch`.",
-    );
+    expect(openTerminal).toContain("Current commitments: `review dispatch`.");
     first.talkToCharacter(ALLY.contact);
     expect(first.journey().storyChoice?.kind).toBe("ally");
     expect(first.view().departureRecap?.dispatch).toEqual({
@@ -493,7 +490,11 @@ describe("Albany opening departure recap", () => {
       status: "selected",
       title: soloOption.title,
     });
-    expect(render(solo.view())).toContain("Dispatch sealed:");
+    expect(render(solo.view())).not.toContain("Dispatch sealed:");
+    expect(render(solo.view())).toContain("Current commitments: `review dispatch`.");
+    expect(renderDepartureRecap(solo.view().departureRecap!).join("\n")).toContain(
+      "Dispatch sealed:",
+    );
 
     const questStart = first.view().questStarts.find(([questId]) => questId === WOLF.id);
     if (!questStart) throw new Error("Expected a legal Wolf-Winter launch.");
@@ -573,17 +574,17 @@ describe("Albany opening departure recap", () => {
     open.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
     const recap = open.view().departureRecap;
     if (!recap?.dispatch) throw new Error("Expected a canonical open dispatch line.");
-    expect(open.compactView().departure_recap?.[4]).toEqual([
+    expect(open.compactView().station_dispatch_board?.[3]).toEqual([
       "committed",
       recap.dispatch.minutes,
       null,
       ["field_team"],
     ]);
     const sealedCompact = open.compactView();
-    const sealedCompactDispatch = sealedCompact.departure_recap?.[4];
+    const sealedCompactDispatch = sealedCompact.station_dispatch_board?.[3];
     if (!sealedCompactDispatch) throw new Error("Expected a compact sealed dispatch line.");
     (sealedCompactDispatch as unknown as [string, number, string, string[]])[1] = 999;
-    expect(open.compactView().departure_recap?.[4]?.[1]).toBe(recap.dispatch.minutes);
+    expect(open.compactView().station_dispatch_board?.[3]?.[1]).toBe(recap.dispatch.minutes);
 
     const forged = open.snapshot();
     const preparation = forged.journalEntries.find((entry) => entry.kind === "preparation");
@@ -627,8 +628,12 @@ describe("Albany opening departure recap", () => {
       timing: "delayed",
       remainingOptional: [],
     });
-    expect(render(delayed.view())).toContain("Dispatch sealed:");
-    expect(render(delayed.view())).toContain("delayed.");
+    const delayedRecap = delayed.view().departureRecap;
+    if (!delayedRecap?.dispatch) throw new Error("Expected delayed Station dispatch recap.");
+    const delayedTerminal = render(delayed.view());
+    expect(delayedTerminal).not.toContain("Dispatch sealed:");
+    expect(delayedTerminal).toContain(`Dispatch ${String(delayedRecap.dispatch.minutes)}m—delayed`);
+    expect(renderDepartureRecap(delayedRecap).join("\n")).toContain("Dispatch sealed:");
     expect(delayed.snapshot()).toEqual(beforeSnapshot);
     expect(delayed.snapshotHash()).toBe(beforeHash);
   });
@@ -704,23 +709,33 @@ describe("Albany opening departure recap", () => {
           .filter((entry) => entry.status === "open_optional")
           .map((entry) => entry.slot),
       ).toEqual(stage.open);
-      expect(stage.compact.departure_recap).toEqual([
-        recap.version,
-        recap.questId,
-        recap.questTitle,
-        recap.entries
-          .filter((entry) => entry.status !== "open_optional")
-          .map((entry) => [entry.slot, entry.status, entry.title]),
-        recap.dispatch
-          ? [
-              recap.dispatch.state,
-              recap.dispatch.minutes,
-              recap.dispatch.timing,
-              recap.dispatch.remainingOptional,
-            ]
-          : null,
-      ]);
-      expect(stage.terminal).toContain(`${WOLF.title} dispatch recap:`);
+      if (stage.kind === "ally") {
+        expect(stage.compact.departure_recap).toEqual([
+          recap.version,
+          recap.questId,
+          recap.questTitle,
+          recap.entries
+            .filter((entry) => entry.status !== "open_optional")
+            .map((entry) => [entry.slot, entry.status, entry.title]),
+          recap.dispatch
+            ? [
+                recap.dispatch.state,
+                recap.dispatch.minutes,
+                recap.dispatch.timing,
+                recap.dispatch.remainingOptional,
+              ]
+            : null,
+        ]);
+        expect(stage.compact.station_dispatch_board).toBeUndefined();
+        expect(stage.terminal).toContain(`${WOLF.title} dispatch recap:`);
+      } else {
+        expect(stage.compact.departure_recap).toBeUndefined();
+        expect(stage.compact.station_dispatch_board?.[4].map((row) => row.slice(0, 3))).toEqual(
+          recap.entries.map((entry) => [entry.slot, entry.status, entry.title]),
+        );
+        expect(stage.terminal).not.toContain(`${WOLF.title} dispatch recap:`);
+        expect(stage.terminal).toContain("Current commitments: `review dispatch`.");
+      }
       const visible = JSON.stringify(recap);
       for (const alternative of [
         ...PREPARATION.profiles.filter((profile) => profile.id !== PREPARATION.profiles[0]!.id),

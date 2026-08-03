@@ -205,6 +205,21 @@ it is **not yet milestone-certified**:
   check math, authenticated timing proof, and full consequence stay behind an
   exact read-only expansion. No action, outcome, or meaningful decision is
   removed;
+- the launch-first Station follow-up now keeps both legal hill roads ahead of
+  optional support in terminal and browser clients. The authenticated full
+  board v2 carries the dispatch clock, all six selected/open plan rows, mapped
+  support actions, and launch card; compact v42 emits only
+  `[2, questId, guidance, dispatch|null, rows]` and retains canonical road
+  detail in `quests` / `quest_starts`. It omits redundant compact
+  `departure_recap`, `departure_interactions`, and `departure_contact_leads`
+  only when every current action and status is exactly indexed; malformed or
+  unmapped sources fall back to the established surfaces. The exact Station
+  compact slice falls from 2,470 to 2,107 UTF-8 bytes (14.7%). Actions, terms,
+  state, saves, hashes, RNG, outcomes, and accepted-decision counts are
+  unchanged, with focused proof in `station_dispatch_board.test.ts`,
+  `opening_dispatch_briefing.test.ts`, `opening_departure_recap.test.ts`,
+  `overworld_cli.test.ts`, `mcp_journey_surface.test.ts`,
+  `ui_overworld.test.ts`, and `compact_legend.test.ts`;
 - four early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.

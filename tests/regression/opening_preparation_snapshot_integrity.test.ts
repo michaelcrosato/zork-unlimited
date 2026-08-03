@@ -208,11 +208,12 @@ describe("opening preparation snapshot integrity", () => {
       status: "selected",
       title: PREPARATION_TITLE,
     });
-    expect(selectedSession.compactView().departure_recap?.[3][3]).toEqual([
-      "preparation",
-      "selected",
-      PREPARATION_TITLE,
-    ]);
+    expect(
+      selectedSession
+        .compactView()
+        .station_dispatch_board?.[4].find(([slot]) => slot === "preparation")
+        ?.slice(0, 3),
+    ).toEqual(["preparation", "selected", PREPARATION_TITLE]);
     expectDepartureInteraction(
       selectedSession,
       WORLD.opening_relief_allocation!,

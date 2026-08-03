@@ -233,22 +233,30 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(terminal).not.toMatch(/market.*scout/i);
   });
 
-  it("renders June's optional departure guidance without changing launch state", () => {
+  it("renders Station support from board action handles without changing launch state", () => {
     const preparation = WORLD.opening_preparation;
     const ally = WORLD.opening_ally;
     if (!preparation || !ally) throw new Error("Albany must retain its Station ally flow.");
     const session = sessionAtOpeningStation();
     const beforeSnapshot = session.snapshot();
     const beforeDecisions = session.journey().acceptedDecisions;
-    const lead = session.view().departureContactLeads[0];
-    if (!lead) throw new Error("Expected June's optional departure lead.");
+    const initialBoard = session.view().stationDispatchBoard;
+    const initialFieldTeam = initialBoard?.support.find((support) => support.slot === "field_team");
+    if (initialFieldTeam?.action?.kind !== "talk") {
+      throw new Error("Expected the Station board's field-team talk handle.");
+    }
 
     const readyBeforePreparation = render(session.view());
     expect(readyBeforePreparation).toContain("The Wolf-Winter field briefing:");
+    expect(readyBeforePreparation).toContain("Depart now:");
+    expect(readyBeforePreparation).toContain("Optional dispatch support (independent):");
+    expect(readyBeforePreparation.indexOf("Depart now:")).toBeLessThan(
+      readyBeforePreparation.indexOf("Optional dispatch support (independent):"),
+    );
     expect(readyBeforePreparation).toContain("June Pike, second rider");
-    expect(readyBeforePreparation).toContain(lead.guidance);
-    expect(readyBeforePreparation).toContain(`Command: talk ${lead.contactName}`);
-    expect(readyBeforePreparation).not.toContain("Available after choosing a Station preparation.");
+    expect(readyBeforePreparation).toContain(
+      `Talk to ${initialFieldTeam.action.contactName}: \`talk ${initialFieldTeam.action.contactName}\``,
+    );
     expect(session.snapshot()).toEqual(beforeSnapshot);
     expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
     expect(session.view().questStarts).toContainEqual([
@@ -259,23 +267,31 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
     const readySnapshot = session.snapshot();
     const readyDecisions = session.journey().acceptedDecisions;
-    const readyLead = session.view().departureContactLeads[0];
-    if (!readyLead) throw new Error("Expected June's ready departure lead.");
+    const readyBoard = session.view().stationDispatchBoard;
+    const readyFieldTeam = readyBoard?.support.find((support) => support.slot === "field_team");
+    if (readyFieldTeam?.action?.kind !== "talk") {
+      throw new Error("Expected the ready Station board talk handle.");
+    }
     const ready = render(session.view());
-    expect(ready).toContain(`Command: talk ${readyLead.contactName}`);
-    expect(ready).not.toContain("Available after choosing a Station preparation.");
+    expect(ready).toContain(
+      `Talk to ${readyFieldTeam.action.contactName}: \`talk ${readyFieldTeam.action.contactName}\``,
+    );
     expect(session.snapshot()).toEqual(readySnapshot);
     expect(session.journey().acceptedDecisions).toBe(readyDecisions);
   });
 
-  it("prints only the bounded dispatch recall beside an active Station choice", () => {
+  it("keeps the bounded dispatch recall behind the launch-first Station summary", () => {
     const session = sessionAtOpeningStation();
     const recap = session.view().departureRecap;
     if (!recap) throw new Error("Expected authenticated Station recall.");
     const bounded = renderDepartureRecap(recap).join("\n");
     const terms = renderDepartureRecapTerms(recap).join("\n");
+    const rendered = render(session.view());
 
-    expect(render(session.view())).toContain(bounded);
+    expect(rendered).toContain("Depart now:");
+    expect(rendered).toContain("Optional dispatch support (independent):");
+    expect(rendered).toContain("Current commitments: `review dispatch`.");
+    expect(rendered).not.toContain(bounded);
     expect(bounded).toContain(`${recap.questTitle} dispatch recap:`);
     expect(bounded).toContain("Plan slots and exact selected terms: `review dispatch`.");
     for (const entry of recap.entries) {
@@ -586,6 +602,11 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.output).toContain(
         `Active term: ${stationed.view().departureRecap!.entries[0]!.activeFieldTerm!}`,
       );
+      expect(run.output.indexOf("Depart now:")).toBeLessThan(
+        run.output.indexOf("Optional dispatch support (independent):"),
+      );
+      expect(run.output).toContain("Current commitments: `review dispatch`.");
+      expect(run.output).not.toContain("The Wolf-Winter dispatch recap:");
       expect(run.output).not.toContain("A scripted command was rejected.");
       expect(outputSnapshotHashes(run.output)).toEqual([baselineHash]);
     } finally {
@@ -789,6 +810,12 @@ describe("overworld_play CLI (scripted mode)", () => {
     const stationed = sessionAtOpeningStation();
     const preparation = WORLD.opening_preparation;
     if (!preparation) throw new Error("Expected Station preparation.");
+    const preparationAction = stationed
+      .view()
+      .stationDispatchBoard?.support.find((support) => support.slot === "preparation")?.action;
+    if (preparationAction?.kind !== "inspect") {
+      throw new Error("Expected Station preparation inspect action.");
+    }
     const option = preparation.profiles[0]!;
     const expected = OverworldSession.restore(WORLD, stationed.snapshot());
     expected.chooseJourneyStory(option.id, preparation.id);
@@ -805,7 +832,9 @@ describe("overworld_play CLI (scripted mode)", () => {
         `look; inspect ${preparation.id}; inspect ${option.id}; back; choose ${option.id}; hash`,
       ]);
       expect(run.status, run.output).toBe(0);
-      expect(run.output).toContain(`Compare field kits: \`inspect ${preparation.id}\``);
+      expect(run.output).toContain(
+        `Inspect ${preparationAction.title}: \`inspect ${preparationAction.storyChoiceId}\``,
+      );
       expect(run.output).toContain(`Inspect: \`inspect ${option.id}\``);
       expect(run.output).toContain(`! Story choice detail — ${option.title}`);
       expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
@@ -822,6 +851,12 @@ describe("overworld_play CLI (scripted mode)", () => {
     const ally = WORLD.opening_ally;
     if (!preparation || !allocation || !ally) {
       throw new Error("Expected Albany's complete Station departure flow.");
+    }
+    const fieldTeamAction = stationed
+      .view()
+      .stationDispatchBoard?.support.find((support) => support.slot === "field_team")?.action;
+    if (fieldTeamAction?.kind !== "talk") {
+      throw new Error("Expected Station field-team talk action.");
     }
     const preparationOption = preparation.profiles.find(
       (option) => option.id === "albany:prep_works_fortification",
@@ -909,7 +944,9 @@ describe("overworld_play CLI (scripted mode)", () => {
         "Compare who is protected, exact cost, and what remains exposed. Field checks surface with their action before resolution.",
       );
       expect(run.output).toContain("The Wolf-Winter field briefing:");
-      expect(run.output.match(/Command: talk June Pike/g) ?? []).toHaveLength(3);
+      expect(run.output).toContain(
+        `Talk to ${fieldTeamAction.contactName}: \`talk ${fieldTeamAction.contactName}\``,
+      );
       const junePromptStart = run.output.lastIndexOf("\n! Story choice comparison\n");
       expect(junePromptStart).toBeGreaterThan(-1);
       const juneFlowOutput = run.output.slice(junePromptStart);

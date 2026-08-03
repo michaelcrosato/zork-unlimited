@@ -142,21 +142,18 @@ describe("MCP server registration", () => {
     const registration = TOOL_REGISTRATIONS.find(
       (candidate) => candidate.name === "inspect_overworld_session_story",
     );
-    expect(registration?.description).toContain("currently presented journey.storyChoice");
-    expect(registration?.description).toContain("listed in departure_interactions");
-    expect(registration?.description).toContain("default compact read");
-    expect(registration?.description).toContain("only that option's new detail");
-    expect(registration?.description).toContain("after it is visible");
-    expect(registration?.description).toContain("live session/story");
-    expect(registration?.description).toContain("bounded authenticated departure_recap");
-    expect(registration?.description).toContain("omits all other repeated world context");
-    expect(registration?.description).toContain(
-      "compact_result:false returns the canonical full story",
-    );
-    expect(registration?.description).toContain("successful reveals still authorize choices");
+    expect(registration?.description).toContain("Inspect journey.storyChoice");
+    expect(registration?.description).toContain("Station ['inspect', story_choice_id]");
+    expect(registration?.description).toContain("legacy departure_interactions");
+    expect(registration?.description).toContain("Compact returns comparison");
+    expect(registration?.description).toContain("one visible option detail");
+    expect(registration?.description).toContain("session-local");
+    expect(registration?.description).toContain("without board/world repetition");
+    expect(registration?.description).toContain("compact_result:false returns full story");
+    expect(registration?.description).toContain("preserves reveals");
 
     const block = registeredToolBlock("inspect_overworld_session_story");
-    expect(block).toContain("journey.storyChoice or departure_interactions");
+    expect(block).toContain("journey.storyChoice, Station inspect action");
     expect(block).toContain("option_id: z");
     expect(block).toContain("Compact output returns only that option's new detail");
     expect(block).toContain("unchanged receipt");
@@ -166,21 +163,19 @@ describe("MCP server registration", () => {
     expect(
       TOOL_REGISTRATIONS.find((candidate) => candidate.name === "talk_overworld_session_contact")
         ?.description,
-    ).toContain("ready departure_contact_leads contact");
+    ).toContain("Station ['talk', character_id, contact_name]");
     expect(
       TOOL_REGISTRATIONS.find((candidate) => candidate.name === "talk_overworld_session_contact")
         ?.description,
-    ).toContain("support choices are order-neutral");
+    ).toContain("support is order-neutral");
 
     const chooseStory = TOOL_REGISTRATIONS.find(
       (candidate) => candidate.name === "choose_overworld_session_story",
     );
-    expect(chooseStory?.description).toContain(
-      "story_choice_id disambiguates departure interactions",
-    );
+    expect(chooseStory?.description).toContain("story_choice_id disambiguates Station support");
     const chooseBlock = registeredToolBlock("choose_overworld_session_story");
     expect(chooseBlock).toContain("Visible option id; departure options are inferred.");
-    expect(chooseBlock).toContain("Optional departure_interactions id for disambiguation.");
+    expect(chooseBlock).toContain("Optional Station support story id.");
   });
 
   it("keeps exact departure terms behind the read-only compact-context request", () => {

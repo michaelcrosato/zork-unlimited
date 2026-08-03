@@ -984,10 +984,23 @@ h3 {
   color: var(--muted);
 }
 
+.station-dispatch-support-details,
+.station-dispatch-recap {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+}
+
+.station-dispatch-support-details summary,
+.station-dispatch-recap summary {
+  color: var(--road);
+  cursor: pointer;
+}
+
 .station-dispatch-support {
   display: grid;
   gap: 0.65rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0.65rem;
 }
 
 .station-dispatch-support-row {
@@ -1020,24 +1033,9 @@ h3 {
   color: var(--muted);
 }
 
-.station-dispatch-extra,
-.station-dispatch-recap,
 .station-dispatch-board > .departure-launch {
   border-top: 1px solid var(--line);
   padding-top: 0.8rem;
-}
-
-.station-dispatch-extra {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.station-dispatch-extra h4 {
-  margin: 0;
-}
-
-.station-dispatch-extra .mini-command {
-  justify-self: start;
 }
 
 .station-dispatch-board > .departure-launch {

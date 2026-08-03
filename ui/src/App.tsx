@@ -349,51 +349,23 @@ function stationDispatchStatus(
   }
 }
 
-function departureInteractionForStationSupport(
-  support: StationDispatchBoardView["support"][number],
-  interactions: readonly OverworldView["departureInteractions"][number][],
-): OverworldView["departureInteractions"][number] | null {
-  if (support.slot === "preparation" || support.slot === "relief_allocation") {
-    return interactions.find((interaction) => interaction.kind === support.slot) ?? null;
-  }
-  return null;
-}
-
 /**
- * One player-facing dispatch board: the existing optional support actions are
- * grouped by the field question they answer, then the unchanged launch card
- * follows. The board is a view-only arrangement; callbacks remain the same
- * inspect/talk/start actions already exposed by the session.
+ * The Station leads with the live crisis and departure. Support stays present
+ * behind an explicit optional disclosure; the board owns every action handle.
  */
 export function StationDispatchBoard({
   board,
   recap,
-  interactions,
-  contactLeads,
   onInspect,
   onTalk,
   children,
 }: {
   board: StationDispatchBoardView;
   recap: OverworldView["departureRecap"];
-  interactions: readonly OverworldView["departureInteractions"][number][];
-  contactLeads: readonly OverworldView["departureContactLeads"][number][];
   onInspect: (storyChoiceId: string) => void;
-  onTalk: (lead: OverworldView["departureContactLeads"][number]) => void;
+  onTalk: (characterId: string) => void;
   children: ReactNode;
 }): JSX.Element {
-  const mappedInteractions = board.support.flatMap((support) => {
-    const interaction = departureInteractionForStationSupport(support, interactions);
-    return interaction ? [interaction] : [];
-  });
-  const mappedInteractionIds = new Set(mappedInteractions.map((interaction) => interaction.id));
-  const fieldLead =
-    contactLeads.find((lead) => lead.kind === "ally" && lead.questId === board.questId) ?? null;
-  const unmappedInteractions = interactions.filter(
-    (interaction) => !mappedInteractionIds.has(interaction.id),
-  );
-  const unmappedContactLeads = contactLeads.filter((lead) => lead.id !== fieldLead?.id);
-
   return (
     <section
       className="station-dispatch-board"
@@ -401,65 +373,49 @@ export function StationDispatchBoard({
     >
       <h3>{board.questTitle} field briefing</h3>
       <p>{board.guidance}</p>
-      <div className="station-dispatch-support">
-        {board.support.map((support) => {
-          const interaction = mappedInteractions.find(
-            (candidate) => candidate.kind === support.slot,
-          );
-          const supportFieldLead = support.slot === "field_team" ? fieldLead : null;
-          return (
-            <article className="station-dispatch-support-row" key={support.slot}>
+      {children}
+      <details className="station-dispatch-support-details">
+        <summary>Optional dispatch support (independent)</summary>
+        <div className="station-dispatch-support">
+          {board.support.map((support) => {
+            const action = support.action;
+            return (
+              <article className="station-dispatch-support-row" key={support.slot}>
               <h4>{support.label}</h4>
               <p>
                 <b>Status:</b> {stationDispatchStatus(support)}
               </p>
               <p>{support.purpose}</p>
               <small>{support.detailHint}</small>
-              {interaction && (
+              {action?.kind === "inspect" && (
                 <button
                   className="mini-command"
                   type="button"
-                  onClick={() => onInspect(interaction.id)}
+                  onClick={() => onInspect(action.storyChoiceId)}
                 >
-                  {support.slot === "preparation"
-                    ? "Compare field kits"
-                    : "Compare wagon destinations"}
+                  Inspect {action.title}
                 </button>
               )}
-              {supportFieldLead && (
-                <DepartureContactLead
-                  lead={supportFieldLead}
-                  onTalk={() => onTalk(supportFieldLead)}
-                />
+              {action?.kind === "talk" && (
+                <button
+                  className="mini-command"
+                  type="button"
+                  onClick={() => onTalk(action.characterId)}
+                >
+                  Ask {action.contactName} about riding
+                </button>
               )}
-            </article>
-          );
-        })}
-      </div>
-      {(unmappedInteractions.length > 0 || unmappedContactLeads.length > 0) && (
-        <div className="station-dispatch-extra">
-          <h4>Other departure options</h4>
-          {unmappedInteractions.map((interaction) => (
-            <button
-              className="mini-command"
-              key={interaction.id}
-              type="button"
-              onClick={() => onInspect(interaction.id)}
-            >
-              Inspect {interaction.title}
-            </button>
-          ))}
-          {unmappedContactLeads.map((lead) => (
-            <DepartureContactLead key={lead.id} lead={lead} onTalk={() => onTalk(lead)} />
-          ))}
+              </article>
+            );
+          })}
         </div>
-      )}
+      </details>
       {recap && (
-        <div className="station-dispatch-recap">
+        <details className="station-dispatch-recap">
+          <summary>Current commitments</summary>
           <DepartureRecap recap={recap} />
-        </div>
+        </details>
       )}
-      {children}
     </section>
   );
 }
@@ -924,13 +880,10 @@ export default function App(): JSX.Element {
             <StationDispatchBoard
               board={worldView.stationDispatchBoard}
               recap={worldView.departureRecap}
-              interactions={worldView.departureInteractions}
-              contactLeads={worldView.departureContactLeads}
               onInspect={inspectDepartureStory}
-              onTalk={(lead) => {
-                if (!lead.action) return;
+              onTalk={(characterId) => {
                 runWorldAction(() =>
-                  worldSession.talkToCharacter(lead.action.arguments.character_id),
+                  worldSession.talkToCharacter(characterId),
                 );
               }}
             >

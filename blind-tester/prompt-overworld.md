@@ -119,12 +119,10 @@ WHEN TO CONTINUE OR END
   `mcp__adventureforge__inspect_overworld_session_story` with the visible
   `journey.storyChoice.id` for the comparison, then call it again with one exact
   option `id` as `option_id` to read only that option's new detail. Reading
-  either view does not change the game. When a departure plan is available, its
-  compact unchanged receipt repeats the bounded authenticated
-  `departure_recap`; a preparation, relief-allocation, or ally option detail may
-  also include authenticated selected terms. It omits all other world context
-  and the prior comparison. Retain the current state and comparison already
-  shown, and do not expand every option.
+  either view does not change the game. A compact inspection does not repeat the
+  Station board or other world context; retain the current state and comparison
+  already shown. A preparation, relief-allocation, or ally option detail may
+  include authenticated selected terms. Do not expand every option.
   If a visible `revealOption` is present, it is a read-only comparison expansion,
   not a choice. You may call its named tool with its exact `story_choice_id` and
   `reveal_id` arguments, then choose only from the expanded visible
@@ -139,30 +137,32 @@ WHEN TO CONTINUE OR END
   `session_id` and `expected_snapshot_hash: latest snapshot_hash`; do not invent, infer, or
   substitute a differently named goal tool. The game, not the harness, decides
   where that passage stops.
-- The context may also list optional `departure_interactions` at the Station.
-  You may leave without choosing one. To consider one, first call
-  `mcp__adventureforge__inspect_overworld_session_story` with its visible
-  `story_choice_id`; the versioned comparison contains short option summaries
-  and inspection does not change the game. To compare one candidate, use its
-  visible `reviewOption`: call its named tool with its arguments and that
-  option's exact `id` at the declared argument. It returns that candidate's
-  consequence/timing and authenticated already-selected departure terms. Do not
-  separately read recap or terms to compare it. You need not expand every
-  option. If you choose an option, call
-  `mcp__adventureforge__choose_overworld_session_story` with the option's
-  visible `id` as `choice`. A unique departure option needs no
-  `story_choice_id`; add its inspected `story_choice_id` only to disambiguate
-  an option id shared by more than one listed interaction.
-- The context may separately list read-only `departure_contact_leads`. These
-  make an optional departure conversation discoverable without creating its
-  offer or blocking launch. A `ready` lead is independent of any preparation
-  or relief-allocation choice; you may pursue it before or after either by calling
-  `mcp__adventureforge__talk_overworld_session_contact` with its exact
-  `contact_id` as `character_id`; only that conversation can present the actual
-  field-team choice. A `requires_preparation` lead is a legacy compatibility
-  state with no available action. You may instead start its listed quest
-  immediately as the disclosed solo default. Merely seeing either lead state
-  changes no game state or decision count.
+- At the Station, compact context consolidates optional planning into read-only
+  `station_dispatch_board`: `[2, quest_id, guidance, dispatch, rows]`.
+  `dispatch` is `[state, minutes, timing, remaining_optional_slots]`; each row is
+  `[slot, status, selected_title, purpose, action]`. The live departure remains
+  in `context.quests` plus `context.quest_starts` and comes first. Support rows
+  are independent and optional; they change dispatch cost and aftermath, not
+  which quest strategy you may choose after arriving. An action
+  `["inspect", story_choice_id]` authorizes
+  `mcp__adventureforge__inspect_overworld_session_story`; an action
+  `["talk", character_id, contact_name]` authorizes
+  `mcp__adventureforge__talk_overworld_session_contact`. A null action is not
+  currently legal. Merely reading the board changes no state or decision count.
+- You may depart without choosing support. To inspect one, use its exact visible
+  `story_choice_id`; the versioned comparison contains short option summaries.
+  To compare one candidate, use its visible `reviewOption` with that option's
+  exact `id` at the declared argument. It returns only that candidate's new
+  consequence/timing and authenticated already-selected terms. Do not
+  separately read recap or terms, and do not expand every option. If you choose
+  it, call `mcp__adventureforge__choose_overworld_session_story` with its visible
+  option `id` as `choice`; pass the inspected `story_choice_id` only when needed
+  to disambiguate a shared option id. A talk action alone can present the actual
+  field-team choice.
+- If a malformed or older session cannot produce the v2 board, the compact
+  fallback may instead expose `departure_recap`, `departure_interactions`, and
+  `departure_contact_leads`; those carry the same read-only plan, inspect, and
+  talk semantics rather than extra choices.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, normally

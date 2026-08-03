@@ -193,8 +193,10 @@ export function buildOverworldSessionCompactView(
   const stationDispatchBoard = state.stationDispatchBoard
     ? compactStationDispatchBoard(state.stationDispatchBoard)
     : null;
+  const hasStationDispatchBoard = stationDispatchBoard?.[0] === 2;
+  const departureQuestId = hasStationDispatchBoard ? stationDispatchBoard[1] : departureRecap?.[1];
   const departureLaunchReady =
-    departureRecap !== null && questStarts.some(([questId]) => questId === departureRecap[1]);
+    departureQuestId !== undefined && questStarts.some(([questId]) => questId === departureQuestId);
   const opportunityLeads = compactJourneyOpportunityLeads(state.opportunities);
   const localRefsTruncated = compactLocalRefTruncation({
     areas: state.areas.length,
@@ -227,13 +229,15 @@ export function buildOverworldSessionCompactView(
     ],
     ...(serviceOffers.length > 0 ? { service_offers: serviceOffers } : {}),
     ...(serviceActions.length > 0 ? { service_actions: serviceActions } : {}),
-    ...(!departureLaunchReady && departureInteractions.length > 0
+    ...(!departureLaunchReady && !hasStationDispatchBoard && departureInteractions.length > 0
       ? { departure_interactions: departureInteractions }
       : {}),
-    ...(!departureLaunchReady && departureContactLeads.length > 0
+    ...(!departureLaunchReady && !hasStationDispatchBoard && departureContactLeads.length > 0
       ? { departure_contact_leads: departureContactLeads }
       : {}),
-    ...(!departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
+    ...(!departureLaunchReady && !hasStationDispatchBoard && departureRecap
+      ? { departure_recap: departureRecap }
+      : {}),
     ...(!departureLaunchReady && stationDispatchBoard
       ? { station_dispatch_board: stationDispatchBoard }
       : {}),
@@ -284,11 +288,13 @@ export function buildOverworldSessionCompactView(
     ...(departureLaunchReady && stationDispatchBoard
       ? { station_dispatch_board: stationDispatchBoard }
       : {}),
-    ...(departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
-    ...(departureLaunchReady && departureInteractions.length > 0
+    ...(departureLaunchReady && !hasStationDispatchBoard && departureRecap
+      ? { departure_recap: departureRecap }
+      : {}),
+    ...(departureLaunchReady && !hasStationDispatchBoard && departureInteractions.length > 0
       ? { departure_interactions: departureInteractions }
       : {}),
-    ...(departureLaunchReady && departureContactLeads.length > 0
+    ...(departureLaunchReady && !hasStationDispatchBoard && departureContactLeads.length > 0
       ? { departure_contact_leads: departureContactLeads }
       : {}),
     ...(pendingRoad ? { pending_road: pendingRoad } : {}),

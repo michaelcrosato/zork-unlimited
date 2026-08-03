@@ -1040,15 +1040,34 @@ describe("MCP journey surface", () => {
 
     const assertMcpRecall = (storyChoiceId: string, kind: string): void => {
       const expectedFull = source.view().departureRecap;
-      const expectedCompact = source.compactView().departure_recap;
-      if (!expectedFull || !expectedCompact) {
+      const expectedCompact = source.compactView();
+      const expectedBoard = expectedCompact.station_dispatch_board;
+      const expectedRecap = expectedCompact.departure_recap;
+      if (!expectedFull || (!expectedBoard && !expectedRecap)) {
         throw new Error(`expected authenticated recap before ${kind}`);
       }
+      const expectCompactRecall = (payload: Record<string, unknown>): void => {
+        if (expectedBoard) {
+          expect(payload.station_dispatch_board).toEqual(expectedBoard);
+          expect(payload).not.toHaveProperty("departure_recap");
+        } else {
+          expect(payload.departure_recap).toEqual(expectedRecap);
+          expect(payload).not.toHaveProperty("station_dispatch_board");
+        }
+      };
+      const expectInspectionRecall = (payload: Record<string, unknown>): void => {
+        expect(payload).not.toHaveProperty("station_dispatch_board");
+        if (expectedBoard) {
+          expect(payload).not.toHaveProperty("departure_recap");
+        } else {
+          expect(payload.departure_recap).toEqual(expectedRecap);
+        }
+      };
       const snapshot = source.snapshot();
       const full = a.restore_overworld_session({ ...FULL_OVERWORLD, snapshot });
       const compact = a.restore_overworld_session({ compact_context: true, snapshot });
       expect(full.observation.departureRecap).toEqual(expectedFull);
-      expect(compact.context.departure_recap).toEqual(expectedCompact);
+      expectCompactRecall(compact.context);
       expect(compact.context).not.toHaveProperty("departure_recap_terms");
       expect(full.snapshot_hash).toBe(compact.snapshot_hash);
       const inspection = a.restore_overworld_session({ compact_context: true, snapshot });
@@ -1061,7 +1080,7 @@ describe("MCP journey surface", () => {
       if (!("context" in reviewed)) {
         throw new Error(`expected explicit departure terms before ${kind}`);
       }
-      expect(reviewed.context.departure_recap).toEqual(expectedCompact);
+      expectCompactRecall(reviewed.context);
       expect(reviewed.context.departure_recap_terms).toEqual(
         compactOpeningDepartureRecapTerms(expectedFull),
       );
@@ -1093,7 +1112,7 @@ describe("MCP journey surface", () => {
       });
       expect(compactInspection.story.kind).toBe(kind);
       expect(compactInspection.unchanged).toBe(true);
-      expect(compactInspection.departure_recap).toEqual(expectedCompact);
+      expectInspectionRecall(compactInspection);
       expect(compactInspection).not.toHaveProperty("departure_recap_terms");
       expect(compactInspection.story.reviewOption).toMatchObject({
         tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
@@ -1111,7 +1130,7 @@ describe("MCP journey surface", () => {
         compact_context: true,
         compact_result: true,
       });
-      expect(optionInspection.departure_recap).toEqual(expectedCompact);
+      expectInspectionRecall(optionInspection);
       expect(optionInspection.departure_recap_terms).toEqual(
         compactOpeningDepartureRecapTerms(expectedFull),
       );
@@ -1547,14 +1566,11 @@ describe("MCP journey surface", () => {
     });
     const afterOne = a.export_overworld_session({ session_id: oneInspectionId });
     expect(afterOne).toEqual(beforeOne);
-    const expectedDepartureRecap = OverworldSession.restore(WORLD, beforeOne.snapshot).compactView()
-      .departure_recap;
     expect(comparisonResponse).toMatchObject({
       ok: true,
       session_id: oneInspectionId,
       snapshot_hash: beforeOne.snapshot_hash,
       unchanged: true,
-      departure_recap: expectedDepartureRecap,
       story: {
         comparisonVersion: JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
         id: preparation.id,
@@ -1571,7 +1587,7 @@ describe("MCP journey surface", () => {
       },
     });
     expect(Object.keys(comparisonResponse).sort()).toEqual(
-      ["departure_recap", "ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
+      ["ok", "session_id", "snapshot_hash", "story", "unchanged"].sort(),
     );
     expect(comparisonResponse).not.toHaveProperty("departure_recap_terms");
     expect(comparisonResponse.story.options).toHaveLength(preparation.profiles.length);
@@ -1649,7 +1665,6 @@ describe("MCP journey surface", () => {
     );
     expect(Object.keys(firstDetail).sort()).toEqual(
       [
-        "departure_recap",
         "departure_recap_terms",
         "legend_delta",
         "ok",
@@ -1659,7 +1674,7 @@ describe("MCP journey surface", () => {
         "unchanged",
       ].sort(),
     );
-    expect(firstDetail.departure_recap).toEqual(expectedDepartureRecap);
+    expect(firstDetail).not.toHaveProperty("departure_recap");
     expect(firstDetail.departure_recap_terms).toEqual(
       compactOpeningDepartureRecapTerms(expectedMultipleRecap),
     );
