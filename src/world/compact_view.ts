@@ -27,6 +27,11 @@ import {
   type OpeningCompactDepartureRecap,
   type OpeningCompactDepartureRecapTerms,
 } from "./opening_departure_recap.js";
+import {
+  cloneCompactStationDispatchBoard,
+  compactStationDispatchBoard,
+  type OpeningCompactStationDispatchBoard,
+} from "./station_dispatch_board.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
 export const OVERWORLD_COMPACT_ROUTE_LIMIT = 8;
@@ -45,7 +50,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 40 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 41 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -370,6 +375,7 @@ export type OverworldCompactView = {
   departure_contact_leads?: OverworldCompactDepartureContactLead[];
   departure_recap?: OpeningCompactDepartureRecap;
   departure_recap_terms?: OpeningCompactDepartureRecapTerms;
+  station_dispatch_board?: OpeningCompactStationDispatchBoard;
   opportunity_guidance?: string;
   opportunity_leads?: OverworldCompactOpportunityLead[];
   opportunity_leads_deferred?: number;
@@ -437,9 +443,11 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_contact_leads:
     "[[lead_id, 'ally', title, status, contact_id, contact_name, quest_id, quest_title, guidance], ...] read-only optional Station contact leads; ready may be pursued with talk_overworld_session_contact(character_id: contact_id) before or after preparation or relief allocation, while legacy requires_preparation has no available action; either status leaves quest_id launch legal as the explicitly disclosed solo default",
   departure_recap:
-    "[version, quest_id, quest_title, [[slot, status, selected_title|null], ...], dispatch|null] read-only Station plan summary. dispatch is [state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]; committed lists every unresolved support slot and omits their redundant open_optional rows, leaving only selected or legacy plan rows in the default tier. preparation, relief_allocation, and field_team remain independent optional choices that may be taken in any order or skipped at launch. sealed has final timing and no remaining optional slots; direct_launch and available_after_preparation remain legacy sequential values. Planning option detail returns exact selected terms automatically; otherwise call get_overworld_session_context(include_departure_recap_terms:true)",
+    "[version, quest_id, quest_title, [[slot, status, selected_title|null], ...], dispatch|null]. dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. committed omits their redundant open_optional rows; remaining_optional lists them. preparation, relief_allocation, and field_team are independent optional choices, in any order or skipped at launch. sealed is final; direct_launch and available_after_preparation remain legacy sequential values. Selected terms: departure_recap_terms.",
   departure_recap_terms:
     "[version, quest_id, [[slot, active_field_term], ...]] exact authenticated terms for selected Station plan slots, returned by explicit read-only include_departure_recap_terms or a preparation, relief_allocation, or ally option detail; no alternatives, outcomes, or actions",
+  station_dispatch_board:
+    "[version, guidance, [[support_slot, purpose], ...]]. Read-only Station overview. Plan: departure_recap; exact terms (opt-in/action detail): departure_recap_terms; inspect/talk: departure_interactions/departure_contact_leads; launch: quests + quest_starts.",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
@@ -1320,6 +1328,9 @@ function cloneCompactDepartureFields(
   view: OverworldCompactView,
   launchFirst: boolean,
 ): void {
+  if (launchFirst && view.station_dispatch_board) {
+    clone.station_dispatch_board = cloneCompactStationDispatchBoard(view.station_dispatch_board);
+  }
   if (launchFirst && view.departure_recap) {
     clone.departure_recap = cloneCompactDepartureRecap(view.departure_recap);
   }
@@ -1337,6 +1348,9 @@ function cloneCompactDepartureFields(
   }
   if (!launchFirst && view.departure_recap_terms) {
     clone.departure_recap_terms = cloneCompactDepartureRecapTerms(view.departure_recap_terms);
+  }
+  if (!launchFirst && view.station_dispatch_board) {
+    clone.station_dispatch_board = cloneCompactStationDispatchBoard(view.station_dispatch_board);
   }
 }
 
@@ -1517,6 +1531,9 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const departureRecap = view.departureRecap
     ? compactOpeningDepartureRecap(view.departureRecap)
     : null;
+  const stationDispatchBoard = view.stationDispatchBoard
+    ? compactStationDispatchBoard(view.stationDispatchBoard)
+    : null;
   const departureLaunchReady =
     departureRecap !== null && questStarts.some(([questId]) => questId === departureRecap[1]);
   const localRefsTruncated = compactLocalRefTruncation({
@@ -1572,6 +1589,9 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       ? { departure_contact_leads: departureContactLeads }
       : {}),
     ...(!departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
+    ...(!departureLaunchReady && stationDispatchBoard
+      ? { station_dispatch_board: stationDispatchBoard }
+      : {}),
     hidden: [
       view.hiddenAreaCount,
       view.hiddenJobCount,
@@ -1603,6 +1623,9 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     ...(quests.length > 0 ? { quests } : {}),
     ...(questStartLocations.length > 0 ? { quest_start_locations: questStartLocations } : {}),
     ...(questStarts.length > 0 ? { quest_starts: questStarts } : {}),
+    ...(departureLaunchReady && stationDispatchBoard
+      ? { station_dispatch_board: stationDispatchBoard }
+      : {}),
     ...(departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
     ...(departureLaunchReady && departureInteractions.length > 0
       ? { departure_interactions: departureInteractions }

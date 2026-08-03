@@ -5,7 +5,7 @@
  * quests still run through the existing deterministic engine, but they are now
  * local opportunities discovered at towns in the road graph.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { GameSession, type View } from "./engine.js";
 import {
   OverworldSession,
@@ -326,6 +326,139 @@ export function DepartureLaunchPanel({
         <QuestNotice quest={quest} areaName={areaName} isCurrentArea={true} onStart={onStart} />
       </ul>
     </div>
+  );
+}
+
+type StationDispatchBoardView = NonNullable<OverworldView["stationDispatchBoard"]>;
+
+function stationDispatchStatus(
+  support: StationDispatchBoardView["support"][number],
+): string {
+  if (support.selectedTitle) return `Selected: ${support.selectedTitle}`;
+  switch (support.status) {
+    case "open_optional":
+      return "Open (optional)";
+    case "available_after_preparation":
+      return "Available after preparation";
+    case "solo_default":
+      return "Solo departure";
+    case "legacy":
+      return "Legacy choice preserved";
+    case "selected":
+      return "Selected";
+  }
+}
+
+function departureInteractionForStationSupport(
+  support: StationDispatchBoardView["support"][number],
+  interactions: readonly OverworldView["departureInteractions"][number][],
+): OverworldView["departureInteractions"][number] | null {
+  if (support.slot === "preparation" || support.slot === "relief_allocation") {
+    return interactions.find((interaction) => interaction.kind === support.slot) ?? null;
+  }
+  return null;
+}
+
+/**
+ * One player-facing dispatch board: the existing optional support actions are
+ * grouped by the field question they answer, then the unchanged launch card
+ * follows. The board is a view-only arrangement; callbacks remain the same
+ * inspect/talk/start actions already exposed by the session.
+ */
+export function StationDispatchBoard({
+  board,
+  recap,
+  interactions,
+  contactLeads,
+  onInspect,
+  onTalk,
+  children,
+}: {
+  board: StationDispatchBoardView;
+  recap: OverworldView["departureRecap"];
+  interactions: readonly OverworldView["departureInteractions"][number][];
+  contactLeads: readonly OverworldView["departureContactLeads"][number][];
+  onInspect: (storyChoiceId: string) => void;
+  onTalk: (lead: OverworldView["departureContactLeads"][number]) => void;
+  children: ReactNode;
+}): JSX.Element {
+  const mappedInteractions = board.support.flatMap((support) => {
+    const interaction = departureInteractionForStationSupport(support, interactions);
+    return interaction ? [interaction] : [];
+  });
+  const mappedInteractionIds = new Set(mappedInteractions.map((interaction) => interaction.id));
+  const fieldLead =
+    contactLeads.find((lead) => lead.kind === "ally" && lead.questId === board.questId) ?? null;
+  const unmappedInteractions = interactions.filter(
+    (interaction) => !mappedInteractionIds.has(interaction.id),
+  );
+  const unmappedContactLeads = contactLeads.filter((lead) => lead.id !== fieldLead?.id);
+
+  return (
+    <section
+      className="station-dispatch-board"
+      aria-label={`${board.questTitle} Station dispatch board`}
+    >
+      <h3>{board.questTitle} Station dispatch board</h3>
+      <p>{board.guidance}</p>
+      <div className="station-dispatch-support">
+        {board.support.map((support) => {
+          const interaction = mappedInteractions.find(
+            (candidate) => candidate.kind === support.slot,
+          );
+          const supportFieldLead = support.slot === "field_team" ? fieldLead : null;
+          return (
+            <article className="station-dispatch-support-row" key={support.slot}>
+              <h4>{support.label}</h4>
+              <p>
+                <b>Status:</b> {stationDispatchStatus(support)}
+              </p>
+              <p>{support.purpose}</p>
+              <small>{support.detailHint}</small>
+              {interaction && (
+                <button
+                  className="mini-command"
+                  type="button"
+                  onClick={() => onInspect(interaction.id)}
+                >
+                  Inspect {interaction.title}
+                </button>
+              )}
+              {supportFieldLead && (
+                <DepartureContactLead
+                  lead={supportFieldLead}
+                  onTalk={() => onTalk(supportFieldLead)}
+                />
+              )}
+            </article>
+          );
+        })}
+      </div>
+      {(unmappedInteractions.length > 0 || unmappedContactLeads.length > 0) && (
+        <div className="station-dispatch-extra">
+          <h4>Other departure options</h4>
+          {unmappedInteractions.map((interaction) => (
+            <button
+              className="mini-command"
+              key={interaction.id}
+              type="button"
+              onClick={() => onInspect(interaction.id)}
+            >
+              Inspect {interaction.title}
+            </button>
+          ))}
+          {unmappedContactLeads.map((lead) => (
+            <DepartureContactLead key={lead.id} lead={lead} onTalk={() => onTalk(lead)} />
+          ))}
+        </div>
+      )}
+      {recap && (
+        <div className="station-dispatch-recap">
+          <DepartureRecap recap={recap} />
+        </div>
+      )}
+      {children}
+    </section>
   );
 }
 
@@ -785,47 +918,77 @@ export default function App(): JSX.Element {
               New Journey
             </button>
           </div>
-          {departureQuest && (
-            <DepartureLaunchPanel
-              quest={departureQuest}
-              areaName={questAreaName(departureQuest)}
-              onStart={(approachId) => startQuest(departureQuest, approachId)}
-            />
-          )}
-          {(worldView.departureRecap ||
-            worldView.departureInteractions.length > 0 ||
-            worldView.departureContactLeads.length > 0) && (
-            <div className="departure-interactions">
-              <h3>{departureQuest ? "Plan the dispatch (optional)" : "Before you depart"}</h3>
-              <p>
-                Your accumulated dispatch plan and any optional Station decisions still open;
-                {" you may inspect one or leave without choosing."} Optional contacts are listed
-                alongside them.
-              </p>
-              {worldView.departureRecap && <DepartureRecap recap={worldView.departureRecap} />}
-              {worldView.departureInteractions.map((interaction) => (
-                <button
-                  className="mini-command"
-                  key={interaction.id}
-                  type="button"
-                  onClick={() => inspectDepartureStory(interaction.id)}
-                >
-                  Inspect {interaction.title}
-                </button>
-              ))}
-              {worldView.departureContactLeads.map((lead) => (
-                <DepartureContactLead
-                  key={lead.id}
-                  lead={lead}
-                  onTalk={() => {
-                    if (!lead.action) return;
-                    runWorldAction(() =>
-                      worldSession.talkToCharacter(lead.action.arguments.character_id),
-                    );
-                  }}
+          {worldView.stationDispatchBoard ? (
+            <StationDispatchBoard
+              board={worldView.stationDispatchBoard}
+              recap={worldView.departureRecap}
+              interactions={worldView.departureInteractions}
+              contactLeads={worldView.departureContactLeads}
+              onInspect={inspectDepartureStory}
+              onTalk={(lead) => {
+                if (!lead.action) return;
+                runWorldAction(() =>
+                  worldSession.talkToCharacter(lead.action.arguments.character_id),
+                );
+              }}
+            >
+              {departureQuest && (
+                <DepartureLaunchPanel
+                  quest={departureQuest}
+                  areaName={questAreaName(departureQuest)}
+                  onStart={(approachId) => startQuest(departureQuest, approachId)}
                 />
-              ))}
-            </div>
+              )}
+            </StationDispatchBoard>
+          ) : (
+            <>
+              {departureQuest && (
+                <DepartureLaunchPanel
+                  quest={departureQuest}
+                  areaName={questAreaName(departureQuest)}
+                  onStart={(approachId) => startQuest(departureQuest, approachId)}
+                />
+              )}
+              {(worldView.departureRecap ||
+                worldView.departureInteractions.length > 0 ||
+                worldView.departureContactLeads.length > 0) && (
+                <div className="departure-interactions">
+                  <h3>
+                    {departureQuest ? "Plan the dispatch (optional)" : "Before you depart"}
+                  </h3>
+                  <p>
+                    Your accumulated dispatch plan and any optional Station decisions still open;
+                    {" you may inspect one or leave without choosing."} Optional contacts are
+                    listed alongside them.
+                  </p>
+                  {worldView.departureRecap && (
+                    <DepartureRecap recap={worldView.departureRecap} />
+                  )}
+                  {worldView.departureInteractions.map((interaction) => (
+                    <button
+                      className="mini-command"
+                      key={interaction.id}
+                      type="button"
+                      onClick={() => inspectDepartureStory(interaction.id)}
+                    >
+                      Inspect {interaction.title}
+                    </button>
+                  ))}
+                  {worldView.departureContactLeads.map((lead) => (
+                    <DepartureContactLead
+                      key={lead.id}
+                      lead={lead}
+                      onTalk={() => {
+                        if (!lead.action) return;
+                        runWorldAction(() =>
+                          worldSession.talkToCharacter(lead.action.arguments.character_id),
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </article>
 

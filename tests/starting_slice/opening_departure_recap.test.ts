@@ -4,6 +4,7 @@ import {
   render,
   renderDepartureRecap,
   renderDepartureRecapTerms,
+  renderStationDispatchBoard,
 } from "../../bin/overworld_play.js";
 import {
   OVERWORLD_COMPACT_VIEW_VERSION,
@@ -236,7 +237,7 @@ describe("Albany opening departure recap", () => {
     expect(gatedWolfRef?.[3]?.[2].every((option) => typeof option[12] === "string")).toBe(true);
     const gatedTerminal = render(gatedView);
     expect(gatedTerminal).not.toContain("Depart now:");
-    expect(gatedTerminal.indexOf(`${WOLF.title} dispatch recap:`)).toBeLessThan(
+    expect(gatedTerminal.indexOf(`${WOLF.title} Station dispatch board:`)).toBeLessThan(
       gatedTerminal.indexOf("Notice board:"),
     );
 
@@ -302,9 +303,27 @@ describe("Albany opening departure recap", () => {
     expect(terminal).toContain(
       `Start with \`start ${WOLF.title}\`; route selection follows before commitment.`,
     );
+    const board = session.view().stationDispatchBoard;
+    if (!board) throw new Error("Expected the Station dispatch board.");
+    expect(board.support).toHaveLength(3);
+    expect(board.launch.approaches).toHaveLength(2);
+    expect(board.launch.approaches.map((approach) => approach.id)).toEqual(
+      WOLF.launch!.options.map((option) => option.id),
+    );
+    const renderedBoard = renderStationDispatchBoard(session.view()).join("\n");
+    expect(renderedBoard).toContain(`${WOLF.title} Station dispatch board:`);
+    expect(renderedBoard).toContain(board.guidance);
+    for (const support of board.support) {
+      expect(renderedBoard).toContain(`${support.label} —`);
+      expect(renderedBoard).toContain(support.purpose);
+      expect(renderedBoard).toContain(support.detailHint);
+    }
+    expect(renderedBoard).toContain(`inspect ${PREPARATION.id}`);
+    expect(renderedBoard).toContain(`inspect ${RELIEF_ALLOCATION.id}`);
+    expect(renderedBoard).toContain("Command: talk June Pike");
+    expect(terminal).toContain(`${WOLF.title} Station dispatch board:`);
     expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
-    expect(terminal).not.toContain(REGISTRATION.profiles[0]!.tradeoff);
     expect(terminal).toContain("Plan slots and exact selected terms: `review dispatch`.");
     expect(renderDepartureRecap(authenticatedRecap).join("\n")).not.toContain(
       REGISTRATION.profiles[0]!.tradeoff,
@@ -315,23 +334,16 @@ describe("Albany opening departure recap", () => {
     expect(reviewedTerms).toContain(`Active term: ${evidenceFieldTerm}`);
     expect(reviewedTerms).toContain("Preparation: Open (optional)");
     expect(reviewedTerms).not.toContain(PREPARATION.profiles[0]!.tradeoff);
-    expect(terminal).not.toContain("Preparation: Open (optional)");
-    expect(terminal).toContain(
-      "Dispatch committed: 10m; preparation, relief allocation, and field team remain optional.",
-    );
-    expect(terminal.indexOf("Depart now:")).toBeLessThan(
-      terminal.indexOf("Plan the dispatch (optional):"),
-    );
-    expect(terminal.indexOf("Plan the dispatch (optional):")).toBeLessThan(
+    expect(terminal.indexOf(`${WOLF.title} Station dispatch board:`)).toBeLessThan(
       terminal.indexOf(`${WOLF.title} dispatch recap:`),
     );
-    expect(terminal.indexOf("Take the Exposed Ridge Road")).toBeLessThan(
-      terminal.indexOf("Plan the dispatch (optional):"),
-    );
-    const promotedLaunch = terminal.slice(
+    expect(terminal.indexOf(`${WOLF.title} dispatch recap:`)).toBeLessThan(
       terminal.indexOf("Depart now:"),
-      terminal.indexOf("Plan the dispatch (optional):"),
     );
+    expect(terminal.indexOf("Take the Exposed Ridge Road")).toBeGreaterThan(
+      terminal.indexOf(`${WOLF.title} Station dispatch board:`),
+    );
+    const promotedLaunch = terminal.slice(terminal.indexOf("Depart now:"));
     expect(promotedLaunch).not.toContain("choose <number|name>");
     expect(promotedLaunch).not.toMatch(/\bchoose [12] —/);
   });

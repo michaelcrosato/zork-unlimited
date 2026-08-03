@@ -59,6 +59,7 @@ import type {
 import type { JourneyOpportunityPresentation } from "./journey_contract.js";
 import type { QuestDispatchPresentationWindow } from "./quest_dispatch_window.js";
 import type { OpeningDepartureRecap } from "./opening_departure_recap.js";
+import { deriveStationDispatchBoard, type StationDispatchBoard } from "./station_dispatch_board.js";
 
 type OverworldSessionViewLocalContentState = Pick<
   MutableOverworldSessionLocalState,
@@ -80,6 +81,7 @@ export type OverworldSessionViewModelState = {
   departureInteractions: readonly OverworldDepartureInteraction[];
   departureContactLeads: readonly OverworldDepartureContactLead[];
   departureRecap: OpeningDepartureRecap | null;
+  stationDispatchBoard: StationDispatchBoard | null;
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -253,6 +255,7 @@ export function buildOverworldSessionViewModelState(
       departureInteractions: [],
       departureContactLeads: [],
       departureRecap: null,
+      stationDispatchBoard: null,
       roads: [],
       areaExits: [],
       routeOptions: [],
@@ -317,6 +320,12 @@ export function buildOverworldSessionViewModelState(
       ),
     ),
   };
+  const stationDispatchBoard = deriveStationDispatchBoard({
+    recap: source.departureRecap,
+    quests: localView.quests,
+    questStarts: source.questStarts,
+    departureContactLeads: source.departureContactLeads,
+  });
 
   return {
     character: buildCampaignCharacterView(source.character),
@@ -342,6 +351,7 @@ export function buildOverworldSessionViewModelState(
     departureInteractions: source.departureInteractions,
     departureContactLeads: source.departureContactLeads,
     departureRecap: source.departureRecap,
+    stationDispatchBoard,
     roads: source.roads,
     areaExits: source.areaExits,
     routeOptions,
@@ -395,6 +405,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     departureInteractions: state.departureInteractions,
     departureContactLeads: state.departureContactLeads,
     departureRecap: state.departureRecap,
+    stationDispatchBoard: state.stationDispatchBoard,
     roads: state.roads,
     areaExits: state.areaExits,
     routeOptions: state.routeOptions,
@@ -452,6 +463,7 @@ export function buildOverworldSessionViewFromState(
     departureInteractions: state.departureInteractions,
     departureContactLeads: state.departureContactLeads,
     departureRecap: state.departureRecap,
+    stationDispatchBoard: state.stationDispatchBoard,
     roads: state.roads,
     areaExits: state.areaExits,
     areas: state.localView.areas,

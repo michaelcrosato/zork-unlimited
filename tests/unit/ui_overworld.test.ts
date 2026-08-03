@@ -1069,6 +1069,87 @@ describe("OverworldSession", () => {
     }
   });
 
+  it("groups Station support and the two legal Wolf-Winter roads on one read-only board", async () => {
+    const session = new OverworldSession(world);
+    session.scoutPoi(session.view().pois[0]!.id);
+    session.talkToCharacter(world.opening_registration!.contact);
+    session.chooseJourneyStory(world.opening_registration!.profiles[0]!.id);
+    session.chooseJourneyStory(world.opening_relief_oath!.options[0]!.id);
+    session.chooseJourneyStory(world.opening_lead_source!.options[0]!.id);
+    moveToOpeningPreparation(session);
+    const view = session.view();
+    const board = view.stationDispatchBoard;
+    const quest = view.quests.find((candidate) => candidate.id === board?.questId);
+    if (!board || !quest?.launch) throw new Error("expected a complete Station dispatch board");
+    expect(board.support).toHaveLength(3);
+    expect(board.launch.approaches).toHaveLength(2);
+
+    const uiRoot = resolve(process.cwd(), "ui");
+    const server = await createServer({
+      root: uiRoot,
+      configFile: resolve(uiRoot, "vite.config.ts"),
+      appType: "custom",
+      logLevel: "silent",
+      optimizeDeps: { noDiscovery: true },
+      server: { middlewareMode: true },
+    });
+    try {
+      const module = (await server.ssrLoadModule("/src/App.tsx")) as {
+        StationDispatchBoard: unknown;
+        DepartureLaunchPanel: unknown;
+      };
+      const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
+      const react = requireFromUi("react") as {
+        createElement: (
+          type: unknown,
+          props: Record<string, unknown>,
+          ...children: unknown[]
+        ) => unknown;
+      };
+      const reactDomServer = requireFromUi("react-dom/server") as {
+        renderToStaticMarkup: (element: unknown) => string;
+      };
+      const markup = reactDomServer.renderToStaticMarkup(
+        react.createElement(
+          module.StationDispatchBoard,
+          {
+            board,
+            recap: view.departureRecap,
+            interactions: view.departureInteractions,
+            contactLeads: view.departureContactLeads,
+            onInspect: () => undefined,
+            onTalk: () => undefined,
+          },
+          react.createElement(module.DepartureLaunchPanel, {
+            quest,
+            areaName: view.currentArea!.name,
+            onStart: () => undefined,
+          }),
+        ),
+      );
+      expect(markup).toContain(`${board.questTitle} Station dispatch board`);
+      expect(markup).toContain(`${board.questTitle} dispatch recap`);
+      for (const support of board.support) {
+        expect(markup).toContain(support.label.replaceAll("'", "&#x27;"));
+        expect(markup).toContain(support.purpose.replaceAll("'", "&#x27;"));
+        expect(markup).toContain(support.detailHint.replaceAll("'", "&#x27;"));
+      }
+      expect(markup).toContain(
+        `Inspect ${world.opening_preparation!.title}`.replaceAll("'", "&#x27;"),
+      );
+      expect(markup).toContain(
+        `Inspect ${world.opening_relief_allocation!.title}`.replaceAll("'", "&#x27;"),
+      );
+      expect(markup).toContain("Talk to June Pike about the field team");
+      expect(markup).toContain("Depart now");
+      for (const approach of board.launch.approaches) {
+        expect(markup).toContain(approach.title);
+      }
+    } finally {
+      await server.close();
+    }
+  });
+
   it("renders current departure recap slots independently while preserving legacy copy", async () => {
     const session = new OverworldSession(world);
     session.scoutPoi(session.view().pois[0]!.id);
