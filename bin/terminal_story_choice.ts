@@ -123,24 +123,33 @@ export function renderTerminalStoryChoiceComparison(
   const visibleComparisonOptions = comparison.options.filter((option) =>
     visibleOptionIds.has(option.id),
   );
+  const progressiveDisclosure = prompt.progressiveDisclosure;
+  const isRevealFirst =
+    progressiveDisclosure !== undefined && progressiveDisclosure.initialOptionIds.length === 0;
+  const requiresComparisonFirst = isRevealFirst && config.revealId === undefined;
   const lines = [
     "\n! Story choice comparison",
     `  ${comparison.message}`,
-    "  Compare the cards, then use one exact command shown below:",
+    requiresComparisonFirst
+      ? "  Open the read-only outcome compass before choosing a duty or role shortcut:"
+      : "  Compare the cards, then use one exact command shown below:",
   ];
   const renderOption = (option: (typeof comparison.options)[number], index: number): void => {
     if (!option.summary) {
       throw new Error(`Story choice "${prompt.id}" lost a structured comparison summary.`);
     }
-    lines.push(`    ${String(index + 1)}. ${option.label}`);
+    lines.push(
+      isRevealFirst ? `    - ${option.label}` : `    ${String(index + 1)}. ${option.label}`,
+    );
     lines.push(...renderSummaryLines(option.summary, "       "));
     lines.push(`       Inspect: \`inspect ${option.id}\``);
     lines.push(`       Choose: \`choose ${option.id}\``);
   };
-  const progressiveDisclosure = prompt.progressiveDisclosure;
   if (progressiveDisclosure && config.revealId !== progressiveDisclosure.reveal.id) {
     lines.push(
-      `  Customize: \`customize\` — ${progressiveDisclosure.reveal.label}. ${progressiveDisclosure.reveal.description}`,
+      requiresComparisonFirst
+        ? `  Compare: \`compare\` — ${progressiveDisclosure.reveal.label}. ${progressiveDisclosure.reveal.description}`
+        : `  Customize: \`customize\` — ${progressiveDisclosure.reveal.label}. ${progressiveDisclosure.reveal.description}`,
     );
   }
   const grouped = groupedRegistrationOptions(prompt);
@@ -163,9 +172,11 @@ export function renderTerminalStoryChoiceComparison(
     visibleComparisonOptions.forEach(renderOption);
   }
   lines.push(
-    config.allowComparisonExit
-      ? "  `back` or `cancel` leaves this optional comparison without changing the journey."
-      : "  This choice is mandatory; inspect a card or choose one of the exact options above.",
+    requiresComparisonFirst
+      ? "  Open the read-only outcome compass with `compare`; no commitment is presented before it."
+      : config.allowComparisonExit
+        ? "  `back` or `cancel` leaves this optional comparison without changing the journey."
+        : "  This choice is mandatory; inspect a card or choose one of the exact options above.",
   );
   return lines.join("\n");
 }
@@ -243,13 +254,22 @@ export async function runTerminalStoryChoiceController(args: {
   let inspected: StructuredJourneyStoryChoiceOption | null = null;
   let revealedStoryChoiceId: string | undefined;
   const progressiveDisclosure = args.prompt.progressiveDisclosure;
+  const requiresComparisonFirst = progressiveDisclosure?.initialOptionIds.length === 0;
+  const revealCommand = requiresComparisonFirst ? "compare" : "customize";
   const visibleOptions = (): readonly StructuredJourneyStoryChoiceOption[] => {
-    const visibleIds = new Set(
-      journeyStoryChoiceOptionsForPresentation(args.prompt, revealedStoryChoiceId).map(
-        (option) => option.id,
-      ),
-    );
-    return options.filter((option) => visibleIds.has(option.id));
+    const presented = journeyStoryChoiceOptionsForPresentation(args.prompt, revealedStoryChoiceId);
+    const visibleIds = new Set(presented.map((option) => option.id));
+    if (!requiresComparisonFirst) return options.filter((option) => visibleIds.has(option.id));
+    return presented.map((option) => options.find((candidate) => candidate.id === option.id)!);
+  };
+  const visibleOption = (selector: string): StructuredJourneyStoryChoiceOption | null => {
+    if (requiresComparisonFirst && /^\d+$/.test(selector.trim())) {
+      const canonical = matchTerminalStoryChoiceOption(options, selector);
+      return canonical && visibleOptions().some((visible) => visible.id === canonical.id)
+        ? canonical
+        : null;
+    }
+    return matchTerminalStoryChoiceOption(visibleOptions(), selector);
   };
   const hiddenOption = (selector: string): StructuredJourneyStoryChoiceOption | null => {
     const option = matchTerminalStoryChoiceOption(options, selector);
@@ -285,13 +305,15 @@ export async function runTerminalStoryChoiceController(args: {
       }
       if (args.allowComparisonExit) return { kind: "cancelled" };
       args.write(
-        "This story choice is mandatory. Inspect an exact option or choose one; back/cancel cannot dismiss it.",
+        requiresComparisonFirst && revealedStoryChoiceId === undefined
+          ? "This story choice is mandatory. Open the read-only outcome compass with `compare`; back/cancel cannot dismiss it."
+          : "This story choice is mandatory. Inspect an exact option or choose one; back/cancel cannot dismiss it.",
       );
       continue;
     }
 
     if (
-      verb === "customize" &&
+      (verb === revealCommand || (requiresComparisonFirst && verb === "customize")) &&
       selector.length === 0 &&
       progressiveDisclosure &&
       revealedStoryChoiceId !== progressiveDisclosure.reveal.id
@@ -311,16 +333,20 @@ export async function runTerminalStoryChoiceController(args: {
     }
 
     if (verb === "inspect") {
-      const option = matchTerminalStoryChoiceOption(visibleOptions(), selector);
+      const option = visibleOption(selector);
       if (!option) {
         if (progressiveDisclosure && hiddenOption(selector)) {
           args.reject(
-            "Use `customize` to reveal the individual duties before inspecting that card.",
+            requiresComparisonFirst
+              ? "Use `compare` to open the outcome compass before inspecting a duty or role shortcut."
+              : "Use `customize` to reveal the individual duties before inspecting that card.",
           );
           continue;
         }
         args.reject(
-          "Inspect an exact option id, full option label, or number from the comparison.",
+          requiresComparisonFirst
+            ? "Inspect an exact option id or full option label from the comparison."
+            : "Inspect an exact option id, full option label, or number from the comparison.",
         );
         continue;
       }
@@ -330,13 +356,21 @@ export async function runTerminalStoryChoiceController(args: {
     }
 
     if (verb === "choose") {
-      const option = matchTerminalStoryChoiceOption(visibleOptions(), selector);
+      const option = visibleOption(selector);
       if (!option) {
         if (progressiveDisclosure && hiddenOption(selector)) {
-          args.reject("Use `customize` to reveal the individual duties before choosing that card.");
+          args.reject(
+            requiresComparisonFirst
+              ? "Use `compare` to open the outcome compass before choosing a duty or role shortcut."
+              : "Use `customize` to reveal the individual duties before choosing that card.",
+          );
           continue;
         }
-        args.reject("Choose an exact option id, full option label, or number from the comparison.");
+        args.reject(
+          requiresComparisonFirst
+            ? "Choose an exact option id or full option label from the comparison."
+            : "Choose an exact option id, full option label, or number from the comparison.",
+        );
         continue;
       }
       if (inspected && inspected.id !== option.id) {
@@ -356,7 +390,9 @@ export async function runTerminalStoryChoiceController(args: {
     args.reject(
       inspected
         ? `Use \`choose ${inspected.id}\`, \`back\`, or an available read-only command.`
-        : "Choose the active journey prompt first with an exact `inspect <id>` or `choose <id>` command shown above.",
+        : requiresComparisonFirst && revealedStoryChoiceId === undefined
+          ? "Open the read-only outcome compass first with `compare`."
+          : "Choose the active journey prompt first with an exact `inspect <id>` or `choose <id>` command shown above.",
     );
   }
 }

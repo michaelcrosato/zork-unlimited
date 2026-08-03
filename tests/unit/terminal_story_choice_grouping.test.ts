@@ -121,32 +121,85 @@ function progressiveReliefOathPrompt(): JourneyStoryChoicePrompt {
 }
 
 describe("terminal registration story-choice groups", () => {
-  it("shows the honest quick-setup pair and four-plan compass before disclosure", () => {
+  it("requires the dawn outcome compass before showing any role shortcut or duty", async () => {
     const prompt = roadWardenReliefOathPrompt();
     const initial = renderTerminalStoryChoiceComparison(prompt);
 
-    expect(initial).toContain(
-      "Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+    expect(initial).toContain("Compare: `compare` — What must stand at dawn?");
+    expect(initial).toMatch(/HUNT[^]*defends herd and relief stores[^]*wolves may die/i);
+    expect(initial).toMatch(/LURE[^]*keep herd and pack alive[^]*spends Cade's last feed/i);
+    expect(initial).toMatch(
+      /DRIVE[^]*moves people and the living pack clear[^]*abandons the outer line/i,
     );
-    expect(initial).toContain("No field plan is chosen");
-    expect(initial).toContain(
-      "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace",
+    expect(initial).toMatch(
+      /FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals/i,
     );
-    expect(initial).toContain("Compare duties before choosing");
-    expect(initial).not.toContain("Compare duty + evidence before choosing");
-    expect(initial).toContain(
-      "Field-plan compass: HUNT risks wolves; LURE spends feed and risks cattle",
-    );
-    expect(initial).toContain("setup does not commit one");
-    expect(initial).toContain("Choose a duty here; its evidence source follows");
-    expect(initial).not.toContain("2. Take Full Compact Duty");
+    expect(initial).toContain("No plan is recommended or committed");
+    expect(initial).not.toContain("Role shortcut — Negotiate Aid-Only Duty");
+    expect(initial).not.toContain("Take Full Compact Duty");
 
     const revealed = renderTerminalStoryChoiceComparison(prompt, {
       revealId: prompt.progressiveDisclosure!.reveal.id,
     });
-    expect(revealed).toContain("2. Take Full Compact Duty");
-    expect(revealed).toContain("3. Negotiate Aid-Only Duty");
-    expect(revealed).toContain("4. Remain an Unaffiliated Helper");
+    expect(revealed).toContain("- Take Full Compact Duty");
+    expect(revealed).toContain("- Negotiate Aid-Only Duty");
+    expect(revealed).toContain("- Remain an Unaffiliated Helper");
+    expect(revealed).toContain(
+      "- Role shortcut — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+    );
+    expect(revealed).not.toMatch(/^ {4}\d+\. /m);
+    expect(revealed.indexOf("Take Full Compact Duty")).toBeLessThan(
+      revealed.indexOf("Role shortcut —"),
+    );
+
+    const selected: string[] = [];
+    const rejected: string[] = [];
+    const written: string[] = [];
+    const commands = [
+      "back",
+      "choose albany:doctrine_road_warden_aid_route",
+      "compare",
+      "choose 99",
+      "choose albany:doctrine_road_warden_aid_route",
+    ];
+    const result = await runTerminalStoryChoiceController({
+      prompt,
+      reader: { read: async () => commands.shift() ?? null },
+      write: (text) => written.push(text),
+      reject: (message) => rejected.push(message),
+      choose: (option) => selected.push(option.id),
+    });
+    expect(rejected).toEqual([
+      "Use `compare` to open the outcome compass before choosing a duty or role shortcut.",
+      "Choose an exact option id or full option label from the comparison.",
+    ]);
+    expect(written).toEqual([
+      initial,
+      "This story choice is mandatory. Open the read-only outcome compass with `compare`; back/cancel cannot dismiss it.",
+      revealed,
+    ]);
+    expect(result).toMatchObject({
+      kind: "chosen",
+      option: { id: "albany:doctrine_road_warden_aid_route" },
+    });
+    expect(selected).toEqual(["albany:doctrine_road_warden_aid_route"]);
+
+    const legacySelected: string[] = [];
+    const legacyCommands = ["customize", "choose 1"];
+    const legacyResult = await runTerminalStoryChoiceController({
+      prompt,
+      reader: { read: async () => legacyCommands.shift() ?? null },
+      write: () => undefined,
+      reject: (message) => {
+        throw new Error(message);
+      },
+      choose: (option) => legacySelected.push(option.id),
+    });
+    expect(legacyResult).toMatchObject({
+      kind: "chosen",
+      option: { id: "albany:doctrine_road_warden_aid_route" },
+    });
+    expect(legacySelected).toEqual(["albany:doctrine_road_warden_aid_route"]);
   });
 
   it("labels doctrine and custom-role cards without changing generic comparisons", async () => {

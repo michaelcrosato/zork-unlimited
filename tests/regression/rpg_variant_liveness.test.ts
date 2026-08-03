@@ -106,9 +106,10 @@ const IMPORT_WITNESS_MAX_STATES = 200_000;
 const WORLD = loadOverworldManifest(process.cwd());
 
 // The pre-crisis 630,199-state Wolf-Winter graph took 153s in a final-hash
-// exhaustive-suite run; later bounded families and shared CI runners can take longer.
-// Wall-clock headroom does not change the bounded state proof.
-const SOLVER_TEST_TIMEOUT_MS = 720_000;
+// exhaustive-suite run; later bounded families now take 713s even in isolation and
+// crossed the former 720s ceiling under full-suite contention. A 15-minute wall-clock
+// guard restores fail-fast headroom without changing the bounded state proof.
+const SOLVER_TEST_TIMEOUT_MS = 900_000;
 
 /**
  * The liveness action policy (identical to the parser proof): step every legal action

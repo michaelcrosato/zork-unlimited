@@ -322,6 +322,81 @@ export type OverworldToolHandlerDeps = {
 
 export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
   const { sessions, overworldSessions } = deps;
+  /**
+   * Presentation-only reveal receipts. Keeping them keyed by the live session
+   * object makes a restored session start unrevealed without adding anything to
+   * the deterministic snapshot, hash, or decision ledger.
+   */
+  const inspectedStoryReveals = new WeakMap<OverworldSession, Map<string, Set<string>>>();
+
+  const rememberStoryReveal = (
+    session: OverworldSession,
+    storyChoiceId: string,
+    revealId: string,
+  ): void => {
+    let stories = inspectedStoryReveals.get(session);
+    if (!stories) {
+      stories = new Map<string, Set<string>>();
+      inspectedStoryReveals.set(session, stories);
+    }
+    let reveals = stories.get(storyChoiceId);
+    if (!reveals) {
+      reveals = new Set<string>();
+      stories.set(storyChoiceId, reveals);
+    }
+    reveals.add(revealId);
+  };
+
+  const storyRevealWasInspected = (
+    session: OverworldSession,
+    storyChoiceId: string,
+    revealId: string,
+  ): boolean => inspectedStoryReveals.get(session)?.get(storyChoiceId)?.has(revealId) === true;
+
+  const storyChoiceForSelection = (
+    session: OverworldSession,
+    choiceId: string,
+    storyChoiceId: string | undefined,
+  ): JourneyStoryChoicePrompt | null => {
+    if (storyChoiceId !== undefined) return session.inspectJourneyStory(storyChoiceId);
+    const presented = session.journey().storyChoice;
+    if (presented) return presented;
+
+    const matchingDepartureStories = session
+      .view()
+      .departureInteractions.map((interaction) => session.inspectJourneyStory(interaction.id))
+      .filter((story) => story.options.some((option) => option.id === choiceId));
+    if (matchingDepartureStories.length > 1) {
+      throw new Error(
+        `Departure story option "${choiceId}" is ambiguous; provide story_choice_id.`,
+      );
+    }
+    return matchingDepartureStories[0] ?? null;
+  };
+
+  const assertStoryChoiceOptionVisible = (
+    session: OverworldSession,
+    story: JourneyStoryChoicePrompt,
+    choiceId: string,
+  ): void => {
+    journeyStoryChoiceOptionById(story, choiceId);
+    const disclosure = story.progressiveDisclosure;
+    if (!disclosure || disclosure.initialOptionIds.includes(choiceId)) return;
+    if (storyRevealWasInspected(session, story.id, disclosure.reveal.id)) return;
+    throw new Error(
+      `Story option "${choiceId}" is hidden. Inspect story "${story.id}" with reveal_id "${disclosure.reveal.id}" in this session before inspecting or choosing it.`,
+    );
+  };
+
+  const assertStoryChoiceVisible = (
+    session: OverworldSession,
+    choiceId: string,
+    storyChoiceId: string | undefined,
+  ): void => {
+    const story = storyChoiceForSelection(session, choiceId, storyChoiceId);
+    if (!story) return;
+    assertStoryChoiceOptionVisible(session, story, choiceId);
+  };
 
   return {
     list_overworld<Args extends OverworldListOptions = Record<string, never>>(
@@ -872,14 +947,20 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       OverworldCompactJourneyStoryChoiceResult
     > {
       const responseOptions = defaultCompactOverworldResponse(args);
-      return overworldSessions.run(
+      const response = overworldSessions.run(
         responseOptions,
         args.session_id,
         "result",
-        (session) => session.chooseJourneyStory(args.choice, args.story_choice_id),
+        (session) => {
+          assertStoryChoiceVisible(session, args.choice, args.story_choice_id);
+          const result = session.chooseJourneyStory(args.choice, args.story_choice_id);
+          inspectedStoryReveals.delete(session);
+          return result;
+        },
         compactOverworldJourneyStoryChoiceResult,
         OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.journey_story_choice,
       );
+      return response;
     },
 
     inspect_overworld_session_story<
@@ -894,30 +975,46 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       const inspectStory = (session: OverworldSession): JourneyStoryChoicePrompt => {
         return session.inspectJourneyStory(args.story_choice_id);
       };
-      const validateInspectionArgs = (story: JourneyStoryChoicePrompt): void => {
+      const validateInspectionArgs = (
+        session: OverworldSession,
+        story: JourneyStoryChoicePrompt,
+      ): void => {
         if (args.option_id !== undefined && args.reveal_id !== undefined) {
           throw new Error("Story choice inspection accepts option_id or reveal_id, not both.");
         }
         if (args.option_id !== undefined) {
-          journeyStoryChoiceOptionById(story, args.option_id);
+          assertStoryChoiceOptionVisible(session, story, args.option_id);
         }
         if (args.reveal_id !== undefined) {
           journeyStoryChoiceOptionsForPresentation(story, args.reveal_id);
         }
       };
       if (args.compact_result === false) {
-        return overworldSessions.run(responseOptions, args.session_id, "story", (session) => {
-          const story = inspectStory(session);
-          validateInspectionArgs(story);
-          return story;
-        }) as unknown as OverworldJourneyStoryInspectionResponse<Args>;
+        const response = overworldSessions.run(
+          responseOptions,
+          args.session_id,
+          "story",
+          (session) => {
+            const story = inspectStory(session);
+            validateInspectionArgs(session, story);
+            return story;
+          },
+        );
+        if (response.ok === true && args.reveal_id !== undefined) {
+          rememberStoryReveal(
+            overworldSessions.get(args.session_id),
+            args.story_choice_id,
+            args.reveal_id,
+          );
+        }
+        return response as unknown as OverworldJourneyStoryInspectionResponse<Args>;
       }
       const guarded = overworldSessions.guardedSession(responseOptions, args.session_id);
       if (isOverworldMcpRejectedSessionPayload(guarded)) {
         return guarded as unknown as OverworldJourneyStoryInspectionResponse<Args>;
       }
       const story = inspectStory(guarded.session);
-      validateInspectionArgs(story);
+      validateInspectionArgs(guarded.session, story);
       const departureRecap = guarded.session.compactView().departure_recap;
       const fullDepartureRecap = guarded.session.view().departureRecap;
       const departureRecapTerms =
@@ -926,7 +1023,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         fullDepartureRecap
           ? compactOpeningDepartureRecapTerms(fullDepartureRecap)
           : null;
-      return {
+      const response = {
         ok: true,
         session_id: args.session_id,
         snapshot_hash: overworldSessions.snapshotHash(guarded.session),
@@ -945,6 +1042,10 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
               ? compactJourneyStoryChoiceComparison(story, undefined, args.reveal_id)
               : compactJourneyStoryChoiceComparison(story),
       } as OverworldJourneyStoryInspectionResponse<Args>;
+      if (args.reveal_id !== undefined) {
+        rememberStoryReveal(guarded.session, args.story_choice_id, args.reveal_id);
+      }
+      return response;
     },
 
     complete_overworld_session_quest<

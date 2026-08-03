@@ -1279,7 +1279,7 @@ describe("MCP journey surface", () => {
     expect(inspectedChoice.result).toEqual(directChoice.result);
   });
 
-  it("expands staged oath cards read-only without leaking them into the initial compact journey", () => {
+  it("requires and expands the dawn outcome compass read-only without leaking oath cards into the initial compact journey", () => {
     const a = api();
     const registration = WORLD.opening_registration;
     const oath = WORLD.opening_relief_oath;
@@ -1306,10 +1306,13 @@ describe("MCP journey surface", () => {
       JourneyStoryChoiceRevealAffordance | undefined
     >();
     expect(compactOath.revealOption).toMatchObject({
-      label: "Compare duties before choosing",
-      description: expect.stringContaining("its evidence source follows"),
+      id: "customize_duty_and_evidence",
+      label: expect.stringContaining("What must stand at dawn?"),
+      description: expect.stringMatching(
+        /HUNT[^]*defends herd and relief stores[^]*wolves may die[^]*LURE[^]*keep herd and pack alive[^]*spends Cade's last feed[^]*DRIVE[^]*moves people and the living pack clear[^]*abandons the outer line[^]*FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals[^]*No plan is recommended or committed/i,
+      ),
     });
-    expect(JSON.stringify(compactOath).toLowerCase()).not.toContain("standard packet");
+    expect(compactOath.options).toEqual([]);
     const canonical = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,
@@ -1318,9 +1321,28 @@ describe("MCP journey surface", () => {
     expectTypeOf(canonical.progressiveDisclosure).not.toEqualTypeOf<undefined>();
     const disclosure = canonical.progressiveDisclosure;
     if (!disclosure) throw new Error("expected staged custom oath disclosure");
-    const hiddenId = disclosure.reveal.optionIds[0];
+    const hiddenId = doctrine.id;
 
     expect(compactOath.options.map((option) => option.id)).toEqual(disclosure.initialOptionIds);
+    expect(disclosure.initialOptionIds).toEqual([]);
+    expect(disclosure.reveal.optionIds).toEqual([
+      ...oath.options.map((option) => option.id),
+      doctrine.id,
+    ]);
+    expect(() =>
+      a.choose_overworld_session_story({
+        session_id: started.session_id,
+        story_choice_id: oath.id,
+        choice: hiddenId,
+      }),
+    ).toThrow(new RegExp(`hidden[^]*reveal_id "${disclosure.reveal.id}"[^]*this session`, "i"));
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: started.session_id,
+        story_choice_id: oath.id,
+        option_id: hiddenId,
+      }),
+    ).toThrow(/hidden[^]*reveal_id[^]*this session/i);
     expect(compactOath).not.toHaveProperty("progressiveDisclosure");
     const initialJourneyJson = JSON.stringify(compactOath);
     expect(initialJourneyJson.indexOf('"revealOption"')).toBeLessThan(
@@ -1345,6 +1367,7 @@ describe("MCP journey surface", () => {
       story: compactJourneyStoryChoiceComparison(canonical),
     });
     expect(initial.story.options.map((option) => option.id)).toEqual(disclosure.initialOptionIds);
+    expect(initial.story.options).toEqual([]);
     const initialJson = JSON.stringify(initial.story);
     expect(initialJson.indexOf('"revealOption"')).toBeLessThan(initialJson.indexOf('"options"'));
     for (const hiddenIdOrLabel of disclosure.reveal.optionIds) {
@@ -1364,9 +1387,10 @@ describe("MCP journey surface", () => {
       unchanged: true,
       story: compactJourneyStoryChoiceComparison(canonical, undefined, disclosure.reveal.id),
     });
-    expect(expanded.story.options.map((option) => option.id)).toEqual(
-      canonical.options.map((option) => option.id),
-    );
+    expect(expanded.story.options.map((option) => option.id)).toEqual([
+      ...disclosure.initialOptionIds,
+      ...disclosure.reveal.optionIds,
+    ]);
     expect(expanded.story).not.toHaveProperty("revealOption");
     const fullReveal = a.inspect_overworld_session_story({
       session_id: started.session_id,
@@ -1399,25 +1423,67 @@ describe("MCP journey surface", () => {
         reveal_id: disclosure.reveal.id,
       }),
     ).toThrow(/option_id or reveal_id/i);
-    expect(a.export_overworld_session({ session_id: started.session_id })).toEqual(before);
+    const afterReveal = a.export_overworld_session({ session_id: started.session_id });
+    expect(afterReveal).toEqual(before);
 
     const directBranch = a.restore_overworld_session({ snapshot: before.snapshot });
     const expandedBranch = a.restore_overworld_session({ snapshot: before.snapshot });
+    const fullExpandedBranch = a.restore_overworld_session({ snapshot: before.snapshot });
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: directBranch.session_id,
+        story_choice_id: oath.id,
+        reveal_id: "albany:not_this_story_reveal",
+      }),
+    ).toThrow(/no progressive disclosure/i);
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: directBranch.session_id,
+        story_choice_id: oath.id,
+        option_id: hiddenId,
+      }),
+    ).toThrow(/hidden[^]*reveal_id[^]*this session/i);
+    expect(() =>
+      a.choose_overworld_session_story({
+        session_id: directBranch.session_id,
+        story_choice_id: oath.id,
+        choice: hiddenId,
+      }),
+    ).toThrow(/hidden[^]*reveal_id[^]*this session/i);
     a.inspect_overworld_session_story({
       session_id: expandedBranch.session_id,
       story_choice_id: oath.id,
       reveal_id: disclosure.reveal.id,
     });
-    const directChoice = a.choose_overworld_session_story({
-      session_id: directBranch.session_id,
-      choice: hiddenId,
+    a.inspect_overworld_session_story({
+      session_id: fullExpandedBranch.session_id,
+      story_choice_id: oath.id,
+      reveal_id: disclosure.reveal.id,
+      ...FULL_OVERWORLD,
     });
     const expandedChoice = a.choose_overworld_session_story({
       session_id: expandedBranch.session_id,
+      story_choice_id: oath.id,
       choice: hiddenId,
     });
-    expect(expandedChoice.snapshot_hash).toBe(directChoice.snapshot_hash);
-    expect(expandedChoice.result).toEqual(directChoice.result);
+    const fullExpandedChoice = a.choose_overworld_session_story({
+      session_id: fullExpandedBranch.session_id,
+      story_choice_id: oath.id,
+      choice: hiddenId,
+    });
+    expect(expandedChoice.snapshot_hash).toBe(fullExpandedChoice.snapshot_hash);
+    expect(expandedChoice.result).toEqual(fullExpandedChoice.result);
+
+    const restoredAfterReveal = a.restore_overworld_session({
+      snapshot: afterReveal.snapshot,
+    });
+    expect(() =>
+      a.choose_overworld_session_story({
+        session_id: restoredAfterReveal.session_id,
+        story_choice_id: oath.id,
+        choice: hiddenId,
+      }),
+    ).toThrow(/hidden[^]*reveal_id[^]*this session/i);
   });
 
   it("stages compact departure terms without mutating zero-, one-, or multi-inspection play", () => {

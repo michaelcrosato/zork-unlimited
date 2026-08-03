@@ -422,6 +422,26 @@ card. This is a read-only terminal, full/compact MCP, and UI projection:
 choices, action ids, exact terms, state, mechanics, RNG, saves, hashes, delayed
 consumers, and outcomes are unchanged.
 
+The outcome-compass follow-up removes the remaining shortcut-first bias without
+adding a decision or flattening the four routes. When a registered role has a
+matching duty-and-evidence shortcut, the oath stage initially exposes no
+selectable card; it first offers one read-only `What must stand at dawn?`
+comparison. HUNT, LURE, DRIVE, and FORTIFY each lead with the people, herd,
+stores, home, or living pack they try to preserve and pair that aim with their
+actual death, feed, cattle, line, wound, rig, property, or public-seal risk. The
+expansion then exposes all three duties and the role shortcut together, with no
+recommendation and no field-plan commitment. Terminal, browser, and compact MCP
+use the same reveal-first boundary; the canonical prompt retains every legal
+choice, and opening the comparison changes no snapshot, clock, journal, RNG, or
+accepted-decision count. Compact MCP keeps only an exact-session presentation
+receipt, so a hidden card cannot be individually inspected or chosen before that
+reveal. The developer-only `compact_result:false` read may return the canonical
+prompt for structural QA, but only a successful exact reveal authorizes its
+choices. The receipt is absent from exports and hashes and resets on restore. The established reveal id,
+canonical option order, terminal `customize` alias, and legacy numeric mappings
+remain stable; only the human-visible comparison and duty-first card order
+change.
+
 Legacy migration is deliberately fail-closed at this causal boundary. An
 untouched registration-era save receives the real source prompt. Every progressed
 post-registration suffix is rejected rather than being falsely certified as
@@ -820,6 +840,18 @@ fleet-level balance, verified player-completion/clarity/enjoyment/continuation
 thresholds, or the absence of recurring severe issues. Those remain the next
 work; twelve deterministic fork proofs are necessary evidence, not final
 greater-than-BG3 certification.
+
+The concept anti-dominance proof now also runs sixteen independent fresh Albany
+launches under identical fixed rolls. Road-Warden Fieldcraft owns the clean LURE
+opening, Ironhands Repair owns the FORTIFY outer seal, Courier Streetwise owns
+the DRIVE recovery, and Ledger Mediation owns the Relief Protocol recovery;
+each concept loses the other three witnesses. Together with the existing
+Road-Warden HUNT rail counterfactual, this proves native, nonpresentational
+advantages without locking any route or claiming fleet-level strategy balance.
+Proof lives in
+[`character_concept_route_balance.test.ts`](../tests/starting_slice/character_concept_route_balance.test.ts)
+and
+[`character_background_counterfactual.test.ts`](../tests/starting_slice/character_background_counterfactual.test.ts).
 
 ## Required resolution families
 

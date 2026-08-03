@@ -15,7 +15,8 @@ const OPENING_DISPATCH_PURPOSE: Readonly<
 > = Object.freeze({
   registration:
     "Purpose: choose your permanent background and promise; duty and evidence come next.",
-  relief_oath: "Purpose: choose Wolf-Winter duty; evidence comes next, and field plan stays open.",
+  relief_oath:
+    "Purpose: compare what must survive Wolf-Winter, then choose duty; evidence comes next, and field plan stays open.",
   lead_source: "Purpose: choose the evidence Albany carries; the field plan stays open.",
   preparation:
     "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
@@ -221,7 +222,7 @@ export function withOpeningDispatchBriefing(
       civicStageIndex === 0
         ? `Mission preview — ${plan.questDiscovery} Civic order: role → duty → evidence.`
         : civicStageIndex === 1 && offersStandardPacket
-          ? "Role chosen. Quick setup binds duty + evidence; compare duties first."
+          ? "Role chosen. Compare all four field outcomes before choosing a duty or role shortcut."
           : civicStageIndex === 2
             ? "Role and duty chosen. Next stop: Hayden's Station launch board."
             : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;

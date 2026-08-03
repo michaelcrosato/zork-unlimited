@@ -146,11 +146,14 @@ describe("MCP server registration", () => {
     expect(registration?.description).toContain("listed in departure_interactions");
     expect(registration?.description).toContain("default compact read");
     expect(registration?.description).toContain("only that option's new detail");
+    expect(registration?.description).toContain("after it is visible");
+    expect(registration?.description).toContain("live session/story");
     expect(registration?.description).toContain("bounded authenticated departure_recap");
     expect(registration?.description).toContain("omits all other repeated world context");
     expect(registration?.description).toContain(
-      "compact_result:false intentionally returns the canonical full story",
+      "compact_result:false returns the canonical full story",
     );
+    expect(registration?.description).toContain("successful reveals still authorize choices");
 
     const block = registeredToolBlock("inspect_overworld_session_story");
     expect(block).toContain("journey.storyChoice or departure_interactions");
@@ -176,9 +179,7 @@ describe("MCP server registration", () => {
       "story_choice_id disambiguates departure interactions",
     );
     const chooseBlock = registeredToolBlock("choose_overworld_session_story");
-    expect(chooseBlock).toContain(
-      "Visible story option id; unique departure options are inferred.",
-    );
+    expect(chooseBlock).toContain("Visible option id; departure options are inferred.");
     expect(chooseBlock).toContain("Optional departure_interactions id for disambiguation.");
   });
 

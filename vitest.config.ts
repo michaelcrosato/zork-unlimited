@@ -62,9 +62,9 @@ export default defineConfig({
           name: "variant-liveness-proof",
           include: [VARIANT_LIVENESS_PROOF],
           maxWorkers: 1,
-          // Wolf-Winter now consumes nearly all of this proof's unchanged 12-minute
-          // per-pack timeout. Keep its exact 800k-state search and best/worst bracket,
-          // but do not make it compete with another memory-heavy exhaustive proof.
+          // Wolf-Winter now consumes roughly 12 minutes of this proof's per-pack
+          // timeout. Keep its exact 800k-state search and best/worst bracket, but do not
+          // make it compete with another memory-heavy exhaustive proof.
           sequence: { groupOrder: 2 },
         },
       },

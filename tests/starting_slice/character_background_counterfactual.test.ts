@@ -244,6 +244,14 @@ function launchRegisteredWolf(profileId: string): {
     choice: profileId,
   });
   expect(registered.journey.storyChoice).toMatchObject({ kind: "relief_oath" });
+  if (profileId !== "albany:ledger_advocate") {
+    api.inspect_overworld_session_story({
+      ...FULL_OVERWORLD,
+      session_id: sessionId,
+      story_choice_id: "albany:wolf_relief_oath",
+      reveal_id: "customize_duty_and_evidence",
+    });
+  }
   const oathBound = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,

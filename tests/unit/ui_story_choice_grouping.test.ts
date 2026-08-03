@@ -29,6 +29,7 @@ describe("JourneyStoryChoiceScreen registration grouping", () => {
       };
       const journey = {
         goal: { text: "Find a local lead." },
+        decisionProof: { hash: "test:grouped-registration", last: null },
         opportunities: null,
         storyChoice: {
           id: "test:grouped-registration",
@@ -87,6 +88,7 @@ describe("JourneyStoryChoiceScreen registration grouping", () => {
       };
       const journey = {
         goal: { text: "Find a local lead." },
+        decisionProof: { hash: "test:legacy-registration", last: null },
         opportunities: null,
         storyChoice: {
           id: "test:legacy-registration",

@@ -37,12 +37,14 @@ function registrationJourney(): ReturnType<OverworldSession["journey"]> {
   return session.journey();
 }
 
-function reliefOathJourney(): ReturnType<OverworldSession["journey"]> {
+function reliefOathJourney(
+  profileId = WORLD.opening_registration!.profiles[0]!.id,
+): ReturnType<OverworldSession["journey"]> {
   const session = new OverworldSession(WORLD);
   const registration = WORLD.opening_registration!;
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
-  session.chooseJourneyStory(registration.profiles[0]!.id);
+  session.chooseJourneyStory(profileId);
   return session.journey();
 }
 
@@ -401,7 +403,12 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(standardPacketButtons).toHaveLength(
         standardPacketChoice.progressiveDisclosure.initialOptionIds.length,
       );
-      const standardPacketOption = standardPacketChoice.options[0]!;
+      expect(standardPacketButtons).toHaveLength(0);
+      expect(rootElement.querySelector(".journey-choice-card")).toBeNull();
+      const roleShortcut = standardPacketChoice.options.find((option) =>
+        option.label.startsWith("Role shortcut —"),
+      );
+      if (!roleShortcut) throw new Error("Expected the Road-Warden role shortcut after reveal.");
       const dutySurfaceOrder = Array.from(
         rootElement.querySelectorAll(
           ".journey-choice-progressive-disclosure, .journey-choice-actions",
@@ -413,27 +420,11 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const quickSetupHeading = rootElement.querySelector("h1") as {
         textContent: string | null;
       } | null;
-      expect(quickSetupHeading?.textContent).toBe("Choose quick setup or compare duties");
+      expect(quickSetupHeading?.textContent).toBe("Compare what must stand at dawn");
       expect(rootElement.textContent).toContain(
-        "The quick-setup card binds duty and evidence together; the duty comparison is read-only.",
+        "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a duty or role shortcut.",
       );
       expect(rootElement.textContent?.toLowerCase()).not.toContain("standard packet");
-      expect(standardPacketButtons[0]!.textContent).toContain(
-        standardPacketOption.summary!.commitment,
-      );
-      expect(standardPacketButtons[0]!.textContent).toContain("Quick setup —");
-      expect(standardPacketButtons[0]!.textContent).toContain(
-        "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
-      );
-      expect(standardPacketButtons[0]!.textContent).not.toContain(
-        "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
-      );
-      const standardPacketDetails = rootElement.querySelector(".journey-choice-card details") as {
-        textContent: string | null;
-      } | null;
-      expect(standardPacketDetails?.textContent).toContain(
-        "Benefit: Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
-      );
       const customize = rootElement.querySelector(
         ".journey-choice-progressive-disclosure > button",
       ) as {
@@ -474,17 +465,36 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(revealedCards).toHaveLength(
         standardPacketChoice.progressiveDisclosure.reveal.optionIds.length,
       );
+      expect(revealedCards).toHaveLength(4);
       expect(revealedCards.map((card) => card.textContent)).toEqual(
-        standardPacketChoice.options
-          .filter((option) =>
-            standardPacketChoice.progressiveDisclosure!.reveal.optionIds.includes(option.id),
-          )
-          .map((option) => expect.stringContaining(option.label)),
+        standardPacketChoice.progressiveDisclosure.reveal.optionIds.map((optionId) =>
+          expect.stringContaining(
+            standardPacketChoice.options.find((option) => option.id === optionId)!.label,
+          ),
+        ),
+      );
+      expect(revealedCards.map((card) => card.textContent)).toEqual(
+        expect.arrayContaining([expect.stringContaining(roleShortcut.label)]),
       );
       await act(async () => {
         revealedCards[0]!.click();
       });
       expect(selected.at(-1)).toBe(standardPacketChoice.progressiveDisclosure.reveal.optionIds[0]);
+
+      const ironhandsJourney = reliefOathJourney("albany:ironhands_repairer");
+      await act(async () => {
+        root!.render(
+          react.createElement(module.JourneyStoryChoiceScreen, {
+            journey: ironhandsJourney,
+            onChoose: (choiceId: string) => selected.push(choiceId),
+          }),
+        );
+      });
+      expect(rootElement.querySelector(".journey-choice-card")).toBeNull();
+      const ironhandsDisclosure = rootElement.querySelector(
+        ".journey-choice-progressive-disclosure > button",
+      ) as { getAttribute: (name: string) => string | null } | null;
+      expect(ironhandsDisclosure?.getAttribute("aria-expanded")).toBe("false");
 
       const ledgerJourney = ledgerReliefOathJourney();
       await act(async () => {
@@ -501,7 +511,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       );
 
       for (const [comparedJourney, sourceOption] of [
-        [reliefOathJourney(), WORLD.opening_relief_oath!.options[0]!],
+        [ledgerReliefOathJourney(), WORLD.opening_relief_oath!.options[0]!],
         [leadSourceJourney(), WORLD.opening_lead_source!.options[0]!],
       ] as const) {
         await act(async () => {

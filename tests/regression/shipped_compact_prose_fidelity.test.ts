@@ -231,9 +231,10 @@ function expectOpeningPromptExact(
       },
       readOnly: true,
     });
-    expect(expanded!.options.map((option) => option.id)).toEqual(
-      prompt.options.map((option) => option.id),
-    );
+    expect(expanded!.options.map((option) => option.id)).toEqual([
+      ...progressiveDisclosure.initialOptionIds,
+      ...progressiveDisclosure.reveal.optionIds,
+    ]);
     expect(expanded).not.toHaveProperty("revealOption");
   } else {
     expect(projected.options.map((option) => option.id)).toEqual(

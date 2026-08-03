@@ -137,6 +137,12 @@ function launchAlbanyWolf(api: ToolApi) {
     session_id: overworldSessionId,
     choice: ROAD_WARDEN.id,
   });
+  api.inspect_overworld_session_story({
+    ...FULL,
+    session_id: overworldSessionId,
+    story_choice_id: "albany:wolf_relief_oath",
+    reveal_id: "customize_duty_and_evidence",
+  });
   api.choose_overworld_session_story({
     ...FULL,
     session_id: overworldSessionId,

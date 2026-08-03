@@ -136,11 +136,20 @@ describe("authenticated Albany preparation dispatch forecast", () => {
       compact_context: false,
       compact_result: false,
     });
-    for (const choice of [
-      "albany:road_warden",
-      "albany:oath_limited_aid_only",
-      "albany:source_jamie_market_testimony",
-    ]) {
+    api.choose_overworld_session_story({
+      session_id: started.session_id,
+      choice: "albany:road_warden",
+      compact_context: false,
+      compact_result: false,
+    });
+    api.inspect_overworld_session_story({
+      session_id: started.session_id,
+      story_choice_id: "albany:wolf_relief_oath",
+      reveal_id: "customize_duty_and_evidence",
+      compact_context: false,
+      compact_result: false,
+    });
+    for (const choice of ["albany:oath_limited_aid_only", "albany:source_jamie_market_testimony"]) {
       api.choose_overworld_session_story({
         session_id: started.session_id,
         choice,

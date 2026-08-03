@@ -1479,7 +1479,7 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect a currently presented journey.storyChoice or optional story listed in departure_interactions without changing state. The default compact read returns a short comparison and unchanged receipt; when available it also repeats the bounded authenticated departure_recap. Pass option_id for only that option's new detail or reveal_id for a staged expansion. Preparation, relief-allocation, and ally option reviews also return authenticated selected terms in that response. It omits all other repeated world context. Developer compact_result:false intentionally returns the canonical full story.",
+  "Inspect a currently presented journey.storyChoice or optional story listed in departure_interactions; read-only. The default compact read returns a comparison, unchanged receipt, and bounded authenticated departure_recap when available. Pass option_id for only that option's new detail after it is visible, or reveal_id to expand. A successful reveal authorizes its choices for this live session/story; new/restored sessions must reveal again. Setup details include authenticated selected terms. It omits all other repeated world context. Developer compact_result:false returns the canonical full story; successful reveals still authorize choices.",
   z
     .object({
       ...OVERWORLD_SESSION,
@@ -1496,7 +1496,7 @@ tool(
         .string()
         .optional()
         .describe(
-          "Staged expansion id from revealOption; exclusive with option_id. compact_result:false validates it but returns the canonical full story.",
+          "Expansion id from revealOption; exclusive with option_id. Success authorizes this live session/story only.",
         ),
       ...OVERWORLD_ACTION_CONTEXT,
     })
@@ -1508,10 +1508,10 @@ tool(
 );
 tool(
   "choose_overworld_session_story",
-  "Choose a visible story option; story_choice_id disambiguates departure interactions.",
+  "Choose a visible option; reveal staged choices first. story_choice_id disambiguates departure interactions.",
   {
     ...OVERWORLD_SESSION,
-    choice: z.string().describe("Visible story option id; unique departure options are inferred."),
+    choice: z.string().describe("Visible option id; departure options are inferred."),
     story_choice_id: z
       .string()
       .optional()
