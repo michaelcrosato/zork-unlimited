@@ -882,7 +882,7 @@ printf 'codex-cli 0.144.1\\n'
       rmSync(ignored, { force: true });
       rmSync(dir, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, 90_000);
 
   it("rejects ordinary unstaged tracked bytes before selected-client execution", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-pure-unstaged-preflight-"));

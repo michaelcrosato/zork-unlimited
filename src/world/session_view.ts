@@ -49,6 +49,7 @@ import {
   cloneOpeningDepartureRecap,
   type OpeningDepartureRecap,
 } from "./opening_departure_recap.js";
+import { cloneStationDispatchBoard, type StationDispatchBoard } from "./station_dispatch_board.js";
 
 export type OverworldPendingRoadEncounterView = OverworldPendingRoadEncounter & {
   nextAction: OverworldRoadEncounterNextAction;
@@ -89,6 +90,7 @@ export type OverworldView = {
   departureInteractions: OverworldDepartureInteraction[];
   departureContactLeads: OverworldDepartureContactLead[];
   departureRecap: OpeningDepartureRecap | null;
+  stationDispatchBoard: StationDispatchBoard | null;
   journal: OverworldJournalEntry[];
   discoveredSiteIds: string[];
   discoveredAreaIds: string[];
@@ -122,6 +124,7 @@ export type OverworldSessionViewState = {
   departureInteractions: readonly OverworldDepartureInteraction[];
   departureContactLeads: readonly OverworldDepartureContactLead[];
   departureRecap: OpeningDepartureRecap | null;
+  stationDispatchBoard: StationDispatchBoard | null;
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   areas: readonly OverworldArea[];
@@ -235,6 +238,9 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     departureInteractions: state.departureInteractions.map(cloneOverworldDepartureInteraction),
     departureContactLeads: state.departureContactLeads.map(cloneOverworldDepartureContactLead),
     departureRecap: state.departureRecap ? cloneOpeningDepartureRecap(state.departureRecap) : null,
+    stationDispatchBoard: state.stationDispatchBoard
+      ? cloneStationDispatchBoard(state.stationDispatchBoard)
+      : null,
     journal: state.journalEntries.map(redactOverworldJournalEntryForPresentation),
     discoveredAreaIds: [...state.discoveredAreaIds].sort(),
     discoveredJobIds: [...state.discoveredJobIds].sort(),

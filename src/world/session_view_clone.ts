@@ -23,6 +23,7 @@ import {
 } from "./session_departure_interactions.js";
 import { cloneOverworldServiceActionPresentation } from "./session_service_presentation.js";
 import { cloneOpeningDepartureRecap } from "./opening_departure_recap.js";
+import { cloneStationDispatchBoard } from "./station_dispatch_board.js";
 
 export function cloneOverworldView(view: OverworldView): OverworldView {
   return {
@@ -56,6 +57,9 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     departureInteractions: view.departureInteractions.map(cloneOverworldDepartureInteraction),
     departureContactLeads: view.departureContactLeads.map(cloneOverworldDepartureContactLead),
     departureRecap: view.departureRecap ? cloneOpeningDepartureRecap(view.departureRecap) : null,
+    stationDispatchBoard: view.stationDispatchBoard
+      ? cloneStationDispatchBoard(view.stationDispatchBoard)
+      : null,
     routeOptions: view.routeOptions.map((plan) => cloneOverworldRouteOption(plan)),
     discovered: view.discovered.map(cloneOverworldNode),
     journal: view.journal.map(redactOverworldJournalEntryForPresentation),

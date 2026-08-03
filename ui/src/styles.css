@@ -961,6 +961,89 @@ h3 {
   justify-self: start;
 }
 
+.station-dispatch-board {
+  background: color-mix(in srgb, var(--panel-3) 45%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--water) 42%, var(--line));
+  border-left: 3px solid var(--water);
+  border-radius: 0.6rem;
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding: 0.9rem;
+}
+
+.station-dispatch-board > h3,
+.station-dispatch-board > p,
+.station-dispatch-support-row h4,
+.station-dispatch-support-row p {
+  margin: 0;
+}
+
+.station-dispatch-board > p,
+.station-dispatch-support-row > small {
+  color: var(--muted);
+}
+
+.station-dispatch-support {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.station-dispatch-support-row {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.7rem;
+}
+
+.station-dispatch-support-row h4 {
+  color: var(--road);
+  font-size: 0.9rem;
+}
+
+.station-dispatch-support-row .mini-command {
+  justify-self: start;
+}
+
+.station-dispatch-support-row .departure-contact-lead {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.1rem;
+  padding-top: 0.55rem;
+}
+
+.station-dispatch-support-row .departure-contact-lead p {
+  color: var(--muted);
+}
+
+.station-dispatch-extra,
+.station-dispatch-recap,
+.station-dispatch-board > .departure-launch {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+}
+
+.station-dispatch-extra {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.station-dispatch-extra h4 {
+  margin: 0;
+}
+
+.station-dispatch-extra .mini-command {
+  justify-self: start;
+}
+
+.station-dispatch-board > .departure-launch {
+  margin-top: 0;
+}
+
 .departure-recap {
   display: grid;
   gap: 0.5rem;
@@ -1670,6 +1753,10 @@ dd {
     grid-column: 1;
   }
 
+  .station-dispatch-support {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .journey-status {
     grid-template-columns: 1fr;
   }
@@ -1704,6 +1791,14 @@ dd {
 
   .journey-passage-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .station-dispatch-board {
+    padding: 0.7rem;
+  }
+
+  .station-dispatch-support {
+    grid-template-columns: 1fr;
   }
 
   .journey-rhythm div {

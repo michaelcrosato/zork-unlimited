@@ -244,8 +244,8 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     if (!lead) throw new Error("Expected June's optional departure lead.");
 
     const readyBeforePreparation = render(session.view());
-    expect(readyBeforePreparation).toContain("Optional before departure:");
-    expect(readyBeforePreparation).toContain(ally.title);
+    expect(readyBeforePreparation).toContain("The Wolf-Winter Station dispatch board:");
+    expect(readyBeforePreparation).toContain("June Pike field team");
     expect(readyBeforePreparation).toContain(lead.guidance);
     expect(readyBeforePreparation).toContain(`Command: talk ${lead.contactName}`);
     expect(readyBeforePreparation).not.toContain("Available after choosing a Station preparation.");
@@ -797,7 +797,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     const snapshotPath = join(temp, "station.json");
     writeFileSync(snapshotPath, JSON.stringify(stationed.snapshot()));
     try {
-      expect(render(stationed.view())).toContain("Optional departure decisions:");
+      expect(render(stationed.view())).toContain("The Wolf-Winter Station dispatch board:");
       const run = runCli([
         "--restore",
         snapshotPath,
@@ -805,7 +805,7 @@ describe("overworld_play CLI (scripted mode)", () => {
         `look; inspect ${preparation.id}; inspect ${option.id}; back; choose ${option.id}; hash`,
       ]);
       expect(run.status, run.output).toBe(0);
-      expect(run.output).toContain(`Compare: \`inspect ${preparation.id}\``);
+      expect(run.output).toContain(`Inspect: \`inspect ${preparation.id}\``);
       expect(run.output).toContain(`Inspect: \`inspect ${option.id}\``);
       expect(run.output).toContain(`! Story choice detail — ${option.title}`);
       expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
@@ -908,7 +908,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(run.output).toContain(
         "Compare who is protected, exact cost, and what remains exposed. Field checks surface with their action before resolution.",
       );
-      expect(run.output).toContain("Optional before departure:");
+      expect(run.output).toContain("The Wolf-Winter Station dispatch board:");
       expect(run.output.match(/Command: talk June Pike/g) ?? []).toHaveLength(3);
       const junePromptStart = run.output.lastIndexOf("\n! Story choice comparison\n");
       expect(junePromptStart).toBeGreaterThan(-1);

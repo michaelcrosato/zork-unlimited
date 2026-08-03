@@ -73,6 +73,10 @@ import {
   compactOpeningDepartureRecap,
   type OpeningDepartureRecap,
 } from "./opening_departure_recap.js";
+import {
+  compactStationDispatchBoard,
+  type StationDispatchBoard,
+} from "./station_dispatch_board.js";
 
 export type OverworldSessionCompactViewState = {
   character: CampaignCharacterView;
@@ -89,6 +93,7 @@ export type OverworldSessionCompactViewState = {
   departureInteractions?: readonly OverworldDepartureInteraction[];
   departureContactLeads?: readonly OverworldDepartureContactLead[];
   departureRecap?: OpeningDepartureRecap | null;
+  stationDispatchBoard?: StationDispatchBoard | null;
   roads: readonly OverworldExit[];
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
@@ -185,6 +190,9 @@ export function buildOverworldSessionCompactView(
   const departureRecap = state.departureRecap
     ? compactOpeningDepartureRecap(state.departureRecap)
     : null;
+  const stationDispatchBoard = state.stationDispatchBoard
+    ? compactStationDispatchBoard(state.stationDispatchBoard)
+    : null;
   const departureLaunchReady =
     departureRecap !== null && questStarts.some(([questId]) => questId === departureRecap[1]);
   const opportunityLeads = compactJourneyOpportunityLeads(state.opportunities);
@@ -226,6 +234,9 @@ export function buildOverworldSessionCompactView(
       ? { departure_contact_leads: departureContactLeads }
       : {}),
     ...(!departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
+    ...(!departureLaunchReady && stationDispatchBoard
+      ? { station_dispatch_board: stationDispatchBoard }
+      : {}),
     ...(state.opportunities
       ? {
           opportunity_guidance: state.opportunities.guidance,
@@ -270,6 +281,9 @@ export function buildOverworldSessionCompactView(
     ...(quests.length > 0 ? { quests } : {}),
     ...(questStartLocations.length > 0 ? { quest_start_locations: questStartLocations } : {}),
     ...(questStarts.length > 0 ? { quest_starts: questStarts } : {}),
+    ...(departureLaunchReady && stationDispatchBoard
+      ? { station_dispatch_board: stationDispatchBoard }
+      : {}),
     ...(departureLaunchReady && departureRecap ? { departure_recap: departureRecap } : {}),
     ...(departureLaunchReady && departureInteractions.length > 0
       ? { departure_interactions: departureInteractions }

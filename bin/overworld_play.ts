@@ -113,6 +113,9 @@ export function render(view: OverworldView): string {
   const noticeBoardQuests = departureQuest
     ? view.quests.filter((quest) => quest.id !== departureQuest.id)
     : view.quests;
+  if (view.stationDispatchBoard) {
+    lines.push(...renderStationDispatchBoard(view));
+  }
   if (departureQuest) {
     lines.push("Depart now:");
     lines.push(
@@ -129,20 +132,23 @@ export function render(view: OverworldView): string {
     }
   }
   if (
+    !view.stationDispatchBoard &&
     departureQuest &&
     (view.departureRecap || view.departureInteractions.length || view.departureContactLeads.length)
   ) {
     lines.push("Plan the dispatch (optional):");
   }
-  if (view.departureRecap) lines.push(...renderDepartureRecap(view.departureRecap));
-  if (view.departureInteractions.length) {
+  if (!view.stationDispatchBoard && view.departureRecap) {
+    lines.push(...renderDepartureRecap(view.departureRecap));
+  }
+  if (!view.stationDispatchBoard && view.departureInteractions.length) {
     lines.push("Optional departure decisions:");
     for (const interaction of view.departureInteractions) {
       lines.push(`  ${interaction.title}`);
       lines.push(`    Compare: \`inspect ${interaction.id}\``);
     }
   }
-  if (view.departureContactLeads.length) {
+  if (!view.stationDispatchBoard && view.departureContactLeads.length) {
     lines.push("Optional before departure:");
     for (const lead of view.departureContactLeads) {
       lines.push(`  ${lead.title} — ${lead.guidance}`);
@@ -180,6 +186,84 @@ export function render(view: OverworldView): string {
     for (const quest of noticeBoardQuests) lines.push(`  ${questLine(view, quest)}`);
   }
   return lines.join("\n");
+}
+
+type StationDispatchBoardView = NonNullable<OverworldView["stationDispatchBoard"]>;
+
+function stationDispatchStatus(support: StationDispatchBoardView["support"][number]): string {
+  if (support.selectedTitle) return `Selected: ${support.selectedTitle}`;
+  switch (support.status) {
+    case "open_optional":
+      return "Open (optional)";
+    case "available_after_preparation":
+      return "Available after preparation";
+    case "solo_default":
+      return "Solo departure";
+    case "legacy":
+      return "Legacy choice preserved";
+    case "selected":
+      return "Selected";
+  }
+}
+
+/** Read-only Station summary; every printed command is an existing session action. */
+export function renderStationDispatchBoard(view: OverworldView): string[] {
+  const board = view.stationDispatchBoard;
+  if (!board) return [];
+  const lines = [`${board.questTitle} Station dispatch board:`, `  ${board.guidance}`];
+  const mappedInteractionIds = new Set<string>();
+  const mappedContactLeadIds = new Set<string>();
+  for (const support of board.support) {
+    lines.push(`  ${support.label} — ${stationDispatchStatus(support)}.`);
+    lines.push(`    ${support.purpose}`);
+    lines.push(`    ${support.detailHint}`);
+    if (support.slot === "preparation" || support.slot === "relief_allocation") {
+      const interaction = view.departureInteractions.find(
+        (candidate) => candidate.kind === support.slot,
+      );
+      if (interaction) {
+        mappedInteractionIds.add(interaction.id);
+        lines.push(`    Inspect: \`inspect ${interaction.id}\``);
+      }
+      continue;
+    }
+    if (support.slot === "field_team") {
+      const lead = view.departureContactLeads.find(
+        (candidate) => candidate.kind === "ally" && candidate.questId === board.questId,
+      );
+      if (lead) {
+        mappedContactLeadIds.add(lead.id);
+        lines.push(`    ${lead.guidance}`);
+        lines.push(
+          lead.action
+            ? `    Command: talk ${lead.contactName}`
+            : "    Available after choosing a Station preparation.",
+        );
+      }
+    }
+  }
+  const otherInteractions = view.departureInteractions.filter(
+    (interaction) => !mappedInteractionIds.has(interaction.id),
+  );
+  const otherContactLeads = view.departureContactLeads.filter(
+    (lead) => !mappedContactLeadIds.has(lead.id),
+  );
+  if (otherInteractions.length || otherContactLeads.length) {
+    lines.push("  Other departure options:");
+    for (const interaction of otherInteractions) {
+      lines.push(`    ${interaction.title} — \`inspect ${interaction.id}\``);
+    }
+    for (const lead of otherContactLeads) {
+      lines.push(`    ${lead.title} — ${lead.guidance}`);
+      lines.push(
+        lead.action
+          ? `      Command: talk ${lead.contactName}`
+          : "      Available after choosing a Station preparation.",
+      );
+    }
+  }
+  if (view.departureRecap) lines.push(...renderDepartureRecap(view.departureRecap));
+  return lines;
 }
 
 /** Bounded authenticated recall shared by status and an active Station choice. */
