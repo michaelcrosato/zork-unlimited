@@ -17,7 +17,10 @@ import {
   RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW,
   RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY,
 } from "../../../src/world/relief_protocol_trigger_copy_legacy.js";
-import { RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY } from "../../../src/world/relief_oath_strategy_parity_legacy.js";
+import {
+  AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY,
+  RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY,
+} from "../../../src/world/relief_oath_strategy_parity_legacy.js";
 import type { OverworldSessionSnapshot } from "../../../src/world/session_snapshot.js";
 
 type ComparisonCardOption = { id: string; tradeoff?: string };
@@ -39,9 +42,99 @@ const JUNE_HUNT_RELEASE_ENDING_IDS: ReadonlySet<string> = new Set([
   "ending_held_june_released",
 ]);
 
+/** Reconstruct the exact manifest before Aid-Only named the clean first-cast prerequisite. */
+export function exactAidOnlyCleanCastCopyPredecessor(
+  current: OverworldManifest,
+): OverworldManifest {
+  const predecessor = structuredClone(current);
+  const registration = predecessor.opening_registration;
+  const roadWardenAidRoute = registration?.doctrines?.find(
+    (doctrine) => doctrine.id === "albany:doctrine_road_warden_aid_route",
+  );
+  const oath = predecessor.opening_relief_oath;
+  const aidOnly = oath?.options.find((option) => option.id === "albany:oath_limited_aid_only");
+  const rowan = predecessor.characters.find(
+    (character) => character.campaign_npc_id === "albany:rowan_quill",
+  );
+  const aidOnlySelected = rowan?.variants?.find(
+    (variant) => variant.id === "wolf_limited_aid_only_selected",
+  );
+  if (!registration || !roadWardenAidRoute || !oath || !aidOnly || !rowan || !aidOnlySelected) {
+    throw new Error(
+      "Aid-Only clean-cast predecessor requires the Road-Warden doctrine, Aid-Only term, and Rowan selection agenda.",
+    );
+  }
+
+  roadWardenAidRoute.preview = AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.roadWardenAidRoutePreview;
+  aidOnly.trigger_category = AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.aidOnlyTriggerCategory;
+  aidOnly.preview = AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.aidOnlyPreview;
+  aidOnlySelected.agenda = AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.rowanAidOnlySelectedAgenda;
+  return predecessor;
+}
+
+/**
+ * Older reconstructions may already have removed an Aid-Only authoring slice.
+ * Preserve those shapes while rejecting partial current-shaped data.
+ */
+function aidOnlyCleanCastCopyPredecessorForHistoricalComposition(
+  current: OverworldManifest,
+): OverworldManifest {
+  const registration = current.opening_registration;
+  const roadWardenAidRoute = registration?.doctrines?.find(
+    (doctrine) => doctrine.id === "albany:doctrine_road_warden_aid_route",
+  );
+  const oath = current.opening_relief_oath;
+  const aidOnly = oath?.options.find((option) => option.id === "albany:oath_limited_aid_only");
+  const rowan = current.characters.find(
+    (character) => character.campaign_npc_id === "albany:rowan_quill",
+  );
+  const aidOnlySelected = rowan?.variants?.find(
+    (variant) => variant.id === "wolf_limited_aid_only_selected",
+  );
+  if (registration && roadWardenAidRoute && oath && aidOnly && rowan && aidOnlySelected) {
+    return exactAidOnlyCleanCastCopyPredecessor(current);
+  }
+
+  const retainedBoundedAidDoctrine = registration?.doctrines?.some(
+    (doctrine) => doctrine.id === "albany:doctrine_bounded_aid",
+  );
+  if (!registration) {
+    throw new Error("Aid-Only clean-cast predecessor requires Albany's opening registration.");
+  }
+  if (registration.doctrines !== undefined && !roadWardenAidRoute && !retainedBoundedAidDoctrine) {
+    throw new Error("Aid-Only clean-cast predecessor requires the Road-Warden Aid doctrine.");
+  }
+  if (!oath) {
+    if (aidOnlySelected) {
+      throw new Error(
+        "Aid-Only clean-cast predecessor found Rowan's selection agenda without its oath.",
+      );
+    }
+    return structuredClone(current);
+  }
+  if (!aidOnly || !rowan || !aidOnlySelected) {
+    throw new Error(
+      "Aid-Only clean-cast predecessor requires the Aid-Only term and Rowan selection agenda.",
+    );
+  }
+
+  const predecessor = structuredClone(current);
+  const historicalAidOnly = predecessor.opening_relief_oath!.options.find(
+    (option) => option.id === "albany:oath_limited_aid_only",
+  )!;
+  const historicalAidOnlySelected = predecessor.characters
+    .find((character) => character.campaign_npc_id === "albany:rowan_quill")!
+    .variants!.find((variant) => variant.id === "wolf_limited_aid_only_selected")!;
+  historicalAidOnly.trigger_category = AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.aidOnlyTriggerCategory;
+  historicalAidOnly.preview = AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.aidOnlyPreview;
+  historicalAidOnlySelected.agenda =
+    AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.rowanAidOnlySelectedAgenda;
+  return predecessor;
+}
+
 /** Reconstruct the exact manifest before June could be released amicably before HUNT. */
 export function exactJuneHuntReleasePredecessor(current: OverworldManifest): OverworldManifest {
-  const predecessor = structuredClone(current);
+  const predecessor = aidOnlyCleanCastCopyPredecessorForHistoricalComposition(current);
   const wolf = predecessor.quests.find((quest) => quest.id === "wolf_winter");
   const june = predecessor.characters.find(
     (character) => character.id === "albany_city__transport_hub__june_pike",

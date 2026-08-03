@@ -153,7 +153,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(limitedDutyLure).toHaveLength(2);
     for (const disclosure of limitedDutyLure) {
       expect(disclosure).toMatch(
-        /AID-ONLY LURE BENEFIT[^]*final bloodless cast[^]*skips[^]*ordinary \+1 alarm[^]*failed-cast pressure stays/i,
+        /AID-ONLY LURE BENEFIT[^]*first cast stays clean[^]*skips[^]*final ordinary \+1 alarm[^]*fouled opening keeps it/i,
       );
     }
     expect(limitedDutyFortify).toMatch(

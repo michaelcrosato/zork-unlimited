@@ -131,6 +131,7 @@ const ENDINGS = {
   ending_fortified_cade_terms: "Dawn Behind Cade's Shutters",
   ending_fortified_albany_authority: "Dawn Under Albany Seal",
   ending_pack_diverted: "The Pack Diverted Alive",
+  ending_pack_diverted_cattle_scattered: "The Pack Diverted, Cattle Scattered",
   ending_drive_person_cattle_lost: "The People Out, Cattle Lost",
 } as const;
 type EndingId = keyof typeof ENDINGS;
@@ -224,8 +225,9 @@ function commitAuthorityFortify(oathId: OathId): GameState {
   return act(state, "go_north");
 }
 
-function commitLure(oathId: OathId): GameState {
-  let state = reachCadeDialogue(oathId);
+function commitLureFromState(state: GameState): GameState {
+  state = act(state, "go_north");
+  state = act(state, "talk_houndsman");
   state = act(state, "ask_lure");
   state = act(state, "ask_commit_lure");
   state = act(state, "ask_leave");
@@ -235,12 +237,24 @@ function commitLure(oathId: OathId): GameState {
   return act(state, "go_north");
 }
 
+function commitLure(oathId: OathId): GameState {
+  return commitLureFromState(rpgState(oathId));
+}
+
 function recoverFailedFirstLure(state: GameState): GameState {
   state = act(state, "wedge_paling_rail", 1);
   expect(state.flags.rail_split).toBe(true);
   state = act(state, "bind_paling_rail");
   state = act(state, "use_split_rail_guard_on_downwind_feed_line");
   expect(state.flags.yearling_redirected_with_split_guard).toBe(true);
+  return state;
+}
+
+function recoverFailedFirstLureWithWorks(state: GameState): GameState {
+  state = act(state, "set_paling_rail", 20);
+  expect(state.flags.breach_braced).toBe(true);
+  state = act(state, "turn_paling_rail");
+  expect(state.flags.yearling_redirected_with_braced_rail).toBe(true);
   return state;
 }
 
@@ -342,6 +356,24 @@ function reachAllyOffer(oathId: OathId): OverworldSession {
     ]),
   });
   return session;
+}
+
+function rpgStateWithJune(oathId: OathId): GameState {
+  const session = reachAllyOffer(oathId);
+  session.chooseJourneyStory(JUNE_PARTNERSHIP);
+  const state = initStateForRpgPack(index, 2026, {
+    character: session.campaignCharacterState(),
+    imports: IMPORTS,
+  });
+  expect(state.flags.june_pike_present).toBe(true);
+  expect(state.campaignImportReceipt?.applied_rules).toEqual(
+    expect.arrayContaining([
+      OATH_CASES[oathId].importRule,
+      "import:wolf_winter_june_companion",
+      "import:wolf_winter_works_fortification",
+    ]),
+  );
+  return state;
 }
 
 function completeCampaign(
@@ -641,7 +673,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
     }
   });
 
-  it("suppresses only Aid-Only's final bloodless lure alarm and retains failed-cast pressure", () => {
+  it("suppresses Aid-Only's final alarm only after a clean first lure cast", () => {
     let limitedClean = act(commitLure(LIMITED), "use_winter_feed_sack_on_downwind_feed_line", 20);
     let controlClean = act(commitLure(FULL), "use_winter_feed_sack_on_downwind_feed_line", 20);
     expect(limitedClean.vars.cattle_alarm).toBe(1);
@@ -687,15 +719,41 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
     controlFailed = finishFinalScentCast(controlFailed);
     expect(limitedFailed).toMatchObject({
       ended: true,
-      endingId: "ending_pack_diverted",
+      endingId: "ending_pack_diverted_cattle_scattered",
       flags: { lure_trail_fouled: true },
-      vars: { cattle_alarm: 3 },
+      vars: { cattle_alarm: 4 },
     });
     expect(controlFailed).toMatchObject({
       ended: true,
       endingId: "ending_pack_diverted_cattle_scattered",
       flags: { lure_trail_fouled: true },
       vars: { cattle_alarm: 4 },
+    });
+    expect(limitedFailed.journal.join("\n")).not.toMatch(
+      /suppresses only the last ordinary alarm/i,
+    );
+
+    let juneRecovered = act(
+      commitLureFromState(rpgStateWithJune(LIMITED)),
+      "use_winter_feed_sack_on_downwind_feed_line",
+      1,
+    );
+    juneRecovered = recoverFailedFirstLureWithWorks(juneRecovered);
+    juneRecovered = reachFinalScentCast(juneRecovered);
+    expect(juneRecovered).toMatchObject({
+      flags: { lure_trail_fouled: true, june_pike_present: true },
+      vars: { cattle_alarm: 3 },
+    });
+    expect(actionIds(juneRecovered)).toContain("talk_june_pike");
+    juneRecovered = act(juneRecovered, "talk_june_pike");
+    juneRecovered = act(juneRecovered, "ask_acknowledge");
+    expect(juneRecovered.vars.cattle_alarm).toBe(2);
+    juneRecovered = finishFinalScentCast(juneRecovered);
+    expect(juneRecovered).toMatchObject({
+      ended: true,
+      endingId: "ending_pack_diverted",
+      flags: { lure_trail_fouled: true, june_cattle_line_taken: true },
+      vars: { cattle_alarm: 3 },
     });
   });
 
@@ -784,12 +842,27 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       completeCampaign(FULL, "ending_pack_diverted"),
       "albany_city__market",
     );
+    const limitedScattered = returnToServiceArea(
+      completeCampaign(LIMITED, "ending_pack_diverted_cattle_scattered"),
+      "albany_city__market",
+    );
     expect(promiseStatus(limitedLiving, LIMITED)).toBe("kept");
     expect(limitedLiving.view().serviceOffers.map((offer) => offer.id)).toContain(
       "albany:limited_oath_living_pack_return_rest",
     );
     expect(fullLiving.view().serviceOffers.map((offer) => offer.id)).not.toContain(
       "albany:limited_oath_living_pack_return_rest",
+    );
+    expect(limitedScattered.view().serviceOffers.map((offer) => offer.id)).not.toContain(
+      "albany:limited_oath_living_pack_return_rest",
+    );
+    expect(limitedScattered.campaignWorldFactIds()).not.toContain("fact:wolf_winter_cattle_whole");
+    const limitedScatteredGreenway = returnToServiceArea(
+      completeCampaign(LIMITED, "ending_pack_diverted_cattle_scattered"),
+      "albany_city__greenway",
+    );
+    expect(limitedScatteredGreenway.view().serviceOffers.map((offer) => offer.id)).not.toContain(
+      "albany:wolf_live_pack_greenway_resupply",
     );
 
     const unaffiliatedDrive = returnToServiceArea(

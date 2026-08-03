@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 723 -->
+<!-- historical_cycle_count: 724 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - aid_only_clean_cast_gate
+
+- Evidence choice: repeated landed pilots chose LURE 10/10, 9/10, 9/9, and 7/10; Aid-Only could foul the opening, recover the living yearling, then erase the ordinary final pressure and receive the clean route's whole-herd ending and services.
+- Surface/effect: Aid-Only now suppresses LURE's final +1 alarm only when the first cast stayed clean; a fouled living recovery keeps ordinary final pressure, while Drover or June can still earn the whole-herd threshold through their separate cattle-line support.
+- Return consequence: an unsupported foul reaches scattered cattle and truthfully omits the cattle-whole fact, Aid-Only Market cot, and Greenway living-pack cache; clean LURE and every other strategy retain their prior rules.
+- Integrity: exact predecessor `271f3935…` composes into world `33d93edc…` through strict Aid/Rowan journal normalization, preserves older trusted saves, and rejects altered or adjacent evidence.
+- Pure evidence: exact-clean Terra seed 682713 chose Aid-Only LURE, redirected all wolves alive with the herd whole, ended at decision 30, rated clarity/enjoyment 4/4 and replay-yes, and reported no bug, rejection, loop, stuck state, or soft-lock.
+- Spark/economy: the frozen Spark-10 verified 1/10 with nine strict-wrapper rejections; measured Terra + Spark evidence used 3.313M raw / 181,534 uncached input + 23,122 output at 94.52% cache reuse (204,656 useful), while nine Spark and one earlier Terra rejection remain unrecoverable rather than guessed.
+- Self-critique/guard: both verified players chose LURE and ended at the first goal, so this proves build safety rather than diversity; Spark's S2 hash report was its own one-character transcription error, and focused counterfactuals, crawl `20260802T223524Z`, exact 457-file/3,792-test health, UI typecheck, and all 12 packs are green.
 
 ### Cycle result - wolf_strategy_consequence_card
 
@@ -165,19 +175,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Frozen cohort: latest-build seeds 73101860–69 verified 3/10 slots across 18 attempts; all three completed The Wolf-Winter through FORTIFY in 20–21 decisions and ended, while 15 attempts failed the separate strict wrapper gate and one retry rescued a slot.
 - Economy/self-critique: verified cohort evidence used 201,399 useful tokens at 92.74% cache reuse (about 67,133/player, 3,302/decision), but rejected attempts made 443 call starts with unrecoverable usage; mass Spark is not efficient until exact rejection diagnostics identify the wrapper mismatch.
 - Guard/follow-through: crawls `20260731T193135Z` / `20260731T193405Z` and combined `20260731T202500Z` have zero findings; health passes 450 files/3,753 tests plus all 12 packs, and the next tooling cycles are strict-rejection capture then pure clean-build admission.
-
-### Cycle result - two_tier_station_briefing
-
-- Evidence choice: the structural depth contract was green, but repeated blind reports still named Albany Station's accumulated planning vocabulary and exact modifier stack dense.
-- Surface/effect: direct launch, the three selected plan titles, and optional-slot/clock status stay first-tier; check fit, timing forecasts, proof, complete slot terms, and exact consequences move behind read-only inspection across compact MCP, terminal, and UI.
-- Measured effect: the default departure recap falls 1,083→258 bytes (76%), preparation 3,152→1,680 (47%), and relief allocation 2,784→1,797 (35%) while exact detail remains available on demand.
-- Counterfactual: choices, actions, meaningful decisions, terms, mechanics, RNG, state, saves, hashes, and outcomes are unchanged; shared projection contracts advance to comparison v9, recap v7, and compact v39.
-- Pure evidence: exact-clean Terra seed 73101852 completed The Wolf-Winter through whole-herd/all-wolves-alive LURE in 30 decisions, ended at the first goal, rated clarity/enjoyment 4/4, replay-yes, and had no rejection, bug, loop, or soft-lock.
-- Economy: one accepted first attempt used 2.260M raw / 107.7k uncached input + 6.2k output at 95.23% cache reuse (113,887 useful, about 3,796/decision); the compiler accepts its full Codex authority chain.
-- Self-critique/follow-through: the player still named Station density and multi-room lure recall, so this is presentation/token efficiency rather than experiential certification; repair Spark 0.146 item-ID admission before spending on a broader cohort.
-- Guard: pre/post crawls `20260731T182704Z` / `20260731T185017Z` have zero findings, two independent reviews are clean, and exact code health passes 450 files/3,750 tests plus all 12 packs before this state-only commit.
-## AFK Cycle 2026-08-02T18-23-00-700Z
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-d6ea0098 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.

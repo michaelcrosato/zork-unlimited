@@ -174,6 +174,7 @@ import {
 import {
   normalizeOpeningPreparationJournalCopies,
   openingPreparationJournalCopyMigrationsForSourceWorldHash,
+  OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES,
 } from "./opening_preparation_copy_migrations.js";
 import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "./frost_jamb_signpost_legacy.js";
 import {
@@ -194,7 +195,10 @@ import {
   proveOpeningReliefOathJournal,
   type OpeningReliefOathJournalProof,
 } from "./opening_relief_oath_journal.js";
-import { RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY } from "./relief_oath_strategy_parity_legacy.js";
+import {
+  AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY,
+  RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY,
+} from "./relief_oath_strategy_parity_legacy.js";
 import {
   openingRegistrationLegacyJournalDraft,
   openingRegistrationLegacySourceWorldHash,
@@ -497,8 +501,11 @@ export const OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH =
 /** Exact manifest before June could be released amicably at the pre-HUNT boundary. */
 export const OVERWORLD_JUNE_HUNT_RELEASE_PREDECESSOR_WORLD_HASH =
   "ef222da19b289d9a32377e9ed2df0c38fa7af37f252fa87a63f3a58cb69ca486";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+/** Exact manifest immediately before Aid-Only named the clean first-cast prerequisite. */
+export const OVERWORLD_AID_ONLY_CLEAN_CAST_PREDECESSOR_WORLD_HASH =
   "271f39351a549c0491c057dc372a80b8ecc899d0b9948d6c90df8ebc0729bd5a";
+export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
+  "33d93edc13833ad2c385a6cd39485546fdb6e38b81851b55e0ab92e256e523bf";
 /** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
 export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
   "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
@@ -534,6 +541,20 @@ const OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_COPY_PREDECESSOR_WORLD_HASHES: Reado
     OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
     OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH,
   ]);
+/**
+ * Existing admitted saves whose Aid-Only journals either carry the immediate
+ * predecessor's clean-cast copy or are first advanced to it by the
+ * strategy-parity normalizer above. This is a copy selector only: the direct
+ * manifest-admission gate remains the single immediate predecessor below.
+ */
+const OVERWORLD_AID_ONLY_CLEAN_CAST_COPY_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> = new Set([
+  OVERWORLD_AID_ONLY_CLEAN_CAST_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_JUNE_HUNT_RELEASE_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH,
+  OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH,
+  ...OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES,
+  ...OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_COPY_PREDECESSOR_WORLD_HASHES,
+]);
 /** Exact supported manifests in which opening preparation was still anchored at Civic. */
 const OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES: ReadonlySet<string> = new Set([
   OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
@@ -566,6 +587,7 @@ const OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES: Re
   ]);
 
 type ExactSnapshotMigrationId =
+  | "aid_only_clean_cast"
   | "campus_archive_contact"
   | "civic_trigger_category"
   | "frost_jamb_signpost"
@@ -583,6 +605,7 @@ type ExactSnapshotMigrationId =
 const EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES: Readonly<
   Record<ExactSnapshotMigrationId, ReadonlySet<string>>
 > = Object.freeze({
+  aid_only_clean_cast: OVERWORLD_AID_ONLY_CLEAN_CAST_COPY_PREDECESSOR_WORLD_HASHES,
   campus_archive_contact: OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES,
   civic_trigger_category: new Set([OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH]),
   frost_jamb_signpost: new Set([
@@ -860,6 +883,93 @@ function normalizeReliefOathStrategyParityPredecessorJournal(args: {
       text: `${entry.text.slice(0, firstMatch)}${aid.preview}${entry.text.slice(
         firstMatch + before.length,
       )}`,
+    });
+  });
+}
+
+/**
+ * The immediately preceding manifest changed only the Aid-Only clean-cast
+ * disclosure. Its oath selection and Rowan's reactive contact are durable
+ * journals, so accept only their exact shipped forms before replaying them
+ * against the current manifest.
+ */
+function normalizeAidOnlyCleanCastPredecessorJournal(args: {
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): OverworldJournalEntry[] {
+  const oath = args.indexes.openingReliefOath;
+  const aid = oath?.options.find((option) => option.id === "albany:oath_limited_aid_only");
+  const rowanJournalId = "talk:albany_city__civic_core__contact@wolf_limited_aid_only_selected";
+  const rowanPresentation = args.indexes.contactPresentationsByJournalId.get(rowanJournalId);
+  if (!oath || !aid || !rowanPresentation) {
+    throw new Error(
+      "Aid-Only clean-cast migration target must retain the Aid-Only term and Rowan's selected contact.",
+    );
+  }
+  const aidSelectionId = openingReliefOathJournalId(oath.id, aid.id);
+  const currentRowanContact = describeOverworldContactAction(
+    rowanPresentation.contact,
+    rowanPresentation.presentationId,
+  );
+  const predecessorRowanContactText = `${rowanPresentation.contact.summary} ${AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.rowanAidOnlySelectedAgenda}`;
+
+  return args.journalEntries.map((entry) => {
+    if (entry.id === aidSelectionId) {
+      if (entry.kind !== "relief_oath") {
+        throw new Error(
+          `Aid-Only clean-cast predecessor entry "${entry.id}" is not an oath selection.`,
+        );
+      }
+      const before = AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.aidOnlyPreview;
+      const firstMatch = entry.text.indexOf(before);
+      if (firstMatch < 0) {
+        // Earlier strategy-parity sources are already advanced to the current
+        // Aid-Only selection receipt immediately before this composition step.
+        // The canonical replay below still rejects anything that is not exact.
+        const currentMatch = entry.text.indexOf(aid.preview);
+        if (
+          currentMatch < 0 ||
+          entry.text.indexOf(aid.preview, currentMatch + aid.preview.length) >= 0
+        ) {
+          throw new Error(
+            `Aid-Only clean-cast predecessor entry "${entry.id}" does not match its exact authored copy.`,
+          );
+        }
+        return entry;
+      }
+      if (entry.text.indexOf(before, firstMatch + before.length) >= 0) {
+        throw new Error(
+          `Aid-Only clean-cast predecessor entry "${entry.id}" does not match its exact authored copy.`,
+        );
+      }
+      return Object.freeze({
+        ...entry,
+        text: `${entry.text.slice(0, firstMatch)}${aid.preview}${entry.text.slice(
+          firstMatch + before.length,
+        )}`,
+      });
+    }
+
+    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
+    const canonicalEntryId =
+      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
+        ? repeatedContact[1]!
+        : entry.id;
+    if (canonicalEntryId !== rowanJournalId) return entry;
+    if (
+      entry.kind !== currentRowanContact.kind ||
+      entry.title !== currentRowanContact.title ||
+      entry.text !== predecessorRowanContactText ||
+      currentRowanContact.id !== canonicalEntryId
+    ) {
+      throw new Error(
+        `Aid-Only clean-cast predecessor contact "${entry.id}" does not match its exact authored copy.`,
+      );
+    }
+    return Object.freeze({
+      ...entry,
+      title: currentRowanContact.title,
+      text: currentRowanContact.text,
     });
   });
 }
@@ -3303,6 +3413,13 @@ export function planOverworldSessionSnapshotRestore(args: {
   const migratesReliefOathStrategyParity =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash === OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH;
+  const migratesAidOnlyCleanCast =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash === OVERWORLD_AID_ONLY_CLEAN_CAST_PREDECESSOR_WORLD_HASH;
+  const normalizesAidOnlyCleanCast =
+    migrationTargetsCurrentManifest &&
+    sourceSnapshot.worldHash !== worldHash &&
+    exactSnapshotMigrationAppliesToSource("aid_only_clean_cast", sourceSnapshot.worldHash);
   const normalizesReliefOathStrategyParity =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
@@ -3406,6 +3523,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     !migratesReliefAllocationTriggerCategory &&
     !migratesCivicTriggerCategory &&
     !migratesReliefOathStrategyParity &&
+    !migratesAidOnlyCleanCast &&
     !migratesOpeningPreparationCopy &&
     !migratesRegistrationPromiseClosure &&
     !migratesJuneReturnCopy &&
@@ -3443,19 +3561,28 @@ export function planOverworldSessionSnapshotRestore(args: {
         }),
       })
     : snapshotWithOpeningPreparationCopy;
+  const snapshotWithAidOnlyCleanCast = normalizesAidOnlyCleanCast
+    ? Object.freeze({
+        ...snapshotWithReliefOathStrategyParity,
+        journalEntries: normalizeAidOnlyCleanCastPredecessorJournal({
+          indexes,
+          journalEntries: snapshotWithReliefOathStrategyParity.journalEntries,
+        }),
+      })
+    : snapshotWithReliefOathStrategyParity;
   const normalizesReliefProtocolTriggerCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
     exactSnapshotMigrationAppliesToSource("relief_protocol_trigger", sourceSnapshot.worldHash);
   const snapshotWithReliefProtocolTriggerCopy = normalizesReliefProtocolTriggerCopy
     ? Object.freeze({
-        ...snapshotWithReliefOathStrategyParity,
+        ...snapshotWithAidOnlyCleanCast,
         journalEntries: normalizeReliefProtocolTriggerCopyPredecessorJournal({
           indexes,
-          journalEntries: snapshotWithReliefOathStrategyParity.journalEntries,
+          journalEntries: snapshotWithAidOnlyCleanCast.journalEntries,
         }),
       })
-    : snapshotWithReliefOathStrategyParity;
+    : snapshotWithAidOnlyCleanCast;
   const normalizesFrostJambCopy =
     migrationTargetsCurrentManifest &&
     sourceSnapshot.worldHash !== worldHash &&
@@ -3581,7 +3708,11 @@ export function planOverworldSessionSnapshotRestore(args: {
           return Object.freeze({ ...snapshotWithCampaignCopy, journalEntries });
         })()
       : snapshotWithCampaignCopy;
-  if (sourceSnapshot.worldHash !== worldHash && !migratesJuneHuntRelease) {
+  if (
+    sourceSnapshot.worldHash !== worldHash &&
+    !migratesJuneHuntRelease &&
+    !migratesAidOnlyCleanCast
+  ) {
     if (indexes.openingAlly === null) {
       throw new Error("June cattle-line copy migration target has no opening ally scene.");
     }
