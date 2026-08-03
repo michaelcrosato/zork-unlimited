@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 725 -->
+<!-- historical_cycle_count: 726 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - station_dispatch_board
+
+- Evidence choice: 17/30 recent reports cited Station density; the exact-build Terra-10 cohort averaged clarity/enjoyment 4.0 and skewed strategy choice, so this change organizes departure information without changing a field decision.
+- Surface/effect: the Station now presents a read-only three-row board—preparation, relief allocation, field-team terms—followed by the existing recap and unchanged launch choices; no mechanics, state, journal, decisions, RNG, saves, hashes, or action ids change.
+- Compact economy: the board projects only its new guidance and support-slot purposes into compact state, cutting payload 1,094→495 bytes (-599) while the cumulative legend remains within its 7,200-byte cap.
+- Pure evidence: exact-clean Terra seed 682735 completed The Wolf-Winter at decisions 29/54, continued then ended, rated clarity/enjoyment 4/4 and replay-yes, with no bug, rejection, loop, soft-lock, or stuck state; post-crawl `20260803T080928Z` covered 6,000 steps, all 247 nodes/344 edges/12 quests.
+- Spark admission: zero-retry five-seat canary verified only 1/5 because four strict-stream wrappers exited 43; valid seed 682740 ended at goal turn 18, rated 4/4, replay-no, and reported no bug, so no Spark scale or guessed rejected-attempt usage.
+- Self-critique/follow-through: both current-build players still cited early terminology/setup density; only two new verified reports exist, below compile threshold, so collect one more clean report before compilation and next target lighter/symmetric briefing rather than reducing depth.
+- Guard: focused cross-surface, malformed-pairing, compact-budget, terminal/UI, MCP pure, and clean-checkout checks pass; exact health is 459 files/3,797 tests plus UI typecheck and all 12 packs.
 
 ### Cycle result - albany_outcome_compass
 
@@ -163,14 +173,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the first attempt used 5.409M raw / 186,876 uncached input + 11,486 output at 96.54% input-cache reuse (198,362 useful, about 3,815/decision), with no retry, fallback, or fanout.
 - Self-critique/follow-through: Station density and quest-local stat continuity repeated; this guard makes future feedback admissible but does not claim experiential certification, while the staged Wolf handoff directly addresses those two presentation costs.
 - Guard: two independent reviews and 127 affected tests are clean; crawls `20260731T205523Z` / `20260731T233054Z` have zero findings, serial health passes 450 files/3,762 tests plus all 12 packs, and the four-subprocess CLI regression keeps every assertion with 120 s of loaded-CI headroom after four false-red timeouts.
-
-### Cycle result - strict_wrapper_rejection_diagnostic
-
-- Evidence choice: Spark 0.146 calibration verified 3/10 slots across 18 attempts; 15 attempts died at the strict wrapper gate with usage unrecoverable, so scaling could neither identify the mismatch nor account for spend honestly.
-- Surface: an already UUID/cwd/file-bound private rejection writes one exclusive ≤4 KiB mode-0600 noncanonical structural record with a closed failure enum and byte/hash plus build/client commitments; raw wrapper, provider output, prose, paths, reasoning, and token data are never retained.
-- Fleet/accounting: strict attempts archive only that validated record plus a fixed safe log, delete raw provider artifacts, and count as launched/unrecoverable with `complete:false` instead of zero or an aggregation crash.
-- Counterfactual: strict acceptance, exit-43 tree kill, canonical evidence, ordinary usage, and all game code, content, actions, mechanics, RNG, saves, hashes, and outcomes are unchanged.
-- Pure evidence: exact-clean Terra seed 73101854 completed The Wolf-Winter through whole-herd/all-wolves-alive LURE at decision 29, continued twice, won The Gallowmere at 53, rated clarity/enjoyment 4/4, replay-yes, and had no rejection, stuck state, loop, or soft-lock.
-- Economy: the first attempt used 5.393M raw / 179,037 uncached input + 12,739 output at 96.67% input-cache reuse (191,776 useful, about 3,619/decision), with no retry, fallback, or fanout.
-- Self-critique/follow-through: compact-state density, surprising local profiles, and one S1 road-event surface remain; these support the staged handoff lane rather than another tooling expansion.
-- Guard: independent least-privilege and implementation reviews are clean; crawls `20260731T210104Z` / `20260731T211549Z` have zero findings, and serial health passes 450 files/3,756 tests plus all 12 packs.
