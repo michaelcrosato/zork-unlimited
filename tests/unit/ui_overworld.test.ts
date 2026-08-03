@@ -1022,10 +1022,10 @@ describe("OverworldSession", () => {
       expect(initiallyReadyMarkup).toContain(
         `aria-describedby="departure-contact-lead-${world.opening_ally!.id.replaceAll(":", "-")}"`,
       );
-      expect(initiallyReadyMarkup).toContain("Optional field team: talk to June Pike");
-      expect(initiallyReadyMarkup).toContain("may start The Wolf-Winter now as a solo rider");
-      expect(initiallyReadyMarkup).toContain("Talk to June Pike about the field team");
-      expect(initiallyReadyMarkup).not.toContain("choose a Station preparation first");
+      expect(initiallyReadyMarkup).toContain("Optional second rider: ask June Pike");
+      expect(initiallyReadyMarkup).toContain("leave for The Wolf-Winter alone now");
+      expect(initiallyReadyMarkup).toContain("Ask June Pike about riding");
+      expect(initiallyReadyMarkup).not.toContain("choose a field kit first");
 
       const recapMarkup = reactDomServer.renderToStaticMarkup(
         react.createElement(module.DepartureRecap, { recap }),
@@ -1061,9 +1061,9 @@ describe("OverworldSession", () => {
         }),
       );
       expect(readyMarkup).toContain('aria-disabled="false"');
-      expect(readyMarkup).toContain("Optional field team: talk to June Pike");
-      expect(readyMarkup).toContain("Talk to June Pike about the field team");
-      expect(readyMarkup).not.toContain("choose a Station preparation first");
+      expect(readyMarkup).toContain("Optional second rider: ask June Pike");
+      expect(readyMarkup).toContain("Ask June Pike about riding");
+      expect(readyMarkup).not.toContain("choose a field kit first");
     } finally {
       await server.close();
     }
@@ -1127,20 +1127,16 @@ describe("OverworldSession", () => {
           }),
         ),
       );
-      expect(markup).toContain(`${board.questTitle} Station dispatch board`);
+      expect(markup).toContain(`${board.questTitle} field briefing`);
       expect(markup).toContain(`${board.questTitle} dispatch recap`);
       for (const support of board.support) {
         expect(markup).toContain(support.label.replaceAll("'", "&#x27;"));
         expect(markup).toContain(support.purpose.replaceAll("'", "&#x27;"));
         expect(markup).toContain(support.detailHint.replaceAll("'", "&#x27;"));
       }
-      expect(markup).toContain(
-        `Inspect ${world.opening_preparation!.title}`.replaceAll("'", "&#x27;"),
-      );
-      expect(markup).toContain(
-        `Inspect ${world.opening_relief_allocation!.title}`.replaceAll("'", "&#x27;"),
-      );
-      expect(markup).toContain("Talk to June Pike about the field team");
+      expect(markup).toContain("Compare field kits");
+      expect(markup).toContain("Compare wagon destinations");
+      expect(markup).toContain("Ask June Pike about riding");
       expect(markup).toContain("Depart now");
       for (const approach of board.launch.approaches) {
         expect(markup).toContain(approach.title);

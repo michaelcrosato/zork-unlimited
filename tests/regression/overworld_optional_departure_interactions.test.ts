@@ -238,7 +238,7 @@ describe("optional Station departure interactions", () => {
         questId: WOLF.id,
         questTitle: WOLF.title,
         status: "ready",
-        guidance: `Optional field team: talk to ${june.name} to review the terms. You may start ${WOLF.title} now as a solo rider without this choice.`,
+        guidance: `Optional second rider: ask ${june.name} about cattle-first authority, or leave for ${WOLF.title} alone now.`,
         action: {
           tool: "talk_overworld_session_contact",
           characterId: june.id,

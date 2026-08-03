@@ -196,9 +196,9 @@ function stationDispatchStatus(support: StationDispatchBoardView["support"][numb
     case "open_optional":
       return "Open (optional)";
     case "available_after_preparation":
-      return "Available after preparation";
+      return "Choose a field kit first";
     case "solo_default":
-      return "Solo departure";
+      return "Leave alone now";
     case "legacy":
       return "Legacy choice preserved";
     case "selected":
@@ -210,7 +210,7 @@ function stationDispatchStatus(support: StationDispatchBoardView["support"][numb
 export function renderStationDispatchBoard(view: OverworldView): string[] {
   const board = view.stationDispatchBoard;
   if (!board) return [];
-  const lines = [`${board.questTitle} Station dispatch board:`, `  ${board.guidance}`];
+  const lines = [`${board.questTitle} field briefing:`, `  ${board.guidance}`];
   const mappedInteractionIds = new Set<string>();
   const mappedContactLeadIds = new Set<string>();
   for (const support of board.support) {
@@ -223,7 +223,9 @@ export function renderStationDispatchBoard(view: OverworldView): string[] {
       );
       if (interaction) {
         mappedInteractionIds.add(interaction.id);
-        lines.push(`    Inspect: \`inspect ${interaction.id}\``);
+        const label =
+          support.slot === "preparation" ? "Compare field kits" : "Compare wagon destinations";
+        lines.push(`    ${label}: \`inspect ${interaction.id}\``);
       }
       continue;
     }

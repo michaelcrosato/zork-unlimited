@@ -181,8 +181,8 @@ export function DepartureContactLead({
         type="button"
       >
         {ready
-          ? `Talk to ${lead.contactName} about the field team`
-          : `Talk to ${lead.contactName} after choosing preparation`}
+          ? `Ask ${lead.contactName} about riding`
+          : `Choose a field kit before asking ${lead.contactName}`}
       </button>
     </div>
   );
@@ -339,9 +339,9 @@ function stationDispatchStatus(
     case "open_optional":
       return "Open (optional)";
     case "available_after_preparation":
-      return "Available after preparation";
+      return "Choose a field kit first";
     case "solo_default":
-      return "Solo departure";
+      return "Leave alone now";
     case "legacy":
       return "Legacy choice preserved";
     case "selected":
@@ -397,9 +397,9 @@ export function StationDispatchBoard({
   return (
     <section
       className="station-dispatch-board"
-      aria-label={`${board.questTitle} Station dispatch board`}
+      aria-label={`${board.questTitle} field briefing`}
     >
-      <h3>{board.questTitle} Station dispatch board</h3>
+      <h3>{board.questTitle} field briefing</h3>
       <p>{board.guidance}</p>
       <div className="station-dispatch-support">
         {board.support.map((support) => {
@@ -421,7 +421,9 @@ export function StationDispatchBoard({
                   type="button"
                   onClick={() => onInspect(interaction.id)}
                 >
-                  Inspect {interaction.title}
+                  {support.slot === "preparation"
+                    ? "Compare field kits"
+                    : "Compare wagon destinations"}
                 </button>
               )}
               {supportFieldLead && (

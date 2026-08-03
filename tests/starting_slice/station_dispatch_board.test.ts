@@ -47,7 +47,7 @@ describe("Station dispatch board", () => {
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
-        "Preparation, relief allocation, and field-team terms are independent and optional. Launch choices remain in the Station launch list; inspect only the support you want before departure.",
+        "A wolf pack is pressing Cade's byre. You can leave now. Field kit, relief wagon, and a second rider are separate and optional; your answer to the pack waits for Cade.",
     });
     expect(board.support.map((entry) => [entry.slot, entry.status, entry.selectedTitle])).toEqual(
       view.departureRecap.entries
@@ -55,19 +55,19 @@ describe("Station dispatch board", () => {
         .map((entry) => [entry.slot, entry.status, entry.title]),
     );
     expect(board.support.map((entry) => entry.label)).toEqual([
-      "Preparation",
-      "Relief allocation",
-      "June Pike field team",
+      "One field kit",
+      "Albany's last relief wagon",
+      "June Pike, second rider",
     ]);
     expect(board.support.map((entry) => entry.purpose)).toEqual([
-      "Choose one specialist packet; each changes one named Wolf-Winter field line.",
-      "Place one relief wagon; each option protects one named crisis line and leaves the others exposed.",
-      "Set field-team crisis authority or go solo; this never adds combat power.",
+      "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
+      "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
+      "Second rider: optionally ask about cattle-first authority, or ride alone.",
     ]);
     expect(board.support.map((entry) => entry.detailHint)).toEqual([
-      "Inspect to compare its exact cost and field trigger.",
-      "Inspect to compare exact timing and protected/exposed lines.",
-      "Talk with the field lead to review exact time and terms.",
+      "Compare kits only if you want their exact cost and field use.",
+      "Compare destinations only if you want to decide who is protected.",
+      "Talk only to compare exact terms; this adds no combat power.",
     ]);
     const quest = view.quests.find((candidate) => candidate.id === WOLF.id);
     if (!quest?.launch) throw new Error("Expected the projected Wolf launch card.");
@@ -91,6 +91,7 @@ describe("Station dispatch board", () => {
     expect(cloneOverworldCompactView(compact).station_dispatch_board).toEqual(
       compact.station_dispatch_board,
     );
+    expect(JSON.stringify(compact.station_dispatch_board).length).toBeLessThanOrEqual(520);
 
     expect(session.snapshot()).toEqual(before);
     expect(session.snapshotHash()).toBe(beforeHash);
@@ -149,6 +150,12 @@ describe("Station dispatch board", () => {
       departureContactLeads: view.departureContactLeads,
     });
     expect(waiting?.launch.approaches.every((approach) => !approach.availableNow)).toBe(true);
+    expect(waiting?.guidance).toBe(
+      "A wolf pack is pressing Cade's byre. No departure road is open yet. Field kit, relief wagon, and a second rider remain separate and optional; your answer to the pack waits for Cade.",
+    );
+    expect(waiting?.guidance).not.toContain("You can leave now");
+    expect(fieldLead).toMatchObject({ status: "ready" });
+    expect(fieldLead.guidance).not.toContain("choose a field kit first");
 
     const visible = JSON.stringify(view.stationDispatchBoard);
     for (const alternative of [

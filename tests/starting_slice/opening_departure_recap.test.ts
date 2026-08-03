@@ -237,7 +237,7 @@ describe("Albany opening departure recap", () => {
     expect(gatedWolfRef?.[3]?.[2].every((option) => typeof option[12] === "string")).toBe(true);
     const gatedTerminal = render(gatedView);
     expect(gatedTerminal).not.toContain("Depart now:");
-    expect(gatedTerminal.indexOf(`${WOLF.title} Station dispatch board:`)).toBeLessThan(
+    expect(gatedTerminal.indexOf(`${WOLF.title} field briefing:`)).toBeLessThan(
       gatedTerminal.indexOf("Notice board:"),
     );
 
@@ -311,7 +311,7 @@ describe("Albany opening departure recap", () => {
       WOLF.launch!.options.map((option) => option.id),
     );
     const renderedBoard = renderStationDispatchBoard(session.view()).join("\n");
-    expect(renderedBoard).toContain(`${WOLF.title} Station dispatch board:`);
+    expect(renderedBoard).toContain(`${WOLF.title} field briefing:`);
     expect(renderedBoard).toContain(board.guidance);
     for (const support of board.support) {
       expect(renderedBoard).toContain(`${support.label} —`);
@@ -321,7 +321,7 @@ describe("Albany opening departure recap", () => {
     expect(renderedBoard).toContain(`inspect ${PREPARATION.id}`);
     expect(renderedBoard).toContain(`inspect ${RELIEF_ALLOCATION.id}`);
     expect(renderedBoard).toContain("Command: talk June Pike");
-    expect(terminal).toContain(`${WOLF.title} Station dispatch board:`);
+    expect(terminal).toContain(`${WOLF.title} field briefing:`);
     expect(terminal).toContain(`${WOLF.title} dispatch recap:`);
     expect(terminal).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
     expect(terminal).toContain("Plan slots and exact selected terms: `review dispatch`.");
@@ -334,14 +334,14 @@ describe("Albany opening departure recap", () => {
     expect(reviewedTerms).toContain(`Active term: ${evidenceFieldTerm}`);
     expect(reviewedTerms).toContain("Preparation: Open (optional)");
     expect(reviewedTerms).not.toContain(PREPARATION.profiles[0]!.tradeoff);
-    expect(terminal.indexOf(`${WOLF.title} Station dispatch board:`)).toBeLessThan(
+    expect(terminal.indexOf(`${WOLF.title} field briefing:`)).toBeLessThan(
       terminal.indexOf(`${WOLF.title} dispatch recap:`),
     );
     expect(terminal.indexOf(`${WOLF.title} dispatch recap:`)).toBeLessThan(
       terminal.indexOf("Depart now:"),
     );
     expect(terminal.indexOf("Take the Exposed Ridge Road")).toBeGreaterThan(
-      terminal.indexOf(`${WOLF.title} Station dispatch board:`),
+      terminal.indexOf(`${WOLF.title} field briefing:`),
     );
     const promotedLaunch = terminal.slice(terminal.indexOf("Depart now:"));
     expect(promotedLaunch).not.toContain("choose <number|name>");
