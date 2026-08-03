@@ -115,8 +115,8 @@ export function overworldDepartureContactLead(args: {
 }): OverworldDepartureContactLead {
   const guidance =
     args.status === "ready"
-      ? `Optional field team: talk to ${args.contactName} to review the terms. You may start ${args.questTitle} now as a solo rider without this choice.`
-      : `Optional field team: choose a Station preparation first, then talk to ${args.contactName} to review the terms. You may start ${args.questTitle} now as a solo rider without this choice.`;
+      ? `Optional second rider: ask ${args.contactName} about cattle-first authority, or leave for ${args.questTitle} alone now.`
+      : `Optional second rider: choose a field kit first, then ask ${args.contactName} about cattle-first authority. You may leave for ${args.questTitle} alone now.`;
   const base: OverworldDepartureContactLeadBase = Object.freeze({
     id: args.id,
     kind: "ally",

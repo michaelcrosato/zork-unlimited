@@ -2257,7 +2257,7 @@ describe("MCP pure play mode", () => {
             "June Pike",
             "wolf_winter",
             "The Wolf-Winter",
-            expect.stringMatching(/talk to June Pike.*solo rider/i),
+            expect.stringMatching(/ask June Pike.*leave.*alone now/i),
           ],
         ]);
         expect((stationed.context as CompactAreaContext).quest_starts).toContainEqual([
@@ -2386,7 +2386,7 @@ describe("MCP pure play mode", () => {
           "June Pike",
           "wolf_winter",
           "The Wolf-Winter",
-          expect.stringMatching(/talk to June Pike.*solo rider/i),
+          expect.stringMatching(/ask June Pike.*leave.*alone now/i),
         ]);
         if (!readyDepartureLead) throw new Error("expected June's ready departure contact lead");
         const juneContactId = readyDepartureLead[4];

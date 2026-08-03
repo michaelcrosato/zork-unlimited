@@ -15,8 +15,10 @@ export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
 const SUPPORT_SLOTS = ["preparation", "relief_allocation", "field_team"] as const;
 type StationDispatchSupportSlot = (typeof SUPPORT_SLOTS)[number];
 
-const GUIDANCE =
-  "Preparation, relief allocation, and field-team terms are independent and optional. Launch choices remain in the Station launch list; inspect only the support you want before departure.";
+const READY_GUIDANCE =
+  "A wolf pack is pressing Cade's byre. You can leave now. Field kit, relief wagon, and a second rider are separate and optional; your answer to the pack waits for Cade.";
+const WAITING_GUIDANCE =
+  "A wolf pack is pressing Cade's byre. No departure road is open yet. Field kit, relief wagon, and a second rider remain separate and optional; your answer to the pack waits for Cade.";
 
 const SUPPORT_COPY: Readonly<
   Record<
@@ -25,20 +27,21 @@ const SUPPORT_COPY: Readonly<
   >
 > = Object.freeze({
   preparation: {
-    label: "Preparation",
-    purpose: "Choose one specialist packet; each changes one named Wolf-Winter field line.",
-    detailHint: "Inspect to compare its exact cost and field trigger.",
+    label: "One field kit",
+    purpose:
+      "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
+    detailHint: "Compare kits only if you want their exact cost and field use.",
   },
   relief_allocation: {
-    label: "Relief allocation",
+    label: "Albany's last relief wagon",
     purpose:
-      "Place one relief wagon; each option protects one named crisis line and leaves the others exposed.",
-    detailHint: "Inspect to compare exact timing and protected/exposed lines.",
+      "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
+    detailHint: "Compare destinations only if you want to decide who is protected.",
   },
   field_team: {
-    label: "Field team",
-    purpose: "Set field-team crisis authority or go solo; this never adds combat power.",
-    detailHint: "Talk with the field lead to review exact time and terms.",
+    label: "Second rider",
+    purpose: "Second rider: optionally ask about cattle-first authority, or ride alone.",
+    detailHint: "Talk only to compare exact terms; this adds no combat power.",
   },
 });
 
@@ -104,7 +107,7 @@ function supportEntry(
     slot,
     label:
       slot === "field_team" && fieldTeamContactName
-        ? `${fieldTeamContactName} field team`
+        ? `${fieldTeamContactName}, second rider`
         : copy.label,
     status: entry.status,
     selectedTitle: entry.title,
@@ -151,7 +154,11 @@ export function deriveStationDispatchBoard(args: {
     version: STATION_DISPATCH_BOARD_VERSION,
     questId: recap.questId,
     questTitle: recap.questTitle,
-    guidance: bounded(GUIDANCE, "guidance", STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT),
+    guidance: bounded(
+      legalApproachIds.size > 0 ? READY_GUIDANCE : WAITING_GUIDANCE,
+      "guidance",
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    ),
     support: Object.freeze(selectedSupport),
     launch: Object.freeze({
       id: quest.launch.id,
