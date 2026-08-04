@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 730 -->
+<!-- historical_cycle_count: 731 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - symmetric_wolf_strategy_framing
+
+- Evidence choice: the exact Terra-10 cohort chose LURE 10/10 although counterfactual tests prove all four plans viable; Cade and June uniquely called LURE/DRIVE/FORTIFY “living” and framed LURE as saving pack/herd while HUNT foregrounded death.
+- Surface/effect: exact-source presentation overlays now compare HUNT, LURE, DRIVE, and FORTIFY by symmetric outcome/cost at Cade and June; the same projected prompts drive legal-action rendering and parser fallback on every client.
+- Truthfulness/compact: HUNT promises prepared combat but no safety, June's keep/release pair grants no invented bonus, the 1,098-character scorecard and every choice label fit their compact limits, and mechanics/state/RNG/saves/world/content hashes are unchanged.
+- Pure evidence: exact-clean Terra seed 80417000 on `db0bd03d` verified first attempt, finished The Wolf-Winter by LURE at decision 28, continued through checkpoint 41, won The Gallowmere and ended at 53, rated clarity/enjoyment 4/4, replay-yes, with no bug or stuck state.
+- Economy: the canary used 4.041M raw / 147,048 uncached input + 10,847 output (157,895 useful) with 96.36% cache reuse and no retry, fallback, or failed slot.
+- Self-critique/follow-through: the player described a meaningful people/animals/infrastructure tradeoff but still chose LURE; one canary cannot prove diversity, is below the compile threshold, and still names Station density plus NPC/stat continuity as S1, so no premature cohort claim or fleet ran.
+- Guard: independent review closed a false June-support claim and the last “living commitments” label; crawls `20260804T201137Z` / `20260804T204002Z` are green, and canonical health passes 459 files/3,906 tests, UI typecheck, and all 12 packs.
 
 ### Cycle result - strict_commentary_provenance
 
@@ -158,14 +168,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the first attempt used 4.104M raw / 149,190 uncached input + 9,858 output at 96.36% input-cache reuse (159,048 useful); no retry, fallback, cohort, or fanout ran.
 - Self-critique/follow-through: the public report cannot prove comparison uptake and this player still chose the standard packet and named compact-state density; one canary validates the build, not strategy diversity, while a fresh S1 submenu reset and repeated stale LURE narration supply the next gameplay candidates.
 - Guard: two independent reviews, 36 focused tests, UI visual/expanded-control smoke, crawls `20260801T101605Z` / `20260801T102707Z`, and exact-tree health (450 files/3,764 tests plus all 12 packs) are clean.
-
-### Cycle result - raw_wrapper_input_boundary
-
-- Evidence choice: exact-build diagnostics had nine varied strict rejections (Spark eight, Terra one; 176–287 bytes), while the canonical 96-byte source passed the real parser, so neither one corrupt runner serialization nor a parser relaxation was supported.
-- Surface/effect: the prompt now says its Markdown fence/language tag are display-only, bounds the raw two-line input by first/last characters, forbids fence/prose/literal wrapper-name calls, and removes the forbidden direct-quest tool identifier; strict-v2, stream supervision, flags, and fail-closed behavior are unchanged.
-- Measured effect: the instruction costs 227 UTF-8 bytes (about 57 input tokens) per run; regressions prove the displayed source still parses, fenced input fails closed, and neither pure prompt contract exposes the forbidden tool.
-- Counterfactual: game content, actions, choices, mechanics, RNG, state, saves, hashes, outcomes, model/client authority, result binding, historical evidence, and ordinary MCP responses are unchanged.
-- Pure evidence: exact-clean Terra seed 7314060 completed The Wolf-Winter through LURE and The Gallowmere in 53 decisions, continued twice, rated clarity/enjoyment 4/4 and replay-yes, and reported no rejection, bug, loop, stuck state, or soft-lock.
-- Economy: that one first-attempt canary used 4.557M raw / 150,858 uncached input + 12,343 output at 96.69% input-cache reuse (163,201 useful); no retry, fallback, pilot, or fanout ran.
-- Self-critique/follow-through: one Terra success validates this build, not a transport rate; it again chose LURE and named dense Albany setup plus hidden duty alternatives S1, so save the next cohort for a gameplay increment rather than spending it on this prompt alone.
-- Guard: independent diagnosis/final review, 149 focused tests, crawls `20260801T090021Z` / `20260801T090319Z`, and exact-tree health (450 files/3,764 tests plus all 12 packs) are clean.
