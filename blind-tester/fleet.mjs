@@ -32,7 +32,12 @@ import { clearTimeout, setTimeout } from "node:timers";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { codexClientAuthorityRecord, validateOutputPrefix } from "./codex-rollout.mjs";
-import { CODEX_GAMEPLAY_WRAPPER_FAILURES } from "./codex-pure-envelope.mjs";
+import {
+  CODEX_GAMEPLAY_WRAPPER_FAILURES,
+  CODEX_SPARK_DIRECT_MCP_CONTRACT,
+  CODEX_STRICT_CURRENT_CONTRACT,
+  CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES,
+} from "./codex-pure-envelope.mjs";
 import {
   acquireFleetCohortLease,
   assertFleetCohortOverlapAllowed,
@@ -49,6 +54,7 @@ import {
   skippedResumeUsageRecord,
   summarizeFleetUsage,
   usageRecordFromFailedAttempt,
+  usageRecordFromStrictStreamDiagnostic,
   usageRecordFromVerifiedPrimaryEnvelope,
 } from "./fleet-usage.mjs";
 import { parseJsonRejectingDuplicateKeys } from "./strict-json.mjs";
@@ -69,11 +75,29 @@ export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
 export const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
 export const HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
 export const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
-export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
+export const HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 8;
 export const PURE_FLEET_SUMMARY_SCHEMA_VERSION = 8;
 export const CODEX_CLIENT_AUTHORITY_PROOF_NAME = "codex-client-authority.private.json";
 export const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1";
 export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v2";
+export const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1";
+export const SPARK_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0";
+const SPARK_ADMISSION_CANARY_COUNT = 3;
+const SPARK_ADMISSION_CANARY_MODEL = "gpt-5.3-codex-spark";
+// These tracked inputs are shared by every live player transport. Prompt and
+// model-catalog inputs are selected below because they are model-specific. Their
+// bytes never leave this process: summaries retain only one digest of each
+// named semantic role.
+const FLEET_COMMON_TRANSPORT_COMPONENTS = Object.freeze({
+  prompt_filler: "fill-prompt.mjs",
+  runner: "run.sh",
+  strict_stream_guard: "codex-strict-stream.mjs",
+  envelope_audit: "codex-pure-envelope.mjs",
+  rollout_capture: "codex-rollout.mjs",
+  process_anchor: "codex-process-anchor.mjs",
+});
+export const SPARK_ADMISSION_RECEIPT_SCHEMA_VERSION = 2;
 export const CERTIFIED_CODEX_MODELS = [
   "gpt-5.6-sol",
   "gpt-5.6-terra",
@@ -95,6 +119,8 @@ Options:
   --max-retries <n>                   Retries per player (default: 2)
   --no-resume                         Do not reuse verified reports
   --out <directory>                   Report output directory
+  --admission-canary                  Run the isolated three-player Spark transport gate
+  --admission-receipt <file>          Passed exact-build gate for a Spark fleet larger than three
   --allow-duplicate-cohort <sha256>   Acknowledge one exact persisted overlap
   -h, --help                          Show this help without starting a fleet
 
@@ -160,6 +186,22 @@ export function validateFleetReportsDirectory(reportsDir, codexHome) {
   return validateOutputPrefix(codexHome, reportsDir, GAME_DIR);
 }
 
+function sameOrNestedPath(candidate, boundary) {
+  const offset = relative(resolve(boundary), resolve(candidate));
+  return (
+    offset === "" || (!isAbsolute(offset) && offset !== ".." && !offset.startsWith(`..${sep}`))
+  );
+}
+
+export function validateAdmissionReportsSeparation(reportsDir, fleetDir) {
+  if (sameOrNestedPath(reportsDir, fleetDir) || sameOrNestedPath(fleetDir, reportsDir)) {
+    throw new Error(
+      "fleet: --admission-canary --out must be separate from and outside its ai-runs/fleet/<label> bundle",
+    );
+  }
+  return reportsDir;
+}
+
 export function normalizeShellPathForNode(path, platform = process.platform) {
   if (platform !== "win32") return path;
   const match = path.match(/^\/(?:(?:mnt|cygdrive)\/)?([A-Za-z])(?:\/(.*))?$/u);
@@ -205,6 +247,7 @@ export function normalizeShellHomeForNode(path, platform = process.platform, tra
  * callers (main()) catch it, print the message, and exit 2 before spawning
  * anything. Valid-input shape is unchanged/backward-compatible. */
 export function parseFleetArgs(argv) {
+  const supplied = new Set();
   const opts = {
     count: 100,
     concurrency: 4,
@@ -218,32 +261,40 @@ export function parseFleetArgs(argv) {
     maxRetries: 2,
     resume: true,
     out: null,
+    admissionCanary: false,
+    admissionReceipt: null,
     allowDuplicateCohort: null,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     switch (a) {
       case "--count":
+        supplied.add("count");
         opts.count = Number(requiredFleetArgValue(argv, i, a));
         i++;
         break;
       case "--concurrency":
+        supplied.add("concurrency");
         opts.concurrency = Number(requiredFleetArgValue(argv, i, a));
         i++;
         break;
       case "--model":
+        supplied.add("model");
         opts.model = requiredFleetArgValue(argv, i, a);
         i++;
         break;
       case "--provider":
+        supplied.add("provider");
         opts.provider = requiredFleetArgValue(argv, i, a);
         i++;
         break;
       case "--personas":
+        supplied.add("personas");
         opts.personas = requiredFleetArgValue(argv, i, a);
         i++;
         break;
       case "--target":
+        supplied.add("target");
         opts.target = requiredFleetArgValue(argv, i, a);
         i++;
         break;
@@ -252,21 +303,36 @@ export function parseFleetArgs(argv) {
         i++;
         break;
       case "--mock":
+        supplied.add("mock");
         opts.mock = true;
         break;
       case "--label":
+        supplied.add("label");
         opts.label = requiredFleetArgValue(argv, i, a);
         i++;
         break;
       case "--max-retries":
+        supplied.add("max-retries");
         opts.maxRetries = Number(requiredFleetArgValue(argv, i, a));
         i++;
         break;
       case "--no-resume":
+        supplied.add("no-resume");
         opts.resume = false;
         break;
       case "--out":
+        supplied.add("out");
         opts.out = requiredFleetArgValue(argv, i, a);
+        i++;
+        break;
+      case "--admission-canary":
+        opts.admissionCanary = true;
+        break;
+      case "--admission-receipt":
+        if (opts.admissionReceipt !== null) {
+          throw new Error("fleet: --admission-receipt may be supplied only once");
+        }
+        opts.admissionReceipt = requiredFleetArgValue(argv, i, a);
         i++;
         break;
       case "--allow-duplicate-cohort":
@@ -278,6 +344,36 @@ export function parseFleetArgs(argv) {
         break;
       default:
         throw new Error(`fleet: unknown argument ${JSON.stringify(a)}; run with --help`);
+    }
+  }
+  if (opts.admissionCanary) {
+    const fixed = [
+      ["count", SPARK_ADMISSION_CANARY_COUNT, "--count"],
+      ["concurrency", 1, "--concurrency"],
+      ["max-retries", 0, "--max-retries"],
+      ["model", SPARK_ADMISSION_CANARY_MODEL, "--model"],
+      ["target", "overworld", "--target"],
+      ["personas", "default", "--personas"],
+    ];
+    for (const [key, value, flag] of fixed) {
+      const property = key === "max-retries" ? "maxRetries" : key === "target" ? "target" : key;
+      if (supplied.has(key) && opts[property] !== value) {
+        throw new Error(`fleet: --admission-canary requires ${flag} ${value}`);
+      }
+      opts[property] = value;
+    }
+    if (opts.mock) throw new Error("fleet: --admission-canary is live Spark-only, never --mock");
+    if (opts.resume) opts.resume = false;
+    if (opts.label === null || opts.out === null) {
+      throw new Error("fleet: --admission-canary requires separate --label and --out values");
+    }
+    if (opts.allowDuplicateCohort !== null) {
+      throw new Error("fleet: --admission-canary cannot reuse or overlap a persisted cohort");
+    }
+    if (opts.admissionReceipt !== null) {
+      throw new Error(
+        "fleet: --admission-canary creates admission.json and cannot consume --admission-receipt",
+      );
     }
   }
   assertFleetInt(opts.count, "count", 1);
@@ -294,6 +390,16 @@ export function parseFleetArgs(argv) {
     throw new Error("fleet: --provider must be exactly codex");
   }
   if (opts.model === null) opts.model = "gpt-5.3-codex-spark";
+  if (
+    opts.admissionReceipt !== null &&
+    (opts.mock ||
+      opts.model !== SPARK_ADMISSION_CANARY_MODEL ||
+      opts.count <= SPARK_ADMISSION_CANARY_COUNT)
+  ) {
+    throw new Error(
+      `fleet: --admission-receipt applies only to a live ${SPARK_ADMISSION_CANARY_MODEL} fleet with --count greater than ${SPARK_ADMISSION_CANARY_COUNT}`,
+    );
+  }
   if (opts.label !== null) validateFleetLabel(opts.label);
   if (
     opts.allowDuplicateCohort !== null &&
@@ -304,6 +410,397 @@ export function parseFleetArgs(argv) {
   }
   assertFleetTargetPolicy(opts);
   return opts;
+}
+
+function componentSha256(component) {
+  return createHash("sha256")
+    .update(readFileSync(join(HERE, component)))
+    .digest("hex");
+}
+
+export function fleetTransportProfile(model) {
+  if (model === SPARK_ADMISSION_CANARY_MODEL) {
+    return {
+      transportContract: SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+      componentPaths: {
+        ...FLEET_COMMON_TRANSPORT_COMPONENTS,
+        prompt_template: "prompt-overworld-spark.md",
+        player_catalog: "codex-model-catalog-spark-v1.json",
+        transport_fragment: "prompt-transports/spark-direct-mcp-v1.md",
+      },
+    };
+  }
+  if (["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"].includes(model)) {
+    return {
+      transportContract: PURE_FLEET_CODE_MODE_CONTRACT,
+      componentPaths: {
+        ...FLEET_COMMON_TRANSPORT_COMPONENTS,
+        prompt_template: "prompt-overworld.md",
+        transport_fragment: "prompt-transports/strict-code-mode-v2.md",
+      },
+    };
+  }
+  throw new Error(`fleet: no certified transport profile for model ${String(model)}`);
+}
+
+/** A stable, non-secret profile key for transport-gate failures. It intentionally
+ * excludes seed, labels, destination paths, rendered prompt values, and raw
+ * component bytes so one broken transport is recognizable without publishing
+ * player content or filesystem details. */
+export function createFleetTransportFingerprint({ provider, model, componentHashes } = {}) {
+  const profile = fleetTransportProfile(model);
+  const componentPaths = profile.componentPaths;
+  const components =
+    componentHashes ??
+    Object.fromEntries(
+      Object.entries(componentPaths).map(([role, component]) => [role, componentSha256(component)]),
+    );
+  const expectedRoles = Object.keys(componentPaths).sort();
+  if (
+    provider !== "codex" ||
+    typeof model !== "string" ||
+    !isDeepStrictEqual(Object.keys(components).sort(), expectedRoles) ||
+    !Object.values(components).every(
+      (digest) => typeof digest === "string" && /^[0-9a-f]{64}$/.test(digest),
+    )
+  ) {
+    throw new Error(
+      "fleet: transport fingerprint requires one exact Codex model and component digest set",
+    );
+  }
+  const canonicalComponents = Object.fromEntries(
+    expectedRoles.map((role) => [role, components[role]]),
+  );
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        // This opaque diagnostic/admission fingerprint deliberately remains
+        // outside fleet-cohort identities and immutable intent records. A
+        // transport-input correction must not reinterpret already-closed
+        // cohorts or change their duplicate-detection semantics.
+        schema_version: 1,
+        provider,
+        model,
+        transport_contract: profile.transportContract,
+        components: canonicalComponents,
+      }),
+    )
+    .digest("hex");
+}
+
+const SPARK_ADMISSION_CONFIGURATION = Object.freeze({
+  admission_count: SPARK_ADMISSION_CANARY_COUNT,
+  concurrency: 1,
+  evidence_schema_version: PURE_FLEET_EVIDENCE_SCHEMA_VERSION,
+  max_retries: 0,
+  model_attestation_schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  personas: "default",
+  play_mode: "pure",
+  provider: "codex",
+  reasoning_effort: "xhigh",
+  report_schema_version: 2,
+  resume_enabled: false,
+  session_contract_version: PURE_SESSION_CONTRACT_VERSION,
+  start_surface: "fresh_overworld",
+  target: "overworld",
+  transport_contract: SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+});
+const SPARK_ADMISSION_RECEIPT_MAX_BYTES = 32 * 1024;
+
+function exactSparkAdmissionConfiguration() {
+  return { ...SPARK_ADMISSION_CONFIGURATION };
+}
+
+export function createPureFleetBuildFingerprint(build) {
+  if (!isExactPureFleetBuild(build)) {
+    throw new Error("fleet: build fingerprint requires one exact clean pure-fleet build");
+  }
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        schema_version: 1,
+        build: {
+          git_commit: build.git_commit,
+          tracked_worktree_clean: build.tracked_worktree_clean,
+          world_hash: build.world_hash,
+          world_id: build.world_id,
+        },
+      }),
+      "utf8",
+    )
+    .digest("hex");
+}
+
+export function sparkMassAdmissionRequired(opts) {
+  return (
+    opts?.mock !== true &&
+    opts?.admissionCanary !== true &&
+    opts?.model === SPARK_ADMISSION_CANARY_MODEL &&
+    Number.isSafeInteger(opts?.count) &&
+    opts.count > SPARK_ADMISSION_CANARY_COUNT
+  );
+}
+
+/** Keep parser-only planning helpers backwards compatible while making the
+ * executable launch boundary reject a large Spark plan before preflight or any
+ * model process can start. */
+export function assertSparkMassAdmissionConfigured(opts) {
+  if (sparkMassAdmissionRequired(opts) && !opts?.admissionReceipt) {
+    throw new Error(
+      `fleet: a live ${SPARK_ADMISSION_CANARY_MODEL} fleet larger than ${SPARK_ADMISSION_CANARY_COUNT} requires --admission-receipt <passed-admission.json>`,
+    );
+  }
+  return opts;
+}
+
+function assertAdmissionCounts(counts) {
+  const values = [counts?.verified, counts?.["skipped-resume"], counts?.failed, counts?.suppressed];
+  if (
+    !values.every((value) => Number.isSafeInteger(value) && value >= 0) ||
+    values.reduce((total, value) => total + value, 0) !== SPARK_ADMISSION_CANARY_COUNT
+  ) {
+    throw new Error("fleet: Spark admission receipt requires exactly three closed canary slots");
+  }
+}
+
+export function createSparkAdmissionReceipt({
+  counts,
+  build,
+  transportFingerprint,
+  client,
+  strictRejectedTransportFingerprints = [],
+} = {}) {
+  assertAdmissionCounts(counts);
+  if (!isExactCodexClientAuthority(client)) {
+    throw new Error("fleet: Spark admission receipt requires exact Codex client authority");
+  }
+  if (!/^[0-9a-f]{64}$/u.test(transportFingerprint ?? "")) {
+    throw new Error("fleet: Spark admission receipt requires one transport fingerprint");
+  }
+  const rejectionFingerprints = [...strictRejectedTransportFingerprints];
+  if (
+    !rejectionFingerprints.every(
+      (fingerprint) => typeof fingerprint === "string" && /^[0-9a-f]{64}$/u.test(fingerprint),
+    ) ||
+    new Set(rejectionFingerprints).size !== rejectionFingerprints.length
+  ) {
+    throw new Error("fleet: Spark admission receipt rejection fingerprints are invalid");
+  }
+  rejectionFingerprints.sort();
+  const passed =
+    counts.verified === SPARK_ADMISSION_CANARY_COUNT &&
+    counts["skipped-resume"] === 0 &&
+    counts.failed === 0 &&
+    counts.suppressed === 0 &&
+    rejectionFingerprints.length === 0;
+  return {
+    schema_version: SPARK_ADMISSION_RECEIPT_SCHEMA_VERSION,
+    purpose: "spark_admission_canary",
+    certification_eligible: false,
+    passed,
+    required_verified: SPARK_ADMISSION_CANARY_COUNT,
+    verified: counts.verified,
+    skipped_resume: counts["skipped-resume"],
+    failed: counts.failed,
+    suppressed: counts.suppressed,
+    model: SPARK_ADMISSION_CANARY_MODEL,
+    configuration: exactSparkAdmissionConfiguration(),
+    build: {
+      git_commit: build?.git_commit,
+      tracked_worktree_clean: build?.tracked_worktree_clean,
+      world_hash: build?.world_hash,
+      world_id: build?.world_id,
+    },
+    build_fingerprint: createPureFleetBuildFingerprint(build),
+    transport_fingerprint: transportFingerprint,
+    codex_cli_version: client.cli_version,
+    codex_client_authority_sha256: client.authority_sha256,
+    strict_stream_rejection_fingerprints: rejectionFingerprints,
+  };
+}
+
+const SPARK_ADMISSION_RECEIPT_KEYS = [
+  "build",
+  "build_fingerprint",
+  "certification_eligible",
+  "codex_cli_version",
+  "codex_client_authority_sha256",
+  "configuration",
+  "failed",
+  "model",
+  "passed",
+  "purpose",
+  "required_verified",
+  "schema_version",
+  "skipped_resume",
+  "strict_stream_rejection_fingerprints",
+  "suppressed",
+  "transport_fingerprint",
+  "verified",
+];
+
+/** Return a precise mismatch instead of treating a self-asserted `passed` bit
+ * as authority. Every redundant field is recomputed and rebound to the exact
+ * launch preflight. */
+export function sparkAdmissionReceiptMismatch(
+  receipt,
+  { build, transportFingerprint, client, model } = {},
+) {
+  if (
+    !isExactPureFleetBuild(build) ||
+    !isExactCodexClientAuthority(client) ||
+    model !== SPARK_ADMISSION_CANARY_MODEL ||
+    !/^[0-9a-f]{64}$/u.test(transportFingerprint ?? "")
+  ) {
+    return "Spark admission comparison requires exact build, transport, client, and model authority";
+  }
+  if (!hasExactKeys(receipt, SPARK_ADMISSION_RECEIPT_KEYS)) {
+    return "Spark admission receipt has unexpected or missing fields";
+  }
+  if (
+    receipt.schema_version !== SPARK_ADMISSION_RECEIPT_SCHEMA_VERSION ||
+    receipt.purpose !== "spark_admission_canary" ||
+    receipt.certification_eligible !== false
+  ) {
+    return "Spark admission receipt identity is invalid";
+  }
+  if (!isDeepStrictEqual(receipt.configuration, exactSparkAdmissionConfiguration())) {
+    return "Spark admission receipt configuration does not match the current gate";
+  }
+  if (
+    receipt.required_verified !== SPARK_ADMISSION_CANARY_COUNT ||
+    !Number.isSafeInteger(receipt.verified) ||
+    !Number.isSafeInteger(receipt.skipped_resume) ||
+    !Number.isSafeInteger(receipt.failed) ||
+    !Number.isSafeInteger(receipt.suppressed) ||
+    [receipt.verified, receipt.skipped_resume, receipt.failed, receipt.suppressed].some(
+      (value) => value < 0,
+    ) ||
+    receipt.verified + receipt.skipped_resume + receipt.failed + receipt.suppressed !==
+      SPARK_ADMISSION_CANARY_COUNT
+  ) {
+    return "Spark admission receipt does not describe exactly three closed canary slots";
+  }
+  if (
+    !Array.isArray(receipt.strict_stream_rejection_fingerprints) ||
+    !receipt.strict_stream_rejection_fingerprints.every(
+      (fingerprint) => typeof fingerprint === "string" && /^[0-9a-f]{64}$/u.test(fingerprint),
+    ) ||
+    new Set(receipt.strict_stream_rejection_fingerprints).size !==
+      receipt.strict_stream_rejection_fingerprints.length ||
+    !isDeepStrictEqual(
+      receipt.strict_stream_rejection_fingerprints,
+      [...receipt.strict_stream_rejection_fingerprints].sort(),
+    )
+  ) {
+    return "Spark admission receipt rejection fingerprints are invalid";
+  }
+  const recomputedPassed =
+    receipt.verified === SPARK_ADMISSION_CANARY_COUNT &&
+    receipt.skipped_resume === 0 &&
+    receipt.failed === 0 &&
+    receipt.suppressed === 0 &&
+    receipt.strict_stream_rejection_fingerprints.length === 0;
+  if (receipt.passed !== recomputedPassed) {
+    return "Spark admission receipt passed status does not match its closed slots";
+  }
+  if (!receipt.passed) return "Spark admission canary did not pass";
+  if (!isExactPureFleetBuild(receipt.build)) {
+    return "Spark admission receipt build identity is invalid or dirty";
+  }
+  const receiptBuildFingerprint = createPureFleetBuildFingerprint(receipt.build);
+  if (receipt.build_fingerprint !== receiptBuildFingerprint) {
+    return "Spark admission receipt build fingerprint does not match its build identity";
+  }
+  if (
+    !samePureFleetBuild(receipt.build, build) ||
+    receipt.build_fingerprint !== createPureFleetBuildFingerprint(build)
+  ) {
+    return "Spark admission receipt build does not match the current exact clean build";
+  }
+  if (receipt.model !== model) return "Spark admission receipt model does not match the launch";
+  if (receipt.transport_fingerprint !== transportFingerprint) {
+    return "Spark admission receipt transport fingerprint does not match the launch";
+  }
+  if (
+    receipt.codex_cli_version !== client.cli_version ||
+    receipt.codex_client_authority_sha256 !== client.authority_sha256
+  ) {
+    return "Spark admission receipt Codex client authority or version does not match the launch";
+  }
+  return null;
+}
+
+function readStableSparkAdmissionReceipt(receiptPath) {
+  if (typeof receiptPath !== "string" || receiptPath.length === 0) {
+    throw new Error("fleet: Spark admission receipt path is missing");
+  }
+  let before;
+  let canonicalPath;
+  let bytes;
+  try {
+    before = lstatSync(receiptPath);
+    if (
+      before.isSymbolicLink() ||
+      !before.isFile() ||
+      before.nlink !== 1 ||
+      before.size <= 0 ||
+      before.size > SPARK_ADMISSION_RECEIPT_MAX_BYTES
+    ) {
+      throw new Error("must be one bounded regular non-symlink file with one link");
+    }
+    canonicalPath = realpathSync.native(receiptPath);
+    bytes = readFileSync(canonicalPath);
+    const after = lstatSync(canonicalPath);
+    if (
+      after.isSymbolicLink() ||
+      !after.isFile() ||
+      after.nlink !== 1 ||
+      after.size !== bytes.byteLength ||
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      before.size !== after.size ||
+      before.mtimeMs !== after.mtimeMs ||
+      before.ctimeMs !== after.ctimeMs
+    ) {
+      throw new Error("changed while it was being read");
+    }
+  } catch (error) {
+    throw new Error(
+      `fleet: Spark admission receipt is unsafe or unreadable: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
+  const text = bytes.toString("utf8");
+  if (!Buffer.from(text, "utf8").equals(bytes)) {
+    throw new Error("fleet: Spark admission receipt must be valid UTF-8 JSON");
+  }
+  const parsed = parseJsonRejectingDuplicateKeys(text, "Spark admission receipt");
+  if (!parsed.ok) throw new Error(`fleet: ${parsed.reason}`);
+  return { path: canonicalPath, bytes, receipt: parsed.value };
+}
+
+export function requireSparkMassAdmissionReceipt({
+  receiptPath,
+  build,
+  transportFingerprint,
+  client,
+  model,
+}) {
+  const loaded = readStableSparkAdmissionReceipt(receiptPath);
+  const mismatch = sparkAdmissionReceiptMismatch(loaded.receipt, {
+    build,
+    transportFingerprint,
+    client,
+    model,
+  });
+  if (mismatch !== null) throw new Error(`fleet: ${mismatch}`);
+  return {
+    path: loaded.path,
+    sha256: sha256Bytes(loaded.bytes),
+    build_fingerprint: loaded.receipt.build_fingerprint,
+    transport_fingerprint: loaded.receipt.transport_fingerprint,
+  };
 }
 
 function assertFleetTargetPolicy(opts) {
@@ -665,7 +1162,7 @@ const PURE_FLEET_CLAUDE_ATTESTATION_KEYS = [
   "target",
 ].sort();
 
-const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
+const CURRENT_STRICT_CODEX_ATTESTATION_KEYS = [
   "actual_model",
   "actual_provider",
   "build",
@@ -701,7 +1198,15 @@ const PURE_FLEET_CODEX_ATTESTATION_KEYS = [
   "target",
 ].sort();
 
-const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_KEYS = PURE_FLEET_CODEX_ATTESTATION_KEYS.filter(
+const CURRENT_SPARK_DIRECT_CODEX_ATTESTATION_KEYS = CURRENT_STRICT_CODEX_ATTESTATION_KEYS.filter(
+  (key) => key !== "code_mode_contract",
+)
+  .concat("transport_contract")
+  .sort();
+
+const HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_KEYS = CURRENT_STRICT_CODEX_ATTESTATION_KEYS;
+
+const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_KEYS = CURRENT_STRICT_CODEX_ATTESTATION_KEYS.filter(
   (key) => key !== "codex_cli_version" && key !== "codex_client_authority_sha256",
 );
 
@@ -831,10 +1336,21 @@ function isExactPureFleetAttestation(attestation) {
           attestation.recovery_envelope_sha256 === null)
     );
   }
-  const currentCodex =
+  const currentSparkDirectCodex =
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
-    keys.length === PURE_FLEET_CODEX_ATTESTATION_KEYS.length &&
-    keys.every((key, index) => key === PURE_FLEET_CODEX_ATTESTATION_KEYS[index]);
+    attestation.model === SPARK_ADMISSION_CANARY_MODEL &&
+    keys.length === CURRENT_SPARK_DIRECT_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === CURRENT_SPARK_DIRECT_CODEX_ATTESTATION_KEYS[index]);
+  const currentStrictCodex =
+    attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    attestation.model !== SPARK_ADMISSION_CANARY_MODEL &&
+    keys.length === CURRENT_STRICT_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === CURRENT_STRICT_CODEX_ATTESTATION_KEYS[index]);
+  const currentCodex = currentSparkDirectCodex || currentStrictCodex;
+  const historicalClientBoundCodex =
+    attestation.schema_version === HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION &&
+    keys.length === HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_KEYS.length &&
+    keys.every((key, index) => key === HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_KEYS[index]);
   const historicalCodeModeCodex =
     attestation.schema_version === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION &&
     keys.length === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_KEYS.length &&
@@ -853,6 +1369,7 @@ function isExactPureFleetAttestation(attestation) {
     keys.every((key, index) => key === HISTORICAL_STRICT_CODEX_ATTESTATION_KEYS[index]);
   return (
     (currentCodex ||
+      historicalClientBoundCodex ||
       historicalCodeModeCodex ||
       historicalStrictCodex ||
       historicalReceiptBoundCodex ||
@@ -878,20 +1395,25 @@ function isExactPureFleetAttestation(attestation) {
     /^[0-9a-f]{64}$/.test(attestation.provider_capture_sha256) &&
     attestation.recovery_metadata_sha256 === null &&
     attestation.recovery_envelope_sha256 === null &&
-    (currentCodex
-      ? typeof attestation.codex_cli_version === "string" &&
-        /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(
-          attestation.codex_cli_version,
-        ) &&
+    (currentSparkDirectCodex
+      ? attestation.codex_cli_version === SPARK_DIRECT_MCP_CODEX_CLI_VERSION &&
         /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
-      : true) &&
-    (currentCodex
-      ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
-      : historicalCodeModeCodex
+      : currentStrictCodex || historicalClientBoundCodex
+        ? typeof attestation.codex_cli_version === "string" &&
+          /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(
+            attestation.codex_cli_version,
+          ) &&
+          /^[0-9a-f]{64}$/u.test(attestation.codex_client_authority_sha256)
+        : true) &&
+    (currentSparkDirectCodex
+      ? attestation.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
+      : currentStrictCodex || historicalClientBoundCodex
         ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
-        : historicalStrictCodex
-          ? attestation.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT
-          : true) &&
+        : historicalCodeModeCodex
+          ? attestation.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT
+          : historicalStrictCodex
+            ? attestation.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT
+            : true) &&
     (historicalCodex
       ? attestation.initial_report_sha256 === null
       : typeof attestation.report_receipt_bound === "boolean" &&
@@ -1004,6 +1526,8 @@ function isExactPureFleetRunArtifactFacts(facts) {
     (facts.code_mode_contract === null ||
       facts.code_mode_contract === HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT ||
       facts.code_mode_contract === PURE_FLEET_CODE_MODE_CONTRACT) &&
+    (facts.transport_contract === null ||
+      facts.transport_contract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT) &&
     isExactFleetArtifactHashes(facts.hashes)
   );
 }
@@ -1206,18 +1730,31 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
   ) {
     return "pure fleet attestation Codex rollout facts do not match authenticated artifacts";
   }
-  if (
-    attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
-    (attestation.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
-      artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT)
-  ) {
-    return "current Codex attestation requires authenticated strict code-mode evidence";
+  if (attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION) {
+    if (expected.model === SPARK_ADMISSION_CANARY_MODEL) {
+      if (
+        attestation.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+        Object.hasOwn(attestation, "code_mode_contract") ||
+        artifactFacts.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+        artifactFacts.code_mode_contract !== null
+      ) {
+        return `current Spark attestation requires authenticated ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} evidence`;
+      }
+    } else if (
+      attestation.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+      Object.hasOwn(attestation, "transport_contract") ||
+      artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+      artifactFacts.transport_contract !== null
+    ) {
+      return "current Codex attestation requires authenticated strict code-mode evidence";
+    }
   }
   if (attestation.report_recovered !== artifactFacts.report_recovered) {
     return "pure fleet attestation recovery status does not match durable recovery evidence";
   }
   const attestedReceiptBound =
     attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION ||
+    attestation.schema_version === HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION
@@ -1237,6 +1774,7 @@ export function pureFleetAttestationMismatch(attestation, run, expected, artifac
     attestation.primary_envelope_sha256 !== artifactFacts.hashes.primary_envelope_sha256 ||
     attestation.initial_report_sha256 !== artifactFacts.hashes.initial_report_sha256 ||
     (attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION ||
+    attestation.schema_version === HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION ||
     attestation.schema_version === HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION
@@ -1284,7 +1822,9 @@ function buildPureFleetAttestation(run, expected, artifactFacts) {
           provider: "codex",
           codex_cli_version: expected.client.cli_version,
           codex_client_authority_sha256: expected.client.authority_sha256,
-          code_mode_contract: artifactFacts.code_mode_contract,
+          ...(expected.model === SPARK_ADMISSION_CANARY_MODEL
+            ? { transport_contract: artifactFacts.transport_contract }
+            : { code_mode_contract: artifactFacts.code_mode_contract }),
           provider_session_id: artifactFacts.provider_session_id,
           actual_provider: artifactFacts.actual_provider,
           reasoning_effort: artifactFacts.reasoning_effort,
@@ -1605,6 +2145,13 @@ export function classifyFleetAttempt({ runnerExit, verifierAttempted, verified }
   return "launcher_or_run_failure";
 }
 
+/** Strict-stream rejection proves that this exact code-mode transport profile
+ * is already invalid. Retrying it cannot produce canonical evidence and only
+ * spends more tokens. Other operational failures retain the normal backoff. */
+export function shouldRetryFleetAttempt({ classification, attempt, maxAttempts }) {
+  return attempt + 1 < maxAttempts && classification !== "strict_stream_rejected";
+}
+
 function reportPrefixFor(reportMdPath) {
   return reportMdPath.endsWith(".md") ? reportMdPath.slice(0, -".md".length) : reportMdPath;
 }
@@ -1652,6 +2199,87 @@ function isSafeStrictRejectionDiagnostic(bytes) {
   const text = bytes.toString("utf8");
   if (!Buffer.from(text, "utf8").equals(bytes)) return false;
   const parsed = parseJsonRejectingDuplicateKeys(text, "strict rejection diagnostic");
+  if (parsed.ok && parsed.value?.schema_version === 2) {
+    const diagnostic = parsed.value;
+    const failures = CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES[diagnostic.surface];
+    const usage = diagnostic.usage_lower_bound;
+    return (
+      hasExactKeys(diagnostic, [
+        "acceptance_eligible",
+        "binding",
+        "canonical",
+        "commitments",
+        "ignored",
+        "kind",
+        "rejection",
+        "schema_version",
+        "surface",
+        "transport_contract",
+        "usage_lower_bound",
+      ]) &&
+      diagnostic.acceptance_eligible === false &&
+      diagnostic.canonical === false &&
+      diagnostic.ignored === true &&
+      diagnostic.kind === "strict_stream_rejection_diagnostic" &&
+      Array.isArray(failures) &&
+      [CODEX_STRICT_CURRENT_CONTRACT, CODEX_SPARK_DIRECT_MCP_CONTRACT].includes(
+        diagnostic.transport_contract,
+      ) &&
+      (diagnostic.surface !== "private_rollout" ||
+        diagnostic.transport_contract === CODEX_SPARK_DIRECT_MCP_CONTRACT) &&
+      hasExactKeys(diagnostic.commitments, [
+        "build_commit",
+        "cli_version",
+        "client_authority_sha256",
+        "model",
+        "seed",
+        "tracked_worktree_clean",
+      ]) &&
+      /^-?[0-9]+$/u.test(diagnostic.commitments.seed) &&
+      Number.isSafeInteger(Number(diagnostic.commitments.seed)) &&
+      String(Number(diagnostic.commitments.seed)) === diagnostic.commitments.seed &&
+      /^[0-9a-f]{40}$/u.test(diagnostic.commitments.build_commit) &&
+      typeof diagnostic.commitments.tracked_worktree_clean === "boolean" &&
+      /^[A-Za-z0-9._-]{1,128}$/u.test(diagnostic.commitments.model) &&
+      /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(diagnostic.commitments.cli_version) &&
+      /^[0-9a-f]{64}$/u.test(diagnostic.commitments.client_authority_sha256) &&
+      hasExactKeys(diagnostic.binding, [
+        "row_ordinal",
+        "row_projection_bytes",
+        "row_projection_sha256",
+        "stream_file_identity",
+        "thread_id",
+      ]) &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        diagnostic.binding.thread_id,
+      ) &&
+      Number.isSafeInteger(diagnostic.binding.row_ordinal) &&
+      diagnostic.binding.row_ordinal > 0 &&
+      Number.isSafeInteger(diagnostic.binding.row_projection_bytes) &&
+      diagnostic.binding.row_projection_bytes > 0 &&
+      /^[0-9a-f]{64}$/u.test(diagnostic.binding.row_projection_sha256) &&
+      hasExactKeys(diagnostic.binding.stream_file_identity, ["device_id", "file_id"]) &&
+      /^\d+$/u.test(diagnostic.binding.stream_file_identity.device_id) &&
+      /^\d+$/u.test(diagnostic.binding.stream_file_identity.file_id) &&
+      hasExactKeys(diagnostic.rejection, ["failure"]) &&
+      failures.includes(diagnostic.rejection.failure) &&
+      (usage === null ||
+        (hasExactKeys(usage, [
+          "cached_input_tokens",
+          "input_tokens",
+          "output_tokens",
+          "reasoning_output_tokens",
+        ]) &&
+          [
+            usage.input_tokens,
+            usage.cached_input_tokens,
+            usage.output_tokens,
+            usage.reasoning_output_tokens,
+          ].every((value) => Number.isSafeInteger(value) && value >= 0) &&
+          usage.cached_input_tokens <= usage.input_tokens &&
+          usage.reasoning_output_tokens <= usage.output_tokens))
+    );
+  }
   if (
     !parsed.ok ||
     !hasExactKeys(parsed.value, [
@@ -1845,21 +2473,11 @@ export function archiveFailedFleetAttemptArtifacts({
   };
 }
 
-function archivedUsageArtifactText({ archive, fleetDir, role }) {
+function archivedArtifactText({ archive, fleetDir, name }) {
   if (
     archive === null ||
     typeof archive !== "object" ||
     Array.isArray(archive) ||
-    archive.usage_artifacts === null ||
-    typeof archive.usage_artifacts !== "object" ||
-    Array.isArray(archive.usage_artifacts) ||
-    !Object.prototype.hasOwnProperty.call(archive.usage_artifacts, role)
-  ) {
-    return null;
-  }
-  const name = archive.usage_artifacts[role];
-  if (name === null) return null;
-  if (
     typeof name !== "string" ||
     name.length === 0 ||
     basename(name) !== name ||
@@ -1905,6 +2523,36 @@ function archivedUsageArtifactText({ archive, fleetDir, role }) {
   }
 }
 
+function archivedUsageArtifactText({ archive, fleetDir, role }) {
+  if (
+    archive === null ||
+    typeof archive !== "object" ||
+    Array.isArray(archive) ||
+    archive.usage_artifacts === null ||
+    typeof archive.usage_artifacts !== "object" ||
+    Array.isArray(archive.usage_artifacts) ||
+    !Object.prototype.hasOwnProperty.call(archive.usage_artifacts, role)
+  ) {
+    return null;
+  }
+  const name = archive.usage_artifacts[role];
+  return name === null ? null : archivedArtifactText({ archive, fleetDir, name });
+}
+
+function archivedStrictRejectionDiagnosticText({ archive, fleetDir }) {
+  if (!Array.isArray(archive?.artifacts)) return null;
+  const matches = archive.artifacts.filter(
+    (artifact) =>
+      artifact !== null &&
+      typeof artifact === "object" &&
+      typeof artifact.name === "string" &&
+      artifact.name.endsWith(".strict-rejection.json"),
+  );
+  return matches.length === 1
+    ? archivedArtifactText({ archive, fleetDir, name: matches[0].name })
+    : null;
+}
+
 /**
  * Failed-attempt usage comes only from immutable copies named by the archive's
  * semantic usage map. A malformed archived primary remains authoritative and
@@ -1920,12 +2568,20 @@ export function usageRecordFromFailedFleetAttemptArchive({ archive, fleetDir }) 
     archive?.usage_artifacts !== null &&
     typeof archive?.usage_artifacts === "object" &&
     archive.usage_artifacts.primary_envelope !== null;
-  return usageRecordFromFailedAttempt({
+  const hasProviderEvents =
+    archive?.usage_artifacts !== null &&
+    typeof archive?.usage_artifacts === "object" &&
+    archive.usage_artifacts.provider_events !== null;
+  const ordinary = usageRecordFromFailedAttempt({
     archivedPrimaryEnvelopeText: hasPrimary ? (primary ?? "") : null,
     providerEventsText: hasPrimary
       ? null
       : archivedUsageArtifactText({ archive, fleetDir, role: "provider_events" }),
   });
+  if (hasPrimary || hasProviderEvents || ordinary.source !== "unrecoverable") return ordinary;
+  return usageRecordFromStrictStreamDiagnostic(
+    archivedStrictRejectionDiagnosticText({ archive, fleetDir }),
+  );
 }
 
 function usageRecordFromVerifiedFleetAttempt(reportMd, reportsDir) {
@@ -2042,9 +2698,19 @@ export async function runPool(items, size, worker) {
 
 /** Run one fleet slot to completion: resume check, then launch (with pacing
  * retries up to opts.maxRetries), returning the manifest row for this run. */
-async function executeRun(
+export async function executeRun(
   run,
-  { reportsDir, stamp, opts, bashPath, fleetDir, fleetBuild, fleetClient, fleetControl },
+  {
+    reportsDir,
+    stamp,
+    opts,
+    bashPath,
+    fleetDir,
+    fleetBuild,
+    fleetClient,
+    fleetControl,
+    spawnRun = spawnAsync,
+  },
 ) {
   const target = run.target;
   const questId = questIdFor(target);
@@ -2058,6 +2724,26 @@ async function executeRun(
         build: fleetBuild,
         client: fleetClient,
       };
+
+  // A serial admission canary closes its remaining slots without launching a
+  // second player once one member fails. The closed manifest still records the
+  // absence of a playthrough rather than pretending it was a zero-token exit.
+  if (opts.admissionCanary && fleetControl.admissionFailure) {
+    return {
+      report: null,
+      status: "suppressed",
+      attempts: 0,
+      attempt_history: [],
+      resume_usage: null,
+      exit: null,
+      log: null,
+      run: null,
+      attestation: null,
+      report_recovered: false,
+      report_receipt_bound: false,
+      failure_reason: "admission_canary_stopped_after_failure",
+    };
+  }
 
   // Check ALL stamp-agnostic candidates, newest-stamp-first, stopping at the
   // first that re-verifies — a stale FAILED report must never shadow a later
@@ -2112,7 +2798,7 @@ async function executeRun(
     args.push(...(questId ? ["--quest", questId] : ["--overworld"]));
     if (opts.mock) args.push("--mock");
 
-    const bashResult = await spawnAsync(bashPath, [RUN_SH, ...args], {
+    const bashResult = await spawnRun(bashPath, [RUN_SH, ...args], {
       cwd: GAME_DIR,
       env: opts.mock ? { ...process.env } : codexFleetMemberEnv(process.env, fleetClient),
     });
@@ -2192,6 +2878,9 @@ async function executeRun(
       verified: false,
     });
     const strictRejection = classification === "strict_stream_rejected";
+    if (strictRejection && fleetControl.transportFingerprint !== null) {
+      fleetControl.strictRejectedTransportFingerprints.add(fleetControl.transportFingerprint);
+    }
     const diagnostic = strictRejection
       ? strictRejectionFleetDiagnostic({
           run,
@@ -2238,9 +2927,7 @@ async function executeRun(
       ...(opts.mock
         ? {}
         : {
-            usage: strictRejection
-              ? usageRecordFromFailedAttempt()
-              : usageRecordFromFailedFleetAttemptArchive({ archive, fleetDir }),
+            usage: usageRecordFromFailedFleetAttemptArchive({ archive, fleetDir }),
           }),
     });
     const summarySource = strictRejection
@@ -2252,16 +2939,14 @@ async function executeRun(
       `[fleet] seed=${run.seed} attempt=${attempt + 1} failed (exit ${lastExit}): ${firstErrorLine(summarySource)}`,
     );
 
-    const isLastAttempt = attempt === maxAttempts - 1;
-    if (!isLastAttempt) {
-      const delayMs = opts.mock ? 0 : 20_000 * 2 ** attempt;
-      if (delayMs > 0) await sleep(delayMs);
-    }
+    if (!shouldRetryFleetAttempt({ classification, attempt, maxAttempts })) break;
+    const delayMs = opts.mock ? 0 : 20_000 * 2 ** attempt;
+    if (delayMs > 0) await sleep(delayMs);
   }
   return {
     report: reportMd,
     status: "failed",
-    attempts: maxAttempts,
+    attempts: attemptHistory.length,
     attempt_history: attemptHistory,
     resume_usage: opts.mock ? undefined : null,
     exit: lastExit,
@@ -2576,6 +3261,7 @@ async function main() {
   let opts;
   try {
     opts = parseFleetArgs(argv);
+    assertSparkMassAdmissionConfigured(opts);
   } catch (err) {
     // Usage error (non-finite/out-of-range numeric flag, e.g. --count 0):
     // exit 2 before touching the filesystem or spawning anything.
@@ -2598,6 +3284,10 @@ async function main() {
       ? validateFleetReportsDirectory(requestedReportsDir, codexHome)
       : requestedReportsDir;
   const runs = planFleetRuns(opts);
+  const stamp = utcStamp();
+  const label = validateFleetLabel(opts.label ?? stamp);
+  const fleetDir = join(GAME_DIR, "ai-runs", "fleet", label);
+  if (opts.admissionCanary) validateAdmissionReportsSeparation(reportsDir, fleetDir);
 
   // Resolve every launcher prerequisite before reserving a report namespace or
   // label directory. A missing runtime must leave no misleading fleet shell.
@@ -2610,13 +3300,22 @@ async function main() {
   // One fail-closed build identity is captured before any live launcher can
   // spend tokens. Structural mocks retain their historical no-provenance path.
   const fleetBuild = opts.mock ? null : await captureExpectedPureFleetBuild();
+  const transportFingerprint = opts.mock
+    ? null
+    : createFleetTransportFingerprint({ provider: opts.provider, model: opts.model });
+  if (sparkMassAdmissionRequired(opts)) {
+    requireSparkMassAdmissionReceipt({
+      receiptPath: resolve(GAME_DIR, normalizeShellPathForNode(String(opts.admissionReceipt))),
+      build: fleetBuild,
+      transportFingerprint,
+      client: fleetClient,
+      model: opts.model,
+    });
+  }
   const cohort = opts.mock
     ? null
     : createFleetCohort(runs, fleetBuild, fleetClient, PURE_SESSION_CONTRACT_VERSION);
 
-  const stamp = utcStamp();
-  const label = validateFleetLabel(opts.label ?? stamp);
-  const fleetDir = join(GAME_DIR, "ai-runs", "fleet", label);
   let reportLock;
   let liveCohortStartup = null;
   if (opts.mock) {
@@ -2674,9 +3373,14 @@ async function main() {
       : writePrivateCodexClientAuthorityProof(fleetDir, fleetClient);
     const manifestPath = join(fleetDir, "manifest.jsonl");
     const summaryPath = join(fleetDir, "summary.json");
-    const counts = { verified: 0, "skipped-resume": 0, failed: 0 };
+    const counts = { verified: 0, "skipped-resume": 0, failed: 0, suppressed: 0 };
     const rows = new Array(runs.length);
-    const fleetControl = { clientPreflightFailure: null };
+    const fleetControl = {
+      clientPreflightFailure: null,
+      admissionFailure: false,
+      transportFingerprint,
+      strictRejectedTransportFingerprints: new Set(),
+    };
 
     await runPool(runs, Math.max(1, opts.concurrency), async (run, plannedIndex) => {
       const result = await executeRun(run, {
@@ -2690,6 +3394,7 @@ async function main() {
         fleetControl,
       });
       counts[result.status] += 1;
+      if (opts.admissionCanary && result.status === "failed") fleetControl.admissionFailure = true;
       const runMeta = result.run;
       const row = {
         planned_index: plannedIndex,
@@ -2781,9 +3486,23 @@ async function main() {
       flag: opts.mock ? "w" : "wx",
     });
 
+    if (opts.admissionCanary) {
+      const admission = createSparkAdmissionReceipt({
+        counts,
+        build: fleetBuild,
+        transportFingerprint,
+        client: fleetClient,
+        strictRejectedTransportFingerprints: fleetControl.strictRejectedTransportFingerprints,
+      });
+      writeFileSync(join(fleetDir, "admission.json"), `${JSON.stringify(admission, null, 2)}\n`, {
+        encoding: "utf8",
+        flag: "wx",
+      });
+    }
+
     const ok = fleetSummaryExitSucceeded(summary);
     console.log(
-      `Fleet ${label}: ${counts.verified} verified, ${counts["skipped-resume"]} skipped-resume, ${counts.failed} failed slots, ${attemptSummary.failed_attempts} failed attempts (of ${runs.length})`,
+      `Fleet ${label}: ${counts.verified} verified, ${counts["skipped-resume"]} skipped-resume, ${counts.failed} failed slots${opts.admissionCanary ? `, ${counts.suppressed} suppressed` : ""}, ${attemptSummary.failed_attempts} failed attempts (of ${runs.length})`,
     );
     console.log(`Manifest: ${manifestPath}`);
     process.exitCode = ok ? 0 : 1;

@@ -8,9 +8,12 @@ export const HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 3;
 export const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
 export const HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
 export const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
-export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
+export const HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 8;
 export const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1" as const;
 export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v2" as const;
+export const PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1" as const;
+export const PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0" as const;
 
 export const PureFleetClaudeAttestationSchema = z
   .object({
@@ -291,9 +294,9 @@ const HistoricalCodeModePureFleetCodexAttestationSchema = z
     }
   });
 
-const CurrentPureFleetCodexAttestationSchema = z
+const HistoricalClientBoundPureFleetCodexAttestationSchema = z
   .object({
-    schema_version: z.literal(PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION),
+    schema_version: z.literal(HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION),
     provider: z.literal("codex"),
     codex_cli_version: z
       .string()
@@ -365,11 +368,114 @@ const CurrentPureFleetCodexAttestationSchema = z
     }
   });
 
+const CurrentCodexAttestationBaseFields = {
+  schema_version: z.literal(PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION),
+  provider: z.literal("codex"),
+  codex_cli_version: z
+    .string()
+    .regex(
+      /^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/,
+    ),
+  codex_client_authority_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  run_seed: z.number().int().safe(),
+  persona: z.literal("default"),
+  target: z.literal("overworld"),
+  play_mode: z.literal("pure"),
+  start_surface: z.literal("fresh_overworld"),
+  build: PureRunBuildSchema.extend({ tracked_worktree_clean: z.literal(true) }),
+  game_session_id: z.string().min(1),
+  provider_session_id: z.string().uuid(),
+  actual_provider: z.literal("openai"),
+  reasoning_effort: z.literal("xhigh"),
+  provider_turn_id: z.string().uuid(),
+  provider_cwd: z.string().min(1),
+  report_recovered: z.literal(false),
+  report_receipt_bound: z.boolean(),
+  receipt_hash: z.string().regex(/^[0-9a-f]{64}$/),
+  report_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  run_sidecar_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  run_evidence_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  primary_envelope_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  provider_events_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  provider_rollout_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  provider_capture_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  initial_report_sha256: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .nullable(),
+  receipt_binding_sha256: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .nullable(),
+  recovery_metadata_sha256: z.null(),
+  recovery_envelope_sha256: z.null(),
+} as const;
+
+function refineCurrentReceiptBinding(
+  value: {
+    report_receipt_bound: boolean;
+    initial_report_sha256: string | null;
+    receipt_binding_sha256: string | null;
+  },
+  context: z.RefinementCtx,
+): void {
+  if (
+    value.report_receipt_bound !==
+    (value.initial_report_sha256 !== null && value.receipt_binding_sha256 !== null)
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["report_receipt_bound"],
+      message: "receipt-bound status must match its original report and binding metadata hashes",
+    });
+  }
+  if ((value.initial_report_sha256 === null) !== (value.receipt_binding_sha256 === null)) {
+    context.addIssue({
+      code: "custom",
+      path: ["receipt_binding_sha256"],
+      message: "receipt-binding artifact hashes must be both present or both absent",
+    });
+  }
+}
+
+const CurrentSparkDirectMcpAttestationSchema = z
+  .object({
+    ...CurrentCodexAttestationBaseFields,
+    codex_cli_version: z.literal(PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION),
+    model: z.literal("gpt-5.3-codex-spark"),
+    actual_model: z.literal("gpt-5.3-codex-spark"),
+    transport_contract: z.literal(PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT),
+  })
+  .strict();
+
+function currentStrictCodeModeAttestationSchema<
+  const Model extends "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna",
+>(model: Model) {
+  return z
+    .object({
+      ...CurrentCodexAttestationBaseFields,
+      model: z.literal(model),
+      actual_model: z.literal(model),
+      code_mode_contract: z.literal(PURE_FLEET_CODE_MODE_CONTRACT),
+    })
+    .strict();
+}
+
+const CurrentPureFleetCodexAttestationSchema = z
+  .discriminatedUnion("model", [
+    CurrentSparkDirectMcpAttestationSchema,
+    currentStrictCodeModeAttestationSchema("gpt-5.6-sol"),
+    currentStrictCodeModeAttestationSchema("gpt-5.6-terra"),
+    currentStrictCodeModeAttestationSchema("gpt-5.6-luna"),
+  ])
+  .superRefine(refineCurrentReceiptBinding);
+
 export const PureFleetCodexAttestationSchema = z.union([
   HistoricalPureFleetCodexAttestationSchema,
   HistoricalReceiptBoundPureFleetCodexAttestationSchema,
   HistoricalStrictPureFleetCodexAttestationSchema,
   HistoricalCodeModePureFleetCodexAttestationSchema,
+  HistoricalClientBoundPureFleetCodexAttestationSchema,
   CurrentPureFleetCodexAttestationSchema,
 ]);
 

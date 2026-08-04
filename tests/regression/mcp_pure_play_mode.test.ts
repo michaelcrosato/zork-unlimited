@@ -14,6 +14,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+// @ts-expect-error — plain .mjs module without type declarations
+import { validPureMcpToolCatalogEntry } from "../../blind-tester/codex-pure-envelope.mjs";
 import {
   PURE_PLAYER_TOOLS,
   resolveAreaMoveSelector,
@@ -1741,6 +1743,22 @@ describe("MCP pure play mode", () => {
       await withPureServer(evidence, async (client) => {
         const listed = await client.listTools();
         expect(new Set(listed.tools.map((tool) => tool.name))).toEqual(PURE_PLAYER_TOOLS);
+        for (const tool of listed.tools) {
+          expect(
+            validPureMcpToolCatalogEntry({ name: tool.name }),
+            `redacted catalogue entry must not authenticate ${tool.name}`,
+          ).toBe(false);
+          expect(
+            validPureMcpToolCatalogEntry({
+              name: tool.name,
+              description: tool.description,
+              input_schema: Object.fromEntries(
+                Object.entries(tool.inputSchema).filter(([key]) => key !== "$schema"),
+              ),
+            }),
+            `pure MCP catalogue digest drifted for ${tool.name}`,
+          ).toBe(true);
+        }
         expect(listed.tools.map((tool) => tool.name)).not.toEqual(
           expect.arrayContaining([
             "list_overworld",

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
@@ -38,8 +39,13 @@ const SPARK_CODE_MODE_METADATA_WARNING =
 const CODEX_0146_EXPLICIT_ONLY_MODE_BLOCK =
   "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>";
 const CODEX_0146_CLI_VERSION = "0.146.0";
+export const CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS =
+  "You are an autonomous first-time player of an AdventureForge text TTRPG. Follow the user play request. Use only preloaded AdventureForge gameplay functions and exact current player-visible values. Never use coding, planning, search, or MCP resource tools.";
+const CODEX_SPARK_PLAYER_COMP_HASH = "2911";
 export const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1";
 export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2";
+export const CODEX_SPARK_DIRECT_MCP_CONTRACT = "spark-direct-mcp-v1";
+const DIRECT_MCP_NAMESPACE = "mcp__adventureforge";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const V2_MULTI_AGENT_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra"]);
 const SUPPORTED_CODEX_MODELS = new Set([
@@ -96,6 +102,91 @@ export const CODEX_PURE_PLAYER_TOOLS = new Set([
   "step_action",
 ]);
 
+// Pure MCP tool prose and JSON schemas are model-visible input, so the server's
+// advertised catalogue is part of the pure-player boundary. These digests are
+// generated from the actual build-owned tools/list projection
+// {name, description, input_schema}; they deliberately do not claim to capture
+// Codex's provider-specific namespace wrapper or outbound request shape. A
+// server catalogue change must deliberately update this reviewed set before its
+// clean build can enter a blind run.
+const PURE_MCP_TOOL_CATALOG_SHA256 = new Map([
+  ["start_overworld", "85040156096828af30f611518a0b2a52baff11570785a2b0b040bd36356127d1"],
+  ["get_overworld_session", "92a177f601d9cb30553a45a6d356e0727981cdcb8a9c1da776378bf7eebe070b"],
+  [
+    "get_overworld_session_context",
+    "4871feadfbe513fdaa76df08a588c12db0e581568d0d6da5bfe1f8365f3f03e3",
+  ],
+  ["travel_overworld_session", "a950b0f764ad06b11baaf6cc656303b8ff43f15309cf8816157b32ac8a3d74cc"],
+  [
+    "follow_overworld_session_goal",
+    "f25e4078e3c4d1e2831352be47d50a3355307aa11aaa8683f4034b0f894bf2c7",
+  ],
+  [
+    "resolve_overworld_session_road_encounter",
+    "b0120f113abc4fb16ce64af5a5983ff6bb2617917376328c7703ae1e7e826ca3",
+  ],
+  ["care_overworld_session", "0086d14d1b5b2f2317cfc8400757517da0717cc20b2a1d9871a36282f43dac43"],
+  [
+    "resupply_overworld_session",
+    "b654cbf31a9cf97de36c2dc8ea17b8aa9bddeb4b136314976d34146a5d8f9147",
+  ],
+  ["rest_overworld_session", "2c1d78da5ead8eb7264d5769dac21babbcb6cad9b005fa90ae39f87c09a6fa94"],
+  [
+    "plan_overworld_session_route",
+    "ac4d827e52f956389d256909450dfee5e363acd5d3dcb0ba191e76d3764a1d79",
+  ],
+  [
+    "scout_overworld_session_poi",
+    "9ce006e7896311778570aa6187b5f993ae2954a002c2310f1457e7bfbdba0433",
+  ],
+  [
+    "talk_overworld_session_contact",
+    "ac9a32b046b25e6dee5b506e13df0687123d08ebc198e315491c8b2b67341719",
+  ],
+  [
+    "investigate_overworld_session_event",
+    "4f4ae77cccd30969b5268b9746e7858aecd55a3dd0c79f8523f6dd495f4d1896",
+  ],
+  [
+    "resolve_overworld_session_event",
+    "7fc4f51e702ed4a66e7c24d51d543d35e5277b29535e0c72d94700b5919f2e4a",
+  ],
+  [
+    "explore_overworld_session_site",
+    "9c7ffc97798ff111b869aa41c49cec5f73dc42152ca028bbeb41b66abdd0457f",
+  ],
+  [
+    "explore_overworld_session_area",
+    "f0c659294f68692ef7f99d299656160fe5e8fb6df8ae598adf9ad9cc93e34dbe",
+  ],
+  [
+    "move_overworld_session_area",
+    "73eb58bf434e63700883692ecbb704b2efe7e3b9e2c0c678a357b0abfc727bee",
+  ],
+  [
+    "work_overworld_session_job",
+    "f5bd6d6163705f200814e6502606bf3b54482ffc8b3f661f2a59052ea97f0a82",
+  ],
+  [
+    "start_overworld_session_quest",
+    "3cc5853829b1a4c7407010ab0fc60c9e36b668b6a92bef9af4bd3524c8d177f8",
+  ],
+  [
+    "choose_overworld_session_journey",
+    "fe0e21e5fb1acfba8ad715c30d9062013ee247ae69e722c9236355257b86ad6a",
+  ],
+  [
+    "inspect_overworld_session_story",
+    "716bc379f7e354d7750f4a335f4489e5a2bc0b0a486a5370979d3311cba5ff22",
+  ],
+  [
+    "choose_overworld_session_story",
+    "f9f64a17cd1960252ea69dde6b4ea894c24532c00228774f731171f20d733393",
+  ],
+  ["get_observation", "0c978cd5bbabbbdd834cf7503caa39ae3ab4080fdde0a9e0f09896b099a8579f"],
+  ["list_legal_actions", "ffde6831a3c8ba1568100d28e4827fd73c77ee1555b4224dde676ebe339d1bb8"],
+  ["step_action", "6b64a9d7833fcf76a0cec2533528ada579c035f2f9c954ac3d4b56c19d07e86d"],
+]);
 function nonNegativeInteger(value) {
   return Number.isInteger(value) && value >= 0;
 }
@@ -124,6 +215,34 @@ function sameJsonValue(left, right) {
   return (
     leftKeys.length === rightKeys.length &&
     leftKeys.every((key, index) => key === rightKeys[index] && sameJsonValue(left[key], right[key]))
+  );
+}
+
+function canonicalJsonValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalJsonValue);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalJsonValue(value[key])]),
+  );
+}
+
+function pureMcpToolCatalogDigest(entry) {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalJsonValue(entry)))
+    .digest("hex");
+}
+
+export function validPureMcpToolCatalogEntry(tool) {
+  if (!isRecord(tool) || typeof tool.name !== "string" || !CODEX_PURE_PLAYER_TOOLS.has(tool.name)) {
+    return false;
+  }
+  return (
+    hasOnlyKeys(tool, ["name", "description", "input_schema"]) &&
+    typeof tool.description === "string" &&
+    isRecord(tool.input_schema) &&
+    pureMcpToolCatalogDigest(tool) === PURE_MCP_TOOL_CATALOG_SHA256.get(tool.name)
   );
 }
 
@@ -198,6 +317,29 @@ function gameplayResult(payload) {
     return null;
   }
   return result;
+}
+
+function isSparkDirectMcpContract(transportContract) {
+  return transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT;
+}
+
+function validCodexTransportContract(transportContract) {
+  return (
+    transportContract === null ||
+    transportContract === CODEX_HISTORICAL_STRICT_CONTRACT ||
+    transportContract === CODEX_STRICT_CURRENT_CONTRACT ||
+    transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT
+  );
+}
+
+function transportMatchesRequestedModel(transportContract, expectedModel) {
+  if (!validCodexTransportContract(transportContract)) return false;
+  if (isSparkDirectMcpContract(transportContract)) return expectedModel === SPARK_DISABLED_MODEL;
+  return !(
+    transportContract !== null &&
+    expectedModel === SPARK_DISABLED_MODEL &&
+    transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT
+  );
 }
 
 function objectPropertyName(name) {
@@ -470,6 +612,36 @@ export const CODEX_GAMEPLAY_WRAPPER_FAILURES = Object.freeze([
   "emitter_shape",
 ]);
 
+// These fixed categories are the only public/private stream rejection details
+// eligible for a noncanonical diagnostic. Never serialize provider prose or a
+// dynamic tool/server/item name into that channel.
+export const CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES = Object.freeze({
+  public_events: Object.freeze([
+    "top_level_error",
+    "forbidden_event_type",
+    "non_object_row",
+    "invalid_item",
+    "item_updated",
+    "unexpected_startup_error",
+    "forbidden_item_type",
+    "forbidden_mcp_server",
+    "forbidden_mcp_tool",
+    "public_contract_rejection",
+  ]),
+  private_rollout: Object.freeze([
+    "direct_invalid_start",
+    "direct_fresh_start_order",
+    "direct_missing_completion",
+    "direct_missing_result",
+    "direct_output_mismatch",
+    "forbidden_response_item",
+    "orphan_tool_lifecycle",
+    "forbidden_private_event",
+    "forbidden_private_row",
+    "private_contract_rejection",
+  ]),
+});
+
 function wrapperFailure(failure) {
   return { ok: false, failure };
 }
@@ -626,20 +798,6 @@ function privateGameplayLifecycle(payload, result) {
   };
 }
 
-function exactRolloutReplay(initial, replay) {
-  if (!isRecord(initial) || !isRecord(replay)) return false;
-  const initialKeys = Object.keys(initial).sort();
-  const replayKeys = Object.keys(replay).sort();
-  return (
-    sameJsonValue(initialKeys, replayKeys) &&
-    initialKeys.every(
-      (key) =>
-        key === "timestamp" ||
-        (Object.hasOwn(replay, key) && sameJsonValue(initial[key], replay[key])),
-    )
-  );
-}
-
 function validPrivateInputMessage(payload, role, turnId, requiresItemId = false) {
   const keys = [
     "type",
@@ -773,6 +931,17 @@ function validNativeCollaborationMode(turnContext, expectedModel) {
     (expectedModel === undefined || settings.model === expectedModel) &&
     settings.reasoning_effort === turnContext.effort &&
     settings.developer_instructions === null
+  );
+}
+
+function validSparkDirectRuntimeProfile(sessionMeta, turnContext) {
+  return (
+    isRecord(sessionMeta) &&
+    isRecord(sessionMeta.base_instructions) &&
+    hasOnlyKeys(sessionMeta.base_instructions, ["text"]) &&
+    sessionMeta.base_instructions.text === CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS &&
+    isRecord(turnContext) &&
+    turnContext.comp_hash === CODEX_SPARK_PLAYER_COMP_HASH
   );
 }
 
@@ -938,7 +1107,56 @@ function validPrivateWrapperOutputPayload(payload, turnId, requiresItemId) {
   );
 }
 
-function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
+function validPrivateDirectFunctionCall(payload, turnId, requiresItemId) {
+  return (
+    isRecord(payload) &&
+    hasOnlyKeys(payload, [
+      "type",
+      "id",
+      "name",
+      "namespace",
+      "arguments",
+      "call_id",
+      "internal_chat_message_metadata_passthrough",
+    ]) &&
+    (!requiresItemId || validItemId(payload.id)) &&
+    payload.type === "function_call" &&
+    typeof payload.name === "string" &&
+    CODEX_PURE_PLAYER_TOOLS.has(payload.name) &&
+    payload.namespace === DIRECT_MCP_NAMESPACE &&
+    typeof payload.arguments === "string" &&
+    typeof payload.call_id === "string" &&
+    payload.call_id.length > 0 &&
+    validTurnMetadata(payload.internal_chat_message_metadata_passthrough, turnId)
+  );
+}
+
+function validPrivateDirectFunctionOutput(payload, turnId, requiresItemId) {
+  return (
+    isRecord(payload) &&
+    hasOnlyKeys(payload, [
+      "type",
+      "id",
+      "call_id",
+      "output",
+      "internal_chat_message_metadata_passthrough",
+    ]) &&
+    (!requiresItemId || validItemId(payload.id)) &&
+    payload.type === "function_call_output" &&
+    typeof payload.call_id === "string" &&
+    payload.call_id.length > 0 &&
+    typeof payload.output === "string" &&
+    validTurnMetadata(payload.internal_chat_message_metadata_passthrough, turnId)
+  );
+}
+
+function inspectCodexRolloutStructure(
+  rows,
+  expectedModel,
+  expectedCliVersion,
+  { transportContract = null } = {},
+) {
+  const directMcp = isSparkDirectMcpContract(transportContract);
   if (!Array.isArray(rows) || rows.length === 0) return rolloutReject("rollout is empty");
   const indices = {
     sessions: [],
@@ -951,6 +1169,9 @@ function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
     compactions: [],
     gameplay: [],
     wrapperOutputs: [],
+    toolSearchCalls: [],
+    toolSearchOutputs: [],
+    directOutputs: [],
     promptMessages: [],
     assistantMessages: [],
     reasoningItems: [],
@@ -968,11 +1189,23 @@ function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
       if (payload?.type === "user_message") indices.userEvents.push(index);
       if (payload?.type === "context_compacted") indices.contextCompactedEvents.push(index);
     }
-    if (row?.type === "response_item" && payload?.type === "custom_tool_call") {
+    if (
+      row?.type === "response_item" &&
+      (payload?.type === "custom_tool_call" || (directMcp && payload?.type === "function_call"))
+    ) {
       indices.gameplay.push(index);
     }
     if (row?.type === "response_item" && payload?.type === "custom_tool_call_output") {
       indices.wrapperOutputs.push(index);
+    }
+    if (row?.type === "response_item" && payload?.type === "tool_search_call") {
+      indices.toolSearchCalls.push(index);
+    }
+    if (row?.type === "response_item" && payload?.type === "tool_search_output") {
+      indices.toolSearchOutputs.push(index);
+    }
+    if (row?.type === "response_item" && payload?.type === "function_call_output") {
+      indices.directOutputs.push(index);
     }
     if (row?.type === "response_item" && payload?.type === "message") {
       if (!new Set(["developer", "user", "assistant"]).has(payload.role)) {
@@ -1003,6 +1236,16 @@ function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
   if (indices.worldStates.length === 0 || indices.turnContexts.length === 0) {
     return rolloutReject("rollout requires one initial world_state and turn_context");
   }
+  if (
+    indices.compactions.length !== 0 ||
+    indices.contextCompactedEvents.length !== 0 ||
+    indices.worldStates.length !== 1 ||
+    indices.turnContexts.length !== 1
+  ) {
+    return rolloutReject(
+      "pure Codex rollout does not permit context compaction or repeated context state",
+    );
+  }
   const initialWorldState = indices.worldStates[0];
   const initialTurnContext = indices.turnContexts[0];
   const userEvent = indices.userEvents[0];
@@ -1013,17 +1256,28 @@ function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
   const promptContent = promptMessage?.content;
   const promptBlock = Array.isArray(promptContent) ? promptContent[0] : null;
   const turnId = rows[initialTurnContext]?.payload?.turn_id;
+  const capturedCliVersion = rows[indices.sessions[0]]?.payload?.cli_version;
+  if (
+    directMcp &&
+    (expectedCliVersion !== CODEX_0146_CLI_VERSION || capturedCliVersion !== CODEX_0146_CLI_VERSION)
+  ) {
+    return rolloutReject(
+      `Spark direct MCP rollout requires authenticated and captured Codex CLI ${CODEX_0146_CLI_VERSION}`,
+    );
+  }
   const profile = codexCaptureProfile(
     rows[initialTurnContext]?.payload,
     expectedModel,
     expectedCliVersion,
-    rows[indices.sessions[0]]?.payload?.cli_version,
+    capturedCliVersion,
   );
   if (profile === null) {
     return rolloutReject("rollout model and multi-agent capture profile is unsupported");
   }
+  const reducedSparkDirectPrelude = directMcp && profile.kind === "spark_disabled_0146";
+  const preludeCount = reducedSparkDirectPrelude ? 1 : profile.preludeCount;
   const preludeIndices = Array.from(
-    { length: profile.preludeCount },
+    { length: preludeCount },
     (_, index) => indices.taskStarts[0] + index + 1,
   );
   const expectedPromptIndices = [...preludeIndices, promptMessageIndex];
@@ -1034,27 +1288,40 @@ function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
     !profile.requiresItemIds ||
     (responseItemIds.every((id) => validItemId(id)) &&
       new Set(responseItemIds).size === responseItemIds.length);
-  const validPrelude =
-    validPermissionsAndSkillsMessage(
-      rows[preludeIndices[0]]?.payload,
-      turnId,
-      profile.requiresItemIds,
-    ) &&
-    (profile.preludeCount === 2
-      ? validEnvironmentMessage(rows[preludeIndices[1]]?.payload, turnId, profile.requiresItemIds)
-      : validV2TeamMessage(rows[preludeIndices[1]]?.payload, turnId, profile.requiresItemIds) &&
-        validV2MultiAgentModeMessage(
-          rows[preludeIndices[2]]?.payload,
-          turnId,
-          profile.requiresItemIds,
-          profile.exactModeBlock,
-        ) &&
-        validEnvironmentMessage(rows[preludeIndices[3]]?.payload, turnId, profile.requiresItemIds));
+  const validPrelude = reducedSparkDirectPrelude
+    ? validPrivateInputMessage(
+        rows[preludeIndices[0]]?.payload,
+        "user",
+        turnId,
+        profile.requiresItemIds,
+      ) &&
+      rows[preludeIndices[0]]?.payload?.content.length === 1 &&
+      validGlobalAgentInstructionsBlock(rows[preludeIndices[0]]?.payload?.content[0])
+    : validPermissionsAndSkillsMessage(
+        rows[preludeIndices[0]]?.payload,
+        turnId,
+        profile.requiresItemIds,
+      ) &&
+      (preludeCount === 2
+        ? validEnvironmentMessage(rows[preludeIndices[1]]?.payload, turnId, profile.requiresItemIds)
+        : validV2TeamMessage(rows[preludeIndices[1]]?.payload, turnId, profile.requiresItemIds) &&
+          validV2MultiAgentModeMessage(
+            rows[preludeIndices[2]]?.payload,
+            turnId,
+            profile.requiresItemIds,
+            profile.exactModeBlock,
+          ) &&
+          validEnvironmentMessage(
+            rows[preludeIndices[3]]?.payload,
+            turnId,
+            profile.requiresItemIds,
+          ));
+  const lastGameplayOutput = Math.max(-1, ...indices.wrapperOutputs, ...indices.directOutputs);
   if (
     !(
       indices.taskStarts[0] === 1 &&
       indices.taskStarts[0] < initialWorldState &&
-      initialWorldState === indices.taskStarts[0] + profile.preludeCount + 1 &&
+      initialWorldState === indices.taskStarts[0] + preludeCount + 1 &&
       initialWorldState + 1 === initialTurnContext &&
       initialTurnContext + 1 === promptMessageIndex &&
       promptMessageIndex + 1 === userEvent &&
@@ -1066,13 +1333,41 @@ function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
     rows[indices.taskCompletes[0]]?.payload?.turn_id !== turnId ||
     !sameJsonValue(indices.promptMessages, expectedPromptIndices) ||
     !validPrelude ||
+    (reducedSparkDirectPrelude &&
+      !validSparkDirectRuntimeProfile(
+        rows[indices.sessions[0]]?.payload,
+        rows[initialTurnContext]?.payload,
+      )) ||
     !validResponseItemIds ||
     !validPrivateInputMessage(promptMessage, "user", turnId, profile.requiresItemIds) ||
-    indices.gameplay.some((index) => !validPrivateWrapperPayload(rows[index]?.payload, turnId)) ||
-    indices.wrapperOutputs.some(
-      (index) =>
-        !validPrivateWrapperOutputPayload(rows[index]?.payload, turnId, profile.requiresItemIds),
-    ) ||
+    (directMcp
+      ? indices.toolSearchCalls.length !== 0 ||
+        indices.toolSearchOutputs.length !== 0 ||
+        indices.gameplay.some(
+          (index) =>
+            !validPrivateDirectFunctionCall(rows[index]?.payload, turnId, profile.requiresItemIds),
+        ) ||
+        indices.directOutputs.some(
+          (index) =>
+            !validPrivateDirectFunctionOutput(
+              rows[index]?.payload,
+              turnId,
+              profile.requiresItemIds,
+            ),
+        )
+      : indices.gameplay.some(
+          (index) => !validPrivateWrapperPayload(rows[index]?.payload, turnId),
+        ) ||
+        indices.wrapperOutputs.some(
+          (index) =>
+            !validPrivateWrapperOutputPayload(
+              rows[index]?.payload,
+              turnId,
+              profile.requiresItemIds,
+            ),
+        )) ||
+    indices.assistantMessages.length !== 1 ||
+    indices.assistantMessages[0] <= lastGameplayOutput ||
     indices.assistantMessages.some(
       (index) => !validPrivateAssistantMessage(rows[index]?.payload, turnId),
     ) ||
@@ -1089,43 +1384,6 @@ function inspectCodexRolloutStructure(rows, expectedModel, expectedCliVersion) {
     return rolloutReject("rollout input and initial context lifecycle is out of order");
   }
 
-  const replayWorldStates = new Set();
-  const replayCompactions = new Set();
-  const initialContextRow = rows[initialTurnContext];
-  for (const contextIndex of indices.turnContexts.slice(1)) {
-    const compactionIndex = contextIndex - 2;
-    const worldStateIndex = contextIndex - 1;
-    if (
-      rows[compactionIndex]?.type !== "compacted" ||
-      rows[worldStateIndex]?.type !== "world_state" ||
-      contextIndex >= indices.taskCompletes[0] ||
-      !exactRolloutReplay(initialContextRow, rows[contextIndex])
-    ) {
-      return rolloutReject("rollout contains an invalid compacted context replay");
-    }
-    replayCompactions.add(compactionIndex);
-    replayWorldStates.add(worldStateIndex);
-  }
-  if (
-    indices.worldStates.some(
-      (index) => index !== initialWorldState && !replayWorldStates.has(index),
-    ) ||
-    indices.compactions.some((index) => !replayCompactions.has(index)) ||
-    indices.contextCompactedEvents.length !== replayCompactions.size
-  ) {
-    return rolloutReject("rollout contains orphan context or world-state rows");
-  }
-  const compactionOrder = [...replayCompactions].sort((left, right) => left - right);
-  for (let index = 0; index < compactionOrder.length; index += 1) {
-    const afterReplay = compactionOrder[index] + 2;
-    const beforeNext = compactionOrder[index + 1] ?? indices.taskCompletes[0];
-    const matchingEvents = indices.contextCompactedEvents.filter(
-      (eventIndex) => eventIndex > afterReplay && eventIndex < beforeNext,
-    );
-    if (matchingEvents.length !== 1) {
-      return rolloutReject("rollout context_compacted lifecycle is out of order");
-    }
-  }
   return { ok: true };
 }
 
@@ -1206,6 +1464,9 @@ function scanCodexGameplayResultForwarding(
       });
     }
     const wrapper = wrapperClassification.wrapper;
+    if (gameplayCalls.length > 0 && wrapper.tool === "start_overworld") {
+      return rolloutReject("pure run must call start_overworld exactly once");
+    }
     wrapperCallIds.add(rowPayload.call_id);
     wrapperItemIds.add(rowPayload.id);
 
@@ -1281,21 +1542,190 @@ function scanCodexGameplayResultForwarding(
   };
 }
 
+function parseDirectMcpArguments(input) {
+  if (typeof input !== "string") return null;
+  try {
+    const arguments_ = JSON.parse(input);
+    return isRecord(arguments_) && JSON.stringify(arguments_) === input ? arguments_ : null;
+  } catch {
+    return null;
+  }
+}
+
+function exactDirectMcpOutput(output, result) {
+  if (typeof output !== "string") return false;
+  return (
+    /^Wall time: \d+(?:\.\d+)? seconds\nOutput:\n/u.test(output) &&
+    output ===
+      output.match(/^Wall time: \d+(?:\.\d+)? seconds\nOutput:\n/u)?.[0] +
+        JSON.stringify(result.content)
+  );
+}
+
+/**
+ * Spark's native MCP transport has no model-authored JavaScript wrapper. It
+ * admits only preloaded native function/MCP/output triplets, preserving the
+ * same result-before-next-action guarantee as the code-mode transport.
+ */
+function scanCodexSparkDirectMcp(rows, { allowIncompletePrefix = false } = {}) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return allowIncompletePrefix
+      ? { ok: true, completedGameplayCalls: 0, gameplayCalls: [], pending: null }
+      : rolloutReject("rollout is empty");
+  }
+
+  const gameplayCalls = [];
+  const nativeCallIds = new Set();
+  const responseItemIds = new Set();
+  const turnContexts = rows.filter((row) => row?.type === "turn_context");
+  const canonicalTurnId = turnContexts[0]?.payload?.turn_id;
+  if (
+    (turnContexts.length > 0 && typeof canonicalTurnId !== "string") ||
+    turnContexts.some((row) => row?.payload?.turn_id !== canonicalTurnId)
+  ) {
+    return rolloutReject("direct MCP rollout has no single canonical turn identity");
+  }
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const payload = row?.payload;
+    if (row?.type === "response_item") {
+      if (payload?.type === "message" || payload?.type === "reasoning") continue;
+
+      if (payload?.type === "function_call") {
+        const ordinal = gameplayCalls.length + 1;
+        const arguments_ = parseDirectMcpArguments(payload.arguments);
+        if (
+          typeof canonicalTurnId !== "string" ||
+          !validPrivateDirectFunctionCall(payload, canonicalTurnId, true) ||
+          arguments_ === null ||
+          responseItemIds.has(payload.id) ||
+          nativeCallIds.has(payload.call_id)
+        ) {
+          return rolloutReject(`direct MCP call ${ordinal} has an invalid or duplicate start`);
+        }
+        if (
+          gameplayCalls.length === 0 &&
+          (payload.name !== "start_overworld" || !sameJsonValue(arguments_, {}))
+        ) {
+          return rolloutReject(
+            "direct MCP run must begin gameplay with start_overworld and no arguments",
+          );
+        }
+        if (gameplayCalls.length > 0 && payload.name === "start_overworld") {
+          return rolloutReject("direct MCP run must call start_overworld exactly once");
+        }
+        responseItemIds.add(payload.id);
+        nativeCallIds.add(payload.call_id);
+
+        const completion = rows[index + 1];
+        const completionPayload = completion?.payload;
+        if (completion === undefined && allowIncompletePrefix) {
+          return {
+            ok: true,
+            completedGameplayCalls: gameplayCalls.length,
+            gameplayCalls,
+            pending: "mcp_completion",
+          };
+        }
+        if (
+          completion?.type !== "event_msg" ||
+          completionPayload?.type !== "mcp_tool_call_end" ||
+          completionPayload.call_id !== payload.call_id ||
+          !isRecord(completionPayload.invocation) ||
+          completionPayload.invocation.server !== "adventureforge" ||
+          completionPayload.invocation.tool !== payload.name ||
+          !sameJsonValue(completionPayload.invocation.arguments, arguments_)
+        ) {
+          return rolloutReject(`direct MCP call ${ordinal} has no immediate matching completion`);
+        }
+        const result = gameplayResult(completionPayload);
+        if (!result) {
+          return rolloutReject(`direct MCP call ${ordinal} has no auditable immediate result`);
+        }
+
+        const output = rows[index + 2];
+        if (output === undefined && allowIncompletePrefix) {
+          return {
+            ok: true,
+            completedGameplayCalls: gameplayCalls.length,
+            gameplayCalls,
+            pending: "visible_result",
+          };
+        }
+        if (
+          output?.type !== "response_item" ||
+          !validPrivateDirectFunctionOutput(output.payload, canonicalTurnId, true) ||
+          output.payload.call_id !== payload.call_id ||
+          responseItemIds.has(output.payload.id) ||
+          !exactDirectMcpOutput(output.payload.output, result)
+        ) {
+          return rolloutReject(
+            `direct MCP call ${ordinal} has a missing, mismatched, or truncated output`,
+          );
+        }
+        responseItemIds.add(output.payload.id);
+        gameplayCalls.push(privateGameplayLifecycle(completionPayload, result));
+        index += 2;
+        continue;
+      }
+
+      return rolloutReject(
+        `forbidden private response item ${String(payload?.type)} at rollout row ${index + 1}`,
+      );
+    }
+    if (row?.type === "event_msg") {
+      if (payload?.type === "mcp_tool_call_end") {
+        return rolloutReject(`orphan or unexpected tool lifecycle at rollout row ${index + 1}`);
+      }
+      if (!ALLOWED_ROLLOUT_NON_TOOL_EVENTS.has(payload?.type)) {
+        return rolloutReject(`forbidden private event at rollout row ${index + 1}`);
+      }
+      continue;
+    }
+    if (!ALLOWED_ROLLOUT_METADATA_ROWS.has(row?.type)) {
+      return rolloutReject(`forbidden private rollout row at position ${index + 1}`);
+    }
+  }
+
+  if (gameplayCalls.length === 0 && !allowIncompletePrefix) {
+    return rolloutReject("direct MCP rollout contains no AdventureForge gameplay result");
+  }
+  return { ok: true, completedGameplayCalls: gameplayCalls.length, gameplayCalls, pending: null };
+}
+
 /**
  * Reject only defects already proven by complete private JSONL rows. A missing
  * adjacent completion/output at the current end of the stream remains pending;
  * the unchanged terminal audit below is still the sole acceptance authority.
  */
-export function inspectCodexGameplayResultForwardingPrefix(rows, { codeModeContract = null } = {}) {
+export function inspectCodexGameplayResultForwardingPrefix(
+  rows,
+  { codeModeContract = null, transportContract = codeModeContract } = {},
+) {
+  if (isSparkDirectMcpContract(transportContract)) {
+    return scanCodexSparkDirectMcp(rows, { allowIncompletePrefix: true });
+  }
   return scanCodexGameplayResultForwarding(rows, {
-    codeModeContract,
+    codeModeContract: transportContract,
     allowIncompletePrefix: true,
   });
 }
 
-export function inspectCodexGameplayResultForwarding(rows, { codeModeContract = null } = {}) {
+export function inspectCodexGameplayResultForwarding(
+  rows,
+  { codeModeContract = null, transportContract = codeModeContract } = {},
+) {
+  if (isSparkDirectMcpContract(transportContract)) {
+    const direct = scanCodexSparkDirectMcp(rows);
+    if (!direct.ok) return direct;
+    return {
+      ok: true,
+      completedGameplayCalls: direct.completedGameplayCalls,
+      gameplayCalls: direct.gameplayCalls,
+    };
+  }
   const inspected = scanCodexGameplayResultForwarding(rows, {
-    codeModeContract,
+    codeModeContract: transportContract,
     allowIncompletePrefix: false,
   });
   if (!inspected.ok) return inspected;
@@ -1413,13 +1843,14 @@ function codeModePrelude(rows, expectedModel) {
 export function inspectCodexPureEventPrefix(
   rows,
   expectedModel = undefined,
-  { codeModeContract = null } = {},
+  { codeModeContract = null, transportContract = codeModeContract } = {},
 ) {
   if (!Array.isArray(rows)) return reject("Codex event stream prefix must be an array");
   if (rows.length === 0) return { ok: true, threadId: null, completedMcpCalls: 0 };
   if (
-    codeModeContract === CODEX_STRICT_CURRENT_CONTRACT &&
-    !SUPPORTED_CODEX_MODELS.has(expectedModel)
+    !transportMatchesRequestedModel(transportContract, expectedModel) ||
+    (transportContract === CODEX_STRICT_CURRENT_CONTRACT &&
+      !SUPPORTED_CODEX_MODELS.has(expectedModel))
   ) {
     return reject("Codex strict-current run has an unsupported requested model");
   }
@@ -1451,7 +1882,12 @@ export function inspectCodexPureEventPrefix(
     }
     // Strict-current startup notices are public `error` items. Their exact
     // count/order remains terminal-audit authority; they carry no tool action.
-    if (item.type === "error") continue;
+    if (item.type === "error") {
+      if (isSparkDirectMcpContract(transportContract)) {
+        return reject("Codex direct MCP run used an unexpected startup error");
+      }
+      continue;
+    }
     if (!ALLOWED_ITEM_TYPES.has(item.type)) {
       return reject(`Codex pure run used forbidden item type ${String(item.type)}`);
     }
@@ -1473,15 +1909,19 @@ export function inspectCodexPureEventPrefix(
 export function inspectCodexPureEvents(
   rows,
   expectedModel = undefined,
-  { codeModeContract = null } = {},
+  { codeModeContract = null, transportContract = codeModeContract } = {},
 ) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return reject("Codex event stream is empty");
   }
 
-  const allowedCodeModePrelude = codeModePrelude(rows, expectedModel);
-  const expectedPreludeLength = expectedModel === SPARK_DISABLED_MODEL ? 2 : 1;
-  if (codeModeContract !== null && allowedCodeModePrelude.length !== expectedPreludeLength) {
+  if (!transportMatchesRequestedModel(transportContract, expectedModel)) {
+    return reject("Codex pure run has an unsupported transport for its requested model");
+  }
+  const directMcp = isSparkDirectMcpContract(transportContract);
+  const allowedCodeModePrelude = directMcp ? [] : codeModePrelude(rows, expectedModel);
+  const expectedPreludeLength = directMcp ? 0 : expectedModel === SPARK_DISABLED_MODEL ? 2 : 1;
+  if (transportContract !== null && allowedCodeModePrelude.length !== expectedPreludeLength) {
     return reject("Codex strict-current run is missing its exact code-mode prelude");
   }
   const turnStartedIndex = 1 + allowedCodeModePrelude.length;
@@ -1548,6 +1988,8 @@ export function inspectCodexPureEvents(
                 "Codex pure run must begin gameplay with start_overworld and no arguments",
               );
             }
+          } else if (item.tool === "start_overworld") {
+            return reject("Codex pure run must call start_overworld exactly once");
           } else if (!freshStartCompleted) {
             return reject("Codex pure run used gameplay before a successful fresh start completed");
           }
@@ -1631,13 +2073,15 @@ export function inspectCodexPureEvidence(
   publicRows,
   rolloutRows,
   expectedModel = undefined,
-  { codeModeContract = null, cliVersion = undefined } = {},
+  { codeModeContract = null, transportContract = codeModeContract, cliVersion = undefined } = {},
 ) {
-  const publicEvidence = inspectCodexPureEvents(publicRows, expectedModel, { codeModeContract });
+  const publicEvidence = inspectCodexPureEvents(publicRows, expectedModel, { transportContract });
   if (!publicEvidence.ok) return publicEvidence;
-  const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel, cliVersion);
+  const rolloutStructure = inspectCodexRolloutStructure(rolloutRows, expectedModel, cliVersion, {
+    transportContract,
+  });
   if (!rolloutStructure.ok) return rolloutStructure;
-  const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows, { codeModeContract });
+  const privateEvidence = inspectCodexGameplayResultForwarding(rolloutRows, { transportContract });
   if (!privateEvidence.ok) return privateEvidence;
   if (publicEvidence.gameplayCalls.length !== privateEvidence.gameplayCalls.length) {
     return reject("Codex public/private gameplay lifecycle count differs");
@@ -1657,6 +2101,7 @@ export function buildCodexPureEnvelope({
   model,
   durationMs,
   codeModeContract = undefined,
+  transportContract = codeModeContract,
   cliVersion = undefined,
 }) {
   if (typeof report !== "string" || report.trim().length === 0) {
@@ -1668,15 +2113,11 @@ export function buildCodexPureEnvelope({
   if (!nonNegativeInteger(durationMs)) {
     return reject("Codex pure run is missing a valid duration");
   }
-  if (
-    codeModeContract !== undefined &&
-    codeModeContract !== CODEX_HISTORICAL_STRICT_CONTRACT &&
-    codeModeContract !== CODEX_STRICT_CURRENT_CONTRACT
-  ) {
+  if (!validCodexTransportContract(transportContract ?? null)) {
     return reject("Codex pure run has an unsupported code-mode contract");
   }
   const inspected = inspectCodexPureEvidence(rows, rolloutRows, model, {
-    codeModeContract: codeModeContract ?? null,
+    transportContract: transportContract ?? null,
     cliVersion,
   });
   if (!inspected.ok) return inspected;
@@ -1746,6 +2187,8 @@ function main() {
   const cliVersion = option(argv, "--cli-version");
   const startedAtMs = Number(option(argv, "--started-at-ms"));
   const codeModeContract = option(argv, "--code-mode-contract");
+  const transportContract = option(argv, "--transport-contract");
+  const effectiveTransportContract = transportContract ?? codeModeContract;
   if (
     !eventsPath ||
     !rolloutPath ||
@@ -1753,10 +2196,13 @@ function main() {
     !model ||
     !cliVersion ||
     !nonNegativeInteger(startedAtMs) ||
-    codeModeContract !== CODEX_STRICT_CURRENT_CONTRACT
+    (codeModeContract !== undefined && transportContract !== undefined) ||
+    typeof effectiveTransportContract !== "string" ||
+    !validCodexTransportContract(effectiveTransportContract) ||
+    effectiveTransportContract === CODEX_HISTORICAL_STRICT_CONTRACT
   ) {
     console.error(
-      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --cli-version <semver> --started-at-ms <n> --code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}`,
+      `Usage: codex-pure-envelope.mjs --events <jsonl> --rollout <jsonl> --report <md> --model <id> --cli-version <semver> --started-at-ms <n> (--code-mode-contract ${CODEX_STRICT_CURRENT_CONTRACT}|--transport-contract ${CODEX_SPARK_DIRECT_MCP_CONTRACT})`,
     );
     process.exit(2);
   }
@@ -1769,7 +2215,7 @@ function main() {
       model,
       cliVersion,
       durationMs: Math.max(0, Date.now() - startedAtMs),
-      codeModeContract,
+      transportContract: effectiveTransportContract,
     });
     if (!result.ok) {
       console.error(result.reason);

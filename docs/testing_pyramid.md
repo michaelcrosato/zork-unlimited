@@ -53,16 +53,17 @@ does, when it runs, and its exact shapes.
 
 ## 2. When each runs + budgets
 
-| Lane                     | Trigger                                                                                                     | Budget                                                                                                                                                                                                                                                                                                                      | Cost                      |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `crawl:smoke`            | every loop cycle (pre- and post-work gate)                                                                  | ~10s deterministic (single-worker smoke config, ~3660 steps/s)                                                                                                                                                                                                                                                              | free                      |
-| `crawl:deep`             | nightly / manual                                                                                            | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                      |
-| `blind` (single)         | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                                                                                                                                                  | $ (one LLM playtest)      |
-| `fleet -- --count 100`   | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                                                                                                                                                          | $ × 100 (real LLM tokens) |
-| `starting-slice:pilot`   | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-member homogeneous-provider/model no-retry cohort as a go/no-go pilot; never certification                                                                                                                                                                                                      | free                      |
-| `starting-slice:certify` | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                                                                                                                                                         | free                      |
-| `fleet:mock`             | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                                                                                                                                | zero tokens               |
-| `feedback:compile`       | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                                                                                                                          | free                      |
+| Lane                          | Trigger                                                                                                     | Budget                                                                                                                                                                                                                                                                                                                      | Cost                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `crawl:smoke`                 | every loop cycle (pre- and post-work gate)                                                                  | ~10s deterministic (single-worker smoke config, ~3660 steps/s)                                                                                                                                                                                                                                                              | free                      |
+| `crawl:deep`                  | nightly / manual                                                                                            | ≥2min soak (multi-worker; measured 352k steps @ ~1935 steps/s incl. 20k-state solver; findings are byte-identical across `--workers` only absent `--seconds` truncation — per-worker deadlines mean WHICH items truncate can vary with worker count once the soak budget bites, always loud via `truncated`/`skippedItems`) | free                      |
+| `blind` (single)              | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                                                                                                                                                  | $ (one LLM playtest)      |
+| `fleet -- --admission-canary` | before expanding Spark spend or a Spark transport change                                                    | three planned serial fresh Spark pure runs; first failure suppresses unlaunched slots; isolated transport go/no-go, never certification                                                                                                                                                                                     | up to $ × 3               |
+| `fleet -- --count 100`        | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                                                                                                                                                          | $ × 100 (real LLM tokens) |
+| `starting-slice:pilot`        | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-member homogeneous-provider/model no-retry cohort as a go/no-go pilot; never certification                                                                                                                                                                                                      | free                      |
+| `starting-slice:certify`      | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                                                                                                                                                         | free                      |
+| `fleet:mock`                  | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                                                                                                                                | zero tokens               |
+| `feedback:compile`            | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                                                                                                                          | free                      |
 
 ## 3. Exact commands
 
@@ -76,6 +77,8 @@ npm run crawl -- --workers 4 --seed 7              # custom invocation (flags in
 npm run blind                                      # canonical pure player, fresh overworld
 npm run blind:smoke                                # explicit structural MCP check, no LLM/tokens
 bash blind-tester/run.sh --smoke --quest sunken_barrow --seed 7 # targeted structural check, no LLM
+npm run fleet -- --admission-canary --label <fresh-spark-admission-label> --out <separate-report-dir> --seed-base <fresh-spark-seed-base>
+npm run fleet -- --provider codex --model gpt-5.3-codex-spark --count <n-greater-than-3> --admission-receipt ai-runs/fleet/<fresh-spark-admission-label>/admission.json --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
 npm run fleet -- --provider codex --model gpt-5.6-terra --count 10 --concurrency 4 --seed-base <fresh-pilot-seed-base> --label <fresh-pilot-label> --no-resume --max-retries 0
 npm run starting-slice:pilot -- --fleet ai-runs/fleet/<fresh-pilot-label>
 npm run fleet -- --provider codex --model gpt-5.6-terra --count 100 --concurrency 4 --seed-base <fresh-seed-base> --label <fresh-label> --no-resume --max-retries 0
@@ -118,6 +121,26 @@ with 10/10 primary
 unrecovered members, unique game and provider sessions, one exact actual
 model id, at least three recognized Wolf-Winter strategies, and no strategy
 above 7/10. The pilot has a distinct result kind and cannot certify the slice.
+Exact Spark uses audited `spark-direct-mcp-v1`: the pure AdventureForge tools are
+preloaded through a tracked game-only player catalog and the first native call is
+`start_overworld({})`. The catalog disables coding tools, Spark-only runner flags
+disable optional context injectors, and the clean build commit binds both.
+Subsequent calls must stay in the
+attested pure set while the game server enforces current legality. Sol, Terra,
+and Luna retain
+`strict-code-mode-v2` wrappers. Lifecycle ids are validated within each stream;
+ordered tools, arguments, results, and visible outputs must cross-bind between
+public and private streams under the selected transport;
+tool/resource discovery, cross-server calls, or a transport
+mismatch reject the run. Before larger Spark spend, `--admission-canary` must
+pass its three serial fresh pure runs. Its separate `admission.json` is marked
+noncertifying and does not count as pilot or authority evidence. A live Spark
+fleet larger than three must supply it through `--admission-receipt`; the exact
+clean build/world, transport fingerprint, model, client authority/version, and
+gate configuration must still match or the fleet fails before player launch.
+Every current Codex model also rejects opaque CLI compaction from pure evidence,
+including a second world or turn context; `auto_compact_token_limit: null`
+preserves default headroom but is not a proof that compaction is disabled.
 Resume is a diagnostic
 convenience and requires a
 reverified evidence-sidecar-v2 report with the current journey contract and
@@ -125,7 +148,8 @@ exact planned seed/build/world. Generic readers retain historical sidecar-v1
 readability, but v1, legacy, and structural reports cannot enter the cohort. The
 20-minute member timeout is a technical failure/failsafe, not the intended
 endpoint. Failed artifacts are digest-indexed in a per-attempt bundle archive
-before retry; the closed manifest and summary count every attempt, so an eventual
+before retry; strict-stream exit 43 is terminal, publishes no playtest, and is
+never retried. The closed manifest and summary count every attempt, so an eventual
 success cannot erase a prior timeout or verification/launcher failure. Any such
 label exits nonzero and cannot certify. A resume-enabled fleet or skipped slot
 is also non-certifying: an authoritative fresh label must use
@@ -180,15 +204,14 @@ deterministic receipt binding: the provider's original report and strict
 replacing only the existing receipt value from raw server evidence, and the
 unchanged report verifier must pass. This zero-model transformation preserves
 all subjective evidence, so it is certifiable; model-assisted report recovery
-remains forbidden. Codex v7 is the current contract: it additionally
-authenticates strict capture v3, the model-specific code-mode prelude, every
-canonical pragma/awaited-forward wrapper, and the fleet-wide frozen effective
-client authority plus exact CLI version. That authority binds the original
+remains forbidden. Codex v8 is the current contract: it authenticates the exact
+selected model-specific transport, Spark capture schema v4 or strict capture
+schema v3 as applicable, public/private cross-binding, and the fleet-wide frozen
+effective client authority plus exact CLI version. That authority binds the original
 canonical Unix npm symlink when present, the exact package/entrypoint/native
 closure, and a native-only final execution target; unsupported script launchers
 cannot downgrade to one-file authority. Current resume and certification require
-v7; v3/v5 (including strict v1), v4, and pre-client-pin strict-v2 v6 are
-historical-readable only. Codex
+v8; receipt schemas v1-v3 and Codex v3-v7 are historical-readable only. Codex
 `turn_context.model` is a CLI-recorded selected-model value, not a provider-signed
 remote-backend identity. Resume and certification reparse these retained facts.
 The cwd receipt is a trusted capture-time runner assertion: after cleanup they
@@ -216,7 +239,7 @@ before the 100-player spend.
 Certification fixes the count to 100 and is the only authority result. Report
 basenames must carry the cohort's current stamp, preventing historical reports
 from being relabeled as fresh. Receipt-bound Codex members remain eligible only
-when current v7 attestation, original provider bytes, binding metadata, raw evidence,
+when current v8 attestation, original provider bytes, binding metadata, raw evidence,
 and the reproduced final report all agree; manifests and summaries count them
 separately from report recovery.
 Malformed evidence exits 2, a threshold miss exits 1, and a pass exits 0. Exact

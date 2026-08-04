@@ -22,6 +22,17 @@ const INTERVIEW = `
 \`\`\`
 `;
 
+function completeReport(interview = INTERVIEW): string {
+  return `
+1. Playthrough log: I started the game, followed the investigation, and reached ending_found.
+2. Did it work mechanically? No rejected actions or loops.
+3. Understandable & fun? clarity 4/5 + enjoyment 4/5.
+4. Confusion / friction points. None.
+5. Bugs or design flaws. None.
+6. Verdict: A real player would finish satisfied.
+${interview}`;
+}
+
 describe("blind report verifier", () => {
   it("rejects Claude success payloads that only report missing AdventureForge MCP tools", () => {
     const result =
@@ -150,6 +161,25 @@ ${INTERVIEW}`);
       ok: false,
       reason: "missing exit interview (a ```json exit-interview fenced block is mandatory)",
     });
+  });
+
+  it("rejects an unclosed or nonterminal exit interview instead of accepting partial output", () => {
+    const unclosed = INTERVIEW.replace(/\n```\n$/u, "\n");
+    expect(verifyBlindReportText(completeReport(unclosed))).toEqual({
+      ok: false,
+      reason: "missing exit interview (a ```json exit-interview fenced block is mandatory)",
+    });
+    expect(verifyBlindReportText(`${completeReport()}trailing model prose`)).toEqual({
+      ok: false,
+      reason: "exit interview must be the final report block",
+    });
+  });
+
+  it("rejects textual none entries in bugs; no observed bugs must be the literal empty array", () => {
+    const textualNone = INTERVIEW.replace('"bugs": []', '"bugs": ["None observed."]');
+    const result = verifyBlindReportText(completeReport(textualNone));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("bugs.0");
   });
 
   it("rejects an exit interview that fails the schema (fractional score)", () => {

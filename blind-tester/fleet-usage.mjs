@@ -8,11 +8,17 @@
  * runner and its independent certifier.
  */
 import { createHash } from "node:crypto";
+import {
+  CODEX_SPARK_DIRECT_MCP_CONTRACT,
+  CODEX_STRICT_CURRENT_CONTRACT,
+  CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES,
+} from "./codex-pure-envelope.mjs";
 import { parseJsonRejectingDuplicateKeys } from "./strict-json.mjs";
 
 export const FLEET_USAGE_RECORD_SOURCES = Object.freeze([
   "primary_envelope",
   "terminal_turn_completed",
+  "strict_stream_lower_bound",
   "unrecoverable",
   "skipped_resume",
 ]);
@@ -78,7 +84,9 @@ export function usageRecordFromUsageObject(
       ? "cache_read_input_tokens"
       : source === "terminal_turn_completed"
         ? "cached_input_tokens"
-        : null);
+        : source === "strict_stream_lower_bound"
+          ? "cached_input_tokens"
+          : null);
   if (expectedCachedInputKey === null) return unrecoverableRecord();
   const cachedInputTokens = usage[expectedCachedInputKey];
   const reasoningOutputTokens = usage.reasoning_output_tokens;
@@ -208,6 +216,61 @@ export function usageRecordFromFailedAttempt({
   return usageRecordFromTerminalTurnCompleted(providerEventsText);
 }
 
+/**
+ * Project only the numeric lower bound from a validated noncanonical strict
+ * stream diagnostic. This remains incomplete accounting and can never make a
+ * failed attempt certification-eligible.
+ */
+export function usageRecordFromStrictStreamDiagnostic(diagnosticText) {
+  const parsed = parseStrictJson(diagnosticText, "strict stream rejection diagnostic");
+  if (!parsed?.ok) return unrecoverableRecord();
+  const diagnostic = parsed.value;
+  const failures = CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES[diagnostic?.surface];
+  const usage = diagnostic?.usage_lower_bound;
+  if (
+    !hasExactKeys(diagnostic, [
+      "acceptance_eligible",
+      "binding",
+      "canonical",
+      "commitments",
+      "ignored",
+      "kind",
+      "rejection",
+      "schema_version",
+      "surface",
+      "transport_contract",
+      "usage_lower_bound",
+    ]) ||
+    diagnostic.schema_version !== 2 ||
+    diagnostic.acceptance_eligible !== false ||
+    diagnostic.canonical !== false ||
+    diagnostic.ignored !== true ||
+    diagnostic.kind !== "strict_stream_rejection_diagnostic" ||
+    ![CODEX_STRICT_CURRENT_CONTRACT, CODEX_SPARK_DIRECT_MCP_CONTRACT].includes(
+      diagnostic.transport_contract,
+    ) ||
+    (diagnostic.surface === "private_rollout" &&
+      diagnostic.transport_contract !== CODEX_SPARK_DIRECT_MCP_CONTRACT) ||
+    !Array.isArray(failures) ||
+    !hasExactKeys(diagnostic.rejection, ["failure"]) ||
+    !failures.includes(diagnostic.rejection.failure) ||
+    usage === null ||
+    !hasExactKeys(usage, [
+      "cached_input_tokens",
+      "input_tokens",
+      "output_tokens",
+      "reasoning_output_tokens",
+    ]) ||
+    usage.reasoning_output_tokens > usage.output_tokens
+  ) {
+    return unrecoverableRecord();
+  }
+  return usageRecordFromUsageObject(usage, "strict_stream_lower_bound", {
+    cachedInputKey: "cached_input_tokens",
+    requireReasoningOutputTokens: true,
+  });
+}
+
 function isExactUsageRecord(record) {
   if (record === null || typeof record !== "object" || Array.isArray(record)) return false;
   const keys = Object.keys(record).sort();
@@ -318,7 +381,12 @@ export function summarizeFleetUsage(records) {
       summary.complete = false;
       continue;
     }
-    summary.measured_attempt_count += 1;
+    if (record.source === "strict_stream_lower_bound") {
+      summary.unrecoverable_attempt_count += 1;
+      summary.complete = false;
+    } else {
+      summary.measured_attempt_count += 1;
+    }
     const uncachedInputTokens = record.input_tokens - record.cached_input_tokens;
     summary.observed_input_tokens = addSafeUsageTotal(
       summary.observed_input_tokens,

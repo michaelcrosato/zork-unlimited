@@ -26,8 +26,10 @@ import * as strictStream from "../../blind-tester/codex-strict-stream.mjs";
 const {
   appendCompleteJsonlBytes,
   createCompleteJsonlDecoder,
+  latestPrivateUsageLowerBound,
   providerExitCodeFor,
   terminateOwnedProviderTree,
+  writeStreamRejectionDiagnostic,
   writeStrictRejectionDiagnostic,
 } = strictStream;
 
@@ -63,7 +65,7 @@ function launchFakeCodex(
 ) {
   return spawnSync(
     process.execPath,
-    ["blind-tester/blind-launch.mjs", "--out", out, "--seed", seed],
+    ["blind-tester/blind-launch.mjs", "--out", out, "--seed", seed, "--model=gpt-5.6-terra"],
     {
       cwd: cleanGit.path,
       encoding: "utf8",
@@ -189,7 +191,7 @@ rollout_dir="\${home}/sessions/2026/07/26"
 mkdir -p "\${rollout_dir}"
 rollout="\${rollout_dir}/rollout-2026-07-26T12-01-00-${threadId}.jsonl"
 printf '{"type":"session_meta","payload":{"id":"%s","cwd":"%s"}}\\n' "${threadId}" "\${cwd}" > "\${rollout}"
-printf '{"type":"turn_context","payload":{"cwd":"%s","model":"gpt-5.3-codex-spark"}}\\n' "\${cwd}" >> "\${rollout}"
+printf '{"type":"turn_context","payload":{"cwd":"%s","model":"gpt-5.6-terra"}}\\n' "\${cwd}" >> "\${rollout}"
 printf '%s\\n' '{"type":"response_item","payload":{"type":"custom_tool_call","id":"wrapper-item-1","status":"completed","call_id":"call-wrapper-1","name":"exec","input":"// @exec: {\\"yield_time_ms\\":120000}\\ntext(await tools.mcp__adventureforge__start_overworld({}));\\n"}}' >> "\${rollout}"
 (
   sleep 2
@@ -251,7 +253,7 @@ while :; do sleep 1; done
       seed: "73654",
       buildCommit: "a".repeat(40),
       trackedWorktreeClean: true,
-      model: "gpt-5.3-codex-spark",
+      model: "gpt-5.6-terra",
       cliVersion: "0.144.1",
       clientAuthoritySha256: "b".repeat(64),
     };
@@ -273,6 +275,120 @@ while :; do sleep 1; done
       expect(writeStrictRejectionDiagnostic(config, watch, row, "syntax_error")).toBe(false);
       expect(readFileSync(diagnosticPath, "utf8")).toBe(initial);
       expect(JSON.parse(initial)).toMatchObject({ acceptance_eligible: false, canonical: false });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps only the latest valid cumulative private usage as a failed-run lower bound", () => {
+    const first = {
+      input_tokens: 120,
+      cached_input_tokens: 80,
+      output_tokens: 30,
+      reasoning_output_tokens: 20,
+      total_tokens: 150,
+    };
+    const latest = {
+      input_tokens: 240,
+      cached_input_tokens: 150,
+      output_tokens: 60,
+      reasoning_output_tokens: 35,
+      total_tokens: 300,
+    };
+    expect(
+      latestPrivateUsageLowerBound([
+        { type: "event_msg", payload: { type: "token_count", info: { total_token_usage: first } } },
+        {
+          type: "event_msg",
+          payload: { type: "token_count", info: { total_token_usage: latest } },
+        },
+        {
+          type: "event_msg",
+          payload: {
+            type: "token_count",
+            info: { total_token_usage: { ...latest, total_tokens: 301 } },
+          },
+        },
+      ]),
+    ).toEqual({
+      input_tokens: 240,
+      cached_input_tokens: 150,
+      output_tokens: 60,
+      reasoning_output_tokens: 35,
+    });
+  });
+
+  it("writes an allowlisted failed-stream category and numeric usage without raw stream data", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-strict-stream-lower-bound-"));
+    const diagnosticPath = join(root, "attempt.strict-rejection.json");
+    const secret = "private game output and provider prose";
+    const config = {
+      path: diagnosticPath,
+      seed: "73655",
+      buildCommit: "a".repeat(40),
+      trackedWorktreeClean: true,
+      model: "gpt-5.3-codex-spark",
+      cliVersion: "0.146.0",
+      clientAuthoritySha256: "b".repeat(64),
+    };
+    const detail = {
+      surface: "private_rollout",
+      failure: "direct_output_mismatch",
+      transportContract: "spark-direct-mcp-v1",
+      threadId: "88888888-8888-4888-8888-888888888888",
+      identity: { dev: 11n, ino: 13n },
+      rowIndex: 8,
+      row: { type: "response_item", payload: { output: secret } },
+      usageLowerBound: {
+        input_tokens: 240,
+        cached_input_tokens: 150,
+        output_tokens: 60,
+        reasoning_output_tokens: 35,
+      },
+    };
+    try {
+      expect(writeStreamRejectionDiagnostic(config, detail)).toBe(true);
+
+      const diagnostic = readFileSync(diagnosticPath, "utf8");
+      expect(Buffer.byteLength(diagnostic, "utf8")).toBeLessThanOrEqual(4 * 1024);
+      expect(diagnostic).not.toContain(secret);
+      expect(JSON.parse(diagnostic)).toMatchObject({
+        schema_version: 2,
+        acceptance_eligible: false,
+        canonical: false,
+        ignored: true,
+        kind: "strict_stream_rejection_diagnostic",
+        surface: "private_rollout",
+        transport_contract: "spark-direct-mcp-v1",
+        binding: {
+          thread_id: "88888888-8888-4888-8888-888888888888",
+          row_ordinal: 9,
+          row_projection_bytes: expect.any(Number),
+          row_projection_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+        },
+        rejection: { failure: "direct_output_mismatch" },
+        usage_lower_bound: {
+          input_tokens: 240,
+          cached_input_tokens: 150,
+          output_tokens: 60,
+          reasoning_output_tokens: 35,
+        },
+      });
+      expect(
+        writeStreamRejectionDiagnostic(
+          { ...config, path: join(root, "unsafe.json") },
+          { ...detail, failure: secret },
+        ),
+      ).toBe(false);
+      expect(
+        writeStreamRejectionDiagnostic(
+          { ...config, path: join(root, "extra-usage-field.json") },
+          {
+            ...detail,
+            usageLowerBound: { ...detail.usageLowerBound, provider_secret: secret },
+          },
+        ),
+      ).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -334,14 +450,13 @@ rollout_dir="\${home}/sessions/2026/07/26"
 mkdir -p "\${rollout_dir}"
 rollout="\${rollout_dir}/rollout-2026-07-26T12-00-00-${threadId}.jsonl"
 printf '{"type":"session_meta","payload":{"id":"%s","cwd":"%s"}}\\n' "${threadId}" "\${cwd}" > "\${rollout}"
-printf '{"type":"turn_context","payload":{"cwd":"%s","model":"gpt-5.3-codex-spark"}}\\n' "\${cwd}" >> "\${rollout}"
+printf '{"type":"turn_context","payload":{"cwd":"%s","model":"gpt-5.6-terra"}}\\n' "\${cwd}" >> "\${rollout}"
 (
   sleep 2
   printf 'fake MCP escaped its provider tree\\n' > "\${FAKE_MCP_SURVIVED}"
 ) &
 printf '%s\\n' '{"type":"thread.started","thread_id":"${threadId}"}'
 printf '%s\\n' '{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set \u0060suppress_unstable_features_warning = true\u0060 in /tmp/config.toml."}}'
-printf '%s\\n' '{"type":"item.completed","item":{"id":"item_1","type":"error","message":"Code Mode is enabled in configuration, but model \u0060gpt-5.3-codex-spark\u0060 does not advertise Code Mode support. This may degrade model performance. Disable \u0060features.code_mode\u0060 and \u0060features.code_mode_only\u0060, or select a model whose metadata enables Code Mode."}}'
 printf '%s\\n' '{"type":"turn.started"}'
 printf '%s\\n' '{"type":"item.started","item":{"id":"item_2","type":"mcp_tool_call","server":"codex","tool":"read_thread","arguments":{},"result":null,"error":null,"status":"in_progress"}}'
 while :; do sleep 1; done
@@ -352,7 +467,7 @@ while :; do sleep 1; done
     try {
       const result = spawnSync(
         process.execPath,
-        ["blind-tester/blind-launch.mjs", "--out", out, "--seed", "73650"],
+        ["blind-tester/blind-launch.mjs", "--out", out, "--seed", "73650", "--model=gpt-5.6-terra"],
         {
           cwd: cleanGit.path,
           encoding: "utf8",
@@ -373,7 +488,18 @@ while :; do sleep 1; done
       expect(output).toMatch(/strict stream rejected/i);
       expect(output).toMatch(/forbidden MCP server codex/i);
       expectNoPublishedEvidence(out);
-      expect(existsSync(`${out}.strict-rejection.json`)).toBe(false);
+      const diagnostic = readFileSync(`${out}.strict-rejection.json`, "utf8");
+      expect(diagnostic).not.toContain("codex");
+      expect(JSON.parse(diagnostic)).toMatchObject({
+        schema_version: 2,
+        acceptance_eligible: false,
+        canonical: false,
+        ignored: true,
+        kind: "strict_stream_rejection_diagnostic",
+        surface: "public_events",
+        rejection: { failure: "forbidden_mcp_server" },
+        usage_lower_bound: null,
+      });
 
       await delay(2_500);
       expect(existsSync(survived)).toBe(false);

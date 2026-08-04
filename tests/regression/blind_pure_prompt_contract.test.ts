@@ -4,9 +4,35 @@ import { describe, expect, it } from "vitest";
 
 // @ts-expect-error — plain .mjs module without type declarations
 import { classifyCodexGameplayWrapper } from "../../blind-tester/codex-pure-envelope.mjs";
+// @ts-expect-error — plain .mjs module without type declarations
+import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
 
 const ROOT = process.cwd();
-const prompt = readFileSync(join(ROOT, "blind-tester", "prompt-overworld.md"), "utf8");
+const promptTemplate = readFileSync(join(ROOT, "blind-tester", "prompt-overworld.md"), "utf8");
+const sparkPromptTemplate = readFileSync(
+  join(ROOT, "blind-tester", "prompt-overworld-spark.md"),
+  "utf8",
+);
+const strictTransport = readFileSync(
+  join(ROOT, "blind-tester", "prompt-transports", "strict-code-mode-v2.md"),
+  "utf8",
+);
+const directTransport = readFileSync(
+  join(ROOT, "blind-tester", "prompt-transports", "spark-direct-mcp-v1.md"),
+  "utf8",
+);
+const prompt = fillPrompt(promptTemplate, {
+  startInstruction: "start",
+  seed: 1,
+  persona: "",
+  transport: strictTransport,
+});
+const sparkPrompt = fillPrompt(sparkPromptTemplate, {
+  startInstruction: "start",
+  seed: 1,
+  persona: "",
+  transport: directTransport,
+});
 const protocol = readFileSync(join(ROOT, "docs", "blind_playtest_protocol.md"), "utf8");
 const readme = readFileSync(join(ROOT, "blind-tester", "README.md"), "utf8");
 const runner = readFileSync(join(ROOT, "blind-tester", "run.sh"), "utf8");
@@ -86,10 +112,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("Never submit either source line alone");
     expect(prompt).toContain("only after\n  seeing the response");
     expect(prompt).toContain("mcp__adventureforge__start_overworld");
-    expect(prompt).toContain("Begin with one pre-game tool invocation");
+    expect(prompt).toContain("first **game action**");
     expect(prompt).toContain("with `{}`, an object containing no\n  fields");
-    expect(prompt).toContain("This\n  is the only pre-game action");
-    expect(prompt).toContain("the game could not start");
+    expect(prompt).toMatch(/Make no other\s+pre-game action/);
+    expect(prompt).toMatch(/the game could\s+not start/);
     expect(prompt).toContain("Use the `functions.exec` gameplay wrapper below for every call");
     expect(prompt).toContain("contains exactly one `mcp__adventureforge__...` action");
     expect(prompt).toMatch(/`tool_search` is not a gameplay\s+action/);
@@ -198,6 +224,63 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).not.toMatch(/Albany|Colonie|Wolf-Winter|breaking_weir|cautious_scout/i);
     expect(prompt).not.toContain("resolve_overworld_session_road_encounter");
     expect(prompt).not.toContain("include_actions: false");
+  });
+
+  it("gives Spark a compact game-only prompt with one native start and a complete interview", () => {
+    expect(sparkPrompt).toContain("`mcp__adventureforge__start_overworld({})` exactly once");
+    expect(sparkPrompt).toContain("Before any words or other action");
+    expect(sparkPrompt).toContain("call only preloaded");
+    expect(sparkPrompt).toContain("gameplay functions authorized by the latest game");
+    expect(sparkPrompt).toContain("Never use any other tool");
+    expect(sparkPrompt).toContain("first-time player");
+    expect(sparkPrompt).toContain(
+      "do not\nseek test coverage, follow a preset route, or impose a turn limit",
+    );
+    expect(sparkPrompt).toContain("Keep the initial `legend` and merge later `legend_delta` keys");
+    expect(sparkPrompt).toContain(
+      "parent overworld and child RPG handles are\nnever interchangeable",
+    );
+    expect(sparkPrompt).toContain("Replace old legal menus with the latest one");
+    expect(sparkPrompt).toContain("honestly continue or end");
+    expect(sparkPrompt).toContain("Report only after an end response returns `exitReceipt`");
+    expect(sparkPrompt).toContain("`run_evidence.recorded` is false and `retryable` is true");
+    for (const heading of [
+      "Playthrough log",
+      "Did it work mechanically?",
+      "Understandable & fun?",
+      "Confusion / friction points",
+      "Bugs or design flaws",
+      "Verdict",
+    ]) {
+      expect(sparkPrompt).toContain(`\`${heading}\``);
+    }
+    expect(sparkPrompt).toContain(
+      "Do not stop after\nthe JSON `}`: your response is invalid unless its final line is the closing\nthree-backtick fence",
+    );
+    expect(sparkPrompt).toContain(
+      "each bug is\nexactly an object with `where`, `severity` (`S0`-`S4`), and `note`",
+    );
+    expect(sparkPrompt).toContain("Use `[]`\nwhen there are none");
+    expect(sparkPrompt).toContain('never put `"none"`, `"none observed"`');
+    expect(sparkPrompt.trimEnd().endsWith("```")).toBe(true);
+    expect(sparkPrompt.match(/^```json exit-interview\r?$/gmu)).toHaveLength(1);
+    expect(sparkPrompt).toContain('"schema_version":2');
+    expect(sparkPrompt).toContain('"play_mode":"pure"');
+    expect(sparkPrompt).toContain('"start_surface":"fresh_overworld"');
+    expect(sparkPrompt).toContain('"journey_exit_receipt":{}');
+    expect(sparkPrompt).not.toMatch(/Albany|Colonie|Wolf-Winter|breaking_weir/i);
+    expect(sparkPrompt).not.toContain("functions.exec");
+    expect(sparkPrompt).not.toContain("apply_patch");
+    expect(sparkPrompt).not.toContain("tool_search");
+    expect(sparkPrompt).not.toContain("list_mcp_resources");
+    expect(sparkPrompt).not.toContain('tool_search({"query"');
+    expect(sparkPrompt).not.toContain(CODEX_EXEC_YIELD_PRAGMA);
+    expect(sparkPrompt).not.toContain("text(await tools.");
+    expect(sparkPrompt).not.toContain("{{TRANSPORT_INSTRUCTIONS}}");
+    expect(sparkPrompt).not.toContain("{{PERSONA}}");
+    expect(prompt).not.toContain("{{TRANSPORT_INSTRUCTIONS}}");
+    expect(prompt).toContain('Never put `"none"`,\n  `"none observed"`');
+    expect(prompt.trimEnd().endsWith("```")).toBe(true);
   });
 
   it("locks quest-only legal-action transport and exact session handles across prompt and protocol", () => {

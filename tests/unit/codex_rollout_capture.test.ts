@@ -73,8 +73,12 @@ function providerEvents(threadId = THREAD_ID): string {
   return `${JSON.stringify({ type: "thread.started", thread_id: threadId })}\n${JSON.stringify({ type: "turn.started" })}\n`;
 }
 
-function cwdRollout(cwd: string, threadId = THREAD_ID): string {
-  return `${JSON.stringify({ type: "session_meta", payload: { id: threadId, cwd } })}\n${JSON.stringify({ type: "turn_context", payload: { cwd } })}\n`;
+function cwdRollout(
+  cwd: string,
+  threadId = THREAD_ID,
+  model: string | undefined = undefined,
+): string {
+  return `${JSON.stringify({ type: "session_meta", payload: { id: threadId, cwd } })}\n${JSON.stringify({ type: "turn_context", payload: { cwd, ...(model === undefined ? {} : { model }) } })}\n`;
 }
 
 function compactedCwdRollout(cwd: string, threadId = THREAD_ID): string {
@@ -117,8 +121,20 @@ function capturePaths(root: string): {
   };
 }
 
-function capture(home: string, paths: ReturnType<typeof capturePaths>, player: string): void {
-  captureThreadBoundCodexRollout(home, paths.events, paths.destination, paths.receipt, player);
+function capture(
+  home: string,
+  paths: ReturnType<typeof capturePaths>,
+  player: string,
+  transportContract?: string,
+): void {
+  captureThreadBoundCodexRollout(
+    home,
+    paths.events,
+    paths.destination,
+    paths.receipt,
+    player,
+    transportContract,
+  );
 }
 
 function alterSecondTurnContext(text: string): string {
@@ -491,6 +507,59 @@ describe("thread-bound Codex rollout capture", () => {
     expect(receipt.expected_directory_identity).toEqual(receipt.session_directory_identity);
     expect(receipt.expected_directory_identity).toEqual(receipt.turn_directory_identity);
     expect(() => capture(home, paths, player)).toThrow(/EEXIST/i);
+  });
+
+  it("writes a distinct v4 receipt only for the exact Spark direct-MCP contract", () => {
+    const root = temporaryRoot("af-codex-spark-direct-capture-");
+    const home = join(root, "existing-home");
+    const player = join(root, "player");
+    const paths = capturePaths(root);
+    mkdirSync(home);
+    mkdirSync(player);
+    writeFileSync(paths.events, providerEvents());
+    const expected = cwdRollout(player, THREAD_ID, "gpt-5.3-codex-spark");
+    writeRollout(home, THREAD_ID, expected);
+
+    capture(home, paths, player, "spark-direct-mcp-v1");
+
+    expect(readFileSync(paths.destination, "utf8")).toBe(expected);
+    expect(JSON.parse(readFileSync(paths.receipt, "utf8"))).toEqual({
+      schema_version: 4,
+      binding: "runner_work_player",
+      transport_contract: "spark-direct-mcp-v1",
+      recorded_session_cwd: player,
+      recorded_turn_cwd: player,
+      canonical_expected_cwd: expect.any(String),
+      canonical_session_cwd: expect.any(String),
+      canonical_turn_cwd: expect.any(String),
+      expected_directory_identity: expect.objectContaining({
+        device_id: expect.stringMatching(/^\d+$/),
+        file_id: expect.stringMatching(/^\d+$/),
+      }),
+      session_directory_identity: expect.any(Object),
+      turn_directory_identity: expect.any(Object),
+      copied_rollout_sha256: createHash("sha256").update(expected).digest("hex"),
+    });
+  });
+
+  it("rejects direct-MCP cross-labeling before publishing rollout evidence", () => {
+    for (const [model, contract, reason] of [
+      ["gpt-5.6-terra", "spark-direct-mcp-v1", /requires exact model gpt-5\.3-codex-spark/i],
+      ["gpt-5.3-codex-spark", "direct", /transport contract must be exactly/i],
+    ] as const) {
+      const root = temporaryRoot("af-codex-direct-cross-label-");
+      const home = join(root, "existing-home");
+      const player = join(root, "player");
+      const paths = capturePaths(root);
+      mkdirSync(home);
+      mkdirSync(player);
+      writeFileSync(paths.events, providerEvents());
+      writeRollout(home, THREAD_ID, cwdRollout(player, THREAD_ID, model));
+
+      expect(() => capture(home, paths, player, contract)).toThrow(reason);
+      expect(existsSync(paths.destination)).toBe(false);
+      expect(existsSync(paths.receipt)).toBe(false);
+    }
   });
 
   it("pins the exact thread rollout descriptor and binds both recorded cwd values", () => {

@@ -171,6 +171,7 @@ export interface PureFleetRunArtifactFacts {
     | typeof CODEX_HISTORICAL_STRICT_CONTRACT
     | typeof CODEX_STRICT_CURRENT_CONTRACT
     | null;
+  transport_contract: typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT | null;
   report_recovered: boolean;
   report_receipt_bound: boolean;
   hashes: PureFleetRunArtifactHashes;
@@ -306,6 +307,8 @@ const CodexCaptureReceiptSchema = z
 
 export const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1" as const;
 export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2" as const;
+export const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1" as const;
+export const SPARK_DIRECT_MCP_MODEL = "gpt-5.3-codex-spark" as const;
 
 const HistoricalStrictCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({
   schema_version: true,
@@ -323,10 +326,20 @@ const CurrentCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({ schema
   })
   .strict();
 
+const SparkDirectMcpCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({
+  schema_version: true,
+})
+  .extend({
+    schema_version: z.literal(4),
+    transport_contract: z.literal(SPARK_DIRECT_MCP_TRANSPORT_CONTRACT),
+  })
+  .strict();
+
 const AnyCodexCaptureReceiptSchema = z.union([
   CodexCaptureReceiptSchema,
   HistoricalStrictCodexCaptureReceiptSchema,
   CurrentCodexCaptureReceiptSchema,
+  SparkDirectMcpCodexCaptureReceiptSchema,
 ]);
 
 interface CodexAuthorityFacts {
@@ -338,6 +351,7 @@ interface CodexAuthorityFacts {
     | typeof CODEX_HISTORICAL_STRICT_CONTRACT
     | typeof CODEX_STRICT_CURRENT_CONTRACT
     | null;
+  transportContract: typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT | null;
   usage: {
     input_tokens: number;
     cached_input_tokens: number;
@@ -441,6 +455,7 @@ function parseCodexCaptureReceipt(
         | typeof CODEX_HISTORICAL_STRICT_CONTRACT
         | typeof CODEX_STRICT_CURRENT_CONTRACT
         | null;
+      transportContract: typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT | null;
     }
   | { ok: false; reason: string } {
   const raw = parseJsonRejectingDuplicateKeys(captureText, "Codex capture receipt");
@@ -475,7 +490,11 @@ function parseCodexCaptureReceipt(
   return {
     ok: true,
     canonicalCwd: receipt.canonical_expected_cwd,
-    codeModeContract: receipt.schema_version === 1 ? null : receipt.code_mode_contract,
+    codeModeContract:
+      receipt.schema_version === 2 || receipt.schema_version === 3
+        ? receipt.code_mode_contract
+        : null,
+    transportContract: receipt.schema_version === 4 ? receipt.transport_contract : null,
   };
 }
 
@@ -591,6 +610,15 @@ function parseCodexAuthority(
     turn.data.cwd,
   );
   if (!capture.ok) return capture;
+  if (
+    capture.transportContract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT &&
+    expectedModel !== SPARK_DIRECT_MCP_MODEL
+  ) {
+    return {
+      ok: false,
+      reason: `${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} requires exact model ${SPARK_DIRECT_MCP_MODEL}`,
+    };
+  }
   const inspected:
     | { ok: true; threadId: string; usage: CodexAuthorityFacts["usage"] }
     | {
@@ -598,6 +626,7 @@ function parseCodexAuthority(
         reason: string;
       } = inspectCodexPureEvidence(events.rows, rollout.rows, expectedModel, {
     codeModeContract: capture.codeModeContract,
+    transportContract: capture.transportContract ?? capture.codeModeContract,
     cliVersion: session.data.cli_version,
   });
   if (!inspected.ok)
@@ -667,6 +696,7 @@ function parseCodexAuthority(
       turnId: turn.data.turn_id,
       cwd: capture.canonicalCwd,
       codeModeContract: capture.codeModeContract,
+      transportContract: capture.transportContract,
       usage: inspected.usage,
     },
   };
@@ -911,6 +941,7 @@ export function validatePureFleetRunArtifactBytes(
         provider_turn_id: authority.facts.turnId,
         provider_cwd: authority.facts.cwd,
         code_mode_contract: authority.facts.codeModeContract,
+        transport_contract: authority.facts.transportContract,
         report_recovered: false,
         report_receipt_bound: reportReceiptBound,
         hashes,
@@ -1018,6 +1049,7 @@ export function validatePureFleetRunArtifactBytes(
       provider_turn_id: null,
       provider_cwd: null,
       code_mode_contract: null,
+      transport_contract: null,
       report_recovered: reportRecovered,
       report_receipt_bound: false,
       hashes,

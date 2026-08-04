@@ -18,6 +18,10 @@ import { extractRecoveredReport } from "../../src/blind/report_recovery.js";
 import { hashState } from "../../src/core/hash.js";
 import { writeCertificationArtifactSafely } from "../../bin/certify-starting-slice.js";
 import {
+  PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
+  PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+} from "../../src/starting_slice/fleet_attestation.js";
+import {
   certifyStartingSliceAuthority as certifyStartingSliceAuthorityOnCurrentBuild,
   evaluateStartingSlicePilotRuns,
   evaluateStartingSliceRuns,
@@ -29,6 +33,10 @@ import {
   type WolfStrategy,
 } from "../../src/starting_slice/fleet_certifier.js";
 import { INITIAL_JOURNEY_GOAL } from "../../src/world/journey_contract.js";
+// @ts-expect-error -- hardened rollout verifier is intentionally plain ESM.
+import * as codexPureEnvelope from "../../blind-tester/codex-pure-envelope.mjs";
+
+const { CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS } = codexPureEnvelope;
 
 const { fixtureBuild } = vi.hoisted(() => ({
   fixtureBuild: {
@@ -65,6 +73,22 @@ function certifyStartingSliceAuthority(options: SyntheticBuildOptions) {
 
 const ROOT = process.cwd();
 const tempDirs: string[] = [];
+const GLOBAL_AGENTS_BLOCK = [
+  "# AGENTS.md instructions",
+  "",
+  "<INSTRUCTIONS>",
+  "# Global Codex Guidance",
+  "",
+  "- Read the repository's own instructions, scripts, and existing patterns before changing code.",
+  "- Prefer the repo-local toolchain and package manager over global installs.",
+  "- Use `rg`/`rg --files` for code search when available.",
+  "- Check the worktree before editing, and do not overwrite unrelated user changes.",
+  "- Keep changes scoped to the requested task unless a broader fix is necessary.",
+  "- Run the most relevant tests, type checks, linters, builds, or browser smoke checks before finishing when the repo provides them.",
+  "- Do not print, commit, or move secrets. Use local env files such as `.env.local` only when a task explicitly needs credentials.",
+  "- For web apps, start the dev server and verify the local page when the app needs a server to run.",
+  "</INSTRUCTIONS>",
+].join("\n");
 
 afterEach(() => {
   while (tempDirs.length > 0) {
@@ -650,7 +674,7 @@ function sha256Text(text: string): string {
 }
 
 describe("closed fleet filesystem integrity", () => {
-  it("accepts client-pinned v7 Codex pilots, then rejects lifecycle tamper", () => {
+  it("accepts client-pinned v8 strict and Spark pilots, then rejects transport and lifecycle tamper", () => {
     const base = mkdtempSync(join(tmpdir(), "af-codex-slice-certifier-"));
     tempDirs.push(base);
     const fleetDir = join(base, "fleet", "codex-pilot");
@@ -690,6 +714,10 @@ describe("closed fleet filesystem integrity", () => {
       authority_sha256: sha256Text(authorityToken),
       cli_version: "0.144.1",
       test_script: false,
+    } as const;
+    const sparkCodexClient = {
+      ...codexClient,
+      cli_version: PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
     } as const;
     const authorityProofBody = (client: unknown) => `${JSON.stringify(client, null, 2)}\n`;
     const authorityProofIndex = (client: unknown) => {
@@ -966,7 +994,7 @@ describe("closed fleet filesystem integrity", () => {
         },
       })}\n`;
       const modelAttestation = {
-        schema_version: 7,
+        schema_version: 8,
         provider: "codex",
         codex_cli_version: codexClient.cli_version,
         codex_client_authority_sha256: codexClient.authority_sha256,
@@ -1088,7 +1116,7 @@ describe("closed fleet filesystem integrity", () => {
       target: "overworld",
       resume_enabled: false,
       evidence_schema_version: 2,
-      model_attestation_schema_version: 7,
+      model_attestation_schema_version: 8,
       build,
       codex_client: {
         schema_version: 2,
@@ -1124,6 +1152,289 @@ describe("closed fleet filesystem integrity", () => {
     expect(accepted.validity_errors).toEqual([]);
     expect(accepted.pilot_passed).toBe(true);
     expect(accepted.authenticated_actual_model).toBe(model);
+
+    const sparkModel = "gpt-5.3-codex-spark" as const;
+    const sparkTransportContract = PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT;
+    const sparkFleetDir = join(base, "fleet", "codex-spark-pilot");
+    const sparkReportsDir = join(base, "spark-reports");
+    mkdirSync(sparkFleetDir, { recursive: true });
+    mkdirSync(sparkReportsDir, { recursive: true });
+    const parseJsonl = (body: string) =>
+      body
+        .trim()
+        .split(/\r?\n/u)
+        .map(
+          (line) =>
+            JSON.parse(line) as {
+              timestamp?: string;
+              type?: string;
+              item?: Record<string, unknown>;
+              payload?: Record<string, unknown>;
+            },
+        );
+    const renderJsonl = (values: readonly unknown[]) =>
+      `${values.map((value) => JSON.stringify(value)).join("\n")}\n`;
+    const sparkRows = rows.map((row) => {
+      const strictPrefix = join(reportsDir, `20260102T000000Z_overworld_seed${row.seed}`);
+      const sparkPrefix = join(sparkReportsDir, `20260102T000000Z_overworld_seed${row.seed}`);
+      for (const suffix of [".md", ".run.json", ".evidence.jsonl"] as const) {
+        writeFileSync(`${sparkPrefix}${suffix}`, readFileSync(`${strictPrefix}${suffix}`));
+      }
+
+      const sparkEvents = parseJsonl(readFileSync(`${strictPrefix}.codex.jsonl`, "utf8")).filter(
+        (event) => {
+          const item = event.item;
+          return !(event.type === "item.completed" && item?.type === "error");
+        },
+      );
+      const sparkEventsBody = renderJsonl(sparkEvents);
+
+      const sparkRollout = parseJsonl(readFileSync(`${strictPrefix}.codex-rollout.jsonl`, "utf8"));
+      const sessionMeta = sparkRollout.find((entry) => entry.type === "session_meta")?.payload;
+      if (!sessionMeta) throw new Error("missing Spark session fixture");
+      sessionMeta.cli_version = sparkCodexClient.cli_version;
+      sessionMeta.base_instructions = { text: CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS };
+      const turnContext = sparkRollout.find((entry) => entry.type === "turn_context")?.payload;
+      if (!turnContext) throw new Error("missing Spark turn context fixture");
+      turnContext.model = sparkModel;
+      turnContext.multi_agent_version = "disabled";
+      turnContext.comp_hash = "2911";
+      delete turnContext.multi_agent_mode;
+      const collaborationMode = turnContext.collaboration_mode as Record<string, unknown>;
+      const collaborationSettings = collaborationMode.settings as Record<string, unknown>;
+      collaborationSettings.model = sparkModel;
+
+      const taskStartIndex = sparkRollout.findIndex(
+        (entry) => entry.type === "event_msg" && entry.payload?.type === "task_started",
+      );
+      const worldStateIndex = sparkRollout.findIndex((entry) => entry.type === "world_state");
+      if (taskStartIndex < 0 || worldStateIndex <= taskStartIndex) {
+        throw new Error("missing Spark prelude boundary fixture");
+      }
+      sparkRollout.splice(taskStartIndex + 1, worldStateIndex - taskStartIndex - 1, {
+        type: "response_item",
+        payload: {
+          type: "message",
+          id: "spark-global-agents",
+          role: "user",
+          content: [{ type: "input_text", text: GLOBAL_AGENTS_BLOCK }],
+          internal_chat_message_metadata_passthrough: {
+            turn_id: row.model_attestation.provider_turn_id,
+          },
+        },
+      });
+
+      const wrapperIndex = sparkRollout.findIndex(
+        (entry) => entry.type === "response_item" && entry.payload?.type === "custom_tool_call",
+      );
+      if (wrapperIndex < 0) throw new Error("missing strict wrapper fixture");
+      const turnMetadata = {
+        internal_chat_message_metadata_passthrough: {
+          turn_id: row.model_attestation.provider_turn_id,
+        },
+      };
+      sparkRollout.splice(
+        wrapperIndex,
+        3,
+        {
+          timestamp: "2026-07-19T00:00:00.100Z",
+          type: "response_item",
+          payload: {
+            type: "function_call",
+            id: "function-call-1",
+            name: "start_overworld",
+            namespace: "mcp__adventureforge",
+            arguments: "{}",
+            call_id: "function-call-1",
+            ...turnMetadata,
+          },
+        },
+        {
+          timestamp: "2026-07-19T00:00:00.200Z",
+          type: "event_msg",
+          payload: {
+            type: "mcp_tool_call_end",
+            call_id: "function-call-1",
+            invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
+            result: { Ok: { content: [] } },
+          },
+        },
+        {
+          timestamp: "2026-07-19T00:00:00.300Z",
+          type: "response_item",
+          payload: {
+            type: "function_call_output",
+            id: "function-output-1",
+            call_id: "function-call-1",
+            output: "Wall time: 0.0 seconds\nOutput:\n[]",
+            ...turnMetadata,
+          },
+        },
+      );
+      let responseItemOrdinal = 0;
+      for (const entry of sparkRollout) {
+        if (entry.type !== "response_item" || !entry.payload) continue;
+        responseItemOrdinal += 1;
+        entry.payload.id = `spark-item-${responseItemOrdinal}`;
+      }
+      const sparkRolloutBody = renderJsonl(sparkRollout);
+
+      const strictCapture = JSON.parse(
+        readFileSync(`${strictPrefix}.codex-capture.json`, "utf8"),
+      ) as Record<string, unknown>;
+      const {
+        schema_version: _strictCaptureSchema,
+        code_mode_contract: _strictCaptureContract,
+        ...captureBase
+      } = strictCapture;
+      const sparkCapture = {
+        ...captureBase,
+        schema_version: 4,
+        transport_contract: sparkTransportContract,
+        copied_rollout_sha256: sha256Text(sparkRolloutBody),
+      };
+      const sparkCaptureBody = `${JSON.stringify(sparkCapture, null, 2)}\n`;
+
+      const sparkPrimary = JSON.parse(readFileSync(`${strictPrefix}.json`, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      const strictModelUsage = (sparkPrimary.modelUsage as Record<string, unknown>)[model];
+      sparkPrimary.requested_model = sparkModel;
+      sparkPrimary.modelUsage = { [sparkModel]: strictModelUsage };
+      const sparkPrimaryBody = `${JSON.stringify(sparkPrimary)}\n`;
+
+      const { code_mode_contract: _strictAttestationContract, ...sparkAttestationBase } =
+        row.model_attestation;
+      const sparkAttestation = {
+        ...sparkAttestationBase,
+        codex_cli_version: sparkCodexClient.cli_version,
+        codex_client_authority_sha256: sparkCodexClient.authority_sha256,
+        model: sparkModel,
+        actual_model: sparkModel,
+        transport_contract: sparkTransportContract,
+        primary_envelope_sha256: sha256Text(sparkPrimaryBody),
+        provider_events_sha256: sha256Text(sparkEventsBody),
+        provider_rollout_sha256: sha256Text(sparkRolloutBody),
+        provider_capture_sha256: sha256Text(sparkCaptureBody),
+      };
+      writeFileSync(`${sparkPrefix}.json`, sparkPrimaryBody);
+      writeFileSync(`${sparkPrefix}.codex.jsonl`, sparkEventsBody);
+      writeFileSync(`${sparkPrefix}.codex-rollout.jsonl`, sparkRolloutBody);
+      writeFileSync(`${sparkPrefix}.codex-capture.json`, sparkCaptureBody);
+      writeFileSync(`${sparkPrefix}.fleet.json`, `${JSON.stringify(sparkAttestation, null, 2)}\n`);
+      return {
+        ...row,
+        model: sparkModel,
+        report: `${sparkPrefix}.md`,
+        model_attestation: sparkAttestation,
+      };
+    });
+    const sparkSummary = {
+      ...summary,
+      label: "codex-spark-pilot",
+      reportsDir: sparkReportsDir,
+      model: sparkModel,
+      codex_client: {
+        schema_version: 2,
+        launcher_kind: sparkCodexClient.launcher_kind,
+        authority_sha256: sparkCodexClient.authority_sha256,
+        cli_version: sparkCodexClient.cli_version,
+      },
+      codex_client_proof: authorityProofIndex(sparkCodexClient),
+    };
+    const sparkManifestPath = join(sparkFleetDir, "manifest.jsonl");
+    writeFileSync(
+      join(sparkFleetDir, "summary.json"),
+      `${JSON.stringify(sparkSummary, null, 2)}\n`,
+    );
+    writeFileSync(sparkManifestPath, renderJsonl(sparkRows));
+    writeFileSync(
+      join(sparkFleetDir, "codex-client-authority.private.json"),
+      authorityProofBody(sparkCodexClient),
+    );
+
+    const acceptedSpark = validateStartingSlicePilot({
+      root: ROOT,
+      fleetDir: sparkFleetDir,
+      expectedBuild: build,
+    });
+    expect(acceptedSpark.validity_errors).toEqual([]);
+    expect(acceptedSpark.pilot_passed).toBe(true);
+    expect(acceptedSpark.authenticated_actual_model).toBe(sparkModel);
+
+    const outdatedSparkClient = { ...sparkCodexClient, cli_version: "0.145.0" } as const;
+    const outdatedSparkSummary = {
+      ...sparkSummary,
+      codex_client: {
+        ...sparkSummary.codex_client,
+        cli_version: outdatedSparkClient.cli_version,
+      },
+      codex_client_proof: authorityProofIndex(outdatedSparkClient),
+    };
+    writeFileSync(
+      join(sparkFleetDir, "summary.json"),
+      `${JSON.stringify(outdatedSparkSummary, null, 2)}\n`,
+    );
+    writeFileSync(
+      join(sparkFleetDir, "codex-client-authority.private.json"),
+      authorityProofBody(outdatedSparkClient),
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir: sparkFleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("current Spark certification requires exact Codex CLI 0.146.0");
+    writeFileSync(
+      join(sparkFleetDir, "summary.json"),
+      `${JSON.stringify(sparkSummary, null, 2)}\n`,
+    );
+    writeFileSync(
+      join(sparkFleetDir, "codex-client-authority.private.json"),
+      authorityProofBody(sparkCodexClient),
+    );
+
+    const firstSparkPrefix = join(sparkReportsDir, "20260102T000000Z_overworld_seed700");
+    const directCapture = JSON.parse(
+      readFileSync(`${firstSparkPrefix}.codex-capture.json`, "utf8"),
+    ) as Record<string, unknown>;
+    const {
+      schema_version: _directCaptureSchema,
+      transport_contract: _directCaptureContract,
+      ...directCaptureBase
+    } = directCapture;
+    const crossContractCapture = {
+      ...directCaptureBase,
+      schema_version: 3,
+      code_mode_contract: "strict-code-mode-v2",
+    };
+    const crossContractCaptureBody = `${JSON.stringify(crossContractCapture, null, 2)}\n`;
+    writeFileSync(`${firstSparkPrefix}.codex-capture.json`, crossContractCaptureBody);
+    const crossContractAttestation = {
+      ...sparkRows[0]!.model_attestation,
+      provider_capture_sha256: sha256Text(crossContractCaptureBody),
+    };
+    writeFileSync(
+      `${firstSparkPrefix}.fleet.json`,
+      `${JSON.stringify(crossContractAttestation, null, 2)}\n`,
+    );
+    writeFileSync(
+      sparkManifestPath,
+      renderJsonl(
+        sparkRows.map((row, index) =>
+          index === 0 ? { ...row, model_attestation: crossContractAttestation } : row,
+        ),
+      ),
+    );
+    expect(
+      validateStartingSlicePilot({
+        root: ROOT,
+        fleetDir: sparkFleetDir,
+        expectedBuild: build,
+      }).validity_errors.join("\n"),
+    ).toContain("Codex strict-current run is missing its exact code-mode prelude");
 
     const summaryPath = join(fleetDir, "summary.json");
     const writeFleet = (nextRows: readonly Record<string, unknown>[], nextSummary: unknown) => {
@@ -1557,7 +1868,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedHistoricalPilot.validity_errors.join("\n")).toMatch(
-      /v8 live certification requires current Codex attestation v7/i,
+      /v8 live certification requires current Codex attestation v8/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
 
@@ -1657,7 +1968,7 @@ describe("closed fleet filesystem integrity", () => {
       const receiptBound = index === 0;
       const modelAttestation = {
         ...row.model_attestation,
-        schema_version: 7,
+        schema_version: 8,
         report_receipt_bound: receiptBound,
         report_sha256: receiptBound
           ? sha256Text(boundReportBody)
@@ -1693,7 +2004,7 @@ describe("closed fleet filesystem integrity", () => {
     const boundSummary = {
       ...summary,
       receipt_bound_runs: 1,
-      model_attestation_schema_version: 7,
+      model_attestation_schema_version: 8,
     };
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
     writeFileSync(manifestPath, `${boundRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
@@ -1722,7 +2033,7 @@ describe("closed fleet filesystem integrity", () => {
       expectedBuild: build,
     });
     expect(rejectedCurrentAuthority.validity_errors.join("\n")).toMatch(
-      /v8 live certification requires current Codex attestation v7/i,
+      /v8 live certification requires current Codex attestation v8/i,
     );
     writeFileSync(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`);
 

@@ -87,6 +87,8 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 const TRUNCATION_CHROME = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const RPG_SERIALIZED_RESPONSE_CEILING = 9_000;
 const OVERWORLD_SERIALIZED_RESPONSE_CEILING = 12_000;
+const SPARK_NATIVE_RESULT_BYTE_CEILING = 16_384;
+const SPARK_NATIVE_RESULT_SAFETY_MARGIN_BYTES = 1_024;
 
 type LabelledText = { label: string; text: string };
 type LabelledEffect = { label: string; effect: Effect };
@@ -94,6 +96,13 @@ type LabelledEffect = { label: string; effect: Effect };
 function expectExact(label: string, source: string, projected: string): void {
   expect(projected, `${label} must fit its compact player transport`).toBe(source);
   expect(projected, `${label} must not expose truncation chrome`).not.toMatch(TRUNCATION_CHROME);
+}
+
+function sparkNativeResultContentBytes(value: unknown): number {
+  const result = {
+    content: [{ type: "text", text: JSON.stringify(value) }],
+  };
+  return Buffer.byteLength(JSON.stringify(result.content), "utf8");
 }
 
 function narrationText(text: string): string {
@@ -944,6 +953,12 @@ describe("shipped compact prose fidelity", () => {
     };
     expect(JSON.stringify(response).length).toBeLessThanOrEqual(
       OVERWORLD_SERIALIZED_RESPONSE_CEILING,
+    );
+    expect(
+      sparkNativeResultContentBytes(response),
+      "the shipped maximal pure-overworld response must retain 1 KiB of headroom after MCP text framing and native JSON double encoding",
+    ).toBeLessThanOrEqual(
+      SPARK_NATIVE_RESULT_BYTE_CEILING - SPARK_NATIVE_RESULT_SAFETY_MARGIN_BYTES,
     );
   });
 
