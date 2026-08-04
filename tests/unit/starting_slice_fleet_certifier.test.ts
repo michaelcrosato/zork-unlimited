@@ -927,6 +927,16 @@ describe("closed fleet filesystem integrity", () => {
           },
         },
         {
+          timestamp: "2026-07-19T00:00:00.999Z",
+          type: "event_msg",
+          payload: {
+            type: "agent_message",
+            message: reportBody,
+            phase: "final_answer",
+            memory_citation: null,
+          },
+        },
+        {
           timestamp: "2026-07-19T00:00:01.000Z",
           type: "response_item",
           payload: {

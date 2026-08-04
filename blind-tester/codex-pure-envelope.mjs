@@ -1050,6 +1050,94 @@ function validPrivateAssistantMessage(payload, turnId) {
   );
 }
 
+function validPrivateAgentMessageEvent(payload) {
+  return (
+    isRecord(payload) &&
+    hasOnlyKeys(payload, ["type", "message", "phase", "memory_citation"]) &&
+    payload.type === "agent_message" &&
+    typeof payload.message === "string" &&
+    payload.message.length > 0 &&
+    (payload.phase === "commentary" || payload.phase === "final_answer") &&
+    payload.memory_citation === null
+  );
+}
+
+function privateAssistantMessage(rows, index, turnId) {
+  const payload = rows[index]?.payload;
+  const event = rows[index - 1];
+  const eventPayload = event?.payload;
+  if (
+    !validPrivateAssistantMessage(payload, turnId) ||
+    payload.content.length !== 1 ||
+    typeof payload.content[0]?.text !== "string" ||
+    payload.content[0].text.length === 0 ||
+    event?.type !== "event_msg" ||
+    !validPrivateAgentMessageEvent(eventPayload) ||
+    eventPayload.phase !== payload.phase ||
+    eventPayload.message !== payload.content[0].text
+  ) {
+    return null;
+  }
+  return { index, phase: payload.phase, text: payload.content[0].text };
+}
+
+function inspectPrivateAssistantMessageLifecycle(
+  rows,
+  assistantEventIndices,
+  assistantIndices,
+  gameplayIndices,
+  outputIndices,
+  turnId,
+  userEventIndex,
+  directMcp,
+) {
+  if (
+    assistantEventIndices.length !== assistantIndices.length ||
+    assistantIndices.some((index, ordinal) => assistantEventIndices[ordinal] !== index - 1)
+  ) {
+    return rolloutReject("rollout assistant-message lifecycle is out of order");
+  }
+  const messages = assistantIndices.map((index) => privateAssistantMessage(rows, index, turnId));
+  if (messages.some((message) => message === null)) {
+    return rolloutReject("rollout assistant-message lifecycle is out of order");
+  }
+  const authenticated = messages;
+  const finals = authenticated.filter((message) => message.phase === "final_answer");
+  const commentary = authenticated.filter((message) => message.phase === "commentary");
+  const lastGameplayOutput = Math.max(-1, ...outputIndices);
+  if (
+    finals.length !== 1 ||
+    finals[0].index <= lastGameplayOutput ||
+    finals[0].index !== Math.max(...assistantIndices)
+  ) {
+    return rolloutReject("rollout assistant-message lifecycle is out of order");
+  }
+  if (directMcp) {
+    if (commentary.length !== 0 || authenticated.length !== 1) {
+      return rolloutReject("rollout assistant-message lifecycle is out of order");
+    }
+  } else {
+    const initialCommentary = commentary.filter(
+      (message) => message.index > userEventIndex && message.index < gameplayIndices[0],
+    );
+    if (
+      initialCommentary.length > 1 ||
+      commentary.some(
+        (message) =>
+          !gameplayIndices.some((index) => index > message.index) ||
+          (!initialCommentary.includes(message) &&
+            !outputIndices.some((index) => index < message.index)),
+      )
+    ) {
+      return rolloutReject("rollout assistant-message lifecycle is out of order");
+    }
+  }
+  return {
+    ok: true,
+    messages: authenticated.map(({ phase, text }) => ({ phase, text })),
+  };
+}
+
 function validPrivateReasoning(payload, turnId) {
   return (
     isRecord(payload) &&
@@ -1173,6 +1261,7 @@ function inspectCodexRolloutStructure(
     toolSearchOutputs: [],
     directOutputs: [],
     promptMessages: [],
+    assistantMessageEvents: [],
     assistantMessages: [],
     reasoningItems: [],
   };
@@ -1188,6 +1277,7 @@ function inspectCodexRolloutStructure(
       if (payload?.type === "task_complete") indices.taskCompletes.push(index);
       if (payload?.type === "user_message") indices.userEvents.push(index);
       if (payload?.type === "context_compacted") indices.contextCompactedEvents.push(index);
+      if (payload?.type === "agent_message") indices.assistantMessageEvents.push(index);
     }
     if (
       row?.type === "response_item" &&
@@ -1316,7 +1406,17 @@ function inspectCodexRolloutStructure(
             turnId,
             profile.requiresItemIds,
           ));
-  const lastGameplayOutput = Math.max(-1, ...indices.wrapperOutputs, ...indices.directOutputs);
+  const assistantLifecycle = inspectPrivateAssistantMessageLifecycle(
+    rows,
+    indices.assistantMessageEvents,
+    indices.assistantMessages,
+    indices.gameplay,
+    directMcp ? indices.directOutputs : indices.wrapperOutputs,
+    turnId,
+    userEvent,
+    directMcp,
+  );
+  if (!assistantLifecycle.ok) return assistantLifecycle;
   if (
     !(
       indices.taskStarts[0] === 1 &&
@@ -1366,11 +1466,6 @@ function inspectCodexRolloutStructure(
               profile.requiresItemIds,
             ),
         )) ||
-    indices.assistantMessages.length !== 1 ||
-    indices.assistantMessages[0] <= lastGameplayOutput ||
-    indices.assistantMessages.some(
-      (index) => !validPrivateAssistantMessage(rows[index]?.payload, turnId),
-    ) ||
     indices.reasoningItems.some((index) => !validPrivateReasoning(rows[index]?.payload, turnId)) ||
     !Array.isArray(promptContent) ||
     promptContent.length !== 1 ||
@@ -1384,7 +1479,7 @@ function inspectCodexRolloutStructure(
     return rolloutReject("rollout input and initial context lifecycle is out of order");
   }
 
-  return { ok: true };
+  return { ok: true, assistantMessages: assistantLifecycle.messages };
 }
 
 /**
@@ -1796,6 +1891,47 @@ function publicGameplayLifecycle(item) {
   };
 }
 
+function validPublicAgentMessageRow(row) {
+  return (
+    isRecord(row) &&
+    hasOnlyKeys(row, ["type", "item"]) &&
+    row.type === "item.completed" &&
+    isRecord(row.item) &&
+    hasOnlyKeys(row.item, ["id", "type", "text"]) &&
+    validItemId(row.item.id) &&
+    row.item.type === "agent_message" &&
+    typeof row.item.text === "string" &&
+    row.item.text.length > 0
+  );
+}
+
+function publicAgentMessages(rows) {
+  return rows.filter(validPublicAgentMessageRow).map((row) => row.item.text);
+}
+
+function publicGameplayAssistantTimeline(rows) {
+  return rows.flatMap((row) => {
+    if (validPublicAgentMessageRow(row)) return ["assistant_message"];
+    if (row?.item?.type !== "mcp_tool_call") return [];
+    if (row.type === "item.started") return ["gameplay_call"];
+    if (row.type === "item.completed") return ["gameplay_output"];
+    return [];
+  });
+}
+
+function privateGameplayAssistantTimeline(rows, directMcp) {
+  return rows.flatMap((row) => {
+    if (row?.type !== "response_item") return [];
+    const type = row.payload?.type;
+    if (type === "message" && row.payload?.role === "assistant") return ["assistant_message"];
+    if (type === (directMcp ? "function_call" : "custom_tool_call")) return ["gameplay_call"];
+    if (type === (directMcp ? "function_call_output" : "custom_tool_call_output")) {
+      return ["gameplay_output"];
+    }
+    return [];
+  });
+}
+
 function validCodeModeWarningRow(row, ordinal) {
   if (
     !isRecord(row) ||
@@ -1891,6 +2027,12 @@ export function inspectCodexPureEventPrefix(
     if (!ALLOWED_ITEM_TYPES.has(item.type)) {
       return reject(`Codex pure run used forbidden item type ${String(item.type)}`);
     }
+    if (item.type === "agent_message") {
+      if (!validPublicAgentMessageRow(row)) {
+        return reject("Codex pure run used an invalid public agent message");
+      }
+      continue;
+    }
     if (item.type !== "mcp_tool_call") continue;
     if (item.server !== "adventureforge") {
       return reject(`Codex pure run called forbidden MCP server ${String(item.server)}`);
@@ -1937,6 +2079,8 @@ export function inspectCodexPureEvents(
   const gameplayCalls = new Map();
   const completedGameplayCalls = [];
   const mcpCallIds = new Set();
+  const agentMessageIds = new Set();
+  const reservedPreludeItemIds = new Set(allowedCodeModePrelude.map((row) => row.item.id));
 
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
@@ -1968,6 +2112,20 @@ export function inspectCodexPureEvents(
       if (row.type === "item.updated") {
         return reject(`Codex pure run used an unexpected item.updated lifecycle for ${item.type}`);
       }
+      if (item.type === "agent_message") {
+        if (!validPublicAgentMessageRow(row)) {
+          return reject("Codex pure run used an invalid public agent message");
+        }
+        if (
+          reservedPreludeItemIds.has(item.id) ||
+          mcpCallIds.has(item.id) ||
+          agentMessageIds.has(item.id)
+        ) {
+          return reject(`Codex pure run reused public item identity ${item.id}`);
+        }
+        agentMessageIds.add(item.id);
+        continue;
+      }
       if (item.type === "mcp_tool_call") {
         if (row.type === "item.started") {
           if (item.server !== "adventureforge") {
@@ -1979,7 +2137,12 @@ export function inspectCodexPureEvents(
           if (!CODEX_PURE_PLAYER_TOOLS.has(item.tool)) {
             return reject(`Codex pure run called forbidden AdventureForge tool ${item.tool}`);
           }
-          if (!validGameplayCallStart(item) || mcpCallIds.has(item.id)) {
+          if (
+            !validGameplayCallStart(item) ||
+            reservedPreludeItemIds.has(item.id) ||
+            agentMessageIds.has(item.id) ||
+            mcpCallIds.has(item.id)
+          ) {
             return reject(`Codex pure run used an invalid or duplicate gameplay call ${item.tool}`);
           }
           if (gameplayCallsStarted === 0) {
@@ -2090,6 +2253,24 @@ export function inspectCodexPureEvidence(
     if (!sameJsonValue(publicEvidence.gameplayCalls[index], privateEvidence.gameplayCalls[index])) {
       return reject(`Codex public/private gameplay lifecycle differs at call ${index + 1}`);
     }
+  }
+  const publicMessages = publicAgentMessages(publicRows);
+  const privateMessages = rolloutStructure.assistantMessages;
+  if (publicMessages.length !== privateMessages.length) {
+    return reject("Codex public/private agent-message count differs");
+  }
+  for (let index = 0; index < publicMessages.length; index += 1) {
+    if (publicMessages[index] !== privateMessages[index].text) {
+      return reject(`Codex public/private agent message differs at message ${index + 1}`);
+    }
+  }
+  if (
+    !sameJsonValue(
+      publicGameplayAssistantTimeline(publicRows),
+      privateGameplayAssistantTimeline(rolloutRows, isSparkDirectMcpContract(transportContract)),
+    )
+  ) {
+    return reject("Codex public/private gameplay and agent-message timeline differs");
   }
   return publicEvidence;
 }

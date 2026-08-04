@@ -165,7 +165,12 @@ compatibility hash, and permits only one final assistant message after gameplay;
 interim narration is rejected. The strict
 audit accepts only canonical `exec -> MCP completion -> visible output`
 lifecycles, including the exact `// @exec: {"yield_time_ms": 120000}` pragma and
-awaited forwarder; `functions.wait` is forbidden. Both reject tool/resource/
+awaited forwarder; `functions.wait` is forbidden. Strict code-mode progress
+commentary is accepted only as an immediate private CLI event/message pair after
+a visible result and before the next game call, or once after the prompt and
+before the first call, with exact text/order binding to the public stream; one
+paired final answer must follow the last result. Both
+transports reject tool/resource/
 template discovery, planning/task tools, another server,
 non-game tools, malformed or unbounded payloads, and every id/tool/argument/
 result/output mismatch. Historical evidence is not retroactively required to use

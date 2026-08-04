@@ -476,6 +476,15 @@ function writeCodexGameplayArtifacts(
       },
     },
     {
+      type: "event_msg",
+      payload: {
+        type: "agent_message",
+        message: report,
+        phase: "final_answer",
+        memory_citation: null,
+      },
+    },
+    {
       type: "response_item",
       payload: {
         type: "message",
