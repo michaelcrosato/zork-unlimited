@@ -123,11 +123,11 @@ function validRows(): TestRow[] {
   return [
     { type: "thread.started", thread_id: THREAD_ID },
     { type: "turn.started" },
+    ...gameplayCallRows(),
     {
       type: "item.completed",
-      item: { id: "item_0", type: "agent_message", text: "I will begin." },
+      item: { id: "item_0", type: "agent_message", text: "report" },
     },
-    ...gameplayCallRows(),
     {
       type: "turn.completed",
       usage: {
@@ -231,7 +231,13 @@ function rolloutPayload(rows: unknown[], index: number): Record<string, unknown>
 
 function twoPublicGameplayCalls(): TestRow[] {
   const rows = validRows();
-  rows.splice(-1, 0, ...gameplayCallRows("item_2", "get_overworld_session_context", {}));
+  const finalAgentMessage = rows.findIndex((row) => row.item?.type === "agent_message");
+  if (finalAgentMessage < 0) throw new Error("missing public final agent-message fixture");
+  rows.splice(
+    finalAgentMessage,
+    0,
+    ...gameplayCallRows("item_2", "get_overworld_session_context", {}),
+  );
   return rows;
 }
 
@@ -325,17 +331,7 @@ function completeRollout(
       },
     },
     ...gameplayRows,
-    {
-      type: "response_item",
-      payload: {
-        type: "message",
-        id: "final-message",
-        role: "assistant",
-        content: [{ type: "output_text", text: "report" }],
-        phase: "final_answer",
-        internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
-      },
-    },
+    ...pairedPrivateAgentMessage("final-message", "report", "final_answer"),
     { type: "event_msg", payload: { type: "task_complete", turn_id: "turn-1" } },
   ];
 }
@@ -369,6 +365,91 @@ function codex0146TerraRollout(gameplayRows = forwardingRollout(undefined, { con
       payload.id = `output-current-${outputOrdinal}`;
     }
   }
+  return rows;
+}
+
+function pairedPrivateAgentMessage(id: string, text: string, phase: "commentary" | "final_answer") {
+  return [
+    {
+      type: "event_msg",
+      payload: { type: "agent_message", message: text, phase, memory_citation: null },
+    },
+    {
+      type: "response_item",
+      payload: {
+        type: "message",
+        id,
+        role: "assistant",
+        content: [{ type: "output_text", text }],
+        phase,
+        internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+      },
+    },
+  ];
+}
+
+function strictPublicAgentMessageRows(commentary = "I inspect the ruined gate.", final = "report") {
+  const rows = singleCodeModeWarningRows();
+  const initialAgentMessage = rows.findIndex((row) => row.item?.type === "agent_message");
+  if (initialAgentMessage < 0) throw new Error("missing public agent-message fixture");
+  rows.splice(initialAgentMessage, 1);
+
+  const turnCompleted = rows.findIndex((row) => row.type === "turn.completed");
+  if (turnCompleted < 0) throw new Error("missing public turn completion fixture");
+  rows.splice(turnCompleted, 0, ...gameplayCallRows("item_3", "get_overworld_session_context", {}));
+
+  const firstCompletion = rows.findIndex(
+    (row) => row.type === "item.completed" && row.item?.type === "mcp_tool_call",
+  );
+  if (firstCompletion < 0) throw new Error("missing first public gameplay completion fixture");
+  rows.splice(firstCompletion + 1, 0, {
+    type: "item.completed",
+    item: { id: "agent-commentary", type: "agent_message", text: commentary },
+  });
+
+  const secondCompletion = rows.findIndex(
+    (row, index) =>
+      index > firstCompletion &&
+      row.type === "item.completed" &&
+      row.item?.type === "mcp_tool_call",
+  );
+  if (secondCompletion < 0) throw new Error("missing second public gameplay completion fixture");
+  rows.splice(secondCompletion + 1, 0, {
+    type: "item.completed",
+    item: { id: "agent-final", type: "agent_message", text: final },
+  });
+  return rows;
+}
+
+function strictTerraAgentMessageRollout(
+  commentary = "I inspect the ruined gate.",
+  final = "report",
+) {
+  const rows = codex0146TerraRollout(twoPrivateGameplayCalls({ content: [] }));
+  const secondGameplay = rows.findIndex(
+    (row) => row.payload?.type === "custom_tool_call" && row.payload.call_id === "call-wrapper-2",
+  );
+  if (secondGameplay < 0) throw new Error("missing second private gameplay fixture");
+  rows.splice(
+    secondGameplay,
+    0,
+    ...pairedPrivateAgentMessage("assistant-commentary", commentary, "commentary"),
+  );
+
+  const finalAssistant = rows.find(
+    (row) =>
+      row.payload?.type === "message" &&
+      row.payload.role === "assistant" &&
+      row.payload.phase === "final_answer",
+  )?.payload;
+  if (!finalAssistant) throw new Error("missing private final assistant fixture");
+  finalAssistant.content = [{ type: "output_text", text: final }];
+
+  const finalAssistantIndex = rows.findIndex((row) => row.payload === finalAssistant);
+  if (finalAssistantIndex < 0) throw new Error("missing private final assistant index");
+  const finalEvent = rows[finalAssistantIndex - 1]?.payload;
+  if (finalEvent?.type !== "agent_message") throw new Error("missing private final agent event");
+  finalEvent.message = final;
   return rows;
 }
 
@@ -2616,6 +2697,327 @@ describe("Codex pure blind provider envelope", () => {
     ).toMatchObject({ ok: false });
   });
 
+  it("accepts paired strict Terra commentary and terminal public/private agent messages", () => {
+    const commentary = "I inspect the ruined gate.";
+    const final = "The gate is locked, so I return to the road.";
+    expect(
+      inspectCodexPureEvidence(
+        strictPublicAgentMessageRows(commentary, final),
+        strictTerraAgentMessageRollout(commentary, final),
+        "gpt-5.6-terra",
+        { codeModeContract: "strict-code-mode-v2", cliVersion: "0.146.0" },
+      ),
+    ).toMatchObject({ ok: true, completedMcpCalls: 2 });
+  });
+
+  it("accepts one paired strict Terra commentary after the prompt and before gameplay", () => {
+    const commentary = "I will start a fresh run.";
+    const final = "The gate is locked, so I return to the road.";
+    const publicRows = strictPublicAgentMessageRows(commentary, final);
+    const publicCommentary = publicRows.findIndex((row) => row.item?.id === "agent-commentary");
+    const publicGameplay = publicRows.findIndex(
+      (row) => row.type === "item.started" && row.item?.type === "mcp_tool_call",
+    );
+    if (publicCommentary < 0 || publicGameplay < 0) throw new Error("missing public fixtures");
+    const [publicMessage] = publicRows.splice(publicCommentary, 1);
+    if (!publicMessage) throw new Error("missing public commentary fixture");
+    publicRows.splice(publicGameplay, 0, publicMessage);
+
+    const privateRows = strictTerraAgentMessageRollout(commentary, final);
+    const privateCommentary = privateRows.findIndex(
+      (row) => row.payload?.type === "message" && row.payload.id === "assistant-commentary",
+    );
+    if (privateCommentary < 0) throw new Error("missing private commentary fixture");
+    const pair = privateRows.splice(privateCommentary - 1, 2);
+    const privateGameplay = privateRows.findIndex(
+      (row) => row.payload?.type === "custom_tool_call" && row.payload.call_id === "call-wrapper-1",
+    );
+    if (privateGameplay < 0) throw new Error("missing private gameplay fixture");
+    privateRows.splice(privateGameplay, 0, ...pair);
+
+    expect(
+      inspectCodexPureEvidence(publicRows, privateRows, "gpt-5.6-terra", {
+        codeModeContract: "strict-code-mode-v2",
+        cliVersion: "0.146.0",
+      }),
+    ).toMatchObject({ ok: true, completedMcpCalls: 2 });
+  });
+
+  it.each([
+    {
+      label: "a missing commentary agent event",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const event = rows.findIndex(
+          (row) =>
+            row.payload?.type === "agent_message" &&
+            row.payload.message === "I inspect the ruined gate.",
+        );
+        if (event < 0) throw new Error("missing commentary agent event fixture");
+        rows.splice(event, 1);
+      },
+    },
+    {
+      label: "a mismatched commentary agent event",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const event = rows.find(
+          (row) =>
+            row.payload?.type === "agent_message" &&
+            row.payload.message === "I inspect the ruined gate.",
+        )?.payload;
+        if (!event) throw new Error("missing commentary agent event fixture");
+        event.message = "I inspect a different gate.";
+      },
+    },
+    {
+      label: "a nonadjacent commentary agent event",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const event = rows.findIndex(
+          (row) =>
+            row.payload?.type === "agent_message" &&
+            row.payload.message === "I inspect the ruined gate.",
+        );
+        if (event < 0) throw new Error("missing commentary agent event fixture");
+        const [agentEvent] = rows.splice(event, 1);
+        const secondGameplay = rows.findIndex(
+          (row) =>
+            row.payload?.type === "custom_tool_call" && row.payload.call_id === "call-wrapper-2",
+        );
+        if (!agentEvent || secondGameplay < 0) throw new Error("missing private gameplay fixture");
+        rows.splice(secondGameplay + 1, 0, agentEvent);
+      },
+    },
+    {
+      label: "an orphan extra agent event",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const taskComplete = rows.findIndex((row) => row.payload?.type === "task_complete");
+        if (taskComplete < 0) throw new Error("missing task-complete fixture");
+        rows.splice(taskComplete, 0, {
+          type: "event_msg",
+          payload: {
+            type: "agent_message",
+            message: "This event has no paired assistant response.",
+            phase: "commentary",
+            memory_citation: null,
+          },
+        });
+      },
+    },
+    {
+      label: "a commentary message in the final phase",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const commentary = rows.find(
+          (row) => row.payload?.type === "message" && row.payload.id === "assistant-commentary",
+        )?.payload;
+        if (!commentary) throw new Error("missing commentary assistant fixture");
+        commentary.phase = "final_answer";
+      },
+    },
+    {
+      label: "commentary before the authenticated user prompt",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const commentary = rows.findIndex(
+          (row) => row.payload?.type === "message" && row.payload.id === "assistant-commentary",
+        );
+        if (commentary < 0) throw new Error("missing commentary assistant fixture");
+        const pair = rows.splice(commentary - 1, 2);
+        const prompt = rows.findIndex(
+          (row) => row.payload?.type === "message" && row.payload.role === "user",
+        );
+        if (prompt < 0) throw new Error("missing private prompt fixture");
+        rows.splice(prompt, 0, ...pair);
+      },
+    },
+    {
+      label: "commentary between a gameplay call and its visible output",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const commentary = rows.findIndex(
+          (row) => row.payload?.type === "message" && row.payload.id === "assistant-commentary",
+        );
+        if (commentary < 0) throw new Error("missing commentary assistant fixture");
+        const pair = rows.splice(commentary - 1, 2);
+        const firstGameplay = rows.findIndex(
+          (row) =>
+            row.payload?.type === "custom_tool_call" && row.payload.call_id === "call-wrapper-1",
+        );
+        if (firstGameplay < 0) throw new Error("missing first private gameplay fixture");
+        rows.splice(firstGameplay + 1, 0, ...pair);
+      },
+    },
+    {
+      label: "commentary after the last visible gameplay output",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const commentary = rows.findIndex(
+          (row) => row.payload?.type === "message" && row.payload.id === "assistant-commentary",
+        );
+        if (commentary < 0) throw new Error("missing commentary assistant fixture");
+        const pair = rows.splice(commentary - 1, 2);
+        const finalAssistant = rows.findIndex(
+          (row) => row.payload?.type === "message" && row.payload.phase === "final_answer",
+        );
+        if (finalAssistant < 0) throw new Error("missing final assistant fixture");
+        rows.splice(finalAssistant, 0, ...pair);
+      },
+    },
+    {
+      label: "a missing terminal answer",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const finalAssistant = rows.findIndex(
+          (row) => row.payload?.type === "message" && row.payload.phase === "final_answer",
+        );
+        if (finalAssistant < 0) throw new Error("missing final assistant fixture");
+        rows.splice(finalAssistant - 1, 2);
+      },
+    },
+    {
+      label: "a duplicate terminal answer",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const taskComplete = rows.findIndex((row) => row.payload?.type === "task_complete");
+        if (taskComplete < 0) throw new Error("missing task-complete fixture");
+        rows.splice(
+          taskComplete,
+          0,
+          ...pairedPrivateAgentMessage("assistant-final-duplicate", "report", "final_answer"),
+        );
+      },
+    },
+    {
+      label: "a non-final terminal answer",
+      mutate: (rows: ReturnType<typeof strictTerraAgentMessageRollout>) => {
+        const taskComplete = rows.findIndex((row) => row.payload?.type === "task_complete");
+        if (taskComplete < 0) throw new Error("missing task-complete fixture");
+        rows.splice(
+          taskComplete,
+          0,
+          ...pairedPrivateAgentMessage("assistant-after-final", "I keep looking.", "commentary"),
+        );
+      },
+    },
+  ])("rejects $label in strict Terra evidence", ({ mutate }) => {
+    const publicRows = strictPublicAgentMessageRows(
+      "I inspect the ruined gate.",
+      "The gate is locked, so I return to the road.",
+    );
+    const privateRows = strictTerraAgentMessageRollout(
+      "I inspect the ruined gate.",
+      "The gate is locked, so I return to the road.",
+    );
+    mutate(privateRows);
+    expect(
+      inspectCodexPureEvidence(publicRows, privateRows, "gpt-5.6-terra", {
+        codeModeContract: "strict-code-mode-v2",
+        cliVersion: "0.146.0",
+      }),
+    ).toMatchObject({ ok: false });
+  });
+
+  it("rejects a public commentary moved across a gameplay boundary", () => {
+    const commentary = "I inspect the ruined gate.";
+    const final = "The gate is locked, so I return to the road.";
+    const publicRows = strictPublicAgentMessageRows(commentary, final);
+    const publicCommentary = publicRows.findIndex((row) => row.item?.id === "agent-commentary");
+    if (publicCommentary < 0) throw new Error("missing public commentary fixture");
+    const [message] = publicRows.splice(publicCommentary, 1);
+    if (!message) throw new Error("missing public commentary row");
+    const firstGameplay = publicRows.findIndex(
+      (row) => row.type === "item.started" && row.item?.type === "mcp_tool_call",
+    );
+    if (firstGameplay < 0) throw new Error("missing first public gameplay fixture");
+    publicRows.splice(firstGameplay, 0, message);
+
+    expect(
+      inspectCodexPureEvidence(
+        publicRows,
+        strictTerraAgentMessageRollout(commentary, final),
+        "gpt-5.6-terra",
+        { codeModeContract: "strict-code-mode-v2", cliVersion: "0.146.0" },
+      ),
+    ).toMatchObject({ ok: false });
+  });
+
+  it("does not authenticate an agent-message item attached to turn.completed", () => {
+    const commentary = "I inspect the ruined gate.";
+    const final = "The gate is locked, so I return to the road.";
+    const publicRows = strictPublicAgentMessageRows(commentary, final);
+    const finalMessage = publicRows.findIndex((row) => row.item?.id === "agent-final");
+    if (finalMessage < 0) throw new Error("missing public final agent-message fixture");
+    const [removed] = publicRows.splice(finalMessage, 1);
+    if (!removed?.item) throw new Error("missing public final agent-message item");
+    const turnCompleted = publicRows.find((row) => row.type === "turn.completed");
+    if (!turnCompleted) throw new Error("missing public turn completion fixture");
+    turnCompleted.item = removed.item;
+
+    expect(
+      inspectCodexPureEvidence(
+        publicRows,
+        strictTerraAgentMessageRollout(commentary, final),
+        "gpt-5.6-terra",
+        { codeModeContract: "strict-code-mode-v2", cliVersion: "0.146.0" },
+      ),
+    ).toMatchObject({ ok: false });
+  });
+
+  it("rejects a public agent-message identity reused by another public item", () => {
+    const commentary = "I inspect the ruined gate.";
+    const final = "The gate is locked, so I return to the road.";
+    for (const collision of ["agent", "gameplay"] as const) {
+      const publicRows = strictPublicAgentMessageRows(commentary, final);
+      const finalMessage = publicRows.find((row) => row.item?.id === "agent-final")?.item;
+      const collidingItem = publicRows.find((row) =>
+        collision === "agent"
+          ? row.item?.id === "agent-commentary"
+          : row.type === "item.started" && row.item?.type === "mcp_tool_call",
+      )?.item;
+      if (!finalMessage || !collidingItem) throw new Error(`missing public ${collision} fixture`);
+      finalMessage.id = collidingItem.id;
+
+      expect(
+        inspectCodexPureEvidence(
+          publicRows,
+          strictTerraAgentMessageRollout(commentary, final),
+          "gpt-5.6-terra",
+          { codeModeContract: "strict-code-mode-v2", cliVersion: "0.146.0" },
+        ),
+        collision,
+      ).toMatchObject({ ok: false });
+    }
+  });
+
+  it.each([
+    {
+      label: "a missing public agent message",
+      mutate: (rows: ReturnType<typeof strictPublicAgentMessageRows>) => {
+        const final = rows.findIndex((row) => row.item?.id === "agent-final");
+        if (final < 0) throw new Error("missing public final agent-message fixture");
+        rows.splice(final, 1);
+      },
+    },
+    {
+      label: "a mismatched public agent-message text",
+      mutate: (rows: ReturnType<typeof strictPublicAgentMessageRows>) => {
+        const final = rows.find((row) => row.item?.id === "agent-final")?.item;
+        if (!final) throw new Error("missing public final agent-message fixture");
+        final.text = "a substituted public answer";
+      },
+    },
+  ])("rejects $label in strict Terra evidence", ({ mutate }) => {
+    const publicRows = strictPublicAgentMessageRows(
+      "I inspect the ruined gate.",
+      "The gate is locked, so I return to the road.",
+    );
+    mutate(publicRows);
+    expect(
+      inspectCodexPureEvidence(
+        publicRows,
+        strictTerraAgentMessageRollout(
+          "I inspect the ruined gate.",
+          "The gate is locked, so I return to the road.",
+        ),
+        "gpt-5.6-terra",
+        { codeModeContract: "strict-code-mode-v2", cliVersion: "0.146.0" },
+      ),
+    ).toMatchObject({ ok: false });
+  });
+
   it.each([
     {
       label: "AdventureForge resource listing",
@@ -3037,6 +3439,27 @@ describe("Spark direct MCP transport", () => {
         internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
       },
     });
+    expect(inspectCodexPureEvidence(validRows(), rows, SPARK_MODEL, direct)).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("rejects an orphan private agent-message event in direct Spark evidence", () => {
+    const rows = sparkDirectMcpRollout();
+    const taskComplete = rows.findIndex(
+      (row) => row.type === "event_msg" && row.payload?.type === "task_complete",
+    );
+    if (taskComplete < 0) throw new Error("missing Spark task-complete fixture");
+    rows.splice(taskComplete, 0, {
+      type: "event_msg",
+      payload: {
+        type: "agent_message",
+        message: "This event has no paired assistant response.",
+        phase: "commentary",
+        memory_citation: null,
+      },
+    });
+
     expect(inspectCodexPureEvidence(validRows(), rows, SPARK_MODEL, direct)).toMatchObject({
       ok: false,
     });

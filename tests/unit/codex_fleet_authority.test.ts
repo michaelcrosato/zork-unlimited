@@ -66,6 +66,18 @@ function finalOutput(rows: unknown[]): Record<string, unknown> {
   return content[0]!;
 }
 
+function finalAssistantEvent(rows: unknown[]): Record<string, unknown> {
+  const event = rows.find(
+    (row) =>
+      (row as { type?: string; payload?: { type?: string; phase?: string } }).type ===
+        "event_msg" &&
+      (row as { payload?: { type?: string; phase?: string } }).payload?.type === "agent_message" &&
+      (row as { payload?: { phase?: string } }).payload?.phase === "final_answer",
+  ) as { payload: Record<string, unknown> } | undefined;
+  if (!event) throw new Error("missing final assistant event fixture");
+  return event.payload;
+}
+
 function environmentInputContent(
   rows: unknown[],
 ): Array<{ type?: string; text?: string; [key: string]: unknown }> {
@@ -153,8 +165,8 @@ function strictPublicEvents(report = REPORT): unknown[] {
 }
 
 function rollout(report = REPORT): unknown[] {
-  // Observed Codex CLI ordering: session, task start, turn context, final
-  // assistant response, then task_complete as the terminal rollout row.
+  // Observed Codex CLI ordering: session, task start, turn context, paired final
+  // assistant event/response, then task_complete as the terminal rollout row.
   const inputMessage = (role: "developer" | "user", ...texts: string[]) => ({
     timestamp: "2026-07-19T00:00:00.0006Z",
     type: "response_item",
@@ -269,6 +281,16 @@ function rollout(report = REPORT): unknown[] {
           { type: "input_text", text: "Script completed\nWall time 0.0 seconds\nOutput:\n" },
           { type: "input_text", text: '{"content":[]}' },
         ],
+      },
+    },
+    {
+      timestamp: "2026-07-19T00:00:00.999Z",
+      type: "event_msg",
+      payload: {
+        type: "agent_message",
+        message: report,
+        phase: "final_answer",
+        memory_citation: null,
       },
     },
     {
@@ -474,7 +496,7 @@ function insertCompactedContextReplay(rows: unknown[]): void {
   const replay = structuredClone(rows[7]) as Record<string, unknown>;
   replay.timestamp = "2026-07-19T00:00:00.500Z";
   rows.splice(
-    rows.length - 2,
+    rows.length - 3,
     0,
     { type: "compacted", payload: { window_number: 2 } },
     { type: "world_state", payload: { full: true } },
@@ -1142,7 +1164,7 @@ describe("Codex certified fleet rollout authority", () => {
             (row as { payload?: { role?: string } }).payload?.role === "assistant",
         );
         if (finalAssistantIndex < 0) throw new Error("missing final assistant fixture");
-        rows.splice(finalAssistantIndex, 0, structuredClone(rows[12]));
+        rows.splice(finalAssistantIndex - 1, 0, structuredClone(rows[12]));
       },
       /orphan or unexpected tool lifecycle/i,
     ],
@@ -1361,8 +1383,11 @@ describe("Codex certified fleet rollout authority", () => {
     ],
     [
       "report substitution",
-      (rows: unknown[]) => (finalOutput(rows).text = "other"),
-      /rollout final assistant/i,
+      (rows: unknown[]) => {
+        finalOutput(rows).text = "other";
+        finalAssistantEvent(rows).message = "other";
+      },
+      /public\/private agent message differs/i,
     ],
     [
       "second context without compaction",

@@ -266,12 +266,19 @@ historical declaration/emitter and remains subject to the full topology audit.
 
 The private rollout has one finite task/input/context topology, a byte-bound
 text-only prompt, and the model-specific prelude profile. Sol and Terra use the
-v2 `explicitRequestOnly` profile; Luna uses its native v1 profile. Current Spark
-direct play disables optional context injectors and has one exact global-AGENTS
-input before the bound world, turn, prompt, and user-message rows; its turn
-context records `multi_agent_version: "disabled"`. The session's exact game-only
-base instructions and catalog compatibility hash are authenticated as applied,
-and any interim assistant prose before the final interview rejects the run.
+v2 `explicitRequestOnly` profile; Luna uses its native v1 profile. Their strict
+code-mode transport permits progress commentary only when each private assistant
+message is immediately paired to the CLI's exact `agent_message` event, appears
+either once after the authenticated prompt and before the first game call or
+after one visible game result and before the next game call, and cross-binds in
+text and order to the public event stream. Exactly one paired `final_answer`
+must follow the last visible game result. Current Spark direct play disables
+optional context injectors and has one exact global-AGENTS input before the
+bound world, turn, prompt, and user-message rows; its turn context records
+`multi_agent_version: "disabled"`. The session's exact game-only base
+instructions and catalog compatibility hash are authenticated as applied, and
+Spark still rejects every interim assistant message before its one final
+interview.
 Injected permissions, skills,
 environment, apps, or collaboration-mode messages reject that profile. These
 profiles do not authorize a different transport.
