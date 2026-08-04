@@ -84,7 +84,7 @@ function commitDrive(withJune = false, withDrover = false): GameState {
 
   expect(state.flags.strategy_drive_committed).not.toBe(true);
   const driveBrief = buildRpgObservation(index, state).dialogue?.npc_text ?? "";
-  expect(driveBrief).toMatch(/drive (?:can spare pack\/people|spares pack\/people)/i);
+  expect(driveBrief).toMatch(/drive evacuates people\/herd[^]*forcing the pack clear/i);
   expect(driveBrief).toMatch(/(?:outer defense[^]*lost|loses outer defense)/i);
   expect(driveBrief).toMatch(
     /commit starts herd[^]*closes (?:lure\/hunt\/fortify|other plans|alternatives)/i,

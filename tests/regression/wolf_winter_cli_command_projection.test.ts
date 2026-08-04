@@ -180,7 +180,7 @@ describe("Wolf-Winter terminal dialogue commands", () => {
     let state = atCade();
     const rootHelp = renderActionHelp(index, state);
     expect(rootHelp).toMatch(
-      /\n {2}lure \(also: ask lure, ask feed, ask alive\) — LURE — Draw the pack out; protects cattle and wolves; spends finite feed, leaves the paling broken, and a foul risks cattle\. Inspect\./i,
+      /\n {2}lure \(also: ask lure, ask feed, ask alive\) — LURE — Relocate pack beyond the breach; keep the herd\. Cost: last feed, broken paling, two cattle risked on a foul\. Inspect\./i,
     );
 
     state = act(state, "lure");
