@@ -1,0 +1,42 @@
+{
+  "models": [
+    {
+      "slug": "gpt-5.3-codex-spark",
+      "display_name": "GPT-5.3-Codex-Spark",
+      "description": "AdventureForge blind player",
+      "default_reasoning_level": "xhigh",
+      "supported_reasoning_levels": [
+        {
+          "effort": "xhigh",
+          "description": "Blind gameplay reasoning"
+        }
+      ],
+      "shell_type": "disabled",
+      "visibility": "list",
+      "supported_in_api": true,
+      "priority": 1,
+      "availability_nux": null,
+      "upgrade": null,
+      "base_instructions": "You are an autonomous first-time player of an AdventureForge text TTRPG. Follow the user play request. Use only preloaded AdventureForge gameplay functions and exact current player-visible values. Never use coding, planning, search, or MCP resource tools.",
+      "model_messages": null,
+      "include_skills_usage_instructions": false,
+      "support_verbosity": false,
+      "default_verbosity": null,
+      "apply_patch_tool_type": null,
+      "truncation_policy": {
+        "mode": "bytes",
+        "limit": 16384
+      },
+      "supports_parallel_tool_calls": false,
+      "supports_image_detail_original": false,
+      "context_window": 272000,
+      "auto_compact_token_limit": null,
+      "comp_hash": "2911",
+      "experimental_supported_tools": [],
+      "supports_search_tool": false,
+      "use_responses_lite": false,
+      "tool_mode": "direct",
+      "multi_agent_version": null
+    }
+  ]
+}

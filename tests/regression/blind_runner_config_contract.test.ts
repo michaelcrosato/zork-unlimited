@@ -15,6 +15,8 @@ import { tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
+// @ts-expect-error — plain .mjs module without type declarations
+import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
 import { useCleanTrackedGitCheckout } from "./support/clean_git_checkout.js";
 
 const CODEX_LOGIN_FILENAME = ["auth", ".json"].join("");
@@ -23,6 +25,27 @@ const RETIRED_CLAUDE_OAUTH_FIELD = ["claude", "AiOauth"].join("");
 const RETIRED_HOME_COMMAND = ["prepare", "-home"].join("");
 const RETIRED_SOURCE_OPTION = ["--source", "-auth"].join("");
 const RETIRED_PERMISSION_MODE = ["bypass", "Permissions"].join("");
+const SPARK_PLAYER_INSTRUCTIONS =
+  "You are an autonomous first-time player of an AdventureForge text TTRPG. " +
+  "Follow the user play request. Use only preloaded AdventureForge gameplay functions and " +
+  "exact current player-visible values. Never use coding, planning, search, or MCP resource tools.";
+
+interface SparkModelCatalog {
+  models: Array<{
+    slug: string;
+    shell_type: string;
+    base_instructions: string;
+    include_skills_usage_instructions: boolean;
+    apply_patch_tool_type: null;
+    truncation_policy: { mode: string; limit: number };
+    supports_parallel_tool_calls: boolean;
+    context_window: number;
+    auto_compact_token_limit: number | null;
+    experimental_supported_tools: unknown[];
+    supports_search_tool: boolean;
+    tool_mode: string;
+  }>;
+}
 
 interface PurePreflightTripwire {
   home: string;
@@ -57,7 +80,7 @@ if [[ "\${1:-}" == "--version" ]]; then
   if [[ -n "\${FAKE_DRIFT_TARGET:-}" && "\${probe}" == "\${FAKE_DRIFT_ON_PROBE:-0}" ]]; then
     printf '\\ntracked setup drift\\n' >> "\${FAKE_DRIFT_TARGET}"
   fi
-  printf 'codex-cli 0.144.1\\n'
+  printf 'codex-cli 0.146.0\\n'
   exit 0
 fi
 printf 'provider-exec\\n' > "\${FAKE_PROVIDER_MARKER}"
@@ -170,7 +193,7 @@ describe("blind runner MCP config contract", () => {
         `#!/usr/bin/env bash
 if [[ "\${1:-}" == "--version" ]]; then
   printf 'phase=version\\nhome=%s\\n' "\${CODEX_HOME:-}" >> "\${FAKE_CODEX_CAPTURE}"
-  printf 'codex-cli 0.144.1\\n'
+  printf 'codex-cli 0.146.0\\n'
   exit 0
 fi
 {
@@ -269,9 +292,9 @@ if [[ "\${1:-}" == "--version" ]]; then
   count=$((count + 1))
   printf '%s' "$count" > "\${PROBE_COUNT}"
   if [[ "$count" -lt 3 ]]; then
-    printf 'codex-cli 0.144.1\\n'
+    printf 'codex-cli 0.146.0\\n'
   else
-    printf 'codex-cli 0.145.0\\n'
+    printf 'codex-cli 0.147.0\\n'
   fi
   exit 0
 fi
@@ -293,8 +316,8 @@ exit 93
       });
       const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
       expect(result.status, output).toBe(42);
-      expect(output).toContain("expected cli=0.144.1");
-      expect(output).toContain("observed cli=0.145.0");
+      expect(output).toContain("expected cli=0.146.0");
+      expect(output).toContain("observed cli=0.147.0");
       expect(readFileSync(probeCount, "utf8")).toBe("3");
       expect(existsSync(`${out}.md`)).toBe(false);
     } finally {
@@ -321,7 +344,7 @@ if [[ "\${1:-}" == "--version" ]]; then
   count=0
   [[ -f "\${PROBE_COUNT}" ]] && count="$(cat "\${PROBE_COUNT}")"
   printf '%s' "$((count + 1))" > "\${PROBE_COUNT}"
-  printf 'codex-cli 0.144.1\\n'
+  printf 'codex-cli 0.146.0\\n'
   exit 0
 fi
 printf '{"type":"thread.started","thread_id":"77777777-7777-4777-8777-777777777777"}\\n'
@@ -374,7 +397,7 @@ exit 0
         `#!/usr/bin/env bash
 if [[ "\${1:-}" == "--version" ]]; then
   printf 'version home=%s\\n' "\${CODEX_HOME:-}" >> "\${SELECTED_CAPTURE}"
-  printf 'codex-cli 0.144.1\\n'
+  printf 'codex-cli 0.146.0\\n'
   exit 0
 fi
 printf 'gameplay reached\\n' >> "\${SELECTED_CAPTURE}"
@@ -399,6 +422,8 @@ exit 0
           "blind-tester/blind-launch.mjs",
           "--preflight-only",
           "--client-authority-json",
+          "--model",
+          "gpt-5.3-codex-spark",
           "--out",
           out,
         ],
@@ -419,12 +444,12 @@ exit 0
       );
       const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
       expect(result.status, output).toBe(0);
-      expect(output).toContain('"cli_version":"0.144.1"');
+      expect(output).toContain('"cli_version":"0.146.0"');
       expect(output).toContain("selected-codex");
       expect(JSON.parse(result.stdout ?? "")).toMatchObject({
         schema_version: 2,
         launcher_kind: "direct",
-        cli_version: "0.144.1",
+        cli_version: "0.146.0",
         test_script: true,
       });
       expect(output).not.toContain("models_cache");
@@ -434,6 +459,87 @@ exit 0
       expect(existsSync(`${out}.md`)).toBe(false);
       expect(existsSync(`${out}.log`)).toBe(false);
       expect(readFileSync(homeTripwire, "utf8")).toBe(homeTripwireBytes);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("requires exact CLI compatibility only for Spark direct transport", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-spark-cli-compatibility-"));
+    const home = join(dir, "home");
+    const selected = join(dir, "selected-codex");
+    const capture = join(dir, "selected-capture.txt");
+    const out = join(dir, "reports", "attempt");
+    try {
+      mkdirSync(home);
+      writeFileSync(
+        selected,
+        `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  printf 'version\\n' >> "\${SELECTED_CAPTURE}"
+  printf 'codex-cli 0.144.1\\n'
+  exit 0
+fi
+printf 'provider-launch\\n' >> "\${SELECTED_CAPTURE}"
+exit 93
+`,
+        "utf8",
+      );
+      chmodSync(selected, 0o755);
+
+      const result = spawnSync(process.execPath, ["blind-tester/blind-launch.mjs", "--out", out], {
+        cwd: cleanGit.path,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          NODE_ENV: "test",
+          CODEX_HOME: home,
+          BLIND_CODEX_BIN: bashPath(selected),
+          BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+          SELECTED_CAPTURE: bashPath(capture),
+        },
+        timeout: 30_000,
+      });
+      const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+      expect(result.status, output).toBe(42);
+      expect(output).toContain("spark-direct-mcp-v1 requires exact codex-cli 0.146.0");
+      expect(output).toContain("observed cli=0.144.1");
+      expect(output).toContain("BLIND_CODEX_BIN");
+      expect(readFileSync(capture, "utf8")).toBe("version\n");
+      expectNoOutputArtifacts(out);
+
+      const strictResult = spawnSync(
+        process.execPath,
+        [
+          "blind-tester/blind-launch.mjs",
+          "--preflight-only",
+          "--client-authority-json",
+          "--model",
+          "gpt-5.6-terra",
+          "--out",
+          out,
+        ],
+        {
+          cwd: cleanGit.path,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            NODE_ENV: "test",
+            CODEX_HOME: home,
+            BLIND_CODEX_BIN: bashPath(selected),
+            BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+            SELECTED_CAPTURE: bashPath(capture),
+          },
+          timeout: 30_000,
+        },
+      );
+      const strictOutput = `${strictResult.stdout ?? ""}\n${strictResult.stderr ?? ""}\n${strictResult.error?.message ?? ""}`;
+      expect(strictResult.status, strictOutput).toBe(0);
+      expect(JSON.parse(strictResult.stdout ?? "")).toMatchObject({
+        cli_version: "0.144.1",
+      });
+      expect(readFileSync(capture, "utf8")).toBe("version\nversion\n");
+      expectNoOutputArtifacts(out);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -544,7 +650,7 @@ printf 'codex-cli 0.144.1\\n'
         const startedAt = Date.now();
         const result = spawnSync(
           process.execPath,
-          ["blind-tester/blind-launch.mjs", "--out", out],
+          ["blind-tester/blind-launch.mjs", "--model", "gpt-5.3-codex-spark", "--out", out],
           {
             cwd: cleanGit.path,
             encoding: "utf8",
@@ -1037,6 +1143,20 @@ printf 'codex-cli 0.144.1\\n'
       join(process.cwd(), "blind-tester", "prompt-overworld.md"),
       "utf8",
     );
+    const sparkPrompt = readFileSync(
+      join(process.cwd(), "blind-tester", "prompt-overworld-spark.md"),
+      "utf8",
+    );
+    const directTransport = readFileSync(
+      join(process.cwd(), "blind-tester", "prompt-transports", "spark-direct-mcp-v1.md"),
+      "utf8",
+    );
+    const directPrompt = fillPrompt(sparkPrompt, {
+      startInstruction: "start",
+      seed: 1,
+      persona: "",
+      transport: directTransport,
+    });
     const launcher = readFileSync(join(process.cwd(), "blind-tester", "blind-launch.mjs"), "utf8");
 
     // The overworld core game is the DEFAULT blind test: with no quest id from
@@ -1051,12 +1171,20 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner).not.toContain('QUEST_ID="breaking_weir"');
     expect(runner).toContain("--overworld");
     expect(runner).toContain("prompt-overworld.md");
+    expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"');
     expect(runner).toContain("mcp__adventureforge__start_overworld");
     // The pure prompt carries only transport syntax. Gameplay objectives,
     // routes, coverage targets, and stopping are owned by the game itself.
     expect(owPrompt).toContain("mcp__adventureforge__start_overworld");
-    expect(owPrompt).toContain("Begin with one pre-game tool invocation");
-    expect(owPrompt).toMatch(/`tool_search` is not a gameplay\s+action/);
+    expect(owPrompt).toContain("first **game action**");
+    expect(owPrompt).not.toContain("Begin with one pre-game tool invocation");
+    expect(directPrompt).toContain("`mcp__adventureforge__start_overworld({})` exactly once");
+    expect(directPrompt).toContain("call only preloaded");
+    expect(directPrompt).toContain("gameplay functions authorized by the latest game");
+    expect(directPrompt).toContain("Never use any other tool");
+    expect(directPrompt).not.toContain("functions.exec");
+    expect(directPrompt).not.toContain("tool_search");
+    expect(directPrompt).not.toContain('tool_search({"query"');
     expect(owPrompt).toContain("one-time tutorial");
     expect(owPrompt).not.toMatch(/30.?45|tool calls|take at least one road/i);
     expect(owPrompt).not.toMatch(
@@ -1162,7 +1290,7 @@ printf 'codex-cli 0.144.1\\n'
     expect(codexLaunch).toContain('CODEX_CAPTURE="$OUT.codex-capture.json"');
     expect(codexLaunch).toContain('--receipt "$CODEX_CAPTURE_ARG"');
     expect(codexLaunch).toContain('--expected-cwd "$CODEX_PLAYER_CWD_ARG"');
-    expect(codexLaunch).toContain("--code-mode-contract strict-code-mode-v2");
+    expect(codexLaunch).toContain('--transport-contract "$CODEX_TRANSPORT_CONTRACT"');
     expect(codexLaunch).toContain('--cli-version "$CODEX_CLI_VERSION"');
     expect(runner).toContain("codex-rollout.mjs");
     expect(codexLaunch).toContain("--ignore-user-config");
@@ -1170,6 +1298,14 @@ printf 'codex-cli 0.144.1\\n'
     expect(codexLaunch).toContain("--strict-config");
     expect(codexLaunch).toContain("-c 'project_doc_max_bytes=0'");
     expect(codexLaunch).toContain("--enable code_mode_only");
+    expect(codexLaunch).toContain("--disable code_mode_only");
+    expect(codexLaunch).toContain("--disable tool_suggest");
+    expect(codexLaunch).not.toContain("--enable tool_suggest");
+    expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="spark-direct-mcp-v1"');
+    expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="strict-code-mode-v2"');
+    expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"');
+    expect(runner).toContain("prompt-transports/spark-direct-mcp-v1.md");
+    expect(runner).toContain("prompt-transports/strict-code-mode-v2.md");
     expect(codexLaunch).toContain("--disable apps");
     expect(codexLaunch).toContain("--disable browser_use");
     expect(codexLaunch).toContain("--disable computer_use");
@@ -1201,6 +1337,123 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner.indexOf('DURABLE_RUN_EVIDENCE="$OUT.evidence.jsonl"')).toBeLessThan(launchAt);
     expect(runner.indexOf("PURE_PUBLICATION_COMPLETE=1")).toBeGreaterThan(launchEnd);
   });
+
+  it("pins only Spark to the compact prompt and repo-owned game-only model catalog", () => {
+    const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
+    const catalogPath = join(process.cwd(), "blind-tester", "codex-model-catalog-spark-v1.json");
+    const catalog = JSON.parse(readFileSync(catalogPath, "utf8")) as SparkModelCatalog;
+
+    const profileStart = runner.indexOf("  CODEX_PLAYER_PROFILE_ARGS=()");
+    const profileEnd = runner.indexOf("\n  fi", profileStart);
+    expect(profileStart).toBeGreaterThan(0);
+    expect(profileEnd).toBeGreaterThan(profileStart);
+    const sparkProfile = runner.slice(profileStart, profileEnd);
+
+    expect(runner).toContain(
+      'if [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.3-codex-spark" ]]',
+    );
+    expect(sparkProfile).toContain('if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" ]]');
+    expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"');
+    expect(sparkProfile).toContain(
+      '--config "model_catalog_json=\\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-spark-v1.json\\""',
+    );
+    expect(sparkProfile).toContain(`--config 'instructions="${SPARK_PLAYER_INSTRUCTIONS}"'`);
+    for (const config of [
+      "tools.update_plan.enabled=false",
+      "tools.experimental_request_user_input.enabled=false",
+      "skills.include_instructions=false",
+      "include_environment_context=false",
+      "include_apps_instructions=false",
+      "include_permissions_instructions=false",
+      "include_collaboration_mode_instructions=false",
+    ]) {
+      expect(sparkProfile).toContain(`--config '${config}'`);
+      expect(runner.match(new RegExp(config.replaceAll(".", "\\."), "gu"))).toHaveLength(1);
+    }
+    expect(runner).toContain('"${CODEX_PLAYER_PROFILE_ARGS[@]}"');
+    expect(runner.match(/CODEX_PLAYER_PROFILE_ARGS=/gu)).toHaveLength(2);
+
+    expect(catalog.models).toHaveLength(1);
+    expect(catalog.models[0]).toMatchObject({
+      slug: "gpt-5.3-codex-spark",
+      shell_type: "disabled",
+      base_instructions: SPARK_PLAYER_INSTRUCTIONS,
+      include_skills_usage_instructions: false,
+      apply_patch_tool_type: null,
+      truncation_policy: { mode: "bytes", limit: 16_384 },
+      supports_parallel_tool_calls: false,
+      context_window: 272_000,
+      auto_compact_token_limit: null,
+      experimental_supported_tools: [],
+      supports_search_tool: false,
+      tool_mode: "direct",
+    });
+  });
+
+  it("passes the Spark player profile to Spark and not to Sol, Terra, or Luna", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-spark-profile-scope-"));
+    const home = join(dir, "home");
+    const selected = join(dir, "selected-codex");
+    try {
+      mkdirSync(home);
+      writeFileSync(
+        selected,
+        `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  printf 'codex-cli 0.146.0\\n'
+  exit 0
+fi
+printf '%s\\n' "$@" > "\${FAKE_CODEX_CAPTURE}"
+exit 93
+`,
+        "utf8",
+      );
+      chmodSync(selected, 0o755);
+
+      for (const [model, isSpark] of [
+        ["gpt-5.3-codex-spark", true],
+        ["gpt-5.6-sol", false],
+        ["gpt-5.6-terra", false],
+        ["gpt-5.6-luna", false],
+      ] as const) {
+        const capture = join(dir, `${model}.argv.txt`);
+        const out = join(dir, "reports", model);
+        const result = spawnSync(
+          process.execPath,
+          ["blind-tester/blind-launch.mjs", "--model", model, "--out", out],
+          {
+            cwd: cleanGit.path,
+            encoding: "utf8",
+            env: {
+              ...process.env,
+              NODE_ENV: "test",
+              CODEX_HOME: home,
+              BLIND_CODEX_BIN: bashPath(selected),
+              BLIND_CODEX_TEST_SCRIPT_CLIENT: "1",
+              FAKE_CODEX_CAPTURE: bashPath(capture),
+            },
+            timeout: 30_000,
+          },
+        );
+        const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`;
+        expect(result.status, `${model}: ${output}`).toBe(93);
+        const args = readFileSync(capture, "utf8");
+        expect(args).toContain("code_mode_only");
+        for (const sparkOnlyArg of [
+          "codex-model-catalog-spark-v1.json",
+          SPARK_PLAYER_INSTRUCTIONS,
+          "tools.update_plan.enabled=false",
+          "skills.include_instructions=false",
+          "include_environment_context=false",
+        ]) {
+          if (isSpark) expect(args).toContain(sparkOnlyArg);
+          else expect(args).not.toContain(sparkOnlyArg);
+        }
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
 
   it("allows the local MCP server to cold-start while parallel verification is busy", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");

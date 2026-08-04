@@ -55,6 +55,19 @@ export function useCleanTrackedGitCheckout(): CleanTrackedGitCheckout {
     };
     runGit(["read-tree", sourceHead], sourceRoot, syntheticEnvironment);
     runGit(["add", "-u"], sourceRoot, syntheticEnvironment);
+    const addedTrackedPaths = runGit(
+      ["diff", "--cached", "--no-renames", "--diff-filter=A", "--name-only", "-z"],
+      sourceRoot,
+      cleanEnvironment,
+    );
+    if (addedTrackedPaths.length > 0) {
+      runGit(
+        ["--literal-pathspecs", "add", "--pathspec-from-file=-", "--pathspec-file-nul"],
+        sourceRoot,
+        syntheticEnvironment,
+        addedTrackedPaths,
+      );
+    }
     const tree = runGit(["write-tree"], sourceRoot, syntheticEnvironment).trim();
     const commit = runGit(
       [
@@ -102,8 +115,8 @@ function withoutGitRepositoryEnvironment(env: NodeJS.ProcessEnv): NodeJS.Process
   return cleanEnvironment;
 }
 
-function runGit(args: string[], cwd: string, env: NodeJS.ProcessEnv): string {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8", env });
+function runGit(args: string[], cwd: string, env: NodeJS.ProcessEnv, input?: string): string {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", env, input });
   if (result.status !== 0) {
     throw new Error(
       `Clean Git checkout setup failed: git ${args.join(" ")}\n${result.stderr || result.stdout}`,

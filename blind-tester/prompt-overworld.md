@@ -4,38 +4,17 @@ naturally, and use only what the game shows you.
 
 PLAY AS A NEW PLAYER
 
-- Begin with one pre-game tool invocation: call
-  `mcp__adventureforge__start_overworld` with `{}`, an object containing no
-  fields. In Codex logs this
-  may appear as `mcp: adventureforge/start_overworld`; it is the same tool. This
-  is the only pre-game action. If it is unavailable, stop and briefly say that
-  the game could not start.
+- Begin with the transport instructions below. Your first **game action** must
+  call `mcp__adventureforge__start_overworld` with `{}`, an object containing no
+  fields. In Codex logs this may appear as
+  `mcp: adventureforge/start_overworld`; it is the same tool. Make no other
+  pre-game action. If the exact start tool is unavailable, stop and briefly say
+  that the game could not start.
 - Use only AdventureForge gameplay actions exposed for this pure run, with the
   exact ids and values shown in the current player response. Your knowledge and
   choices come from that player surface. Treat the current game response as your
   complete source for rules, choices, and state.
-- Use the `functions.exec` gameplay wrapper below for every call. Each wrapper
-  contains exactly one `mcp__adventureforge__...` action permitted by this
-  prompt or shown by the current game response. `tool_search` is not a gameplay
-  action.
-- For every Codex `functions.exec` AdventureForge gameplay wrapper, submit this
-  exact initial two-line wrapper as one indivisible input. The Markdown fence and
-  its `text` language tag below are display-only, not input. Submit only the two raw
-  source lines: first character `/`, last non-newline character `;`. Add no
-  Markdown fence, language label, prose, or literal `functions.exec(...)` call:
-
-```text
-// @exec: {"yield_time_ms": 120000}
-text(await tools.mcp__adventureforge__start_overworld({}));
-```
-
-- For later calls, replace only the tool and arguments with current legal values.
-  Never submit either source line alone. Use an object literal containing only
-  JSON-valued literals. Add no other comment or executable statement. Never call
-  `functions.wait`; completion and visible output must stay in that wrapper
-  lifecycle. A wedge or yield invalidates the run. Spell the pragma key
-  `yield_time_ms` exactly (never `yield-time`). Make the next game choice only after
-  seeing the response.
+  {{TRANSPORT_INSTRUCTIONS}}
 
 - `mcp__adventureforge__start_overworld_session_quest` is the normal player
   bridge into a quest currently shown by the overworld. Use it only when
@@ -216,6 +195,12 @@ Before you send your report, check every item:
   both integer ratings, and exactly one final `json exit-interview` block. After
   the JSON object's closing brace, add a newline and the three-backtick closing
   fence shown below; the reply is incomplete without that closing fence.
+- If no actual bug was observed, write `"bugs": []` exactly. Never put `"none"`,
+  `"none observed"`, or any other string in the `bugs` array.
+
+Be honest and specific. A critical, well-observed report is more useful than a
+flattering one. The closing fence below must be your final non-whitespace
+content.
 
 ```json exit-interview
 {
@@ -236,6 +221,3 @@ Before you send your report, check every item:
   "verdict": "<the one-paragraph verdict, restated>"
 }
 ```
-
-Be honest and specific. A critical, well-observed report is more useful than a
-flattering one.

@@ -20,6 +20,8 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL, URL } from "node:url";
 import {
   CODEX_GAMEPLAY_WRAPPER_FAILURES,
+  CODEX_SPARK_DIRECT_MCP_CONTRACT,
+  CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES,
   CODEX_STRICT_CURRENT_CONTRACT,
   inspectCodexGameplayResultForwardingPrefix,
   inspectCodexPureEventPrefix,
@@ -112,6 +114,37 @@ function validStrictRejectionDiagnosticConfig(config) {
   );
 }
 
+function writeExclusiveDiagnostic(path, bytes) {
+  if (bytes.byteLength > STRICT_REJECTION_DIAGNOSTIC_MAX_BYTES) return false;
+  let descriptor;
+  try {
+    descriptor = openSync(path, "wx", 0o600);
+    fchmodSync(descriptor, 0o600);
+    let offset = 0;
+    while (offset < bytes.byteLength) offset += writeSync(descriptor, bytes, offset);
+    fsyncSync(descriptor);
+    const written = fstatSync(descriptor, { bigint: true });
+    const linked = lstatSync(path, { bigint: true });
+    if (
+      !written.isFile() ||
+      written.nlink !== 1n ||
+      linked.isSymbolicLink() ||
+      !linked.isFile() ||
+      linked.nlink !== 1n ||
+      written.dev !== linked.dev ||
+      written.ino !== linked.ino ||
+      written.size !== BigInt(bytes.byteLength)
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
 /**
  * Best-effort, diagnostic-only evidence for an already bound private wrapper
  * rejection. This must never affect fail-closed termination or canonical
@@ -175,34 +208,185 @@ export function writeStrictRejectionDiagnostic(config, watch, row, failureKind) 
     }) + "\n",
     "utf8",
   );
-  if (bytes.byteLength > STRICT_REJECTION_DIAGNOSTIC_MAX_BYTES) return false;
-  let descriptor;
-  try {
-    descriptor = openSync(config.path, "wx", 0o600);
-    fchmodSync(descriptor, 0o600);
-    let offset = 0;
-    while (offset < bytes.byteLength) offset += writeSync(descriptor, bytes, offset);
-    fsyncSync(descriptor);
-    const written = fstatSync(descriptor, { bigint: true });
-    const linked = lstatSync(config.path, { bigint: true });
+  return writeExclusiveDiagnostic(config.path, bytes);
+}
+
+function classifyPublicStreamRejection(reason) {
+  if (reason === "Codex event stream contains forbidden event type error") {
+    return "top_level_error";
+  }
+  if (reason.startsWith("Codex event stream contains forbidden event type ")) {
+    return "forbidden_event_type";
+  }
+  if (reason === "Codex event stream contains a non-object row") return "non_object_row";
+  if (reason === "Codex item event is missing its item object") return "invalid_item";
+  if (reason.startsWith("Codex pure run used an unexpected item.updated lifecycle")) {
+    return "item_updated";
+  }
+  if (reason === "Codex direct MCP run used an unexpected startup error") {
+    return "unexpected_startup_error";
+  }
+  if (reason.startsWith("Codex pure run used forbidden item type ")) {
+    return "forbidden_item_type";
+  }
+  if (reason.startsWith("Codex pure run called forbidden MCP server ")) {
+    return "forbidden_mcp_server";
+  }
+  if (reason.startsWith("Codex pure run called forbidden AdventureForge tool ")) {
+    return "forbidden_mcp_tool";
+  }
+  return "public_contract_rejection";
+}
+
+function classifyPrivateDirectRejection(reason) {
+  if (/direct MCP call \d+ has an invalid or duplicate start/u.test(reason)) {
+    return "direct_invalid_start";
+  }
+  if (
+    reason.includes("direct MCP run must begin gameplay with start_overworld") ||
+    reason.includes("direct MCP run must call start_overworld exactly once")
+  ) {
+    return "direct_fresh_start_order";
+  }
+  if (reason.includes("has no immediate matching completion")) {
+    return "direct_missing_completion";
+  }
+  if (reason.includes("has no auditable immediate result")) return "direct_missing_result";
+  if (reason.includes("has a missing, mismatched, or truncated output")) {
+    return "direct_output_mismatch";
+  }
+  if (reason.includes("forbidden private response item")) return "forbidden_response_item";
+  if (reason.includes("orphan or unexpected tool lifecycle")) return "orphan_tool_lifecycle";
+  if (reason.includes("forbidden private event")) return "forbidden_private_event";
+  if (reason.includes("forbidden private rollout row")) return "forbidden_private_row";
+  return "private_contract_rejection";
+}
+
+function nonnegativeSafeInteger(value) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+function hasExactKeys(value, expectedKeys) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = Object.keys(value).sort();
+  return (
+    keys.length === expectedKeys.length && keys.every((key, index) => key === expectedKeys[index])
+  );
+}
+
+export function latestPrivateUsageLowerBound(rows) {
+  if (!Array.isArray(rows)) return null;
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const usage = rows[index]?.payload?.info?.total_token_usage;
     if (
-      !written.isFile() ||
-      written.nlink !== 1n ||
-      linked.isSymbolicLink() ||
-      !linked.isFile() ||
-      linked.nlink !== 1n ||
-      written.dev !== linked.dev ||
-      written.ino !== linked.ino ||
-      written.size !== BigInt(bytes.byteLength)
+      rows[index]?.type !== "event_msg" ||
+      rows[index]?.payload?.type !== "token_count" ||
+      usage === null ||
+      typeof usage !== "object" ||
+      Array.isArray(usage) ||
+      !nonnegativeSafeInteger(usage.input_tokens) ||
+      !nonnegativeSafeInteger(usage.cached_input_tokens) ||
+      !nonnegativeSafeInteger(usage.output_tokens) ||
+      !nonnegativeSafeInteger(usage.reasoning_output_tokens) ||
+      !nonnegativeSafeInteger(usage.total_tokens) ||
+      usage.cached_input_tokens > usage.input_tokens ||
+      usage.reasoning_output_tokens > usage.output_tokens ||
+      usage.total_tokens !== usage.input_tokens + usage.output_tokens
     ) {
-      return false;
+      continue;
     }
-    return true;
+    return {
+      input_tokens: usage.input_tokens,
+      cached_input_tokens: usage.cached_input_tokens,
+      output_tokens: usage.output_tokens,
+      reasoning_output_tokens: usage.reasoning_output_tokens,
+    };
+  }
+  return null;
+}
+
+/**
+ * Best-effort, diagnostic-only classification for a bound public or direct-MCP
+ * stream rejection. One row from the rejected, inspected prefix is represented
+ * only by byte count and hash; provider prose, game output, dynamic names, and
+ * paths are never stored.
+ */
+export function writeStreamRejectionDiagnostic(config, detail) {
+  const failures = CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES[detail?.surface];
+  const usage = detail?.usageLowerBound;
+  if (
+    !validStrictRejectionDiagnosticConfig(config) ||
+    !Array.isArray(failures) ||
+    !failures.includes(detail?.failure) ||
+    ![CODEX_STRICT_CURRENT_CONTRACT, CODEX_SPARK_DIRECT_MCP_CONTRACT].includes(
+      detail?.transportContract,
+    ) ||
+    (detail.surface === "private_rollout" &&
+      detail.transportContract !== CODEX_SPARK_DIRECT_MCP_CONTRACT) ||
+    typeof detail?.threadId !== "string" ||
+    !THREAD_ID_RE.test(detail.threadId) ||
+    typeof detail?.identity?.dev !== "bigint" ||
+    typeof detail.identity.ino !== "bigint" ||
+    !Number.isSafeInteger(detail?.rowIndex) ||
+    detail.rowIndex < 0 ||
+    (usage !== null &&
+      (usage === undefined ||
+        !hasExactKeys(usage, [
+          "cached_input_tokens",
+          "input_tokens",
+          "output_tokens",
+          "reasoning_output_tokens",
+        ]) ||
+        !nonnegativeSafeInteger(usage.input_tokens) ||
+        !nonnegativeSafeInteger(usage.cached_input_tokens) ||
+        !nonnegativeSafeInteger(usage.output_tokens) ||
+        !nonnegativeSafeInteger(usage.reasoning_output_tokens) ||
+        usage.cached_input_tokens > usage.input_tokens ||
+        usage.reasoning_output_tokens > usage.output_tokens))
+  ) {
+    return false;
+  }
+  let projection;
+  try {
+    const serialized = JSON.stringify(detail.row);
+    if (typeof serialized !== "string") return false;
+    projection = Buffer.from(serialized, "utf8");
   } catch {
     return false;
-  } finally {
-    if (descriptor !== undefined) closeSync(descriptor);
   }
+  const bytes = Buffer.from(
+    JSON.stringify({
+      schema_version: 2,
+      acceptance_eligible: false,
+      canonical: false,
+      ignored: true,
+      kind: "strict_stream_rejection_diagnostic",
+      surface: detail.surface,
+      transport_contract: detail.transportContract,
+      commitments: {
+        seed: config.seed,
+        build_commit: config.buildCommit,
+        tracked_worktree_clean: config.trackedWorktreeClean,
+        model: config.model,
+        cli_version: config.cliVersion,
+        client_authority_sha256: config.clientAuthoritySha256,
+      },
+      binding: {
+        thread_id: detail.threadId,
+        stream_file_identity: {
+          device_id: String(detail.identity.dev),
+          file_id: String(detail.identity.ino),
+        },
+        row_ordinal: detail.rowIndex + 1,
+        row_projection_bytes: projection.byteLength,
+        row_projection_sha256: sha256(projection),
+      },
+      rejection: { failure: detail.failure },
+      usage_lower_bound: usage,
+    }) + "\n",
+    "utf8",
+  );
+  return writeExclusiveDiagnostic(config.path, bytes);
 }
 
 export function createCompleteJsonlDecoder(label) {
@@ -471,6 +655,7 @@ export async function superviseCodexStrictStream({
   providerStderrPath,
   model,
   timeoutSeconds,
+  transportContract = CODEX_STRICT_CURRENT_CONTRACT,
   strictRejection = null,
   testShell = null,
   pollMs = DEFAULT_POLL_MS,
@@ -544,10 +729,38 @@ export async function superviseCodexStrictStream({
         readOwnedOutputChunk(eventsOutput, "Codex provider events"),
       );
       const publicInspection = inspectCodexPureEventPrefix(publicDecoder.rows, model, {
-        codeModeContract: CODEX_STRICT_CURRENT_CONTRACT,
+        transportContract,
       });
       if (!publicInspection.ok) {
         rejection = publicInspection.reason;
+        if (privateWatch !== null) {
+          try {
+            appendCompleteJsonlBytes(
+              privateDecoder,
+              readThreadBoundCodexRolloutChunk(privateWatch),
+            );
+          } catch {
+            // Diagnostic enrichment is best-effort and cannot affect the
+            // already-proven public rejection or owned-tree termination.
+          }
+        }
+        const failureKind = classifyPublicStreamRejection(rejection);
+        const firstTopLevelError =
+          failureKind === "top_level_error"
+            ? publicDecoder.rows.findIndex((row) => row?.type === "error")
+            : -1;
+        const rowIndex =
+          firstTopLevelError >= 0 ? firstTopLevelError : publicDecoder.rows.length - 1;
+        writeStreamRejectionDiagnostic(strictRejection, {
+          surface: "public_events",
+          failure: failureKind,
+          transportContract,
+          threadId: publicDecoder.rows[0]?.thread_id,
+          identity: eventsOutput,
+          rowIndex,
+          row: publicDecoder.rows[rowIndex],
+          usageLowerBound: latestPrivateUsageLowerBound(privateDecoder.rows),
+        });
         break;
       }
 
@@ -566,11 +779,14 @@ export async function superviseCodexStrictStream({
         if (binding.turnBound) {
           const privateInspection = inspectCodexGameplayResultForwardingPrefix(
             privateDecoder.rows,
-            { codeModeContract: CODEX_STRICT_CURRENT_CONTRACT },
+            { transportContract },
           );
           if (!privateInspection.ok) {
             rejection = privateInspection.reason;
-            if (privateInspection.strictRejection?.kind === "wrapper") {
+            if (
+              transportContract === CODEX_STRICT_CURRENT_CONTRACT &&
+              privateInspection.strictRejection?.kind === "wrapper"
+            ) {
               // `turnBound` proves the public UUID, isolated cwd, and pinned
               // private file identity before this noncanonical write is even
               // considered. Writer failure is deliberately ignored: rejection
@@ -581,6 +797,17 @@ export async function superviseCodexStrictStream({
                 privateDecoder.rows[privateInspection.strictRejection.rowIndex],
                 privateInspection.strictRejection.failure,
               );
+            } else if (transportContract === CODEX_SPARK_DIRECT_MCP_CONTRACT) {
+              writeStreamRejectionDiagnostic(strictRejection, {
+                surface: "private_rollout",
+                failure: classifyPrivateDirectRejection(rejection),
+                transportContract,
+                threadId: privateWatch.threadId,
+                identity: privateWatch.identity,
+                rowIndex: Math.max(0, privateDecoder.rows.length - 1),
+                row: privateDecoder.rows.at(-1),
+                usageLowerBound: latestPrivateUsageLowerBound(privateDecoder.rows),
+              });
             }
             break;
           }
@@ -626,6 +853,8 @@ async function main() {
   const eventsPath = option(options, "--events");
   const providerStderrPath = option(options, "--provider-stderr");
   const model = option(options, "--model");
+  const transportContract =
+    option(options, "--transport-contract") ?? CODEX_STRICT_CURRENT_CONTRACT;
   const timeoutSeconds = Number(option(options, "--timeout-seconds"));
   const strictRejection = strictRejectionConfig(options);
   const testShell = option(options, "--test-shell") ?? null;
@@ -636,12 +865,13 @@ async function main() {
     !eventsPath ||
     !providerStderrPath ||
     !model ||
+    ![CODEX_STRICT_CURRENT_CONTRACT, CODEX_SPARK_DIRECT_MCP_CONTRACT].includes(transportContract) ||
     !Number.isSafeInteger(timeoutSeconds) ||
     timeoutSeconds <= 0 ||
     providerArgs.length === 0
   ) {
     failure(
-      "codex-strict-stream requires --binary, --cwd, --home, --events, --provider-stderr, --model, --timeout-seconds, and provider arguments",
+      "codex-strict-stream requires --binary, --cwd, --home, --events, --provider-stderr, --model, --timeout-seconds, a supported transport contract, and provider arguments",
     );
   }
   if (
@@ -659,6 +889,7 @@ async function main() {
     providerStderrPath,
     model,
     timeoutSeconds,
+    transportContract,
     strictRejection,
     testShell,
   });

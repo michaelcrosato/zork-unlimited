@@ -1058,6 +1058,7 @@ function rolloutRecordedIdentity(rolloutBytes) {
   const threadId = sessions[0]?.payload?.id;
   const sessionCwd = sessions[0]?.payload?.cwd;
   const turnCwd = initialTurn.row?.payload?.cwd;
+  const turnModel = initialTurn.row?.payload?.model;
   if (
     typeof threadId !== "string" ||
     !THREAD_ID_RE.test(threadId) ||
@@ -1066,7 +1067,7 @@ function rolloutRecordedIdentity(rolloutBytes) {
   ) {
     fail("Codex rollout identity or cwd fields are missing");
   }
-  return { threadId, sessionCwd, turnCwd };
+  return { threadId, sessionCwd, turnCwd, turnModel };
 }
 
 function publicationDestination(path, homeAuthority, label) {
@@ -1093,6 +1094,17 @@ function sha256(bytes) {
 }
 
 const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v2";
+export const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1";
+const SPARK_DIRECT_MCP_MODEL = "gpt-5.3-codex-spark";
+
+function exactCaptureTransportContract(value) {
+  if (value === STRICT_CODE_MODE_CONTRACT || value === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT) {
+    return value;
+  }
+  fail(
+    `Codex capture transport contract must be exactly ${STRICT_CODE_MODE_CONTRACT} or ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT}`,
+  );
+}
 
 function assertSameDirectoryAuthority(path, expected, label, { allowLinkedPath = false } = {}) {
   const actual = canonicalExistingDirectory(path, label, { allowLinkedPath });
@@ -1316,7 +1328,9 @@ export function captureThreadBoundCodexRollout(
   destinationPath,
   receiptPath,
   expectedCwd,
+  transportContract = STRICT_CODE_MODE_CONTRACT,
 ) {
+  const exactTransportContract = exactCaptureTransportContract(transportContract);
   const home = resolve(codexHome);
   const homeAuthority = canonicalExistingDirectory(home, "Codex home", {
     allowLinkedPath: true,
@@ -1360,6 +1374,14 @@ export function captureThreadBoundCodexRollout(
   if (recorded.threadId !== threadId) {
     fail("Codex rollout session id differs from public thread.started");
   }
+  if (
+    exactTransportContract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT &&
+    recorded.turnModel !== SPARK_DIRECT_MCP_MODEL
+  ) {
+    fail(
+      `Codex ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} capture requires exact model ${SPARK_DIRECT_MCP_MODEL}`,
+    );
+  }
   const expectedAuthority = canonicalExistingDirectory(expectedCwd, "Codex expected player cwd");
   const sessionAuthority = canonicalExistingDirectory(
     recorded.sessionCwd,
@@ -1377,9 +1399,11 @@ export function captureThreadBoundCodexRollout(
   }
 
   const receiptBody = {
-    schema_version: 3,
+    schema_version: exactTransportContract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ? 4 : 3,
     binding: "runner_work_player",
-    code_mode_contract: STRICT_CODE_MODE_CONTRACT,
+    ...(exactTransportContract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
+      ? { transport_contract: SPARK_DIRECT_MCP_TRANSPORT_CONTRACT }
+      : { code_mode_contract: STRICT_CODE_MODE_CONTRACT }),
     recorded_session_cwd: recorded.sessionCwd,
     recorded_turn_cwd: recorded.turnCwd,
     canonical_expected_cwd: expectedAuthority.canonicalPath,
@@ -1501,10 +1525,11 @@ function main() {
     const out = option(argv, "--out");
     const receipt = option(argv, "--receipt");
     const expectedCwd = option(argv, "--expected-cwd");
+    const transportContract = option(argv, "--transport-contract") ?? STRICT_CODE_MODE_CONTRACT;
     if (!home || !events || !out || !receipt || !expectedCwd) {
       fail("capture requires --home, --events, --out, --receipt, and --expected-cwd");
     }
-    captureThreadBoundCodexRollout(home, events, out, receipt, expectedCwd);
+    captureThreadBoundCodexRollout(home, events, out, receipt, expectedCwd, transportContract);
     return;
   }
   fail(

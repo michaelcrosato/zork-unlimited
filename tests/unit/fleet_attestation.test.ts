@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION,
+  HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION,
+  HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION,
+  HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION,
   parsePureFleetAttestation,
-  PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
   PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
+  PURE_FLEET_CODE_MODE_CONTRACT,
+  PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
+  PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
   PureFleetAttestationSchema,
   pureFleetAttestationPathFor,
 } from "../../src/starting_slice/fleet_attestation.js";
@@ -12,6 +20,7 @@ import {
   pureFleetAttestationMismatch,
   PURE_FLEET_ATTESTATION_SCHEMA_VERSION as RUNNER_ATTESTATION_SCHEMA_VERSION,
   PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION as RUNNER_CODEX_ATTESTATION_SCHEMA_VERSION,
+  SPARK_DIRECT_MCP_CODEX_CLI_VERSION as RUNNER_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
   // @ts-expect-error — native runner module has no declaration file
 } from "../../blind-tester/fleet.mjs";
 import {
@@ -41,6 +50,10 @@ const CLIENT_AUTHORITY_TOKEN = Buffer.from(
   "utf8",
 ).toString("base64url");
 const CODEX_CLIENT = codexClientAuthorityRecord(CLIENT_AUTHORITY_TOKEN, "0.144.1");
+const SPARK_CODEX_CLIENT = codexClientAuthorityRecord(
+  CLIENT_AUTHORITY_TOKEN,
+  PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
+);
 
 const VALID_ATTESTATION = {
   schema_version: PURE_FLEET_ATTESTATION_SCHEMA_VERSION,
@@ -70,14 +83,14 @@ const VALID_ATTESTATION = {
   recovery_envelope_sha256: null,
 } as const;
 
-const VALID_CODEX_ATTESTATION = {
+const VALID_STRICT_CODEX_ATTESTATION = {
   schema_version: PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
   provider: "codex",
   codex_cli_version: CODEX_CLIENT.cli_version,
   codex_client_authority_sha256: CODEX_CLIENT.authority_sha256,
-  code_mode_contract: "strict-code-mode-v2",
+  code_mode_contract: PURE_FLEET_CODE_MODE_CONTRACT,
   run_seed: 43,
-  model: "gpt-5.3-codex-spark",
+  model: "gpt-5.6-terra",
   persona: "default",
   target: "overworld",
   play_mode: "pure",
@@ -86,7 +99,7 @@ const VALID_CODEX_ATTESTATION = {
   game_session_id: "ow-codex-attested",
   provider_session_id: "20852ae5-43b1-424a-aa39-7ba347361cec",
   actual_provider: "openai",
-  actual_model: "gpt-5.3-codex-spark",
+  actual_model: "gpt-5.6-terra",
   reasoning_effort: "xhigh",
   provider_turn_id: "30852ae5-43b1-424a-aa39-7ba347361cec",
   provider_cwd: "C:\\private\\player",
@@ -106,14 +119,51 @@ const VALID_CODEX_ATTESTATION = {
   recovery_envelope_sha256: null,
 } as const;
 
+const { code_mode_contract: _currentCodeModeContract, ...CURRENT_CODEX_COMMON_ATTESTATION_FIELDS } =
+  VALID_STRICT_CODEX_ATTESTATION;
+const VALID_SPARK_DIRECT_CODEX_ATTESTATION = {
+  ...CURRENT_CODEX_COMMON_ATTESTATION_FIELDS,
+  codex_cli_version: SPARK_CODEX_CLIENT.cli_version,
+  codex_client_authority_sha256: SPARK_CODEX_CLIENT.authority_sha256,
+  model: "gpt-5.3-codex-spark",
+  actual_model: "gpt-5.3-codex-spark",
+  transport_contract: PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+} as const;
+
+const VALID_HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION = {
+  ...VALID_STRICT_CODEX_ATTESTATION,
+  schema_version: HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION,
+} as const;
+const {
+  codex_cli_version: _historicalCliVersion,
+  codex_client_authority_sha256: _historicalClientAuthority,
+  ...HISTORICAL_CODE_MODE_ATTESTATION_FIELDS
+} = VALID_HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION;
+const VALID_HISTORICAL_CODE_MODE_CODEX_ATTESTATION = {
+  ...HISTORICAL_CODE_MODE_ATTESTATION_FIELDS,
+  schema_version: HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION,
+} as const;
 const VALID_HISTORICAL_STRICT_CODEX_ATTESTATION = {
-  ...Object.fromEntries(
-    Object.entries(VALID_CODEX_ATTESTATION).filter(
-      ([key]) => key !== "codex_cli_version" && key !== "codex_client_authority_sha256",
-    ),
-  ),
-  schema_version: 5 as const,
-  code_mode_contract: "strict-code-mode-v1" as const,
+  ...HISTORICAL_CODE_MODE_ATTESTATION_FIELDS,
+  schema_version: HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION,
+  code_mode_contract: "strict-code-mode-v1",
+} as const;
+const {
+  code_mode_contract: _historicalCodeModeContract,
+  ...HISTORICAL_RECEIPT_BOUND_ATTESTATION_FIELDS
+} = VALID_HISTORICAL_CODE_MODE_CODEX_ATTESTATION;
+const VALID_HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION = {
+  ...HISTORICAL_RECEIPT_BOUND_ATTESTATION_FIELDS,
+  schema_version: HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION,
+} as const;
+const {
+  report_receipt_bound: _historicalReceiptBound,
+  receipt_binding_sha256: _historicalReceiptBinding,
+  ...HISTORICAL_PURE_ATTESTATION_FIELDS
+} = VALID_HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION;
+const VALID_HISTORICAL_PURE_CODEX_ATTESTATION = {
+  ...HISTORICAL_PURE_ATTESTATION_FIELDS,
+  schema_version: HISTORICAL_PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
 } as const;
 
 describe("PureFleetAttestationSchema", () => {
@@ -121,6 +171,9 @@ describe("PureFleetAttestationSchema", () => {
     expect(RUNNER_ATTESTATION_SCHEMA_VERSION).toBe(PURE_FLEET_ATTESTATION_SCHEMA_VERSION);
     expect(RUNNER_CODEX_ATTESTATION_SCHEMA_VERSION).toBe(
       PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+    );
+    expect(RUNNER_SPARK_DIRECT_MCP_CODEX_CLI_VERSION).toBe(
+      PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
     );
     expect(PureFleetAttestationSchema.parse(VALID_ATTESTATION)).toEqual(VALID_ATTESTATION);
     expect(parsePureFleetAttestation(JSON.stringify(VALID_ATTESTATION))).toEqual({
@@ -153,64 +206,80 @@ describe("PureFleetAttestationSchema", () => {
     ).toBe(false);
   });
 
-  it("accepts exact Codex rollout authority while retaining historical Claude v2", () => {
-    expect(PureFleetAttestationSchema.parse(VALID_CODEX_ATTESTATION)).toEqual(
-      VALID_CODEX_ATTESTATION,
-    );
-    expect(parseRunnerAttestation(JSON.stringify(VALID_CODEX_ATTESTATION))).toEqual({
-      ok: true,
-      attestation: VALID_CODEX_ATTESTATION,
-    });
-    expect(
-      PureFleetAttestationSchema.safeParse({
-        ...VALID_CODEX_ATTESTATION,
-        actual_model: "gpt-5.6-sol",
-      }).success,
-    ).toBe(false);
-    expect(
-      PureFleetAttestationSchema.safeParse({
-        ...VALID_CODEX_ATTESTATION,
-        requested_model: VALID_CODEX_ATTESTATION.model,
-      }).success,
-    ).toBe(false);
-    expect(
-      PureFleetAttestationSchema.safeParse({
-        ...VALID_CODEX_ATTESTATION,
-        code_mode_contract: "legacy",
-      }).success,
-    ).toBe(false);
-    expect(
-      PureFleetAttestationSchema.safeParse({
-        ...VALID_CODEX_ATTESTATION,
+  it("accepts only the model-specific current Codex v8 transport branch", () => {
+    for (const attestation of [
+      VALID_SPARK_DIRECT_CODEX_ATTESTATION,
+      VALID_STRICT_CODEX_ATTESTATION,
+    ]) {
+      expect(PureFleetAttestationSchema.parse(attestation)).toEqual(attestation);
+      expect(parseRunnerAttestation(JSON.stringify(attestation))).toEqual({
+        ok: true,
+        attestation,
+      });
+    }
+
+    expect(VALID_SPARK_DIRECT_CODEX_ATTESTATION).not.toHaveProperty("code_mode_contract");
+    expect(VALID_STRICT_CODEX_ATTESTATION).not.toHaveProperty("transport_contract");
+    for (const model of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"] as const) {
+      const strictAttestation = {
+        ...VALID_STRICT_CODEX_ATTESTATION,
+        model,
+        actual_model: model,
+      };
+      expect(PureFleetAttestationSchema.safeParse(strictAttestation).success).toBe(true);
+      expect(parseRunnerAttestation(JSON.stringify(strictAttestation))).toMatchObject({ ok: true });
+    }
+
+    for (const invalid of [
+      {
+        ...VALID_SPARK_DIRECT_CODEX_ATTESTATION,
+        code_mode_contract: PURE_FLEET_CODE_MODE_CONTRACT,
+      },
+      { ...VALID_SPARK_DIRECT_CODEX_ATTESTATION, transport_contract: "legacy" },
+      {
+        ...VALID_SPARK_DIRECT_CODEX_ATTESTATION,
+        codex_cli_version: CODEX_CLIENT.cli_version,
+      },
+      {
+        ...VALID_STRICT_CODEX_ATTESTATION,
+        transport_contract: PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+      },
+      { ...VALID_STRICT_CODEX_ATTESTATION, code_mode_contract: "legacy" },
+      {
+        ...VALID_SPARK_DIRECT_CODEX_ATTESTATION,
         model: "gpt-5.6-luna",
         actual_model: "gpt-5.6-luna",
-      }).success,
-    ).toBe(true);
-    expect(PureFleetAttestationSchema.parse(VALID_HISTORICAL_STRICT_CODEX_ATTESTATION)).toEqual(
+      },
+      {
+        ...VALID_STRICT_CODEX_ATTESTATION,
+        model: "gpt-5.3-codex-spark",
+        actual_model: "gpt-5.3-codex-spark",
+      },
+    ]) {
+      expect(PureFleetAttestationSchema.safeParse(invalid).success).toBe(false);
+      expect(parseRunnerAttestation(JSON.stringify(invalid)).ok).toBe(false);
+    }
+  });
+
+  it("keeps historical Codex attestation schemas v3 through v7 readable", () => {
+    for (const attestation of [
+      VALID_HISTORICAL_PURE_CODEX_ATTESTATION,
+      VALID_HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION,
       VALID_HISTORICAL_STRICT_CODEX_ATTESTATION,
-    );
-    expect(
-      parseRunnerAttestation(JSON.stringify(VALID_HISTORICAL_STRICT_CODEX_ATTESTATION)),
-    ).toEqual({
-      ok: true,
-      attestation: VALID_HISTORICAL_STRICT_CODEX_ATTESTATION,
-    });
-    const {
-      codex_cli_version: _cliVersion,
-      codex_client_authority_sha256: _clientAuthority,
-      ...historicalV6Fields
-    } = VALID_CODEX_ATTESTATION;
-    const historicalV6 = { ...historicalV6Fields, schema_version: 6 } as const;
-    expect(PureFleetAttestationSchema.parse(historicalV6)).toEqual(historicalV6);
-    expect(parseRunnerAttestation(JSON.stringify(historicalV6))).toEqual({
-      ok: true,
-      attestation: historicalV6,
-    });
+      VALID_HISTORICAL_CODE_MODE_CODEX_ATTESTATION,
+      VALID_HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION,
+    ]) {
+      expect(PureFleetAttestationSchema.parse(attestation)).toEqual(attestation);
+      expect(parseRunnerAttestation(JSON.stringify(attestation))).toEqual({
+        ok: true,
+        attestation,
+      });
+    }
   });
 
   it("requires complete current provenance for receipt-bound Codex reports", () => {
     const bound = {
-      ...VALID_CODEX_ATTESTATION,
+      ...VALID_STRICT_CODEX_ATTESTATION,
       report_receipt_bound: true,
       initial_report_sha256: "9".repeat(64),
       receipt_binding_sha256: "a".repeat(64),
@@ -257,79 +326,95 @@ describe("PureFleetAttestationSchema", () => {
 
   it("binds Codex provider, effort, turn, and cwd back to authenticated rollout facts", () => {
     const run = {
-      run_seed: VALID_CODEX_ATTESTATION.run_seed,
-      build: VALID_CODEX_ATTESTATION.build,
-      session_id: VALID_CODEX_ATTESTATION.game_session_id,
-      receipt: { receiptHash: VALID_CODEX_ATTESTATION.receipt_hash },
+      run_seed: VALID_STRICT_CODEX_ATTESTATION.run_seed,
+      build: VALID_STRICT_CODEX_ATTESTATION.build,
+      session_id: VALID_STRICT_CODEX_ATTESTATION.game_session_id,
+      receipt: { receiptHash: VALID_STRICT_CODEX_ATTESTATION.receipt_hash },
     };
     const artifactFacts = {
       run,
-      game_session_id: VALID_CODEX_ATTESTATION.game_session_id,
+      game_session_id: VALID_STRICT_CODEX_ATTESTATION.game_session_id,
       provider: "codex",
-      provider_session_id: VALID_CODEX_ATTESTATION.provider_session_id,
-      actual_model: VALID_CODEX_ATTESTATION.actual_model,
-      actual_provider: VALID_CODEX_ATTESTATION.actual_provider,
-      reasoning_effort: VALID_CODEX_ATTESTATION.reasoning_effort,
-      provider_turn_id: VALID_CODEX_ATTESTATION.provider_turn_id,
-      provider_cwd: VALID_CODEX_ATTESTATION.provider_cwd,
-      code_mode_contract: VALID_CODEX_ATTESTATION.code_mode_contract,
+      provider_session_id: VALID_STRICT_CODEX_ATTESTATION.provider_session_id,
+      actual_model: VALID_STRICT_CODEX_ATTESTATION.actual_model,
+      actual_provider: VALID_STRICT_CODEX_ATTESTATION.actual_provider,
+      reasoning_effort: VALID_STRICT_CODEX_ATTESTATION.reasoning_effort,
+      provider_turn_id: VALID_STRICT_CODEX_ATTESTATION.provider_turn_id,
+      provider_cwd: VALID_STRICT_CODEX_ATTESTATION.provider_cwd,
+      code_mode_contract: VALID_STRICT_CODEX_ATTESTATION.code_mode_contract,
+      transport_contract: null,
       report_recovered: false,
       report_receipt_bound: false,
       hashes: {
-        report_sha256: VALID_CODEX_ATTESTATION.report_sha256,
-        run_sidecar_sha256: VALID_CODEX_ATTESTATION.run_sidecar_sha256,
-        run_evidence_sha256: VALID_CODEX_ATTESTATION.run_evidence_sha256,
-        primary_envelope_sha256: VALID_CODEX_ATTESTATION.primary_envelope_sha256,
+        report_sha256: VALID_STRICT_CODEX_ATTESTATION.report_sha256,
+        run_sidecar_sha256: VALID_STRICT_CODEX_ATTESTATION.run_sidecar_sha256,
+        run_evidence_sha256: VALID_STRICT_CODEX_ATTESTATION.run_evidence_sha256,
+        primary_envelope_sha256: VALID_STRICT_CODEX_ATTESTATION.primary_envelope_sha256,
         initial_report_sha256: null,
         receipt_binding_sha256: null,
         recovery_metadata_sha256: null,
         recovery_envelope_sha256: null,
-        provider_events_sha256: VALID_CODEX_ATTESTATION.provider_events_sha256,
-        provider_rollout_sha256: VALID_CODEX_ATTESTATION.provider_rollout_sha256,
-        provider_capture_sha256: VALID_CODEX_ATTESTATION.provider_capture_sha256,
+        provider_events_sha256: VALID_STRICT_CODEX_ATTESTATION.provider_events_sha256,
+        provider_rollout_sha256: VALID_STRICT_CODEX_ATTESTATION.provider_rollout_sha256,
+        provider_capture_sha256: VALID_STRICT_CODEX_ATTESTATION.provider_capture_sha256,
       },
     };
     const expected = {
-      seed: VALID_CODEX_ATTESTATION.run_seed,
+      seed: VALID_STRICT_CODEX_ATTESTATION.run_seed,
       provider: "codex",
-      model: VALID_CODEX_ATTESTATION.model,
-      build: VALID_CODEX_ATTESTATION.build,
+      model: VALID_STRICT_CODEX_ATTESTATION.model,
+      build: VALID_STRICT_CODEX_ATTESTATION.build,
       client: CODEX_CLIENT,
     };
     expect(
-      pureFleetAttestationMismatch(VALID_CODEX_ATTESTATION, run, expected, artifactFacts),
+      pureFleetAttestationMismatch(VALID_STRICT_CODEX_ATTESTATION, run, expected, artifactFacts),
     ).toBeNull();
     expect(
       pureFleetAttestationMismatch(
-        { ...VALID_CODEX_ATTESTATION, provider_cwd: "C:\\substituted" },
+        { ...VALID_STRICT_CODEX_ATTESTATION, provider_cwd: "C:\\substituted" },
         run,
         expected,
         artifactFacts,
       ),
     ).toMatch(/rollout facts/i);
     expect(
-      pureFleetAttestationMismatch(VALID_CODEX_ATTESTATION, run, expected, {
+      pureFleetAttestationMismatch(VALID_STRICT_CODEX_ATTESTATION, run, expected, {
         ...artifactFacts,
         code_mode_contract: null,
       }),
     ).toMatch(/strict code-mode evidence/i);
+    const sparkExpected = {
+      ...expected,
+      model: VALID_SPARK_DIRECT_CODEX_ATTESTATION.model,
+      client: SPARK_CODEX_CLIENT,
+    };
+    const sparkArtifactFacts = {
+      ...artifactFacts,
+      actual_model: VALID_SPARK_DIRECT_CODEX_ATTESTATION.actual_model,
+      code_mode_contract: null,
+      transport_contract: PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+    };
     expect(
-      pureFleetAttestationMismatch(VALID_HISTORICAL_STRICT_CODEX_ATTESTATION, run, expected, {
-        ...artifactFacts,
-        code_mode_contract: "strict-code-mode-v1",
-      }),
-    ).toMatch(/current Codex resume requires attestation v7/i);
-    const {
-      code_mode_contract: _strictContract,
-      codex_cli_version: _cliVersion,
-      codex_client_authority_sha256: _clientAuthority,
-      ...historicalFields
-    } = VALID_CODEX_ATTESTATION;
+      pureFleetAttestationMismatch(
+        VALID_SPARK_DIRECT_CODEX_ATTESTATION,
+        run,
+        sparkExpected,
+        sparkArtifactFacts,
+      ),
+    ).toBeNull();
     expect(
-      pureFleetAttestationMismatch({ ...historicalFields, schema_version: 4 }, run, expected, {
-        ...artifactFacts,
-        code_mode_contract: null,
+      pureFleetAttestationMismatch(VALID_SPARK_DIRECT_CODEX_ATTESTATION, run, sparkExpected, {
+        ...sparkArtifactFacts,
+        transport_contract: null,
       }),
-    ).toMatch(/current Codex resume requires attestation v7/i);
+    ).toMatch(/Spark attestation requires authenticated spark-direct-mcp-v1 evidence/i);
+    expect(
+      pureFleetAttestationMismatch(
+        VALID_HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION,
+        run,
+        expected,
+        artifactFacts,
+      ),
+    ).toMatch(/current Codex resume requires attestation v8/i);
   });
 });

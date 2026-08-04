@@ -531,7 +531,7 @@ export function exitInterviewPlayMode(
   return "legacy_guided";
 }
 
-const BLOCK = /```json exit-interview\s*\n([\s\S]*?)```/;
+const BLOCK = /```json exit-interview[^\S\r\n]*\r?\n([\s\S]*?)\r?\n```[^\S\r\n]*(?=\r?\n|$)/gu;
 
 export type ExitInterviewExtraction =
   | { ok: true; interview: ExitInterview }
@@ -549,12 +549,23 @@ function schemaForParsedInterview(parsed: unknown): typeof ExitInterviewSchema |
 }
 
 export function extractExitInterview(text: string): ExitInterviewExtraction {
-  const body = BLOCK.exec(text)?.[1];
-  if (body === undefined) {
+  const matches = [...text.matchAll(BLOCK)];
+  if (matches.length === 0) {
     return {
       ok: false,
       reason: "missing exit interview (a ```json exit-interview fenced block is mandatory)",
     };
+  }
+  if (matches.length !== 1) {
+    return { ok: false, reason: "report must contain exactly one exit interview block" };
+  }
+  const match = matches[0]!;
+  if (text.slice((match.index ?? 0) + match[0].length).trim().length !== 0) {
+    return { ok: false, reason: "exit interview must be the final report block" };
+  }
+  const body = match[1];
+  if (body === undefined) {
+    return { ok: false, reason: "exit interview block is empty" };
   }
   let parsed: unknown;
   try {

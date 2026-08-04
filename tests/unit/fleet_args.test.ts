@@ -28,10 +28,16 @@ import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
 import {
   acquireFleetReportLock,
   archiveFailedFleetAttemptArtifacts,
+  assertSparkMassAdmissionConfigured,
   classifyFleetAttempt,
   CODEX_CLIENT_AUTHORITY_PROOF_NAME,
   codexFleetMemberEnv,
+  createPureFleetBuildFingerprint,
+  createSparkAdmissionReceipt,
+  createFleetTransportFingerprint,
+  executeRun,
   FLEET_USAGE,
+  fleetTransportProfile,
   fleetAttestationPathFor,
   fleetReportLockSpec,
   fleetSummaryExitSucceeded,
@@ -49,15 +55,21 @@ import {
   PURE_SESSION_CONTRACT_VERSION,
   pureFleetSummaryAccounting,
   releaseFleetReportLock,
+  requireSparkMassAdmissionReceipt,
   renderClosedFleetManifest,
   reportPathFor,
   resumeCandidatesFor,
   runPool,
   runSidecarPathFor,
   strictRejectionFleetDiagnostic,
+  shouldRetryFleetAttempt,
+  sparkAdmissionReceiptMismatch,
+  sparkMassAdmissionRequired,
+  SPARK_ADMISSION_RECEIPT_SCHEMA_VERSION,
   summarizeFleetAttemptHistory,
   usageRecordFromFailedFleetAttemptArchive,
   validateFleetLabel,
+  validateAdmissionReportsSeparation,
   validateFleetReportsDirectory,
   verifyReportForResume,
   writePrivateCodexClientAuthorityProof,
@@ -74,6 +86,20 @@ import {
 import { useCleanTrackedGitCheckout } from "../regression/support/clean_git_checkout.js";
 
 const cleanGit = useCleanTrackedGitCheckout();
+
+function sparkAdmissionAuthorityFixture() {
+  const resolved = resolveCodexClientBinary(process.execPath);
+  return {
+    build: {
+      git_commit: "a".repeat(40),
+      tracked_worktree_clean: true as const,
+      world_hash: "b".repeat(64),
+      world_id: "new_york_overworld",
+    },
+    client: codexClientAuthorityRecord(resolved.identity_token, "0.146.0"),
+    transportFingerprint: "c".repeat(64),
+  };
+}
 
 it("keeps the fleet resume contract pinned to the engine journey contract", () => {
   expect(PURE_SESSION_CONTRACT_VERSION).toBe(JOURNEY_CONTRACT_VERSION);
@@ -494,9 +520,46 @@ describe("fill-prompt", () => {
     const out = fillPrompt(template, { startInstruction: "x", seed: 1, persona: "" });
     expect(out).toBe("Intro.\nRules 1.\nGo: x\n");
   });
+  it("injects exactly one required transport fragment without leaving a template slot", () => {
+    const transportTemplate = "Intro.\n{{PERSONA}}\n{{TRANSPORT_INSTRUCTIONS}}\nGo.\n";
+    const out = fillPrompt(transportTemplate, {
+      startInstruction: "unused",
+      seed: 1,
+      persona: "",
+      transport: "- Call only the game.",
+    });
+    expect(out).toBe("Intro.\n- Call only the game.\nGo.\n");
+    expect(() =>
+      fillPrompt(transportTemplate, {
+        startInstruction: "unused",
+        seed: 1,
+        persona: "",
+      }),
+    ).toThrow(/transport instructions are required/);
+    expect(() =>
+      fillPrompt(template, {
+        startInstruction: "x",
+        seed: 1,
+        persona: "",
+        transport: "unexpected",
+      }),
+    ).toThrow(/without a slot/);
+  });
   it("real prompts contain exactly one persona slot each", () => {
     for (const p of ["blind-tester/prompt.md", "blind-tester/prompt-overworld.md"])
       expect(readFileSync(p, "utf8").match(/\{\{PERSONA\}\}/g)).toHaveLength(1);
+  });
+  it("the overworld prompt has one transport slot and both transport fragments are concrete", () => {
+    const overworld = readFileSync("blind-tester/prompt-overworld.md", "utf8");
+    expect(overworld.match(/\{\{TRANSPORT_INSTRUCTIONS\}\}/g)).toHaveLength(1);
+    for (const p of [
+      "blind-tester/prompt-transports/strict-code-mode-v2.md",
+      "blind-tester/prompt-transports/spark-direct-mcp-v1.md",
+    ]) {
+      const fragment = readFileSync(p, "utf8");
+      expect(fragment.trim().length).toBeGreaterThan(0);
+      expect(fragment).not.toMatch(/\{\{/);
+    }
   });
 });
 
@@ -538,6 +601,34 @@ describe("fleet planning", () => {
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
+    }
+  });
+
+  it("rejects mass Spark without a receipt before preflight or filesystem side effects", () => {
+    const root = mkdtempSync(join(tmpdir(), "af-fleet-admission-required-"));
+    const reportsDir = join(root, "reports-that-must-not-exist");
+    const label = `admission-required-${Date.now()}`;
+    try {
+      const result = spawnSync(
+        process.execPath,
+        ["blind-tester/fleet.mjs", "--count", "4", "--label", label, "--out", reportsDir],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          timeout: 5_000,
+          env: {
+            ...process.env,
+            BLIND_CODEX_BIN: join(root, "client-that-must-not-run"),
+          },
+        },
+      );
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toMatch(/requires --admission-receipt/i);
+      expect(existsSync(reportsDir)).toBe(false);
+      expect(existsSync(join(process.cwd(), "ai-runs", "fleet", label))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 
@@ -602,6 +693,249 @@ describe("fleet planning", () => {
   it("makes authoritative no-resume behavior explicit without changing diagnostic defaults", () => {
     expect(parseFleetArgs([]).resume).toBe(true);
     expect(parseFleetArgs(["--no-resume"]).resume).toBe(false);
+  });
+
+  it("constrains the Spark admission canary to one isolated fresh pure cohort", () => {
+    const opts = parseFleetArgs([
+      "--admission-canary",
+      "--label",
+      "spark-admission-1",
+      "--out",
+      "ai-runs/admission/spark-admission-1/reports",
+    ]);
+    expect(opts).toMatchObject({
+      admissionCanary: true,
+      count: 3,
+      concurrency: 1,
+      model: "gpt-5.3-codex-spark",
+      target: "overworld",
+      personas: "default",
+      resume: false,
+      maxRetries: 0,
+    });
+    for (const args of [
+      ["--admission-canary", "--label", "a", "--out", "b", "--count", "4"],
+      ["--admission-canary", "--label", "a", "--out", "b", "--concurrency", "2"],
+      ["--admission-canary", "--label", "a", "--out", "b", "--max-retries", "1"],
+      ["--admission-canary", "--label", "a", "--out", "b", "--model", "gpt-5.6-terra"],
+      ["--admission-canary", "--label", "a", "--out", "b", "--mock"],
+      ["--admission-canary", "--label", "a"],
+    ]) {
+      expect(() => parseFleetArgs(args)).toThrow(/admission-canary/i);
+    }
+  });
+
+  it("rejects an admission report directory that overlaps its fleet bundle", () => {
+    const fleetDir = join(process.cwd(), "ai-runs", "fleet", "spark-admission-1");
+    expect(() => validateAdmissionReportsSeparation(fleetDir, fleetDir)).toThrow(
+      /outside its ai-runs\/fleet\/<label> bundle/i,
+    );
+    expect(() => validateAdmissionReportsSeparation(join(fleetDir, "reports"), fleetDir)).toThrow(
+      /outside its ai-runs\/fleet\/<label> bundle/i,
+    );
+    expect(() => validateAdmissionReportsSeparation(join(fleetDir, ".."), fleetDir)).toThrow(
+      /outside its ai-runs\/fleet\/<label> bundle/i,
+    );
+    expect(
+      validateAdmissionReportsSeparation(
+        join(process.cwd(), "ai-runs", "admission-reports", "spark-admission-1"),
+        fleetDir,
+      ),
+    ).toMatch(/admission-reports/u);
+  });
+
+  it("requires one explicit admission receipt only at the mass Spark launch boundary", () => {
+    const massSpark = parseFleetArgs(["--count", "4"]);
+    expect(sparkMassAdmissionRequired(massSpark)).toBe(true);
+    expect(() => assertSparkMassAdmissionConfigured(massSpark)).toThrow(
+      /requires --admission-receipt/i,
+    );
+
+    const receiptPath = "ai-runs/fleet/spark-admission/admission.json";
+    const admitted = parseFleetArgs(["--count", "4", "--admission-receipt", receiptPath]);
+    expect(assertSparkMassAdmissionConfigured(admitted).admissionReceipt).toBe(receiptPath);
+    expect(sparkMassAdmissionRequired(parseFleetArgs(["--count", "3"]))).toBe(false);
+    expect(sparkMassAdmissionRequired(parseFleetArgs(["--model", "gpt-5.6-terra"]))).toBe(false);
+    expect(sparkMassAdmissionRequired(parseFleetArgs(["--mock"]))).toBe(false);
+
+    for (const args of [
+      ["--count", "3", "--admission-receipt", receiptPath],
+      ["--mock", "--admission-receipt", receiptPath],
+      ["--model", "gpt-5.6-terra", "--admission-receipt", receiptPath],
+      [
+        "--admission-canary",
+        "--label",
+        "new-canary",
+        "--out",
+        "ai-runs/admission/new-canary",
+        "--admission-receipt",
+        receiptPath,
+      ],
+    ]) {
+      expect(() => parseFleetArgs(args)).toThrow(/admission-receipt/i);
+    }
+  });
+
+  it("builds and validates a passed admission receipt against every launch authority", () => {
+    const authority = sparkAdmissionAuthorityFixture();
+    const receipt = createSparkAdmissionReceipt({
+      counts: { verified: 3, "skipped-resume": 0, failed: 0, suppressed: 0 },
+      ...authority,
+    });
+    expect(receipt).toMatchObject({
+      schema_version: SPARK_ADMISSION_RECEIPT_SCHEMA_VERSION,
+      purpose: "spark_admission_canary",
+      certification_eligible: false,
+      passed: true,
+      required_verified: 3,
+      verified: 3,
+      skipped_resume: 0,
+      failed: 0,
+      suppressed: 0,
+      model: "gpt-5.3-codex-spark",
+      build: authority.build,
+      build_fingerprint: createPureFleetBuildFingerprint(authority.build),
+      transport_fingerprint: authority.transportFingerprint,
+      codex_cli_version: authority.client.cli_version,
+      codex_client_authority_sha256: authority.client.authority_sha256,
+      strict_stream_rejection_fingerprints: [],
+    });
+    expect(
+      sparkAdmissionReceiptMismatch(receipt, {
+        ...authority,
+        model: "gpt-5.3-codex-spark",
+      }),
+    ).toBeNull();
+
+    const failed = createSparkAdmissionReceipt({
+      counts: { verified: 1, "skipped-resume": 0, failed: 1, suppressed: 1 },
+      ...authority,
+      strictRejectedTransportFingerprints: [authority.transportFingerprint],
+    });
+    expect(failed.passed).toBe(false);
+    expect(
+      sparkAdmissionReceiptMismatch(failed, {
+        ...authority,
+        model: "gpt-5.3-codex-spark",
+      }),
+    ).toMatch(/did not pass/i);
+  });
+
+  it.each([
+    [
+      "build identity",
+      (receipt: Record<string, unknown>) => {
+        receipt.build = {
+          ...(receipt.build as Record<string, unknown>),
+          git_commit: "d".repeat(40),
+        };
+        receipt.build_fingerprint = createPureFleetBuildFingerprint(
+          receipt.build as Parameters<typeof createPureFleetBuildFingerprint>[0],
+        );
+      },
+      /build does not match/i,
+    ],
+    [
+      "build fingerprint",
+      (receipt: Record<string, unknown>) => (receipt.build_fingerprint = "d".repeat(64)),
+      /build fingerprint/i,
+    ],
+    [
+      "tracked clean state",
+      (receipt: Record<string, unknown>) => {
+        receipt.build = {
+          ...(receipt.build as Record<string, unknown>),
+          tracked_worktree_clean: false,
+        };
+      },
+      /invalid or dirty/i,
+    ],
+    [
+      "transport fingerprint",
+      (receipt: Record<string, unknown>) => (receipt.transport_fingerprint = "d".repeat(64)),
+      /transport fingerprint/i,
+    ],
+    [
+      "client version",
+      (receipt: Record<string, unknown>) => (receipt.codex_cli_version = "0.147.0"),
+      /client authority or version/i,
+    ],
+    [
+      "client authority",
+      (receipt: Record<string, unknown>) =>
+        (receipt.codex_client_authority_sha256 = "d".repeat(64)),
+      /client authority or version/i,
+    ],
+    [
+      "model",
+      (receipt: Record<string, unknown>) => (receipt.model = "gpt-5.6-terra"),
+      /model does not match/i,
+    ],
+    [
+      "configuration",
+      (receipt: Record<string, unknown>) => {
+        receipt.configuration = {
+          ...(receipt.configuration as Record<string, unknown>),
+          concurrency: 2,
+        };
+      },
+      /configuration/i,
+    ],
+    [
+      "unexpected field",
+      (receipt: Record<string, unknown>) => (receipt.untrusted = true),
+      /unexpected or missing fields/i,
+    ],
+  ])("rejects admission receipt drift in %s", (_label, mutate, reason) => {
+    const authority = sparkAdmissionAuthorityFixture();
+    const receipt = createSparkAdmissionReceipt({
+      counts: { verified: 3, "skipped-resume": 0, failed: 0, suppressed: 0 },
+      ...authority,
+    }) as Record<string, unknown>;
+    mutate(receipt);
+    expect(
+      sparkAdmissionReceiptMismatch(receipt, {
+        ...authority,
+        model: "gpt-5.3-codex-spark",
+      }),
+    ).toMatch(reason);
+  });
+
+  it("reads only one stable exact admission receipt before authorizing mass Spark", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-spark-admission-"));
+    const path = join(dir, "admission.json");
+    const authority = sparkAdmissionAuthorityFixture();
+    const receipt = createSparkAdmissionReceipt({
+      counts: { verified: 3, "skipped-resume": 0, failed: 0, suppressed: 0 },
+      ...authority,
+    });
+    try {
+      const bytes = `${JSON.stringify(receipt, null, 2)}\n`;
+      writeFileSync(path, bytes);
+      expect(
+        requireSparkMassAdmissionReceipt({
+          receiptPath: path,
+          ...authority,
+          model: "gpt-5.3-codex-spark",
+        }),
+      ).toEqual({
+        path,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+        build_fingerprint: receipt.build_fingerprint,
+        transport_fingerprint: authority.transportFingerprint,
+      });
+
+      writeFileSync(path, '{"schema_version":2,"schema_version":2}\n');
+      expect(() =>
+        requireSparkMassAdmissionReceipt({
+          receiptPath: path,
+          ...authority,
+          model: "gpt-5.3-codex-spark",
+        }),
+      ).toThrow(/duplicate JSON object key/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("rotates personas only for explicit structural mocks and honors seed base", () => {
@@ -1226,6 +1560,241 @@ describe("fleet attempt evidence", () => {
     expect(
       classifyFleetAttempt({ runnerExit: 137, verifierAttempted: true, verified: false }),
     ).toBe("technical_timeout");
+  });
+
+  it("never retries a strict-stream rejection while retaining other retry behavior", () => {
+    expect(
+      shouldRetryFleetAttempt({
+        classification: "strict_stream_rejected",
+        attempt: 0,
+        maxAttempts: 3,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRetryFleetAttempt({
+        classification: "launcher_or_run_failure",
+        attempt: 0,
+        maxAttempts: 3,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRetryFleetAttempt({ classification: "technical_timeout", attempt: 2, maxAttempts: 3 }),
+    ).toBe(false);
+  });
+
+  it("launches a strict-stream-rejected member exactly once even when retries are configured", async () => {
+    const root = mkdtempSync(join(tmpdir(), "af-fleet-strict-no-retry-"));
+    const reportsDir = join(root, "reports");
+    const fleetDir = join(root, "fleet");
+    mkdirSync(reportsDir);
+    mkdirSync(fleetDir);
+    let launches = 0;
+    const resolved = resolveCodexClientBinary(process.execPath);
+    const client = codexClientAuthorityRecord(resolved.identity_token, "0.146.0");
+    try {
+      const result = await executeRun(
+        {
+          seed: 7,
+          persona: "default",
+          provider: "codex",
+          model: "gpt-5.6-terra",
+          target: "overworld",
+        },
+        {
+          reportsDir,
+          stamp: "20260803T120000Z",
+          opts: { mock: false, resume: false, maxRetries: 2, admissionCanary: false },
+          bashPath: "fake-bash",
+          fleetDir,
+          fleetBuild: { commit: "a".repeat(40) },
+          fleetClient: client,
+          fleetControl: {
+            clientPreflightFailure: null,
+            admissionFailure: false,
+            transportFingerprint: "b".repeat(64),
+            strictRejectedTransportFingerprints: new Set<string>(),
+          },
+          spawnRun: async (_command: string, args: string[]) => {
+            launches += 1;
+            const out = args[args.indexOf("--out") + 1];
+            writeFileSync(
+              `${out}.strict-rejection.json`,
+              `${JSON.stringify({
+                schema_version: 1,
+                acceptance_eligible: false,
+                canonical: false,
+                code_mode_contract: "strict-code-mode-v2",
+                ignored: true,
+                kind: "strict_wrapper_rejection_diagnostic",
+                surface: "private_rollout",
+                commitments: {
+                  seed: "7",
+                  build_commit: "a".repeat(40),
+                  tracked_worktree_clean: true,
+                  model: "gpt-5.6-terra",
+                  cli_version: client.cli_version,
+                  client_authority_sha256: client.authority_sha256,
+                },
+                binding: {
+                  thread_id: "77777777-7777-4777-8777-777777777777",
+                  rollout_file_identity: { device_id: "7", file_id: "9" },
+                  wrapper_item_id_sha256: "c".repeat(64),
+                  wrapper_call_id_sha256: "d".repeat(64),
+                },
+                wrapper: { failure: "syntax_error", input_bytes: 0, input_sha256: "e".repeat(64) },
+              })}\n`,
+            );
+            return { status: 43, stdout: "", stderr: "" };
+          },
+        },
+      );
+      expect(launches).toBe(1);
+      expect(result).toMatchObject({
+        status: "failed",
+        attempts: 1,
+        exit: 43,
+        failure_reason: "strict_stream_rejected",
+        attempt_history: [{ attempt: 1, exit: 43, classification: "strict_stream_rejected" }],
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("binds each model's exact prompt surface into an isolated stable fingerprint", () => {
+    const commonHashes = {
+      runner: "a".repeat(64),
+      envelope_audit: "c".repeat(64),
+      strict_stream_guard: "d".repeat(64),
+      prompt_filler: "e".repeat(64),
+      rollout_capture: "4".repeat(64),
+      process_anchor: "5".repeat(64),
+    };
+    const sparkHashes = {
+      ...commonHashes,
+      prompt_template: "b".repeat(64),
+      player_catalog: "7".repeat(64),
+      transport_fragment: "f".repeat(64),
+    };
+    const strictHashes = {
+      ...commonHashes,
+      prompt_template: "8".repeat(64),
+      transport_fragment: "9".repeat(64),
+    };
+    const first = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.3-codex-spark",
+      componentHashes: sparkHashes,
+    });
+    const reordered = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.3-codex-spark",
+      componentHashes: {
+        player_catalog: sparkHashes.player_catalog,
+        prompt_filler: sparkHashes.prompt_filler,
+        strict_stream_guard: sparkHashes.strict_stream_guard,
+        envelope_audit: sparkHashes.envelope_audit,
+        prompt_template: sparkHashes.prompt_template,
+        runner: sparkHashes.runner,
+        transport_fragment: sparkHashes.transport_fragment,
+        rollout_capture: sparkHashes.rollout_capture,
+        process_anchor: sparkHashes.process_anchor,
+      },
+    });
+    const changedRunner = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.3-codex-spark",
+      componentHashes: { ...sparkHashes, runner: "0".repeat(64) },
+    });
+    const changedFragment = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.3-codex-spark",
+      componentHashes: { ...sparkHashes, transport_fragment: "1".repeat(64) },
+    });
+    const changedSparkPrompt = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.3-codex-spark",
+      componentHashes: { ...sparkHashes, prompt_template: "2".repeat(64) },
+    });
+    const changedSparkCatalog = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.3-codex-spark",
+      componentHashes: { ...sparkHashes, player_catalog: "3".repeat(64) },
+    });
+    const changedRolloutCapture = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.3-codex-spark",
+      componentHashes: { ...sparkHashes, rollout_capture: "6".repeat(64) },
+    });
+    const changedProcessAnchor = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.3-codex-spark",
+      componentHashes: { ...sparkHashes, process_anchor: "6".repeat(64) },
+    });
+    const terra = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.6-terra",
+      componentHashes: strictHashes,
+    });
+    expect(first).toMatch(/^[0-9a-f]{64}$/);
+    expect(reordered).toBe(first);
+    expect(changedRunner).not.toBe(first);
+    expect(changedFragment).not.toBe(first);
+    expect(changedSparkPrompt).not.toBe(first);
+    expect(changedSparkCatalog).not.toBe(first);
+    expect(changedRolloutCapture).not.toBe(first);
+    expect(changedProcessAnchor).not.toBe(first);
+    expect(terra).not.toBe(first);
+    expect(fleetTransportProfile("gpt-5.3-codex-spark")).toEqual({
+      transportContract: "spark-direct-mcp-v1",
+      componentPaths: {
+        envelope_audit: "codex-pure-envelope.mjs",
+        player_catalog: "codex-model-catalog-spark-v1.json",
+        prompt_filler: "fill-prompt.mjs",
+        prompt_template: "prompt-overworld-spark.md",
+        process_anchor: "codex-process-anchor.mjs",
+        rollout_capture: "codex-rollout.mjs",
+        runner: "run.sh",
+        strict_stream_guard: "codex-strict-stream.mjs",
+        transport_fragment: "prompt-transports/spark-direct-mcp-v1.md",
+      },
+    });
+    expect(fleetTransportProfile("gpt-5.6-terra")).toEqual({
+      transportContract: "strict-code-mode-v2",
+      componentPaths: {
+        envelope_audit: "codex-pure-envelope.mjs",
+        prompt_filler: "fill-prompt.mjs",
+        prompt_template: "prompt-overworld.md",
+        process_anchor: "codex-process-anchor.mjs",
+        rollout_capture: "codex-rollout.mjs",
+        runner: "run.sh",
+        strict_stream_guard: "codex-strict-stream.mjs",
+        transport_fragment: "prompt-transports/strict-code-mode-v2.md",
+      },
+    });
+    expect(() =>
+      createFleetTransportFingerprint({
+        provider: "codex",
+        model: "gpt-5.6-terra",
+        componentHashes: { ...strictHashes, player_catalog: sparkHashes.player_catalog },
+      }),
+    ).toThrow(/component digest set/i);
+    expect(() =>
+      createFleetTransportFingerprint({
+        provider: "codex",
+        model: "gpt-5.3-codex-spark",
+        componentHashes: strictHashes,
+      }),
+    ).toThrow(/component digest set/i);
+    expect(first).not.toContain("prompt");
+    expect(first).not.toContain("seed");
+    expect(() =>
+      createFleetTransportFingerprint({
+        provider: "codex",
+        model: "gpt-5.3-codex-spark",
+        componentHashes: { runner: "a".repeat(64) },
+      }),
+    ).toThrow(/component digest set/i);
   });
 
   it("archives failed artifacts before retry and reduces every attempt, not only the terminal one", () => {

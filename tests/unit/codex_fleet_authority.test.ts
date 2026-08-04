@@ -40,6 +40,9 @@ const GLOBAL_AGENTS_BLOCK =
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const HISTORICAL_STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v1";
 const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v2";
+const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1";
+const SPARK_PLAYER_BASE_INSTRUCTIONS =
+  "You are an autonomous first-time player of an AdventureForge text TTRPG. Follow the user play request. Use only preloaded AdventureForge gameplay functions and exact current player-visible values. Never use coding, planning, search, or MCP resource tools.";
 const CODE_MODE_WARNING_PREFIX =
   "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
 
@@ -364,6 +367,95 @@ function codex0146StrictTerraRollout(report = REPORT): unknown[] {
   return rows;
 }
 
+function sparkDirectMcpRollout(report = REPORT): unknown[] {
+  const rows = rollout(report) as Array<{
+    timestamp?: string;
+    type?: string;
+    payload?: Record<string, unknown>;
+  }>;
+  const metadata = { internal_chat_message_metadata_passthrough: { turn_id: TURN } };
+  const taskStartIndex = rows.findIndex(
+    (row) => row.type === "event_msg" && row.payload?.type === "task_started",
+  );
+  const worldStateIndex = rows.findIndex((row) => row.type === "world_state");
+  if (taskStartIndex < 0 || worldStateIndex < 0) {
+    throw new Error("missing Spark direct-MCP prelude boundary fixture");
+  }
+  rows.splice(taskStartIndex + 1, worldStateIndex - taskStartIndex - 1, {
+    timestamp: "2026-07-19T00:00:00.0006Z",
+    type: "response_item",
+    payload: {
+      type: "message",
+      id: "spark-response-global-agents",
+      role: "user",
+      content: [{ type: "input_text", text: GLOBAL_AGENTS_BLOCK }],
+      ...metadata,
+    },
+  });
+  const session = rows.find((row) => row.type === "session_meta")!.payload!;
+  session.cli_version = "0.146.0";
+  session.base_instructions = { text: SPARK_PLAYER_BASE_INSTRUCTIONS };
+  const context = rows.find((row) => row.type === "turn_context")!.payload!;
+  context.model = "gpt-5.3-codex-spark";
+  const collaboration = context.collaboration_mode as Record<string, unknown>;
+  const settings = collaboration.settings as Record<string, unknown>;
+  settings.model = "gpt-5.3-codex-spark";
+  context.multi_agent_version = "disabled";
+  context.comp_hash = "2911";
+  delete context.multi_agent_mode;
+
+  const wrapperIndex = rows.findIndex(
+    (row) => row.type === "response_item" && row.payload?.type === "custom_tool_call",
+  );
+  rows.splice(wrapperIndex, 3);
+  const userEventIndex = rows.findIndex(
+    (row) => row.type === "event_msg" && row.payload?.type === "user_message",
+  );
+  rows.splice(
+    userEventIndex + 1,
+    0,
+    {
+      type: "response_item",
+      payload: {
+        type: "function_call",
+        id: "function-call-1",
+        name: "start_overworld",
+        namespace: "mcp__adventureforge",
+        arguments: "{}",
+        call_id: "function-call-1",
+        ...metadata,
+      },
+    },
+    {
+      type: "event_msg",
+      payload: {
+        type: "mcp_tool_call_end",
+        call_id: "function-call-1",
+        invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
+        result: { Ok: { content: [] } },
+      },
+    },
+    {
+      type: "response_item",
+      payload: {
+        type: "function_call_output",
+        id: "function-output-1",
+        call_id: "function-call-1",
+        output: "Wall time: 1.0 seconds\nOutput:\n[]",
+        ...metadata,
+      },
+    },
+  );
+  let generatedId = 0;
+  for (const row of rows) {
+    if (row.type === "response_item" && row.payload && typeof row.payload.id !== "string") {
+      generatedId += 1;
+      row.payload.id = `spark-response-${generatedId}`;
+    }
+  }
+  return rows;
+}
+
 function historicalStrictTerraRollout(report = REPORT): unknown[] {
   const rows = rollout(report);
   const wrapper = rows.find(
@@ -420,6 +512,14 @@ function historicalStrictCaptureReceipt(rows: unknown[]): string {
   const receipt = JSON.parse(captureReceipt(rows)) as Record<string, unknown>;
   receipt.schema_version = 2;
   receipt.code_mode_contract = HISTORICAL_STRICT_CODE_MODE_CONTRACT;
+  return `${JSON.stringify(receipt)}\n`;
+}
+
+function sparkDirectCaptureReceipt(rows: unknown[]): string {
+  const receipt = JSON.parse(captureReceipt(rows, true)) as Record<string, unknown>;
+  receipt.schema_version = 4;
+  delete receipt.code_mode_contract;
+  receipt.transport_contract = SPARK_DIRECT_MCP_TRANSPORT_CONTRACT;
   return `${JSON.stringify(receipt)}\n`;
 }
 
@@ -602,6 +702,32 @@ function unboundVerifiedArtifactFixture() {
   };
 }
 
+function sparkDirectVerifiedArtifactFixture() {
+  const fixture = unboundVerifiedArtifactFixture();
+  const report = fixture.artifacts.report.toString("utf8");
+  const primaryEnvelope = JSON.parse(fixture.artifacts.primaryEnvelope.toString("utf8")) as Record<
+    string,
+    unknown
+  >;
+  primaryEnvelope.requested_model = "gpt-5.3-codex-spark";
+  const terraUsage = (primaryEnvelope.modelUsage as Record<string, unknown>)["gpt-5.6-terra"];
+  primaryEnvelope.modelUsage = { "gpt-5.3-codex-spark": terraUsage };
+  const rolloutRows = sparkDirectMcpRollout(report);
+  return {
+    artifacts: {
+      ...fixture.artifacts,
+      primaryEnvelope: Buffer.from(`${JSON.stringify(primaryEnvelope)}\n`),
+      providerEvents: Buffer.from(jsonl(publicEvents(report))),
+      providerRollout: Buffer.from(jsonl(rolloutRows)),
+      providerCapture: Buffer.from(sparkDirectCaptureReceipt(rolloutRows)),
+    },
+    expected: {
+      ...fixture.expected,
+      model: "gpt-5.3-codex-spark" as const,
+    },
+  };
+}
+
 describe("Codex certified fleet rollout authority", () => {
   it("binds one public thread to one rollout turn and exact final report", () => {
     const rows = strictTerraRollout();
@@ -621,6 +747,36 @@ describe("Codex certified fleet rollout authority", () => {
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: STRICT_CODE_MODE_CONTRACT,
+        transportContract: null,
+        usage: {
+          input_tokens: 10,
+          cached_input_tokens: 2,
+          output_tokens: 3,
+          reasoning_output_tokens: 0,
+        },
+      },
+    });
+  });
+
+  it("propagates v4 Spark direct-MCP transport authority without a code-mode label", () => {
+    const rows = sparkDirectMcpRollout();
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(publicEvents()),
+        rollout: jsonl(rows),
+        capture: sparkDirectCaptureReceipt(rows),
+        model: "gpt-5.3-codex-spark",
+        report: REPORT,
+      }),
+    ).toEqual({
+      ok: true,
+      facts: {
+        sessionId: SESSION,
+        actualModel: "gpt-5.3-codex-spark",
+        turnId: TURN,
+        cwd: "C:\\private\\player",
+        codeModeContract: null,
+        transportContract: SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
         usage: {
           input_tokens: 10,
           cached_input_tokens: 2,
@@ -648,6 +804,7 @@ describe("Codex certified fleet rollout authority", () => {
         actualModel: "gpt-5.6-terra",
         turnId: TURN,
         codeModeContract: STRICT_CODE_MODE_CONTRACT,
+        transportContract: null,
       },
     });
   });
@@ -674,6 +831,7 @@ describe("Codex certified fleet rollout authority", () => {
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: STRICT_CODE_MODE_CONTRACT,
+        transportContract: null,
         usage: {
           input_tokens: 10,
           cached_input_tokens: 2,
@@ -707,6 +865,7 @@ describe("Codex certified fleet rollout authority", () => {
         turnId: TURN,
         cwd: "C:\\private\\player",
         codeModeContract: HISTORICAL_STRICT_CODE_MODE_CONTRACT,
+        transportContract: null,
         usage: {
           input_tokens: 10,
           cached_input_tokens: 2,
@@ -827,6 +986,54 @@ describe("Codex certified fleet rollout authority", () => {
     ).toEqual({ ok: false, reason: expect.stringMatching(/duplicate JSON object key/i) });
   });
 
+  it("rejects direct-MCP receipts cross-labeled onto a non-Spark rollout", () => {
+    const rows = strictTerraRollout();
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(strictPublicEvents()),
+        rollout: jsonl(rows),
+        capture: sparkDirectCaptureReceipt(rows),
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/spark-direct-mcp-v1 requires exact model/i),
+    });
+  });
+
+  it.each([
+    [
+      "a transport field on strict v3",
+      () => {
+        const rows = strictTerraRollout();
+        const receipt = JSON.parse(captureReceipt(rows, true)) as Record<string, unknown>;
+        receipt.transport_contract = SPARK_DIRECT_MCP_TRANSPORT_CONTRACT;
+        return { rows, receipt };
+      },
+    ],
+    [
+      "a code-mode field on direct v4",
+      () => {
+        const rows = strictTerraRollout();
+        const receipt = JSON.parse(sparkDirectCaptureReceipt(rows)) as Record<string, unknown>;
+        receipt.code_mode_contract = STRICT_CODE_MODE_CONTRACT;
+        return { rows, receipt };
+      },
+    ],
+  ])("rejects $0 instead of cross-labeling capture authority", (_label, fixture) => {
+    const { rows, receipt } = fixture();
+    expect(
+      validateCodexFleetProviderAuthority({
+        events: jsonl(strictPublicEvents()),
+        rollout: jsonl(rows),
+        capture: `${JSON.stringify(receipt)}\n`,
+        model: "gpt-5.6-terra",
+        report: REPORT,
+      }),
+    ).toEqual({ ok: false, reason: expect.stringMatching(/exact runner-work-player proof/i) });
+  });
+
   it("authenticates the exact Luna v1 topology without trusting a rewritten capture receipt", () => {
     const rows = lunaV1Rollout();
     expect(
@@ -926,7 +1133,17 @@ describe("Codex certified fleet rollout authority", () => {
     ],
     [
       "a non-adjacent duplicate wrapper output",
-      (rows: unknown[]) => rows.splice(rows.length - 1, 0, structuredClone(rows[12])),
+      (rows: unknown[]) => {
+        const finalAssistantIndex = rows.findIndex(
+          (row) =>
+            (row as { type?: string; payload?: { type?: string; role?: string } }).type ===
+              "response_item" &&
+            (row as { payload?: { type?: string; role?: string } }).payload?.type === "message" &&
+            (row as { payload?: { role?: string } }).payload?.role === "assistant",
+        );
+        if (finalAssistantIndex < 0) throw new Error("missing final assistant fixture");
+        rows.splice(finalAssistantIndex, 0, structuredClone(rows[12]));
+      },
       /orphan or unexpected tool lifecycle/i,
     ],
   ])("rejects $0 during fleet artifact authority validation", (_label, mutate, reason) => {
@@ -941,6 +1158,26 @@ describe("Codex certified fleet rollout authority", () => {
         report: REPORT,
       }),
     ).toEqual({ ok: false, reason: expect.stringMatching(reason) });
+  });
+
+  it("propagates direct-MCP authority through the complete artifact validator", () => {
+    const { artifacts, expected } = sparkDirectVerifiedArtifactFixture();
+    expect(validatePureFleetRunArtifactBytes(artifacts, expected)).toMatchObject({
+      ok: true,
+      facts: {
+        provider: "codex",
+        actual_model: "gpt-5.3-codex-spark",
+        code_mode_contract: null,
+        transport_contract: SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
+      },
+    });
+
+    expect(
+      validatePureFleetRunArtifactBytes(artifacts, {
+        ...expected,
+        model: "gpt-5.6-terra",
+      }),
+    ).toMatchObject({ ok: false, reason: expect.stringMatching(/requested model differs/i) });
   });
 
   it("authenticates a receipt-bound report against the original rollout message", () => {
@@ -1067,7 +1304,7 @@ describe("Codex certified fleet rollout authority", () => {
     });
   });
 
-  it("accepts exact context replays immediately after each compaction", () => {
+  it("rejects compaction even when every replayed context is exact", () => {
     const rows = rollout();
     insertCompactedContextReplay(rows);
     const replay = structuredClone(rows[7]) as Record<string, unknown>;
@@ -1088,7 +1325,12 @@ describe("Codex certified fleet rollout authority", () => {
         model: "gpt-5.6-terra",
         report: REPORT,
       }),
-    ).toMatchObject({ ok: true, facts: { turnId: TURN } });
+    ).toEqual({
+      ok: false,
+      reason: expect.stringMatching(
+        /does not permit context compaction or repeated context state/i,
+      ),
+    });
   });
 
   it.each([
@@ -1125,7 +1367,7 @@ describe("Codex certified fleet rollout authority", () => {
     [
       "second context without compaction",
       (rows: unknown[]) => rows.splice(rows.length - 1, 0, structuredClone(rows[7])),
-      /invalid compacted context replay|exact compacted pre-completion replay/i,
+      /does not permit context compaction or repeated context state|exact compacted pre-completion replay/i,
     ],
     [
       "altered compacted context",
@@ -1133,7 +1375,7 @@ describe("Codex certified fleet rollout authority", () => {
         insertCompactedContextReplay(rows);
         payload(rows, 15).model = "gpt-5.6-sol";
       },
-      /invalid compacted context replay|exact compacted pre-completion replay/i,
+      /does not permit context compaction or repeated context state|exact compacted pre-completion replay/i,
     ],
     [
       "altered compacted context envelope",
@@ -1141,7 +1383,7 @@ describe("Codex certified fleet rollout authority", () => {
         insertCompactedContextReplay(rows);
         (rows[15] as Record<string, unknown>).untrusted_marker = true;
       },
-      /invalid compacted context replay|exact compacted pre-completion replay/i,
+      /does not permit context compaction or repeated context state|exact compacted pre-completion replay/i,
     ],
     [
       "post-completion compacted context replay",
@@ -1149,7 +1391,7 @@ describe("Codex certified fleet rollout authority", () => {
         const replay = structuredClone(rows[7]);
         rows.push({ type: "compacted", payload: {} }, { type: "world_state", payload: {} }, replay);
       },
-      /task_complete must be the final row|exact compacted pre-completion replay/i,
+      /task_complete must be the final row|does not permit context compaction or repeated context state|exact compacted pre-completion replay/i,
     ],
     ["missing completion", (rows: unknown[]) => rows.pop(), /exactly one task_started/i],
     [

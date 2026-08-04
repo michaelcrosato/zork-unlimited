@@ -77,6 +77,12 @@ start another fresh run of the experience you just tested?” Set `would_replay`
 the matching JSON boolean (`true` for yes, `false` for no); do not copy the
 placeholder.
 
+If no actual bug was observed, write `"bugs": []` exactly. Never put `"none"`,
+`"none observed"`, or any other string in the `bugs` array. Be honest, specific,
+and ruthless. A critical, well-observed report is far more useful than a
+flattering one. The closing fence below must be your final non-whitespace
+content.
+
 ```json exit-interview
 {
   "clarity": 3,
@@ -91,6 +97,3 @@ placeholder.
   "verdict": "<the one-paragraph verdict, restated>"
 }
 ```
-
-Be honest, specific, and ruthless. A critical, well-observed report is far more
-useful than a flattering one.

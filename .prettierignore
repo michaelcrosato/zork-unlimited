@@ -12,6 +12,9 @@ ai-runs
 content
 # trace fixtures carry committed hashes / known-answer vectors.
 traces
+# The Spark player prompt is deliberately compact and byte-contract tested;
+# auto-formatting its JSON example spends model input without changing meaning.
+blind-tester/prompt-overworld-spark.md
 # tests/ is under the Prettier gate (bug_0036) EXCEPT the verification assets the
 # integrity guard (scripts/verify-integrity.ts) freezes: the determinism property
 # tests and the hash-pin/known-answer unit tests. A formatter must not churn a

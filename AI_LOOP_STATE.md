@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 728 -->
+<!-- historical_cycle_count: 729 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - codex_transport_yield_gate
+
+- Evidence choice: a fixed 72-hour audit found five completed-but-rejected journeys consumed 24.38M measured input tokens, including 17.08M lost to report shape, while failed-attempt usage was often unrecoverable.
+- Surface/effect: exact Spark now uses audited preloaded `spark-direct-mcp-v1`; current Sol, Terra, and Luna retain strict-v2 wrappers, and every transport enforces one successful fresh-overworld start plus exact public/private gameplay forwarding.
+- Purity: all current Codex runs reject opaque compaction and repeated world/turn context; `null` preserves the client's maximum default headroom but is not treated as proof that encrypted replacement history is player-visible-only.
+- Admission: any live Spark fleet above three players must present a passed three-run receipt matching the exact clean build/world, transport fingerprint, model, CLI/client authority, and gate configuration before launch.
+- Economy: rejected public/direct streams retain only an allowlisted failure, hashed row commitment, and numeric token lower bound; verified totals count it as observed but incomplete, with zero automatic retry.
+- Report contract: exactly one closed terminal interview and literal `bugs: []` remove the measured format-only rejection class; synthetic clean-checkout verification now retains newly added tracked files.
+- Self-critique/guard: long post-goal journeys may still fail closed at compaction, but the audited run completed Wolf at decision 29 and compacted only after 46; pre/post crawls `20260804T084131Z` / `20260804T090511Z`, 440 integrated tests, 155 all-model purity tests, typecheck, and formatting are green.
 
 ### Cycle result - launch_first_station_dispatch
 
@@ -160,14 +170,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Frozen diagnostics: no-retry exact-build pilots verified Spark 2/10 and Terra 9/10 but had eight plus one wrapper failures; all nine Terra players chose LURE, both cohorts are invalid, and no replacement or 100-player fleet ran.
 - Economy: canary plus measured pilot members used a 41.514M raw-input / 1.600M uncached-input + 139,359 output lower bound at 96.15% input-cache reuse (1.740M useful); nine rejected attempts lack trustworthy usage and are not guessed into the total.
 - Self-critique/guard: 8/9 Terra reports still flagged dense opening planning (six as S1), the canary skipped this pull path, and public evidence cannot prove `reviewOption` uptake; independent reviews, crawl `20260801T072902Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.
-
-### Cycle result - indivisible_blind_wrapper_prompt
-
-- Evidence choice: a pre-fix Terra pilot produced one verified member plus a 32-byte incomplete-wrapper rejection; because that cohort could never certify, it was stopped without retry instead of spending the remaining slots.
-- Surface/effect: the pure prompt now shows the concrete initial `start_overworld({})` wrapper as one byte-copyable 96-byte input at column zero, says later calls replace only tool/arguments, and forbids either line alone; the strict parser remains unchanged and fail-closed.
-- Measured effect: the live prompt is 57 bytes smaller; regression coverage feeds its exact displayed source through the real strict-v2 classifier and separately rejects canonical-comment-only plus representative 32-byte malformed inputs.
-- Counterfactual: game content, choices, actions, mechanics, RNG, saves, hashes, outcomes, model/client authority, result cross-binding, and historical evidence acceptance are unchanged.
-- Pure evidence: exact-clean Terra seed 7314010 diverted every wolf alive after recovering a failed LURE cast, continued at decisions 31/40, won The Gallowmere at 56, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, bug, loop, stuck state, or soft-lock.
-- Frozen pilot: seeds 7314020–29 verified 10/10 first attempts with no resume/retry/failure and all continued; readiness correctly failed at clarity/enjoyment 4.00 and only two strategies (LURE 7, FORTIFY 3), so no 100-player fleet launched.
-- Economy: the final canary plus pilot used 49.150M raw / 1.667M uncached input + 120,665 output at 96.60% input-cache reuse (1.787M useful, about 162,488/run); the aborted pre-fix cohort remains non-authoritative rather than guessed into this total.
-- Self-critique/guard: Albany's cumulative planning density recurred in 5/10 reports and HUNT/DRIVE stayed unused, so combined comparison and strategy discoverability are next; independent byte/security reviews, 112 focused tests, crawl `20260801T054037Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.

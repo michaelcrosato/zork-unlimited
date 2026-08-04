@@ -397,11 +397,21 @@ if [[ "$OVERWORLD" == "1" ]]; then
   SOURCE_SLUG="overworld"
   START_INSTRUCTION="Start: \`mcp__adventureforge__start_overworld\` with compact_context = true. Read the one-time \`tutorial\`, capture the initial \`legend\`, and merge every later \`legend_delta\` into it by key before reading that response."
   PROMPT_FILE="$SCRIPT_DIR/prompt-overworld.md"
+  if [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.3-codex-spark" ]]; then
+    CODEX_TRANSPORT_CONTRACT="spark-direct-mcp-v1"
+    PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"
+    PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/spark-direct-mcp-v1.md"
+  else
+    CODEX_TRANSPORT_CONTRACT="strict-code-mode-v2"
+    PROMPT_TRANSPORT_FILE="$SCRIPT_DIR/prompt-transports/strict-code-mode-v2.md"
+  fi
 else
   SOURCE_LABEL="quest=$QUEST_ID"
   SOURCE_SLUG="$QUEST_ID"
   START_INSTRUCTION="Start: \`mcp__adventureforge__start_world_quest\` with world_quest_id = \"$QUEST_ID\", seed = $SEED, hide_graph = true, compact_observation = true."
   PROMPT_FILE="$SCRIPT_DIR/prompt.md"
+  CODEX_TRANSPORT_CONTRACT="strict-code-mode-v2"
+  PROMPT_TRANSPORT_FILE=""
 fi
 
 # Resolve and validate the report prefix before creating any runner temp or
@@ -457,6 +467,7 @@ CODEX_PREFLIGHT_EXIT=42
 CODEX_STRICT_STREAM_REJECT_EXIT=43
 CODEX_VERSION_TIMEOUT_SECONDS=5
 CODEX_VERSION_MAX_BYTES=1024
+SPARK_DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION="0.146.0"
 SELECTED_CODEX_BIN=""
 SELECTED_CODEX_LAUNCHER=""
 CODEX_BIN_IDENTITY=""
@@ -605,6 +616,12 @@ preflight_codex_client() {
     EXPECTED_CODEX_CLI_VERSION="$version"
   elif [[ "$version" != "$EXPECTED_CODEX_CLI_VERSION" ]]; then
     echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": expected cli=$EXPECTED_CODEX_CLI_VERSION but observed cli=$version." >&2
+    return "$CODEX_PREFLIGHT_EXIT"
+  fi
+  if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" && \
+        "$version" != "$SPARK_DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION" ]]; then
+    echo "Codex client preflight failed for selected binary \"$SELECTED_CODEX_BIN\": spark-direct-mcp-v1 requires exact codex-cli $SPARK_DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION but observed cli=$version." >&2
+    echo "Set BLIND_CODEX_BIN to one absolute codex-cli $SPARK_DIRECT_MCP_REQUIRED_CODEX_CLI_VERSION executable path; no provider was launched." >&2
     return "$CODEX_PREFLIGHT_EXIT"
   fi
   CODEX_CLI_VERSION="$version"
@@ -807,7 +824,12 @@ fi
 FILL_SCRIPT="$(node_path_arg "$SCRIPT_DIR/fill-prompt.mjs")"
 PROMPT_FILE_ARG="$(node_path_arg "$PROMPT_FILE")"
 PERSONA_FILE_ARG="$(node_path_arg "$PERSONA_FILE")"
-PROMPT="$("$NODE_CMD" "$FILL_SCRIPT" "$PROMPT_FILE_ARG" --seed "$SEED" --start-instruction "$START_INSTRUCTION" --persona-file "$PERSONA_FILE_ARG")"
+PROMPT_TRANSPORT_ARGS=()
+if [[ -n "$PROMPT_TRANSPORT_FILE" ]]; then
+  PROMPT_TRANSPORT_FILE_ARG="$(node_path_arg "$PROMPT_TRANSPORT_FILE")"
+  PROMPT_TRANSPORT_ARGS=(--transport-file "$PROMPT_TRANSPORT_FILE_ARG")
+fi
+PROMPT="$("$NODE_CMD" "$FILL_SCRIPT" "$PROMPT_FILE_ARG" --seed "$SEED" --start-instruction "$START_INSTRUCTION" --persona-file "$PERSONA_FILE_ARG" "${PROMPT_TRANSPORT_ARGS[@]}")"
 
 mkdir -p "$(dirname "$OUT")"
 RUN_SIDECAR="$OUT.run.json"
@@ -975,6 +997,22 @@ record_playthrough_terminal() {
   CODEX_PROVIDER_LOG_ARG="$(node_path_arg "$OUT.log")"
   CODEX_STARTED_AT_MS="$("$NODE_CMD" -e 'process.stdout.write(String(Date.now()))')"
   CODEX_PURE_TOOLS_TOML="$("$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" --print-tools-toml)"
+  CODEX_TRANSPORT_FEATURE_ARGS=(--enable code_mode_only --disable tool_suggest)
+  CODEX_PLAYER_PROFILE_ARGS=()
+  if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" ]]; then
+    CODEX_TRANSPORT_FEATURE_ARGS=(--disable code_mode_only --disable tool_suggest)
+    CODEX_PLAYER_PROFILE_ARGS=(
+      --config 'tools.update_plan.enabled=false'
+      --config 'tools.experimental_request_user_input.enabled=false'
+      --config 'skills.include_instructions=false'
+      --config 'include_environment_context=false'
+      --config 'include_apps_instructions=false'
+      --config 'include_permissions_instructions=false'
+      --config 'include_collaboration_mode_instructions=false'
+      --config 'instructions="You are an autonomous first-time player of an AdventureForge text TTRPG. Follow the user play request. Use only preloaded AdventureForge gameplay functions and exact current player-visible values. Never use coding, planning, search, or MCP resource tools."'
+      --config "model_catalog_json=\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-spark-v1.json\""
+    )
+  fi
   # Re-probe the same pinned executable immediately before the gameplay process
   # in case the selected file changed after the early gate.
   if ! preflight_codex_client 1; then
@@ -994,6 +1032,7 @@ set +e
     --events "$CODEX_EVENTS_ARG" \
     --provider-stderr "$CODEX_PROVIDER_LOG_ARG" \
     --model "$MODEL" \
+    --transport-contract "$CODEX_TRANSPORT_CONTRACT" \
     --timeout-seconds "$TIMEOUT" \
     --strict-rejection "$CODEX_STRICT_REJECTION_ARG" \
     --diagnostic-seed "$SEED" \
@@ -1010,7 +1049,8 @@ set +e
     --ignore-user-config \
     --ignore-rules \
     --strict-config \
-    --enable code_mode_only \
+    "${CODEX_TRANSPORT_FEATURE_ARGS[@]}" \
+    "${CODEX_PLAYER_PROFILE_ARGS[@]}" \
     --disable apps \
     --disable auth_elicitation \
     --disable browser_use \
@@ -1025,7 +1065,6 @@ set +e
     --disable plugins \
     --disable remote_plugin \
     --disable shell_snapshot \
-    --disable tool_suggest \
     --disable workspace_dependencies \
     --json \
     --output-last-message "$CODEX_REPORT_ARG" \
@@ -1060,6 +1099,7 @@ set +e
       --home "$ACTIVE_CODEX_HOME_ARG" --events "$CODEX_EVENTS_ARG" \
       --out "$CODEX_ROLLOUT_ARG" \
       --receipt "$CODEX_CAPTURE_ARG" \
+      --transport-contract "$CODEX_TRANSPORT_CONTRACT" \
       --expected-cwd "$CODEX_PLAYER_CWD_ARG" \
       >"$OUT.codex-rollout.log" 2>&1
     CODEX_ROLLOUT_STATUS=$?
@@ -1072,7 +1112,7 @@ set +e
     "$NODE_CMD" "$CODEX_ENVELOPE_SCRIPT" \
       --events "$CODEX_EVENTS_ARG" --rollout "$CODEX_ROLLOUT_ARG" --report "$CODEX_REPORT_ARG" \
       --model "$MODEL" --cli-version "$CODEX_CLI_VERSION" --started-at-ms "$CODEX_STARTED_AT_MS" \
-      --code-mode-contract strict-code-mode-v2 \
+      --transport-contract "$CODEX_TRANSPORT_CONTRACT" \
       > "$OUT.json" 2> "$OUT.codex-audit.log"
     CODEX_AUDIT_STATUS=$?
     if [[ "$CODEX_AUDIT_STATUS" -ne 0 ]]; then

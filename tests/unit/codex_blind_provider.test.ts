@@ -13,6 +13,8 @@ const {
   classifyCodexGameplayWrapper,
   CODEX_GAMEPLAY_WRAPPER_FAILURES,
   CODEX_PURE_PLAYER_TOOLS,
+  CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS,
+  CODEX_SPARK_DIRECT_MCP_CONTRACT,
   inspectCodexGameplayResultForwarding,
   inspectCodexGameplayResultForwardingPrefix,
   inspectCodexPureEvidence,
@@ -380,7 +382,11 @@ function codex0146SparkRollout(gameplayRows = forwardingRollout(undefined, { con
   for (const row of rows) {
     const payload = row.payload;
     if (!payload) continue;
-    if (row.type === "session_meta") payload.cli_version = "0.146.0";
+    if (row.type === "session_meta") {
+      payload.cli_version = "0.146.0";
+      payload.base_instructions = { text: CODEX_SPARK_PLAYER_BASE_INSTRUCTIONS };
+    }
+    if (row.type === "turn_context") payload.comp_hash = "2911";
     if (
       row.type === "response_item" &&
       payload.type === "message" &&
@@ -422,6 +428,123 @@ function environmentInputContent(
     }
   }
   throw new Error("missing environment input fixture");
+}
+
+function sparkDirectMcpRollout(
+  result: Record<string, unknown> = { content: [] },
+): Array<{ type?: string; payload?: Record<string, unknown> }> {
+  const rows = codex0146SparkRollout([]) as Array<{
+    type?: string;
+    payload?: Record<string, unknown>;
+  }>;
+  let userEventIndex = rows.findIndex(
+    (row) => row.type === "event_msg" && row.payload?.type === "user_message",
+  );
+  if (userEventIndex < 0) throw new Error("missing direct-MCP user event fixture");
+  const turnId = "turn-1";
+  const metadata = { internal_chat_message_metadata_passthrough: { turn_id: turnId } };
+  const taskStartIndex = rows.findIndex(
+    (row) => row.type === "event_msg" && row.payload?.type === "task_started",
+  );
+  const worldStateIndex = rows.findIndex((row) => row.type === "world_state");
+  if (taskStartIndex < 0 || worldStateIndex < 0) {
+    throw new Error("missing direct-MCP prelude boundary fixture");
+  }
+  rows.splice(taskStartIndex + 1, worldStateIndex - taskStartIndex - 1, {
+    type: "response_item",
+    payload: {
+      type: "message",
+      id: "msg-current-global-agents",
+      role: "user",
+      content: [{ type: "input_text", text: GLOBAL_AGENTS_BLOCK }],
+      ...metadata,
+    },
+  });
+  userEventIndex = rows.findIndex(
+    (row) => row.type === "event_msg" && row.payload?.type === "user_message",
+  );
+  if (userEventIndex < 0) throw new Error("missing reduced direct-MCP user event fixture");
+  const directRows = [
+    {
+      type: "response_item",
+      payload: {
+        type: "function_call",
+        id: "function-call-1",
+        name: "start_overworld",
+        namespace: "mcp__adventureforge",
+        arguments: "{}",
+        call_id: "function-call-1",
+        ...metadata,
+      },
+    },
+    {
+      type: "event_msg",
+      payload: {
+        type: "mcp_tool_call_end",
+        call_id: "function-call-1",
+        invocation: { server: "adventureforge", tool: "start_overworld", arguments: {} },
+        result: { Ok: result },
+      },
+    },
+    {
+      type: "response_item",
+      payload: {
+        type: "function_call_output",
+        id: "function-output-1",
+        call_id: "function-call-1",
+        output: `Wall time: 1.0 seconds\nOutput:\n${JSON.stringify(result.content)}`,
+        ...metadata,
+      },
+    },
+  ];
+  rows.splice(userEventIndex + 1, 0, ...directRows);
+  return rows;
+}
+
+function appendSparkDirectCall(
+  rows: ReturnType<typeof sparkDirectMcpRollout>,
+  tool = "get_overworld_session",
+  arguments_: Record<string, unknown> = {},
+  result: Record<string, unknown> = { content: [] },
+) {
+  const outputIndex = rows.findIndex((row) => row.payload?.type === "function_call_output");
+  if (outputIndex < 0) throw new Error("missing direct-MCP function output fixture");
+  const metadata = { internal_chat_message_metadata_passthrough: { turn_id: "turn-1" } };
+  rows.splice(
+    outputIndex + 1,
+    0,
+    {
+      type: "response_item",
+      payload: {
+        type: "function_call",
+        id: "function-call-2",
+        name: tool,
+        namespace: "mcp__adventureforge",
+        arguments: JSON.stringify(arguments_),
+        call_id: "function-call-2",
+        ...metadata,
+      },
+    },
+    {
+      type: "event_msg",
+      payload: {
+        type: "mcp_tool_call_end",
+        call_id: "function-call-2",
+        invocation: { server: "adventureforge", tool, arguments: arguments_ },
+        result: { Ok: result },
+      },
+    },
+    {
+      type: "response_item",
+      payload: {
+        type: "function_call_output",
+        id: "function-output-2",
+        call_id: "function-call-2",
+        output: `Wall time: 1.0 seconds\nOutput:\n${JSON.stringify(result.content)}`,
+        ...metadata,
+      },
+    },
+  );
 }
 
 function insertBeforeGameplay(rows: ReturnType<typeof validRows>, entries: readonly object[]) {
@@ -1119,7 +1242,7 @@ describe("Codex pure blind provider envelope", () => {
     reordered.push(...first);
     expect(inspectCodexPureEvidence(twoPublicGameplayCalls(), completeRollout(reordered))).toEqual({
       ok: false,
-      reason: expect.stringMatching(/differs at call 1/i),
+      reason: expect.stringMatching(/start_overworld exactly once/i),
     });
 
     const mismatched = forwardingRollout(undefined, { content: [] });
@@ -1895,6 +2018,26 @@ describe("Codex pure blind provider envelope", () => {
     });
   });
 
+  it("rejects a second fresh start in both public and private pure evidence", () => {
+    const publicRows = validRows();
+    publicRows.splice(-1, 0, ...gameplayCallRows("item_2", "start_overworld", {}));
+    expect(inspectCodexPureEvents(publicRows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/start_overworld exactly once/i),
+    });
+
+    const privateRows = twoPrivateGameplayCalls();
+    rolloutPayload(privateRows, 3).input = canonicalGameplayWrapper(
+      "tools.mcp__adventureforge__start_overworld({})",
+    );
+    const invocation = rolloutPayload(privateRows, 4).invocation as Record<string, unknown>;
+    invocation.tool = "start_overworld";
+    expect(inspectCodexGameplayResultForwarding(privateRows)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/start_overworld exactly once/i),
+    });
+  });
+
   it("accepts harmless trailing commas in JSON-valued object literals", () => {
     const rows = twoPrivateGameplayCalls();
     rolloutPayload(rows, 3).input =
@@ -2065,14 +2208,60 @@ describe("Codex pure blind provider envelope", () => {
     if (!reasoning?.payload) throw new Error("missing reasoning fixture");
     reasoning.payload.tool_input = "hidden";
     expect(inspectCodexPureEvidence(publicRows, reasoningRows)).toMatchObject({ ok: false });
-
-    const compacted = structuredClone(baseline);
-    compacted.splice(-2, 0, { type: "compacted", payload: { window_number: 2 } });
-    compacted.splice(-2, 0, { type: "world_state", payload: { full: true } });
-    compacted.splice(-2, 0, structuredClone(initialTurnContext));
-    compacted.splice(-2, 0, { type: "event_msg", payload: { type: "context_compacted" } });
-    expect(inspectCodexPureEvidence(publicRows, compacted)).toMatchObject({ ok: true });
   });
+
+  it.each([
+    ["Sol", "sol_v2", "gpt-5.6-sol"],
+    ["Terra", "terra_v2", "gpt-5.6-terra"],
+    ["Luna", "luna_v1", "gpt-5.6-luna"],
+  ] as const)(
+    "rejects compaction and repeated private state for strict %s evidence",
+    (_label, profile, model) => {
+      const publicRows = validRows();
+      const gameplay = forwardingRollout(undefined, { content: [] });
+      if (profile === "luna_v1") {
+        rolloutPayload(gameplay, 0).input = legacyGameplayWrapper(
+          "tools.mcp__adventureforge__start_overworld()",
+        );
+      }
+      const baseline = completeRollout(gameplay, profile);
+      const initialTurnContext = baseline.find(
+        (row) => (row as { type?: string }).type === "turn_context",
+      );
+      if (!initialTurnContext) throw new Error(`missing ${model} turn-context fixture`);
+
+      const mutations: Array<[string, unknown]> = [
+        ["a compacted row", { type: "compacted", payload: { window_number: 2 } }],
+        [
+          "a context_compacted event",
+          { type: "event_msg", payload: { type: "context_compacted" } },
+        ],
+        ["an additional world_state", { type: "world_state", payload: { full: true } }],
+        ["an additional turn_context", structuredClone(initialTurnContext)],
+      ];
+      for (const [mutation, injected] of mutations) {
+        const rows = structuredClone(baseline);
+        rows.splice(-2, 0, injected);
+        expect(inspectCodexPureEvidence(publicRows, rows, model), mutation).toEqual({
+          ok: false,
+          reason: expect.stringMatching(/does not permit context compaction/i),
+        });
+      }
+
+      const fullLifecycle = structuredClone(baseline);
+      fullLifecycle.splice(-2, 0, { type: "compacted", payload: { window_number: 2 } });
+      fullLifecycle.splice(-2, 0, { type: "world_state", payload: { full: true } });
+      fullLifecycle.splice(-2, 0, structuredClone(initialTurnContext));
+      fullLifecycle.splice(-2, 0, {
+        type: "event_msg",
+        payload: { type: "context_compacted" },
+      });
+      expect(inspectCodexPureEvidence(publicRows, fullLifecycle, model)).toEqual({
+        ok: false,
+        reason: expect.stringMatching(/does not permit context compaction/i),
+      });
+    },
+  );
 
   it("binds wrapper output ids and rejects duplicates and orphans anywhere", () => {
     const wrongOutputId = forwardingRollout();
@@ -2735,5 +2924,385 @@ describe("Codex pure blind provider envelope", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("Spark direct MCP transport", () => {
+  const direct = { transportContract: CODEX_SPARK_DIRECT_MCP_CONTRACT, cliVersion: "0.146.0" };
+
+  it("fails closed unless both authenticated and captured CLI versions are exactly 0.146.0", () => {
+    for (const [expectedCliVersion, capturedCliVersion] of [
+      ["0.145.0", "0.146.0"],
+      ["0.146.0", "0.145.0"],
+      ["0.144.1", "0.145.0"],
+    ] as const) {
+      const rolloutRows = sparkDirectMcpRollout();
+      const session = rolloutRows.find((row) => row.type === "session_meta")?.payload;
+      if (!session) throw new Error("missing Spark session fixture");
+      session.cli_version = capturedCliVersion;
+      expect(
+        inspectCodexPureEvidence(validRows(), rolloutRows, SPARK_MODEL, {
+          transportContract: CODEX_SPARK_DIRECT_MCP_CONTRACT,
+          cliVersion: expectedCliVersion,
+        }),
+      ).toMatchObject({
+        ok: false,
+        reason: expect.stringContaining(
+          "Spark direct MCP rollout requires authenticated and captured Codex CLI 0.146.0",
+        ),
+      });
+    }
+  });
+
+  it("accepts exactly one byte-exact global AGENTS prelude in the reduced 0.146 profile", () => {
+    const rolloutRows = sparkDirectMcpRollout();
+    const taskStartIndex = rolloutRows.findIndex(
+      (row) => row.type === "event_msg" && row.payload?.type === "task_started",
+    );
+    const worldStateIndex = rolloutRows.findIndex((row) => row.type === "world_state");
+    expect(taskStartIndex).toBeGreaterThanOrEqual(0);
+    expect(worldStateIndex).toBeGreaterThan(taskStartIndex);
+    expect(rolloutRows.slice(taskStartIndex + 1, worldStateIndex)).toEqual([
+      {
+        type: "response_item",
+        payload: {
+          type: "message",
+          id: "msg-current-global-agents",
+          role: "user",
+          content: [{ type: "input_text", text: GLOBAL_AGENTS_BLOCK }],
+          internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+        },
+      },
+    ]);
+    expect(inspectCodexPureEvidence(validRows(), rolloutRows, SPARK_MODEL, direct)).toMatchObject({
+      ok: true,
+    });
+
+    const changed = structuredClone(rolloutRows);
+    const changedPrelude = changed[taskStartIndex + 1]?.payload?.content as
+      | Array<{ text?: string }>
+      | undefined;
+    if (!changedPrelude?.[0]) throw new Error("missing reduced Spark prelude fixture");
+    changedPrelude[0].text = `${GLOBAL_AGENTS_BLOCK}\n`;
+    expect(inspectCodexPureEvidence(validRows(), changed, SPARK_MODEL, direct)).toMatchObject({
+      ok: false,
+    });
+
+    const duplicated = structuredClone(rolloutRows);
+    const duplicatePrelude = structuredClone(duplicated[taskStartIndex + 1]!);
+    duplicatePrelude.payload!.id = "msg-current-global-agents-duplicate";
+    duplicated.splice(worldStateIndex, 0, duplicatePrelude);
+    expect(inspectCodexPureEvidence(validRows(), duplicated, SPARK_MODEL, direct)).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("binds the applied Spark base instructions and catalog comp hash", () => {
+    const rows = sparkDirectMcpRollout();
+    expect(inspectCodexPureEvidence(validRows(), rows, SPARK_MODEL, direct)).toMatchObject({
+      ok: true,
+    });
+
+    const changedInstructions = structuredClone(rows);
+    const session = changedInstructions.find((row) => row.type === "session_meta")?.payload;
+    if (!session) throw new Error("missing Spark session fixture");
+    session.base_instructions = { text: "contaminated instructions" };
+    expect(
+      inspectCodexPureEvidence(validRows(), changedInstructions, SPARK_MODEL, direct),
+    ).toMatchObject({ ok: false });
+
+    const changedCompHash = structuredClone(rows);
+    const context = changedCompHash.find((row) => row.type === "turn_context")?.payload;
+    if (!context) throw new Error("missing Spark turn fixture");
+    context.comp_hash = "changed";
+    expect(
+      inspectCodexPureEvidence(validRows(), changedCompHash, SPARK_MODEL, direct),
+    ).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("rejects interim assistant prose before the final exit interview", () => {
+    const rows = sparkDirectMcpRollout();
+    const firstGameplay = rows.findIndex((row) => row.payload?.type === "function_call");
+    if (firstGameplay < 0) throw new Error("missing Spark gameplay fixture");
+    rows.splice(firstGameplay, 0, {
+      type: "response_item",
+      payload: {
+        type: "message",
+        id: "interim-assistant-message",
+        role: "assistant",
+        content: [{ type: "output_text", text: "I will begin now." }],
+        phase: "commentary",
+        internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+      },
+    });
+    expect(inspectCodexPureEvidence(validRows(), rows, SPARK_MODEL, direct)).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it.each([
+    {
+      label: "permissions/skills developer message",
+      role: "developer",
+      content: [
+        { type: "input_text", text: PERMISSIONS_BLOCK },
+        { type: "input_text", text: SKILLS_BLOCK },
+      ],
+    },
+    {
+      label: "environment user message",
+      role: "user",
+      content: [{ type: "input_text", text: ENVIRONMENT_BLOCK }],
+    },
+  ])("rejects an injected $label", ({ role, content }) => {
+    const rows = sparkDirectMcpRollout();
+    const worldStateIndex = rows.findIndex((row) => row.type === "world_state");
+    if (worldStateIndex < 0) throw new Error("missing reduced Spark world-state fixture");
+    rows.splice(worldStateIndex, 0, {
+      type: "response_item",
+      payload: {
+        type: "message",
+        id: `msg-current-injected-${role}`,
+        role,
+        content,
+        internal_chat_message_metadata_passthrough: { turn_id: "turn-1" },
+      },
+    });
+    expect(inspectCodexPureEvidence(validRows(), rows, SPARK_MODEL, direct)).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("accepts preloaded native calls without a code-mode prelude", () => {
+    const publicRows = validRows();
+    const rolloutRows = sparkDirectMcpRollout();
+    expect(inspectCodexPureEventPrefix(publicRows.slice(0, 2), SPARK_MODEL, direct)).toMatchObject({
+      ok: true,
+    });
+    expect(inspectCodexGameplayResultForwarding(rolloutRows, direct)).toMatchObject({
+      ok: true,
+      completedGameplayCalls: 1,
+      gameplayCalls: [
+        { tool: "start_overworld", arguments: {}, status: "completed", result: { content: [] } },
+      ],
+    });
+    expect(inspectCodexPureEvidence(publicRows, rolloutRows, SPARK_MODEL, direct)).toMatchObject({
+      ok: true,
+      completedMcpCalls: 1,
+    });
+    expect(
+      buildCodexPureEnvelope({
+        rows: publicRows,
+        rolloutRows,
+        report: "report",
+        model: SPARK_MODEL,
+        durationMs: 1,
+        transportContract: CODEX_SPARK_DIRECT_MCP_CONTRACT,
+        cliVersion: "0.146.0",
+      }),
+    ).toMatchObject({ ok: true, envelope: { requested_model: SPARK_MODEL } });
+  });
+
+  it.each([...CODEX_PURE_PLAYER_TOOLS].filter((tool) => tool !== "start_overworld"))(
+    "permits pre-attested %s after start without requiring its name in the prior result",
+    (tool) => {
+      const rows = sparkDirectMcpRollout({
+        content: [{ type: "text", text: "Choose naturally from the current visible state." }],
+      });
+      appendSparkDirectCall(rows, tool);
+      expect(inspectCodexGameplayResultForwarding(rows, direct)).toMatchObject({
+        ok: true,
+        completedGameplayCalls: 2,
+        gameplayCalls: [
+          { tool: "start_overworld", arguments: {} },
+          { tool, arguments: {} },
+        ],
+      });
+    },
+  );
+
+  it("rejects a second native fresh start", () => {
+    const rows = sparkDirectMcpRollout({
+      content: [{ type: "text", text: "Choose naturally from the current visible state." }],
+    });
+    appendSparkDirectCall(rows, "start_overworld");
+    expect(inspectCodexGameplayResultForwarding(rows, direct)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/start_overworld exactly once/i),
+    });
+  });
+
+  it("rejects context compaction because its replacement history is not purity-bound", () => {
+    const rows = sparkDirectMcpRollout();
+    const initialTurnContext = rows.find((row) => row.type === "turn_context");
+    if (!initialTurnContext) throw new Error("missing Spark turn-context fixture");
+    rows.splice(-2, 0, { type: "compacted", payload: { window_number: 2 } });
+    rows.splice(-2, 0, { type: "world_state", payload: { full: true } });
+    rows.splice(-2, 0, structuredClone(initialTurnContext));
+    rows.splice(-2, 0, { type: "event_msg", payload: { type: "context_compacted" } });
+
+    expect(inspectCodexPureEvidence(validRows(), rows, SPARK_MODEL, direct)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/does not permit context compaction/i),
+    });
+  });
+
+  it("rejects a function outside the pre-attested pure-player set", () => {
+    const rows = sparkDirectMcpRollout({
+      content: [{ type: "text", text: "Choose naturally from the current visible state." }],
+    });
+    appendSparkDirectCall(rows, "list_mcp_resources");
+    expect(inspectCodexGameplayResultForwarding(rows, direct)).toMatchObject({ ok: false });
+  });
+
+  it("accepts exact native output beyond the 16 KiB player cap and rejects a truncation splice", () => {
+    const result = {
+      content: [{ type: "text", text: "visible-state:" + "x".repeat(18 * 1024) }],
+    };
+    const rows = sparkDirectMcpRollout(result);
+    const output = rows.find((row) => row.payload?.type === "function_call_output")?.payload;
+    if (typeof output?.output !== "string") throw new Error("missing long direct output fixture");
+    expect(Buffer.byteLength(output.output, "utf8")).toBeGreaterThan(16 * 1024);
+    expect(inspectCodexGameplayResultForwarding(rows, direct)).toMatchObject({
+      ok: true,
+      completedGameplayCalls: 1,
+    });
+
+    const truncated = structuredClone(rows);
+    const truncatedOutput = truncated.find(
+      (row) => row.payload?.type === "function_call_output",
+    )?.payload;
+    if (typeof truncatedOutput?.output !== "string") {
+      throw new Error("missing copied long direct output fixture");
+    }
+    truncatedOutput.output =
+      truncatedOutput.output.slice(0, 6 * 1024) +
+      "\n... 4096 chars truncated ...\n" +
+      truncatedOutput.output.slice(-2 * 1024);
+    expect(inspectCodexGameplayResultForwarding(truncated, direct)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/missing.*mismatched.*truncated/i),
+    });
+  });
+
+  it("requires globally unique native call ids across preloaded gameplay", () => {
+    const rows = sparkDirectMcpRollout({
+      content: [{ type: "text", text: "Use get_overworld_session to refresh the view." }],
+    });
+    appendSparkDirectCall(rows);
+    const second = rows.filter((row) => row.payload?.call_id === "function-call-2");
+    for (const row of second) row.payload!.call_id = "function-call-1";
+    expect(inspectCodexGameplayResultForwarding(rows, direct)).toMatchObject({ ok: false });
+  });
+
+  it("rejects wrong-turn direct rows in the live prefix instead of deferring to terminal audit", () => {
+    const rows = sparkDirectMcpRollout();
+    for (const row of rows) {
+      if (
+        row.type === "response_item" &&
+        ["function_call", "function_call_output"].includes(String(row.payload?.type))
+      ) {
+        row.payload!.internal_chat_message_metadata_passthrough = { turn_id: "wrong-turn" };
+      }
+    }
+    expect(inspectCodexGameplayResultForwardingPrefix(rows, direct)).toMatchObject({ ok: false });
+  });
+
+  it.each([
+    [
+      "a tool-search call",
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const directCall = rows.findIndex((row) => row.payload?.type === "function_call");
+        rows.splice(directCall, 0, {
+          type: "response_item",
+          payload: { type: "tool_search_call", id: "search-call", call_id: "search" },
+        });
+      },
+    ],
+    [
+      "a tool-search output",
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const call = rows.findIndex((row) => row.payload?.type === "function_call");
+        rows.splice(call, 0, {
+          type: "response_item",
+          payload: { type: "tool_search_output", id: "search-output", call_id: "search" },
+        });
+      },
+    ],
+    [
+      "a forbidden function namespace",
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const call = rows.find((row) => row.payload?.type === "function_call")?.payload;
+        if (!call) throw new Error("missing function call");
+        call.namespace = "functions";
+      },
+    ],
+    [
+      "a non-start first function",
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const call = rows.find((row) => row.payload?.type === "function_call")?.payload;
+        const completion = rows.find((row) => row.payload?.type === "mcp_tool_call_end")?.payload;
+        if (!call || !completion) throw new Error("missing direct function lifecycle");
+        call.name = "get_overworld_session";
+        completion.invocation = {
+          server: "adventureforge",
+          tool: "get_overworld_session",
+          arguments: {},
+        };
+      },
+    ],
+    [
+      "noncanonical function arguments",
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const call = rows.find((row) => row.payload?.type === "function_call")?.payload;
+        if (!call) throw new Error("missing function call");
+        call.arguments = "{ }";
+      },
+    ],
+    [
+      "a mismatched native result",
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const completion = rows.find((row) => row.payload?.type === "mcp_tool_call_end")?.payload;
+        if (!completion) throw new Error("missing MCP completion");
+        completion.invocation = {
+          server: "adventureforge",
+          tool: "get_overworld_session",
+          arguments: {},
+        };
+      },
+    ],
+    [
+      "a mismatched visible output",
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const output = rows.find((row) => row.payload?.type === "function_call_output")?.payload;
+        if (!output) throw new Error("missing function output");
+        output.output = "Wall time: 1.0 seconds\nOutput:\n[]\n";
+      },
+    ],
+    [
+      "a wrapper row",
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const call = rows.findIndex((row) => row.payload?.type === "function_call");
+        rows.splice(call, 0, forwardingRollout()[0]!);
+      },
+    ],
+  ])("rejects %s", (_label, mutate) => {
+    const rows = sparkDirectMcpRollout();
+    mutate(rows);
+    expect(inspectCodexGameplayResultForwarding(rows, direct)).toMatchObject({ ok: false });
+  });
+
+  it("rejects a direct startup error in the streaming public prefix", () => {
+    const rows = validRows();
+    rows.splice(1, 0, {
+      type: "item.completed",
+      item: { id: "error-1", type: "error", message: "unexpected" },
+    });
+    expect(inspectCodexPureEventPrefix(rows, SPARK_MODEL, direct)).toEqual({
+      ok: false,
+      reason: "Codex direct MCP run used an unexpected startup error",
+    });
   });
 });

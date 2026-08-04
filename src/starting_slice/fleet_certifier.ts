@@ -27,8 +27,10 @@ import {
 } from "../feedback/normalize.js";
 import type { CanonicalLocation } from "../feedback/schema.js";
 import {
+  HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION,
   PURE_FLEET_CODE_MODE_CONTRACT,
   PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
   parsePureFleetAttestation,
   PureFleetAttestationSchema,
   pureFleetAttestationPathFor,
@@ -36,6 +38,8 @@ import {
 import { capturePureFleetBuild } from "./fleet_build.js";
 import {
   pureFleetRunArtifactPaths,
+  SPARK_DIRECT_MCP_MODEL,
+  SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
   validatePureFleetRunArtifactBytes,
 } from "./fleet_run_artifacts.js";
 import { WOLF_WINTER_CAMPAIGN_OUTCOMES } from "../world/journey_campaign.js";
@@ -608,13 +612,15 @@ const FleetSummarySchema = z
       });
     }
     if (
-      (summary.model_attestation_schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION) !==
+      (summary.model_attestation_schema_version ===
+        HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION) !==
       (summary.codex_client !== undefined)
     ) {
       context.addIssue({
         code: "custom",
         path: ["codex_client"],
-        message: "current Codex attestation v7 requires exactly one fleet-wide client authority",
+        message:
+          "historical client-bound Codex attestation v7 requires exactly one fleet-wide client authority",
       });
     }
     if (
@@ -674,6 +680,7 @@ const FleetSummaryV8Schema = z
       z.literal(5),
       z.literal(6),
       z.literal(7),
+      z.literal(8),
     ]),
     build: PureRunBuildSchema,
     codex_client: CodexClientSummarySchema.optional(),
@@ -690,7 +697,7 @@ const FleetSummaryV8Schema = z
       context.addIssue({
         code: "custom",
         path: ["model_attestation_schema_version"],
-        message: "v8 live certification requires current Codex attestation v7",
+        message: `v8 live certification requires current Codex attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`,
       });
     }
     if (summary.codex_client === undefined)
@@ -1647,6 +1654,16 @@ function validateAuthenticatedStartingSliceCohort(
   if (expectedProvider === "codex" && !isV8) {
     errors.push(`current Codex ${options.cohortKind} certification requires fleet summary v8`);
   }
+  if (
+    expectedProvider === "codex" &&
+    summary.model === SPARK_DIRECT_MCP_MODEL &&
+    authenticatedCodexClient !== null &&
+    authenticatedCodexClient.cli_version !== PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION
+  ) {
+    errors.push(
+      `current Spark certification requires exact Codex CLI ${PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION}`,
+    );
+  }
   const fleetBasename = basename(fleetDir);
   const labelBoundToDirectory = summary.label === fleetBasename;
   const displayLabel = labelBoundToDirectory ? summary.label : "invalid-fleet-label";
@@ -1853,9 +1870,13 @@ function validateAuthenticatedStartingSliceCohort(
     }
     if (row.report_receipt_bound === true) {
       manifestReceiptBoundRuns += 1;
-      if (![4, 5, 6, 7].includes(summary.model_attestation_schema_version)) {
+      if (
+        ![4, 5, 6, 7, PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION].includes(
+          summary.model_attestation_schema_version,
+        )
+      ) {
         errors.push(
-          `seed ${seed}: receipt-bound row requires summary attestation v4, v5, v6, or v7`,
+          `seed ${seed}: receipt-bound row requires a receipt-aware Codex attestation schema`,
         );
       }
     }
@@ -2316,11 +2337,31 @@ function validateAuthenticatedStartingSliceCohort(
       continue;
     }
     const attestation = parsedAttestation.attestation;
-    if (
-      summary.model_attestation_schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
-      artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT
-    ) {
-      errors.push(`seed ${seed}: current Codex attestation lacks strict code-mode evidence`);
+    const attestationRecord = attestation as unknown as Record<string, unknown>;
+    if (summary.model_attestation_schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION) {
+      if (row.model === SPARK_DIRECT_MCP_MODEL) {
+        if (
+          artifactFacts.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+          artifactFacts.code_mode_contract !== null ||
+          attestationRecord.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+          Object.hasOwn(attestationRecord, "code_mode_contract")
+        ) {
+          errors.push(
+            `seed ${seed}: current Spark attestation lacks exact ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} evidence`,
+          );
+        }
+      } else if (
+        artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+        artifactFacts.transport_contract !== null ||
+        attestationRecord.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+        Object.hasOwn(attestationRecord, "transport_contract")
+      ) {
+        errors.push(`seed ${seed}: current Codex attestation lacks strict code-mode evidence`);
+      }
+    } else if (artifactFacts.transport_contract !== null) {
+      errors.push(
+        `seed ${seed}: ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} evidence requires the current Codex attestation schema`,
+      );
     }
     if (attestation.schema_version !== summary.model_attestation_schema_version) {
       errors.push(
@@ -2380,10 +2421,7 @@ function validateAuthenticatedStartingSliceCohort(
       errors.push(`seed ${seed}: model attestation recovery status differs from run artifacts`);
     }
     const attestationReceiptBound =
-      attestation.schema_version === 4 ||
-      attestation.schema_version === 5 ||
-      attestation.schema_version === 6 ||
-      attestation.schema_version === 7
+      attestation.schema_version >= 4 && "report_receipt_bound" in attestation
         ? attestation.report_receipt_bound
         : false;
     if (attestationReceiptBound !== artifactFacts.report_receipt_bound) {

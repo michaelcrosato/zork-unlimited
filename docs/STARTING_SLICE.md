@@ -1163,24 +1163,28 @@ primary prose and cannot participate in authoritative certification.
 
 Each live member has an adjacent runner-owned provider-discriminated attestation.
 Historical Claude v2 remains compatible, as do ordinary historical Codex v3,
-receipt-bound v4, strict-v1 v5, and pre-client-pin strict-v2 v6. Current Codex
-v7 binds the strict-v2 code-mode contract, fleet-wide frozen effective-client
-authority and exact CLI version, and its exact CLI-recorded selected model,
-provider/session/turn, effort, isolated cwd, completed lifecycle, unique game
-session, and all artifact hashes. It may also declare deterministic
+receipt-bound v4, strict-v1 v5, pre-client-pin strict-v2 v6, and client-bound
+v7. Current Codex v8 is model-discriminated: exact Spark binds
+`spark-direct-mcp-v1` with capture receipt v4, while Sol, Terra, and Luna bind
+`strict-code-mode-v2` with capture receipt v3. Both branches bind fleet-wide
+frozen effective-client authority and exact CLI version, the exact CLI-recorded
+selected model, provider/session/turn, effort, isolated cwd, completed lifecycle,
+unique game session, and all artifact hashes. They may also declare deterministic
 `report_receipt_bound` provenance: `.initial-report.txt` remains the exact
 provider message, `.receipt-bind.json` hashes the envelope/report/raw evidence
 and one replaced field, and certification must reproduce the final report from
 those bytes. Because this starts no model turn and preserves every subjective
 field and all prose outside the receipt value, it is not report recovery and is
-eligible when every v7 check passes. An exclusive strict capture v3 receipt
-binds the copied rollout hash to the exact canonical expected/session/turn cwd and
-native filesystem identity; later validation reparses it and rejects
-abort/error history or any row after terminal `task_complete`.
-Each automatic CLI compaction may add a replay with an exact deep-equal context
-payload only in the immediate `compacted` → `world_state` → `turn_context`
-sequence before completion. Wrapper keys must match and only the timestamp may
-differ; every other duplicate context fails closed.
+eligible when every v8 check passes. The selected capture receipt binds the
+copied rollout hash to the exact canonical expected/session/turn cwd and native
+filesystem identity; later validation reparses it and rejects abort/error
+history or any row after terminal `task_complete`.
+Every current pure Codex transport rejects `compacted`, `context_compacted`, or
+any second `world_state` or `turn_context`. The CLI's encrypted replacement
+history cannot be locally proven to derive only from the audited player-visible
+transcript. A catalog `auto_compact_token_limit: null` preserves default maximum
+headroom rather than disabling compaction; crossing the boundary therefore
+fails closed instead of entering certification evidence.
 `turn_context.model` is durable CLI provenance, not a provider-signed
 remote-backend snapshot. Diagnostic resume reparses these retained facts;
 certification rejects model-assisted recovery, reuse, links, and path escape.
