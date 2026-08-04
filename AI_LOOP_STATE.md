@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 729 -->
+<!-- historical_cycle_count: 730 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - strict_commentary_provenance
+
+- Evidence choice: Codex 0.146 strict code mode emits authenticated progress commentary as paired private event/message rows; the final-only verifier rejected nine otherwise complete Terra traces before report publication.
+- Surface/effect: strict Sol/Terra/Luna evidence now admits at most one paired pre-game message plus paired commentary only between visible results and later game calls, while Spark direct remains final-only; public/private text, order, gameplay boundary, event count, and item identity all cross-bind.
+- Counterfactual/integrity: orphan or nonadjacent events, commentary before the prompt or inside a call/result pair, post-game commentary, missing/duplicate finals, moved/malformed public messages, duplicate identities, and public/private substitutions all fail closed; game content, mechanics, RNG, saves, and world hash are unchanged.
+- Pure evidence: exact-clean Terra build `4a15e760` verified 10/10 first attempts with zero retries or failed slots; all completed The Wolf-Winter (decision p50 29), none got stuck, clarity/enjoyment were 4.0/4.0, 6/10 continued, and all 10 chose LURE.
+- Economy: the cohort used 32.016M raw / 1.365M uncached input + 100,034 output (1.465M useful) with 95.74% input-cache reuse; no retry, fallback, or replacement player ran.
+- Self-critique/follow-through: the verifier is certified but the quality pilot failed 4.2 clarity/enjoyment, 70% continuation, and strategy-diversity gates; compiled feedback ranks dense Station planning terminology first, so the next gameplay increment must address the opening decision surface and LURE dominance before another pilot.
+- Guard: independent adversarial review is clean, preserved Terra traces validate 9/9, focused provider/authority/certifier coverage passes, crawls `20260804T150247Z` / `20260804T155418Z` have zero findings, and canonical health passes 459 files/3,905 tests plus UI typecheck and all 12 packs.
 
 ### Cycle result - codex_transport_yield_gate
 
@@ -159,14 +169,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: that one first-attempt canary used 4.557M raw / 150,858 uncached input + 12,343 output at 96.69% input-cache reuse (163,201 useful); no retry, fallback, pilot, or fanout ran.
 - Self-critique/follow-through: one Terra success validates this build, not a transport rate; it again chose LURE and named dense Albany setup plus hidden duty alternatives S1, so save the next cohort for a gameplay increment rather than spending it on this prompt alone.
 - Guard: independent diagnosis/final review, 149 focused tests, crawls `20260801T090021Z` / `20260801T090319Z`, and exact-tree health (450 files/3,764 tests plus all 12 packs) are clean.
-
-### Cycle result - cumulative_station_option_review
-
-- Evidence choice: the prior exact Terra pilot named Albany planning or selected-term recall in 5/10 reports; an optional candidate inspection still returned that candidate alone and could force another context call before departure.
-- Surface/effect: optional preparation, relief-allocation, and ally detail now co-return the candidate's full consequence/timing plus authenticated selected departure terms and a one-time legend delta; the default short comparison is unchanged and sibling alternatives never leak.
-- Measured effect: the pure prompt is about 182 UTF-8 bytes smaller and points to visible `reviewOption` instead of a separate recap/terms pull; default comparison stays ≤1,700 bytes, cumulative legend ≤7,200, pulled details ≤2,048, with review v10 and compact v40.
-- Counterfactual: choices, order, terms, mechanics, RNG, state, saves, hashes, content, outcomes, full/UI projections, and default comparison shape are unchanged.
-- Pure evidence: exact-clean Spark seed 7314030 skipped optional Station planning, completed The Wolf-Winter through FORTIFY in 16 decisions, rated clarity/enjoyment 4/4 and replay-yes, and reported no rejection, bug, loop, stuck state, or soft-lock.
-- Frozen diagnostics: no-retry exact-build pilots verified Spark 2/10 and Terra 9/10 but had eight plus one wrapper failures; all nine Terra players chose LURE, both cohorts are invalid, and no replacement or 100-player fleet ran.
-- Economy: canary plus measured pilot members used a 41.514M raw-input / 1.600M uncached-input + 139,359 output lower bound at 96.15% input-cache reuse (1.740M useful); nine rejected attempts lack trustworthy usage and are not guessed into the total.
-- Self-critique/guard: 8/9 Terra reports still flagged dense opening planning (six as S1), the canary skipped this pull path, and public evidence cannot prove `reviewOption` uptake; independent reviews, crawl `20260801T072902Z`, and health (450 files/3,764 tests plus all 12 packs) are clean.
