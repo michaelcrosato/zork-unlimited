@@ -2732,7 +2732,7 @@ describe("MCP pure play mode", () => {
         const talkContext = talked.context as RpgCompactContext;
         const talkActions = talkContext.actions;
         expect(talkContext.dialogue?.[1]).toBe(
-          "Albany sent you. Choose what must stand at dawn. Every plan can finish Wolf-Winter; none saves everything, and I name no best answer.\n\nHUNT — Tonight: hold the breach to protect herd and stores. Cost: wolves may die; defeat can cost cattle and the line. Albany: bloodshed changes Greenway work; any damage remains.\nLURE — Tonight: draw off the pack; herd and wolves can live. Cost: last feed, broken paling, cattle risk on a foul. Albany: broken boundary or scattered cattle change the Station response.\nDRIVE — Tonight: clear people and pack from the byre. Cost: abandon the outer line; the crisis takes a wound, two cattle, or the rig. Albany: the abandoned line and chosen loss remain.\nFORTIFY — Tonight: hold byre, herd, and pack to dawn. Cost: risk Cade's property or Albany's seals and aid; no retreat. Albany: those terms remain; a no-loss hold opens no Cade repair dispatch.\n\nAsking may teach; it never commits a strategy. HUNT commits on an uncommitted north crossing. LURE, DRIVE, and FORTIFY commit in their branches. Any commitment closes the other three.",
+          "Albany sent you. Choose what must stand at dawn. Every plan can finish Wolf-Winter; none saves everything, and I name no best answer.\n\nHUNT — Outcome: hold Cade's ground, herd, and relief stores with prepared combat. Cost: wolves may die; failure can lose cattle or the line. Albany: bloodshed changes Greenway work; damage remains.\nLURE — Outcome: relocate the pack beyond the breach and keep the herd. Cost: last feed, broken paling, two cattle risked on a first-cast foul. Albany: broken boundary or scattered cattle change Station response.\nDRIVE — Outcome: evacuate people and herd; force the pack clear. Cost: abandon the outer steading; Crisis takes a wound, two cattle, or rig. Albany: the line and chosen loss remain.\nFORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost: no retreat; expose property for Cade's aid or spend public seals without it. Albany: terms remain; a no-loss hold opens no Cade repair dispatch.\n\nQuestions teach; they do not commit. HUNT commits on uncommitted north crossing; other plans commit in branches. Any commitment closes the other three.",
         );
         expect(talkActions).toEqual(
           expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
@@ -2775,11 +2775,11 @@ describe("MCP pure play mode", () => {
           Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
         ).toMatchObject({
           ask_wolves:
-            "ask: HUNT — Hold breach: cattle/reserves safe; wolves may die. Learn +2 attack/+5 tally. Leave; if June, acknowledge; north = HUNT; close LURE/DRIVE/FORTIFY.",
+            "ask: HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits.",
           ask_byre:
             "ask: HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
           ask_commit_hunt_and_hold:
-            "ask: Commit HUNT when you cross north — Hold breach: cattle/reserves safe; wolves may die; LURE/DRIVE/FORTIFY then close.",
+            "ask: Commit HUNT north — Hold ground in prepared combat. Risk: wolf deaths; failure risks cattle/line. Closes LURE/DRIVE/FORTIFY.",
           ask_leave: "ask: Leave Cade.",
         });
         expect(labeledMenu).toMatchObject({

@@ -347,7 +347,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       },
       {
         type: "narration",
-        text: `Road Warden June Pike: "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle the feed lure, pack drive, or joined seals with him. Until one is committed, north remains closed."`,
+        text: `Road Warden June Pike: "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle LURE relocation, DRIVE evacuation, or FORTIFY until dawn with him. Until one is committed, north remains closed."`,
       },
     ]);
     const keepTerms = keepTermsResult.state;
@@ -359,7 +359,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(buildRpgObservation(index, keepTerms).dialogue).toEqual({
       npc: "june_pike_combat_boundary",
       npc_text:
-        "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle the feed lure, pack drive, or joined seals with him. Until one is committed, north remains closed.",
+        "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle LURE relocation, DRIVE evacuation, or FORTIFY until dawn with him. Until one is committed, north remains closed.",
     });
     expect(keepTerms.flags.june_combat_line_acknowledged).not.toBe(true);
     expect(actionIds(keepTerms)).not.toContain("go_north");

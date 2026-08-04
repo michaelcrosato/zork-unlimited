@@ -12,6 +12,7 @@ import type { RpgAction } from "../api/types.js";
 import { evalConditions } from "../core/conditions.js";
 import type { GameState } from "../core/state.js";
 import { normalizeRpgTopicCommand, parseQualifiedRpgAskCommand } from "./command_normalization.js";
+import { dialogueTopicPrompt } from "./dialogue_presentation.js";
 import { type RpgModelIndex, activeDialogue } from "./model.js";
 import { enumerateRpgBaseActions, useInteraction } from "./legal_actions.js";
 
@@ -253,7 +254,7 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
       active.node.topics.find(
         (candidate) =>
           normalizedArg.length > 0 &&
-          normalizeRpgTopicCommand(candidate.prompt).includes(normalizedArg),
+          normalizeRpgTopicCommand(dialogueTopicPrompt(candidate)).includes(normalizedArg),
       );
     if (!topic)
       return {

@@ -125,18 +125,20 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootDialogue = observation(uncommitted);
     expect(rootDialogue.dialogue?.npc_text).toMatch(LIVING_BOUNDARY);
     expect(rootDialogue.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*Every plan can finish[^]*hunt[^]*protect herd and stores[^]*wolves may die[^]*defeat can cost cattle and the line[^]*lure[^]*herd and wolves can live[^]*last feed[^]*broken paling[^]*cattle risk[^]*drive[^]*people and pack[^]*outer line[^]*wound, two cattle, or the rig[^]*fortify[^]*byre, herd, and pack[^]*Cade's property[^]*seals and aid[^]*Asking may teach[^]*never commits[^]*HUNT commits[^]*north crossing[^]*commitment closes the other three/i,
+      /Albany sent you[^]*Every plan can finish[^]*hunt[^]*hold Cade's ground, herd, and relief stores[^]*prepared combat[^]*wolves may die[^]*failure can lose cattle or the line[^]*lure[^]*relocate the pack beyond the breach[^]*keep the herd[^]*last feed[^]*broken paling[^]*two cattle[^]*drive[^]*evacuate people and herd[^]*force the pack clear[^]*outer steading[^]*wound, two cattle, or rig[^]*fortify[^]*household, herd, and pack apart[^]*no retreat[^]*property[^]*Cade's aid[^]*public seals[^]*Questions teach[^]*do not commit[^]*HUNT commits[^]*north crossing[^]*commitment closes the other three/i,
     );
     const rootCommands = rootDialogue.available_actions.map((action) => action.command).join("\n");
-    expect(rootCommands).toMatch(/hunt[^]*hold breach[^]*cattle\/reserves safe[^]*wolves may die/i);
     expect(rootCommands).toMatch(
-      /lure[^]*draw the pack out[^]*protects cattle and wolves[^]*spends finite feed[^]*paling broken[^]*foul risks cattle/i,
+      /hunt[^]*hold ground\/stores[^]*prepared combat[^]*wolf deaths[^]*failure risks cattle\/line/i,
     );
     expect(rootCommands).toMatch(
-      /drive[^]*move herd and pack[^]*protects people and wolves[^]*abandons the outer line[^]*crisis costs wound, cattle, or rig/i,
+      /lure[^]*relocate pack beyond the breach[^]*keep the herd[^]*last feed[^]*broken paling[^]*two cattle risked/i,
     );
     expect(rootCommands).toMatch(
-      /fortify[^]*seal until dawn[^]*protects byre, cattle, and wolves[^]*outer property[^]*public seals[^]*Cade's aid/i,
+      /drive[^]*evacuate people\/herd[^]*force pack clear[^]*abandon outer steading[^]*crisis takes wound, two cattle, or rig/i,
+    );
+    expect(rootCommands).toMatch(
+      /fortify[^]*household\/herd\/pack apart[^]*no retreat[^]*property\/Cade aid[^]*spend seals\/no aid/i,
     );
     expect(`${rootDialogue.dialogue?.npc_text}\n${rootCommands}`).not.toMatch(
       /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b|\bDC\s*\d/i,
@@ -161,7 +163,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     );
     expect(
       lureDialogue.available_actions.find((action) => action.id === "ask_lure_back")?.command,
-    ).toMatch(/crossing uncommitted[^]*hunt-and-hold[^]*permanently retires all living plans/i);
+    ).toMatch(/crossing uncommitted[^]*HUNT[^]*permanently retires LURE, DRIVE, and FORTIFY/i);
 
     uncommitted = act(uncommitted, "ask_lure_back");
     const afterLureBack = observation(uncommitted);

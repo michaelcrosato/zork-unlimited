@@ -302,10 +302,10 @@ describe("June's pre-HUNT release counterfactual", () => {
       (option) => option.id === "ask_commit_hunt_and_hold",
     );
     expect(release?.command).toMatch(
-      /preserve the relationship[^]*forfeit every later June field intervention[^]*no combat or cattle bonus/i,
+      /release June[^]*hold ground alone[^]*preserve agreement[^]*lose June's field aid[^]*commits HUNT[^]*closes LURE\/DRIVE\/FORTIFY/i,
     );
     expect(retain?.command).toMatch(
-      /keep June[^]*first wolf death ends June's agreement[^]*breaking it/i,
+      /keep June[^]*June stays cattle-first[^]*first wolf death breaks agreement[^]*north commits[^]*closes other plans/i,
     );
 
     const preChoiceSave = save(boundary, loaded.compiled.contentHash, SAVE_MODE, {

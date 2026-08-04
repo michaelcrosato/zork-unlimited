@@ -28,7 +28,7 @@ import {
   roomDescription,
   visibleObjectIds,
 } from "./model.js";
-import { dialogueNodeText } from "./dialogue_presentation.js";
+import { dialogueNodeText, dialogueTopicPrompt } from "./dialogue_presentation.js";
 
 // A USE action that carries a `skill_check` (resolved by the runner as a d20 + skill
 // roll, parser/RPG alike) is annotated with the rolled stat + difficulty + die type, so a
@@ -583,7 +583,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   const active = activeDialogue(index, state);
   if (active) {
     for (const t of active.node.topics) {
-      const projected = option(index, state, `ask_${t.id}`, `ask: ${t.prompt}`, {
+      const projected = option(index, state, `ask_${t.id}`, `ask: ${dialogueTopicPrompt(t)}`, {
         type: "ASK",
         npc: active.npc.id,
         topic: t.id,

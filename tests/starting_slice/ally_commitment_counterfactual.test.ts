@@ -35,7 +35,7 @@ const DEFAULT_OATH = "albany:oath_full_compact_duty";
 const WOLF_SOURCE = readFileSync("content/rpg/quests/wolf_winter.yaml", "utf8");
 const FULL = { compact_context: false, compact_result: false } as const;
 const JUNE_CATTLE_TERMS_RESPONSE =
-  "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle the feed lure, pack drive, or joined seals with him. Until one is committed, north remains closed.";
+  "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle LURE relocation, DRIVE evacuation, or FORTIFY until dawn with him. Until one is committed, north remains closed.";
 
 const PRE_RELIEF_WORLD = exactF06World(WORLD);
 delete PRE_RELIEF_WORLD.opening_relief_allocation;
@@ -536,8 +536,9 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
       hide_graph: true,
     });
     expect(dialogueCompact.context.dialogue?.[1]).toMatch(
-      /spear funnel[^]*not a living turn[^]*committed first feed cast fouls[^]*brace[^]*pen the yearling alive[^]*first wolf down ends our agreement/i,
+      /Choose by outcome[^]*HUNT holds Cade's ground[^]*LURE relocates the pack[^]*DRIVE evacuates the outer line[^]*FORTIFY keeps household, herd, and pack apart[^]*release me now[^]*preserve our agreement without field aid[^]*keep me on cattle[^]*first wolf death breaks it[^]*Crossing north commits HUNT/i,
     );
+    expect(dialogueCompact.context.dialogue?.[1]).not.toMatch(/living plan|living turn/i);
     const beforeTerms = api.get_state({ session_id: rpgSessionId, include_state: true });
     const termsResponse = api.step_action({
       session_id: rpgSessionId,
