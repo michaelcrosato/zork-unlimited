@@ -73,7 +73,41 @@ function deepFreeze<T>(obj: T): T {
 }
 
 const picksArb = fc.array(fc.nat({ max: 1000 }), { maxLength: 20 });
-const seedArb = fc.integer({ min: 0, max: 2 ** 31 - 1 });
+
+/**
+ * The full domain `isRuntimeSeed` accepts, not a comfortable slice of it.
+ *
+ * This generator used to sample only [0, 2**31), so it never exercised a negative
+ * seed or one at or above 2**32 — exactly the region where `rngForStep` used to
+ * discard the seed's high bits and let seeds 1 and 4294967297 play identically while
+ * hashing differently. A property test that cannot reach the boundary cannot fail at
+ * it. Weighted so the interesting bands are sampled, not drowned out by the wide one.
+ */
+const seedArb = fc.oneof(
+  { arbitrary: fc.integer({ min: 0, max: 2 ** 31 - 1 }), weight: 4 },
+  { arbitrary: fc.integer({ min: -(2 ** 31), max: -1 }), weight: 2 },
+  { arbitrary: fc.integer({ min: 2 ** 32, max: Number.MAX_SAFE_INTEGER }), weight: 2 },
+  { arbitrary: fc.integer({ min: Number.MIN_SAFE_INTEGER, max: -(2 ** 32) }), weight: 2 },
+  {
+    arbitrary: fc.constantFrom(
+      0,
+      -1,
+      1,
+      2 ** 32,
+      2 ** 32 + 1,
+      4294967295,
+      Number.MAX_SAFE_INTEGER,
+      Number.MIN_SAFE_INTEGER,
+    ),
+    weight: 1,
+  },
+);
+
+/**
+ * Pinned rather than left to fast-check's default so a future default change cannot
+ * silently alter how much of the domain these properties actually cover.
+ */
+const RUNS = { numRuns: 200 };
 
 describe("determinism contract (§8.5)", () => {
   it("(a) identical RpgAction sequence ⇒ identical hashes and events on repeat", () => {
@@ -85,6 +119,7 @@ describe("determinism contract (§8.5)", () => {
         expect(a.events).toEqual(b.events);
         expect(hashState(a.finalState)).toBe(hashState(b.finalState));
       }),
+      RUNS,
     );
   });
 
@@ -93,6 +128,7 @@ describe("determinism contract (§8.5)", () => {
       fc.property(picksArb, seedArb, (picks, seed) => {
         expect(() => walk(picks, seed)).not.toThrow();
       }),
+      RUNS,
     );
   });
 
@@ -109,6 +145,7 @@ describe("determinism contract (§8.5)", () => {
           expect(hashState(restored.state)).toBe(hashState(s));
         }
       }),
+      RUNS,
     );
   });
 
@@ -117,6 +154,7 @@ describe("determinism contract (§8.5)", () => {
       fc.property(picksArb, seedArb, (picks, seed) => {
         expect(walk(picks, seed).illegalRejections).toBe(0);
       }),
+      RUNS,
     );
   });
 });

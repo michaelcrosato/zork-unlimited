@@ -85,4 +85,35 @@ describe("rng absolute known-answer vector (determinism keystone, §4.1/§8.5)",
     const d = rngForStep(7, 3).next();
     expect(new Set([a, b, c, d]).size).toBe(4);
   });
+
+  // `isRuntimeSeed` accepts any safe integer, but rngForStep used to fold the seed with a
+  // bare `seed >>> 0`, silently discarding 21 bits. Seeds 1 and 4294967297 therefore played
+  // byte-identically while hashing differently — two runs the same in every observable way
+  // but claiming distinct identities — and the determinism property test could not see it,
+  // because its generator only sampled [0, 2**31).
+  it("distinct accepted seeds produce distinct streams across the 32-bit boundary", () => {
+    const pairs: [number, number][] = [
+      [0, 2 ** 32],
+      [1, 2 ** 32 + 1],
+      [5, 4294967301],
+      [-1, 4294967295],
+      [-3, 4294967293],
+    ];
+    for (const [low, high] of pairs) {
+      expect(rngForStep(low, 0).next(), `${String(low)} vs ${String(high)}`).not.toBe(
+        rngForStep(high, 0).next(),
+      );
+      expect(rngForStep(low, 9).next(), `${String(low)} vs ${String(high)} at step 9`).not.toBe(
+        rngForStep(high, 9).next(),
+      );
+    }
+  });
+
+  it("mixing the seed's high word left every sub-2^32 stream byte-identical", () => {
+    // The whole range any shipped artifact uses. If this moves, every pinned trace
+    // expected_final_hash and every reachability bracket moves with it.
+    expect(rngForStep(0, 0).next()).toBe(0.26642920868471265);
+    expect(rngForStep(1, 1).next()).toBe(0.762141314567998);
+    expect(rngForStep(541, 12).next()).toBe(0.011826428584754467);
+  });
 });

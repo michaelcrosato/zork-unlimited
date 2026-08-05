@@ -41,7 +41,25 @@ export function mulberry32(seed: number): Rng {
  */
 export function rngForStep(seed: number, step: number): Rng {
   // 32-bit mix of (seed, step) so adjacent steps don't share a stream.
-  let h = (seed >>> 0) ^ Math.imul(step >>> 0, 0x9e3779b1);
+  //
+  // `seed >>> 0` alone DISCARDED the seed's high bits. `isRuntimeSeed` accepts any
+  // safe integer, so seeds 1 and 4294967297 — and -1 and 4294967295 — produced
+  // byte-identical play while hashing differently: two runs behaviourally the same
+  // while claiming distinct identities. Fold the high word in as well.
+  //
+  // Math.floor, not Math.trunc: `-1 >>> 0` is 4294967295, so trunc — which gives -0 for
+  // both — would leave every negative seed aliased to its unsigned twin. floor gives -1
+  // there and 0 for every seed in [0, 2**32), which is the whole range any shipped
+  // artifact uses: no negative seed and no seed at or above 2**32 appears in content,
+  // corpus, traces, saves, or fixtures, so every pinned trace hash and every RNG
+  // known-answer vector stays byte-identical.
+  //
+  // Widening is the right direction rather than narrowing the accepted domain: the
+  // seed gate's signed, above-32-bit range is a recorded decision (bug_0208) with its
+  // own over-restriction guards, and those guards pin acceptance and the STATE hash,
+  // which is independent of this stream.
+  const high = Math.floor(seed / 0x100000000);
+  let h = (seed >>> 0) ^ Math.imul(step >>> 0, 0x9e3779b1) ^ Math.imul(high, 0x27d4eb2f);
   h = Math.imul(h ^ (h >>> 16), 0x85ebca6b) >>> 0;
   return mulberry32(h);
 }
