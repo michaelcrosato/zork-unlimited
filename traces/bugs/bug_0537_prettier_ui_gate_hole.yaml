@@ -1,0 +1,43 @@
+id: bug_0537
+title: "ui/ was named in the format scripts but excluded by .prettierignore, so the gate matched zero files"
+pack: n/a (repo tooling)
+reported_by: external repository review (finding D6), 2026-08-04
+reports:
+  - EXTERNAL_REVIEW.md
+severity: S3
+symptom: >
+  `npm run format:check` passes `ui` on the command line, README.md and AGENTS.md both
+  describe Prettier as covering it, and tests/regression/eslint_ui_coverage.test.ts
+  asserted the scripts "actually run over ui/". All of that was true of the argument and
+  false of the behaviour: `.prettierignore` carried a bare `ui`, so Prettier matched zero
+  files under it and printed "All matched files use Prettier code style!". Eight ui/src
+  files had drifted, including a real indentation defect in App.tsx where 24 children of
+  a station-dispatch article sat one level short of their parent.
+root_cause: >
+  bug_0031 wired ESLint+Prettier and scoped the gate to src/bin/scripts/agents, adding
+  `ui` to .prettierignore. bug_0038 later added `ui` to the lint/format npm scripts but
+  never removed the ignore entry. Its verification note recorded "prettier: green ... ui/
+  was already clean" — a false green produced by matching nothing. ESLint had no
+  equivalent hole (eslint.config.js ignores only ui/dist).
+fix: >
+  Delete the bare `ui` from .prettierignore and reformat ui/ as its own commit. The
+  slash-free `dist` / `node_modules` / `coverage` entries already match at any depth, so
+  ui/dist and ui/node_modules stay excluded and nothing new is pulled in; CI also runs
+  format:check before UI deps or build output exist. Replace the string-matching
+  assertion with a behavioural one: Prettier's own getFileInfo must report ui/ source as
+  not-ignored, so an ignore entry can never again beat the argument silently.
+corrects_earlier_record: >
+  bug_0038's verification lines claiming Prettier green over ui/ were false greens. Left
+  in place rather than edited, per the repo's append-a-correction norm.
+deterministic_witnesses:
+  - before: "prettier --check --ignore-path .prettierignore ui -> exit 0, zero files matched"
+    after: "the same command inspects 18 ui files"
+  - before: "getFileInfo(ui/src/App.tsx, {ignorePath: .prettierignore}).ignored === true"
+    after: "=== false"
+  - reformat: "8 files, 125 insertions, 168 deletions; App.tsx:385-409 re-indented +2"
+tests:
+  - tests/regression/eslint_ui_coverage.test.ts
+verification:
+  - npm run format:check
+  - npm run ui:typecheck
+  - npm run health

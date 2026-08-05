@@ -12,7 +12,9 @@
  *
  * This locks the gate so it cannot silently regress:
  *   (1) the SHIPPED eslint.config.js covers ui/ (files-named + un-ignored);
- *   (2) the lint/format npm scripts actually RUN over ui/;
+ *   (2) the lint/format npm scripts actually RUN over ui/ — both that they name it AND,
+ *       since a `.prettierignore` entry silently beat the argument for two months, that
+ *       Prettier itself reports ui/ source as not-ignored;
  *   (3) the react-hooks gate is genuinely ACTIVE on a ui .tsx file (rules-of-hooks=error,
  *       exhaustive-deps=warn) and BITES a real conditional-hook violation;
  *   (4) the shipped ui/ source passes the gate clean (it is a live linter, not inert);
@@ -22,6 +24,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ESLint } from "eslint";
+import { getFileInfo } from "prettier";
 import { assess, eslintCovers } from "../../src/afk/assessor.js";
 
 const root = process.cwd();
@@ -42,6 +45,22 @@ describe("bug_0038 — ui/ is under the ESLint gate", () => {
   it("the lint/format npm scripts actually run over ui/ (not a config-only no-op)", () => {
     for (const key of ["lint", "format:check", "format"]) {
       expect(pkg.scripts[key]).toMatch(/(^|\s)ui(\s|$)/);
+    }
+  });
+
+  // The assertion above checks the npm-script ARGUMENT and nothing else, which is
+  // exactly how ui/ stayed outside the Prettier gate for two months while this file
+  // claimed to lock it: `.prettierignore` carried a bare `ui`, so `prettier --check
+  // ... ui` matched zero files and printed its success line. Passing an argument to a
+  // formatter that has been told to ignore it is a no-op the string check cannot see.
+  // Ask Prettier itself instead.
+  it("Prettier actually inspects ui/ source (the ignore file does not neuter the argument)", async () => {
+    for (const file of ["ui/src/App.tsx", "ui/src/engine.ts", "ui/src/styles.css"]) {
+      const info = await getFileInfo(join(root, file), {
+        ignorePath: join(root, ".prettierignore"),
+      });
+      expect(info.ignored, `${file} must not be excluded from the format gate`).toBe(false);
+      expect(info.inferredParser, `${file} must have a parser`).not.toBeNull();
     }
   });
 
