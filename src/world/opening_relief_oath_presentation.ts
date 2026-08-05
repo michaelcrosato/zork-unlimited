@@ -120,16 +120,12 @@ export function presentOpeningReliefOath(
         const firstOathOption = oathOptions[0];
         if (!firstOathOption) throw new Error("Opening relief oath requires at least one duty.");
         const optionIds: JourneyStoryChoiceProgressiveDisclosure["reveal"]["optionIds"] =
-          Object.freeze([
-            firstOathOption.id,
-            ...oathOptions.slice(1).map((option) => option.id),
-            standardPacket.id,
-          ]);
+          Object.freeze([firstOathOption.id, ...oathOptions.slice(1).map((option) => option.id)]);
         return Object.freeze({
-          initialOptionIds: Object.freeze([]),
+          initialOptionIds: Object.freeze([standardPacket.id]),
           reveal: Object.freeze({
             id: "customize_duty_and_evidence",
-            label: "What must stand at dawn? Compare all four field outcomes",
+            label: "Customize duty and evidence — compare all four field outcomes",
             description:
               "HUNT defends herd and relief stores, but wolves may die and a failed hold can lose cattle or the line. LURE aims to keep herd and pack alive, but spends Cade's last feed and risks the paling and cattle. DRIVE moves people and the living pack clear, but abandons the outer line and its Crisis costs a wound, cattle, or the rig. FORTIFY keeps home, herd, and pack through dawn, but exposes Cade's property or spends public seals. No plan is recommended or committed. After this read-only comparison, choose one duty or the role shortcut; evidence follows unless the shortcut binds it.",
             optionIds,
@@ -142,7 +138,7 @@ export function presentOpeningReliefOath(
     id: parsed.id,
     kind: "relief_oath" as const,
     message: standardPacket
-      ? `${parsed.title}. First compare what each field plan is trying to preserve. Then choose one duty, or use your role shortcut to bind its duty and evidence together. ${parsed.message}`
+      ? `${parsed.title}. Your role shortcut can bind its matched duty and evidence now without choosing a field plan. Customize only if you want a different duty or source. ${parsed.message}`
       : `${parsed.title}. ${parsed.message}`,
     options,
     ...(progressiveDisclosure ? { progressiveDisclosure } : {}),

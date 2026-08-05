@@ -437,25 +437,28 @@ card. This is a read-only terminal, full/compact MCP, and UI projection:
 choices, action ids, exact terms, state, mechanics, RNG, saves, hashes, delayed
 consumers, and outcomes are unchanged.
 
-The outcome-compass follow-up removes the remaining shortcut-first bias without
-adding a decision or flattening the four routes. When a registered role has a
-matching duty-and-evidence shortcut, the oath stage initially exposes no
-selectable card; it first offers one read-only `What must stand at dawn?`
-comparison. HUNT, LURE, DRIVE, and FORTIFY each lead with the people, herd,
-stores, home, or living pack they try to preserve and pair that aim with their
-actual death, feed, cattle, line, wound, rig, property, or public-seal risk. The
-expansion then exposes all three duties and the role shortcut together, with no
-recommendation and no field-plan commitment. Terminal, browser, and compact MCP
-use the same reveal-first boundary; the canonical prompt retains every legal
-choice, and opening the comparison changes no snapshot, clock, journal, RNG, or
-accepted-decision count. Compact MCP keeps only an exact-session presentation
-receipt, so a hidden card cannot be individually inspected or chosen before that
+The role-actionable outcome-compass follow-up keeps the four-route comparison
+without making it a compulsory read. After a registered role is chosen, its one
+matched duty-and-evidence shortcut is immediately actionable; choosing it still
+records exactly the same oath and source decisions, costs, promises, field
+imports, and journal proof as the equivalent manual path. `Customize duty and
+evidence` opens the read-only comparison and all three ordinary duties; evidence
+then follows only for a manually chosen duty. HUNT, LURE, DRIVE, and FORTIFY each
+lead with the people, herd, stores, home, or living pack they try to preserve and
+pair that aim with their actual death, feed, cattle, line, wound, rig, property,
+or public-seal risk. No route is recommended or committed.
+
+Terminal, browser, and compact MCP use the same boundary. The canonical prompt
+retains every legal choice, while the initial compact surface contains only the
+matched shortcut and the Customize affordance. Opening Customize changes no
+snapshot, clock, journal, RNG, or accepted-decision count. Compact MCP keeps an
+exact-session presentation receipt: the shortcut is authorized immediately,
+but a hidden ordinary duty cannot be inspected or chosen before the exact
 reveal. The developer-only `compact_result:false` read may return the canonical
-prompt for structural QA, but only a successful exact reveal authorizes its
-choices. The receipt is absent from exports and hashes and resets on restore. The established reveal id,
+prompt for structural QA without authorizing hidden choices. The receipt is
+absent from exports and hashes and resets on restore. The established reveal id,
 canonical option order, terminal `customize` alias, and legacy numeric mappings
-remain stable; only the human-visible comparison and duty-first card order
-change.
+remain stable; legal choices and durable gameplay are unchanged.
 
 Legacy migration is deliberately fail-closed at this causal boundary. An
 untouched registration-era save receives the real source prompt. Every progressed

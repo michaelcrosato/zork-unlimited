@@ -208,7 +208,9 @@ export function withOpeningDispatchBriefing(
               : ally && prompt.id === ally.id && prompt.kind === "ally"
                 ? `${ally.title}. ${ALLY_COMPARISON_HEADER}`
                 : prompt.message;
-  const purpose = OPENING_DISPATCH_PURPOSE[prompt.kind];
+  const purpose = offersStandardPacket
+    ? "Purpose: take your role's matched duty/evidence shortcut or customize; every field plan stays open."
+    : OPENING_DISPATCH_PURPOSE[prompt.kind];
   if (civicStageIndex >= 0) {
     const stage = plan.civicStages[civicStageIndex]!;
     const completed = plan.civicStages
@@ -222,7 +224,7 @@ export function withOpeningDispatchBriefing(
       civicStageIndex === 0
         ? `Mission preview — ${plan.questDiscovery} Civic order: role → duty → evidence.`
         : civicStageIndex === 1 && offersStandardPacket
-          ? "Role chosen. Compare all four field outcomes before choosing a duty or role shortcut."
+          ? "Role chosen. Take its matched duty/evidence shortcut now, or customize the full comparison."
           : civicStageIndex === 2
             ? "Role and duty chosen. Next stop: Hayden's Station launch board."
             : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;
