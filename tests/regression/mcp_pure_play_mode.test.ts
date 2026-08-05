@@ -2165,7 +2165,9 @@ describe("MCP pure play mode", () => {
               typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
-        expect(oathChoice?.options).toEqual([]);
+        expect(oathChoice?.options?.map((option) => option.id)).toEqual([
+          "albany:doctrine_fortify_breach",
+        ]);
         expect(JSON.stringify(oathChoice)).not.toContain("albany:oath_limited_aid_only");
         const reveal = oathChoice?.revealOption;
         if (!reveal) throw new Error("expected pure compact oath reveal affordance");

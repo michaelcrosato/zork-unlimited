@@ -1323,7 +1323,7 @@ describe("MCP journey surface", () => {
     expect(inspectedChoice.result).toEqual(directChoice.result);
   });
 
-  it("requires and expands the dawn outcome compass read-only without leaking oath cards into the initial compact journey", () => {
+  it("offers the role shortcut immediately and expands custom duties read-only without leaking oath cards", () => {
     const a = api();
     const registration = WORLD.opening_registration;
     const oath = WORLD.opening_relief_oath;
@@ -1351,12 +1351,11 @@ describe("MCP journey surface", () => {
     >();
     expect(compactOath.revealOption).toMatchObject({
       id: "customize_duty_and_evidence",
-      label: expect.stringContaining("What must stand at dawn?"),
+      label: expect.stringContaining("Customize duty and evidence"),
       description: expect.stringMatching(
         /HUNT[^]*defends herd and relief stores[^]*wolves may die[^]*LURE[^]*keep herd and pack alive[^]*spends Cade's last feed[^]*DRIVE[^]*moves people and the living pack clear[^]*abandons the outer line[^]*FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals[^]*No plan is recommended or committed/i,
       ),
     });
-    expect(compactOath.options).toEqual([]);
     const canonical = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,
@@ -1365,14 +1364,12 @@ describe("MCP journey surface", () => {
     expectTypeOf(canonical.progressiveDisclosure).not.toEqualTypeOf<undefined>();
     const disclosure = canonical.progressiveDisclosure;
     if (!disclosure) throw new Error("expected staged custom oath disclosure");
-    const hiddenId = doctrine.id;
+    const shortcutId = doctrine.id;
+    const hiddenId = oath.options[0]!.id;
 
     expect(compactOath.options.map((option) => option.id)).toEqual(disclosure.initialOptionIds);
-    expect(disclosure.initialOptionIds).toEqual([]);
-    expect(disclosure.reveal.optionIds).toEqual([
-      ...oath.options.map((option) => option.id),
-      doctrine.id,
-    ]);
+    expect(disclosure.initialOptionIds).toEqual([shortcutId]);
+    expect(disclosure.reveal.optionIds).toEqual(oath.options.map((option) => option.id));
     expect(() =>
       a.choose_overworld_session_story({
         session_id: started.session_id,
@@ -1411,7 +1408,11 @@ describe("MCP journey surface", () => {
       story: compactJourneyStoryChoiceComparison(canonical),
     });
     expect(initial.story.options.map((option) => option.id)).toEqual(disclosure.initialOptionIds);
-    expect(initial.story.options).toEqual([]);
+    expect(initial.story.options).toHaveLength(1);
+    expect(initial.story.options[0]).toMatchObject({
+      id: shortcutId,
+      label: expect.stringContaining("Role shortcut"),
+    });
     const initialJson = JSON.stringify(initial.story);
     expect(initialJson.indexOf('"revealOption"')).toBeLessThan(initialJson.indexOf('"options"'));
     for (const hiddenIdOrLabel of disclosure.reveal.optionIds) {
@@ -1473,6 +1474,7 @@ describe("MCP journey surface", () => {
     const directBranch = a.restore_overworld_session({ snapshot: before.snapshot });
     const expandedBranch = a.restore_overworld_session({ snapshot: before.snapshot });
     const fullExpandedBranch = a.restore_overworld_session({ snapshot: before.snapshot });
+    const shortcutExpandedBranch = a.restore_overworld_session({ snapshot: before.snapshot });
     expect(() =>
       a.inspect_overworld_session_story({
         session_id: directBranch.session_id,
@@ -1494,6 +1496,11 @@ describe("MCP journey surface", () => {
         choice: hiddenId,
       }),
     ).toThrow(/hidden[^]*reveal_id[^]*this session/i);
+    const directShortcutChoice = a.choose_overworld_session_story({
+      session_id: directBranch.session_id,
+      story_choice_id: oath.id,
+      choice: shortcutId,
+    });
     a.inspect_overworld_session_story({
       session_id: expandedBranch.session_id,
       story_choice_id: oath.id,
@@ -1504,6 +1511,11 @@ describe("MCP journey surface", () => {
       story_choice_id: oath.id,
       reveal_id: disclosure.reveal.id,
       ...FULL_OVERWORLD,
+    });
+    a.inspect_overworld_session_story({
+      session_id: shortcutExpandedBranch.session_id,
+      story_choice_id: oath.id,
+      reveal_id: disclosure.reveal.id,
     });
     const expandedChoice = a.choose_overworld_session_story({
       session_id: expandedBranch.session_id,
@@ -1517,6 +1529,13 @@ describe("MCP journey surface", () => {
     });
     expect(expandedChoice.snapshot_hash).toBe(fullExpandedChoice.snapshot_hash);
     expect(expandedChoice.result).toEqual(fullExpandedChoice.result);
+    const expandedShortcutChoice = a.choose_overworld_session_story({
+      session_id: shortcutExpandedBranch.session_id,
+      story_choice_id: oath.id,
+      choice: shortcutId,
+    });
+    expect(directShortcutChoice.snapshot_hash).toBe(expandedShortcutChoice.snapshot_hash);
+    expect(directShortcutChoice.result).toEqual(expandedShortcutChoice.result);
 
     const restoredAfterReveal = a.restore_overworld_session({
       snapshot: afterReveal.snapshot,

@@ -399,16 +399,16 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       });
       const standardPacketButtons = Array.from(
         rootElement.querySelectorAll(".journey-choice-card > button"),
-      ) as Array<{ textContent: string | null }>;
+      ) as Array<{ click: () => void; textContent: string | null }>;
       expect(standardPacketButtons).toHaveLength(
         standardPacketChoice.progressiveDisclosure.initialOptionIds.length,
       );
-      expect(standardPacketButtons).toHaveLength(0);
-      expect(rootElement.querySelector(".journey-choice-card")).toBeNull();
+      expect(standardPacketButtons).toHaveLength(1);
       const roleShortcut = standardPacketChoice.options.find((option) =>
         option.label.startsWith("Role shortcut —"),
       );
-      if (!roleShortcut) throw new Error("Expected the Road-Warden role shortcut after reveal.");
+      if (!roleShortcut) throw new Error("Expected the Road-Warden role shortcut before reveal.");
+      expect(standardPacketButtons[0]?.textContent).toContain(roleShortcut.label);
       const dutySurfaceOrder = Array.from(
         rootElement.querySelectorAll(
           ".journey-choice-progressive-disclosure, .journey-choice-actions",
@@ -420,9 +420,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const quickSetupHeading = rootElement.querySelector("h1") as {
         textContent: string | null;
       } | null;
-      expect(quickSetupHeading?.textContent).toBe("Compare what must stand at dawn");
+      expect(quickSetupHeading?.textContent).toBe("Choose a role shortcut or compare duties");
       expect(rootElement.textContent).toContain(
-        "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a duty or role shortcut.",
+        "The role-shortcut card binds duty and evidence together; the duty comparison is read-only.",
       );
       expect(rootElement.textContent?.toLowerCase()).not.toContain("standard packet");
       const customize = rootElement.querySelector(
@@ -445,6 +445,10 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(describedBy?.textContent).toBe(
         standardPacketChoice.progressiveDisclosure.reveal.description,
       );
+      await act(async () => {
+        standardPacketButtons[0]!.click();
+      });
+      expect(selected.at(-1)).toBe(roleShortcut.id);
       const selectedBeforeCustomize = [...selected];
       await act(async () => {
         customize.click();
@@ -465,7 +469,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(revealedCards).toHaveLength(
         standardPacketChoice.progressiveDisclosure.reveal.optionIds.length,
       );
-      expect(revealedCards).toHaveLength(4);
+      expect(revealedCards).toHaveLength(3);
       expect(revealedCards.map((card) => card.textContent)).toEqual(
         standardPacketChoice.progressiveDisclosure.reveal.optionIds.map((optionId) =>
           expect.stringContaining(
@@ -473,7 +477,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
           ),
         ),
       );
-      expect(revealedCards.map((card) => card.textContent)).toEqual(
+      expect(revealedCards.map((card) => card.textContent)).not.toEqual(
         expect.arrayContaining([expect.stringContaining(roleShortcut.label)]),
       );
       await act(async () => {
@@ -490,7 +494,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
           }),
         );
       });
-      expect(rootElement.querySelector(".journey-choice-card")).toBeNull();
+      const ironhandsCards = rootElement.querySelectorAll(".journey-choice-card > button");
+      expect(ironhandsCards).toHaveLength(1);
       const ironhandsDisclosure = rootElement.querySelector(
         ".journey-choice-progressive-disclosure > button",
       ) as { getAttribute: (name: string) => string | null } | null;

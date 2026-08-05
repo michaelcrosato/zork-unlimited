@@ -82,6 +82,13 @@ describe("Albany role-first standard packet runtime", () => {
         );
         expect(oathPresentation.message).toContain("role shortcut");
         expect(oathPresentation.message.toLowerCase()).not.toContain("standard packet");
+        expect(oathPrompt.progressiveDisclosure).toMatchObject({
+          initialOptionIds: [matchedPacket.id],
+          reveal: {
+            id: "customize_duty_and_evidence",
+            optionIds: RELIEF_OATH.options.map((option) => option.id),
+          },
+        });
         const mappedOath = RELIEF_OATH.options.find(
           (option) => option.id === matchedPacket.relief_oath_option_id,
         )!;

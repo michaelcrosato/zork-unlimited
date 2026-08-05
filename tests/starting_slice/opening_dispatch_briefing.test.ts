@@ -44,6 +44,8 @@ const PURPOSES = Object.freeze({
     "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
   ally: "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
 });
+const STANDARD_PACKET_PURPOSE =
+  "Purpose: take your role's matched duty/evidence shortcut or customize; every field plan stays open.";
 
 function expectedPreparationCheckFit(profile: (typeof PREPARATION.profiles)[number]): string {
   const check = profile.check_disclosure;
@@ -117,10 +119,7 @@ function wordCount(value: string): number {
   return value.match(/\S+/g)?.length ?? 0;
 }
 
-function expectBoundedPurpose(
-  storyChoice: JourneyStoryChoicePrompt,
-  purpose: (typeof PURPOSES)[keyof typeof PURPOSES],
-): void {
+function expectBoundedPurpose(storyChoice: JourneyStoryChoicePrompt, purpose: string): void {
   expect(purpose.length).toBeLessThanOrEqual(140);
   expect(storyChoice.message.match(/\bPurpose:/g) ?? []).toHaveLength(1);
   expect(storyChoice.message).toContain(purpose);
@@ -267,9 +266,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
     expect(oath.message).toContain(
-      "Role chosen. Compare all four field outcomes before choosing a duty or role shortcut.",
+      "Role chosen. Take its matched duty/evidence shortcut now, or customize the full comparison.",
     );
-    expectBoundedPurpose(oath, PURPOSES.relief_oath);
+    expectBoundedPurpose(oath, STANDARD_PACKET_PURPOSE);
     expect(oath.options.map((option) => option.id)).toEqual([
       standardPacket.id,
       ...RELIEF_OATH.options.map((option) => option.id),
@@ -302,11 +301,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       ).options.find((option) => option.id === standardPacket.id)?.summary?.commitment,
     ).toBe(roadWardenPacket.summary?.commitment);
     expect(oath.progressiveDisclosure).toMatchObject({
-      initialOptionIds: [],
+      initialOptionIds: [standardPacket.id],
       reveal: {
         id: "customize_duty_and_evidence",
-        label: expect.stringContaining("What must stand at dawn?"),
-        optionIds: [...RELIEF_OATH.options.map((option) => option.id), standardPacket.id],
+        label: expect.stringContaining("Customize duty and evidence"),
+        optionIds: RELIEF_OATH.options.map((option) => option.id),
       },
     });
     const oathCompass = oath.progressiveDisclosure!.reveal.description;
@@ -319,12 +318,14 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       /FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals/i,
     );
     expect(oathCompass).toMatch(/No plan is recommended or committed/i);
-    expect(journeyStoryChoiceOptionsForPresentation(oath)).toEqual([]);
+    expect(journeyStoryChoiceOptionsForPresentation(oath).map((option) => option.id)).toEqual([
+      standardPacket.id,
+    ]);
     expect(
       journeyStoryChoiceOptionsForPresentation(oath, "customize_duty_and_evidence").map(
         (option) => option.id,
       ),
-    ).toEqual([...RELIEF_OATH.options.map((option) => option.id), standardPacket.id]);
+    ).toEqual([standardPacket.id, ...RELIEF_OATH.options.map((option) => option.id)]);
     expect(() => journeyStoryChoiceOptionsForPresentation(oath, "not_a_reveal")).toThrow(
       /no progressive disclosure/i,
     );
@@ -485,7 +486,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(ally);
   });
 
-  it("requires every role-doctrine oath to begin with a read-only outcome compass", () => {
+  it("makes every role-matched packet immediately actionable and keeps customization read-only", () => {
     for (const doctrine of REGISTRATION.doctrines ?? []) {
       const session = new OverworldSession(WORLD);
       session.scoutPoi(session.view().pois[0]!.id);
@@ -496,20 +497,24 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       const beforeReveal = session.snapshot();
       const beforeJourney = session.journey();
       const disclosure = oath.progressiveDisclosure;
-      if (!disclosure) throw new Error(`Expected ${doctrine.id} to require the outcome compass.`);
+      if (!disclosure) throw new Error(`Expected ${doctrine.id} to offer duty customization.`);
 
-      expect(disclosure.initialOptionIds).toEqual([]);
+      expect(disclosure.initialOptionIds).toEqual([doctrine.id]);
       expect(disclosure.reveal).toMatchObject({
         id: "customize_duty_and_evidence",
-        label: expect.stringContaining("What must stand at dawn?"),
+        label: expect.stringContaining("Customize duty and evidence"),
       });
-      expect(journeyStoryChoiceOptionsForPresentation(oath)).toEqual([]);
-      expect(compactJourneyStoryChoiceComparison(oath).options).toEqual([]);
+      expect(journeyStoryChoiceOptionsForPresentation(oath).map((option) => option.id)).toEqual([
+        doctrine.id,
+      ]);
+      expect(compactJourneyStoryChoiceComparison(oath).options.map((option) => option.id)).toEqual([
+        doctrine.id,
+      ]);
 
       const revealed = compactJourneyStoryChoiceComparison(oath, undefined, disclosure.reveal.id);
       expect(revealed.options.map((option) => option.id)).toEqual([
-        ...RELIEF_OATH.options.map((option) => option.id),
         doctrine.id,
+        ...RELIEF_OATH.options.map((option) => option.id),
       ]);
       expect(session.snapshot()).toEqual(beforeReveal);
       expect(session.journey()).toEqual(beforeJourney);
@@ -549,13 +554,6 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     let compactJourney: JourneyPresentation | CompactJourneyPresentation = talked.journey;
     for (const choice of sharedChoices) {
       ui.chooseJourneyStory(choice);
-      if (choice === standardPacket.id) {
-        api.inspect_overworld_session_story({
-          session_id: started.session_id,
-          story_choice_id: RELIEF_OATH.id,
-          reveal_id: "customize_duty_and_evidence",
-        });
-      }
       compactJourney = api.choose_overworld_session_story({
         session_id: started.session_id,
         choice,
