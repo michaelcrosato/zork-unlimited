@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 733 -->
+<!-- historical_cycle_count: 734 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - evidence_bound_terminal_interview
+
+- Evidence choice: the no-retry Spark-10 lost three otherwise complete journeys to terminal interview shape, making evidence-bound acceptance of complete EOF variants the highest measured harness-efficiency increment before any wider Spark spend.
+- Surface/effect: generic and structural reports keep the strict closed-fence contract; a required pure check with private evidence may additionally parse exactly one terminal opening followed by complete V2 JSON through EOF or one immediate inline fence, then binds the exact receipt without rewriting report bytes; the ledger/compiler require the trusted adjacent sidecar.
+- Counterfactual/integrity: malformed or unescaped JSON, trailing prose, duplicate markers, schema drift, receipt mismatch, missing evidence, and non-pure use still fail closed; zero-marker reports retain the older one-shot recovery classification, and a current-v2 Spark artifact regression pins exact provider/report bytes.
+- Pure evidence: exact-clean Terra seed 80423002 on `e0fe54fa` chose Road-Warden/full duty/Hayden/June, completed The Wolf-Winter by whole-herd/all-wolves-alive LURE at decision 28, ended naturally, rated clarity/enjoyment 4/4 and replay-yes, and reported no bug or stuck state.
+- Economy: the verified first Terra attempt used 1.706M raw / 79,677 uncached input + 7,192 output (86,869 useful) at 95.33% cache reuse; Spark seeds 80423000/1 consumed 244,241 observed useful tokens but failed closed on unescaped JSON strings and a provider top-level error, with no retry and no published evidence.
+- Self-critique/follow-through: the canary proves clean-build safety, not an observed terminal-variant recovery or clarity uplift; it repeated layered Station/setup density, while the two Spark failures make prompt/transport reliability a separate prerequisite before another fanout rather than grounds to weaken JSON validation.
+- Guard: independent review is clean; crawls `20260805T035649Z` / `20260805T051322Z`, 119 focused tests, and exact-tree health (459 files/3,913 tests plus UI/all 12 packs) are green after the full matrix caught and closed zero-marker recovery compatibility.
 
 ### Cycle result - campaign_quest_scope_handoff
 
@@ -156,14 +166,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Background evidence: the no-retry Spark qualification verified 4/10 first attempts with six strict-stream failures; every verified player completed without getting stuck and rated 4/4/replay-yes, but all ended at the first goal, so it is neither transport qualification nor milestone certification.
 - Economy: the Terra first attempt used 4.946M raw / 164,814 uncached input + 13,411 output at 96.66% input-cache reuse (178,225 useful, about 3,300/decision); no retry, fallback, or extra certifying player ran.
 - Self-critique/guard: the canary proves build safety, not HUNT uptake; Albany planning density and Gallowmere's same-label recovery remain isolated S1 evidence, so the next decisive step is a fresh 10-player Terra pilot; two bounded audits are clean, crawl `20260801T231727Z` has zero findings, and exact-code health passes 456 files/3,784 tests plus all 12 packs.
-
-### Cycle result - june_fortify_dawn_strain
-
-- Evidence choice: June's paid cattle-first field seat named FORTIFY but only blocked the dawn boundary; an unstabilized failed first seal already reached Strained pressure 3 while the otherwise identical solo watch had no persistent consumer.
-- Surface/effect: at that exact failed, unstabilized pressure 3+, intact June's lower cattle brace prevents the rider's persistent 2 HP dawn strain; solo or broken June pays it, while pressure, stance ending, herd, and living pack stay unchanged.
-- Counterfactual: Cade/Albany × clean/strained/mobile are directly pinned; delayed mobile stabilization may still display pressure 3 but costs no HP and gains no synthetic June benefit, and all six stance/provenance dialogue variants preserve their authority/property account.
-- Integrity: the copy-only world change migrates only exact `fbb3b0e5…` predecessor receipts to `ef222da1…`; save/restore, historical composition, altered receipts, and adjacent manifests remain exact or fail closed.
-- Pure evidence: exact-clean Terra seed 84017293 chose June but LURE, diverted all three wolves with the whole herd, continued at decisions 30/40, won The Gallowmere at 54, rated clarity 4/enjoyment 5, replay-yes, and reported no rejection, loop, stuck state, or mechanical bug.
-- Economy: the first attempt used 4.950M raw / 159,823 uncached input + 11,783 output at 96.77% input-cache reuse (171,606 useful, about 3,178/decision); no retry, fallback, cohort, or fanout ran.
-- Self-critique/follow-through: this proves clean-build safety and retention, not FORTIFY uptake; Albany setup density and Queensbury scout-to-route signposting repeated as S1, so they remain accumulated presentation evidence rather than grounds to widen this consequence increment.
-- Guard: review caught and corrected the reachable mobile-stabilized pressure-3 edge plus first-match dialogue shadowing before landing; final independent review is clean, crawl `20260801T143335Z` has zero findings, and exact-tree health passes 452 files/3,784 tests plus all 12 packs.
