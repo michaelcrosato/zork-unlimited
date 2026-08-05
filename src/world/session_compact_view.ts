@@ -159,7 +159,10 @@ export function buildOverworldSessionCompactView(
   const renown = compactOverworldRenownEntries(renownEntries);
   const completedArcIds = sortedStringSet(state.completedRegionalArcIds);
   const completedArcs = compactOverworldCompletedArcs(completedArcIds);
-  const roads = compactOverworldRoads(state.roads, state.routeOptions, state.fatigue);
+  const roads = compactOverworldRoads(state.roads, state.routeOptions, {
+    fatigue: state.fatigue,
+    supplies: state.supplies,
+  });
   const areas = compactOverworldRefs(state.areas);
   const poi = compactOverworldTitleRefs(state.poi);
   const contacts = compactOverworldRefs(state.contacts);
