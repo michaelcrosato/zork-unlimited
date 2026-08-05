@@ -745,6 +745,7 @@ prose, puzzle chains, and endings — is standing flywheel work: each port is a
 well-scoped cycle (adapt → validate → blind-playtest → gate).
 
 **Remediation required before merge (all landed with the merge):**
+
 1. Rejection-direction coverage restored: the deleted parser negative
    fixtures were converted to RPG-foundation format with a data-driven
    corpus test, so ~36 foundation finding codes regain witnesses
@@ -761,7 +762,7 @@ well-scoped cycle (adapt → validate → blind-playtest → gate).
 **Why merge rather than reject:** the compact-observation engine is the
 difference between an AI-playable overworld (762 B/observation) and an
 unplayable one (94-110 KB/observation measured on develop); the integrity
-verifier got strictly stronger (FORBIDDEN_* guards, protected→forbidden
+verifier got strictly stronger (FORBIDDEN\_\* guards, protected→forbidden
 migration enforcement); CI is green on the full bar; and the one-engine
 consolidation matches the project's stated direction — a single deep world
 under TTRPG-style rules, evolved by the dev↔playtest↔feedback flywheel.
@@ -825,7 +826,7 @@ Revisit breadth only on an explicit human authoring goal.
 runtime LLM; the authoring writer/adapter now run only against the deterministic,
 keyless `MockAuthorProvider` (`bin/author.ts` and `src/mcp/tools.ts` construct it
 directly). `.gitignore` now blocks `.env`/`*.pem`/`*.key`/secret files. No secret
-was ever committed — this removes the *surface*, not a leak.
+was ever committed — this removes the _surface_, not a leak.
 
 **Supersedes prior recorded facts:** the "still valid: `resolveProvider` in
 `src/mcp/tools.ts`" note above is now stale (that call site uses
@@ -848,6 +849,7 @@ of the Charter Marches quest graph). The game is now a single seamless open worl
 and discovers every quest in-world from a town's local notice board.
 
 **Removed:**
+
 - `content/world/charter_marches.yaml` (the world manifest + hub-and-route graph).
 - `CANONICAL_WORLD_ID` / `CANONICAL_WORLD_NAME` / `CANONICAL_HUB_CITY`,
   `WorldManifestSchema`, `WorldGraph*` (from `src/world/schema.ts`), and
@@ -901,3 +903,70 @@ exist. The `RpgWorldQuestPlayableSource`/`…ReportSource` shape dropped its
 
 **Verified:** `npm run health` green (verifier integrity, typecheck, lint, format,
 1673 tests, UI typecheck, pack validation), plus a blind overworld playtest.
+
+### External-review remediation — 2026-08-05 (branch `review/external-remediation`, base 589eb8db)
+
+**Why this entry exists:** an independent external reviewer audited the repo at
+`5bb7947b` and `43d69416` and filed 17 findings with a four-phase plan. This
+records what was executed, the judgement calls made inside it, and — per the
+append-only contract — what was deliberately NOT done and why, so a later
+reviewer does not read the gaps as oversights.
+
+**Landed (20 commits, Phase 1 through Phase 3 minus the content restructures):**
+
+- `N1` — numeric gates were never checked for feasibility. `checkConds` audited
+  every symbolic gate for unsatisfiability and never looked at `var_gte` /
+  `var_lte` / `var_eq`, so an unwinnable quest validated with zero findings.
+  Added `varReachableRange`, a deliberate OVER-approximation (one positive `inc`
+  makes the maximum unbounded), plus `PHANTOM_VAR` for a gate naming a var that
+  is neither declared nor written, and widened the win-room harvest to `in_room`.
+- `N2` — free-text TALK returned the first substring match in pack order, so any
+  abbreviation of a Wolf-Winter June resolved to a June who was absent on that
+  branch. Routed through `resolveVisibleNpc`; added `AMBIGUOUS_NPC_NAME`.
+- `N3` — compact `roads` quoted the shortest ROUTE to a destination, which for
+  eight ordered road pairs is a two-hop detour, not the road. Compact view v44.
+- `N4` — the crawler RENDER oracle checked three observation fields; it now walks
+  every player-visible one.
+- `N5`, `N7`, `D1`–`D4`, `D6`, `D7`, `D9`, and the §3.2/§3.4 test and solver items.
+
+**Judgement calls worth recording:**
+
+1. `AMBIGUOUS_NPC_NAME` ships as a WARNING, not an error. The four same-named
+   Junes are provably mutually exclusive, so erroring would make a healthy pack
+   unplayable. It surfaces the duplicates honestly and should be promoted to an
+   error once they are gone — at which point it also proves that work complete.
+2. `D3` was resolved by WIDENING the RNG rather than narrowing the accepted seed
+   domain, because narrowing would reverse `bug_0208` and red four documented
+   OVER-RESTRICTION guards. `Math.floor`, not `Math.trunc`, so negative seeds stop
+   aliasing onto their unsigned twins; every sub-2^32 stream is byte-identical.
+3. `D9`'s `unlock_exit` was DELETED rather than wired into MOVE. Wiring it would
+   mean the engine scanning pack-wide effects at runtime to decide which exits are
+   flag-gated, when `exit.conditions` already expresses exactly that.
+4. `D2` raised the static floors to ~80% of the measured corpus AND made the two
+   silently-skipped drift guards hard errors. Wiring `--against` into a shallow CI
+   checkout without that change would have bought nothing while looking like
+   protection.
+5. `N7` inverted three assertions that pinned the defect as intended. Called out
+   explicitly rather than quietly: they now pin that a snapshot taken after a
+   reveal restores with the gate satisfied.
+
+**NOT done, and why — these are open, not closed:**
+
+- **Review items 15 + 16 (NPC `variants[]` with `when:`, and moving the four Junes
+  onto it).** Landing the engine affordance alone would add schema surface with no
+  consumer, which is the accretion the review's own closing section names as the
+  root problem. Landing the content half changes NPC ids on the flagship quest,
+  and therefore action ids across traces, tests and the ending census, and is
+  player-facing — which under `AGENTS.md` needs a blind playtest per landed cycle.
+  The `AMBIGUOUS_NPC_NAME` warning is the standing signal until it is done.
+- **Review item 17 (`N6`, reclaiming `src/rpg/dialogue_presentation.ts` prose into
+  content).** Larger than the review's description: the module is a whole
+  presentation overlay for one quest, keyed on exact authored prose, with ~60 lines
+  of shipped player text and a set of `replaceAll` rewrites. The fix is a ~20-site
+  prose migration inside a 4,000-line YAML quest that changes its `content_hash`;
+  exact-match fragile, player-facing, and gated on item 15. Left open.
+- **Phase 0 and Phase 4 in their entirety** — the density counter-metric, the
+  cross-family blind tester, the non-player evidence channel, the go/no-go on
+  deleting the save-migration ladder, the assessor's fate, and the README claims.
+  The review assigns every one of them to the repository owner as a human decision.
+  `AI_LOOP_ALLOW_VERIFIER_EDITS` was never set.
