@@ -3,7 +3,7 @@
  * PHANTOM_VAR.
  *
  * The validator audited every SYMBOLIC gate for unsatisfiability — has_flag,
- * has_item, quest_stage, is_open/is_unlocked — and never looked at the numeric
+ * has_item, quest_stage, is_open/is_explicitly_unlocked — and never looked at the numeric
  * ones. A quest whose only win condition was `var_gte: { name: resolve, value: 5 }`
  * with nothing anywhere writing `resolve` therefore validated green while being
  * unwinnable, and a typo'd var name silently compared against 0 because

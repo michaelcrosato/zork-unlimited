@@ -516,9 +516,9 @@ export function validateRpgFoundation(
     if ("set_quest_stage" in e) settableQuestStages.add(questStageKey(e.set_quest_stage));
   }
 
-  // ── Settable object-state (is_open / is_unlocked) ────────────────────────────
+  // ── Settable object-state (is_open / is_explicitly_unlocked) ────────────────────────────
   // objectState inits to {} (state.ts) and both predicates DEFAULT FALSE
-  // (conditions.ts: is_open ⇒ objectState[id].open===true, is_unlocked ⇒
+  // (conditions.ts: is_open ⇒ objectState[id].open===true, is_explicitly_unlocked ⇒
   // objectState[id].locked===false). So a satisfiable gate needs a path that WRITES
   // the matching flip. CRITICAL: there are TWO write sources for each — an authored
   // effect, OR the engine's built-in OPEN/UNLOCK verbs (legal_actions.ts) — and the
@@ -534,7 +534,7 @@ export function validateRpgFoundation(
   //     is obtainable (the built-in UNLOCK verb emits `{ set_object_locked: {id,
   //     locked:false} }` and requires the player hold the matching key —
   //     legal_actions.ts). NOTE: a STATICALLY-unlocked object is NOT unlock-settable —
-  //     is_unlocked reads objectState[id].locked===false directly (no static fallback),
+  //     is_explicitly_unlocked reads objectState[id].locked===false directly (no static fallback),
   //     so only an explicit relock-then-unlock effect or a keyed UNLOCK can make it true.
   const openableObjects = new Set<string>();
   const unlockableObjects = new Set<string>();
@@ -607,7 +607,7 @@ export function validateRpgFoundation(
         );
       }
     }
-    // An object-state gate (is_open/is_unlocked) whose id is in neither
+    // An object-state gate (is_open/is_explicitly_unlocked) whose id is in neither
     // over-approximating settable set can NEVER become true: no authored effect and
     // no built-in OPEN/UNLOCK verb path establishes it. (An undefined id is in neither
     // set, so the same miss carries the "object not defined" case — no objById
@@ -1215,7 +1215,7 @@ export function validateRpgFoundation(
   // ── INERT object-state: an AUTHORED open/lock-state write nothing ever reads ──
   // The LIVENESS dual of bug_0253's IMPOSSIBLE_OBJECT_STATE (feasibility) — the
   // object-state analogue of INERT_FLAG. An AUTHORED `open_object` /
-  // `set_object_locked` effect whose target object's is_open / is_unlocked state is
+  // `set_object_locked` effect whose target object's is_open / is_explicitly_unlocked state is
   // NEVER read by any condition pack-wide is dead bookkeeping: the write changes
   // nothing the game ever consults. CRITICAL SOUNDNESS BOUNDARY: key the write-set
   // STRICTLY on these authored effects — do NOT fold in the over-approximating
@@ -1228,9 +1228,9 @@ export function validateRpgFoundation(
   // error — an inert open/lock-state write is a no-op, never a soft-lock.
   //
   // bug_0263 completes bug_0262 over set_object_locked's FULL domain: the liveness
-  // question is "does any condition read is_unlocked for this id?", which is
+  // question is "does any condition read is_explicitly_unlocked for this id?", which is
   // INDEPENDENT of the boolean written. A `set_object_locked(locked: true)` re-lock is
-  // just as inert as a `locked: false` unlock when nothing reads is_unlocked — the
+  // just as inert as a `locked: false` unlock when nothing reads is_explicitly_unlocked — the
   // original check filtered `locked === false`, so an unread re-lock escaped it. Both
   // directions are now tracked (deduped so an object both unlocked AND re-locked by
   // effects, still never read, warns exactly once).
@@ -1269,7 +1269,7 @@ export function validateRpgFoundation(
           "INERT_OBJECT_STATE",
           `object "${id}" is unlocked by an effect but no condition ever reads its ` +
             `unlocked state — a no-op write (dead bookkeeping). Gate something on ` +
-            `\`is_unlocked: ${id}\`, or remove the effect.`,
+            `\`is_explicitly_unlocked: ${id}\`, or remove the effect.`,
           [`object:${id}`],
         ),
       );
@@ -1277,7 +1277,7 @@ export function validateRpgFoundation(
   }
   for (const id of writtenLocked) {
     // A `set_object_locked(locked: true)` re-lock is inert under the SAME condition —
-    // is_unlocked is never read. Deduped against writtenUnlocked so an object that is
+    // is_explicitly_unlocked is never read. Deduped against writtenUnlocked so an object that is
     // both unlocked and re-locked by effects (and still never read) warns just once.
     if (!objStateReads.unlocked.has(id) && !writtenUnlocked.has(id)) {
       findings.push(
@@ -1285,7 +1285,7 @@ export function validateRpgFoundation(
           "INERT_OBJECT_STATE",
           `object "${id}" is locked by an effect but no condition ever reads its ` +
             `unlocked state — a no-op write (dead bookkeeping). Gate something on ` +
-            `\`is_unlocked: ${id}\`, or remove the effect.`,
+            `\`is_explicitly_unlocked: ${id}\`, or remove the effect.`,
           [`object:${id}`],
         ),
       );
@@ -1319,8 +1319,8 @@ export function validateRpgFoundation(
  * (`initStateForRpgModel`, start `on_enter` applied, start room marked visited),
  * evaluated by the engine's own `evalConditions`; and un-falsifiability is proven
  * only for a flat conjunction of monotone-stable atoms (incl. `is_open`, which no
- * effect can close, and `is_unlocked` when nothing can relock it) — any
- * disjunction/negation, a `not_visited`/quest condition, a relockable `is_unlocked`,
+ * effect can close, and `is_explicitly_unlocked` when nothing can relock it) — any
+ * disjunction/negation, a `not_visited`/quest condition, a relockable `is_explicitly_unlocked`,
  * or a condition on a combat-volatile var makes us bail (treat as falsifiable ⇒ no
  * finding). A win merely satisfiable early but escapable on the first move is never
  * flagged.
@@ -1511,7 +1511,7 @@ type Falsifiers = {
   removedItems: Set<string>;
   varWrites: Map<string, VarWrite[]>;
   // Objects a `set_object_locked: { locked: true }` can re-lock — the only effect
-  // that falsifies an `is_unlocked` condition.
+  // that falsifies an `is_explicitly_unlocked` condition.
   relockedObjects: Set<string>;
   // Objects a `close_object` effect (or the built-in CLOSE verb, which emits it)
   // can shut — the falsifiers of an `is_open` condition. Open-state stopped being
@@ -1621,7 +1621,7 @@ function varReachableRange(
  *  pack effect — so once met at init they can never become false. Proven only for a
  *  flat AND of individually monotone-stable atoms (flags, items, sign-significant
  *  var bounds, `visited`, plus object open/unlock state: `is_open` is monotone — no
- *  effect closes an object — and `is_unlocked` is stable unless a `set_object_locked`
+ *  effect closes an object — and `is_explicitly_unlocked` is stable unless a `set_object_locked`
  *  can relock it); any_of/none_of, not_visited, quest_stage, or a condition on a
  *  combat-volatile var make us bail to false (conservative: we never claim an
  *  un-falsifiability we cannot prove). */
@@ -1655,16 +1655,16 @@ function winStaysTrueForever(
       // Open-state stopped being monotone when CLOSE became a first-class
       // verb: an authored `close_object` (and the built-in close it powers)
       // falsifies is_open. Stable iff nothing can shut this object — the
-      // exact mirror of the is_unlocked/relock rule below. The built-in
+      // exact mirror of the is_explicitly_unlocked/relock rule below. The built-in
       // CLOSE verb only ever emits close_object for its own target, so the
       // authored-effect scan is the complete falsifier set.
       stable = !f.closedObjects.has(c.is_open);
-    } else if ("is_unlocked" in c) {
+    } else if ("is_explicitly_unlocked" in c) {
       // A lock CAN be re-set: `set_object_locked: { locked: true }` is the sole
-      // effect that falsifies an `is_unlocked` win. Stable iff no such relock
+      // effect that falsifies an `is_explicitly_unlocked` win. Stable iff no such relock
       // targets this object (UNLOCK and `set_object_locked: { locked: false }`
       // only ever help, so they are not falsifiers).
-      stable = !f.relockedObjects.has(c.is_unlocked);
+      stable = !f.relockedObjects.has(c.is_explicitly_unlocked);
     } else if ("all_of" in c) c.all_of.forEach(visit);
     else stable = false; // any_of/none_of/not_visited/quest_stage: not analysed
   };
@@ -1816,7 +1816,7 @@ function whenProfile(when: Condition[]): WhenProfile {
     else if ("visited" in c) p.pos.add(`visited:${c.visited}`);
     else if ("not_visited" in c) p.neg.add(`visited:${c.not_visited}`);
     else if ("is_open" in c) p.pos.add(`open:${c.is_open}`);
-    else if ("is_unlocked" in c) p.pos.add(`unlocked:${c.is_unlocked}`);
+    else if ("is_explicitly_unlocked" in c) p.pos.add(`unlocked:${c.is_explicitly_unlocked}`);
     else if ("quest_stage" in c) p.pos.add(`quest:${c.quest_stage.quest}=${c.quest_stage.stage}`);
     else if ("var_gte" in c) raise(p.lower, c.var_gte.name, c.var_gte.value, true);
     else if ("var_lte" in c) raise(p.upper, c.var_lte.name, c.var_lte.value, false);
@@ -2020,7 +2020,8 @@ function objectStateReqs(conds: Condition[]): { kind: "open" | "unlocked"; id: s
   const out: { kind: "open" | "unlocked"; id: string }[] = [];
   const walk = (c: Condition): void => {
     if ("is_open" in c) out.push({ kind: "open", id: c.is_open });
-    else if ("is_unlocked" in c) out.push({ kind: "unlocked", id: c.is_unlocked });
+    else if ("is_explicitly_unlocked" in c)
+      out.push({ kind: "unlocked", id: c.is_explicitly_unlocked });
     else if ("all_of" in c) c.all_of.forEach(walk);
   };
   conds.forEach(walk);
@@ -2164,7 +2165,7 @@ function collectVarReads(pack: RpgPack): Map<string, string[]> {
   return reads;
 }
 
-/** Every object id whose `is_open` / `is_unlocked` state an RPG pack READS —
+/** Every object id whose `is_open` / `is_explicitly_unlocked` state an RPG pack READS —
  *  in any exit, interaction condition/blocked hint, or win condition, any room/object variant `when`, or any
  *  dialogue-topic gate, DESCENDING all_of/any_of/none_of (a read inside ANY connective,
  *  even a disjunction, counts as consumed). The consumer set for the INERT_OBJECT_STATE
@@ -2179,7 +2180,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
   const unlocked = new Set<string>();
   const walk = (c: Condition): void => {
     if ("is_open" in c) open.add(c.is_open);
-    else if ("is_unlocked" in c) unlocked.add(c.is_unlocked);
+    else if ("is_explicitly_unlocked" in c) unlocked.add(c.is_explicitly_unlocked);
     else if ("all_of" in c) c.all_of.forEach(walk);
     else if ("any_of" in c) c.any_of.forEach(walk);
     else if ("none_of" in c) c.none_of.forEach(walk);

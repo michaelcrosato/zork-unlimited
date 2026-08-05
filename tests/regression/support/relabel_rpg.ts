@@ -61,7 +61,7 @@ function relabelCondition(
   if ("not_visited" in c) return { not_visited: r(c.not_visited) };
   if ("in_room" in c) return { in_room: r(c.in_room) };
   if ("is_open" in c) return { is_open: r(c.is_open) };
-  if ("is_unlocked" in c) return { is_unlocked: r(c.is_unlocked) };
+  if ("is_explicitly_unlocked" in c) return { is_explicitly_unlocked: r(c.is_explicitly_unlocked) };
   if ("var_gte" in c) return { var_gte: { name: rv(c.var_gte.name), value: c.var_gte.value } };
   if ("var_lte" in c) return { var_lte: { name: rv(c.var_lte.name), value: c.var_lte.value } };
   if ("var_eq" in c) return { var_eq: { name: rv(c.var_eq.name), value: c.var_eq.value } };

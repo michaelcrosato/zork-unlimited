@@ -31,7 +31,7 @@ export const EffectSchema = z.union([
   // The inverse of open_object (first-class CLOSE verb). Open-state is NOT
   // monotone once this exists: the RPG validator's `is_open` win-stability
   // check tracks close_object falsifiers exactly as relocks falsify
-  // is_unlocked. Additive — no shipped pack emits it, so every existing pack
+  // is_explicitly_unlocked. Additive — no shipped pack emits it, so every existing pack
   // compiles byte-identically and all recorded traces replay unchanged.
   z.object({ close_object: z.string().min(1) }).strict(),
   z

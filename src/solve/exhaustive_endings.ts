@@ -41,7 +41,7 @@
  *      ending going unreached, i.e. a LOUD test failure, never a silent pass. Mode-specific
  *      callers that prove score/menu/variant completeness widen `explore` to retain such
  *      stateful actions. (Shipped packs gate every transition on
- *      has_item / visited / flags / is_unlocked; `not_item`/drop appear only in reactive
+ *      has_item / visited / flags / is_explicitly_unlocked; `not_item`/drop appear only in reactive
  *      prose `when:` variants, never on a route — so no ending needs a drop.)
  */
 import { makeStep, type EngineAction, type Rules } from "../core/engine.js";
