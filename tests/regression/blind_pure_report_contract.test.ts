@@ -411,6 +411,10 @@ ${JSON.stringify(interview, null, 2)}
 `;
 }
 
+function terminalReport(interview: Record<string, unknown>, closing: "none" | "inline"): string {
+  return report(interview).replace(/\r?\n```\r?\n$/u, closing === "inline" ? "```" : "");
+}
+
 function common() {
   return {
     clarity: 4,
@@ -501,6 +505,72 @@ describe("blind V2 pure/structural report contract", () => {
         expect(result.run.receipt.acceptedDecisions).toBe(40);
       }
     }
+  });
+
+  it("accepts complete terminal pure JSON through EOF only with matching raw evidence", () => {
+    const result = verifyBlindReportText(terminalReport(pureInterview(), "none"), {
+      requiredPlayMode: "pure",
+      runEvidenceText: evidence(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok && result.run?.play_mode === "pure") {
+      expect(result.run.receipt.receiptHash).toBe(receipt().receiptHash);
+    }
+  });
+
+  it("accepts one inline terminal fence with a previously verified pure sidecar", () => {
+    const parsed = parseRunEvidenceJsonl(evidence());
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const result = verifyBlindReportText(terminalReport(pureInterview(), "inline"), {
+      requiredPlayMode: "pure",
+      runSidecar: parsed.sidecar,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.run?.play_mode).toBe("pure");
+  });
+
+  it("keeps terminal recovery unavailable to generic, structural, and evidence-free checks", () => {
+    const terminal = terminalReport(pureInterview(), "none");
+    const generic = verifyBlindReportText(terminal);
+    const evidenceFree = verifyBlindReportText(terminal, { requiredPlayMode: "pure" });
+    const structural = verifyBlindReportText(terminal, {
+      requiredPlayMode: "structural",
+      runEvidenceText: evidence(),
+    });
+    const noOpening = verifyBlindReportText(terminal.slice(0, terminal.indexOf("```json")), {
+      requiredPlayMode: "pure",
+      runEvidenceText: evidence(),
+    });
+
+    for (const result of [generic, evidenceFree, structural, noOpening]) {
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.reason).toContain("missing exit interview");
+    }
+  });
+
+  it("rejects malformed, duplicated, trailing, and receipt-mismatched terminal candidates", () => {
+    const complete = terminalReport(pureInterview(), "none");
+    const malformed = complete.replace(/\n {2}\},\n {2}"clarity": 4,/u, '\n  }},\n  "clarity": 4,');
+    const duplicated = `${complete}\n\`\`\`json exit-interview\n${JSON.stringify(pureInterview())}`;
+    const trailing = `${complete}\ntrailing model prose`;
+    const mismatched = verifyBlindReportText(complete, {
+      requiredPlayMode: "pure",
+      runEvidenceText: evidence(earlyGoalReceipt()),
+    });
+
+    for (const candidate of [malformed, duplicated, trailing]) {
+      const result = verifyBlindReportText(candidate, {
+        requiredPlayMode: "pure",
+        runEvidenceText: evidence(),
+      });
+      expect(result.ok).toBe(false);
+    }
+    expect(mismatched.ok).toBe(false);
+    if (!mismatched.ok) expect(mismatched.reason).toContain("does not match");
   });
 
   it("keeps a frozen contract-v1 pure receipt verifiable as historical evidence", () => {

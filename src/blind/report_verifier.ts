@@ -2,8 +2,10 @@ import { readFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import {
   extractExitInterview,
+  extractTerminalPureExitInterview,
   isPureExitInterviewV2,
   isStructuralExitInterviewV2,
+  MISSING_EXIT_INTERVIEW_REASON,
   type ExitInterview,
 } from "./exit_interview.js";
 import {
@@ -147,7 +149,17 @@ export function verifyBlindReportText(
   // report human-readable, but only the validated JSON block lets the dev
   // loop RANK feedback (sort by clarity, aggregate S3+ bugs) instead of
   // re-reading markdown. No valid interview ⇒ the playtest doesn't count.
-  const interview = extractExitInterview(text);
+  let interview = extractExitInterview(text);
+  const hasPureEvidence =
+    options.runEvidenceText !== undefined || options.runSidecar?.play_mode === "pure";
+  if (
+    !interview.ok &&
+    interview.reason === MISSING_EXIT_INTERVIEW_REASON &&
+    options.requiredPlayMode === "pure" &&
+    hasPureEvidence
+  ) {
+    interview = extractTerminalPureExitInterview(text);
+  }
   if (!interview.ok) {
     return { ok: false, reason: interview.reason };
   }
