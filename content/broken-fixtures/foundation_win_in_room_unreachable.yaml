@@ -1,0 +1,27 @@
+# MUST FAIL: WIN_UNREACHABLE
+# The win needs the player to be STANDING in room `c`, which no exit leads to.
+# The win-room harvest used to read only `visited`, so this produced nothing but
+# the UNREACHABLE_ROOM warning — and report.ok is derived from errors alone, so
+# an unwinnable pack validated green.
+meta:
+  {
+    id: win_in_room_unreachable,
+    title: "Win In Room Unreachable",
+    start_room: a,
+    vars_init: { hp: 10, attack: 2, defense: 1 },
+  }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+  - id: c
+    name: "C"
+    description: "Room C, which nothing leads to."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ in_room: c }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

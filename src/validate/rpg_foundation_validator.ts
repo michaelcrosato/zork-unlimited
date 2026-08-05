@@ -25,7 +25,16 @@
 import { exitFlag, type Effect } from "../core/effects.js";
 import { evalConditions, type Condition } from "../core/conditions.js";
 import { indexRpgModel, initStateForRpgModel } from "../rpg/model.js";
-import { type RpgPack, type GameObject, type Interaction, SCORE_VAR } from "../rpg/schema.js";
+import {
+  type RpgPack,
+  type GameObject,
+  type Interaction,
+  SCORE_VAR,
+  HP_VAR,
+  ATTACK_VAR,
+  DEFENSE_VAR,
+  enemyHpVar,
+} from "../rpg/schema.js";
 import { maneuverSequenceConditions } from "../rpg/maneuver_sequence.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
@@ -43,6 +52,21 @@ const warn = (code: string, message: string, where: string[]): Finding => ({
 });
 const hasDeclaredVar = (vars: Record<string, number>, name: string): boolean =>
   Object.prototype.hasOwnProperty.call(vars, name);
+
+const pushVarWrite = (into: Map<string, VarWrite[]>, name: string, w: VarWrite): void => {
+  const arr = into.get(name) ?? [];
+  arr.push(w);
+  into.set(name, arr);
+};
+
+/** Renders a reachable range for a finding message, spelling the unbounded sides. */
+const rangeText = (min: number, max: number): string => {
+  if (min === Number.NEGATIVE_INFINITY && max === Number.POSITIVE_INFINITY) return "any value";
+  if (min === Number.NEGATIVE_INFINITY) return `values <= ${String(max)}`;
+  if (max === Number.POSITIVE_INFINITY) return `values >= ${String(min)}`;
+  if (min === max) return String(min);
+  return `values in [${String(min)}, ${String(max)}]`;
+};
 
 /**
  * Extra facts a higher layer (the RPG validator, §13 Stage 4) can inject: flags
@@ -424,10 +448,7 @@ export function validateRpgFoundation(
     // (bug_0092). Skip the room-adding for a provably-dead win (but still run the
     // ENDING_UNDECLARED reference check, which is independent of firability).
     if (!isUnsatisfiable(whenProfile(wc.conditions))) {
-      for (const c of wc.conditions) {
-        const v = visitedRoom(c);
-        if (v) winRooms.add(v);
-      }
+      for (const wr of winRoomReqs(wc.conditions)) winRooms.add(wr);
     }
     const endingTargets = [
       { ending: wc.ending, where: [`win:${wc.id}`], label: `win_condition "${wc.id}"` },
@@ -524,6 +545,34 @@ export function validateRpgFoundation(
       unlockableObjects.add(o.id);
   }
 
+  // ── Reachable numeric range per var, for the var_gte/var_lte/var_eq gates ────
+  // Widest write set we can see, so the range over-approximates as far as possible:
+  // authored effects + higher-layer effects + the falsifier-only branches (enemy
+  // on_defeat). A write this pass cannot see would make the range too NARROW, which
+  // is the one direction that produces false positives — hence volatileVars below.
+  const varWrites = new Map<string, VarWrite[]>();
+  for (const e of [...effects, ...(opts.extraFalsifierEffects ?? [])]) {
+    if ("inc_var" in e)
+      pushVarWrite(varWrites, e.inc_var.name, { kind: "inc", amount: e.inc_var.by });
+    else if ("dec_var" in e)
+      pushVarWrite(varWrites, e.dec_var.name, { kind: "dec", amount: e.dec_var.by });
+    else if ("set_var" in e)
+      pushVarWrite(varWrites, e.set_var.name, { kind: "set", amount: e.set_var.value });
+  }
+  // Vars mutated by mechanics with no authored effect to scan. `extraVolatileVars` is
+  // the documented injection point (rpg_validator fills it), but validateRpgFoundation
+  // is also called directly, so derive the engine-owned combat stats locally too: a
+  // range built without combat's dynamic set_var writes would be far too narrow.
+  const volatileVars = new Set<string>([
+    ...(opts.extraVolatileVars ?? []),
+    HP_VAR,
+    ATTACK_VAR,
+    DEFENSE_VAR,
+    ...pack.enemies.map((e) => enemyHpVar(e.id)),
+  ]);
+  const varRange = (name: string): { min: number; max: number } =>
+    varReachableRange(pack.meta.vars_init[name] ?? 0, varWrites.get(name));
+
   // ── Feasibility of every gate (presence, exits, interactions/hints, topics, wins) ──
   const checkConds = (conds: Condition[], where: string[]): void => {
     for (const f of flagReqs(conds)) {
@@ -576,6 +625,31 @@ export function validateRpgFoundation(
             where,
           ),
         );
+    }
+    // A numeric gate outside the var's whole reachable range can never hold. The range
+    // over-approximates (see varReachableRange), so a gate INSIDE it is never flagged
+    // even when the exact value is unreachable — this only ever misses, never rejects
+    // a good pack. Combat-volatile vars are skipped for the same reason
+    // winStaysTrueForever bails on them: their writes are not in the authored set.
+    for (const vr of varReqs(conds)) {
+      if (volatileVars.has(vr.name)) continue;
+      const { min, max } = varRange(vr.name);
+      const impossible =
+        vr.op === "gte"
+          ? vr.value > max
+          : vr.op === "lte"
+            ? vr.value < min
+            : vr.value > max || vr.value < min;
+      if (impossible) {
+        const op = vr.op === "gte" ? ">=" : vr.op === "lte" ? "<=" : "==";
+        findings.push(
+          err(
+            "IMPOSSIBLE_GATE",
+            `condition requires var "${vr.name}" ${op} ${String(vr.value)}, but it can only ever hold ${rangeText(min, max)}.`,
+            where,
+          ),
+        );
+      }
     }
   };
   for (const room of pack.rooms) {
@@ -636,6 +710,25 @@ export function validateRpgFoundation(
         checkConds(t.conditions ?? [], [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
       }
     }
+  }
+
+  // ── Phantom vars ─────────────────────────────────────────────────────────────
+  // The mirror of SKILL_CHECK_PHANTOM_STAT for condition-side var reads. A gate
+  // naming a var that is neither declared in meta.vars_init nor written by any
+  // effect is a typo: `evalCondition` reads `state.vars[name] ?? 0`, so it never
+  // throws — it silently compares against 0, making `var_gte` permanently false and
+  // `var_lte` permanently true. Requiring BOTH undeclared and unwritten keeps the
+  // legitimately-runtime-created vars (`score`, combat stats, enemy HP) clean.
+  for (const [name, where] of collectVarReads(pack)) {
+    if (name === SCORE_VAR || volatileVars.has(name)) continue;
+    if (hasDeclaredVar(pack.meta.vars_init, name) || varWrites.has(name)) continue;
+    findings.push(
+      err(
+        "PHANTOM_VAR",
+        `condition reads var "${name}", which is not declared in meta.vars_init and no effect ever writes.`,
+        where,
+      ),
+    );
   }
 
   // ── quest_critical: never permanently lost ───────────────────────────────────
@@ -1483,6 +1576,44 @@ function varNeverChanges(fixed: number, writes: VarWrite[] | undefined): boolean
   return (writes ?? []).every((w) => (w.kind === "set" ? w.amount === fixed : w.amount === 0));
 }
 
+/**
+ * The SOUND OVER-APPROXIMATION of the value range a var can ever hold — the
+ * feasibility mirror of the winStaysTrueForever stability analysis above, which
+ * asks the opposite question ("once true, can this become false?").
+ *
+ * Deliberately loose in the safe direction, so the only mistake it can make is to
+ * MISS an impossible gate, never to reject a shipped pack:
+ *  - a single `inc` by a positive amount (or `dec` by a negative one) makes the
+ *    maximum unbounded, because nothing here proves how often that effect can
+ *    fire — an interaction may be repeatable, a room re-entered. Symmetrically for
+ *    the minimum.
+ *  - `set` writes only widen the range to the literal they assign.
+ *  - the interval is not the reachable SET: with init 0 and a single
+ *    `set_var: 100`, the range is [0, 100] even though 50 is unreachable. A gate
+ *    inside the interval is therefore never flagged.
+ *
+ * `by` is sign-significant (effects.ts permits a negative inc), so this inspects
+ * the literal rather than the effect name — same discipline as varNeverDrops.
+ */
+function varReachableRange(
+  init: number,
+  writes: VarWrite[] | undefined,
+): { min: number; max: number } {
+  let min = init;
+  let max = init;
+  for (const w of writes ?? []) {
+    if (w.kind === "set") {
+      if (w.amount < min) min = w.amount;
+      if (w.amount > max) max = w.amount;
+      continue;
+    }
+    const delta = w.kind === "inc" ? w.amount : -w.amount;
+    if (delta > 0) max = Number.POSITIVE_INFINITY;
+    else if (delta < 0) min = Number.NEGATIVE_INFINITY;
+  }
+  return { min, max };
+}
+
 /** True iff `conditions` (taken as a conjunction) hold now AND stay true under every
  *  pack effect — so once met at init they can never become false. Proven only for a
  *  flat AND of individually monotone-stable atoms (flags, items, sign-significant
@@ -1616,8 +1747,27 @@ function requiredItems(conds: Condition[]): string[] {
   return out;
 }
 
-function visitedRoom(c: Condition): string | null {
-  return "visited" in c ? c.visited : null;
+/**
+ * Rooms a win condition REQUIRES, in AND-context — top-level + all_of only,
+ * mirroring flagReqs/itemReqs/questStageReqs/objectStateReqs.
+ *
+ * Both `visited` and `in_room` count. `in_room` is the STRICTER of the two (you
+ * must be standing there when the win check runs, rather than merely having been
+ * there once), so a room it names is at least as much a win-trigger room as a
+ * `visited` one. Harvesting only `visited` meant a win gated on `in_room` at a
+ * structurally unreachable room produced nothing but the UNREACHABLE_ROOM
+ * *warning*, and `makeReport` derives `ok` from errors alone — so the pack shipped
+ * green and unwinnable. The flat scan also missed either atom nested in `all_of`.
+ */
+function winRoomReqs(conds: Condition[]): string[] {
+  const out: string[] = [];
+  const walk = (c: Condition): void => {
+    if ("visited" in c) out.push(c.visited);
+    else if ("in_room" in c) out.push(c.in_room);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
 }
 
 // ── Dead-content analysis: variant shadowing + unsatisfiable guards ──────────────
@@ -1874,6 +2024,24 @@ function objectStateReqs(conds: Condition[]): { kind: "open" | "unlocked"; id: s
   return out;
 }
 
+/** A numeric gate in AND-context. `op` mirrors the three condition kinds. */
+type VarReq = { op: "gte" | "lte" | "eq"; name: string; value: number };
+
+// Required numeric bounds in AND-context — top-level + all_of only, mirroring
+// flagReqs/itemReqs/questStageReqs/objectStateReqs. any_of/none_of are NOT descended
+// (conservative: guarantees zero false positives).
+function varReqs(conds: Condition[]): VarReq[] {
+  const out: VarReq[] = [];
+  const walk = (c: Condition): void => {
+    if ("var_gte" in c) out.push({ op: "gte", name: c.var_gte.name, value: c.var_gte.value });
+    else if ("var_lte" in c) out.push({ op: "lte", name: c.var_lte.name, value: c.var_lte.value });
+    else if ("var_eq" in c) out.push({ op: "eq", name: c.var_eq.name, value: c.var_eq.value });
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
+}
+
 /** Every flag name an RPG pack READS — has_flag/not_flag in any exit,
  *  interaction condition/blocked hint, or win condition, any room/object variant `when`, NPC presence
  *  gate, or dialogue-topic gate, descending all_of/any_of/none_of. The set of
@@ -1915,6 +2083,79 @@ function collectFlagReads(pack: RpgPack): Set<string> {
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when); // reactive NPC-line guards (bug_0246)
       for (const t of node.topics) walkAll(t.conditions);
+    }
+  }
+  return reads;
+}
+
+/** Every var name an RPG pack READS through a `var_gte` / `var_lte` / `var_eq`
+ *  gate, mapped to the first site that reads it (for the finding's `where`).
+ *  Mirrors collectFlagReads EXACTLY — including variant `when:` lists and the
+ *  descent through all_of/any_of/none_of — because a typo'd var name is a typo
+ *  wherever it appears, not only in AND-context. The consumer is the PHANTOM_VAR
+ *  check: `evalCondition` reads `state.vars[name] ?? 0`, so a misspelled name is
+ *  not a runtime error, it silently compares against 0. */
+function collectVarReads(pack: RpgPack): Map<string, string[]> {
+  const reads = new Map<string, string[]>();
+  let site: string[] = [];
+  const note = (name: string): void => {
+    if (!reads.has(name)) reads.set(name, site);
+  };
+  const walk = (c: Condition): void => {
+    if ("var_gte" in c) note(c.var_gte.name);
+    else if ("var_lte" in c) note(c.var_lte.name);
+    else if ("var_eq" in c) note(c.var_eq.name);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+    else if ("none_of" in c) c.none_of.forEach(walk);
+  };
+  const walkAll = (conds: Condition[] | undefined, where: string[]): void => {
+    site = where;
+    (conds ?? []).forEach(walk);
+  };
+  for (const room of pack.rooms) {
+    for (const [index, v] of (room.variants ?? []).entries())
+      walkAll(v.when, [`room:${room.id}`, `variant:${index}`]);
+    for (const exit of room.exits)
+      walkAll(exit.conditions, [`room:${room.id}`, `exit:${exit.direction}`]);
+  }
+  for (const o of pack.objects) {
+    walkAll(o.visible_when, [`object:${o.id}`, "visible_when"]);
+    for (const [index, v] of (o.variants ?? []).entries())
+      walkAll(v.when, [`object:${o.id}`, `variant:${index}`]);
+    for (const it of o.interactions) {
+      walkAll(it.conditions, [`object:${o.id}`, `verb:${it.verb}`]);
+      for (const [index, branch] of (it.skill_check?.on_failure_when ?? []).entries())
+        walkAll(branch.conditions, [
+          `object:${o.id}`,
+          `verb:${it.verb}`,
+          `on_failure_when:${String(index)}`,
+        ]);
+      walkAll(it.blocked_hint?.visible_when, [
+        `object:${o.id}`,
+        `verb:${it.verb}`,
+        "blocked_hint:visible_when",
+      ]);
+    }
+  }
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? [])
+      walkAll(maneuver.conditions, [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`]);
+  for (const wc of pack.win_conditions) {
+    walkAll(wc.conditions, [`win:${wc.id}`]);
+    for (const [index, override] of (wc.ending_overrides ?? []).entries())
+      walkAll(override.conditions, [`win:${wc.id}`, `ending_override:${index}`]);
+  }
+  for (const e of pack.endings)
+    for (const [index, v] of (e.variants ?? []).entries())
+      walkAll(v.when, [`ending:${e.id}`, `variant:${index}`]);
+  for (const npc of pack.npcs) {
+    walkAll(npc.conditions, [`npc:${npc.id}`]);
+    for (const node of npc.dialogue.nodes) {
+      for (const [index, v] of (node.variants ?? []).entries())
+        walkAll(v.when, [`npc:${npc.id}`, `node:${node.id}`, `variant:${index}`]);
+      for (const t of node.topics)
+        walkAll(t.conditions, [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
     }
   }
   return reads;
