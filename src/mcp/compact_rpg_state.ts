@@ -18,14 +18,15 @@ import { compactMcpVisibleJournalProse } from "./journal_prose.js";
 const MAX_SCORE_VAR = "max_score";
 const CORE_STATE_VARS = new Set([ATTACK_VAR, DEFENSE_VAR, HP_VAR, MAX_SCORE_VAR, SCORE_VAR]);
 
-export const RPG_COMPACT_STATE_VERSION = 2 as const;
+// v3: the dead `contents` / `contents_more` object fields are gone. Nothing ever wrote
+// ObjectRuntime.contents, and the save gate rejected any state that carried it.
+export const RPG_COMPACT_STATE_VERSION = 3 as const;
 export const COMPACT_STATE_INVENTORY_LIMIT = 16;
 export const COMPACT_STATE_FLAG_LIMIT = 16;
 export const COMPACT_STATE_VAR_LIMIT = 16;
 export const COMPACT_STATE_JOURNAL_LIMIT = 5;
 export const COMPACT_STATE_VISITED_LIMIT = 16;
 export const COMPACT_STATE_OBJECT_LIMIT = 16;
-export const COMPACT_STATE_OBJECT_CONTENT_LIMIT = 8;
 export const COMPACT_STATE_QUEST_LIMIT = 16;
 
 export type RpgCompactStateVitals = readonly [
@@ -42,8 +43,6 @@ export type RpgCompactStateObject = {
   locked?: boolean;
   by?: "p" | "w";
   room?: string;
-  contents?: string[];
-  contents_more?: number;
 };
 
 export type RpgCompactQuestStage = readonly [quest: string, stage: string];
@@ -109,14 +108,6 @@ function visibleVisitedRooms(state: GameState): string[] {
 }
 
 function compactObjectState(id: string, runtime: ObjectRuntime): RpgCompactStateObject {
-  const contents =
-    runtime.contents === undefined
-      ? undefined
-      : compactHead(runtime.contents, COMPACT_STATE_OBJECT_CONTENT_LIMIT).map(
-          compactMcpTranscriptSummaryValue,
-        );
-  const contentsMore =
-    runtime.contents === undefined ? undefined : omittedCount(runtime.contents, contents ?? []);
   return {
     id: compactMcpTranscriptSummaryValue(id),
     ...(runtime.open === true ? { open: true as const } : {}),
@@ -125,8 +116,6 @@ function compactObjectState(id: string, runtime: ObjectRuntime): RpgCompactState
       ? { by: runtime.takenBy === "player" ? ("p" as const) : ("w" as const) }
       : {}),
     ...(runtime.room ? { room: compactMcpTranscriptSceneId(runtime.room) } : {}),
-    ...(contents !== undefined ? { contents } : {}),
-    ...(contentsMore !== undefined ? { contents_more: contentsMore } : {}),
   };
 }
 
@@ -211,8 +200,6 @@ function cloneCompactRpgStateObject(object: RpgCompactStateObject): RpgCompactSt
     ...(object.locked !== undefined ? { locked: object.locked } : {}),
     ...(object.by !== undefined ? { by: object.by } : {}),
     ...(object.room !== undefined ? { room: object.room } : {}),
-    ...(object.contents !== undefined ? { contents: [...object.contents] } : {}),
-    ...(object.contents_more !== undefined ? { contents_more: object.contents_more } : {}),
   };
 }
 

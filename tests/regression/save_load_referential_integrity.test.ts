@@ -375,20 +375,18 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown object room/);
   });
 
-  it("RPG: a runtime container with a phantom child object is a hard SaveIntegrityError", () => {
-    const forged = forgeSave((s) => {
-      s.objectState = { sarcophagus: { contents: ["no_such_object"] } };
-    });
-    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ save: forged })).toThrow(/unknown contained object/);
-  });
-
-  it("RPG: runtime container contents are a hard SaveIntegrityError", () => {
-    const forged = forgeSave((s) => {
-      s.objectState = { sarcophagus: { contents: ["iron_bar"] } };
-    });
-    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ save: forged })).toThrow(/invalid object contents state/);
+  // ObjectRuntime carried a `contents` field no effect ever wrote and the pack-aware
+  // gate unconditionally rejected. It is gone, so a forged save carrying it is now
+  // refused one layer earlier, by the .strict() schema, rather than by a bespoke check.
+  // The rejection direction is what matters and it is unchanged: such a save never loads.
+  it("RPG: runtime container contents are refused at the strict state schema", () => {
+    for (const contents of [["no_such_object"], ["iron_bar"]]) {
+      const forged = forgeSave((s) => {
+        (s.objectState as Record<string, unknown>) = { sarcophagus: { contents } };
+      });
+      expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+      expect(() => api().load_game({ save: forged })).toThrow(/malformed or non-finite/);
+    }
   });
 
   it("RPG: object takenBy without a runtime room is a hard SaveIntegrityError", () => {

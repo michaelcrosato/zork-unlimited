@@ -440,16 +440,6 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
         throw new SaveIntegrityError(`Save references invalid object takenBy state for "${id}".`);
       }
     }
-    for (const childId of runtime.contents ?? []) {
-      if (!objects.has(childId)) {
-        throw new SaveIntegrityError(
-          `Save references unknown contained object "${childId}" for "${id}".`,
-        );
-      }
-    }
-    if (runtime.contents !== undefined) {
-      throw new SaveIntegrityError(`Save references invalid object contents state for "${id}".`);
-    }
   }
   for (const [quest, stage] of Object.entries(state.questStage)) {
     if (questStages.get(quest)?.has(stage) !== true) {

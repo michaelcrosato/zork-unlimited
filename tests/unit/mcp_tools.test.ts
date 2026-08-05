@@ -2756,7 +2756,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
     rawState.state.current = "mutated_room";
     rawState.state.inventory.push("mutated_item");
     rawState.state.visited.mutated_room = true;
-    rawState.state.objectState.mutated_object = { contents: ["mutated_child"] };
+    rawState.state.objectState.mutated_object = { room: "mutated_room" };
     const afterRawStateMutation = a.get_state({
       session_id: game.session_id,
       include_state: true,

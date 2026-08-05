@@ -81,7 +81,7 @@ function isProgressAction(a: EngineAction): boolean {
  *   - `flags`       — boolean switches.
  *   - `inventory`   — carried object ids.
  *   - `vars`        — every numeric var (CYOA's `ticks`, the parser `score`).
- *   - `objectState` — per-object open/locked/contents/location (a parser puzzle's whole
+ *   - `objectState` — per-object open/locked/location (a parser puzzle's whole
  *                     point: an opened chest is a DIFFERENT state from a closed one even
  *                     when flags/inventory are untouched — omitting this collapses the
  *                     two and the BFS can never explore "the chest is now open").
@@ -111,8 +111,7 @@ export function stateKey(s: GameState): string {
   const objects = Object.entries(s.objectState)
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([id, o]) => {
-      const contents = o.contents ? [...o.contents].sort().join("+") : "";
-      return `${id}:${o.open ? 1 : 0}${o.locked ? 1 : 0}:${o.takenBy ?? ""}:${o.room ?? ""}:${contents}`;
+      return `${id}:${o.open ? 1 : 0}${o.locked ? 1 : 0}:${o.takenBy ?? ""}:${o.room ?? ""}`;
     })
     .join(";");
   const quests = Object.entries(s.questStage)

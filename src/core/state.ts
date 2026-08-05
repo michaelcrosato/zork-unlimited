@@ -44,7 +44,6 @@ function assertFiniteVars(vars: Record<string, number> | undefined, label: strin
 export type ObjectRuntime = {
   open?: boolean;
   locked?: boolean;
-  contents?: string[]; // object ids inside a container
   takenBy?: "player" | "world"; // location bookkeeping
   room?: string; // current room id if the object has been moved/dropped (Stage 2, §7.3)
 };
@@ -62,7 +61,7 @@ export type GameState = {
   flags: Record<string, boolean>; // boolean switches
   vars: Record<string, number>; // numeric variables / stats (HP, gold, skills…)
   inventory: string[]; // object ids carried by the player
-  objectState: Record<string, ObjectRuntime>; // open/locked/contents per world object
+  objectState: Record<string, ObjectRuntime>; // open/locked/location per world object
 
   // narrative
   journal: string[]; // append-only player-visible log
@@ -110,10 +109,7 @@ export function initState(opts: InitOptions): GameState {
 export function cloneGameState(state: GameState): GameState {
   const objectState: GameState["objectState"] = {};
   for (const [id, object] of Object.entries(state.objectState)) {
-    objectState[id] = {
-      ...object,
-      ...(object.contents ? { contents: [...object.contents] } : {}),
-    };
+    objectState[id] = { ...object };
   }
   return {
     ...state,

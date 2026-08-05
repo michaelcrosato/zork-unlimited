@@ -214,7 +214,7 @@ describe("save / load (§8.7)", () => {
     const bytes = saveMicro({
       ...microInitState(),
       inventory: ["torch"],
-      objectState: { chest: { contents: ["ruby"] } },
+      objectState: { chest: { open: true, room: "vault" } },
     });
     const loaded = load(bytes, MICRO_CONTENT_HASH);
 
@@ -224,7 +224,6 @@ describe("save / load (§8.7)", () => {
     expect(Object.isFrozen(loaded.state.inventory)).toBe(true);
     expect(Object.isFrozen(loaded.state.objectState)).toBe(true);
     expect(Object.isFrozen(loaded.state.objectState["chest"])).toBe(true);
-    expect(Object.isFrozen(loaded.state.objectState["chest"]?.contents)).toBe(true);
     expect(() => {
       loaded.contentHash = "deadbeef";
     }).toThrow(TypeError);
@@ -235,7 +234,7 @@ describe("save / load (§8.7)", () => {
       loaded.state.inventory.push("mutated");
     }).toThrow(TypeError);
     expect(() => {
-      loaded.state.objectState["chest"]!.contents!.push("mutated");
+      loaded.state.objectState["chest"]!.open = false;
     }).toThrow(TypeError);
   });
 

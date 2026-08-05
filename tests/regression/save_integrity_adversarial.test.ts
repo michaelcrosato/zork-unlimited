@@ -229,7 +229,7 @@ describe("save/load integrity gate — GREEN round-trip (no false rejection)", (
       vars: { score: 30, hp: 18, gold: -5 }, // includes a negative — finite, must pass
       inventory: ["torch", "gold", "map"],
       objectState: {
-        chest: { open: true, locked: false, contents: ["ruby"], room: "vault" },
+        chest: { open: true, locked: false, room: "vault" },
         gate: { locked: true, takenBy: "world" },
       },
       journal: ["The cave breathes cold air.", "You grab the gold."],

@@ -64,7 +64,6 @@ const ObjectRuntimeSchema = z
   .object({
     open: z.boolean().optional(),
     locked: z.boolean().optional(),
-    contents: z.array(z.string()).optional(),
     takenBy: z.enum(["player", "world"]).optional(),
     room: z.string().optional(),
   })
