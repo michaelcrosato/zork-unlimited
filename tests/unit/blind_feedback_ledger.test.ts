@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -181,6 +181,12 @@ describe("blind feedback ledger", () => {
         retention_eligible: true,
         accepted_decisions: 40,
         exit_reason: "player_ended_at_choice",
+      });
+
+      writeFileSync(reportPath, readFileSync(reportPath, "utf8").replace(/\r?\n```\r?\n$/u, ""));
+      expect(buildBlindFeedbackLedger(reports, { cwd: root })).toMatchObject({
+        accepted_reports: 1,
+        rejected_reports: 0,
       });
 
       writeFileSync(

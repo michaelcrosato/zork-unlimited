@@ -1202,6 +1202,36 @@ describe("Codex certified fleet rollout authority", () => {
     ).toMatchObject({ ok: false, reason: expect.stringMatching(/requested model differs/i) });
   });
 
+  it("authenticates exact terminal Spark report bytes through current v2 fleet artifacts", () => {
+    const { artifacts, expected } = sparkDirectVerifiedArtifactFixture();
+    const terminalReport = artifacts.report.toString("utf8").replace(/\r?\n```\r?\n$/u, "");
+    const primaryEnvelope = JSON.parse(artifacts.primaryEnvelope.toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+    primaryEnvelope.result = terminalReport;
+    const rolloutRows = sparkDirectMcpRollout(terminalReport);
+    const terminalArtifacts = {
+      ...artifacts,
+      report: Buffer.from(terminalReport),
+      primaryEnvelope: Buffer.from(`${JSON.stringify(primaryEnvelope)}\n`),
+      providerEvents: Buffer.from(jsonl(publicEvents(terminalReport))),
+      providerRollout: Buffer.from(jsonl(rolloutRows)),
+      providerCapture: Buffer.from(sparkDirectCaptureReceipt(rolloutRows)),
+    };
+
+    expect(validatePureFleetRunArtifactBytes(terminalArtifacts, expected)).toMatchObject({
+      ok: true,
+      facts: {
+        provider: "codex",
+        actual_model: "gpt-5.3-codex-spark",
+        hashes: {
+          report_sha256: createHash("sha256").update(terminalReport).digest("hex"),
+        },
+      },
+    });
+  });
+
   it("authenticates a receipt-bound report against the original rollout message", () => {
     const fixture = receiptBindingFixture();
     const rolloutRows = rollout(fixture.originalReport);

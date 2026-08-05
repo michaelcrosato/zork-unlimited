@@ -163,31 +163,41 @@ function resolveReport(
   text: string,
   manifestIndex: ReadonlyMap<string, ManifestRow>,
 ): ReportOutcome {
+  const verifyWithAdjacentPureSidecar = () => {
+    const sidecarPath = filePath.replace(/\.md$/, ".run.json");
+    if (!existsSync(sidecarPath)) return null;
+    if (statSync(sidecarPath).mtimeMs < statSync(filePath).mtimeMs) return null;
+    const sidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
+    if (!sidecar.ok || sidecar.sidecar.play_mode !== "pure") return null;
+    const providerAuthority = validateAdjacentPureProviderAuthority(filePath);
+    if (!providerAuthority.ok) return null;
+    return verifyBlindReportText(text, {
+      requiredPlayMode: "pure",
+      runSidecar: sidecar.sidecar,
+    });
+  };
   let verification = verifyBlindReportText(text);
-  if (!verification.ok) return { rejected: true };
+  let pureSidecarVerified = false;
+  if (!verification.ok) {
+    const pureVerification = verifyWithAdjacentPureSidecar();
+    if (!pureVerification?.ok) return { rejected: true };
+    verification = pureVerification;
+    pureSidecarVerified = true;
+  }
 
   // Pure UX prose is not retention evidence by itself. Apply the same
   // adjacent-sidecar gate as the durable feedback ledger so a timed-out,
   // copied, or otherwise unverified V2-shaped report cannot enter Tier 3 as a
   // live-player run. Legacy reports stay readable as legacy-guided evidence;
   // structural V2 reports remain explicit QA inputs rather than pure evidence.
-  if (isPureExitInterviewV2(verification.interview)) {
-    const sidecarPath = filePath.replace(/\.md$/, ".run.json");
-    if (!existsSync(sidecarPath)) return { rejected: true };
+  if (isPureExitInterviewV2(verification.interview) && !pureSidecarVerified) {
     // A reused explicit output prefix must not let an older successful run's
     // sidecar bless a newer timed-out/partial report. The verifier writes the
     // sidecar only after the report and server evidence both pass, so a valid
     // adjacent sidecar cannot predate its report.
-    if (statSync(sidecarPath).mtimeMs < statSync(filePath).mtimeMs) return { rejected: true };
-    const sidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
-    if (!sidecar.ok) return { rejected: true };
-    const providerAuthority = validateAdjacentPureProviderAuthority(filePath);
-    if (!providerAuthority.ok) return { rejected: true };
-    verification = verifyBlindReportText(text, {
-      requiredPlayMode: "pure",
-      runSidecar: sidecar.sidecar,
-    });
-    if (!verification.ok) return { rejected: true };
+    const pureVerification = verifyWithAdjacentPureSidecar();
+    if (!pureVerification?.ok) return { rejected: true };
+    verification = pureVerification;
   }
 
   const manifestRow = manifestIndex.get(fileName);

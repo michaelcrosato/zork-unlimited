@@ -181,35 +181,36 @@ export function buildBlindFeedbackLedger(
     }
     const fullPath = join(reportsDir, name);
     const reportText = readFileSync(fullPath, "utf8");
-    let verification = verifyBlindReportText(reportText);
-    if (!verification.ok) {
-      rejectedReports += 1;
-      continue;
-    }
-    if (isPureExitInterviewV2(verification.interview)) {
+    const verifyWithAdjacentPureSidecar = () => {
       const sidecarPath = fullPath.replace(/\.md$/, ".run.json");
-      if (!existsSync(sidecarPath)) {
-        rejectedReports += 1;
-        continue;
-      }
+      if (!existsSync(sidecarPath)) return null;
       const parsedSidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
-      if (!parsedSidecar.ok) {
-        rejectedReports += 1;
-        continue;
-      }
+      if (!parsedSidecar.ok || parsedSidecar.sidecar.play_mode !== "pure") return null;
       const providerAuthority = validateAdjacentPureProviderAuthority(fullPath);
-      if (!providerAuthority.ok) {
-        rejectedReports += 1;
-        continue;
-      }
-      verification = verifyBlindReportText(reportText, {
+      if (!providerAuthority.ok) return null;
+      return verifyBlindReportText(reportText, {
         requiredPlayMode: "pure",
         runSidecar: parsedSidecar.sidecar,
       });
-      if (!verification.ok) {
+    };
+    let verification = verifyBlindReportText(reportText);
+    let pureSidecarVerified = false;
+    if (!verification.ok) {
+      const pureVerification = verifyWithAdjacentPureSidecar();
+      if (!pureVerification?.ok) {
         rejectedReports += 1;
         continue;
       }
+      verification = pureVerification;
+      pureSidecarVerified = true;
+    }
+    if (isPureExitInterviewV2(verification.interview) && !pureSidecarVerified) {
+      const pureVerification = verifyWithAdjacentPureSidecar();
+      if (!pureVerification?.ok) {
+        rejectedReports += 1;
+        continue;
+      }
+      verification = pureVerification;
     }
     const interview = verification.interview;
     const pure = isPureExitInterviewV2(interview);

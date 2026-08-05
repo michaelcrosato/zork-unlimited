@@ -649,6 +649,19 @@ describe("collectInputs", () => {
     expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 0, rejected: 1 });
   });
 
+  it("compiles a complete terminal pure interview only through its verified sidecar", () => {
+    const dir = mkdtempSync(join(tmpdir(), "feedback-terminal-pure-"));
+    const base = join(dir, "20260101T000007Z_overworld_seed7");
+    const fixture = pureReportAndSidecar();
+    const terminalReport = fixture.report.replace(/\r?\n```\r?\n$/u, "");
+    writeFileSync(`${base}.md`, terminalReport);
+
+    expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 0, rejected: 1 });
+
+    writeFileSync(`${base}.run.json`, fixture.sidecar);
+    expect(collectInputs(process.cwd(), [dir])).toMatchObject({ verified: 1, rejected: 0 });
+  });
+
   it("re-audits retained Codex wrapper evidence before compiling feedback", () => {
     const dir = mkdtempSync(join(tmpdir(), "feedback-codex-reaudit-"));
     const base = join(dir, "20260101T000005Z_overworld_seed5");

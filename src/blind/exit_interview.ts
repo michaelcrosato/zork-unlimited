@@ -532,6 +532,10 @@ export function exitInterviewPlayMode(
 }
 
 const BLOCK = /```json exit-interview[^\S\r\n]*\r?\n([\s\S]*?)\r?\n```[^\S\r\n]*(?=\r?\n|$)/gu;
+const TERMINAL_OPENING = /^```json exit-interview[^\S\r\n]*(?:\r?\n|$)/gmu;
+
+export const MISSING_EXIT_INTERVIEW_REASON =
+  "missing exit interview (a ```json exit-interview fenced block is mandatory)";
 
 export type ExitInterviewExtraction =
   | { ok: true; interview: ExitInterview }
@@ -551,10 +555,7 @@ function schemaForParsedInterview(parsed: unknown): typeof ExitInterviewSchema |
 export function extractExitInterview(text: string): ExitInterviewExtraction {
   const matches = [...text.matchAll(BLOCK)];
   if (matches.length === 0) {
-    return {
-      ok: false,
-      reason: "missing exit interview (a ```json exit-interview fenced block is mandatory)",
-    };
+    return { ok: false, reason: MISSING_EXIT_INTERVIEW_REASON };
   }
   if (matches.length !== 1) {
     return { ok: false, reason: "report must contain exactly one exit interview block" };
@@ -582,4 +583,62 @@ export function extractExitInterview(text: string): ExitInterviewExtraction {
     };
   }
   return { ok: true, interview: res.data as ExitInterview };
+}
+
+/**
+ * Parse the two complete terminal shapes occasionally emitted by streaming
+ * pure players: JSON through EOF, or JSON followed immediately by an inline
+ * closing fence. Callers must still bind the receipt to private run evidence;
+ * generic and structural report parsing deliberately remain strict.
+ */
+export function extractTerminalPureExitInterview(text: string): ExitInterviewExtraction {
+  const openings = [...text.matchAll(TERMINAL_OPENING)];
+  if (openings.length === 0) {
+    return { ok: false, reason: MISSING_EXIT_INTERVIEW_REASON };
+  }
+  if (openings.length > 1) {
+    return {
+      ok: false,
+      reason: "terminal pure report must contain exactly one exit interview opening marker",
+    };
+  }
+
+  const opening = openings[0]!;
+  let body = text.slice((opening.index ?? 0) + opening[0].length).trimEnd();
+  if (body.length === 0) {
+    return { ok: false, reason: "terminal pure exit interview block is empty" };
+  }
+
+  const fences = [...body.matchAll(/```/gu)];
+  if (fences.length === 1 && body.endsWith("```")) {
+    const withoutFence = body.slice(0, -3);
+    if (!withoutFence.endsWith("}")) {
+      return {
+        ok: false,
+        reason: "terminal pure exit interview closing fence must immediately follow its JSON",
+      };
+    }
+    body = withoutFence;
+  } else if (fences.length !== 0) {
+    return {
+      ok: false,
+      reason: "terminal pure exit interview has unsupported fence or trailing content",
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return { ok: false, reason: "terminal pure exit interview is not valid JSON through EOF" };
+  }
+  const res = PureExitInterviewV2Schema.safeParse(parsed);
+  if (!res.success) {
+    const first = res.error.issues[0];
+    return {
+      ok: false,
+      reason: `terminal pure exit interview invalid: ${first?.path.join(".") ?? "?"} — ${first?.message ?? "schema mismatch"}`,
+    };
+  }
+  return { ok: true, interview: res.data };
 }
