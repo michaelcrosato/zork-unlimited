@@ -34,32 +34,76 @@ export function textDefect(text: string): string | null {
 }
 
 /**
- * Scan everything the current step just made player-visible: the observation's
- * title/description/ending text, plus every `narration` event's text. Never
- * throws on content defects (those become messages); a THROW out of this
- * function (e.g. the observation builder itself blowing up) is the caller's
- * CRASH oracle to catch.
+ * Scan everything the current step just made player-visible, then every
+ * `narration` event's text. Never throws on content defects (those become
+ * messages); a THROW out of this function (e.g. the observation builder itself
+ * blowing up) is the caller's CRASH oracle to catch.
+ *
+ * The oracle used to check only title/description/ending text, which left the
+ * whole reactive surface unwatched: a broken template in a `locked_msg`, an
+ * object `variants[].name`, a dialogue node, a pressure band label, or a skill
+ * check's `stakes` renders straight to the player and is never emitted as a
+ * narration event, so nothing else in the pipeline could see it either — the
+ * schemas only require `min(1)` strings. Every field below is text a player
+ * reads. Prefixes are per-site so the finding fingerprint
+ * (`src/crawl/findings.ts`) dedupes each site independently; the original four
+ * prefixes are unchanged so existing fingerprints still match.
+ *
+ * Deliberately NOT scanned: `state.journal` (it only grows, so re-scanning the
+ * whole log every step is quadratic in a long crawl, and journal prose is
+ * written by effects that narrate the same text), `inventory` and `state.flags`
+ * (ids, not prose), and `exits[].direction` (compass tokens).
  */
 export function renderDefects(index: RpgIndex, state: GameState, events: GameEvent[]): string[] {
   const messages: string[] = [];
-  const obs = buildRpgObservation(index, state, { includeAvailableActions: false });
+  // `available_actions` costs a second base-action enumeration, but `command` and
+  // `skill_check.stakes` are only reachable through it and are read by every player.
+  const obs = buildRpgObservation(index, state, { includeAvailableActions: true });
+  const check = (label: string, text: string): void => {
+    const defect = textDefect(text);
+    if (defect) messages.push(`${label}: ${defect}`);
+  };
 
-  const titleDefect = textDefect(obs.title);
-  if (titleDefect) messages.push(`observation title: ${titleDefect}`);
+  check("observation title", obs.title);
+  check("observation description", obs.description);
 
-  const descriptionDefect = textDefect(obs.description);
-  if (descriptionDefect) messages.push(`observation description: ${descriptionDefect}`);
+  if (obs.ending) check("ending text", obs.ending.text);
 
-  if (obs.ending) {
-    const endingDefect = textDefect(obs.ending.text);
-    if (endingDefect) messages.push(`ending text: ${endingDefect}`);
+  for (const object of obs.visible_objects) check(`visible object ${object.id} name`, object.name);
+  for (const npc of obs.npcs_present) check(`npc ${npc.id} name`, npc.name);
+  for (const enemy of obs.enemies_present) check(`enemy ${enemy.id} name`, enemy.name);
+
+  for (const exit of obs.blocked_exits)
+    check(`blocked exit ${exit.direction} message`, exit.message);
+  for (const blocked of obs.blocked_actions)
+    check(`blocked action ${blocked.id} reason`, blocked.reason);
+
+  if (obs.dialogue) check(`dialogue ${obs.dialogue.npc} text`, obs.dialogue.npc_text);
+
+  for (const track of obs.pressure_tracks ?? []) {
+    check(`pressure track ${track.id} title`, track.title);
+    check(`pressure track ${track.id} band label`, track.band.label);
+    // Band descriptions are optional in the schema; an absent one is not a defect,
+    // but a present-and-broken one is.
+    if (track.band.description !== undefined)
+      check(`pressure track ${track.id} band description`, track.band.description);
+    // The next-band preview renders alongside the current one, so a defect there is
+    // visible a band earlier than the band itself would reveal it.
+    if (track.next) {
+      check(`pressure track ${track.id} next band label`, track.next.label);
+      if (track.next.description !== undefined)
+        check(`pressure track ${track.id} next band description`, track.next.description);
+    }
+  }
+
+  for (const option of obs.available_actions) {
+    check(`available action ${option.id} command`, option.command);
+    if (option.skill_check?.stakes !== undefined)
+      check(`available action ${option.id} skill check stakes`, option.skill_check.stakes);
   }
 
   for (const event of events) {
-    if (event.type === "narration") {
-      const defect = textDefect(event.text);
-      if (defect) messages.push(`narration event: ${defect}`);
-    }
+    if (event.type === "narration") check("narration event", event.text);
   }
 
   return messages;
