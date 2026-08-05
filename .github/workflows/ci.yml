@@ -90,16 +90,18 @@ jobs:
   # fails, then fails explicitly instead of being skipped or succeeding accidentally.
   verify:
     if: ${{ always() }}
-    needs: [verify-prerequisites, test-shards]
+    needs: [verify-prerequisites, test-shards, crawl-smoke]
     runs-on: ubuntu-latest
     steps:
       - name: Require all verification prerequisites
         env:
           PRECHECK_RESULT: ${{ needs.verify-prerequisites.result }}
           TEST_SHARDS_RESULT: ${{ needs.test-shards.result }}
+          CRAWL_SMOKE_RESULT: ${{ needs.crawl-smoke.result }}
         run: |
           test "$PRECHECK_RESULT" = success
           test "$TEST_SHARDS_RESULT" = success
+          test "$CRAWL_SMOKE_RESULT" = success
 
   crawl-smoke:
     runs-on: ubuntu-latest
