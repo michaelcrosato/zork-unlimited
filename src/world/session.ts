@@ -501,6 +501,18 @@ export class OverworldSession {
   private journeyState: JourneyContractSnapshot = createInitialJourneyContractSnapshot();
   private openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null = null;
   private questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundary | null = null;
+  /**
+   * Story-choice reveals the player has already opened, as ordinary session state.
+   *
+   * The MCP layer gates duty selection on this and hard-throws when it is absent, so
+   * it is LEGALITY, not presentation — and this engine's whole contract is that legality
+   * is a function of state. It lived in a WeakMap keyed by the live session object,
+   * deliberately outside the snapshot, which meant exporting and restoring a session
+   * silently revoked a gate the player had already satisfied: they had opened the
+   * compass, and after a restore they could no longer take the choice it unlocked.
+   * Persisting it makes an exported session fully resumable and keeps legality derivable.
+   */
+  private inspectedStoryReveals = new Map<string, Set<string>>();
   private trustedCivicPreparationSourceWorldHash: string | null = null;
   private trustedLegacyRegistrationReceiptSourceWorldHash: string | null = null;
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
@@ -1286,6 +1298,33 @@ export class OverworldSession {
     }
   }
 
+  /**
+   * Record that the player has opened a story choice's progressive-disclosure reveal.
+   * The single accessor pair the MCP gate reads and writes, so reveal legality is
+   * derived from session state rather than from where the call happened to arrive.
+   */
+  rememberStoryReveal(storyChoiceId: string, revealId: string): void {
+    let reveals = this.inspectedStoryReveals.get(storyChoiceId);
+    if (!reveals) {
+      reveals = new Set<string>();
+      this.inspectedStoryReveals.set(storyChoiceId, reveals);
+    }
+    if (reveals.has(revealId)) return;
+    reveals.add(revealId);
+    this.clearSessionCaches();
+  }
+
+  storyRevealWasInspected(storyChoiceId: string, revealId: string): boolean {
+    return this.inspectedStoryReveals.get(storyChoiceId)?.has(revealId) === true;
+  }
+
+  /** Drop every reveal receipt — the story is decided, so the gate has no more work. */
+  private forgetStoryReveals(): void {
+    if (this.inspectedStoryReveals.size === 0) return;
+    this.inspectedStoryReveals.clear();
+    this.clearSessionCaches();
+  }
+
   inspectJourneyStory(storyChoiceId: string): JourneyStoryChoicePrompt {
     assertJourneyContractAcceptingDecision(this.journeyState);
     const presented = this.journey().storyChoice;
@@ -1852,7 +1891,12 @@ export class OverworldSession {
   }
 
   chooseJourneyStory(choiceId: string, storyChoiceId?: string): OverworldJourneyStoryChoiceResult {
-    return this.chooseJourneyStoryInternal(choiceId, storyChoiceId, true);
+    const result = this.chooseJourneyStoryInternal(choiceId, storyChoiceId, true);
+    // The story is decided, so the reveal gate has nothing left to guard. Clearing here
+    // also keeps a revealed branch and an unrevealed one converging on the same snapshot
+    // hash once both have chosen, which several parity proofs depend on.
+    this.forgetStoryReveals();
+    return result;
   }
 
   private chooseJourneyStoryInternal(
@@ -2283,6 +2327,7 @@ export class OverworldSession {
       pendingRoadEncounter: this.pendingRoadEncounter,
       openingLeadSourceDecisionTrail: this.openingLeadSourceDecisionTrail,
       questCharacterDeathBoundary: this.questCharacterDeathBoundary,
+      inspectedStoryReveals: this.inspectedStoryReveals,
       journey: this.journeyState,
     };
   }
@@ -2309,6 +2354,12 @@ export class OverworldSession {
     this.questCharacterDeathBoundary = snapshot.questCharacterDeathBoundary
       ? cloneQuestCharacterDeathBoundary(snapshot.questCharacterDeathBoundary)
       : null;
+    this.inspectedStoryReveals = new Map(
+      (snapshot.inspectedStoryReveals ?? []).map(([storyChoiceId, revealIds]) => [
+        storyChoiceId,
+        new Set(revealIds),
+      ]),
+    );
     this.assertQuestCharacterDeathBoundary();
     this.openingLeadSourceDecisionTrail = applied.openingLeadSourceDecisionTrailAfter
       ? cloneOpeningLeadSourceDecisionTrail(applied.openingLeadSourceDecisionTrailAfter)

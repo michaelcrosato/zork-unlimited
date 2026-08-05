@@ -457,6 +457,12 @@ export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.e
   character: CampaignCharacterStateSchema,
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrailSchema.optional(),
   questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundarySchema.optional(),
+  // Progressive-disclosure reveals the player has opened, per story choice. OPTIONAL and
+  // omitted when empty, so a v9/v10 snapshot written before this field existed still
+  // parses and an unrevealed session hashes exactly as it did.
+  inspectedStoryReveals: z
+    .array(z.tuple([z.string().min(1), z.array(z.string().min(1)).min(1)]))
+    .optional(),
 })
   .strict()
   .superRefine((snapshot, ctx) => {

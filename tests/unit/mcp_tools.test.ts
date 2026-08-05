@@ -1044,7 +1044,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
       "Campaign supplies, fatigue, and character persist; quest HP, stats and issued inventory are local; only authored imports/exports cross.",
     );
     const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
-    expect(compactLaunchBytes).toBe(6_771);
+    // 6_771 before the retired unlock_exit legend tag and the dead compact-state
+    // contents fields came out; the ceiling below is the real budget.
+    expect(compactLaunchBytes).toBe(6_747);
     expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
     const fieldHandoff = a.step_action({
       session_id: compactStartedQuest.rpg_session_id,

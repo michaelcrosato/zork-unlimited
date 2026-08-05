@@ -102,7 +102,10 @@ describe("bug_0399 — wolf_winter signposts the score-bearing day-book", () => 
           "relief_resident_shelter_allocated",
           "relief_mobile_reserve_allocated",
         ],
-      }).findings,
+      }).findings.filter((finding) => finding.severity === "error"),
     ).toHaveLength(0);
+    // Errors only: wolf_winter carries standing AMBIGUOUS_NPC_NAME warnings for the four
+    // same-named June declarations until they move onto a variant affordance. This test is
+    // about the day-book award, and warnings never flip report.ok.
   });
 });

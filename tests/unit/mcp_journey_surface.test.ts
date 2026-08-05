@@ -1427,11 +1427,15 @@ describe("MCP journey surface", () => {
       story_choice_id: oath.id,
       reveal_id: disclosure.reveal.id,
     });
-    expect(expanded).toMatchObject({
-      snapshot_hash: before.snapshot_hash,
-      unchanged: true,
-      story: compactJourneyStoryChoiceComparison(canonical, undefined, disclosure.reveal.id),
-    });
+    // Opening the compass is now RECORDED. The gate that gives duty selection its
+    // legality reads this, and legality in this engine is a function of state — so the
+    // receipt lives in the snapshot and moves the hash, rather than in a WeakMap that a
+    // restore silently empties. The story projection itself is unchanged.
+    expect(expanded.story).toEqual(
+      compactJourneyStoryChoiceComparison(canonical, undefined, disclosure.reveal.id),
+    );
+    const revealedHash = expanded.snapshot_hash;
+    expect(revealedHash).not.toBe(before.snapshot_hash);
     expect(expanded.story.options.map((option) => option.id)).toEqual([
       ...disclosure.initialOptionIds,
       ...disclosure.reveal.optionIds,
@@ -1444,7 +1448,8 @@ describe("MCP journey surface", () => {
       ...FULL_OVERWORLD,
     });
     expect(fullReveal.story).toEqual(canonical);
-    expect(fullReveal.snapshot_hash).toBe(before.snapshot_hash);
+    // Re-opening the same reveal is genuinely idempotent — the receipt is a set.
+    expect(fullReveal.snapshot_hash).toBe(revealedHash);
 
     const detail = a.inspect_overworld_session_story({
       session_id: started.session_id,
@@ -1452,7 +1457,8 @@ describe("MCP journey surface", () => {
       option_id: hiddenId,
     });
     expect(detail.story).toEqual(compactJourneyStoryChoiceComparison(canonical, hiddenId));
-    expect(detail.snapshot_hash).toBe(before.snapshot_hash);
+    // Reading one option's detail reveals nothing new, so it moves nothing.
+    expect(detail.snapshot_hash).toBe(revealedHash);
     expect(() =>
       a.inspect_overworld_session_story({
         session_id: started.session_id,
@@ -1469,7 +1475,21 @@ describe("MCP journey surface", () => {
       }),
     ).toThrow(/option_id or reveal_id/i);
     const afterReveal = a.export_overworld_session({ session_id: started.session_id });
-    expect(afterReveal).toEqual(before);
+    expect(afterReveal).not.toEqual(before);
+    expect(afterReveal.snapshot.inspectedStoryReveals).toEqual([[oath.id, [disclosure.reveal.id]]]);
+
+    // THE POINT OF PERSISTING IT: a session exported after the reveal restores WITH the
+    // gate satisfied. Previously the receipt was excluded from the snapshot, so a player
+    // who opened the compass, exported, and restored could no longer take the choice they
+    // had unlocked — an exported session was not fully resumable.
+    const resumedRevealed = a.restore_overworld_session({ snapshot: afterReveal.snapshot });
+    expect(() =>
+      a.inspect_overworld_session_story({
+        session_id: resumedRevealed.session_id,
+        story_choice_id: oath.id,
+        option_id: hiddenId,
+      }),
+    ).not.toThrow();
 
     const directBranch = a.restore_overworld_session({ snapshot: before.snapshot });
     const expandedBranch = a.restore_overworld_session({ snapshot: before.snapshot });
@@ -1537,6 +1557,10 @@ describe("MCP journey surface", () => {
     expect(directShortcutChoice.snapshot_hash).toBe(expandedShortcutChoice.snapshot_hash);
     expect(directShortcutChoice.result).toEqual(expandedShortcutChoice.result);
 
+    // A snapshot taken AFTER the reveal restores with the gate satisfied: the player
+    // opened the compass, so the duty they unlocked is still theirs to take. A snapshot
+    // taken BEFORE it (the `directBranch` above) still gates, because in that session
+    // they had not opened it. Both follow from legality being a function of state.
     const restoredAfterReveal = a.restore_overworld_session({
       snapshot: afterReveal.snapshot,
     });
@@ -1546,7 +1570,7 @@ describe("MCP journey surface", () => {
         story_choice_id: oath.id,
         choice: hiddenId,
       }),
-    ).toThrow(/hidden[^]*reveal_id[^]*this session/i);
+    ).not.toThrow();
   });
 
   it("stages compact departure terms without mutating zero-, one-, or multi-inspection play", () => {

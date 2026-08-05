@@ -322,36 +322,12 @@ export type OverworldToolHandlerDeps = {
 
 export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
   const { sessions, overworldSessions } = deps;
-  /**
-   * Presentation-only reveal receipts. Keeping them keyed by the live session
-   * object makes a restored session start unrevealed without adding anything to
-   * the deterministic snapshot, hash, or decision ledger.
-   */
-  const inspectedStoryReveals = new WeakMap<OverworldSession, Map<string, Set<string>>>();
-
-  const rememberStoryReveal = (
-    session: OverworldSession,
-    storyChoiceId: string,
-    revealId: string,
-  ): void => {
-    let stories = inspectedStoryReveals.get(session);
-    if (!stories) {
-      stories = new Map<string, Set<string>>();
-      inspectedStoryReveals.set(session, stories);
-    }
-    let reveals = stories.get(storyChoiceId);
-    if (!reveals) {
-      reveals = new Set<string>();
-      stories.set(storyChoiceId, reveals);
-    }
-    reveals.add(revealId);
-  };
-
-  const storyRevealWasInspected = (
-    session: OverworldSession,
-    storyChoiceId: string,
-    revealId: string,
-  ): boolean => inspectedStoryReveals.get(session)?.get(storyChoiceId)?.has(revealId) === true;
+  // Reveal receipts are ORDINARY SESSION STATE (OverworldSession.rememberStoryReveal /
+  // storyRevealWasInspected), not a WeakMap keyed by the live session object. This gate
+  // hard-throws, so it is legality, and in an engine whose whole contract is
+  // state -> legal actions a gate that a restore silently revokes is a bug: a player who
+  // opened the compass, exported, and restored could no longer take the choice they had
+  // unlocked. The session clears the receipts itself once the story is chosen.
 
   const storyChoiceForSelection = (
     session: OverworldSession,
@@ -382,7 +358,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     journeyStoryChoiceOptionById(story, choiceId);
     const disclosure = story.progressiveDisclosure;
     if (!disclosure || disclosure.initialOptionIds.includes(choiceId)) return;
-    if (storyRevealWasInspected(session, story.id, disclosure.reveal.id)) return;
+    if (session.storyRevealWasInspected(story.id, disclosure.reveal.id)) return;
     throw new Error(
       `Story option "${choiceId}" is hidden. Inspect story "${story.id}" with reveal_id "${disclosure.reveal.id}" in this session before inspecting or choosing it.`,
     );
@@ -954,7 +930,6 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         (session) => {
           assertStoryChoiceVisible(session, args.choice, args.story_choice_id);
           const result = session.chooseJourneyStory(args.choice, args.story_choice_id);
-          inspectedStoryReveals.delete(session);
           return result;
         },
         compactOverworldJourneyStoryChoiceResult,
@@ -1001,11 +976,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           },
         );
         if (response.ok === true && args.reveal_id !== undefined) {
-          rememberStoryReveal(
-            overworldSessions.get(args.session_id),
-            args.story_choice_id,
-            args.reveal_id,
-          );
+          overworldSessions
+            .get(args.session_id)
+            .rememberStoryReveal(args.story_choice_id, args.reveal_id);
         }
         return response as unknown as OverworldJourneyStoryInspectionResponse<Args>;
       }
@@ -1023,10 +996,17 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         fullDepartureRecap
           ? compactOpeningDepartureRecapTerms(fullDepartureRecap)
           : null;
+      // Record the reveal BEFORE reading the hash: the receipt is session state now, so
+      // the response must quote the snapshot the caller actually holds afterwards.
+      if (args.reveal_id !== undefined) {
+        guarded.session.rememberStoryReveal(args.story_choice_id, args.reveal_id);
+      }
       const response = {
         ok: true,
         session_id: args.session_id,
         snapshot_hash: overworldSessions.snapshotHash(guarded.session),
+        // The story projection is read-only; `unchanged` describes the JOURNEY, which a
+        // reveal does not advance — no decision is recorded and no goal moves.
         unchanged: true,
         ...(departureRecap ? { departure_recap: departureRecap } : {}),
         ...(departureRecapTerms
@@ -1042,9 +1022,6 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
               ? compactJourneyStoryChoiceComparison(story, undefined, args.reveal_id)
               : compactJourneyStoryChoiceComparison(story),
       } as OverworldJourneyStoryInspectionResponse<Args>;
-      if (args.reveal_id !== undefined) {
-        rememberStoryReveal(guarded.session, args.story_choice_id, args.reveal_id);
-      }
       return response;
     },
 
