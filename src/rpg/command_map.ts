@@ -121,40 +121,6 @@ function customUseByVerb(index: RpgModelIndex, verb: string, rest: string): RpgA
     : { type: "USE", item: hit.item, target: hit.target };
 }
 
-const npcAliasCache = new WeakMap<
-  RpgModelIndex,
-  { exact: Map<string, string>; list: Array<{ id: string; nameNorm: string }> }
->();
-
-function npcAliasMap(index: RpgModelIndex) {
-  let cache = npcAliasCache.get(index);
-  if (!cache) {
-    const exact = new Map<string, string>();
-    const list: Array<{ id: string; nameNorm: string }> = [];
-    for (const npc of index.npcs.values()) {
-      const nameNorm = npc.name.toLowerCase();
-      exact.set(npc.id, npc.id);
-      if (!exact.has(nameNorm)) exact.set(nameNorm, npc.id);
-      list.push({ id: npc.id, nameNorm });
-    }
-    cache = { exact, list };
-    npcAliasCache.set(index, cache);
-  }
-  return cache;
-}
-
-function resolveNpc(index: RpgModelIndex, phrase: string): string | null {
-  const norm = stripArticle(phrase).toLowerCase().trim();
-  if (!norm) return null;
-  const cache = npcAliasMap(index);
-  const exactMatch = cache.exact.get(norm);
-  if (exactMatch) return exactMatch;
-  for (const entry of cache.list) {
-    if (entry.nameNorm.includes(norm)) return entry.id;
-  }
-  return null;
-}
-
 type VisibleNpcResolution =
   | { kind: "resolved"; id: string; name: string }
   | { kind: "ambiguous" }
@@ -358,10 +324,26 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
       return { ok: false, reason: `Use what on what? (e.g. "use rope on old well")` };
     }
     case "talk": {
-      const npc = resolveNpc(index, rest.replace(/^to\s+/, ""));
-      return npc
-        ? { ok: true, action: { type: "TALK", npc } }
-        : { ok: false, reason: `There's no one called "${rest}" here.` };
+      // Resolve against people the player can actually SEE, never pack order. The
+      // old resolver scanned the whole pack and returned the first substring hit
+      // with no presence filter, so in a quest that models one character in several
+      // mutually exclusive states — four NPCs sharing "Road Warden June Pike" — the
+      // player read that name off the legal-action menu, typed any abbreviation of
+      // it, and was told the action was unavailable: the id it resolved to belonged
+      // to a June who was definitionally absent on that branch. Only the byte-exact
+      // menu label worked, and only through the CLI's exact-match short-circuit.
+      const phrase = rest.replace(/^to\s+/, "").trim();
+      const resolved = resolveVisibleNpc(index, state, phrase);
+      if (resolved.kind === "ambiguous") {
+        return {
+          ok: false,
+          reason: `"${phrase}" matches more than one person here. Name them exactly.`,
+        };
+      }
+      if (resolved.kind === "unmatched") {
+        return { ok: false, reason: `There's no visible person called "${phrase}" here.` };
+      }
+      return { ok: true, action: { type: "TALK", npc: resolved.id } };
     }
     case "inventory":
     case "inv":

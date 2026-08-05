@@ -1,0 +1,53 @@
+id: bug_0538
+title: "Typing any abbreviation of June Pike's name refused the action she was standing there offering"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: external repository review (finding N2), 2026-08-04
+reports:
+  - EXTERNAL_REVIEW.md
+severity: S1
+symptom: >
+  On the LURE / DRIVE / FORTIFY branches the player sees "talk to Road Warden June Pike"
+  in the legal-action menu, types "talk to june" (or "june pike", "pike", "warden"), and
+  is told the action is not available. Only the byte-exact menu label works, and only in
+  the CLI, through an exact-match short-circuit that bypasses the parser entirely. A
+  player on any other surface, or one who abbreviates, simply cannot address the person
+  in front of them.
+root_cause: >
+  The TALK path called a resolver that scanned the whole pack and returned the first
+  substring match in declaration order, with no room filter, no condition filter and no
+  ambiguity handling. Wolf-Winter models one character in four mutually exclusive states
+  as four NPCs sharing the display name "Road Warden June Pike"; june_pike_combat_boundary
+  is declared first, so every phrasing resolved to her — and on the three strategy branches
+  she is definitionally absent, so the reducer rejected the resulting action. The correct
+  resolver, resolveVisibleNpc, already existed twenty lines below and was used only by the
+  qualified-ASK path.
+why_nothing_caught_it: >
+  No verification layer models a human typing text. AMBIGUOUS_ALIAS scans pack.objects and
+  never pack.npcs; the crawler drives structured RpgActions; the blind testers play over
+  MCP with stable action ids. Three independent layers, and the one player class none of
+  them models is the one that hits it.
+fix: >
+  Route TALK through resolveVisibleNpc, which filters to NPCs in the current room whose
+  conditions pass, prefers an exact id/name match, accepts a partial only when exactly one
+  visible person matches, and reports ambiguity rather than guessing. The now-unused
+  first-match resolver and its alias cache are deleted. A second change, AMBIGUOUS_NPC_NAME,
+  makes a duplicate display name visible to the validator so this cannot recur silently;
+  it ships as a warning because the four Junes are provably mutually exclusive and erroring
+  would make a healthy pack unplayable.
+deterministic_witnesses:
+  - state: "byre_mouth, june_pike_present + strategy_drive_committed + drive_flank_turned"
+    before: 'talk to june -> TALK june_pike_combat_boundary (absent) -> refused'
+    after: "talk to june -> TALK june_pike_drive, which is the sole legal TALK option"
+  - state: "byre_yard, june_pike_present"
+    after: "talk to june -> TALK june_pike_combat_boundary (unchanged, she is the visible one)"
+  - state: "steading_yard, no NPCs present"
+    after: 'talk to june -> ok:false, "There''s no visible person called \"june\" here."'
+  - fixture: content/broken-fixtures/foundation_ambiguous_npc_name.yaml
+    code: AMBIGUOUS_NPC_NAME
+tests:
+  - tests/regression/rpg_talk_visible_npc_resolution.test.ts
+  - tests/regression/rpg_foundation_negative_corpus.test.ts
+verification:
+  - npm run validate
+  - npm run crawl:smoke
+  - npm run health
