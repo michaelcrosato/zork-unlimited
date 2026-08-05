@@ -63,9 +63,9 @@ describe("RPG foundation validator negative corpus — rejection-direction witne
   it("discovers the full fixture corpus (mass-deletion tripwire)", () => {
     // The 25 witnesses recovered from main's retired parser corpus, plus the three
     // numeric/room gate witnesses (IMPOSSIBLE_GATE on a var, PHANTOM_VAR,
-    // WIN_UNREACHABLE via in_room); adding a fixture should consciously raise this
-    // floor, deleting one must fail here.
-    expect(files.length).toBeGreaterThanOrEqual(28);
+    // WIN_UNREACHABLE via in_room) and AMBIGUOUS_NPC_NAME; adding a fixture should
+    // consciously raise this floor, deleting one must fail here.
+    expect(files.length).toBeGreaterThanOrEqual(29);
   });
 
   it("every fixture carries a machine-readable MUST FAIL/WARN header", () => {
@@ -78,6 +78,7 @@ describe("RPG foundation validator negative corpus — rejection-direction witne
     const covered = [...new Set(expectations.map((e) => e.code))].sort();
     expect(covered).toEqual([
       "AMBIGUOUS_ALIAS",
+      "AMBIGUOUS_NPC_NAME",
       "DIALOGUE_NONTERMINATING",
       "DUPLICATE_ID",
       "END_GAME_UNDECLARED",

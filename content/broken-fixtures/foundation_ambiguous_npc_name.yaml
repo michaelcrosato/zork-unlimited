@@ -1,0 +1,43 @@
+# MUST WARN: AMBIGUOUS_NPC_NAME
+# Two NPCs share a display name, so the name the player reads off the action menu
+# does not identify either of them. AMBIGUOUS_ALIAS covered the same hazard for
+# objects and never looked at pack.npcs.
+meta:
+  {
+    id: ambiguous_npc_name,
+    title: "Ambiguous Npc Name",
+    start_room: gate,
+    vars_init: { hp: 10, attack: 2, defense: 1 },
+  }
+rooms:
+  - id: gate
+    name: "Gate"
+    description: "A gate with two wardens."
+    exits: [{ direction: north, to: yard }]
+  - id: yard
+    name: "Yard"
+    description: "An empty yard."
+    exits: [{ direction: south, to: gate }]
+npcs:
+  - id: warden_a
+    name: "Road Warden Ash"
+    description: "One warden."
+    room: gate
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: "Ash nods."
+          topics: [{ id: leave, prompt: "Leave", end: true }]
+  - id: warden_b
+    name: "Road Warden Ash"
+    description: "The other warden, identically named."
+    room: gate
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: "The other Ash nods."
+          topics: [{ id: leave, prompt: "Leave", end: true }]
+win_conditions: [{ id: w, conditions: [{ visited: yard }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

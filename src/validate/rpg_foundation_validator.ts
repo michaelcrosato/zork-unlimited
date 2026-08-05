@@ -398,6 +398,36 @@ export function validateRpgFoundation(
     }
   }
 
+  // ── Ambiguous NPC display names ──────────────────────────────────────────────
+  // The NPC-side mirror of AMBIGUOUS_ALIAS above, which scans pack.objects only.
+  // Two people sharing a display name means the name the player reads off the
+  // action menu does not identify one of them, and a text resolver has nothing
+  // better than the name to work with. Free-text TALK now resolves against
+  // visible, condition-passing NPCs, so a duplicate is only actually unplayable
+  // when the two can be co-present — but it is always an authoring smell, and
+  // Wolf-Winter's four same-named Junes are a hand-rolled variant table standing
+  // in for an NPC-level `variants[]` the schema does not yet offer.
+  //
+  // WARNING severity, deliberately: those four Junes ship today and are provably
+  // mutually exclusive, so erroring would make a healthy pack unplayable
+  // (makeReport derives ok from errors alone). Promote this to `err` once NPCs
+  // gain a variant affordance and the duplicates are gone — at which point the
+  // check also proves that restructure complete.
+  const npcNameOwner = new Map<string, string>();
+  for (const n of pack.npcs) {
+    const key = n.name.toLowerCase();
+    const prev = npcNameOwner.get(key);
+    if (prev !== undefined && prev !== n.id)
+      findings.push(
+        warn(
+          "AMBIGUOUS_NPC_NAME",
+          `display name "${n.name}" is shared by npcs "${prev}" and "${n.id}"; a player typing that name cannot say which they mean.`,
+          [`npc:${n.id}`, `npc:${prev}`],
+        ),
+      );
+    else npcNameOwner.set(key, n.id);
+  }
+
   // Bail before graph analysis if references are broken (would crash traversal).
   // UNLOCK_EXIT_ROOM_MISSING is included because a dangling unlock_exit room id corrupts
   // the settable-flags set the graph analysis uses (exitFlag writes an unreachable key).
