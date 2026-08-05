@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 731 -->
+<!-- historical_cycle_count: 732 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - station_support_progressive_disclosure
+
+- Evidence choice: 9/10 verified Terra players named Albany Station's multi-surface planning density despite 10/10 Wolf-Winter completion, so the repeated issue was first-view presentation rather than missing mechanics.
+- Surface/effect: compact MCP v43 / Station board v3, terminal, and UI now lead with legal roads plus one plain field-kit / relief-wagon / second-rider cue; exact optional comparisons and authenticated inspect/talk handles remain behind an explicit read-only detail request.
+- Truthfulness/parity: all support options, costs, order, action ids, full verbose observation, state, RNG, hashes, journal, and decision counts are unchanged; an explicit detail request bypasses snapshot `unchanged` without mutating play, and pure actions remain unauthorized until their handles are shown.
+- Pure evidence: exact-clean Terra seed 80418000 on `385c3a08` verified first attempt, finished The Wolf-Winter by LURE at decision 25, continued at 25/40, won The Gallowmere and ended at 49, rated clarity/enjoyment 4/4, replay-yes, with no bug or stuck state.
+- Economy: the canary used 3.338M raw / 127,358 uncached input + 9,772 output (137,130 useful) with 96.18% cache reuse and no retry, fallback, or failed slot.
+- Self-critique/follow-through: the player still found collapsed support easy to overlook and technical session handles dense; one canary proves build safety, not a 4.2 clarity uplift, and leaves support discoverability as an open cohort question rather than grounds for another immediate fleet.
+- Guard: the audit closed stale v2 prompt/assertion paths plus one vacuous UI check; crawls `20260804T221651Z` / `20260804T224521Z` are green, canonical health passes 459 files/3,906 tests plus UI/all 12 packs, and only two fresh reports exist since the last compile.
 
 ### Cycle result - symmetric_wolf_strategy_framing
 
@@ -157,14 +167,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the first attempt used 4.941M raw / 163,847 uncached input + 11,640 output at 96.68% input-cache reuse (175,487 useful, about 3,134/decision); no retry, fallback, cohort, or fanout ran.
 - Self-critique/follow-through: this proves clean-build safety and retention, not DRIVE uptake; the player again named Albany planning density and chose replay-no, while its Queensbury/Gallowmere S1 notes stay outside this focused starting-slice increment pending accumulated feedback.
 - Guard: two independent reviews found no actionable issue; crawls `20260801T112656Z` / `20260801T130256Z` have zero findings, and exact-tree health passes 451 files/3,771 tests plus all 12 packs.
-
-### Cycle result - duty_comparison_first
-
-- Evidence choice: all nine verified members of the latest Terra diagnostic chose LURE, 8/9 named opening-planning density, and the preceding exact canary specifically called the hidden duty alternatives S1; default-first rendering made the optional comparison easiest to miss.
-- Surface/effect: compact MCP, terminal, and UI now lead with the read-only `Compare FORTIFY, LURE, or DRIVE duties` control and a neutral cost/strategy compass before the standard packet; expanded cards retain their prior order and direct legality.
-- Measured effect: the description grows 62 UTF-8 bytes (about 16 one-time input tokens) with no new field, card, decision, or tool call; hidden duty cards still do not leak before inspection.
-- Counterfactual: duty/evidence choices, standard packet, mechanics, RNG, state, saves, hashes, outcomes, content, and full canonical projections are unchanged.
-- Pure evidence: exact-clean Terra seed 7314061 took Aid-Only/Hayden, diverted every wolf alive, continued twice, won The Gallowmere at decision 53, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, broken state, loop, stuck state, or soft-lock.
-- Economy: the first attempt used 4.104M raw / 149,190 uncached input + 9,858 output at 96.36% input-cache reuse (159,048 useful); no retry, fallback, cohort, or fanout ran.
-- Self-critique/follow-through: the public report cannot prove comparison uptake and this player still chose the standard packet and named compact-state density; one canary validates the build, not strategy diversity, while a fresh S1 submenu reset and repeated stale LURE narration supply the next gameplay candidates.
-- Guard: two independent reviews, 36 focused tests, UI visual/expanded-control smoke, crawls `20260801T101605Z` / `20260801T102707Z`, and exact-tree health (450 files/3,764 tests plus all 12 packs) are clean.
