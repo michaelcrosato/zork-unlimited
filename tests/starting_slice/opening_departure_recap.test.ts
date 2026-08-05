@@ -169,7 +169,7 @@ describe("Albany opening departure recap", () => {
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.departure_recap).toBeUndefined();
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
-      2,
+      3,
       WOLF.id,
       expect.any(String),
       ["committed", 10, null, ["preparation", "relief_allocation", "field_team"]],
@@ -332,10 +332,8 @@ describe("Albany opening departure recap", () => {
     expect(terminal.indexOf(`${WOLF.title} field briefing:`)).toBeLessThan(
       terminal.indexOf("Depart now:"),
     );
-    expect(terminal.indexOf("Depart now:")).toBeLessThan(
-      terminal.indexOf("Optional dispatch support (independent):"),
-    );
-    expect(terminal.indexOf("Optional dispatch support (independent):")).toBeLessThan(
+    expect(terminal.indexOf("Depart now:")).toBeLessThan(terminal.indexOf("Optional support:"));
+    expect(terminal.indexOf("Optional support:")).toBeLessThan(
       terminal.indexOf("Current commitments: `review dispatch`."),
     );
     expect(terminal.indexOf("Take the Exposed Ridge Road")).toBeGreaterThan(

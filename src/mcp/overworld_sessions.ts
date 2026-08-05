@@ -7,6 +7,7 @@ import {
   type OverworldCompactView,
 } from "../world/compact_view.js";
 import { compactOpeningDepartureRecapTerms } from "../world/opening_departure_recap.js";
+import { compactStationDispatchBoardSupport } from "../world/station_dispatch_board.js";
 import type { OverworldManifest } from "../world/overworld.js";
 import { freshGameTutorial, type FreshGameTutorial } from "../world/fresh_game_tutorial.js";
 import { OverworldSession, type OverworldSessionSnapshot } from "../world/session.js";
@@ -57,6 +58,7 @@ export type OverworldMcpResponseOptions = OverworldMcpSnapshotGuardOptions & {
   compact_context?: boolean;
   compact_result?: boolean;
   include_departure_recap_terms?: boolean;
+  include_station_dispatch_support?: boolean;
   include_ids?: boolean;
   include_route_options?: boolean;
   include_world_name?: boolean;
@@ -159,6 +161,7 @@ export type OverworldMcpReadArgs = {
   if_snapshot_hash?: string;
   include_observation?: boolean;
   include_departure_recap_terms?: boolean;
+  include_station_dispatch_support?: boolean;
   include_ids?: boolean;
   include_route_options?: boolean;
   include_world_name?: boolean;
@@ -498,6 +501,7 @@ export class OverworldMcpSessionStore {
     args: Pick<
       OverworldMcpResponseOptions,
       | "include_departure_recap_terms"
+      | "include_station_dispatch_support"
       | "include_ids"
       | "include_route_options"
       | "include_world_name"
@@ -514,6 +518,10 @@ export class OverworldMcpSessionStore {
     if (args.include_departure_recap_terms === true) {
       const recap = session.view().departureRecap;
       if (recap) context.departure_recap_terms = compactOpeningDepartureRecapTerms(recap);
+    }
+    if (args.include_station_dispatch_support === true) {
+      const board = session.view().stationDispatchBoard;
+      if (board) context.station_dispatch_support = compactStationDispatchBoardSupport(board);
     }
     const patch = this.takeLegendPatch(session, context, additionalKeys);
     return patch ? { [field]: patch, context } : { context };
@@ -638,6 +646,7 @@ export class OverworldMcpSessionStore {
     const snapshotHash = this.fullSnapshotHash(session);
     if (
       args.include_departure_recap_terms !== true &&
+      args.include_station_dispatch_support !== true &&
       args.if_snapshot_hash !== undefined &&
       overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
     ) {
@@ -670,6 +679,7 @@ export class OverworldMcpSessionStore {
     const snapshotHash = this.fullSnapshotHash(session);
     if (
       args.include_departure_recap_terms !== true &&
+      args.include_station_dispatch_support !== true &&
       args.if_snapshot_hash !== undefined &&
       overworldSnapshotHashMatches(args.if_snapshot_hash, snapshotHash)
     ) {

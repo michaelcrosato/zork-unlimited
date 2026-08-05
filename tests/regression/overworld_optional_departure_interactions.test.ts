@@ -4,6 +4,7 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { compactOverworldView, OVERWORLD_COMPACT_LEGEND } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { compactStationDispatchBoardSupport } from "../../src/world/station_dispatch_board.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -157,16 +158,17 @@ describe("optional Station departure interactions", () => {
     ]);
     const compact = session.compactView();
     expect(compact.departure_interactions).toBeUndefined();
+    expect(compact.station_dispatch_board?.[0]).toBe(3);
     expect(compact.station_dispatch_board?.[4]).toEqual(
       expect.arrayContaining([
-        ["preparation", "open_optional", null, expect.any(String), ["inspect", PREPARATION.id]],
-        [
-          "relief_allocation",
-          "open_optional",
-          null,
-          expect.any(String),
-          ["inspect", ALLOCATION.id],
-        ],
+        ["preparation", "open_optional", null, null, null],
+        ["relief_allocation", "open_optional", null, null, null],
+      ]),
+    );
+    expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toEqual(
+      expect.arrayContaining([
+        ["preparation", expect.any(String), ["inspect", PREPARATION.id]],
+        ["relief_allocation", expect.any(String), ["inspect", ALLOCATION.id]],
       ]),
     );
     expect(OVERWORLD_COMPACT_LEGEND.departure_interactions).toContain(
@@ -226,13 +228,7 @@ describe("optional Station departure interactions", () => {
       session
         .compactView()
         .station_dispatch_board?.[4].find(([slot]) => slot === "relief_allocation"),
-    ).toEqual([
-      "relief_allocation",
-      "open_optional",
-      null,
-      expect.any(String),
-      ["inspect", ALLOCATION.id],
-    ]);
+    ).toEqual(["relief_allocation", "open_optional", null, null, null]);
 
     session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
     expect(session.view().departureInteractions).toEqual([]);
@@ -268,13 +264,10 @@ describe("optional Station departure interactions", () => {
     expect(session.compactView().departure_contact_leads).toBeUndefined();
     expect(
       session.compactView().station_dispatch_board?.[4].find(([slot]) => slot === "field_team"),
-    ).toEqual([
-      "field_team",
-      "open_optional",
-      null,
-      expect.any(String),
-      ["talk", june.id, june.name],
-    ]);
+    ).toEqual(["field_team", "open_optional", null, null, null]);
+    expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toContainEqual(
+      ["field_team", expect.any(String), ["talk", june.id, june.name]],
+    );
     expect(compactOverworldView(session.view()).station_dispatch_board).toEqual(
       session.compactView().station_dispatch_board,
     );
@@ -296,7 +289,10 @@ describe("optional Station departure interactions", () => {
       session
         .compactView()
         .station_dispatch_board?.[4].find(([slot]) => slot === "field_team")?.[4],
-    ).toEqual(["talk", june.id, june.name]);
+    ).toBeNull();
+    expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toContainEqual(
+      ["field_team", expect.any(String), ["talk", june.id, june.name]],
+    );
     expect(compactOverworldView(session.view()).station_dispatch_board).toEqual(
       session.compactView().station_dispatch_board,
     );

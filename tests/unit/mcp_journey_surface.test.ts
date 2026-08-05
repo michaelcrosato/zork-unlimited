@@ -25,6 +25,7 @@ import {
   openingSelectionReceiptWordCount,
 } from "../../src/world/opening_choice_receipt.js";
 import { compactOpeningDepartureRecapTerms } from "../../src/world/opening_departure_recap.js";
+import { compactStationDispatchBoardSupport } from "../../src/world/station_dispatch_board.js";
 import {
   TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
   TANNERS_FEVER_ACCOUNTABILITY_ID,
@@ -1070,6 +1071,30 @@ describe("MCP journey surface", () => {
       expectCompactRecall(compact.context);
       expect(compact.context).not.toHaveProperty("departure_recap_terms");
       expect(full.snapshot_hash).toBe(compact.snapshot_hash);
+      if (expectedBoard) {
+        const sourceBoard = source.view().stationDispatchBoard;
+        if (!sourceBoard) throw new Error("expected full Station dispatch board");
+        // An explicitly requested verbose observation remains the complete data
+        // surface; progressive disclosure applies to compact/pure presentation.
+        expect(full.observation.stationDispatchBoard).toEqual(sourceBoard);
+        expect(full.observation.stationDispatchBoard?.support).toEqual(sourceBoard.support);
+        expect(compact.context).not.toHaveProperty("station_dispatch_support");
+        const supportReview = a.get_overworld_session_context({
+          session_id: compact.session_id,
+          if_snapshot_hash: compact.snapshot_hash,
+          include_station_dispatch_support: true,
+        });
+        expect(supportReview).not.toHaveProperty("unchanged");
+        if (!("context" in supportReview)) {
+          throw new Error(`expected explicit Station support before ${kind}`);
+        }
+        expectCompactRecall(supportReview.context);
+        expect(supportReview.context.station_dispatch_support).toEqual(
+          compactStationDispatchBoardSupport(sourceBoard),
+        );
+        expect(supportReview.legend_delta).toHaveProperty("station_dispatch_support");
+        expect(supportReview.snapshot_hash).toBe(compact.snapshot_hash);
+      }
       const inspection = a.restore_overworld_session({ compact_context: true, snapshot });
       const reviewed = a.get_overworld_session_context({
         session_id: compact.session_id,

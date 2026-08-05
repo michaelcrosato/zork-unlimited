@@ -193,7 +193,7 @@ export function buildOverworldSessionCompactView(
   const stationDispatchBoard = state.stationDispatchBoard
     ? compactStationDispatchBoard(state.stationDispatchBoard)
     : null;
-  const hasStationDispatchBoard = stationDispatchBoard?.[0] === 2;
+  const hasStationDispatchBoard = stationDispatchBoard !== null;
   const departureQuestId = hasStationDispatchBoard ? stationDispatchBoard[1] : departureRecap?.[1];
   const departureLaunchReady =
     departureQuestId !== undefined && questStarts.some(([questId]) => questId === departureQuestId);

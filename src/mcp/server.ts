@@ -1198,6 +1198,9 @@ const W = {
 const S = {
   include_session_id: B("Echo the session id."),
 };
+const STATION_SUPPORT = {
+  include_station_dispatch_support: B("Optional Station support purposes and action handles."),
+};
 const OVERWORLD_READ_DETAILS = PLAY_MODE === "pure" ? {} : { ...S, ...W, ...IDS, ...ROUTES };
 const COMPACT_OVERWORLD_CONTEXT =
   PLAY_MODE === "pure"
@@ -1252,6 +1255,7 @@ tool(
     ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,
     include_departure_recap_terms: B("Exact selected plan terms."),
+    ...STATION_SUPPORT,
     ...OVERWORLD_READ_DETAILS,
   },
   (a) => api.get_overworld_session_context(a),
