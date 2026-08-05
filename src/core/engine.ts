@@ -91,7 +91,12 @@ export function makeStep<A extends EngineAction = RpgAction>(rules: Rules<A>) {
     }
 
     // §8.4.1 — legality against the legal-action set. No state change on failure.
-    const legal = rules.legalActions(state).some((a) => actionEquals(a, action));
+    // Canonicalize the probe ONCE rather than inside the predicate: actionEquals
+    // canonicalizes both operands, so testing membership in a set of N actions cost
+    // 2N JSON.stringify passes when N+1 suffice. Purely local — same comparison, same
+    // result — and it sits under every solver BFS, where it is the hot path.
+    const target = canonicalize(action);
+    const legal = rules.legalActions(state).some((a) => canonicalize(a) === target);
     if (!legal) return reject(state, "That action is not available right now.");
 
     const resolution = rules.resolve(state, action);

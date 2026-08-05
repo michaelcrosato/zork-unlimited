@@ -45,6 +45,7 @@
  *      prose `when:` variants, never on a route — so no ending needs a drop.)
  */
 import { makeStep, type EngineAction, type Rules } from "../core/engine.js";
+import { memoizeLegalActions, newLegalActionCache } from "./legal_action_cache.js";
 import type { GameState } from "../core/state.js";
 import type { Action } from "../api/types.js";
 
@@ -208,12 +209,20 @@ export function exhaustiveEndingsMulti<A extends EngineAction = Action>(
   onState?: (s: GameState) => void,
   opts?: SearchOpts<A>,
 ): ExhaustiveResult {
-  const primary = ruleSets[0];
-  if (!primary) throw new Error("exhaustiveEndingsMulti requires at least one rule set");
+  if (ruleSets.length === 0)
+    throw new Error("exhaustiveEndingsMulti requires at least one rule set");
+  // One cache per search, shared across the rule sets — legality is rng-independent
+  // (see above), so every regime sees the same legal set for the same state object.
+  // Without this, each state is enumerated once for the loop below AND once inside
+  // makeStep's legality check per (action × rule set): 5.1 enumerations per state
+  // measured on gallowmere, all but one of them redundant.
+  const cache = newLegalActionCache<A>();
+  const memoized = ruleSets.map((r) => memoizeLegalActions(r, cache));
+  const primary = memoized[0]!;
   const explore = opts?.explore ?? ((a: A) => isProgressAction(a));
   const key = opts?.key ?? stateKey;
   const onEdge = opts?.onEdge;
-  const steps = ruleSets.map((r) => makeStep(r));
+  const steps = memoized.map((r) => makeStep(r));
   const reached = new Set<string>();
   const seen = new Set<string>();
   // Keep FIFO traversal without repeatedly shifting a growing array. `Array.shift()` moves
