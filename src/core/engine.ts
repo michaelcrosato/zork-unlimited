@@ -57,6 +57,9 @@ export type Rules<A extends EngineAction = RpgAction> = {
    * ordered event list for the step and returns only the events to append. The
    * content-free engine never inspects which var is "score" — that knowledge stays
    * in the content layer that supplies this hook.
+   *
+   * The argument is a SNAPSHOT — mutating it cannot affect the step's result, and
+   * returning it unchanged appends nothing. Purity is enforced here, not trusted.
    */
   decorateEvents?: (events: GameEvent[]) => GameEvent[];
 };
@@ -127,8 +130,18 @@ export function makeStep<A extends EngineAction = RpgAction>(rules: Rules<A>) {
     // from everything that just happened this step. State-free — it adds player-facing
     // narration only, never mutates `next` — so determinism and the state hash are
     // untouched. Run last, so the score line lands after the action's own narration.
+    //
+    // The hook gets a SNAPSHOT, not the live array: this is the engine's only
+    // extension seam, and handing it the array we are about to return let a
+    // misbehaving decorator splice or clear the step's own events. Copying here
+    // makes the documented purity a property of the engine rather than a promise
+    // the hook has to keep — same defensive spread as `applied.events` above. A
+    // decorator that returns its own argument is caught too, since the returned
+    // array is the snapshot and appending it would duplicate every event.
     if (rules.decorateEvents) {
-      events.push(...rules.decorateEvents(events));
+      const snapshot = [...events];
+      const decorated = rules.decorateEvents(snapshot);
+      if (decorated !== snapshot) events.push(...decorated);
     }
 
     // §8.4.6 — advance the step counter (state hash is recomputed by callers/trace).
