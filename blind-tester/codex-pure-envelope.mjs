@@ -114,7 +114,7 @@ const PURE_MCP_TOOL_CATALOG_SHA256 = new Map([
   ["get_overworld_session", "92a177f601d9cb30553a45a6d356e0727981cdcb8a9c1da776378bf7eebe070b"],
   [
     "get_overworld_session_context",
-    "4871feadfbe513fdaa76df08a588c12db0e581568d0d6da5bfe1f8365f3f03e3",
+    "4e4c8a1bb5e8af5e4316d4669513f96f1e0eef7ae23fd895e580c3d3aff6d5f8",
   ],
   ["travel_overworld_session", "a950b0f764ad06b11baaf6cc656303b8ff43f15309cf8816157b32ac8a3d74cc"],
   [

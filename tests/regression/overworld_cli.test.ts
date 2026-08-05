@@ -20,6 +20,7 @@ import {
   renderJourneyGate,
   renderJourneyStatus,
   renderQuestLaunch,
+  renderStationDispatchBoard,
   matchJourneyGateOption,
   resolveQuestLaunchChoice,
 } from "../../bin/overworld_play.js";
@@ -233,7 +234,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(terminal).not.toMatch(/market.*scout/i);
   });
 
-  it("renders Station support from board action handles without changing launch state", () => {
+  it("keeps Station support behind one read-only review affordance without changing launch state", () => {
     const preparation = WORLD.opening_preparation;
     const ally = WORLD.opening_ally;
     if (!preparation || !ally) throw new Error("Albany must retain its Station ally flow.");
@@ -249,12 +250,16 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const readyBeforePreparation = render(session.view());
     expect(readyBeforePreparation).toContain("The Wolf-Winter field briefing:");
     expect(readyBeforePreparation).toContain("Depart now:");
-    expect(readyBeforePreparation).toContain("Optional dispatch support (independent):");
-    expect(readyBeforePreparation.indexOf("Depart now:")).toBeLessThan(
-      readyBeforePreparation.indexOf("Optional dispatch support (independent):"),
-    );
-    expect(readyBeforePreparation).toContain("June Pike, second rider");
     expect(readyBeforePreparation).toContain(
+      "Optional support: field kit, relief wagon, or second rider — `review support`.",
+    );
+    expect(readyBeforePreparation.indexOf("Depart now:")).toBeLessThan(
+      readyBeforePreparation.indexOf("Optional support:"),
+    );
+    expect(readyBeforePreparation).not.toContain("June Pike, second rider");
+    const expandedBeforePreparation = renderStationDispatchBoard(session.view()).join("\n");
+    expect(expandedBeforePreparation).toContain("June Pike, second rider");
+    expect(expandedBeforePreparation).toContain(
       `Talk to ${initialFieldTeam.action.contactName}: \`talk ${initialFieldTeam.action.contactName}\``,
     );
     expect(session.snapshot()).toEqual(beforeSnapshot);
@@ -273,7 +278,10 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       throw new Error("Expected the ready Station board talk handle.");
     }
     const ready = render(session.view());
-    expect(ready).toContain(
+    expect(ready).not.toContain(
+      `Talk to ${readyFieldTeam.action.contactName}: \`talk ${readyFieldTeam.action.contactName}\``,
+    );
+    expect(renderStationDispatchBoard(session.view()).join("\n")).toContain(
       `Talk to ${readyFieldTeam.action.contactName}: \`talk ${readyFieldTeam.action.contactName}\``,
     );
     expect(session.snapshot()).toEqual(readySnapshot);
@@ -289,7 +297,9 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const rendered = render(session.view());
 
     expect(rendered).toContain("Depart now:");
-    expect(rendered).toContain("Optional dispatch support (independent):");
+    expect(rendered).toContain(
+      "Optional support: field kit, relief wagon, or second rider — `review support`.",
+    );
     expect(rendered).toContain("Current commitments: `review dispatch`.");
     expect(rendered).not.toContain(bounded);
     expect(bounded).toContain(`${recap.questTitle} dispatch recap:`);
@@ -580,7 +590,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
 });
 
 describe("overworld_play CLI (scripted mode)", () => {
-  it("uses an executable start command for the promoted Station launch preview", () => {
+  it("uses an executable start command and read-only support review for the promoted Station launch preview", () => {
     const stationed = sessionAtOpeningStation();
     const baselineHash = stationed.snapshotHash();
     const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-launch-first-"));
@@ -591,7 +601,7 @@ describe("overworld_play CLI (scripted mode)", () => {
         "--restore",
         snapshotPath,
         "--commands",
-        "look; review dispatch; start The Wolf-Winter; cancel; hash",
+        "look; review support; review dispatch; start The Wolf-Winter; cancel; hash",
       ]);
       expect(run.status, run.output).toBe(0);
       expect(run.output).toContain("Depart now:");
@@ -599,6 +609,9 @@ describe("overworld_play CLI (scripted mode)", () => {
         "Start with `start The Wolf-Winter`; route selection follows before commitment.",
       );
       expect(run.output).toContain("The Wolf-Winter exact active terms and plan slots:");
+      expect(run.output).toContain("Optional support: field kit, relief wagon, or second rider");
+      expect(run.output).toContain("June Pike, second rider");
+      expect(run.output).toContain("Talk to June Pike: `talk June Pike`");
       expect(run.output).toContain(
         `Active term: ${stationed.view().departureRecap!.entries[0]!.activeFieldTerm!}`,
       );
@@ -829,7 +842,7 @@ describe("overworld_play CLI (scripted mode)", () => {
         "--restore",
         snapshotPath,
         "--commands",
-        `look; inspect ${preparation.id}; inspect ${option.id}; back; choose ${option.id}; hash`,
+        `look; review support; inspect ${preparation.id}; inspect ${option.id}; back; choose ${option.id}; hash`,
       ]);
       expect(run.status, run.output).toBe(0);
       expect(run.output).toContain(
@@ -892,6 +905,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     try {
       const commands = [
         "look",
+        "review support",
         `inspect ${preparation.id}`,
         "review dispatch",
         `inspect ${preparationOption.id}`,

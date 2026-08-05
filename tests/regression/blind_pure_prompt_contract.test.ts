@@ -169,18 +169,29 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("context.quest_starts");
     expect(prompt).toContain("pass those values unchanged");
     expect(prompt).toContain("read-only\n  `station_dispatch_board`");
-    expect(prompt).toContain("`[2, quest_id, guidance, dispatch, rows]`");
-    expect(prompt).toContain("`[slot, status, selected_title, purpose, action]`");
-    expect(prompt).toContain("The live departure remains");
-    expect(prompt).toContain("Support rows\n  are independent and optional");
+    expect(prompt).toContain("`[3, quest_id, guidance, dispatch, rows]`");
+    expect(prompt).toContain("`[slot, status, selected_title|null, purpose|null, action|null]`");
+    expect(prompt).toContain("The live\n  departure and its legal roads remain");
+    expect(prompt).toContain("one deliberate,\n  collapsed planning affordance");
+    expect(prompt).toContain("every optional support row has null `purpose` and `action`");
+    expect(prompt).toContain("does not authorize an inspect or talk call");
+    expect(prompt).toContain("mcp__adventureforge__get_overworld_session_context");
+    expect(prompt).toContain("`include_station_dispatch_support: true`");
+    expect(prompt).toContain("`station_dispatch_support`: `[[slot, purpose, action], ...]`");
+    expect(prompt).toContain("Do not request it\n  merely to enumerate all three rows");
+    expect(prompt).toContain("Support rows are independent and optional");
     expect(prompt).toContain('`["inspect", story_choice_id]`');
     expect(prompt).toContain('`["talk", character_id, contact_name]`');
     expect(prompt).toContain("A null action is not");
     expect(prompt).toContain("mcp__adventureforge__talk_overworld_session_contact");
     expect(prompt).toContain("A talk action alone can present the actual");
-    expect(prompt).toContain("reading the board changes no state");
+    expect(prompt).toContain("reading the default board or deferred support detail");
     expect(prompt).toContain("or decision count");
-    expect(prompt).toMatch(/compact\s+fallback may instead expose `departure_recap`/);
+    expect(prompt).toMatch(
+      /older session cannot produce the v3 board, the compact\s+fallback may instead expose `departure_recap`/,
+    );
+    expect(prompt).toContain("A legacy v2 board can instead carry");
+    expect(prompt).toContain("use only those visible non-null\n  actions as authorization");
     expect(prompt).toContain("`departure_interactions`, and");
     expect(prompt).toContain("`departure_contact_leads`");
     expect(prompt).toContain("context.job_scenes");
@@ -189,7 +200,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toMatch(/passing\s+both values unchanged/);
     expect(prompt).toContain("versioned comparison contains short option summaries");
     expect(prompt).toContain("visible `reviewOption`");
-    expect(prompt).toMatch(/that option's\s+exact `id` at the declared argument/);
+    expect(prompt).toMatch(/that option's\s+exact `id` at the declared\s+argument/);
     expect(prompt).toMatch(/candidate's new\s+consequence\/timing/);
     expect(prompt).toContain("authenticated already-selected terms");
     expect(prompt).toContain("separately read recap or terms");
@@ -200,7 +211,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("then choose only from the expanded visible");
     expect(prompt).toMatch(/do not expand every\s+option/);
     expect(prompt).toContain("pass the inspected `story_choice_id` only when needed");
-    expect(prompt).toContain("to disambiguate a shared option id");
+    expect(prompt).toMatch(/to\s+disambiguate a shared\s+option id/);
     expect(prompt).not.toContain("with both that\n  `story_choice_id`");
     expect(prompt).toContain("does not repeat the\n  Station board or other world context");
     expect(prompt).not.toContain("mcp__adventureforge__start_world_quest");

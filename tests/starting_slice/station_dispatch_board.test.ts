@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { cloneOverworldCompactView, compactOverworldView } from "../../src/world/compact_view.js";
 import {
   compactStationDispatchBoard,
+  compactStationDispatchBoardSupport,
   deriveStationDispatchBoard,
 } from "../../src/world/station_dispatch_board.js";
 import {
@@ -48,7 +49,7 @@ describe("Station dispatch board", () => {
     if (!board || !view.departureRecap) throw new Error("Expected the Station dispatch board.");
 
     expect(board).toMatchObject({
-      version: 2,
+      version: 3,
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
@@ -126,11 +127,11 @@ describe("Station dispatch board", () => {
     expect(cloneOverworldCompactView(compact).station_dispatch_board).toEqual(
       compact.station_dispatch_board,
     );
-    // V2 replaces the dispatch recap and current action index without carrying
-    // duplicated title, launch, label, or detail-hint payloads.
+    // V3 keeps the first compact Station view launch-first and defers optional
+    // support purposes and action handles to an explicit read-only context.
     expect(JSON.stringify(compact.station_dispatch_board).length).toBeLessThanOrEqual(1_000);
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
-      2,
+      3,
       WOLF.id,
       board.guidance,
       [
@@ -144,24 +145,24 @@ describe("Station dispatch board", () => {
       ["role", "selected", REGISTRATION.profiles[0]!.title, null, null],
       ["duty", "selected", RELIEF_OATH.options[0]!.title, null, null],
       ["evidence", "selected", LEAD_SOURCE.options[0]!.title, null, null],
+      ["preparation", "open_optional", null, null, null],
+      ["relief_allocation", "open_optional", null, null, null],
+      ["field_team", "open_optional", null, null, null],
+    ]);
+    expect(compact.station_dispatch_support).toBeUndefined();
+    expect(compactStationDispatchBoardSupport(board)).toEqual([
       [
         "preparation",
-        "open_optional",
-        null,
         "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
         ["inspect", PREPARATION.id],
       ],
       [
         "relief_allocation",
-        "open_optional",
-        null,
         "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
         ["inspect", RELIEF_ALLOCATION.id],
       ],
       [
         "field_team",
-        "open_optional",
-        null,
         "Second rider: optionally ask about cattle-first authority, or ride alone.",
         ["talk", ALLY.contact, "June Pike"],
       ],
@@ -179,10 +180,10 @@ describe("Station dispatch board", () => {
       departure_interactions: compactOverworldDepartureInteractions(view.departureInteractions),
       departure_contact_leads: compactOverworldDepartureContactLeads(view.departureContactLeads),
     });
-    const v2StationBlock = JSON.stringify({
+    const v3StationBlock = JSON.stringify({
       station_dispatch_board: compact.station_dispatch_board,
     });
-    expect(v2StationBlock.length).toBeLessThan(legacyStationBlock.length);
+    expect(v3StationBlock.length).toBeLessThan(legacyStationBlock.length);
 
     expect(session.snapshot()).toEqual(before);
     expect(session.snapshotHash()).toBe(beforeHash);

@@ -1127,12 +1127,12 @@ describe("OverworldSession", () => {
       );
       expect(markup).toContain(`${board.questTitle} field briefing`);
       expect(markup).toContain(`${board.questTitle} dispatch recap`);
-      expect(markup).toContain("Optional dispatch support (independent)");
-      expect(markup).toContain("Current commitments");
-      expect(markup.indexOf("Depart now")).toBeLessThan(
-        markup.indexOf("Optional dispatch support (independent)"),
+      expect(markup).toContain(
+        "Review optional support — field kit, relief wagon, or second rider",
       );
-      expect(markup.indexOf("Optional dispatch support (independent)")).toBeLessThan(
+      expect(markup).toContain("Current commitments");
+      expect(markup.indexOf("Depart now")).toBeLessThan(markup.indexOf("Review optional support"));
+      expect(markup.indexOf("Review optional support")).toBeLessThan(
         markup.indexOf("Current commitments"),
       );
       for (const support of board.support) {

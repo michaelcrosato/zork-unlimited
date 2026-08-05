@@ -11,7 +11,7 @@ import type {
 } from "./session_departure_interactions.js";
 
 /** A read-only, coverage-complete index of the current Station dispatch. */
-export const STATION_DISPATCH_BOARD_VERSION = 2 as const;
+export const STATION_DISPATCH_BOARD_VERSION = 3 as const;
 export const STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT = 240;
 export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
 
@@ -134,6 +134,17 @@ export type OpeningCompactStationDispatchBoard = readonly [
   guidance: string,
   dispatch: OpeningCompactStationDispatchBoardDispatch | null,
   rows: readonly OpeningCompactStationDispatchBoardPlanRow[],
+];
+
+/**
+ * Optional Station support is intentionally omitted from the first compact
+ * board read. This bounded detail is returned only by an explicit read-only
+ * context request, while retaining the same authenticated action handles.
+ */
+export type OpeningCompactStationDispatchBoardSupport = readonly [
+  slot: StationDispatchSupportSlot,
+  purpose: string,
+  action: OpeningCompactStationDispatchBoardAction | null,
 ];
 
 function bounded(
@@ -419,7 +430,6 @@ function compactAction(
 export function compactStationDispatchBoard(
   board: StationDispatchBoard,
 ): OpeningCompactStationDispatchBoard {
-  const supportBySlot = new Map(board.support.map((entry) => [entry.slot, entry]));
   return [
     board.version,
     board.questId,
@@ -432,19 +442,33 @@ export function compactStationDispatchBoard(
           [...board.dispatch.remainingOptional],
         ]
       : null,
-    board.plan.map((entry) => {
-      const support = supportBySlot.get(entry.slot as StationDispatchSupportSlot);
-      return [
-        entry.slot,
-        entry.status,
-        entry.selectedTitle,
-        support
-          ? compactText(support.purpose, STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT)
-          : null,
-        support ? compactAction(support.action) : null,
-      ] as const;
-    }),
+    board.plan.map(
+      (entry) =>
+        [
+          entry.slot,
+          entry.status,
+          entry.selectedTitle,
+          // The first compact Station view is deliberately launch-first. Exact
+          // optional-support purposes and action handles are disclosed only by
+          // an explicit read-only context request.
+          null,
+          null,
+        ] as const,
+    ),
   ];
+}
+
+export function compactStationDispatchBoardSupport(
+  board: StationDispatchBoard,
+): readonly OpeningCompactStationDispatchBoardSupport[] {
+  return board.support.map(
+    (support) =>
+      [
+        support.slot,
+        compactText(support.purpose, STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT),
+        compactAction(support.action),
+      ] as const,
+  );
 }
 
 export function cloneCompactStationDispatchBoard(
@@ -466,4 +490,10 @@ export function cloneCompactStationDispatchBoard(
         ] as OpeningCompactStationDispatchBoardPlanRow,
     ),
   ];
+}
+
+export function cloneCompactStationDispatchBoardSupport(
+  support: readonly OpeningCompactStationDispatchBoardSupport[],
+): readonly OpeningCompactStationDispatchBoardSupport[] {
+  return support.map((entry) => [entry[0], entry[1], entry[2] ? [...entry[2]] : null] as const);
 }

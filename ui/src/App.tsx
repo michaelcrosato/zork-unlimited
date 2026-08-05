@@ -375,7 +375,7 @@ export function StationDispatchBoard({
       <p>{board.guidance}</p>
       {children}
       <details className="station-dispatch-support-details">
-        <summary>Optional dispatch support (independent)</summary>
+        <summary>Review optional support — field kit, relief wagon, or second rider</summary>
         <div className="station-dispatch-support">
           {board.support.map((support) => {
             const action = support.action;

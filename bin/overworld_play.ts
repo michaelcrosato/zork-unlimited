@@ -133,7 +133,7 @@ export function render(view: OverworldView): string {
     }
   }
   if (view.stationDispatchBoard) {
-    lines.push(...renderStationDispatchBoard(view));
+    lines.push(...renderStationSupportAffordance(view));
   }
   if (
     !view.stationDispatchBoard &&
@@ -231,6 +231,29 @@ export function renderStationDispatchBoard(view: OverworldView): string[] {
   }
   lines.push("  Current commitments: `review dispatch`.");
   return lines;
+}
+
+/**
+ * Opening Station status keeps optional planning to one deliberate expansion.
+ * The detailed board stays available through `review support` without touching
+ * session state, the decision count, or the authored action handles.
+ */
+export function renderStationSupportAffordance(view: OverworldView): string[] {
+  const board = view.stationDispatchBoard;
+  if (!board) return [];
+  return [
+    "Optional support: field kit, relief wagon, or second rider — `review support`.",
+    "  Current commitments: `review dispatch`.",
+  ];
+}
+
+function printStationDispatchSupport(session: OverworldSession): void {
+  const board = session.view().stationDispatchBoard;
+  console.log(
+    board
+      ? renderStationDispatchBoard(session.view()).join("\n")
+      : "No optional Station support is available to review.",
+  );
 }
 
 /** Bounded authenticated recall shared by status and an active Station choice. */
@@ -584,6 +607,7 @@ function strategyForCommand(raw: string): OverworldRoadEncounterStrategy | null 
 
 const HELP = `Commands:
   look                     full status of the current town and area
+  review support           optional Station support comparisons and actions
   review dispatch          exact selected Station plan terms
   choose <number|label|id> answer the active journey or story choice
   inspect <id>             compare an optional story choice or expand one structured card
@@ -809,6 +833,10 @@ async function main(): Promise<void> {
           printDepartureRecapTerms(session);
           return "handled";
         }
+        if (verb === "review" && rest.toLowerCase() === "support") {
+          printStationDispatchSupport(session);
+          return "handled";
+        }
         if (verb === "hash" && rest.length === 0) {
           console.log(session.snapshotHash());
           return "handled";
@@ -879,6 +907,8 @@ async function main(): Promise<void> {
             console.log(renderJourneyStatus(session.journey()));
           } else if (verb === "review" && rest === "dispatch") {
             printDepartureRecapTerms(session);
+          } else if (verb === "review" && rest === "support") {
+            printStationDispatchSupport(session);
           } else if (verb === "hash") {
             console.log(session.snapshotHash());
           } else if (verb === "journal") {
@@ -908,7 +938,7 @@ async function main(): Promise<void> {
             console.log(renderJourneyStatus(session.journey()));
           } else {
             fail(
-              "Choose the active journey prompt first with `choose <number|label>`; `look`, `review dispatch`, `help`, `journal`, `log`, `save`, `load`, `hash`, and `quit` remain available.",
+              "Choose the active journey prompt first with `choose <number|label>`; `look`, `review support`, `review dispatch`, `help`, `journal`, `log`, `save`, `load`, `hash`, and `quit` remain available.",
             );
           }
           continue;
@@ -924,6 +954,8 @@ async function main(): Promise<void> {
             console.log(renderJourneyStatus(session.journey()));
           } else if (low === "review dispatch") {
             printDepartureRecapTerms(session);
+          } else if (low === "review support") {
+            printStationDispatchSupport(session);
           } else if (low === "hash") {
             console.log(session.snapshotHash());
           } else if (low.startsWith("save")) {
@@ -963,11 +995,17 @@ async function main(): Promise<void> {
             break;
           }
           case "review":
-            if (rest !== "dispatch") {
-              fail("Review what? Use `review dispatch` for exact selected Station plan terms.");
+            if (rest === "dispatch") {
+              printDepartureRecapTerms(session);
               break;
             }
-            printDepartureRecapTerms(session);
+            if (rest === "support") {
+              printStationDispatchSupport(session);
+              break;
+            }
+            fail(
+              "Review what? Use `review support` for optional Station comparisons or `review dispatch` for exact selected plan terms.",
+            );
             break;
           case "go":
           case "travel": {

@@ -29,8 +29,10 @@ import {
 } from "./opening_departure_recap.js";
 import {
   cloneCompactStationDispatchBoard,
+  cloneCompactStationDispatchBoardSupport,
   compactStationDispatchBoard,
   type OpeningCompactStationDispatchBoard,
+  type OpeningCompactStationDispatchBoardSupport,
 } from "./station_dispatch_board.js";
 
 export const OVERWORLD_COMPACT_JOURNAL_LIMIT = 5;
@@ -50,7 +52,7 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 42 as const;
+export const OVERWORLD_COMPACT_VIEW_VERSION = 43 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -376,6 +378,7 @@ export type OverworldCompactView = {
   departure_recap?: OpeningCompactDepartureRecap;
   departure_recap_terms?: OpeningCompactDepartureRecapTerms;
   station_dispatch_board?: OpeningCompactStationDispatchBoard;
+  station_dispatch_support?: readonly OpeningCompactStationDispatchBoardSupport[];
   opportunity_guidance?: string;
   opportunity_leads?: OverworldCompactOpportunityLead[];
   opportunity_leads_deferred?: number;
@@ -447,7 +450,9 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_recap_terms:
     "[version, quest_id, [[slot, active_field_term], ...]] exact authenticated terms for selected Station plan slots, returned by explicit read-only include_departure_recap_terms or a preparation, relief_allocation, or ally option detail; no alternatives, outcomes, or actions",
   station_dispatch_board:
-    "[2, quest_id, guidance, dispatch|null, [[plan_slot, status, selected_title|null, purpose|null, action|null], ...]]. Consolidated Station departure surface: role, duty, and evidence rows have no optional action; dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. Selected exact terms remain opt-in departure_recap_terms. action is ['inspect', story_choice_id] for inspect_overworld_session_story or ['talk', character_id, contact_name] for talk_overworld_session_contact; inspect reveals legal story.options[*].id choices. Canonical quest title and launch approaches remain in quests + quest_starts.",
+    "[3, quest_id, guidance, dispatch|null, [[plan_slot, status, selected_title|null, purpose|null, action|null], ...]]. Launch-first Station departure index: role, duty, and evidence rows have no optional action; optional support rows intentionally defer purpose/action to station_dispatch_support. dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. Selected exact terms remain opt-in departure_recap_terms. Canonical quest title and launch approaches remain in quests + quest_starts.",
+  station_dispatch_support:
+    "[[support_slot, purpose, action|null], ...] explicit read-only Station support detail, returned only by get_overworld_session_context(include_station_dispatch_support:true). action is ['inspect', story_choice_id] for inspect_overworld_session_story or ['talk', character_id, contact_name] for talk_overworld_session_contact; inspect reveals legal story.options[*].id choices. Support remains optional and changes dispatch cost and aftermath, not which Wolf-Winter strategy is offered.",
   opportunity_guidance:
     "player-facing pursuit guidance for optional aftermath; shown beside detailed opportunity_leads or alone while those details are temporarily deferred at a journey decision boundary",
   opportunity_leads:
@@ -1331,6 +1336,11 @@ function cloneCompactDepartureFields(
   if (launchFirst && view.station_dispatch_board) {
     clone.station_dispatch_board = cloneCompactStationDispatchBoard(view.station_dispatch_board);
   }
+  if (launchFirst && view.station_dispatch_support) {
+    clone.station_dispatch_support = cloneCompactStationDispatchBoardSupport(
+      view.station_dispatch_support,
+    );
+  }
   if (launchFirst && view.departure_recap) {
     clone.departure_recap = cloneCompactDepartureRecap(view.departure_recap);
   }
@@ -1352,11 +1362,16 @@ function cloneCompactDepartureFields(
   if (!launchFirst && view.station_dispatch_board) {
     clone.station_dispatch_board = cloneCompactStationDispatchBoard(view.station_dispatch_board);
   }
+  if (!launchFirst && view.station_dispatch_support) {
+    clone.station_dispatch_support = cloneCompactStationDispatchBoardSupport(
+      view.station_dispatch_support,
+    );
+  }
 }
 
 export function cloneOverworldCompactView(view: OverworldCompactView): OverworldCompactView {
   const departureQuestId =
-    view.station_dispatch_board?.[0] === 2
+    view.station_dispatch_board !== undefined
       ? view.station_dispatch_board[1]
       : view.departure_recap?.[1];
   const departureLaunchReady =
@@ -1537,7 +1552,7 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const stationDispatchBoard = view.stationDispatchBoard
     ? compactStationDispatchBoard(view.stationDispatchBoard)
     : null;
-  const hasStationDispatchBoard = stationDispatchBoard?.[0] === 2;
+  const hasStationDispatchBoard = stationDispatchBoard !== null;
   const departureQuestId = hasStationDispatchBoard ? stationDispatchBoard[1] : departureRecap?.[1];
   const departureLaunchReady =
     departureQuestId !== undefined && questStarts.some(([questId]) => questId === departureQuestId);
