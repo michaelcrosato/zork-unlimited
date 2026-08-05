@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 732 -->
+<!-- historical_cycle_count: 733 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - campaign_quest_scope_handoff
+
+- Evidence choice: the cross-boundary continuity foundation was mechanically proven, but recurring blind notes still questioned which campaign condition and character facts survive an embedded quest versus which numbers belong only to that quest.
+- Surface/effect: terminal and UI route selection now lead with one shared plain-language boundary; compact MCP names the same campaign supplies/fatigue/record persistence, quest-local HP/stats/issued inventory, and authored-only import/export rule.
+- Compatibility/integrity: current runtime/save writes remain strict, while load accepts only the immediately previous persisted v1 explanation and normalizes it; arbitrary wording still fails, and mechanics, legal actions, state, RNG, hashes, decisions, and outcomes are unchanged.
+- Pure evidence: exact-clean Spark seed 80422004 on `c3053c53` chose HUNT, completed The Wolf-Winter at decision 20, continued at 20/43, won The Gallowmere and ended at 52, rated clarity/enjoyment 4/4, replay-yes, and reported no confusion, bug, or stuck state.
+- Economy: the accepted first attempt used 3.869M raw / 130,026 uncached input + 15,292 output (145,318 useful) at 96.64% cache reuse; separate Terra strict-yield and Sol multi-agent provenance rejects plus one artifactless Luna orchestration loss are disclosed and never counted as play evidence.
+- Parallel Spark evidence: exact-main admission passed 3/3, then the requested no-retry Spark-10 verified 4/10; all four completed Wolf-Winter with HUNT/LURE/FORTIFY represented, but 59.8% of observed useful tokens landed in six invalid attempts, so this fingerprint was not scaled.
+- Self-critique/follow-through: the canary proves a smooth two-quest handoff and clean build, not a measured clarity uplift; it showed no concrete scope confusion, while the background cohort leaves optional Station support undiscovered and motivates a narrow evidence-bound interview/transport reliability cycle before more Spark fanout.
+- Guard: independent save and presentation audits are clean; crawls `20260805T012948Z` / `20260805T015013Z`, exact-tree health (459 files/3,907 tests plus UI/all 12 packs), and the 16-report feedback compile are green.
 
 ### Cycle result - station_support_progressive_disclosure
 
@@ -156,19 +167,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the first attempt used 4.950M raw / 159,823 uncached input + 11,783 output at 96.77% input-cache reuse (171,606 useful, about 3,178/decision); no retry, fallback, cohort, or fanout ran.
 - Self-critique/follow-through: this proves clean-build safety and retention, not FORTIFY uptake; Albany setup density and Queensbury scout-to-route signposting repeated as S1, so they remain accumulated presentation evidence rather than grounds to widen this consequence increment.
 - Guard: review caught and corrected the reachable mobile-stabilized pressure-3 edge plus first-match dialogue shadowing before landing; final independent review is clean, crawl `20260801T143335Z` has zero findings, and exact-tree health passes 452 files/3,784 tests plus all 12 packs.
-
-### Cycle result - june_drive_overrun
-
-- Evidence choice: June's paid 15-minute cattle-first field seat named DRIVE but had no distinct DRIVE consequence, while an unrecovered failed first signal already produced a pressure-3 Overrun and solo recovery cost.
-- Surface/effect: at that exact Overrun, intact June independently catches the extra lower-gate beat, returns pack pressure 3→2, and prevents the rider's persistent 2 HP brace; a clean signal gains nothing, and broken June falls back to the solo recovery.
-- Counterfactual: identical failed-signal routes end at HP 30 with June versus HP 28 solo, then expose the same three irreversible crisis priorities; save/restore, visible pressure, blocked-action truth, and the liveness witness are pinned.
-- Integrity: the copy-only world change has one exact-hash predecessor migration; older trusted June receipts compose through that exact intermediate, while altered or adjacent manifests still fail closed.
-- Pure evidence: exact-clean Terra seed 73126081 chose June but LURE, completed The Wolf-Winter bloodlessly at decision 32, continued at 32/41, won The Gallowmere at 56, rated clarity/enjoyment 4/4, got-stuck-no, and ended at the second goal.
-- Economy: the first attempt used 4.941M raw / 163,847 uncached input + 11,640 output at 96.68% input-cache reuse (175,487 useful, about 3,134/decision); no retry, fallback, cohort, or fanout ran.
-- Self-critique/follow-through: this proves clean-build safety and retention, not DRIVE uptake; the player again named Albany planning density and chose replay-no, while its Queensbury/Gallowmere S1 notes stay outside this focused starting-slice increment pending accumulated feedback.
-- Guard: two independent reviews found no actionable issue; crawls `20260801T112656Z` / `20260801T130256Z` have zero findings, and exact-tree health passes 451 files/3,771 tests plus all 12 packs.
-## AFK Cycle 2026-08-05T01-29-25-636Z
-- Assess: rpg=12; world=12; candidates=15.
-- Rec: hotspot-585424d9 (content_fix/M; score=1.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
