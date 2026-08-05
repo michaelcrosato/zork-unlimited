@@ -61,11 +61,12 @@ const expectations: Expectation[] = files.map((file) => {
 
 describe("RPG foundation validator negative corpus — rejection-direction witnesses", () => {
   it("discovers the full fixture corpus (mass-deletion tripwire)", () => {
-    // The 25 witnesses recovered from main's retired parser corpus, plus the three
-    // numeric/room gate witnesses (IMPOSSIBLE_GATE on a var, PHANTOM_VAR,
-    // WIN_UNREACHABLE via in_room) and AMBIGUOUS_NPC_NAME; adding a fixture should
-    // consciously raise this floor, deleting one must fail here.
-    expect(files.length).toBeGreaterThanOrEqual(29);
+    // The 25 witnesses recovered from main's retired parser corpus, plus four new
+    // ones (IMPOSSIBLE_GATE on a var, PHANTOM_VAR, WIN_UNREACHABLE via in_room,
+    // AMBIGUOUS_NPC_NAME), minus the unlock_exit witness that went with the retired
+    // effect kind. Adding a fixture should consciously raise this floor; deleting one
+    // must fail here unless the code it witnessed was itself deleted.
+    expect(files.length).toBeGreaterThanOrEqual(28);
   });
 
   it("every fixture carries a machine-readable MUST FAIL/WARN header", () => {
@@ -93,7 +94,6 @@ describe("RPG foundation validator negative corpus — rejection-direction witne
       "SCORE_UNREACHABLE",
       "SOFTLOCK",
       "SOFTLOCK_QUEST_ITEM",
-      "UNLOCK_EXIT_ROOM_MISSING",
       "UNREACHABLE_VARIANT",
       "UNRESOLVED_ROOM_REFERENCE",
       "UNSATISFIABLE_CONDITION",

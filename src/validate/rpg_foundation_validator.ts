@@ -22,7 +22,7 @@
  *    consuming it cannot wedge the quest. Both checks are sound over-approximations
  *    of "can be lost".
  */
-import { exitFlag, type Effect } from "../core/effects.js";
+import { type Effect } from "../core/effects.js";
 import { evalConditions, type Condition } from "../core/conditions.js";
 import { indexRpgModel, initStateForRpgModel } from "../rpg/model.js";
 import {
@@ -317,28 +317,6 @@ export function validateRpgFoundation(
         ),
       );
   }
-  // An `unlock_exit` effect whose `from` or `to` is absent from pack.rooms silently
-  // writes an unreachable exit-flag key (__exit:phantom->real), making the unlock a
-  // permanent no-op — harder to diagnose than a dead gate because the effect APPEARS
-  // to fire. Error severity (bug_0278). Checked in a dedicated block (not via
-  // collectRoomRefs) because the two sides need individual messages (bug_0278).
-  for (const e of effects) {
-    if (!("unlock_exit" in e)) continue;
-    for (const [side, id] of [
-      ["from", e.unlock_exit.from],
-      ["to", e.unlock_exit.to],
-    ] as const) {
-      if (!roomIds.has(id))
-        findings.push(
-          err(
-            "UNLOCK_EXIT_ROOM_MISSING",
-            `unlock_exit "${side}" room "${id}" does not exist — the unlock writes an unreachable exit flag and is a permanent no-op.`,
-            [`room:${id}`],
-          ),
-        );
-    }
-  }
-
   // An `add_item` or `remove_item` effect targeting an object id absent from pack.objects
   // is a dangling item reference — a typo'd `add_item: "lantren"` silently inserts a
   // phantom string into inventory (no description, no interactions, nonsense label) that
@@ -429,8 +407,6 @@ export function validateRpgFoundation(
   }
 
   // Bail before graph analysis if references are broken (would crash traversal).
-  // UNLOCK_EXIT_ROOM_MISSING is included because a dangling unlock_exit room id corrupts
-  // the settable-flags set the graph analysis uses (exitFlag writes an unreachable key).
   // ITEM_REF_MISSING is included because a dangling item id could corrupt the
   // obtainability fixpoint that uses objById.
   // OBJECT_STATE_REF_MISSING is included because a dangling open_object id silently
@@ -444,7 +420,6 @@ export function validateRpgFoundation(
         [
           "EXIT_TARGET_MISSING",
           "START_MISSING",
-          "UNLOCK_EXIT_ROOM_MISSING",
           "ITEM_REF_MISSING",
           "OBJECT_STATE_REF_MISSING",
         ].includes(f.code),
@@ -530,7 +505,6 @@ export function validateRpgFoundation(
   const settable = new Set<string>([...pack.meta.flags_init, ...(opts.extraSettableFlags ?? [])]);
   for (const e of effects) {
     if ("set_flag" in e) settable.add(e.set_flag);
-    if ("unlock_exit" in e) settable.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));
   }
 
   // ── Settable quest stages (provided by some set_quest_stage effect) ──────────
@@ -1564,7 +1538,6 @@ function collectFalsifiers(pack: RpgPack, extra: Effect[]): Falsifiers {
     for (const e of effects) {
       if ("set_flag" in e) setFlags.add(e.set_flag);
       else if ("clear_flag" in e) clearedFlags.add(e.clear_flag);
-      else if ("unlock_exit" in e) setFlags.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));
       else if ("add_item" in e) addedItems.add(e.add_item);
       else if ("remove_item" in e) removedItems.add(e.remove_item);
       else if ("set_object_locked" in e && e.set_object_locked.locked)
@@ -2248,8 +2221,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
  *  node-variant/topic gate (DESCENDING all_of/any_of/none_of, so a disjunction-
  *  guarded room ref still counts), PLUS by a `goto` / `place_object.room` effect target
  *  (the room-id-bearing effects
- *  collected here; unlock_exit.from/.to are checked in a dedicated UNLOCK_EXIT_ROOM_MISSING
- *  block in the validator body). A referenced id absent from pack.rooms is a dangling
+ *  collected here). A referenced id absent from pack.rooms is a dangling
  *  reference — a permanently-dead gate (visited/in_room evaluate false forever) or a
  *  goto/place_object into nowhere — the room-id analogue of EXIT_TARGET_MISSING.
  *  Mirrors collectFlagReads EXACTLY — NOT objectStateReqs, which descends only all_of
@@ -2293,9 +2265,7 @@ function collectRoomRefs(pack: RpgPack, extraEffects: readonly Effect[] = []): S
       for (const t of node.topics) walkAll(t.conditions);
     }
   }
-  // Effect-side room refs: goto + place_object.room (the room-id-bearing effects
-  // collected here; unlock_exit.from/.to are checked in a dedicated
-  // UNLOCK_EXIT_ROOM_MISSING block in the validator body).
+  // Effect-side room refs: goto + place_object.room.
   for (const e of [...allEffects(pack), ...extraEffects]) {
     if ("goto" in e) refs.add(e.goto);
     else if ("place_object" in e) refs.add(e.place_object.room);

@@ -33,7 +33,7 @@
  *    difficulty;
  *  - every enemy on_defeat end_game is declared.
  */
-import { exitFlag, type Effect } from "../core/effects.js";
+import { type Effect } from "../core/effects.js";
 import type { Condition } from "../core/conditions.js";
 import { wolfWinterDispatchOverlayFlagForPack } from "../core/embedded_launch_overlay_receipt.js";
 import { validateRpgFoundation } from "./rpg_foundation_validator.js";
@@ -236,11 +236,6 @@ function authoredFlagSetTargets(node: unknown, out = new Set<string>()): Set<str
     for (const [key, value] of Object.entries(node)) {
       if (key === "set_flag" && typeof value === "string") {
         out.add(value);
-      } else if (key === "unlock_exit" && value !== null && typeof value === "object") {
-        const edge = value as Record<string, unknown>;
-        if (typeof edge.from === "string" && typeof edge.to === "string") {
-          out.add(exitFlag(edge.from, edge.to));
-        }
       }
       authoredFlagSetTargets(value, out);
     }

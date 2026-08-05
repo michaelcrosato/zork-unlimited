@@ -1,6 +1,5 @@
 import type { GameState } from "../core/state.js";
 import { dlgVar } from "../core/dialogue_state.js";
-import { exitFlag } from "../core/effects.js";
 import { SaveIntegrityError } from "../persist/save_load.js";
 import type { RpgIndex } from "./runner.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR, enemyHpVar } from "./schema.js";
@@ -73,11 +72,6 @@ function collectFlagTargets(node: unknown, acc: BooleanRuntimeTargets): BooleanR
         addBooleanRuntimeTarget(acc, v, true);
       } else if (k === "clear_flag" && typeof v === "string") {
         addBooleanRuntimeTarget(acc, v, false);
-      } else if (k === "unlock_exit" && v !== null && typeof v === "object") {
-        const edge = v as Record<string, unknown>;
-        if (typeof edge.from === "string" && typeof edge.to === "string") {
-          addBooleanRuntimeTarget(acc, exitFlag(edge.from, edge.to), true);
-        }
       }
       collectFlagTargets(v, acc);
     }

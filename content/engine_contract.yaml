@@ -66,7 +66,6 @@ engine_capabilities:
     - dec_var
     - add_journal
     - goto
-    - unlock_exit
     - open_object
     - close_object # inverse of open_object (first-class CLOSE verb)
     - set_object_locked

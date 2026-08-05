@@ -9,7 +9,6 @@
 export type GameEvent =
   | { type: "state_change"; effect: string; [k: string]: unknown }
   | { type: "narration"; text: string }
-  | { type: "unlock_exit"; from: string; to: string }
   | { type: "open_object"; id: string }
   | { type: "close_object"; id: string }
   | { type: "move"; from: string; to: string }
@@ -23,7 +22,6 @@ export type GameEvent =
 export const EVENT_TYPES = [
   "state_change",
   "narration",
-  "unlock_exit",
   "open_object",
   "close_object",
   "move",

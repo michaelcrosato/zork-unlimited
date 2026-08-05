@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { initState } from "../../src/core/state.js";
-import { applyEffect, applyEffects, exitFlag, EffectSchema } from "../../src/core/effects.js";
+import { applyEffect, applyEffects, EffectSchema } from "../../src/core/effects.js";
 
 const base = () => initState({ seed: 1, start: "room0" });
 
@@ -46,9 +46,12 @@ describe("effect reducer", () => {
     expect(r.event).toEqual({ type: "move", from: "room0", to: "room1" });
   });
 
-  it("unlock_exit sets the canonical exit flag", () => {
-    const r = applyEffect({ unlock_exit: { from: "a", to: "b" } }, base());
-    expect(r.state.flags[exitFlag("a", "b")]).toBe(true);
+  // unlock_exit was retired: it wrote a `__exit:<from>-><to>` flag that no MOVE
+  // resolver ever consulted, so it was a set_flag with a computed key and a comment
+  // citing a parser stage removed in the 2026-07-06 consolidation. The closed union
+  // must now reject it outright.
+  it("rejects the retired unlock_exit effect at the schema", () => {
+    expect(EffectSchema.safeParse({ unlock_exit: { from: "a", to: "b" } }).success).toBe(false);
   });
 
   it("object open/lock state", () => {

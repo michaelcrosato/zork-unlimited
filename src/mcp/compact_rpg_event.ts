@@ -31,7 +31,8 @@ export type RpgCompactEvent =
   | readonly ["q", npc: string, node: string]
   | readonly ["e", endingId: string];
 
-export const RPG_COMPACT_EVENT_VERSION = 7 as const;
+// v8: the `u=unlock_exit` tag is gone with the effect it encoded.
+export const RPG_COMPACT_EVENT_VERSION = 8 as const;
 
 /**
  * Agent-facing one-line legend for the RpgCompactEvent tuples above; co-located
@@ -42,7 +43,7 @@ export const RPG_COMPACT_EVENT_LEGEND =
   "step_action events are [tag, ...]: r=rejected[reason], n=narration[text], " +
   "s=state_change[code, key, value?, extra?] with codes f=set_flag x=clear_flag v=set_var " +
   "+=inc_var[name,delta,new] -=dec_var[name,delta,new] j=journal l=set_locked p=place_object " +
-  "q=quest_stage, u=unlock_exit[from,to], o=open_object[id], c=close_object[id], " +
+  "q=quest_stage, o=open_object[id], c=close_object[id], " +
   "m=move[from,to], t=take[item], d=drop[item], q=dialogue[npc_id,node_id], e=ending[ending_id]";
 
 type RpgStateChangeEvent = Extract<GameEvent, { type: "state_change" }>;
@@ -173,8 +174,6 @@ export function compactPlayerEvent(event: GameEvent): RpgCompactEvent {
       return ["n", compactText(event.text, COMPACT_EVENT_NARRATION_CHAR_LIMIT)];
     case "state_change":
       return compactStateChangeEvent(event);
-    case "unlock_exit":
-      return ["u", compactMcpTranscriptSceneId(event.from), compactMcpTranscriptSceneId(event.to)];
     case "open_object":
       return ["o", compactMcpTranscriptSummaryValue(event.id)];
     case "close_object":

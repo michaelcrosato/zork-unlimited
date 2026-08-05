@@ -15,8 +15,8 @@ import {
 import type { GameEvent } from "../../src/core/events.js";
 
 describe("compactPlayerEvent", () => {
-  it("uses the v7 single-character event contract", () => {
-    expect(RPG_COMPACT_EVENT_VERSION).toBe(7);
+  it("uses the v8 single-character event contract", () => {
+    expect(RPG_COMPACT_EVENT_VERSION).toBe(8);
     expect(compactPlayerEvent({ type: "rejected", reason: "no" })).toEqual(["r", "no"]);
     expect(compactPlayerEvent({ type: "move", from: "yard", to: "road" })).toEqual([
       "m",
@@ -184,11 +184,6 @@ describe("compactPlayerEvent", () => {
       id: longId,
       value: longValue,
     });
-    const unlock = compactPlayerEvent({
-      type: "unlock_exit",
-      from: longScene,
-      to: longTargetScene,
-    });
     const move = compactPlayerEvent({ type: "move", from: longScene, to: longTargetScene });
     const open = compactPlayerEvent({ type: "open_object", id: longId });
     const take = compactPlayerEvent({ type: "take", item: longId });
@@ -206,8 +201,6 @@ describe("compactPlayerEvent", () => {
     expect(String(fallback[1])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(String(fallback[2])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(String(fallback[3])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
-    expect(String(unlock[1])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
-    expect(String(unlock[2])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
     expect(String(move[1])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
     expect(String(move[2])).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
     expect(String(open[1])).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
@@ -223,7 +216,6 @@ describe("compactPlayerEvent", () => {
         placeObject,
         questStage,
         fallback,
-        unlock,
         move,
         open,
         take,

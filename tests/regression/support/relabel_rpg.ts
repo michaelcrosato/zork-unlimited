@@ -84,8 +84,6 @@ function relabelEffect(e: Effect, r: (id: string) => string, rv: (n: string) => 
   if ("dec_var" in e) return { dec_var: { name: rv(e.dec_var.name), by: e.dec_var.by } };
   if ("add_journal" in e) return { add_journal: e.add_journal };
   if ("goto" in e) return { goto: r(e.goto) };
-  if ("unlock_exit" in e)
-    return { unlock_exit: { from: r(e.unlock_exit.from), to: r(e.unlock_exit.to) } };
   if ("open_object" in e) return { open_object: r(e.open_object) };
   if ("close_object" in e) return { close_object: r(e.close_object) };
   if ("set_object_locked" in e)
