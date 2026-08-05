@@ -29,6 +29,7 @@
  * other RPG tests use.
  */
 import { readdirSync, readFileSync } from "node:fs";
+// (readFileSync also backs the validator source scan below.)
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 import { compileRpgSource } from "../../src/rpg/source.js";
@@ -61,12 +62,11 @@ const expectations: Expectation[] = files.map((file) => {
 
 describe("RPG foundation validator negative corpus — rejection-direction witnesses", () => {
   it("discovers the full fixture corpus (mass-deletion tripwire)", () => {
-    // The 25 witnesses recovered from main's retired parser corpus, plus four new
-    // ones (IMPOSSIBLE_GATE on a var, PHANTOM_VAR, WIN_UNREACHABLE via in_room,
-    // AMBIGUOUS_NPC_NAME), minus the unlock_exit witness that went with the retired
-    // effect kind. Adding a fixture should consciously raise this floor; deleting one
-    // must fail here unless the code it witnessed was itself deleted.
-    expect(files.length).toBeGreaterThanOrEqual(28);
+    // Kept alongside the code-coverage pin below, which does not subsume it: this one
+    // catches MASS DELETION — several fixtures for one code, or a whole family — which
+    // a per-code check cannot see. Raise it consciously when adding; a drop must fail
+    // here unless the code a fixture witnessed was itself deleted.
+    expect(files.length).toBeGreaterThanOrEqual(42);
   });
 
   it("every fixture carries a machine-readable MUST FAIL/WARN header", () => {
@@ -75,32 +75,59 @@ describe("RPG foundation validator negative corpus — rejection-direction witne
     }
   });
 
-  it("the corpus covers the expected foundation finding codes (coverage pin)", () => {
-    const covered = [...new Set(expectations.map((e) => e.code))].sort();
-    expect(covered).toEqual([
-      "AMBIGUOUS_ALIAS",
-      "AMBIGUOUS_NPC_NAME",
-      "DIALOGUE_NONTERMINATING",
-      "DUPLICATE_ID",
-      "END_GAME_UNDECLARED",
-      "EXIT_TARGET_MISSING",
-      "HELD_ALSO_PLACED",
-      "IMPOSSIBLE_GATE",
-      "ITEM_REF_MISSING",
-      "KEY_MISSING",
-      "OBJECT_STATE_REF_MISSING",
-      "PHANTOM_VAR",
-      "SCHEMA",
-      "SCORE_UNREACHABLE",
-      "SOFTLOCK",
-      "SOFTLOCK_QUEST_ITEM",
-      "UNREACHABLE_VARIANT",
-      "UNRESOLVED_ROOM_REFERENCE",
-      "UNSATISFIABLE_CONDITION",
-      "WIN_FIRES_AT_START",
-      "WIN_IS_DEATH",
-      "WIN_UNREACHABLE",
-    ]);
+  // The coverage pin used to derive its expectation FROM THE FIXTURES: `covered` was
+  // compared against a hand-maintained copy of itself. It pinned what the corpus
+  // happened to contain and never asked what the validator can actually emit, so a
+  // brand-new finding code with no witness passed it green — and 17 codes had drifted
+  // into exactly that state.
+  //
+  // Invert the direction. Read the emit sites out of the validator source and require
+  // every one to have a witness, with the remainder as an EXPLICIT, shrinking
+  // allowlist. Adding a code now fails this suite until it is either fixtured or
+  // consciously listed. Source-parsing keeps the corpus purely additive, as its header
+  // promises: no validator change is needed to make its codes machine-readable.
+  const validatorSource = readFileSync("src/validate/rpg_foundation_validator.ts", "utf8");
+  const emittedCodes = [
+    ...new Set(
+      [...validatorSource.matchAll(/\b(?:err|warn)\(\s*"([A-Z][A-Z0-9_]*)"/g)].map((m) => m[1]!),
+    ),
+  ].sort();
+
+  /**
+   * Foundation codes with no `# MUST FAIL:` fixture yet. Three of them
+   * (ENDING_UNDECLARED, IMPOSSIBLE_OBJECT_STATE, ITEM_REQUIRED_UNOBTAINABLE) do carry a
+   * rejection-direction witness elsewhere in tests/; the rest have none anywhere and are
+   * the honest remaining gap. Shrink this list; never grow it.
+   */
+  const WITNESS_ALLOWLIST = [
+    "DIALOGUE_ROOT_REGREET_MISSING",
+    "ENDING_UNDECLARED",
+    "IMPOSSIBLE_OBJECT_STATE",
+    "INERT_OBJECT_STATE",
+    "ITEM_REQUIRED_UNOBTAINABLE",
+    "SCORE_PEAKS_BEFORE_WIN",
+  ];
+
+  it("reads the validator's emit sites at all (the source scan is never vacuous)", () => {
+    // If the emit shape changes, this must fail loudly rather than quietly concluding
+    // the validator emits nothing and passing the coverage check by default.
+    expect(emittedCodes.length).toBeGreaterThan(30);
+    expect(emittedCodes).toContain("IMPOSSIBLE_GATE");
+    expect(emittedCodes).toContain("SOFTLOCK");
+    expect(emittedCodes).toContain("PHANTOM_VAR");
+  });
+
+  it("every foundation finding code has a rejection witness, or is explicitly allowlisted", () => {
+    const covered = new Set(expectations.map((e) => e.code));
+    expect(emittedCodes.filter((code) => !covered.has(code))).toEqual(WITNESS_ALLOWLIST);
+  });
+
+  it("the allowlist carries no stale entries", () => {
+    const covered = new Set(expectations.map((e) => e.code));
+    // A code that gained a witness must leave the list...
+    expect(WITNESS_ALLOWLIST.filter((code) => covered.has(code))).toEqual([]);
+    // ...and a code the validator no longer emits must leave it too.
+    expect(WITNESS_ALLOWLIST.filter((code) => !emittedCodes.includes(code))).toEqual([]);
   });
 
   for (const e of expectations) {

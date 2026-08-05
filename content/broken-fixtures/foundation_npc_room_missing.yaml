@@ -1,0 +1,25 @@
+# MUST FAIL: NPC_ROOM_MISSING
+# An NPC stands in a room the pack does not declare, so nobody can ever meet them.
+meta: { id: bad_npc_room, title: "Bad Npc Room", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+npcs:
+  - id: warden
+    name: "Warden"
+    description: "A warden."
+    room: nowhere
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: "The warden nods."
+          topics: [{ id: leave, prompt: "Leave", end: true }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

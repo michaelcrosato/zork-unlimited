@@ -1,0 +1,26 @@
+# MUST FAIL: SKILL_CHECK_PHANTOM_STAT
+# A skill check rolls a stat that meta.vars_init does not declare, so it silently
+# rolls d20 + 0 instead of failing loudly.
+meta: { id: bad_phantom_stat, title: "Bad Phantom Stat", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [lever]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: lever
+    name: "iron lever"
+    aliases: [lever]
+    description: "A stiff lever."
+    interactions:
+      - verb: USE
+        target: lever
+        skill_check: { skill: lockpicking, difficulty: 12 }
+        effects: [{ set_flag: pulled }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

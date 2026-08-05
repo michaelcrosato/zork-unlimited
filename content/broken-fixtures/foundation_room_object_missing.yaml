@@ -1,0 +1,15 @@
+# MUST FAIL: ROOM_OBJECT_MISSING
+# A room lists an object id that no object declares.
+meta: { id: bad_room_object, title: "Bad Room Object", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [ghost_lamp]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

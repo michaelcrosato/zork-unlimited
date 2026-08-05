@@ -1,0 +1,22 @@
+# MUST FAIL: LOCKED_NO_KEY
+# A locked object declares no key, so nothing can ever open it.
+meta: { id: bad_locked_no_key, title: "Bad Locked No Key", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [chest]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: chest
+    name: "chest"
+    description: "A locked chest."
+    container: true
+    openable: true
+    locked: true
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

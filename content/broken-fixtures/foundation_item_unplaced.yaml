@@ -1,0 +1,21 @@
+# MUST WARN: ITEM_UNPLACED
+# An object is declared but placed in no room, held by nobody, and inside no
+# container, so it can never be seen or taken.
+meta: { id: bad_item_unplaced, title: "Bad Item Unplaced", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: orphan_coin
+    name: "orphan coin"
+    aliases: [coin]
+    description: "A coin nothing places."
+    takeable: true
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]
