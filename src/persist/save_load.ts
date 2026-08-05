@@ -17,6 +17,7 @@ import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "
 import { canonicalize } from "../core/hash.js";
 import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
 import {
+  EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
   EmbeddedQuestCharacterContinuitySchema,
   cloneEmbeddedQuestCharacterContinuity,
   type EmbeddedQuestCharacterContinuity,
@@ -131,10 +132,32 @@ export type EmbeddedQuestCharacterContinuitySave = {
   character_continuity: EmbeddedQuestCharacterContinuity;
 };
 
+const PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
+  "Scenario-local numbers and issued kit govern this quest. Your persistent record remains intact; only authored campaign import and export effects cross the quest boundary.";
+
+// The explanation is player-facing copy, but version-1 sidecars persisted it as
+// a literal. Accept only the immediately previous literal at the load boundary
+// and normalize it before the strict current runtime schema sees the value.
+const PersistedEmbeddedQuestCharacterContinuitySchema = z.preprocess((value) => {
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    (value as Record<string, unknown>)["explanation"] ===
+      PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION
+  ) {
+    return {
+      ...(value as Record<string, unknown>),
+      explanation: EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
+    };
+  }
+  return value;
+}, EmbeddedQuestCharacterContinuitySchema);
+
 const EmbeddedQuestCharacterContinuitySaveSchema = z
   .object({
     version: z.literal(EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION),
-    character_continuity: EmbeddedQuestCharacterContinuitySchema,
+    character_continuity: PersistedEmbeddedQuestCharacterContinuitySchema,
   })
   .strict();
 
@@ -414,6 +437,7 @@ export function load(
   assertSaveLaunchOverlaySource(bundle.state, bundle.source_ref);
   const rawContinuity = (bundle as { embedded_character_continuity?: unknown })
     .embedded_character_continuity;
+  let normalizedContinuity: EmbeddedQuestCharacterContinuitySave | undefined;
   if (rawContinuity !== undefined) {
     if (bundle.source_ref[0] !== "wq") {
       throw new SaveIntegrityError(
@@ -427,6 +451,11 @@ export function load(
       );
     }
     assertEmbeddedContinuityMatchesState(parsedContinuity.data.character_continuity, bundle.state);
+    normalizedContinuity = parsedContinuity.data;
   }
-  return immutableLoadedSaveBundle(bundle);
+  return immutableLoadedSaveBundle(
+    normalizedContinuity === undefined
+      ? bundle
+      : { ...bundle, embedded_character_continuity: normalizedContinuity },
+  );
 }

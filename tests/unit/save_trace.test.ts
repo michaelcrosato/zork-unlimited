@@ -31,6 +31,8 @@ const WIN: RpgAction[] = [
 ];
 const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
 const MICRO_WORLD_QUEST_ID = "sunken_barrow";
+const PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
+  "Scenario-local numbers and issued kit govern this quest. Your persistent record remains intact; only authored campaign import and export effects cross the quest boundary.";
 const MICRO_SAVE_SOURCE: SaveMetadata = { worldQuestId: MICRO_WORLD_QUEST_ID };
 const MICRO_EMBEDDED_CONTINUITY: EmbeddedQuestCharacterContinuity = {
   continuity: "same_campaign_character",
@@ -102,6 +104,49 @@ describe("save / load (§8.7)", () => {
     ).toBe(true);
   });
 
+  it("loads the previous continuity explanation and normalizes future saves", () => {
+    const previousContinuity = {
+      ...MICRO_EMBEDDED_CONTINUITY,
+      explanation: PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
+    } as unknown as EmbeddedQuestCharacterContinuity;
+    expect(() =>
+      save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
+        worldQuestId: MICRO_WORLD_QUEST_ID,
+        embeddedCharacterContinuity: previousContinuity,
+      }),
+    ).toThrow(/continuity is malformed/i);
+
+    const currentBytes = save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
+      worldQuestId: MICRO_WORLD_QUEST_ID,
+      embeddedCharacterContinuity: MICRO_EMBEDDED_CONTINUITY,
+    });
+    const previousBundle = JSON.parse(currentBytes) as {
+      embedded_character_continuity: {
+        character_continuity: { explanation: string };
+      };
+    };
+    previousBundle.embedded_character_continuity.character_continuity.explanation =
+      PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION;
+
+    const loaded = load(JSON.stringify(previousBundle), MICRO_CONTENT_HASH);
+    const normalized = loaded.embedded_character_continuity?.character_continuity;
+    expect(normalized?.explanation).toBe(EMBEDDED_QUEST_CONTINUITY_EXPLANATION);
+    if (normalized === undefined) throw new Error("Expected normalized continuity metadata.");
+
+    const resaved = save(loaded.state, loaded.contentHash, loaded.mode, {
+      worldQuestId: MICRO_WORLD_QUEST_ID,
+      embeddedCharacterContinuity: normalized,
+    });
+    const resavedBundle = JSON.parse(resaved) as {
+      embedded_character_continuity: {
+        character_continuity: { explanation: string };
+      };
+    };
+    expect(resavedBundle.embedded_character_continuity.character_continuity.explanation).toBe(
+      EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
+    );
+  });
+
   it("rejects malformed, mismatched, or generated-source continuity sidecars", () => {
     const validBytes = save(microInitState(), MICRO_CONTENT_HASH, SAVE_MODE, {
       worldQuestId: MICRO_WORLD_QUEST_ID,
@@ -121,6 +166,16 @@ describe("save / load (§8.7)", () => {
       }
     ).character_continuity.forged = true;
     expect(() => load(JSON.stringify(unknownField), MICRO_CONTENT_HASH)).toThrow(
+      /continuity save metadata is malformed/i,
+    );
+
+    const unknownExplanation = JSON.parse(validBytes) as Record<string, unknown>;
+    (
+      unknownExplanation.embedded_character_continuity as {
+        character_continuity: { explanation: string };
+      }
+    ).character_continuity.explanation = "Unrecognized continuity wording.";
+    expect(() => load(JSON.stringify(unknownExplanation), MICRO_CONTENT_HASH)).toThrow(
       /continuity save metadata is malformed/i,
     );
 

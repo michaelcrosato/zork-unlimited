@@ -33,6 +33,7 @@ import {
 } from "../src/rpg/runner.js";
 import { buildRpgObservation } from "../src/rpg/observation.js";
 import { renderRpgActiveDialoguePrompt } from "../src/rpg/player_command_projection.js";
+import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../src/rpg/embedded_quest_character_continuity.js";
 import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 import {
   render as renderQuest,
@@ -363,6 +364,7 @@ export function renderQuestLaunch(
   const selectionActive = mode === "selection";
   const lines = [
     `\n${quest.launch.prompt}`,
+    EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
     selectionActive
       ? "Choose with `choose <number|name>`; a legacy bare number also works."
       : `Start with \`start ${quest.title}\`; route selection follows before commitment.`,

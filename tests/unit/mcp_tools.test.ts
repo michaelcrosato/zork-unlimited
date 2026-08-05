@@ -1040,8 +1040,11 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).toEqual([discoveredQuest.id, discoveredQuest.title, discoveredQuest.area]);
     expect(compactStartedQuest.rpg_session.context.actions?.[0]).toEqual(expect.any(String));
     expect("observation" in compactStartedQuest.rpg_session).toBe(false);
+    expect(compactStartedQuest.rpg_session.character_continuity?.scope_note).toBe(
+      "Campaign supplies, fatigue, and character persist; quest HP, stats and issued inventory are local; only authored imports/exports cross.",
+    );
     const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
-    expect(compactLaunchBytes).toBe(6_724);
+    expect(compactLaunchBytes).toBe(6_771);
     expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
     const fieldHandoff = a.step_action({
       session_id: compactStartedQuest.rpg_session_id,

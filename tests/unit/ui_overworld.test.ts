@@ -7,6 +7,7 @@ import { buildCampaignCharacterState } from "../../src/world/campaign_character_
 import { buildCampaignCharacterView } from "../../src/world/campaign_character_view.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
 import {
   OVERWORLD_COMPACT_COMPLETED_ARC_LIMIT,
   OVERWORLD_COMPACT_LABEL_CHAR_LIMIT,
@@ -1311,6 +1312,10 @@ describe("OverworldSession", () => {
       expect(markup.match(/<button/g)).toHaveLength(2);
       expect(markup.match(/ disabled=""/g)).toHaveLength(1);
       expect(markup).toContain("Which road do you commit to?");
+      expect(markup).toContain(EMBEDDED_QUEST_CONTINUITY_EXPLANATION);
+      expect(markup.indexOf(EMBEDDED_QUEST_CONTINUITY_EXPLANATION)).toBeLessThan(
+        markup.indexOf("Take the Exposed Ridge"),
+      );
       expect(markup).toContain("Take the Exposed Ridge");
       expect(markup).toContain("Spend less supply but arrive winded.");
       expect(markup).toContain("The ridge is fast and visible from the valley.");

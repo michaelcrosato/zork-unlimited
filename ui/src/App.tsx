@@ -30,6 +30,7 @@ import { QuestCharacterContinuityPanel } from "./QuestCharacterContinuityPanel.j
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
+import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
 import type {
   JourneyChoice,
   JourneyStoryChoicePrompt,
@@ -238,6 +239,7 @@ export function QuestNotice({
       </div>
       <fieldset className="quest-launch-fieldset">
         <legend>{quest.launch.prompt}</legend>
+        <p className="quest-launch-continuity">{EMBEDDED_QUEST_CONTINUITY_EXPLANATION}</p>
         <ul className="quest-launch-options">
           {quest.launch.options.map((option) => {
             const projection = option.projection;
