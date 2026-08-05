@@ -2181,7 +2181,12 @@ describe("MCP pure play mode", () => {
           }),
         );
         expectPureStoryInspectionEnvelope(expandedOath, sessionId);
-        expect(expandedOath.snapshot_hash).toBe(selected.snapshot_hash);
+        // Opening the reveal is recorded in the session, so it moves the hash: the gate
+        // that gives duty selection its legality reads that receipt, and legality here
+        // is a function of state. Read-only in the sense that matters — no decision is
+        // accepted and no goal advances — but not invisible to the snapshot, or a
+        // restore would silently revoke a gate the player had already satisfied.
+        expect(expandedOath.snapshot_hash).not.toBe(selected.snapshot_hash);
         const limitedOath = (
           expandedOath.story as {
             options?: { id: string; consequence?: string; summary?: { tradeoff?: string } }[];
