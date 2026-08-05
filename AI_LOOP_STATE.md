@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 734 -->
+<!-- historical_cycle_count: 735 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - role_matched_setup_actionable
+
+- Evidence choice: 15/18 verified players mentioned setup/Station density, and 9/11 who used the existing role shortcut still named density, so the redundant oath-selection step was the narrowest measured flow cost.
+- Surface/effect: after role choice, its matching doctrine is the sole actionable Relief Oath option; `Customize duty and evidence` reveals the three ordinary duties read-only, preserving their exact downstream lead-source behavior.
+- Counterfactual/parity: direct shortcut and customized selection reach equivalent durable state; ordinary duties remain unauthorized until revealed, while terminal, UI, compact MCP, restore, mechanics, RNG, hashes, and outcomes stay aligned.
+- Pure evidence: exact-clean Terra seed 80424000 on `58f60fb6` took Road-Warden/Aid-Only/Hayden, diverted every Wolf-Winter wolf with the herd whole at decision 26, voluntarily continued through checkpoint 40, won The Gallowmere, and ended at 49; clarity/enjoyment 4/4, replay-yes, no bug or stuck state.
+- Economy: the verified first attempt used 3.176M raw / 130,904 uncached input + 9,924 output (140,828 useful) at 95.88% cache reuse in 303 seconds, with no retry, fallback, failed attempt, or fanout.
+- Self-critique/follow-through: the three-report compile is 3/3 at clarity/enjoyment 4/4, 0 stuck, 100% replay, and 2/3 continuing past the first goal; one remaining separate-surface density mention is not enough for another trim, so the next increment returns to a systemic consequence candidate.
+- Guard: independent review is clean; crawls `20260805T062211Z` / `20260805T064140Z`, 49 focused tests plus the 16-test pure regression, and exact-tree health (459 files/3,913 tests plus UI/all 12 packs) are green.
 
 ### Cycle result - evidence_bound_terminal_interview
 
@@ -155,14 +165,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the first attempt used 5.312M raw / 165,736 uncached input + 12,552 output at 96.88% input-cache reuse (178,288 useful, about 3,184/decision); no retry, fallback, or extra certifying player ran.
 - Self-critique/follow-through: the canary proves the pair is legible and the build is safe, not strategy diversity; it still chose LURE and repeated Station planning density as S1, so the next decisive evidence is a fresh landed-build 10-player Terra pilot, not a 100-player fleet.
 - Guard: two independent reviews are clean, 62 focused/hash-migration tests pass, crawl `20260802T035007Z` has zero findings, and exact-tree health passes 456 files/3,785 tests plus all 12 packs when serialized to prevent unrelated exhaustive-project CPU contention.
-
-### Cycle result - june_hunt_release
-
-- Evidence choice: paid cattle-first ally June had no truthful pre-combat exit from HUNT; retaining her made the first wolf death break the agreement, so HUNT alone forced relationship damage rather than pricing it as a visible tradeoff.
-- Surface/effect: the last pre-HUNT boundary now permits an amicable release that immediately commits HUNT, closes LURE/DRIVE/FORTIFY and every later June intervention, and grants no replacement combat or cattle bonus; retaining her preserves the original death-triggered breakage.
-- Reusable engine: ordered data-driven `ending_overrides` select four released-June HUNT identities through generic schema, runner, validation, replay, and source-runtime paths; Albany foldback consumes declared ending facts instead of adding a Wolf-specific campaign branch.
-- Counterfactual/integrity: paired retain/release proofs cover the three held outcomes plus bloodied evacuation, strategy closure, memory/testimony/service consequences, full/compact/UI parity, save/replay, exact predecessor migration, and adjacent/tampered rejection.
-- Pure evidence: exact-clean Terra seed 681101 independently chose LURE, diverted all three wolves with the whole herd, continued at decisions 29/41, won The Gallowmere at 54, rated clarity/enjoyment 4/4 and replay-yes, and reported no rejection, broken state, loop, or stuck state.
-- Background evidence: the no-retry Spark qualification verified 4/10 first attempts with six strict-stream failures; every verified player completed without getting stuck and rated 4/4/replay-yes, but all ended at the first goal, so it is neither transport qualification nor milestone certification.
-- Economy: the Terra first attempt used 4.946M raw / 164,814 uncached input + 13,411 output at 96.66% input-cache reuse (178,225 useful, about 3,300/decision); no retry, fallback, or extra certifying player ran.
-- Self-critique/guard: the canary proves build safety, not HUNT uptake; Albany planning density and Gallowmere's same-label recovery remain isolated S1 evidence, so the next decisive step is a fresh 10-player Terra pilot; two bounded audits are clean, crawl `20260801T231727Z` has zero findings, and exact-code health passes 456 files/3,784 tests plus all 12 packs.
