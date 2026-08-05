@@ -1,8 +1,5 @@
 import { useEffect, useRef } from "react";
-import type {
-  JourneyChoice,
-  JourneyPresentation,
-} from "../../src/world/journey_contract.js";
+import type { JourneyChoice, JourneyPresentation } from "../../src/world/journey_contract.js";
 import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 
 type JourneyChoiceScreenProps = {
@@ -10,10 +7,7 @@ type JourneyChoiceScreenProps = {
   onChoose: (choice: JourneyChoice) => void;
 };
 
-export function JourneyChoiceScreen({
-  journey,
-  onChoose,
-}: JourneyChoiceScreenProps): JSX.Element {
+export function JourneyChoiceScreen({ journey, onChoose }: JourneyChoiceScreenProps): JSX.Element {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const pendingChoice = journey.pendingChoice;
 
@@ -51,7 +45,8 @@ export function JourneyChoiceScreen({
             <h2 id="journey-continuation-preview-title">After Continue: dawn relief dispatch</h2>
             <p>{pendingChoice.continuationPreview.message}</p>
             <p className="journey-continuation-preview-lock">
-              These terms are locked for review. Continue opens this decision; only Continue or End is legal now.
+              These terms are locked for review. Continue opens this decision; only Continue or End
+              is legal now.
             </p>
             <div className="journey-continuation-preview-cards">
               {pendingChoice.continuationPreview.options.map((option) => (

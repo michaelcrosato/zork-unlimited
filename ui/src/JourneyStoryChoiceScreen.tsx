@@ -27,9 +27,10 @@ export function JourneyStoryChoiceScreen({
 }: JourneyStoryChoiceScreenProps): JSX.Element {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const storyChoice = journey.storyChoice;
-  const [revealedStoryChoice, setRevealedStoryChoice] = useState<
-    Readonly<{ storyChoiceId: string; revealId: string }> | null
-  >(null);
+  const [revealedStoryChoice, setRevealedStoryChoice] = useState<Readonly<{
+    storyChoiceId: string;
+    revealId: string;
+  }> | null>(null);
   const storyChoicePresentationKey = [
     journey.decisionProof.hash,
     storyChoice?.id ?? "",
@@ -64,17 +65,15 @@ export function JourneyStoryChoiceScreen({
     revealedStoryChoice.revealId === progressiveDisclosure.reveal.id;
   const revealedOptions =
     progressiveDisclosure && isProgressiveDisclosureRevealed
-      ? journeyStoryChoiceOptionsForPresentation(storyChoice, progressiveDisclosure.reveal.id).filter(
+      ? journeyStoryChoiceOptionsForPresentation(
+          storyChoice,
+          progressiveDisclosure.reveal.id,
+        ).filter(
           (option) => !initialOptions.some((initialOption) => initialOption.id === option.id),
         )
       : [];
   const keepsCurrentObjective =
-    isRegistration ||
-    isLeadSource ||
-    isPreparation ||
-    isAlly ||
-    isReliefAllocation ||
-    isReliefOath;
+    isRegistration || isLeadSource || isPreparation || isAlly || isReliefAllocation || isReliefOath;
   const usesRoleplayReceipts =
     keepsCurrentObjective &&
     storyChoice.options.every(
@@ -96,21 +95,21 @@ export function JourneyStoryChoiceScreen({
       ? "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a duty or role shortcut."
       : hasRoleShortcut
         ? "The role-shortcut card binds duty and evidence together; the duty comparison is read-only."
-    : usesRoleplayReceipts
-      ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
-      : isRegistration
-        ? "Your registered history persists into the journey; choose the experience and obligations you will carry."
-      : isLeadSource
-        ? "Your source changes the evidence and approaches you can carry forward; it does not replace this objective."
-        : isPreparation
-          ? "Your finite allocation changes later actions and the service Albany can release on your return; it does not replace this objective."
-          : isAlly
-            ? "Compare the field capability, binding condition, and actual cost in these terms; your commitment changes who can act independently without replacing this objective."
-            : isReliefAllocation
-              ? "Albany can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
-              : isReliefOath
-                ? "Compare each term's access, duty, actual cost, field consequence, and return promise. This binds the dispatch without replacing your current objective."
-                : "Choose the consequence that sets your next objective.";
+        : usesRoleplayReceipts
+          ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
+          : isRegistration
+            ? "Your registered history persists into the journey; choose the experience and obligations you will carry."
+            : isLeadSource
+              ? "Your source changes the evidence and approaches you can carry forward; it does not replace this objective."
+              : isPreparation
+                ? "Your finite allocation changes later actions and the service Albany can release on your return; it does not replace this objective."
+                : isAlly
+                  ? "Compare the field capability, binding condition, and actual cost in these terms; your commitment changes who can act independently without replacing this objective."
+                  : isReliefAllocation
+                    ? "Albany can cover one need. Each choice names what it protects, what remains exposed, and which field or return resource changes."
+                    : isReliefOath
+                      ? "Compare each term's access, duty, actual cost, field consequence, and return promise. This binds the dispatch without replacing your current objective."
+                      : "Choose the consequence that sets your next objective.";
   const renderOption = (option: (typeof initialOptions)[number]): JSX.Element => {
     const conciseSummary = option.summary;
     const usesRoleplayReceipt =
@@ -136,11 +135,7 @@ export function JourneyStoryChoiceScreen({
           )}
           {conciseSummary?.fieldTrigger && (
             <small className="journey-choice-trigger">
-              <b>
-                {usesTriggerCategory
-                  ? "Trigger category:"
-                  : "First field trigger / tradeoff:"}
-              </b>{" "}
+              <b>{usesTriggerCategory ? "Trigger category:" : "First field trigger / tradeoff:"}</b>{" "}
               {conciseSummary.fieldTrigger}
             </small>
           )}
@@ -176,9 +171,7 @@ export function JourneyStoryChoiceScreen({
               <p className="journey-choice-dispatch-impact">{option.dispatchImpact.line}</p>
             )}
             {option.dispatchForecast && (
-              <p className="journey-choice-dispatch-forecast">
-                {option.dispatchForecast.line}
-              </p>
+              <p className="journey-choice-dispatch-forecast">{option.dispatchForecast.line}</p>
             )}
             <p>{option.consequence}</p>
           </details>
@@ -229,7 +222,7 @@ export function JourneyStoryChoiceScreen({
                         ? "Compare what must stand at dawn"
                         : hasRoleShortcut
                           ? "Choose a role shortcut or compare duties"
-                        : "Choose one binding term"
+                          : "Choose one binding term"
                       : "Choose what follows"}
         </h1>
         <p id="journey-story-choice-message" className="journey-choice-message">

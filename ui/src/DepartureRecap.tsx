@@ -43,8 +43,7 @@ export function DepartureRecap({
 }): JSX.Element {
   const Heading = headingLevel === 2 ? "h2" : "h4";
   const selectedTerms = recap.entries.filter(
-    (entry): entry is typeof entry & { activeFieldTerm: string } =>
-      entry.activeFieldTerm !== null,
+    (entry): entry is typeof entry & { activeFieldTerm: string } => entry.activeFieldTerm !== null,
   );
   const selectedPlan = recap.entries
     .flatMap((entry) => (entry.title === null ? [] : [`${entry.label}: ${entry.title}`]))
@@ -76,14 +75,14 @@ export function DepartureRecap({
         <p className="departure-recap-dispatch">
           {recap.dispatch.state === "sealed" ? (
             <>
-              Dispatch sealed: {recap.dispatch.minutes}m — {" "}
+              Dispatch sealed: {recap.dispatch.minutes}m —{" "}
               {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}.
             </>
           ) : recap.dispatch.state === "direct_launch" ? (
             <>
-              Direct launch now: {recap.dispatch.minutes}m — {" "}
-              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}. Field-team
-              contact remains optional.
+              Direct launch now: {recap.dispatch.minutes}m —{" "}
+              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}. Field-team contact
+              remains optional.
             </>
           ) : (
             <>

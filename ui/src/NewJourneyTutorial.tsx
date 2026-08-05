@@ -5,10 +5,7 @@ type NewJourneyTutorialProps = {
   onStart: () => void;
 };
 
-export function NewJourneyTutorial({
-  tutorial,
-  onStart,
-}: NewJourneyTutorialProps): JSX.Element {
+export function NewJourneyTutorial({ tutorial, onStart }: NewJourneyTutorialProps): JSX.Element {
   return (
     <main className="tutorial-page">
       <section
