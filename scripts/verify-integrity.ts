@@ -43,6 +43,15 @@ import { countCycleEntries, LOOP_STATE_FILE, ROTATE_KEEP } from "../src/afk/loop
 /** Verification assets the project's correctness rests on. Must always exist. */
 export const PROTECTED_FILES = [
   "tests/property/determinism.test.ts",
+  // The overworld twin of the property suite above, and the toy subject the RPG one
+  // still uses as its cheap minimal witness. determinism.test.ts was protected while
+  // micro.ts was not, so deleting the toy broke the protected test without tripping
+  // PROTECTED_DELETED — the guard would have reported the disappearance as a plain
+  // test failure rather than as verification being removed.
+  //
+  // NOTE: keep this comment free of apostrophes and quotes and brackets — see below.
+  "tests/property/overworld_determinism.test.ts",
+  "src/demo/micro.ts",
   "src/core/rng.ts",
   "src/core/hash.ts",
   "src/core/sha256.ts",

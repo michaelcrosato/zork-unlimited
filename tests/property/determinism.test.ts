@@ -17,14 +17,57 @@ import { makeStep } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
 import { save, load } from "../../src/persist/save_load.js";
 import type { RpgAction } from "../../src/api/types.js";
-import {
-  microRules,
-  microInitState,
-  MICRO_CONTENT_HASH,
-} from "../../src/demo/micro.js";
+import { microRules, microInitState, MICRO_CONTENT_HASH } from "../../src/demo/micro.js";
+import type { Rules } from "../../src/core/engine.js";
+import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
 
 const ILLEGAL_REASON = "That action is not available right now.";
-const step = makeStep(microRules);
+
+/**
+ * A subject these properties can be established ON.
+ *
+ * They used to run against src/demo/micro.ts alone — 99 lines, four hand-written
+ * scenes, ends in three moves, with no combat, no skill checks, no RNG draw, no
+ * objectState, no quest stages, no dialogue. Determinism and purity held there
+ * trivially, because almost none of the state the engine actually carries existed to
+ * be non-deterministic or mutated. Properties are what establish correctness here, so
+ * they belong on shipped content; the toy stays as the fast, minimal witness.
+ */
+type Subject = {
+  label: string;
+  rules: Rules<RpgAction>;
+  initState: (seed: number) => GameState;
+  contentHash: string;
+  /** Longest walk to attempt. A real pack needs more steps to reach anything. */
+  maxSteps: number;
+};
+
+function shippedSubject(path: string, label: string, maxSteps: number): Subject {
+  const loaded = loadRpgSourceFile(path);
+  if (!loaded.ok) throw new Error(`${label} must compile for the property suite`);
+  const index = indexRpgPack(loaded.compiled.pack);
+  return {
+    label,
+    rules: buildRpgRules(index),
+    initState: (seed) => initStateForRpgPack(index, seed),
+    contentHash: loaded.compiled.contentHash,
+    maxSteps,
+  };
+}
+
+const SUBJECTS: Subject[] = [
+  {
+    label: "demo/micro",
+    rules: microRules,
+    initState: microInitState,
+    contentHash: MICRO_CONTENT_HASH,
+    maxSteps: 20,
+  },
+  // The smallest shipped quest: real rooms, objects, containers, an NPC, combat, and a
+  // score var, so the state graph these properties quantify over is the real one.
+  shippedSubject("content/rpg/quests/sunken_barrow.yaml", "sunken_barrow", 40),
+];
 
 type Walk = {
   hashes: string[];
@@ -37,16 +80,17 @@ type Walk = {
 };
 
 /** Walk the game guided by `picks`: at each step choose a legal RpgAction by index. */
-function walk(picks: number[], seed: number): Walk {
-  let state = microInitState(seed);
+function walk(subject: Subject, picks: number[], seed: number): Walk {
+  const step = makeStep(subject.rules);
+  let state = subject.initState(seed);
   const hashes: string[] = [];
   const events: GameEvent[][] = [];
   const states: GameState[] = [];
   let illegalRejections = 0;
 
-  for (const pick of picks) {
+  for (const pick of picks.slice(0, subject.maxSteps)) {
     if (state.ended) break;
-    const legal = microRules.legalActions(state);
+    const legal = subject.rules.legalActions(state);
     if (legal.length === 0) break;
     const action = legal[pick % legal.length] as RpgAction;
 
@@ -72,7 +116,9 @@ function deepFreeze<T>(obj: T): T {
   return obj;
 }
 
-const picksArb = fc.array(fc.nat({ max: 1000 }), { maxLength: 20 });
+// Long enough for a real pack to reach a container, a fight, or an ending; each
+// subject slices this to its own maxSteps.
+const picksArb = fc.array(fc.nat({ max: 1000 }), { maxLength: 40 });
 
 /**
  * The full domain `isRuntimeSeed` accepts, not a comfortable slice of it.
@@ -109,12 +155,12 @@ const seedArb = fc.oneof(
  */
 const RUNS = { numRuns: 200 };
 
-describe("determinism contract (§8.5)", () => {
+describe.each(SUBJECTS)("determinism contract (§8.5) — $label", (subject: Subject) => {
   it("(a) identical RpgAction sequence ⇒ identical hashes and events on repeat", () => {
     fc.assert(
       fc.property(picksArb, seedArb, (picks, seed) => {
-        const a = walk(picks, seed);
-        const b = walk(picks, seed);
+        const a = walk(subject, picks, seed);
+        const b = walk(subject, picks, seed);
         expect(a.hashes).toEqual(b.hashes);
         expect(a.events).toEqual(b.events);
         expect(hashState(a.finalState)).toBe(hashState(b.finalState));
@@ -126,7 +172,7 @@ describe("determinism contract (§8.5)", () => {
   it("(b) step never mutates its input (deep-frozen states never throw)", () => {
     fc.assert(
       fc.property(picksArb, seedArb, (picks, seed) => {
-        expect(() => walk(picks, seed)).not.toThrow();
+        expect(() => walk(subject, picks, seed)).not.toThrow();
       }),
       RUNS,
     );
@@ -135,12 +181,12 @@ describe("determinism contract (§8.5)", () => {
   it("(c) every reached state survives a save/load round-trip with an identical hash", () => {
     fc.assert(
       fc.property(picksArb, seedArb, (picks, seed) => {
-        for (const s of walk(picks, seed).states) {
+        for (const s of walk(subject, picks, seed).states) {
           const restored = load(
-            save(s, MICRO_CONTENT_HASH, undefined, {
-              worldQuestId: "micro_determinism",
+            save(s, subject.contentHash, undefined, {
+              worldQuestId: `${subject.label}_determinism`,
             }),
-            MICRO_CONTENT_HASH,
+            subject.contentHash,
           );
           expect(hashState(restored.state)).toBe(hashState(s));
         }
@@ -152,9 +198,21 @@ describe("determinism contract (§8.5)", () => {
   it("(d) a member of the legal-RpgAction set is never rejected as illegal", () => {
     fc.assert(
       fc.property(picksArb, seedArb, (picks, seed) => {
-        expect(walk(picks, seed).illegalRejections).toBe(0);
+        expect(walk(subject, picks, seed).illegalRejections).toBe(0);
       }),
       RUNS,
     );
+  });
+
+  it("the walk actually reaches state (a property over an empty region proves nothing)", () => {
+    // Guards the whole file against becoming vacuous: if legalActions ever returned
+    // nothing, or the pack failed to start, every property above would pass trivially.
+    const reached = walk(
+      subject,
+      Array.from({ length: subject.maxSteps }, (_, index) => index),
+      7,
+    );
+    expect(reached.states.length).toBeGreaterThan(2);
+    expect(new Set(reached.hashes).size).toBeGreaterThan(1);
   });
 });
