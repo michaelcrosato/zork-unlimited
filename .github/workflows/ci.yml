@@ -25,7 +25,14 @@ jobs:
   verify-prerequisites:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 is load-bearing, not hygiene. The verifier's real teeth —
+      # the per-cycle count ratchet and the guard-weakening check — live in drift
+      # mode, which needs the base commit's tree. A shallow clone has no history,
+      # so drift mode now fails loudly rather than reporting OK with both checks
+      # silently skipped.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -33,6 +40,15 @@ jobs:
       - run: npm ci
       - name: Verifier integrity (don't route around the verifier)
         run: npm run verify:integrity
+      # Static mode alone cannot see a deletion that stays above the floors. Drift
+      # mode compares this branch against the base it will merge into, which is the
+      # same comparison loop.sh makes per cycle. On a push (no PR context) there is
+      # no base ref, so the static run above stands on its own.
+      - name: Verifier drift vs the merge base (the count ratchet + guard-weakening check)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: npm run verify:integrity -- --against "$BASE_SHA"
       - name: Typecheck
         run: npm run typecheck
       - name: Lint (ESLint)

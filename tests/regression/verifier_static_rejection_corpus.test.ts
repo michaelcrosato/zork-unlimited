@@ -55,7 +55,7 @@ const BOGUS_REF = "0000000000000000000000000000000000000000";
 
 // A tiny test file (string literal) that is DELIBERATELY below all three floors: ONE
 // it() shell, ONE expect() call, ONE strong (toBe) matcher — far under MIN_TEST_CASES /
-// MIN_ASSERTIONS / MIN_STRONG_ASSERTIONS (each is 120/400/400). So runStatic emits all
+// MIN_ASSERTIONS / MIN_STRONG_ASSERTIONS. So runStatic emits all
 // three floor codes on this root. Assembled so it does NOT contain any disabled marker.
 const TINY_TEST_FILE = [
   "import { describe, it, expect } from 'vitest';",

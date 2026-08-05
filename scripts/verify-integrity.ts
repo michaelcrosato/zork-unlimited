@@ -67,6 +67,20 @@ export const PROTECTED_FILES = [
   // the pins still re-mint deterministically. bug_0176, the bug_0172 deferred lever c.
   "corpus/manifest.json",
   "scripts/verify-integrity.ts",
+  // The exhaustive solver is the ground truth under 14 census proofs — every
+  // all-endings-reachable, soft-lock and score-economy claim is a statement about
+  // what its BFS found. Weakening it would make all 14 pass VACUOUSLY with no change
+  // to any count here, so nothing else in this guard would notice. The cap backstop
+  // is its two-sided witness that the state cap actually fires, which is what stops
+  // a silently truncated search from reading as a completed proof; guard both or
+  // guarding either is theatre.
+  //
+  // NOTE: keep this comment free of apostrophes and quotes and brackets — see above.
+  "src/solve/exhaustive_endings.ts",
+  "tests/regression/exhaustive_endings_cap_backstop.test.ts",
+  // Decides WHICH test files CI runs. A filter here silently shrinks the suite while
+  // every shard still reports green, so it belongs beside the counts it could hide.
+  "scripts/ci-test-groups.ts",
 ];
 
 /** Paths that must not reappear while the repo normalizes to RPG-only authoring. */
@@ -108,18 +122,29 @@ export const HASH_PIN_FILES = [
   "traces/rpg/barrow_victory.json",
 ];
 
-/** Never drop below this many test cases (a mass-deletion tripwire). Currently ~890. */
-export const MIN_TEST_CASES = 120;
+// The three static floors below are the LAST line of defence, and until 2026-08-05 they
+// sat at roughly 2-4% of the real corpus (120/400/400 against ~3,200/20,300/19,400) with
+// comments claiming counts that were an order of magnitude stale. A PR could delete
+// ~96% of the suite and pass both verify:integrity and the test shards, because the
+// shards simply run fewer files. They are now set at ~80% of the measured corpus:
+// tight enough that a mass deletion cannot hide beneath them, loose enough that a
+// legitimate consolidation, or removing a check together with the feature it guarded,
+// has room. Re-measure and re-raise them deliberately, never lower them.
+//
+// Measured 2026-08-05 over 462 files: 3,255 cases / 20,297 assertions / 19,382 strong.
+
+/** Never drop below this many test cases (a mass-deletion tripwire). */
+export const MIN_TEST_CASES = 2600;
 
 /** Never drop below this many `expect()` assertions (the assertion-gutting tripwire,
- *  parallel to MIN_TEST_CASES). Currently ~2950; set well below as a mass-deletion
- *  floor, while the drift ASSERTION_COUNT_REGRESSION guards the precise per-cycle drop. */
-export const MIN_ASSERTIONS = 400;
+ *  parallel to MIN_TEST_CASES), while the drift ASSERTION_COUNT_REGRESSION guards the
+ *  precise per-cycle drop. */
+export const MIN_ASSERTIONS = 16200;
 
 /** Never drop below this many STRONG (value-pinning) matchers — the strict→loose-swap
- *  tripwire, parallel to MIN_ASSERTIONS. Currently ~2890; set well below as a mass
- *  tripwire, while the drift STRONG_ASSERTION_REGRESSION guards the precise per-cycle drop. */
-export const MIN_STRONG_ASSERTIONS = 400;
+ *  tripwire, parallel to MIN_ASSERTIONS, while the drift STRONG_ASSERTION_REGRESSION
+ *  guards the precise per-cycle drop. */
+export const MIN_STRONG_ASSERTIONS = 15500;
 
 /** A disabled / focused test marker — any of these in a test file is a red flag. */
 const DISABLED_RE =
@@ -378,7 +403,7 @@ export function countStrongAssertions(files: { text: string }[]): number {
   return files.reduce((n, f) => n + (f.text.match(STRONG_ASSERTION_RE)?.length ?? 0), 0);
 }
 
-function readAll(root: string, paths: string[]): { path: string; text: string }[] {
+export function readAll(root: string, paths: string[]): { path: string; text: string }[] {
   return paths.map((p) => ({ path: p, text: readFileSync(join(root, p), "utf8") }));
 }
 
@@ -891,7 +916,19 @@ export function runDrift(
   // strong-matcher check closes the strict→loose swap launder (turn `toBe(x)` into
   // `toBeDefined()`) — the expect() count holds but the strong count drops, caught here.
   const before = countTestArtifactsAtRef(root, ref);
-  if (before !== null) {
+  if (before === null) {
+    // Previously this was a SILENT skip: any git failure reading the ref — a shallow
+    // clone with no history, a bad ref, a maxBuffer overflow — quietly disabled the
+    // count-regression check while the run still reported OK. The whole point of drift
+    // mode is these three counters, so a guard that cannot run is a failure, not a
+    // pass. (Shallow CI checkouts are the realistic cause: fetch-depth: 0 fixes it.)
+    findings.push({
+      severity: "error",
+      code: "COUNT_BASELINE_UNREADABLE",
+      message: `cannot read the test corpus at ${ref}, so the count-regression guard could not run (a shallow clone has no history — use fetch-depth: 0)`,
+      where: ref,
+    });
+  } else {
     const nowFiles = readAll(root, listTestFiles(root));
     const now = {
       cases: countTestCases(nowFiles),
@@ -900,6 +937,16 @@ export function runDrift(
       tautologies: countTautologyAssertions(nowFiles),
     };
     findings.push(...detectCountRegressions(before, now));
+  }
+  if (guardBefore === null) {
+    // Same reasoning for the guard-weakening half: a ref whose verify-integrity.ts
+    // cannot be read means detectGuardWeakening never ran.
+    findings.push({
+      severity: "error",
+      code: "GUARD_BASELINE_UNREADABLE",
+      message: `cannot read scripts/verify-integrity.ts at ${ref}, so the guard-weakening check could not run`,
+      where: ref,
+    });
   }
   return { ok: !findings.some((f) => f.severity === "error"), findings };
 }
