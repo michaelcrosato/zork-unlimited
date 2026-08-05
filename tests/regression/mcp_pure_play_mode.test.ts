@@ -3259,4 +3259,52 @@ describe("MCP pure play mode", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   }, 120_000);
+
+  // Zod v3's ZodError.message is a GETTER that pretty-prints one object per failing
+  // element, and these two tools accept opaque blobs with no size bound. A 108 KB
+  // restore snapshot produced a 3.9 MB error string, 1 MB produced 59 MB, and around
+  // 300k issues the getter read itself threw RangeError from INSIDE the catch block —
+  // so spectateRecord never ran and, in pure mode, the structured recovery envelope was
+  // silently replaced by the SDK's generic error. Bound the response and the work.
+  it("bounds a malformed restore_overworld_session error instead of amplifying it", async () => {
+    await withFullServer(async (client) => {
+      const result = await client.callTool({
+        name: "restore_overworld_session",
+        arguments: {
+          snapshot: { version: 9, visitedIds: Array.from({ length: 500 }, (_, index) => index) },
+        },
+      });
+      expect(result.isError).toBe(true);
+      const text = textResult(result);
+      // Untrimmed, this snapshot alone yields 527 issues and a ~99 KB message.
+      expect(text.length).toBeLessThan(4_000);
+      expect(text.startsWith("Error: ")).toBe(true);
+    });
+  }, 120_000);
+
+  it("refuses an implausibly large snapshot at the tool boundary", async () => {
+    await withFullServer(async (client) => {
+      const result = await client.callTool({
+        name: "restore_overworld_session",
+        arguments: { snapshot: { version: 9, filler: "x".repeat(600_000) } },
+      });
+      expect(result.isError).toBe(true);
+      expect(textResult(result).length).toBeLessThan(4_000);
+    });
+  }, 120_000);
+
+  it("bounds a malformed load_game error the same way", async () => {
+    await withFullServer(async (client) => {
+      const result = await client.callTool({
+        name: "load_game",
+        arguments: {
+          save: JSON.stringify({
+            state: { flags: Array.from({ length: 400 }, (_, index) => index) },
+          }),
+        },
+      });
+      expect(result.isError).toBe(true);
+      expect(textResult(result).length).toBeLessThan(4_000);
+    });
+  }, 120_000);
 });

@@ -29,6 +29,7 @@ import { createToolApi } from "./tools.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
 import { formatSpectateEntry } from "./spectate.js";
+import { compactText } from "../core/compact_text.js";
 import { OverworldSessionSnapshotSchema } from "../world/session_snapshot.js";
 import { compactOverworldAreaRoutes } from "../world/compact_view.js";
 import {
@@ -270,11 +271,81 @@ function pureSessionRecoveryFields(): Record<string, string> {
   };
 }
 
+/**
+ * Longest tool-error text that may leave the server. Sits at the top of the band the
+ * repo already uses for diagnostic strings (180-1200 chars elsewhere): enough to carry
+ * a real message and the first few zod issues, far short of a context-destroying wall.
+ */
+export const MCP_TOOL_ERROR_CHAR_LIMIT = 1_200;
+
+/**
+ * Boundary sizes for the two tools that accept an opaque blob. A real overworld
+ * snapshot is ~2 KB and grows with the journal and travel log; a real save is
+ * comparable. These sit orders of magnitude above anything the game produces and
+ * orders of magnitude below the payloads that made zod build a multi-megabyte
+ * issue list. They stop the work, not just the response: the deep schema parse
+ * inside the handler is what generates one pretty-printed object per failing
+ * element, so refusing an implausible blob at the boundary is cheaper than
+ * trimming the wreckage afterwards.
+ */
+export const MCP_SNAPSHOT_CHAR_LIMIT = 512_000;
+export const MCP_SAVE_CHAR_LIMIT = 512_000;
+/** Content patches are authored op lists, not bulk data. */
+export const MCP_PATCH_OPS_LIMIT = 512;
+
+function withinSerializedLimit(value: unknown, limit: number): boolean {
+  try {
+    return JSON.stringify(value).length <= limit;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Declared here rather than inline in the tool block: `registeredToolBlock` measures the
+ * registration's SOURCE length to keep the schema text a client is shown terse, and a
+ * multi-line refine in the block would spend that budget on a server-side size guard.
+ */
+const BOUNDED_SNAPSHOT_RECORD = z
+  .record(z.unknown())
+  .refine((value) => withinSerializedLimit(value, MCP_SNAPSHOT_CHAR_LIMIT), {
+    message: "Snapshot is too large to restore.",
+  });
+
+/**
+ * Read an error's message without letting it become the failure.
+ *
+ * Zod v3's `ZodError.message` is a GETTER that runs
+ * `JSON.stringify(this.issues, replacer, 2)` on every read — one pretty-printed
+ * object per failing element. The tools that accept unbounded collections hand
+ * that straight to a response: a 108 KB `restore_overworld_session` snapshot
+ * produced a 3.9 MB error string, 1 MB produced 59 MB, and at roughly 300k issues
+ * the read itself throws `RangeError: Invalid string length` — from INSIDE the
+ * catch block, so the structured pure-mode error contract never ran and the
+ * spectate record was skipped. The server survived only because the MCP SDK
+ * happened to catch the rejection.
+ *
+ * So the getter access itself is guarded, not just its result: any
+ * `compactText(e.message, N)` would still evaluate the getter first.
+ */
+function safeErrorMessage(error: unknown): string {
+  try {
+    return compactText(
+      error instanceof Error ? error.message : String(error),
+      MCP_TOOL_ERROR_CHAR_LIMIT,
+    );
+  } catch {
+    return "Tool error message could not be rendered (too large).";
+  }
+}
+
 function pureSessionErrorPayload(error: unknown): Record<string, unknown> {
-  const resolved = error instanceof Error ? error : new Error(String(error));
+  // `instanceof` against the original error, so a non-Error never round-trips
+  // through String() — which for a ZodError routes to the same amplifying getter.
+  const resolved = error;
   return {
     ok: false,
-    error: resolved.message,
+    error: safeErrorMessage(error),
     ...(resolved instanceof PureSessionRecoveryError
       ? {
           // `expected_session_field` is retained for existing clients. The two
@@ -427,7 +498,7 @@ function persistPureJourneyExitEvidence(response: Record<string, unknown>): unkn
   } catch (error) {
     pureRunState.journeyExitWriteFailures += 1;
     const retryable = pureRunState.journeyExitWriteFailures === 1;
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = safeErrorMessage(error);
     return pureJourneyExitEvidenceFailure(response, detail, retryable);
   }
 }
@@ -503,7 +574,7 @@ function pureCallEvidence(name: string, value: unknown): unknown {
   try {
     verifiedReceipt = JourneyExitReceiptSchema.parse(receipt);
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = safeErrorMessage(error);
     return pureJourneyExitEvidenceFailure(response, detail, false);
   }
   if (RUN_EVIDENCE_PATH !== null) {
@@ -525,7 +596,7 @@ function pureCallEvidence(name: string, value: unknown): unknown {
         receipt: verifiedReceipt,
       });
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
+      const detail = safeErrorMessage(error);
       return pureJourneyExitEvidenceFailure(response, detail, false);
     }
   }
@@ -816,6 +887,10 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
       const value = pureSessionResponsePayload(name, evidencedValue);
       result = ok(value);
     } catch (e) {
+      // Bound the text on BOTH branches. Trimming only the dev branch leaves the pure
+      // payload amplifying; trimming only inside pureSessionErrorPayload leaves the dev
+      // branch amplifying; trimming downstream (spectate, ok()) is too late, because the
+      // oversized string is already on the wire.
       result =
         PLAY_MODE === "pure"
           ? {
@@ -823,7 +898,7 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
               isError: true,
             }
           : {
-              content: [{ type: "text", text: `Error: ${(e as Error).message}` }],
+              content: [{ type: "text", text: `Error: ${safeErrorMessage(e)}` }],
               isError: true,
             };
     } finally {
@@ -1274,7 +1349,7 @@ tool(
   "restore_overworld_session",
   "Restore an exported overworld snapshot as a new session without replaying the fresh-start tutorial; keep its initial compact legend and merge later legend_delta patches by key.",
   {
-    snapshot: z.record(z.unknown()).describe("Snapshot from export_overworld_session."),
+    snapshot: BOUNDED_SNAPSHOT_RECORD.describe("Snapshot from export_overworld_session."),
     ...COMPACT_OVERWORLD_CONTEXT,
   },
   (a) => api.restore_overworld_session(defaultCompactOverworld(a)),
@@ -1684,7 +1759,7 @@ tool(
   {
     world_quest_id: z.string().optional().describe("World quest id."),
     generate_rpg_seed: G.optional().describe("Seed for generated-pack saves."),
-    save: z.string().describe("Save string from save_game."),
+    save: z.string().max(MCP_SAVE_CHAR_LIMIT).describe("Save string from save_game."),
     ...HIDE_GRAPH,
     ...COMPACT_ACTIONS,
     ...COMPACT_OBSERVATION,
@@ -1740,7 +1815,10 @@ tool(
           "quest_structure",
         ]),
         summary: z.string(),
-        ops: z.array(z.record(z.string(), z.unknown())).describe("Validated patch ops."),
+        ops: z
+          .array(z.record(z.string(), z.unknown()))
+          .max(MCP_PATCH_OPS_LIMIT)
+          .describe("Validated patch ops."),
       })
       .describe("Op-based patch proposal."),
   },
