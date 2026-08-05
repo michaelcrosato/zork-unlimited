@@ -12,10 +12,10 @@ import {
 import type { RpgPack } from "./schema.js";
 
 export const EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
-  "Scenario-local numbers and issued kit govern this quest. Your persistent record remains intact; only authored campaign import and export effects cross the quest boundary.";
+  "Campaign supplies, fatigue, and character record persist. Quest HP, stats, and issued inventory are local; only authored campaign imports and exports cross the boundary.";
 
 export const EMBEDDED_QUEST_COMPACT_SCOPE_NOTE =
-  "Quest stats and kit are local; quest HP does not reduce or replace your campaign health.";
+  "Campaign supplies, fatigue, and character persist; quest HP, stats and issued inventory are local; only authored imports/exports cross.";
 
 export type EmbeddedQuestLocalSkill = {
   id: string;

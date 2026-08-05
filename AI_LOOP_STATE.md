@@ -167,3 +167,8 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the first attempt used 4.941M raw / 163,847 uncached input + 11,640 output at 96.68% input-cache reuse (175,487 useful, about 3,134/decision); no retry, fallback, cohort, or fanout ran.
 - Self-critique/follow-through: this proves clean-build safety and retention, not DRIVE uptake; the player again named Albany planning density and chose replay-no, while its Queensbury/Gallowmere S1 notes stay outside this focused starting-slice increment pending accumulated feedback.
 - Guard: two independent reviews found no actionable issue; crawls `20260801T112656Z` / `20260801T130256Z` have zero findings, and exact-tree health passes 451 files/3,771 tests plus all 12 packs.
+## AFK Cycle 2026-08-05T01-29-25-636Z
+- Assess: rpg=12; world=12; candidates=15.
+- Rec: hotspot-585424d9 (content_fix/M; score=1.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

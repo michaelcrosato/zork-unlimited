@@ -26,6 +26,7 @@ import {
 } from "../../bin/overworld_play.js";
 import { renderTerminalStoryChoiceDetail } from "../../bin/terminal_story_choice.js";
 import { compactJourneyStoryChoiceComparison } from "../../src/mcp/journey_projection.js";
+import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -414,6 +415,10 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
 
     const text = renderQuestLaunch(quest);
     expect(text).toContain("Which last-mile road do you commit to?");
+    expect(text).toContain(EMBEDDED_QUEST_CONTINUITY_EXPLANATION);
+    expect(text.indexOf(EMBEDDED_QUEST_CONTINUITY_EXPLANATION)).toBeLessThan(
+      text.indexOf("choose 1 — Take the ridge"),
+    );
     expect(text).toContain("choose <number|name>");
     expect(text).toContain("choose 1 — Take the ridge");
     expect(text).toContain("Actual cost: 30 min, 1 supply, fatigue +25.");
