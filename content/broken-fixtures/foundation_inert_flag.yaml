@@ -1,0 +1,25 @@
+# MUST WARN: INERT_FLAG
+# An effect sets a flag no condition anywhere reads — dead bookkeeping that reads
+# like a working gate.
+meta: { id: bad_inert_flag, title: "Bad Inert Flag", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [lever]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: lever
+    name: "iron lever"
+    aliases: [lever]
+    description: "A lever."
+    interactions:
+      - verb: USE
+        target: lever
+        effects: [{ set_flag: nobody_reads_this }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

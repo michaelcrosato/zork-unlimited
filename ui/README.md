@@ -32,7 +32,7 @@ time (see below), so nothing else is needed at runtime.
 ## How it stays honest
 
 - **No reimplemented rules.** `ui/src/engine.ts` imports the real engine, runners,
-  validators, and observation builders from `../src`. The state hash shown in the
+  schemas, and observation builders from `../src`. The state hash shown in the
   sidebar is the same pure SHA-256 the determinism contract uses (§8.5).
 - **Browser-safe core.** The engine has no Node-only dependencies; the state hash
   is a pure-JS SHA-256 (`src/core/sha256.ts`), identical to Node's `crypto`.

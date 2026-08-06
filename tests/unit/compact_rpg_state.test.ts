@@ -5,7 +5,6 @@ import {
   COMPACT_STATE_FLAG_LIMIT,
   COMPACT_STATE_INVENTORY_LIMIT,
   COMPACT_STATE_JOURNAL_LIMIT,
-  COMPACT_STATE_OBJECT_CONTENT_LIMIT,
   COMPACT_STATE_OBJECT_LIMIT,
   COMPACT_STATE_QUEST_LIMIT,
   COMPACT_STATE_VAR_LIMIT,
@@ -54,7 +53,6 @@ function largeState(): GameState {
         {
           open: index % 2 === 0,
           locked: index % 3 === 0,
-          contents: ids(`contained_${index}`, COMPACT_STATE_OBJECT_CONTENT_LIMIT + 2),
           room: `room_${index}`,
           takenBy: index % 2 === 0 ? "world" : "player",
         },
@@ -75,7 +73,7 @@ describe("compactRpgState", () => {
     const compact = compactRpgState(state, { maxScore: 42 });
 
     expect(compact.v).toBe(RPG_COMPACT_STATE_VERSION);
-    expect(RPG_COMPACT_STATE_VERSION).toBe(2);
+    expect(RPG_COMPACT_STATE_VERSION).toBe(3);
     expect(compact.at).toBe("room_00");
     expect(compact.step).toBe(23);
     expect(compact.seed).toBe(99);
@@ -95,9 +93,7 @@ describe("compactRpgState", () => {
       locked: true,
       by: "w",
       room: "room_0",
-      contents_more: 2,
     });
-    expect(compact.objects?.[0]?.contents).toHaveLength(COMPACT_STATE_OBJECT_CONTENT_LIMIT);
     expect(compact.quests).toHaveLength(COMPACT_STATE_QUEST_LIMIT);
     expect(compact.quests?.[0]).toEqual(["quest_00", "stage_0"]);
     expect(compact.more).toEqual([4, 4, 3, 5, 4, 4, 4]);
@@ -123,7 +119,6 @@ describe("compactRpgState", () => {
         [longId]: {
           locked: false,
           room: longRoom,
-          contents: [longId],
         },
       },
       journal: [longJournal],
@@ -145,9 +140,6 @@ describe("compactRpgState", () => {
     expect(compact.visited?.[0]).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
     expect(compact.objects?.[0]?.id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.objects?.[0]?.room).toHaveLength(MCP_TRANSCRIPT_SCENE_ID_CHAR_LIMIT);
-    expect(compact.objects?.[0]?.contents?.[0]).toHaveLength(
-      MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT,
-    );
     expect(compact.quests?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.quests?.[0]?.[1]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.ending_id).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);

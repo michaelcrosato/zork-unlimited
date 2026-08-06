@@ -110,6 +110,43 @@ describe("fault injection: the crawler catches planted defects", () => {
     expect(r.findings.find((f) => f.code === "RENDER")!.location.sceneId).toBe(room.id);
   });
 
+  // The two legs below plant into fields the RENDER oracle was blind to until it walked
+  // the whole observation: an object's display name and an exit's authored `locked_msg`.
+  // Neither is ever emitted as a narration event and the schemas only demand min(1)
+  // strings, so before the oracle widened, both rendered straight to the player through
+  // a fully green bar. Keep them separate from the description leg so each field has its
+  // own witness rather than sharing one.
+  it("catches a planted RENDER defect in an object display name", () => {
+    const pack = generateRpgPack(3);
+    // "bar" sits in "hall" (src/gen/rpg_generator.ts), one MOVE from the start room, so
+    // a mixed-policy crawl sees it almost immediately.
+    const object = pack.objects.find((o) => o.id === "bar")!;
+    object.name = "a {{macro}} gad-bar";
+    const prepared = preparePack(pack);
+    // 150 steps rather than the 600 the description leg uses: the defect is one MOVE
+    // away, and a longer crawl only lengthens the trace ddmin has to minimize.
+    const r = crawlQuest(prepared, { ...CRAWL, maxSteps: 150 });
+    assertCaughtWithRepro(r, "RENDER", prepared);
+    const finding = r.findings.find((f) => f.code === "RENDER")!;
+    expect(finding.location.sceneId).toBe("hall");
+    expect(finding.message).toContain("visible object bar name");
+  });
+
+  it("catches a planted RENDER defect in a blocked exit's locked_msg", () => {
+    const pack = generateRpgPack(3);
+    // "gallery" is two MOVEs from the start and its east exit stays blocked while the
+    // rock-golem stands, so the authored locked_msg renders on every look from there.
+    const gallery = pack.rooms.find((room) => room.id === "gallery")!;
+    const blocked = gallery.exits.find((exit) => exit.direction === "east")!;
+    blocked.locked_msg = "The way east is barred by ${lock.name} until undefined.";
+    const prepared = preparePack(pack);
+    const r = crawlQuest(prepared, { ...CRAWL, maxSteps: 600 });
+    assertCaughtWithRepro(r, "RENDER", prepared);
+    const finding = r.findings.find((f) => f.code === "RENDER")!;
+    expect(finding.location.sceneId).toBe("gallery");
+    expect(finding.message).toContain("blocked exit east message");
+  });
+
   it("catches planted state corruption (INTEGRITY or CRASH — engine may throw first)", () => {
     const prepared = preparePack(generateRpgPack(4), {
       wrapRules: (rules) => ({

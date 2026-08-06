@@ -1,0 +1,44 @@
+id: bug_0539
+title: "Compact roads advertised a two-hop detour's cost for a single direct road"
+pack: content/world/new_york_overworld.json
+reported_by: external repository review (finding N3), 2026-08-04
+reports:
+  - EXTERNAL_REVIEW.md
+severity: S2
+symptom: >
+  On the very first move of a default game, the compact roads row for Schenectady read
+  [schenectady_city, 16, 2, 2], but travel_overworld_session("schenectady_city") resolves
+  to the single direct road and charged 18 minutes for 1 supply. The direct road's real
+  cost was not recoverable from the compact surface at all, because roads and route_options
+  emitted the identical tuple. Eight ordered road pairs in the shipped world are affected:
+  albany<->schenectady (18 vs 16), brookhaven<->southampton (37 vs 36), evans<->lackawanna
+  (30 vs 28), huntington<->lake_grove (28 vs 22).
+root_cause: >
+  compactOverworldRoads keyed a Map by destination id and emitted the matching routeOptions
+  plan's estimate for each direct road exit. routeOptions are Dijkstra shortest paths by
+  travel_minutes, so where a two-hop detour beats the direct road the plan attached to the
+  road row belongs to a different route. The non-compact view() was always correct — it
+  reports edge.travel_minutes — but the compact projection is the surface MCP agents and
+  the blind fleet actually consume, so every plan made from it since this projection shipped
+  was budgeted from the wrong numbers.
+fix: >
+  Compute each roads row from its own edge via resolveOverworldTravelLeg, the same helper
+  the travel path uses, with the session's real fatigue, supplies, and contextual road event.
+  route_options keeps the multi-hop plan; the two collections answer different questions.
+  Every full-view direct exit carries a detached exact estimate, so clone, shallow-spread,
+  and JSON-roundtrip projections preserve the charge without an object-identity side channel.
+  Where the shortest plan IS the direct road the emitted numbers are unchanged, since the
+  inputs are identical.
+surface_version: "OVERWORLD_COMPACT_VIEW_VERSION 43 -> 44 for direct-edge cost, then 45 for serialized exact event-fatigue estimates"
+deterministic_witnesses:
+  - state: "fresh default session at albany_city, turn 1"
+    before: "roads row [schenectady_city, 16, 2, 2]; travel_to charges 18 minutes, 1 supply"
+    after: "roads row [schenectady_city, 18, 1, 2]; travel_to charges 18 minutes, 1 supply and ends at fatigue 2"
+  - property: "for every direct road out of the start town, advertised minutes, supplies, and fatigue equal what travelTo charges"
+  - property: "clone, shallow spread, and JSON roundtrip keep the exact direct-edge fatigue; mutating one returned estimate cannot poison a later view"
+  - property: "across all 344 edges in both directions, no row undercuts its own edge's base minutes"
+tests:
+  - tests/regression/compact_road_cost_truth.test.ts
+verification:
+  - npm run crawl:smoke
+  - npm run health

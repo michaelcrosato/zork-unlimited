@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice_id": "albany_winter_relief_v1",
   "status": "active_unproven",
-  "updated_local_date": "2026-07-26",
+  "updated_local_date": "2026-08-05",
   "contract": {
     "minimum_material_forks": 12,
     "minimum_delayed": 8,

@@ -157,12 +157,19 @@ export type OverworldQuestCompletionResult = {
 // paid 3).
 export const QUEST_COMPLETION_RENOWN = 8;
 
+// The on-site work a quest represents, on top of the local approach travel. This
+// used to be spelled `QUEST_COMPLETION_RENOWN * 15`, which silently tied every
+// quest's elapsed time to the reward-economy constant above: rebalancing renown
+// 8 → 10 would have re-timed the whole game by +30 minutes each and invalidated
+// journal text that quotes elapsed minutes. Two unrelated numbers, two constants.
+export const QUEST_COMPLETION_LOCAL_WORK_MINUTES = 120;
+
 export function questCompletionMinutes(
   quest: OverworldQuest,
   areasById: ReadonlyMap<string, OverworldArea>,
 ): number {
   const localApproachMinutes = areasById.get(quest.area)?.travel_minutes ?? 30;
-  return localApproachMinutes + QUEST_COMPLETION_RENOWN * 15;
+  return localApproachMinutes + QUEST_COMPLETION_LOCAL_WORK_MINUTES;
 }
 
 /**

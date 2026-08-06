@@ -208,7 +208,8 @@ export function CampaignCharacterPanel({
                 <li key={relationship.npcId}>
                   <strong title={relationship.npcId}>{idLabel(relationship.npcId)}</strong>
                   <span>
-                    Trust {statusLabel(relationship.trust)} · Regard {statusLabel(relationship.regard)}
+                    Trust {statusLabel(relationship.trust)} · Regard{" "}
+                    {statusLabel(relationship.regard)}
                   </span>
                   {(relationship.owesPlayer > 0 || relationship.playerOwes > 0) && (
                     <span>

@@ -60,7 +60,11 @@ import type {
   TravelLogEntry,
 } from "./session_snapshot.js";
 import { timeLabel } from "./session_journal_codec.js";
-import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
+import {
+  OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
+  travelCondition,
+  type OverworldTravelLegResult,
+} from "./travel_mechanics.js";
 import {
   compactOverworldDepartureContactLeads,
   compactOverworldDepartureInteractions,
@@ -95,6 +99,7 @@ export type OverworldSessionCompactViewState = {
   departureRecap?: OpeningDepartureRecap | null;
   stationDispatchBoard?: StationDispatchBoard | null;
   roads: readonly OverworldExit[];
+  directRoadTravelLegs?: ReadonlyMap<string, OverworldTravelLegResult>;
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
   areas: readonly OverworldArea[];
@@ -159,7 +164,16 @@ export function buildOverworldSessionCompactView(
   const renown = compactOverworldRenownEntries(renownEntries);
   const completedArcIds = sortedStringSet(state.completedRegionalArcIds);
   const completedArcs = compactOverworldCompletedArcs(completedArcIds);
-  const roads = compactOverworldRoads(state.roads, state.routeOptions, state.fatigue);
+  const roads = compactOverworldRoads(
+    state.roads,
+    state.routeOptions,
+    {
+      fatigue: state.fatigue,
+      supplies: state.supplies,
+    },
+    undefined,
+    state.directRoadTravelLegs,
+  );
   const areas = compactOverworldRefs(state.areas);
   const poi = compactOverworldTitleRefs(state.poi);
   const contacts = compactOverworldRefs(state.contacts);

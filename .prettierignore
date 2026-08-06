@@ -1,10 +1,15 @@
-# Prettier is scoped to first-party engine/tooling TS via the format scripts
-# (src bin scripts agents tests). These globs are a belt-and-suspenders guard so an
-# accidental `prettier .` never rewrites hash-sensitive or generated assets.
+# Prettier is scoped to first-party engine/tooling source via the format scripts
+# (src bin scripts agents tests blind-tester ui). These globs are a belt-and-suspenders
+# guard so an accidental `prettier .` never rewrites hash-sensitive or generated assets.
+#
+# Nothing first-party belongs here. A bare `ui` sat in this list from the original
+# lint wiring and survived the cycle that added ui/ to the format scripts, so the gate
+# matched zero files and reported success — the exclusion won, silently, for two months.
+# dist/node_modules/coverage below are slash-free, so they already match ui/dist,
+# ui/node_modules and ui/coverage at any depth; ui/ needs no entry of its own.
 dist
 node_modules
 coverage
-ui
 saves
 ai-runs
 .codex

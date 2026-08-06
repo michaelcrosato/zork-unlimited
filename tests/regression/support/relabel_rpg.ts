@@ -61,7 +61,7 @@ function relabelCondition(
   if ("not_visited" in c) return { not_visited: r(c.not_visited) };
   if ("in_room" in c) return { in_room: r(c.in_room) };
   if ("is_open" in c) return { is_open: r(c.is_open) };
-  if ("is_unlocked" in c) return { is_unlocked: r(c.is_unlocked) };
+  if ("is_explicitly_unlocked" in c) return { is_explicitly_unlocked: r(c.is_explicitly_unlocked) };
   if ("var_gte" in c) return { var_gte: { name: rv(c.var_gte.name), value: c.var_gte.value } };
   if ("var_lte" in c) return { var_lte: { name: rv(c.var_lte.name), value: c.var_lte.value } };
   if ("var_eq" in c) return { var_eq: { name: rv(c.var_eq.name), value: c.var_eq.value } };
@@ -84,8 +84,6 @@ function relabelEffect(e: Effect, r: (id: string) => string, rv: (n: string) => 
   if ("dec_var" in e) return { dec_var: { name: rv(e.dec_var.name), by: e.dec_var.by } };
   if ("add_journal" in e) return { add_journal: e.add_journal };
   if ("goto" in e) return { goto: r(e.goto) };
-  if ("unlock_exit" in e)
-    return { unlock_exit: { from: r(e.unlock_exit.from), to: r(e.unlock_exit.to) } };
   if ("open_object" in e) return { open_object: r(e.open_object) };
   if ("close_object" in e) return { close_object: r(e.close_object) };
   if ("set_object_locked" in e)

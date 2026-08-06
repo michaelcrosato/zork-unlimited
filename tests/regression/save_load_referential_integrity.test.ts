@@ -375,20 +375,18 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown object room/);
   });
 
-  it("RPG: a runtime container with a phantom child object is a hard SaveIntegrityError", () => {
-    const forged = forgeSave((s) => {
-      s.objectState = { sarcophagus: { contents: ["no_such_object"] } };
-    });
-    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ save: forged })).toThrow(/unknown contained object/);
-  });
-
-  it("RPG: runtime container contents are a hard SaveIntegrityError", () => {
-    const forged = forgeSave((s) => {
-      s.objectState = { sarcophagus: { contents: ["iron_bar"] } };
-    });
-    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
-    expect(() => api().load_game({ save: forged })).toThrow(/invalid object contents state/);
+  // ObjectRuntime.contents existed in legacy save version 1, so the load migration
+  // accepts its exact historical string-array shape and strips it. It
+  // must not become a general unknown-field escape hatch: malformed old values
+  // are still rejected by the strict compatibility schema.
+  it("RPG: malformed legacy runtime contents are refused at the strict v1 schema", () => {
+    for (const contents of ["iron_bar", [1], null]) {
+      const forged = forgeSave((s) => {
+        (s.objectState as Record<string, unknown>) = { sarcophagus: { contents } };
+      });
+      expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+      expect(() => api().load_game({ save: forged })).toThrow(/malformed or non-finite/);
+    }
   });
 
   it("RPG: object takenBy without a runtime room is a hard SaveIntegrityError", () => {

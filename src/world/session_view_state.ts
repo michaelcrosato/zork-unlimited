@@ -35,6 +35,7 @@ import {
 } from "./session_route_progress.js";
 import type { OverworldRoutePlannerIndex, OverworldSessionRoutePlan } from "./session_routes.js";
 import type { OverworldRouteRoadEventState } from "./session_routes.js";
+import { roadEventForOverworldSessionTravel } from "./session_road_travel.js";
 import type {
   OverworldJournalEntry,
   OverworldPendingRoadEncounter,
@@ -60,6 +61,7 @@ import type { JourneyOpportunityPresentation } from "./journey_contract.js";
 import type { QuestDispatchPresentationWindow } from "./quest_dispatch_window.js";
 import type { OpeningDepartureRecap } from "./opening_departure_recap.js";
 import { deriveStationDispatchBoard, type StationDispatchBoard } from "./station_dispatch_board.js";
+import { resolveOverworldTravelLeg, type OverworldTravelLegResult } from "./travel_mechanics.js";
 
 type OverworldSessionViewLocalContentState = Pick<
   MutableOverworldSessionLocalState,
@@ -83,6 +85,7 @@ export type OverworldSessionViewModelState = {
   departureRecap: OpeningDepartureRecap | null;
   stationDispatchBoard: StationDispatchBoard | null;
   roads: readonly OverworldExit[];
+  directRoadTravelLegs: ReadonlyMap<string, OverworldTravelLegResult>;
   areaExits: readonly OverworldAreaExit[];
   routeOptions: readonly OverworldSessionRoutePlan[];
   localView: OverworldSessionLocalView;
@@ -257,6 +260,7 @@ export function buildOverworldSessionViewModelState(
       departureRecap: null,
       stationDispatchBoard: null,
       roads: [],
+      directRoadTravelLegs: new Map(),
       areaExits: [],
       routeOptions: [],
       localView: EMPTY_LOCAL_VIEW,
@@ -305,6 +309,20 @@ export function buildOverworldSessionViewModelState(
     },
     ...(source.roadEventState ? { roadEventState: source.roadEventState } : {}),
   });
+  const directRoadTravelLegs = new Map<string, OverworldTravelLegResult>();
+  for (const road of source.roads) {
+    const manifestRoadEvent = source.routePlannerIndex.roadEventsByEdgeId.get(road.id) ?? null;
+    const roadEvent = source.roadEventState
+      ? roadEventForOverworldSessionTravel(manifestRoadEvent, source.roadEventState)
+      : manifestRoadEvent;
+    directRoadTravelLegs.set(
+      road.id,
+      resolveOverworldTravelLeg(road.travel_minutes, roadEvent, {
+        fatigue: source.fatigue,
+        supplies: source.supplies,
+      }),
+    );
+  }
   const localView: OverworldSessionLocalView = {
     ...source.localView,
     quests: source.localView.quests.map((quest) =>
@@ -354,6 +372,7 @@ export function buildOverworldSessionViewModelState(
     departureRecap: source.departureRecap,
     stationDispatchBoard,
     roads: source.roads,
+    directRoadTravelLegs,
     areaExits: source.areaExits,
     routeOptions,
     localView,
@@ -408,6 +427,7 @@ function compactViewState(state: OverworldSessionViewModelState): OverworldSessi
     departureRecap: state.departureRecap,
     stationDispatchBoard: state.stationDispatchBoard,
     roads: state.roads,
+    directRoadTravelLegs: state.directRoadTravelLegs,
     areaExits: state.areaExits,
     routeOptions: state.routeOptions,
     areas: state.localView.areas,
@@ -466,6 +486,7 @@ export function buildOverworldSessionViewFromState(
     departureRecap: state.departureRecap,
     stationDispatchBoard: state.stationDispatchBoard,
     roads: state.roads,
+    directRoadTravelLegs: state.directRoadTravelLegs,
     areaExits: state.areaExits,
     areas: state.localView.areas,
     hiddenAreaCount: state.localView.hiddenAreaCount,

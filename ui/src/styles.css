@@ -26,8 +26,7 @@
 body {
   background:
     linear-gradient(180deg, rgba(16, 18, 15, 0.92), rgba(16, 18, 15, 1)),
-    radial-gradient(circle at 78% 12%, rgba(77, 167, 160, 0.15), transparent 30%),
-    var(--bg);
+    radial-gradient(circle at 78% 12%, rgba(77, 167, 160, 0.15), transparent 30%), var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
   line-height: 1.55;
@@ -69,9 +68,7 @@ button:hover {
 }
 
 .tutorial-card {
-  background:
-    linear-gradient(135deg, rgba(32, 29, 24, 0.98), rgba(17, 32, 29, 0.96)),
-    var(--panel);
+  background: linear-gradient(135deg, rgba(32, 29, 24, 0.98), rgba(17, 32, 29, 0.96)), var(--panel);
   border: 1px solid color-mix(in srgb, var(--road) 48%, var(--line));
   border-radius: 12px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
@@ -319,8 +316,7 @@ button:hover {
 
 .journey-passage {
   background:
-    linear-gradient(120deg, rgba(44, 35, 20, 0.96), rgba(23, 31, 25, 0.97)),
-    var(--panel-2);
+    linear-gradient(120deg, rgba(44, 35, 20, 0.96), rgba(23, 31, 25, 0.97)), var(--panel-2);
   border: 1px solid color-mix(in srgb, var(--road) 62%, var(--line));
   border-left: 4px solid var(--road);
   border-radius: 9px;
@@ -423,9 +419,7 @@ button:hover {
 
 .journey-decision-card,
 .journey-ended-card {
-  background:
-    linear-gradient(135deg, rgba(32, 29, 24, 0.98), rgba(17, 32, 29, 0.97)),
-    var(--panel);
+  background: linear-gradient(135deg, rgba(32, 29, 24, 0.98), rgba(17, 32, 29, 0.97)), var(--panel);
   border: 1px solid color-mix(in srgb, var(--road) 55%, var(--line));
   border-radius: 12px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);

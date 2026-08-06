@@ -22,7 +22,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { assess, findStaleDocRefs } from "../../src/afk/assessor.js";
+import { assess, docStalenessDocs, findStaleDocRefs } from "../../src/afk/assessor.js";
 
 const a = assess(process.cwd());
 const DOC_STALE = "repo-doc-staleness";
@@ -84,6 +84,19 @@ describe("bug_0045 — findStaleDocRefs (the predicate that flags doc rot)", () 
 });
 
 describe("bug_0045 — the detector on the REAL repo (ships disarmed, non-noisy)", () => {
+  it("scans every active top-level, blind-player, UI, and docs guide", () => {
+    expect(docStalenessDocs(process.cwd())).toEqual(
+      expect.arrayContaining([
+        "AGENTS.md",
+        "README.md",
+        "ADVENTUREFORGE_BUILD_SPEC.md",
+        "blind-tester/README.md",
+        "ui/README.md",
+        "docs/afk_loop.md",
+      ]),
+    );
+  });
+
   it("raises NO repo-doc-staleness candidate: the canonical docs are clean", () => {
     // Fire-while-real / silent-when-done: with every canonical-doc reference live,
     // the radar is quiet. If a future edit renames a file a doc points at without

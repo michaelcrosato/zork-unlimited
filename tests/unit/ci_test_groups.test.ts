@@ -60,4 +60,17 @@ describe("CI test groups", () => {
     expect(workflow).not.toContain("--shard=");
     expect(workflow).toMatch(/^ {2}verify:$/m);
   });
+
+  // AGENTS.md calls `crawl:smoke` a mandatory pre- and post-work gate and loop.sh treats a
+  // red crawl as a halt, but branch protection keys on the single `verify` check. Until the
+  // crawl-smoke job was in `verify.needs` a red mechanical gate could still be merged, so
+  // pin both halves: the dependency edge and the result assertion that consumes it.
+  it("blocks the required verify gate on the mechanical crawl job", () => {
+    const workflow = readFileSync(resolve(".github/workflows/ci.yml"), "utf8");
+
+    expect(workflow).toMatch(/^ {2}crawl-smoke:$/m);
+    expect(workflow).toContain("needs: [verify-prerequisites, test-shards, crawl-smoke]");
+    expect(workflow).toContain("CRAWL_SMOKE_RESULT: ${{ needs.crawl-smoke.result }}");
+    expect(workflow).toContain('test "$CRAWL_SMOKE_RESULT" = success');
+  });
 });

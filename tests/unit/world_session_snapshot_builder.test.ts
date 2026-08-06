@@ -103,6 +103,7 @@ describe("overworld session snapshot builder", () => {
       completedRegionalArcIds: new Set(["arc:b", "arc:a"]),
       pendingRoadEncounter: pendingRoadEncounter(),
       openingLeadSourceDecisionTrail: null,
+      inspectedStoryReveals: new Map(),
       journey,
     });
 

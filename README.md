@@ -72,6 +72,7 @@ copied anywhere and opened directly.
 
 ```bash
 npm install
+npm --prefix ui install                           # required by npm run health
 npm run health                                   # the full verification bar (see below)
 npm run validate                                 # validate all 12 shipped quests
 npm run validate -- sunken_barrow               # validate one quest by world quest id
@@ -103,16 +104,17 @@ any agent harness (Claude Code, Codex, Gemini CLI, …) plays via native tool
 calls over the structured observation/action loop — never a raw parser. The
 repo ships `.mcp.json`, so an MCP client opened here connects automatically.
 
-**40 tools**, in four groups:
+**42 tools**, in four groups:
 
 - **World catalog** (1): `list_overworld` — the overworld is both the world and
   the quest registry.
-- **Overworld sessions** (23): `start_overworld`, then travel, rest, resupply,
-  route planning, POI scouting, contacts, events, jobs, area exploration,
-  export/restore — and `start_overworld_session_quest` /
+- **Overworld sessions** (25): `start_overworld`, then travel, care, rest,
+  resupply, route planning, POI scouting, contacts, events, jobs, area
+  exploration, export/restore — and `start_overworld_session_quest` /
   `complete_overworld_session_quest` bridging a discovered lead into quest play,
   plus `choose_overworld_session_journey` at game-presented retention pauses,
-  `choose_overworld_session_story` for game-presented authored choices, and
+  `inspect_overworld_session_story` / `choose_overworld_session_story` for
+  game-presented authored choices, and
   `follow_overworld_session_goal` committing to the current objective's road as
   one interruptible Goal Passage.
   This is how a player reaches a shipped quest: in-world, through the overworld.
@@ -163,7 +165,7 @@ every real road cost but stops at authored road choices, objective arrival, or a
 new resource boundary. The player may still take roads manually; the pure
 harness supplies neither route nor recommendation.
 
-## Testing: a three-tier pyramid, coupled by an exit interview
+## Testing: a three-tier pyramid on a Tier 0 dev foundation
 
 Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
 
@@ -192,11 +194,12 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   direct-quest/crawler/smoke/mock modes require explicit flags and are not pure
   retention evidence. Milestone fleets run 100 seed/model variants of the same
   neutral player contract; `fleet:mock` is a zero-token structural CI stand-in.
-  Current Codex runs authenticate their exact code-mode notice, leading yield
-  pragma on every gameplay wrapper, and canonical JSON-result emitter through a
-  hash-bound capture receipt v2; fleet attestation v5 carries that same exact
-  contract marker. Legacy capture v1 and attestations v3/v4 remain historical
-  readers only and cannot satisfy a current run or resume.
+  Current Codex runs authenticate the selected model-specific transport. Spark
+  uses a direct-MCP capture receipt v4 (`spark-direct-mcp-v1`); Sol, Terra, and
+  Luna use a strict code-mode receipt v3 (`strict-code-mode-v2`). Fleet
+  attestation v8 binds the exact provider, model, transport, CLI, rollout, and
+  receipt. Older receipt and attestation schemas remain historical readers only
+  and cannot satisfy a current run or resume.
 - **Tier 3 — feedback compiler** (`src/feedback/`): clusters and ranks Tier-1
   findings and verified Tier-2 reports into `hotspots.{json,md}`
   (`npm run feedback:compile`), writes a separate `retention.json` that admits
@@ -224,9 +227,9 @@ npm run feedback:compile                          # Tier 3: hot spots + pure ret
 
 The blind harness drives the external Codex CLI on the operator's subscription
 (default model `gpt-5.3-codex-spark`) through a runner-enforced no-file,
-no-shell, no-web tool boundary. Claude remains an explicit compatibility
-provider. Arbitrary `BLIND_AGENT_CMD` overrides are rejected for pure runs
-because their blindness cannot be verified. Live play is
+no-shell, no-web tool boundary. Historical Claude artifacts remain readable,
+but the live Claude provider is retired. Arbitrary `BLIND_AGENT_CMD` overrides
+are rejected for pure runs because their blindness cannot be verified. Live play is
 NOT part of CI or the health bar (a structural mock fleet run is — see
 [`docs/testing_pyramid.md`](./docs/testing_pyramid.md)). Separately, the
 authoring/repair agents (`bin/author.ts`, the debugger/fixer) run against a

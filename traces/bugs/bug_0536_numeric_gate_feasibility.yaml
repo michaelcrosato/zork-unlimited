@@ -1,0 +1,57 @@
+id: bug_0536
+title: "Numeric gates were never checked for feasibility; an unwinnable quest validated green"
+pack: content/broken-fixtures/foundation_impossible_var_gate.yaml
+reported_by: external repository review (finding N1), 2026-08-04
+reports:
+  - EXTERNAL_REVIEW.md
+severity: S1
+symptom: >
+  checkConds audited every symbolic gate for unsatisfiability — has_flag, has_item,
+  quest_stage, is_open/is_unlocked each emit a finding when no effect can ever make
+  them true — but var_gte / var_lte / var_eq were never inspected at all. A pack whose
+  sole win condition was `var_gte: { name: resolve, value: 5 }`, with nothing anywhere
+  writing `resolve`, reported "Result: OK (0 errors, 0 warnings)" while an exhaustive
+  search of its whole reachable state space reached the good ending zero times. A
+  single typo in a win condition on a quest carrying 38 numeric gates ships an
+  unwinnable quest through a fully green bar. Separately, a win gated on `in_room` at
+  a structurally unreachable room produced only the UNREACHABLE_ROOM warning, and
+  report.ok is derived from errors alone.
+root_cause: >
+  The validator had the raw material and used it for the opposite question. collectFalsifiers
+  already built varWrites (inc/dec/set per var name), but only winStaysTrueForever consumed
+  it, to prove a win cannot be FALSIFIED. Nothing asked whether a threshold could be REACHED.
+  The win-room harvest had the mirror gap: visitedRoom read `visited` only, and the scan was
+  flat, so neither `in_room` nor a `visited` nested in all_of reached winRooms.
+fix: >
+  Add varReachableRange — a sound over-approximation of the interval a var can ever hold,
+  from meta.vars_init plus every write the pass can see. A single positive inc (or negative
+  dec) makes the maximum unbounded, because nothing proves how often an effect can fire; set
+  writes widen the interval to the literal. checkConds emits IMPOSSIBLE_GATE when a var_gte
+  exceeds the maximum, a var_lte falls below the minimum, or a var_eq sits outside the
+  interval. Combat-volatile vars (hp/attack/defense, __enemy_hp_*) are exempt because their
+  writes are dynamic set_vars no effect scan sees. A new PHANTOM_VAR errors when a gate names
+  a var that is neither declared in vars_init nor written anywhere — evalCondition reads
+  `state.vars[name] ?? 0`, so a typo silently compares against 0 instead of failing.
+  winRoomReqs replaces visitedRoom, harvesting `visited` and `in_room` and descending all_of.
+soundness_direction: >
+  Over-approximating is the required direction: the analysis may only MISS a bad pack, never
+  reject a good one. With init 0 and a single `set_var: 8`, the range is [0, 8] even though 5
+  is unreachable, and a gate on 5 is deliberately not flagged. All 12 shipped packs, including
+  wolf_winter's 38 numeric gates, still validate clean.
+deterministic_witnesses:
+  - fixture: content/broken-fixtures/foundation_impossible_var_gate.yaml
+    code: IMPOSSIBLE_GATE
+    detail: "sole win needs resolve >= 5; resolve starts at 0 and no effect writes it"
+  - fixture: content/broken-fixtures/foundation_phantom_var.yaml
+    code: PHANTOM_VAR
+    detail: "exit gate reads `reslove`, a typo for the declared `resolve`"
+  - fixture: content/broken-fixtures/foundation_win_in_room_unreachable.yaml
+    code: WIN_UNREACHABLE
+    detail: "win needs in_room: c, and no exit leads to c"
+tests:
+  - tests/regression/rpg_numeric_gate_feasibility.test.ts
+  - tests/regression/rpg_foundation_negative_corpus.test.ts
+verification:
+  - npm run validate
+  - npm run crawl:smoke
+  - npm run health

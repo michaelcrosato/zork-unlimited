@@ -27,17 +27,26 @@ export const ConditionSchema: z.ZodType<Condition> = z.lazy(() =>
     // should only offer in the crypt, not trail the player into every room they carry
     // the key through (the sealed_crypt blind-playtest "grip iron key" wart, bug_0258).
     z.object({ in_room: z.string().min(1) }).strict(),
-    // Runtime object-state predicates (parser+): read the per-object open/locked
-    // runtime overrides in GameState.objectState. `is_open` is true once the object
-    // has been opened during play; `is_unlocked` is true once its lock has been
-    // cleared at runtime (an explicitly unlocked container). Both default false
-    // until the relevant effect fires, so they let a reactive room/object `variant`
-    // track a container's lifecycle (locked → unlocked → opened → emptied) DIRECTLY,
-    // instead of leaning on a `has_item` proxy for the contained item — which only
-    // flips on EMPTYING and so left the unlocked-but-not-yet-emptied window stale
-    // (the gap bug_0024 called out and bug_0033 closes).
+    // Runtime object-state predicates: read the per-object open/locked runtime
+    // overrides in GameState.objectState. `is_open` is true once the object has been
+    // opened during play. Both default false until the relevant effect fires, so they
+    // let a reactive room/object `variant` track a container's lifecycle
+    // (locked → unlocked → opened → emptied) DIRECTLY, instead of leaning on a
+    // `has_item` proxy for the contained item — which only flips on EMPTYING and so
+    // left the unlocked-but-not-yet-emptied window stale (the gap bug_0024 called out
+    // and bug_0033 closes).
+    //
+    // `is_explicitly_unlocked` is NOT the negation of "locked", and it is named for
+    // exactly that reason. It reads `objectState[id].locked === false`, with no static
+    // fallback, so it is FALSE for an object that was never locked in the first place —
+    // no runtime entry exists, and `undefined !== false`. It means "this lock was
+    // cleared during play". The predicate that answers "is this locked right now" is
+    // `isLocked` (src/core/object_locations.ts), which does fall back to the static
+    // flag; it is what the UNLOCK verb consults. The two must not be conflated: the
+    // validator's win-stability proof is built on the runtime-only reading, so
+    // aligning them would silently change validator verdicts.
     z.object({ is_open: z.string().min(1) }).strict(),
-    z.object({ is_unlocked: z.string().min(1) }).strict(),
+    z.object({ is_explicitly_unlocked: z.string().min(1) }).strict(),
     z.object({ var_gte: VarCmp }).strict(),
     z.object({ var_lte: VarCmp }).strict(),
     z.object({ var_eq: VarCmp }).strict(),
@@ -62,7 +71,7 @@ export type Condition =
   | { not_visited: string }
   | { in_room: string }
   | { is_open: string }
-  | { is_unlocked: string }
+  | { is_explicitly_unlocked: string }
   | { var_gte: { name: string; value: number } }
   | { var_lte: { name: string; value: number } }
   | { var_eq: { name: string; value: number } }
@@ -81,7 +90,8 @@ export function evalCondition(cond: Condition, state: GameState): boolean {
   if ("not_visited" in cond) return state.visited[cond.not_visited] !== true;
   if ("in_room" in cond) return state.current === cond.in_room;
   if ("is_open" in cond) return state.objectState[cond.is_open]?.open === true;
-  if ("is_unlocked" in cond) return state.objectState[cond.is_unlocked]?.locked === false;
+  if ("is_explicitly_unlocked" in cond)
+    return state.objectState[cond.is_explicitly_unlocked]?.locked === false;
   if ("var_gte" in cond) return (state.vars[cond.var_gte.name] ?? 0) >= cond.var_gte.value;
   if ("var_lte" in cond) return (state.vars[cond.var_lte.name] ?? 0) <= cond.var_lte.value;
   if ("var_eq" in cond) return (state.vars[cond.var_eq.name] ?? 0) === cond.var_eq.value;

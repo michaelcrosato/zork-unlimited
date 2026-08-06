@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "contentHash": "bcc62ba52613a38077375a01f02c748338927dbfbffc9d37d92f95de2309ffa0",
+  "mode": "rpg",
+  "source_ref": ["wq", "sunken_barrow"],
+  "state": {
+    "seed": 1234,
+    "step": 7,
+    "current": "start",
+    "visited": {
+      "start": true
+    },
+    "flags": {},
+    "vars": {},
+    "inventory": [],
+    "objectState": {
+      "chest": {
+        "open": true,
+        "locked": false,
+        "contents": ["ruby", "map"],
+        "takenBy": "world",
+        "room": "start"
+      }
+    },
+    "journal": [],
+    "questStage": {},
+    "ended": false,
+    "endingId": null
+  }
+}

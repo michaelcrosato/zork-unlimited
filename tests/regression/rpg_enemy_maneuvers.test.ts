@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import type { RpgAction } from "../../src/api/types.js";
 import type { Condition } from "../../src/core/conditions.js";
 import { makeStep } from "../../src/core/engine.js";
-import { exitFlag, type Effect } from "../../src/core/effects.js";
+import { type Effect } from "../../src/core/effects.js";
 import type { Rng } from "../../src/core/rng.js";
 import { publicActions } from "../../src/mcp/rpg_view_projection.js";
 import { load, save } from "../../src/persist/save_load.js";
@@ -948,8 +948,8 @@ describe("one-shot enemy maneuvers", () => {
     }
 
     const derivedWriter = effectSurfacePack();
-    derivedWriter.enemies[0]!.maneuvers![0]!.result_flag = exitFlag("yard", "safety");
-    derivedWriter.rooms[0]!.on_enter.push({ unlock_exit: { from: "yard", to: "safety" } });
+    derivedWriter.enemies[0]!.maneuvers![0]!.result_flag = "yard_route_open";
+    derivedWriter.rooms[0]!.on_enter.push({ set_flag: "yard_route_open" });
     expect(validateRpg(derivedWriter).findings.map((finding) => finding.code)).toContain(
       "MANEUVER_RESULT_FLAG_FOREIGN_WRITER",
     );

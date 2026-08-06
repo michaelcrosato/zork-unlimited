@@ -29,10 +29,13 @@ import {
   type CompactSourceRef,
 } from "../world/source_ref.js";
 
-export const SAVE_VERSION = 1 as const;
+export const LEGACY_SAVE_VERSION = 1 as const;
+export const SAVE_VERSION = 2 as const;
 export const SAVE_MODE = "rpg" as const;
 export const EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION = 1 as const;
 export type SaveMode = typeof SAVE_MODE;
+
+const UINT32_SEED_RANGE = 0x100000000;
 
 /**
  * Structural + finiteness validator for a loaded GameState (§16 "integrity at
@@ -48,50 +51,82 @@ export type SaveMode = typeof SAVE_MODE;
  * always-true (NaN makes every `var_*` always-false). The gate REJECTS such a
  * save (throws `SaveIntegrityError`); it never coerces/clamps.
  *
- * `seed`/`step` are gated to the safe INTEGER domain. `rngForStep`
- * (rng.ts:44) consumes both via `>>> 0`, so non-integers silently truncate to a
- * DIFFERENT value than the one the save's content hash (hash.ts `canonicalize`)
- * committed to. `step` is also bounded to the engine's safe increment domain;
- * an unsafe integer can make `step + 1` stop advancing precisely. `seed` stays
- * signed — negative seeds are legitimate (`mulberry32` does `seed >>> 0`,
- * defined for negatives) — but unsafe integers are rejected before persistence
- * can commit an imprecise identity.
+ * `seed`/`step` are gated to the safe INTEGER domain. `rngForStep` preserves the
+ * historical unsigned-32-bit stream and uses exact BigInt state for signed/wide
+ * seeds, so a non-integer is not a valid deterministic identity. `step` is also
+ * bounded to the engine's safe increment domain; an unsafe integer can make
+ * `step + 1` stop advancing precisely. `seed` stays signed and may exceed 32
+ * bits — both are legitimate and both reach the stream — but unsafe integers
+ * are rejected before persistence can commit an imprecise identity.
  *
- * `objectState` mirrors `ObjectRuntime` (state.ts:9–15) with `.strict()` so an
+ * `objectState` mirrors `ObjectRuntime` (src/core/state.ts) with `.strict()` so an
  * unknown or wrong-typed key is rejected, not silently carried into the engine.
  */
 const ObjectRuntimeSchema = z
   .object({
     open: z.boolean().optional(),
     locked: z.boolean().optional(),
-    contents: z.array(z.string()).optional(),
     takenBy: z.enum(["player", "world"]).optional(),
     room: z.string().optional(),
   })
   .strict();
 
+function isOwnEntryRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+const OwnEntryRecordInputSchema = z.custom<Record<string, unknown>>(isOwnEntryRecord, {
+  message: "Expected an object record.",
+});
+
+/**
+ * z.record may skip or drop reserved own keys such as `__proto__` during parse.
+ * Validate Object.entries explicitly and rebuild through Object.fromEntries so
+ * every schema-valid key survives and reserved-name values receive the same
+ * strict checks as ordinary keys.
+ */
+function ownEntryRecordSchema<Value>(valueSchema: z.ZodType<Value>) {
+  return OwnEntryRecordInputSchema.transform((record, ctx): Record<string, Value> => {
+    const entries: [string, Value][] = [];
+    for (const [key, value] of Object.entries(record)) {
+      const parsed = valueSchema.safeParse(value);
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          ctx.addIssue({ ...issue, path: [key, ...issue.path] });
+        }
+        continue;
+      }
+      entries.push([key, parsed.data]);
+    }
+    return Object.fromEntries(entries) as Record<string, Value>;
+  });
+}
+
 const GameStateSchema = z
   .object({
     // identity / determinism — INTEGER domain only (the values rngForStep
-    // consumes via `>>> 0`); rejects non-integers AND Infinity/-Infinity/NaN.
-    // Matches the MCP entry gate (server.ts:147) exactly: bare .int() on seed
-    // (negative seeds are legitimate); step is a bounded monotonic counter.
+    // consumes); rejects non-integers AND Infinity/-Infinity/NaN. Matches the
+    // MCP entry gates (the `.int().safe()` seed schemas in src/mcp/server.ts):
+    // negative and above-32-bit seeds are legitimate; step is a bounded
+    // monotonic counter.
     seed: z.number().int().refine(isRuntimeSeed, {
       message: "GameState seed must be within JavaScript's safe integer range.",
     }),
     step: z.number().int().nonnegative().max(MAX_ENGINE_STEP),
     // location
     current: z.string(),
-    visited: z.record(z.boolean()),
+    visited: ownEntryRecordSchema(z.boolean()),
     // world state
-    flags: z.record(z.boolean()),
+    flags: ownEntryRecordSchema(z.boolean()),
     // THE load-bearing finiteness gate (the Infinity/NaN -> conditions.ts:75 hole):
-    vars: z.record(z.number().finite()),
+    vars: ownEntryRecordSchema(z.number().finite()),
     inventory: z.array(z.string()),
-    objectState: z.record(ObjectRuntimeSchema),
+    objectState: ownEntryRecordSchema(ObjectRuntimeSchema),
     // narrative
     journal: z.array(z.string()),
-    questStage: z.record(z.string()),
+    questStage: ownEntryRecordSchema(z.string()),
     // termination
     ended: z.boolean(),
     endingId: z.string().nullable(),
@@ -99,6 +134,65 @@ const GameStateSchema = z
     embeddedLaunchOverlayReceipt: EmbeddedLaunchOverlayReceiptSchema.optional(),
   })
   .strict();
+
+// ObjectRuntime.contents existed in save version 1. Keep the current v2
+// runtime/write schema strict, but recognize exactly that historical field
+// while loading v1 bytes and erase it before the state reaches the engine.
+// The old field was semantically dead; accepting any shape broader than its
+// original string-array contract would turn compatibility into coercion.
+const Version1ObjectRuntimeSchema = ObjectRuntimeSchema.extend({
+  contents: z.array(z.string()).optional(),
+}).strict();
+
+const Version1GameStateSchema = GameStateSchema.extend({
+  objectState: ownEntryRecordSchema(Version1ObjectRuntimeSchema),
+}).strict();
+
+function assertVersion1SeedCompatibility(seed: number): void {
+  if (seed >= 0 && seed < UINT32_SEED_RANGE) return;
+  throw new SaveIntegrityError(
+    `Save version ${String(LEGACY_SAVE_VERSION)} seed ${String(seed)} cannot be resumed because ` +
+      `signed/wide RNG streams changed in save version ${String(SAVE_VERSION)}. ` +
+      "Only version-1 seeds from 0 through 4294967295 are continuation-compatible.",
+  );
+}
+
+function migrateVersion1State(state: unknown): GameState {
+  const parsed = Version1GameStateSchema.safeParse(state);
+  if (!parsed.success) {
+    throw new SaveIntegrityError(`Save state is malformed or non-finite: ${parsed.error.message}`);
+  }
+  assertVersion1SeedCompatibility(parsed.data.seed);
+
+  const objectState = Object.fromEntries(
+    Object.entries(parsed.data.objectState).map(([id, runtime]) => [
+      id,
+      {
+        ...(runtime.open !== undefined ? { open: runtime.open } : {}),
+        ...(runtime.locked !== undefined ? { locked: runtime.locked } : {}),
+        ...(runtime.takenBy !== undefined ? { takenBy: runtime.takenBy } : {}),
+        ...(runtime.room !== undefined ? { room: runtime.room } : {}),
+      },
+    ]),
+  ) as GameState["objectState"];
+
+  const migrated = { ...parsed.data, objectState };
+  const current = GameStateSchema.safeParse(migrated);
+  if (!current.success) {
+    throw new SaveIntegrityError(
+      `Save state is malformed or non-finite after v1 migration: ${current.error.message}`,
+    );
+  }
+  return current.data as GameState;
+}
+
+function parseCurrentState(state: unknown): GameState {
+  const parsed = GameStateSchema.safeParse(state);
+  if (!parsed.success) {
+    throw new SaveIntegrityError(`Save state is malformed or non-finite: ${parsed.error.message}`);
+  }
+  return parsed.data as GameState;
+}
 
 /**
  * Assert a (possibly untrusted) GameState is well-formed + FINITE per §16
@@ -376,6 +470,8 @@ function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
  * legacy modes are integrity failures, not migration inputs. Legacy
  * worldQuestId/generatedRpgSeed mirror fields are accepted only to check old
  * artifacts against source_ref, and are dropped from the returned bundle.
+ * Version 1 is migrated only when its seed remains on the byte-identical legacy
+ * RNG path; every returned bundle uses the current version.
  */
 export function load(
   bytes: string,
@@ -389,8 +485,13 @@ export function load(
     throw new SaveIntegrityError(`Save is not valid JSON: ${(e as Error).message}`);
   }
   const bundle = parsed as SaveBundle;
-  if (bundle.version !== SAVE_VERSION) {
-    throw new SaveIntegrityError(`Unsupported save version: ${String(bundle.version)}`);
+  const persistedVersion = (bundle as { version?: unknown }).version;
+  if (persistedVersion !== LEGACY_SAVE_VERSION && persistedVersion !== SAVE_VERSION) {
+    throw new SaveIntegrityError(
+      `Unsupported save version: ${String(persistedVersion)}; expected ${String(
+        LEGACY_SAVE_VERSION,
+      )} or ${String(SAVE_VERSION)}.`,
+    );
   }
   if ("packId" in (bundle as Record<string, unknown>)) {
     throw new SaveIntegrityError("Save packId is retired; use source_ref plus contentHash.");
@@ -424,17 +525,19 @@ export function load(
   }
   assertSaveSourceRefConsistency(bundle);
   if (expectedContentHash !== undefined) assertSaveContentHash(bundle, expectedContentHash);
-  // §16 integrity at load: the state must be a well-formed, FINITE GameState
-  // before it is handed back to the engine. Reject (never coerce) — a poisoned
-  // save is an integrity failure, not a value to repair. We validate before
-  // cloning/freezing, so a valid state's bytes/hash stay identical.
-  const parsedState = GameStateSchema.safeParse((bundle as { state?: unknown }).state);
-  if (!parsedState.success) {
-    throw new SaveIntegrityError(
-      `Save state is malformed or non-finite: ${parsedState.error.message}`,
-    );
-  }
-  assertSaveLaunchOverlaySource(bundle.state, bundle.source_ref);
+  // §16 integrity at load: v1 recognizes and removes only its deprecated
+  // ObjectRuntime.contents field; v2 uses the current strict shape. Both schemas
+  // validate record values entry-by-entry so reserved own keys survive intact.
+  const normalizedState =
+    persistedVersion === LEGACY_SAVE_VERSION
+      ? migrateVersion1State((bundle as { state?: unknown }).state)
+      : parseCurrentState((bundle as { state?: unknown }).state);
+  const normalizedBundle: SaveBundle = {
+    ...bundle,
+    version: SAVE_VERSION,
+    state: normalizedState,
+  };
+  assertSaveLaunchOverlaySource(normalizedBundle.state, normalizedBundle.source_ref);
   const rawContinuity = (bundle as { embedded_character_continuity?: unknown })
     .embedded_character_continuity;
   let normalizedContinuity: EmbeddedQuestCharacterContinuitySave | undefined;
@@ -450,12 +553,15 @@ export function load(
         `Embedded quest character continuity save metadata is malformed: ${parsedContinuity.error.message}`,
       );
     }
-    assertEmbeddedContinuityMatchesState(parsedContinuity.data.character_continuity, bundle.state);
+    assertEmbeddedContinuityMatchesState(
+      parsedContinuity.data.character_continuity,
+      normalizedBundle.state,
+    );
     normalizedContinuity = parsedContinuity.data;
   }
   return immutableLoadedSaveBundle(
     normalizedContinuity === undefined
-      ? bundle
-      : { ...bundle, embedded_character_continuity: normalizedContinuity },
+      ? normalizedBundle
+      : { ...normalizedBundle, embedded_character_continuity: normalizedContinuity },
   );
 }

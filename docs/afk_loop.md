@@ -20,7 +20,7 @@ loop.sh  (outer driver — orchestration + the bar)
 │     a primary input to the ranking.
 │     Emits: ai-runs/<id>/{assessment.md, prompt.md} plus latest-cycle.json at
 │     the ai-runs/ root (which records the improvement source, fresh-overworld
-│     playtest contract, and where the playtest report must go).
+│     playtest contract, report path, and ultraplan handoff path when applicable).
 │
 ├─ 2. CRAWL GATE (pre)   npm run crawl:smoke — Tier 1 of the testing pyramid.
 │     Must be green before the agent touches anything; red here means the
@@ -28,7 +28,13 @@ loop.sh  (outer driver — orchestration + the bar)
 │
 ├─ 3. WORK          the operating agent (installed Codex CLI / explicit agent command)
 │     Reads the cycle prompt and:
-│       a. MANDATORY PURE LLM PLAYTEST — spawns a fresh, no-context player in a
+│       a. ONE improvement — content edit / apply_content_patch, or an engine/repo
+│          change (full authority; new mechanics need no §14 ceremony, but stay
+│          verified). Bugs get a traces/bugs/ artifact + a tests/regression/ test.
+│       b. FOCUSED CHECKS + LOCAL PROVISIONAL COMMIT — freezes every tracked
+│          implementation change without pushing, then requires an exactly clean
+│          `git status --porcelain`. This is the revision the player will exercise.
+│       c. MANDATORY PURE LLM PLAYTEST — spawns a fresh, no-context player in a
 │          brand-new CORE GAME overworld session, with only the human tutorial,
 │          goal, state, legal choices, decision/checkpoint status, and consequences
 │          exposed through player MCP tools. The harness supplies transport syntax
@@ -40,9 +46,10 @@ loop.sh  (outer driver — orchestration + the bar)
 │          smoke/mock modes are structural QA, never pure retention evidence.
 │          Milestone/harvest cycles run `npm run fleet -- --count 100` instead of
 │          a single pure player (docs/testing_pyramid.md).
-│       b. ONE improvement — content edit / apply_content_patch, or an engine/repo
-│          change (full authority; new mechanics need no §14 ceremony, but stay
-│          verified). Bugs get a traces/bugs/ artifact + a tests/regression/ test.
+│       d. FEEDBACK + LEDGER — count actual verified reports since the newest
+│          successful compile. Run `npm run feedback:compile` iff there are ≥3;
+│          never invent a count. Complete AI_LOOP_STATE.md after play; it must be
+│          the only tracked change left outside the provisional commit.
 │
 ├─ 4. CRAWL GATE (post)  npm run crawl:smoke again — a new finding here is a
 │     regression the cycle itself just introduced; the cycle halts and reverts.
@@ -58,27 +65,34 @@ loop.sh  (outer driver — orchestration + the bar)
 │                                                      test count, or a re-pin with no
 │                                                      content change; legit re-pins warn)
 │       require_playtest_record    (no blind-playtest report ⇒ no commit)
+│       require_final_ledger_only  (only AI_LOOP_STATE.md may differ after play)
 │
-├─ 6. COMPILE (as needed)   when ≥3 new verified reports exist since the last
-│     compile: npm run feedback:compile → ai-runs/feedback/<ts>/{hotspots.json,
-│     hotspots.md,retention.json}. Tier 3 keeps structural/legacy experience
-│     evidence separate from sidecar-verified pure continuation choices; the
-│     NEXT cycle's ASSESS step reads the ranked hot spots.
-│
-└─ 7. COMMIT/PUSH   git add -A && commit (scope is free — trust; but only after the
-       bar passed — verify). Both are env-gated: AI_LOOP_COMMIT=1 to commit,
-       AI_LOOP_PUSH=1 to push. Note: a bare push of a fresh commit to protected
+└─ 6. FINALIZE/PUSH   commit only the completed AI_LOOP_STATE.md entry after the
+       outer bar passes. AI_LOOP_COMMIT=1 enables both the provisional implementation
+       commit and this final ledger commit; AI_LOOP_PUSH=1 may push only afterward.
+       Note: a bare push of fresh commits to protected
        main is always rejected (the required 'verify' check can't have run yet) —
        land loop commits via a scratch branch/PR and leave AI_LOOP_PUSH=0.
-       Durable handoff in AI_LOOP_STATE.md.
 ```
 
 **Failure handling.** loop.sh refuses to start on a dirty tree (AI_LOOP_ALLOW_DIRTY=1
-overrides, accepting the risk below). Each red gate fails the cycle explicitly
-(`|| return 1`, not `set -e`): the cycle's scratch is hard-reset to the pre-cycle
-ref (`git reset --hard` + `git clean` of content/traces/tests — this is why a dirty
-start is refused), the commit is skipped, and the outer loop continues until the
-circuit breakers stop it (5 consecutive / 15 total failed cycles by default).
+overrides commit-mode startup only, accepting the risk below). Each cycle snapshots
+its exact non-ignored untracked paths. A red gate fails explicitly (`|| return 1`, not
+`set -e`): tracked work and the provisional commit reset to the pre-cycle ref, and
+only untracked paths absent from that snapshot are cleaned, across the whole repo.
+Preexisting untracked paths are not intentionally deleted. Under the dirty override,
+however, reset still destroys tracked edits and no cleanup can restore a preexisting
+untracked file that the agent staged/committed, edited, moved, or removed. The outer loop continues
+until its circuit breakers stop it (5 consecutive / 15 total failures by default).
+
+**Evidence-only mode.** With `AI_LOOP_COMMIT=0`, `npm run ai:loop` does not rotate or
+append to the tracked loop ledger before the agent starts. The prompt requires an
+exact-clean baseline pure play before any uncommitted edit. The later work can be
+checked locally, but its baseline report must not be represented as evidence for that
+uncommitted revision. The driver enforces a clean start again at every cycle boundary;
+`AI_LOOP_ALLOW_DIRTY=1` cannot bypass that provenance gate. If a successful
+evidence-only cycle leaves work uncommitted, continuous mode stops before launching
+another baseline and tells the operator to commit, stash, or discard the pending work.
 
 ## Saturation-triggered ultraplan
 
@@ -99,10 +113,14 @@ ASSESS → isSaturated?  ── no ──▶ standard cycle (as above)
       researchers; web tools force an interactive approval prompt that stalls the
       unattended loop) picks the single highest-value STRUCTURAL move, grounded in
       docs/archive/ULTRAPLAN-*.md and docs/ROADMAP.md (advance them, don't restart).
-   2. Writes the plan to docs/CURRENT_PLAN.md  ← the rolling plan + hand-off doc.
-   3. A FRESH implementation subagent reads ONLY docs/CURRENT_PLAN.md + the files it
-      names (clean context, not the whole repo) and makes the one change.
-   4. Same mandatory blind playtest + green bar as every cycle.
+   2. Writes the sole fresh-agent handoff to ignored
+      ai-runs/<cycle>/current-plan.md; latest-cycle.json records it as
+      currentPlanRecord. docs/CURRENT_PLAN.md remains a durable short router and is
+      never overwritten by the loop.
+   3. A FRESH implementation subagent reads ONLY that per-cycle handoff + the files
+      it names (clean context, not the whole repo) and makes the one change.
+   4. Same provisional-commit → exact-clean blind playtest → outer green bar →
+      final ledger-commit sequence as every commit-enabled cycle.
 ```
 
 **Cost control.** An ultraplan is multi-agent (≈4-6 agents) / multi-minute work, so it must not fire
@@ -118,10 +136,9 @@ handed off as a _document_, not a context window.
 
 ### The decision log (durable memory of settled questions)
 
-`docs/CURRENT_PLAN.md` is **overwritten** each ultraplan, so it cannot remember what was
-already ruled out — which is why successive re-aims kept re-confirming the same
-already-implemented features as "gaps" (re-aim #19 alone re-confirmed six false alarms).
-`docs/DECISION_LOG.md` fixes this: it is an **append-only** ledger of settled questions.
+The ignored per-cycle handoff is intentionally disposable, so it cannot remember what
+was already ruled out across re-aims. `docs/DECISION_LOG.md` supplies that durable
+memory: it is an **append-only** ledger of settled questions.
 Each ultraplan reads it first and treats its "Confirmed CLOSED" list as a hard boundary for
 every reviewer subagent (do not re-nominate or re-investigate a closed gap — the file:line
 proof is recorded), then appends the gaps it confirmed closed this cycle. This is the missing
@@ -151,14 +168,15 @@ fourth piece of the reviewer subagent contract — _objective · output format �
   around every change — together they're the feedback that actually improves the
   game.
 - **Externalized state + one change per cycle**: `AI_LOOP_STATE.md` is the durable
-  handoff; `ai-runs/<id>/` holds the (ignored) per-cycle evidence and playtest report.
+  history; `ai-runs/<id>/` holds ignored per-cycle evidence, playtest report, and any
+  ultraplan fresh-agent handoff.
 
 ## Running it
 
 ```bash
 npm run assess          # just print the ranked next-best-improvement backlog
 npm run ai:loop         # one cycle: assess + emit the cycle prompt + artifacts
-./loop.sh --once        # full single cycle (crawl gate → agent → crawl gate → verify → commit)
+./loop.sh --once        # full cycle (pre-crawl → change/provisional/play → outer gates → ledger commit)
 ./loop.sh               # continuous (AI_LOOP_MAX_CYCLES, AI_LOOP_DELAY_SECONDS to bound)
 npm run loop:status     # project-scoped status (breaker/velocity telemetry needs
 npm run loop:stop       #   a wrapper log: ./loop.sh 2>&1 | tee ai-runs/wrapper.log)
@@ -170,8 +188,12 @@ npm run fleet:mock -- --count 2   # explicit structural, zero-token dry run
 npm run feedback:compile          # compile hot spots + mode-separated pure retention evidence
 ```
 
+`loop.sh` installs missing root and UI dependencies before starting cycles because
+`npm run health` includes `ui:typecheck`.
+
 Key env (loop.sh's header comment is the authoritative reference): `AI_LOOP_COMMIT=1`
-to commit, `AI_LOOP_PUSH=1` to push (rejected against protected main — see the cycle
+to enable the local provisional and final-ledger commits, `AI_LOOP_PUSH=1` to push
+(rejected against protected main — see the cycle
 diagram), `AI_LOOP_DELAY_SECONDS` between cycles (default 10), `AI_AGENT_CMD` to set
 an explicit agent command — otherwise the default is the installed `codex exec` CLI;
 the outer loop does not inspect local credential files or choose a fallback provider —

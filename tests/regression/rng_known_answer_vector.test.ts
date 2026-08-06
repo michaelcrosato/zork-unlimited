@@ -85,4 +85,42 @@ describe("rng absolute known-answer vector (determinism keystone, §4.1/§8.5)",
     const d = rngForStep(7, 3).next();
     expect(new Set([a, b, c, d]).size).toBe(4);
   });
+
+  // `isRuntimeSeed` accepts any safe integer. A bare `seed >>> 0` discarded 21 bits;
+  // the first high-word XOR repair still mapped a 54-bit domain into only 32 bits and
+  // therefore retained whole-stream aliases. Signed/wide seeds now use injective 64-bit
+  // initial state while the historical unsigned-32-bit route remains frozen below.
+  it("distinct accepted seeds produce distinct streams across the 32-bit boundary", () => {
+    const pairs: [number, number][] = [
+      [0, 2 ** 32],
+      [0, 2 ** 32 + 0x27d4eb2f],
+      [1, 2 ** 32 + 1],
+      [5, 4294967301],
+      [-1, 4294967295],
+      [-3, 4294967293],
+    ];
+    for (const [low, high] of pairs) {
+      expect(rngForStep(low, 0).next(), `${String(low)} vs ${String(high)}`).not.toBe(
+        rngForStep(high, 0).next(),
+      );
+      expect(rngForStep(low, 9).next(), `${String(low)} vs ${String(high)} at step 9`).not.toBe(
+        rngForStep(high, 9).next(),
+      );
+    }
+  });
+
+  it("pins the 64-bit stream for the confirmed high-word XOR alias seed", () => {
+    const r = rngForStep(2 ** 32 + 0x27d4eb2f, 0);
+    expect([r.next(), r.next(), r.next()]).toEqual([
+      0.4852148871553811, 0.5238291275419239, 0.559851012362939,
+    ]);
+  });
+
+  it("the wide-seed route left every sub-2^32 stream byte-identical", () => {
+    // The whole range any shipped artifact uses. If this moves, every pinned trace
+    // expected_final_hash and every reachability bracket moves with it.
+    expect(rngForStep(0, 0).next()).toBe(0.26642920868471265);
+    expect(rngForStep(1, 1).next()).toBe(0.762141314567998);
+    expect(rngForStep(541, 12).next()).toBe(0.011826428584754467);
+  });
 });

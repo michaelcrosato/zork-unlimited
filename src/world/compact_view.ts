@@ -1,12 +1,17 @@
 import type { OverworldPendingRoadEncounter, TravelLogEntry } from "./session_snapshot.js";
 import type { OverworldSessionRoutePlan } from "./session_routes.js";
 import type { OverworldView } from "./session_view.js";
-import type { OverworldRoadEncounterOption } from "./travel_mechanics.js";
+import {
+  resolveOverworldTravelLeg,
+  type OverworldRoadEncounterOption,
+  type OverworldTravelLegResult,
+  type OverworldTravelResourceState,
+} from "./travel_mechanics.js";
 import { compactText } from "../core/compact_text.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 import type { OverworldQuestLaunchView } from "./quest_launch.js";
-import type { OverworldLocalEvent, OverworldLocalJob } from "./overworld.js";
+import type { OverworldLocalEvent, OverworldLocalJob, OverworldRoadEvent } from "./overworld.js";
 import {
   compactOverworldRoadEncounterNextAction,
   type OverworldCompactRoadEncounterNextAction,
@@ -52,7 +57,13 @@ export const OVERWORLD_COMPACT_TITLE_CHAR_LIMIT = 140;
 export const OVERWORLD_COMPACT_RISK_CHAR_LIMIT = 160;
 export const OVERWORLD_COMPACT_ROAD_EVENT_SUMMARY_CHAR_LIMIT = 240;
 export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
-export const OVERWORLD_COMPACT_VIEW_VERSION = 43 as const;
+// v44: `roads` rows now carry each direct road's own cost. They previously carried the
+// shortest-route estimate to the same destination, which for eight ordered road pairs in
+// the shipped world is a two-hop detour and not what travel_overworld_session charges.
+// v45: full-view direct exits carry detached travel estimates, preserving the v44 road
+// contract when a full view is spread, cloned, serialized, and compacted again. This also
+// makes direct-edge event fatigue part of the authenticated public projection.
+export const OVERWORLD_COMPACT_VIEW_VERSION = 45 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -463,7 +474,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   hidden:
     "[areas, jobs, sites, quests] counts not currently listed at this town; jobs include undiscovered jobs plus discovered, incomplete authored job scenes with no legal options currently available. Scout, talk, or explore can reveal more.",
   roads:
-    "[[dest_town_id, est_minutes_incl_delays, supplies_needed, fatigue_0to100_on_arrival], ...] direct roads from here",
+    "[[dest_town_id, est_minutes_incl_delays, supplies_needed, fatigue_0to100_on_arrival], ...] direct roads from here; each cost is that one road's own, which travel_overworld_session charges. A multi-leg detour in route_options can be cheaper.",
   roads_truncated: "true when more roads exist than listed",
   area_routes:
     "[[area_route_id, dest_area_id, minutes], ...] walking routes for move_overworld_session_area",
@@ -956,6 +967,7 @@ type OverworldCompactRouteSource = {
   id: string;
   destination: { id: string };
   travel_minutes: number;
+  estimate?: OverworldTravelLegResult;
 };
 
 export function compactOverworldAreaRoutes(
@@ -971,26 +983,56 @@ export function compactOverworldAreaRoutes(
   return compact;
 }
 
+/**
+ * Cost of each DIRECT road out of here — the thing `travel_to` will actually charge.
+ *
+ * This used to look the destination up in `routeOptions` and emit that plan's
+ * estimate. But `routeOptions` are Dijkstra shortest paths by travel_minutes, and
+ * for eight ordered road pairs in the shipped world the shortest path to a
+ * neighbour is a two-hop detour, not the road itself: the very first move of a
+ * default game promised Schenectady in 16 minutes for 2 supplies via
+ * Colonie, while `travel_to("schenectady_city")` resolves to the direct road and
+ * charges 18 for 1. The direct road's true cost was not recoverable from the
+ * compact surface at all, because `roads` and `route_options` emitted the same
+ * tuple — and this projection is the surface MCP agents and the blind fleet
+ * actually plan from. Time and supplies are the overworld's core resources.
+ *
+ * Compute each row from its own edge instead. `route_options` keeps the multi-hop
+ * plan; the two collections answer different questions. For a road whose shortest
+ * plan IS the direct road this reproduces the old number exactly, since the inputs
+ * are identical. Road events only feed fatigue gain (`travelFatigueGain`), never
+ * minutes or supplies. The session projection supplies canonical previews for every
+ * direct edge because a dominated direct edge may not occur in ANY shortest-path
+ * option. Full-view exits carry a detached copy of that preview so spread and JSON
+ * round trips stay truthful. The route-plan lookup remains a compatibility fallback.
+ */
 export function compactOverworldRoads(
   exits: readonly OverworldCompactRouteSource[],
   routeOptions: readonly OverworldSessionRoutePlan[],
-  fallbackFatigue: number,
+  resources: OverworldTravelResourceState,
   limit = OVERWORLD_COMPACT_MOVEMENT_LIMIT,
+  directRoadTravelLegs?: ReadonlyMap<string, OverworldTravelLegResult>,
 ): OverworldCompactRoad[] {
-  const routeByDestination = new Map<string, OverworldSessionRoutePlan>();
-  for (const plan of routeOptions) routeByDestination.set(plan.destination.id, plan);
+  const roadEventByEdgeId = new Map<string, OverworldRoadEvent>();
+  for (const plan of routeOptions) {
+    for (const step of plan.steps) {
+      if (step.roadEvent) roadEventByEdgeId.set(step.edge.id, step.roadEvent);
+    }
+  }
 
   const compact: OverworldCompactRoad[] = [];
   const capped = Math.min(exits.length, limit);
   for (let index = 0; index < capped; index += 1) {
     const exit = exits[index]!;
-    const plan = routeByDestination.get(exit.destination.id);
-    compact.push([
-      exit.destination.id,
-      plan?.estimate.elapsedMinutes ?? exit.travel_minutes,
-      plan?.estimate.suppliesNeeded ?? 0,
-      plan?.estimate.fatigueAfter ?? fallbackFatigue,
-    ]);
+    const leg =
+      exit.estimate ??
+      directRoadTravelLegs?.get(exit.id) ??
+      resolveOverworldTravelLeg(
+        exit.travel_minutes,
+        roadEventByEdgeId.get(exit.id) ?? null,
+        resources,
+      );
+    compact.push([exit.destination.id, leg.elapsedMinutes, leg.suppliesNeeded, leg.fatigueAfter]);
   }
   return compact;
 }
@@ -1620,7 +1662,10 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
       view.hiddenSiteCount,
       view.hiddenQuestCount,
     ],
-    roads: compactOverworldRoads(view.exits, view.routeOptions, view.fatigue),
+    roads: compactOverworldRoads(view.exits, view.routeOptions, {
+      fatigue: view.fatigue,
+      supplies: view.supplies,
+    }),
     ...(roadsTruncated ? { roads_truncated: true as const } : {}),
     ...(areaRoutes.length > 0 ? { area_routes: areaRoutes } : {}),
     ...(areaRoutesTruncated ? { area_routes_truncated: true as const } : {}),

@@ -48,7 +48,7 @@ engine_capabilities:
     - not_visited
     - in_room # "are you here RIGHT NOW" (visited is monotone; this is not)
     - is_open # object opened and still standing open (CLOSE can shut it again)
-    - is_unlocked # lock currently open (set_object_locked can re-lock)
+    - is_explicitly_unlocked # a lock CLEARED DURING PLAY; false for a never-locked object
     - quest_stage # quest is at the named stage (written by set_quest_stage)
     - var_gte
     - var_lte
@@ -66,7 +66,6 @@ engine_capabilities:
     - dec_var
     - add_journal
     - goto
-    - unlock_exit
     - open_object
     - close_object # inverse of open_object (first-class CLOSE verb)
     - set_object_locked

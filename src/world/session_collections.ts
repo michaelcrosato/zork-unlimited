@@ -6,6 +6,17 @@ export function sortedStringSet(values: ReadonlySet<string>): string[] {
   return [...values].sort();
 }
 
+/** Deterministic serialization of a map of string sets: both levels sorted, so the
+ *  snapshot hash cannot depend on insertion order. */
+export function sortedStringSetMap(
+  values: ReadonlyMap<string, ReadonlySet<string>>,
+): [string, string[]][] {
+  return [...values.entries()]
+    .filter(([, members]) => members.size > 0)
+    .map(([key, members]): [string, string[]] => [key, [...members].sort()])
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
 export function sortedStringMap(values: ReadonlyMap<string, string>): [string, string][] {
   return [...values.entries()].sort(([left], [right]) => left.localeCompare(right));
 }

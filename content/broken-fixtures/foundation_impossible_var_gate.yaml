@@ -1,0 +1,23 @@
+# MUST FAIL: IMPOSSIBLE_GATE
+# The sole win condition needs `resolve >= 5`, but `resolve` starts at 0 and no
+# effect anywhere in the pack ever writes it — the quest is unwinnable. The
+# symbolic gate kinds (has_flag / has_item / quest_stage / is_open) were already
+# audited; the numeric ones were not, so this validated green.
+meta:
+  {
+    id: impossible_var_gate,
+    title: "Impossible Var Gate",
+    start_room: a,
+    vars_init: { hp: 10, attack: 2, defense: 1, resolve: 0 },
+  }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ var_gte: { name: resolve, value: 5 } }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

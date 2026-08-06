@@ -1,0 +1,27 @@
+# MUST FAIL: DIALOGUE_GOTO_MISSING
+# A dialogue topic routes to a node the tree does not contain.
+meta: { id: bad_dialogue_goto, title: "Bad Dialogue Goto", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+npcs:
+  - id: warden
+    name: "Warden"
+    description: "A warden."
+    room: a
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: "The warden nods."
+          topics:
+            - { id: ask_on, prompt: "Ask about the road", goto: no_such_node }
+            - { id: leave, prompt: "Leave", end: true }
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

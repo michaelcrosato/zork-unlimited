@@ -22,10 +22,19 @@
  *    consuming it cannot wedge the quest. Both checks are sound over-approximations
  *    of "can be lost".
  */
-import { exitFlag, type Effect } from "../core/effects.js";
+import { type Effect } from "../core/effects.js";
 import { evalConditions, type Condition } from "../core/conditions.js";
 import { indexRpgModel, initStateForRpgModel } from "../rpg/model.js";
-import { type RpgPack, type GameObject, type Interaction, SCORE_VAR } from "../rpg/schema.js";
+import {
+  type RpgPack,
+  type GameObject,
+  type Interaction,
+  SCORE_VAR,
+  HP_VAR,
+  ATTACK_VAR,
+  DEFENSE_VAR,
+  enemyHpVar,
+} from "../rpg/schema.js";
 import { maneuverSequenceConditions } from "../rpg/maneuver_sequence.js";
 import { type Finding, type ValidationReport, makeReport } from "./report.js";
 
@@ -43,6 +52,21 @@ const warn = (code: string, message: string, where: string[]): Finding => ({
 });
 const hasDeclaredVar = (vars: Record<string, number>, name: string): boolean =>
   Object.prototype.hasOwnProperty.call(vars, name);
+
+const pushVarWrite = (into: Map<string, VarWrite[]>, name: string, w: VarWrite): void => {
+  const arr = into.get(name) ?? [];
+  arr.push(w);
+  into.set(name, arr);
+};
+
+/** Renders a reachable range for a finding message, spelling the unbounded sides. */
+const rangeText = (min: number, max: number): string => {
+  if (min === Number.NEGATIVE_INFINITY && max === Number.POSITIVE_INFINITY) return "any value";
+  if (min === Number.NEGATIVE_INFINITY) return `values <= ${String(max)}`;
+  if (max === Number.POSITIVE_INFINITY) return `values >= ${String(min)}`;
+  if (min === max) return String(min);
+  return `values in [${String(min)}, ${String(max)}]`;
+};
 
 /**
  * Extra facts a higher layer (the RPG validator, §13 Stage 4) can inject: flags
@@ -293,28 +317,6 @@ export function validateRpgFoundation(
         ),
       );
   }
-  // An `unlock_exit` effect whose `from` or `to` is absent from pack.rooms silently
-  // writes an unreachable exit-flag key (__exit:phantom->real), making the unlock a
-  // permanent no-op — harder to diagnose than a dead gate because the effect APPEARS
-  // to fire. Error severity (bug_0278). Checked in a dedicated block (not via
-  // collectRoomRefs) because the two sides need individual messages (bug_0278).
-  for (const e of effects) {
-    if (!("unlock_exit" in e)) continue;
-    for (const [side, id] of [
-      ["from", e.unlock_exit.from],
-      ["to", e.unlock_exit.to],
-    ] as const) {
-      if (!roomIds.has(id))
-        findings.push(
-          err(
-            "UNLOCK_EXIT_ROOM_MISSING",
-            `unlock_exit "${side}" room "${id}" does not exist — the unlock writes an unreachable exit flag and is a permanent no-op.`,
-            [`room:${id}`],
-          ),
-        );
-    }
-  }
-
   // An `add_item` or `remove_item` effect targeting an object id absent from pack.objects
   // is a dangling item reference — a typo'd `add_item: "lantren"` silently inserts a
   // phantom string into inventory (no description, no interactions, nonsense label) that
@@ -374,9 +376,37 @@ export function validateRpgFoundation(
     }
   }
 
+  // ── Ambiguous NPC display names ──────────────────────────────────────────────
+  // The NPC-side mirror of AMBIGUOUS_ALIAS above, which scans pack.objects only.
+  // Two people sharing a display name means the name the player reads off the
+  // action menu does not identify one of them, and a text resolver has nothing
+  // better than the name to work with. Free-text TALK now resolves against
+  // visible, condition-passing NPCs, so a duplicate is only actually unplayable
+  // when the two can be co-present — but it is always an authoring smell, and
+  // Wolf-Winter's four same-named Junes are a hand-rolled variant table standing
+  // in for an NPC-level `variants[]` the schema does not yet offer.
+  //
+  // WARNING severity, deliberately: those four Junes ship today and are provably
+  // mutually exclusive, so erroring would make a healthy pack unplayable
+  // (makeReport derives ok from errors alone). Promote this to `err` once NPCs
+  // gain a variant affordance and the duplicates are gone — at which point the
+  // check also proves that restructure complete.
+  const npcNameOwner = new Map<string, string>();
+  for (const n of pack.npcs) {
+    const key = n.name.toLowerCase();
+    const prev = npcNameOwner.get(key);
+    if (prev !== undefined && prev !== n.id)
+      findings.push(
+        warn(
+          "AMBIGUOUS_NPC_NAME",
+          `display name "${n.name}" is shared by npcs "${prev}" and "${n.id}"; a player typing that name cannot say which they mean.`,
+          [`npc:${n.id}`, `npc:${prev}`],
+        ),
+      );
+    else npcNameOwner.set(key, n.id);
+  }
+
   // Bail before graph analysis if references are broken (would crash traversal).
-  // UNLOCK_EXIT_ROOM_MISSING is included because a dangling unlock_exit room id corrupts
-  // the settable-flags set the graph analysis uses (exitFlag writes an unreachable key).
   // ITEM_REF_MISSING is included because a dangling item id could corrupt the
   // obtainability fixpoint that uses objById.
   // OBJECT_STATE_REF_MISSING is included because a dangling open_object id silently
@@ -390,7 +420,6 @@ export function validateRpgFoundation(
         [
           "EXIT_TARGET_MISSING",
           "START_MISSING",
-          "UNLOCK_EXIT_ROOM_MISSING",
           "ITEM_REF_MISSING",
           "OBJECT_STATE_REF_MISSING",
         ].includes(f.code),
@@ -424,10 +453,7 @@ export function validateRpgFoundation(
     // (bug_0092). Skip the room-adding for a provably-dead win (but still run the
     // ENDING_UNDECLARED reference check, which is independent of firability).
     if (!isUnsatisfiable(whenProfile(wc.conditions))) {
-      for (const c of wc.conditions) {
-        const v = visitedRoom(c);
-        if (v) winRooms.add(v);
-      }
+      for (const wr of winRoomReqs(wc.conditions)) winRooms.add(wr);
     }
     const endingTargets = [
       { ending: wc.ending, where: [`win:${wc.id}`], label: `win_condition "${wc.id}"` },
@@ -479,7 +505,6 @@ export function validateRpgFoundation(
   const settable = new Set<string>([...pack.meta.flags_init, ...(opts.extraSettableFlags ?? [])]);
   for (const e of effects) {
     if ("set_flag" in e) settable.add(e.set_flag);
-    if ("unlock_exit" in e) settable.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));
   }
 
   // ── Settable quest stages (provided by some set_quest_stage effect) ──────────
@@ -491,9 +516,9 @@ export function validateRpgFoundation(
     if ("set_quest_stage" in e) settableQuestStages.add(questStageKey(e.set_quest_stage));
   }
 
-  // ── Settable object-state (is_open / is_unlocked) ────────────────────────────
+  // ── Settable object-state (is_open / is_explicitly_unlocked) ────────────────────────────
   // objectState inits to {} (state.ts) and both predicates DEFAULT FALSE
-  // (conditions.ts: is_open ⇒ objectState[id].open===true, is_unlocked ⇒
+  // (conditions.ts: is_open ⇒ objectState[id].open===true, is_explicitly_unlocked ⇒
   // objectState[id].locked===false). So a satisfiable gate needs a path that WRITES
   // the matching flip. CRITICAL: there are TWO write sources for each — an authored
   // effect, OR the engine's built-in OPEN/UNLOCK verbs (legal_actions.ts) — and the
@@ -509,7 +534,7 @@ export function validateRpgFoundation(
   //     is obtainable (the built-in UNLOCK verb emits `{ set_object_locked: {id,
   //     locked:false} }` and requires the player hold the matching key —
   //     legal_actions.ts). NOTE: a STATICALLY-unlocked object is NOT unlock-settable —
-  //     is_unlocked reads objectState[id].locked===false directly (no static fallback),
+  //     is_explicitly_unlocked reads objectState[id].locked===false directly (no static fallback),
   //     so only an explicit relock-then-unlock effect or a keyed UNLOCK can make it true.
   const openableObjects = new Set<string>();
   const unlockableObjects = new Set<string>();
@@ -523,6 +548,34 @@ export function validateRpgFoundation(
     if (o.locked === true && o.key_id !== undefined && obtainable.has(o.key_id))
       unlockableObjects.add(o.id);
   }
+
+  // ── Reachable numeric range per var, for the var_gte/var_lte/var_eq gates ────
+  // Widest write set we can see, so the range over-approximates as far as possible:
+  // authored effects + higher-layer effects + the falsifier-only branches (enemy
+  // on_defeat). A write this pass cannot see would make the range too NARROW, which
+  // is the one direction that produces false positives — hence volatileVars below.
+  const varWrites = new Map<string, VarWrite[]>();
+  for (const e of [...effects, ...(opts.extraFalsifierEffects ?? [])]) {
+    if ("inc_var" in e)
+      pushVarWrite(varWrites, e.inc_var.name, { kind: "inc", amount: e.inc_var.by });
+    else if ("dec_var" in e)
+      pushVarWrite(varWrites, e.dec_var.name, { kind: "dec", amount: e.dec_var.by });
+    else if ("set_var" in e)
+      pushVarWrite(varWrites, e.set_var.name, { kind: "set", amount: e.set_var.value });
+  }
+  // Vars mutated by mechanics with no authored effect to scan. `extraVolatileVars` is
+  // the documented injection point (rpg_validator fills it), but validateRpgFoundation
+  // is also called directly, so derive the engine-owned combat stats locally too: a
+  // range built without combat's dynamic set_var writes would be far too narrow.
+  const volatileVars = new Set<string>([
+    ...(opts.extraVolatileVars ?? []),
+    HP_VAR,
+    ATTACK_VAR,
+    DEFENSE_VAR,
+    ...pack.enemies.map((e) => enemyHpVar(e.id)),
+  ]);
+  const varRange = (name: string): { min: number; max: number } =>
+    varReachableRange(pack.meta.vars_init[name] ?? 0, varWrites.get(name));
 
   // ── Feasibility of every gate (presence, exits, interactions/hints, topics, wins) ──
   const checkConds = (conds: Condition[], where: string[]): void => {
@@ -554,7 +607,7 @@ export function validateRpgFoundation(
         );
       }
     }
-    // An object-state gate (is_open/is_unlocked) whose id is in neither
+    // An object-state gate (is_open/is_explicitly_unlocked) whose id is in neither
     // over-approximating settable set can NEVER become true: no authored effect and
     // no built-in OPEN/UNLOCK verb path establishes it. (An undefined id is in neither
     // set, so the same miss carries the "object not defined" case — no objById
@@ -576,6 +629,31 @@ export function validateRpgFoundation(
             where,
           ),
         );
+    }
+    // A numeric gate outside the var's whole reachable range can never hold. The range
+    // over-approximates (see varReachableRange), so a gate INSIDE it is never flagged
+    // even when the exact value is unreachable — this only ever misses, never rejects
+    // a good pack. Combat-volatile vars are skipped for the same reason
+    // winStaysTrueForever bails on them: their writes are not in the authored set.
+    for (const vr of varReqs(conds)) {
+      if (volatileVars.has(vr.name)) continue;
+      const { min, max } = varRange(vr.name);
+      const impossible =
+        vr.op === "gte"
+          ? vr.value > max
+          : vr.op === "lte"
+            ? vr.value < min
+            : vr.value > max || vr.value < min;
+      if (impossible) {
+        const op = vr.op === "gte" ? ">=" : vr.op === "lte" ? "<=" : "==";
+        findings.push(
+          err(
+            "IMPOSSIBLE_GATE",
+            `condition requires var "${vr.name}" ${op} ${String(vr.value)}, but it can only ever hold ${rangeText(min, max)}.`,
+            where,
+          ),
+        );
+      }
     }
   };
   for (const room of pack.rooms) {
@@ -636,6 +714,25 @@ export function validateRpgFoundation(
         checkConds(t.conditions ?? [], [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
       }
     }
+  }
+
+  // ── Phantom vars ─────────────────────────────────────────────────────────────
+  // The mirror of SKILL_CHECK_PHANTOM_STAT for condition-side var reads. A gate
+  // naming a var that is neither declared in meta.vars_init nor written by any
+  // effect is a typo: `evalCondition` reads `state.vars[name] ?? 0`, so it never
+  // throws — it silently compares against 0, making `var_gte` permanently false and
+  // `var_lte` permanently true. Requiring BOTH undeclared and unwritten keeps the
+  // legitimately-runtime-created vars (`score`, combat stats, enemy HP) clean.
+  for (const [name, where] of collectVarReads(pack)) {
+    if (name === SCORE_VAR || volatileVars.has(name)) continue;
+    if (hasDeclaredVar(pack.meta.vars_init, name) || varWrites.has(name)) continue;
+    findings.push(
+      err(
+        "PHANTOM_VAR",
+        `condition reads var "${name}", which is not declared in meta.vars_init and no effect ever writes.`,
+        where,
+      ),
+    );
   }
 
   // ── quest_critical: never permanently lost ───────────────────────────────────
@@ -1118,7 +1215,7 @@ export function validateRpgFoundation(
   // ── INERT object-state: an AUTHORED open/lock-state write nothing ever reads ──
   // The LIVENESS dual of bug_0253's IMPOSSIBLE_OBJECT_STATE (feasibility) — the
   // object-state analogue of INERT_FLAG. An AUTHORED `open_object` /
-  // `set_object_locked` effect whose target object's is_open / is_unlocked state is
+  // `set_object_locked` effect whose target object's is_open / is_explicitly_unlocked state is
   // NEVER read by any condition pack-wide is dead bookkeeping: the write changes
   // nothing the game ever consults. CRITICAL SOUNDNESS BOUNDARY: key the write-set
   // STRICTLY on these authored effects — do NOT fold in the over-approximating
@@ -1131,9 +1228,9 @@ export function validateRpgFoundation(
   // error — an inert open/lock-state write is a no-op, never a soft-lock.
   //
   // bug_0263 completes bug_0262 over set_object_locked's FULL domain: the liveness
-  // question is "does any condition read is_unlocked for this id?", which is
+  // question is "does any condition read is_explicitly_unlocked for this id?", which is
   // INDEPENDENT of the boolean written. A `set_object_locked(locked: true)` re-lock is
-  // just as inert as a `locked: false` unlock when nothing reads is_unlocked — the
+  // just as inert as a `locked: false` unlock when nothing reads is_explicitly_unlocked — the
   // original check filtered `locked === false`, so an unread re-lock escaped it. Both
   // directions are now tracked (deduped so an object both unlocked AND re-locked by
   // effects, still never read, warns exactly once).
@@ -1172,7 +1269,7 @@ export function validateRpgFoundation(
           "INERT_OBJECT_STATE",
           `object "${id}" is unlocked by an effect but no condition ever reads its ` +
             `unlocked state — a no-op write (dead bookkeeping). Gate something on ` +
-            `\`is_unlocked: ${id}\`, or remove the effect.`,
+            `\`is_explicitly_unlocked: ${id}\`, or remove the effect.`,
           [`object:${id}`],
         ),
       );
@@ -1180,7 +1277,7 @@ export function validateRpgFoundation(
   }
   for (const id of writtenLocked) {
     // A `set_object_locked(locked: true)` re-lock is inert under the SAME condition —
-    // is_unlocked is never read. Deduped against writtenUnlocked so an object that is
+    // is_explicitly_unlocked is never read. Deduped against writtenUnlocked so an object that is
     // both unlocked and re-locked by effects (and still never read) warns just once.
     if (!objStateReads.unlocked.has(id) && !writtenUnlocked.has(id)) {
       findings.push(
@@ -1188,7 +1285,7 @@ export function validateRpgFoundation(
           "INERT_OBJECT_STATE",
           `object "${id}" is locked by an effect but no condition ever reads its ` +
             `unlocked state — a no-op write (dead bookkeeping). Gate something on ` +
-            `\`is_unlocked: ${id}\`, or remove the effect.`,
+            `\`is_explicitly_unlocked: ${id}\`, or remove the effect.`,
           [`object:${id}`],
         ),
       );
@@ -1222,8 +1319,8 @@ export function validateRpgFoundation(
  * (`initStateForRpgModel`, start `on_enter` applied, start room marked visited),
  * evaluated by the engine's own `evalConditions`; and un-falsifiability is proven
  * only for a flat conjunction of monotone-stable atoms (incl. `is_open`, which no
- * effect can close, and `is_unlocked` when nothing can relock it) — any
- * disjunction/negation, a `not_visited`/quest condition, a relockable `is_unlocked`,
+ * effect can close, and `is_explicitly_unlocked` when nothing can relock it) — any
+ * disjunction/negation, a `not_visited`/quest condition, a relockable `is_explicitly_unlocked`,
  * or a condition on a combat-volatile var makes us bail (treat as falsifiable ⇒ no
  * finding). A win merely satisfiable early but escapable on the first move is never
  * flagged.
@@ -1414,7 +1511,7 @@ type Falsifiers = {
   removedItems: Set<string>;
   varWrites: Map<string, VarWrite[]>;
   // Objects a `set_object_locked: { locked: true }` can re-lock — the only effect
-  // that falsifies an `is_unlocked` condition.
+  // that falsifies an `is_explicitly_unlocked` condition.
   relockedObjects: Set<string>;
   // Objects a `close_object` effect (or the built-in CLOSE verb, which emits it)
   // can shut — the falsifiers of an `is_open` condition. Open-state stopped being
@@ -1441,7 +1538,6 @@ function collectFalsifiers(pack: RpgPack, extra: Effect[]): Falsifiers {
     for (const e of effects) {
       if ("set_flag" in e) setFlags.add(e.set_flag);
       else if ("clear_flag" in e) clearedFlags.add(e.clear_flag);
-      else if ("unlock_exit" in e) setFlags.add(exitFlag(e.unlock_exit.from, e.unlock_exit.to));
       else if ("add_item" in e) addedItems.add(e.add_item);
       else if ("remove_item" in e) removedItems.add(e.remove_item);
       else if ("set_object_locked" in e && e.set_object_locked.locked)
@@ -1483,11 +1579,49 @@ function varNeverChanges(fixed: number, writes: VarWrite[] | undefined): boolean
   return (writes ?? []).every((w) => (w.kind === "set" ? w.amount === fixed : w.amount === 0));
 }
 
+/**
+ * The SOUND OVER-APPROXIMATION of the value range a var can ever hold — the
+ * feasibility mirror of the winStaysTrueForever stability analysis above, which
+ * asks the opposite question ("once true, can this become false?").
+ *
+ * Deliberately loose in the safe direction, so the only mistake it can make is to
+ * MISS an impossible gate, never to reject a shipped pack:
+ *  - a single `inc` by a positive amount (or `dec` by a negative one) makes the
+ *    maximum unbounded, because nothing here proves how often that effect can
+ *    fire — an interaction may be repeatable, a room re-entered. Symmetrically for
+ *    the minimum.
+ *  - `set` writes only widen the range to the literal they assign.
+ *  - the interval is not the reachable SET: with init 0 and a single
+ *    `set_var: 100`, the range is [0, 100] even though 50 is unreachable. A gate
+ *    inside the interval is therefore never flagged.
+ *
+ * `by` is sign-significant (effects.ts permits a negative inc), so this inspects
+ * the literal rather than the effect name — same discipline as varNeverDrops.
+ */
+function varReachableRange(
+  init: number,
+  writes: VarWrite[] | undefined,
+): { min: number; max: number } {
+  let min = init;
+  let max = init;
+  for (const w of writes ?? []) {
+    if (w.kind === "set") {
+      if (w.amount < min) min = w.amount;
+      if (w.amount > max) max = w.amount;
+      continue;
+    }
+    const delta = w.kind === "inc" ? w.amount : -w.amount;
+    if (delta > 0) max = Number.POSITIVE_INFINITY;
+    else if (delta < 0) min = Number.NEGATIVE_INFINITY;
+  }
+  return { min, max };
+}
+
 /** True iff `conditions` (taken as a conjunction) hold now AND stay true under every
  *  pack effect — so once met at init they can never become false. Proven only for a
  *  flat AND of individually monotone-stable atoms (flags, items, sign-significant
  *  var bounds, `visited`, plus object open/unlock state: `is_open` is monotone — no
- *  effect closes an object — and `is_unlocked` is stable unless a `set_object_locked`
+ *  effect closes an object — and `is_explicitly_unlocked` is stable unless a `set_object_locked`
  *  can relock it); any_of/none_of, not_visited, quest_stage, or a condition on a
  *  combat-volatile var make us bail to false (conservative: we never claim an
  *  un-falsifiability we cannot prove). */
@@ -1521,16 +1655,16 @@ function winStaysTrueForever(
       // Open-state stopped being monotone when CLOSE became a first-class
       // verb: an authored `close_object` (and the built-in close it powers)
       // falsifies is_open. Stable iff nothing can shut this object — the
-      // exact mirror of the is_unlocked/relock rule below. The built-in
+      // exact mirror of the is_explicitly_unlocked/relock rule below. The built-in
       // CLOSE verb only ever emits close_object for its own target, so the
       // authored-effect scan is the complete falsifier set.
       stable = !f.closedObjects.has(c.is_open);
-    } else if ("is_unlocked" in c) {
+    } else if ("is_explicitly_unlocked" in c) {
       // A lock CAN be re-set: `set_object_locked: { locked: true }` is the sole
-      // effect that falsifies an `is_unlocked` win. Stable iff no such relock
+      // effect that falsifies an `is_explicitly_unlocked` win. Stable iff no such relock
       // targets this object (UNLOCK and `set_object_locked: { locked: false }`
       // only ever help, so they are not falsifiers).
-      stable = !f.relockedObjects.has(c.is_unlocked);
+      stable = !f.relockedObjects.has(c.is_explicitly_unlocked);
     } else if ("all_of" in c) c.all_of.forEach(visit);
     else stable = false; // any_of/none_of/not_visited/quest_stage: not analysed
   };
@@ -1616,8 +1750,27 @@ function requiredItems(conds: Condition[]): string[] {
   return out;
 }
 
-function visitedRoom(c: Condition): string | null {
-  return "visited" in c ? c.visited : null;
+/**
+ * Rooms a win condition REQUIRES, in AND-context — top-level + all_of only,
+ * mirroring flagReqs/itemReqs/questStageReqs/objectStateReqs.
+ *
+ * Both `visited` and `in_room` count. `in_room` is the STRICTER of the two (you
+ * must be standing there when the win check runs, rather than merely having been
+ * there once), so a room it names is at least as much a win-trigger room as a
+ * `visited` one. Harvesting only `visited` meant a win gated on `in_room` at a
+ * structurally unreachable room produced nothing but the UNREACHABLE_ROOM
+ * *warning*, and `makeReport` derives `ok` from errors alone — so the pack shipped
+ * green and unwinnable. The flat scan also missed either atom nested in `all_of`.
+ */
+function winRoomReqs(conds: Condition[]): string[] {
+  const out: string[] = [];
+  const walk = (c: Condition): void => {
+    if ("visited" in c) out.push(c.visited);
+    else if ("in_room" in c) out.push(c.in_room);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
 }
 
 // ── Dead-content analysis: variant shadowing + unsatisfiable guards ──────────────
@@ -1663,7 +1816,7 @@ function whenProfile(when: Condition[]): WhenProfile {
     else if ("visited" in c) p.pos.add(`visited:${c.visited}`);
     else if ("not_visited" in c) p.neg.add(`visited:${c.not_visited}`);
     else if ("is_open" in c) p.pos.add(`open:${c.is_open}`);
-    else if ("is_unlocked" in c) p.pos.add(`unlocked:${c.is_unlocked}`);
+    else if ("is_explicitly_unlocked" in c) p.pos.add(`unlocked:${c.is_explicitly_unlocked}`);
     else if ("quest_stage" in c) p.pos.add(`quest:${c.quest_stage.quest}=${c.quest_stage.stage}`);
     else if ("var_gte" in c) raise(p.lower, c.var_gte.name, c.var_gte.value, true);
     else if ("var_lte" in c) raise(p.upper, c.var_lte.name, c.var_lte.value, false);
@@ -1867,7 +2020,26 @@ function objectStateReqs(conds: Condition[]): { kind: "open" | "unlocked"; id: s
   const out: { kind: "open" | "unlocked"; id: string }[] = [];
   const walk = (c: Condition): void => {
     if ("is_open" in c) out.push({ kind: "open", id: c.is_open });
-    else if ("is_unlocked" in c) out.push({ kind: "unlocked", id: c.is_unlocked });
+    else if ("is_explicitly_unlocked" in c)
+      out.push({ kind: "unlocked", id: c.is_explicitly_unlocked });
+    else if ("all_of" in c) c.all_of.forEach(walk);
+  };
+  conds.forEach(walk);
+  return out;
+}
+
+/** A numeric gate in AND-context. `op` mirrors the three condition kinds. */
+type VarReq = { op: "gte" | "lte" | "eq"; name: string; value: number };
+
+// Required numeric bounds in AND-context — top-level + all_of only, mirroring
+// flagReqs/itemReqs/questStageReqs/objectStateReqs. any_of/none_of are NOT descended
+// (conservative: guarantees zero false positives).
+function varReqs(conds: Condition[]): VarReq[] {
+  const out: VarReq[] = [];
+  const walk = (c: Condition): void => {
+    if ("var_gte" in c) out.push({ op: "gte", name: c.var_gte.name, value: c.var_gte.value });
+    else if ("var_lte" in c) out.push({ op: "lte", name: c.var_lte.name, value: c.var_lte.value });
+    else if ("var_eq" in c) out.push({ op: "eq", name: c.var_eq.name, value: c.var_eq.value });
     else if ("all_of" in c) c.all_of.forEach(walk);
   };
   conds.forEach(walk);
@@ -1920,7 +2092,80 @@ function collectFlagReads(pack: RpgPack): Set<string> {
   return reads;
 }
 
-/** Every object id whose `is_open` / `is_unlocked` state an RPG pack READS —
+/** Every var name an RPG pack READS through a `var_gte` / `var_lte` / `var_eq`
+ *  gate, mapped to the first site that reads it (for the finding's `where`).
+ *  Mirrors collectFlagReads EXACTLY — including variant `when:` lists and the
+ *  descent through all_of/any_of/none_of — because a typo'd var name is a typo
+ *  wherever it appears, not only in AND-context. The consumer is the PHANTOM_VAR
+ *  check: `evalCondition` reads `state.vars[name] ?? 0`, so a misspelled name is
+ *  not a runtime error, it silently compares against 0. */
+function collectVarReads(pack: RpgPack): Map<string, string[]> {
+  const reads = new Map<string, string[]>();
+  let site: string[] = [];
+  const note = (name: string): void => {
+    if (!reads.has(name)) reads.set(name, site);
+  };
+  const walk = (c: Condition): void => {
+    if ("var_gte" in c) note(c.var_gte.name);
+    else if ("var_lte" in c) note(c.var_lte.name);
+    else if ("var_eq" in c) note(c.var_eq.name);
+    else if ("all_of" in c) c.all_of.forEach(walk);
+    else if ("any_of" in c) c.any_of.forEach(walk);
+    else if ("none_of" in c) c.none_of.forEach(walk);
+  };
+  const walkAll = (conds: Condition[] | undefined, where: string[]): void => {
+    site = where;
+    (conds ?? []).forEach(walk);
+  };
+  for (const room of pack.rooms) {
+    for (const [index, v] of (room.variants ?? []).entries())
+      walkAll(v.when, [`room:${room.id}`, `variant:${index}`]);
+    for (const exit of room.exits)
+      walkAll(exit.conditions, [`room:${room.id}`, `exit:${exit.direction}`]);
+  }
+  for (const o of pack.objects) {
+    walkAll(o.visible_when, [`object:${o.id}`, "visible_when"]);
+    for (const [index, v] of (o.variants ?? []).entries())
+      walkAll(v.when, [`object:${o.id}`, `variant:${index}`]);
+    for (const it of o.interactions) {
+      walkAll(it.conditions, [`object:${o.id}`, `verb:${it.verb}`]);
+      for (const [index, branch] of (it.skill_check?.on_failure_when ?? []).entries())
+        walkAll(branch.conditions, [
+          `object:${o.id}`,
+          `verb:${it.verb}`,
+          `on_failure_when:${String(index)}`,
+        ]);
+      walkAll(it.blocked_hint?.visible_when, [
+        `object:${o.id}`,
+        `verb:${it.verb}`,
+        "blocked_hint:visible_when",
+      ]);
+    }
+  }
+  for (const enemy of pack.enemies)
+    for (const maneuver of enemy.maneuvers ?? [])
+      walkAll(maneuver.conditions, [`enemy:${enemy.id}`, `maneuver:${maneuver.id}`]);
+  for (const wc of pack.win_conditions) {
+    walkAll(wc.conditions, [`win:${wc.id}`]);
+    for (const [index, override] of (wc.ending_overrides ?? []).entries())
+      walkAll(override.conditions, [`win:${wc.id}`, `ending_override:${index}`]);
+  }
+  for (const e of pack.endings)
+    for (const [index, v] of (e.variants ?? []).entries())
+      walkAll(v.when, [`ending:${e.id}`, `variant:${index}`]);
+  for (const npc of pack.npcs) {
+    walkAll(npc.conditions, [`npc:${npc.id}`]);
+    for (const node of npc.dialogue.nodes) {
+      for (const [index, v] of (node.variants ?? []).entries())
+        walkAll(v.when, [`npc:${npc.id}`, `node:${node.id}`, `variant:${index}`]);
+      for (const t of node.topics)
+        walkAll(t.conditions, [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
+    }
+  }
+  return reads;
+}
+
+/** Every object id whose `is_open` / `is_explicitly_unlocked` state an RPG pack READS —
  *  in any exit, interaction condition/blocked hint, or win condition, any room/object variant `when`, or any
  *  dialogue-topic gate, DESCENDING all_of/any_of/none_of (a read inside ANY connective,
  *  even a disjunction, counts as consumed). The consumer set for the INERT_OBJECT_STATE
@@ -1935,7 +2180,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
   const unlocked = new Set<string>();
   const walk = (c: Condition): void => {
     if ("is_open" in c) open.add(c.is_open);
-    else if ("is_unlocked" in c) unlocked.add(c.is_unlocked);
+    else if ("is_explicitly_unlocked" in c) unlocked.add(c.is_explicitly_unlocked);
     else if ("all_of" in c) c.all_of.forEach(walk);
     else if ("any_of" in c) c.any_of.forEach(walk);
     else if ("none_of" in c) c.none_of.forEach(walk);
@@ -1977,8 +2222,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
  *  node-variant/topic gate (DESCENDING all_of/any_of/none_of, so a disjunction-
  *  guarded room ref still counts), PLUS by a `goto` / `place_object.room` effect target
  *  (the room-id-bearing effects
- *  collected here; unlock_exit.from/.to are checked in a dedicated UNLOCK_EXIT_ROOM_MISSING
- *  block in the validator body). A referenced id absent from pack.rooms is a dangling
+ *  collected here). A referenced id absent from pack.rooms is a dangling
  *  reference — a permanently-dead gate (visited/in_room evaluate false forever) or a
  *  goto/place_object into nowhere — the room-id analogue of EXIT_TARGET_MISSING.
  *  Mirrors collectFlagReads EXACTLY — NOT objectStateReqs, which descends only all_of
@@ -2022,9 +2266,7 @@ function collectRoomRefs(pack: RpgPack, extraEffects: readonly Effect[] = []): S
       for (const t of node.topics) walkAll(t.conditions);
     }
   }
-  // Effect-side room refs: goto + place_object.room (the room-id-bearing effects
-  // collected here; unlock_exit.from/.to are checked in a dedicated
-  // UNLOCK_EXIT_ROOM_MISSING block in the validator body).
+  // Effect-side room refs: goto + place_object.room.
   for (const e of [...allEffects(pack), ...extraEffects]) {
     if ("goto" in e) refs.add(e.goto);
     else if ("place_object" in e) refs.add(e.place_object.room);

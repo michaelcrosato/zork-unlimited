@@ -1,4 +1,9 @@
-import { sortedNumberMap, sortedStringMap, sortedStringSet } from "./session_collections.js";
+import {
+  sortedNumberMap,
+  sortedStringMap,
+  sortedStringSet,
+  sortedStringSetMap,
+} from "./session_collections.js";
 import {
   cloneCampaignCharacterState,
   type CampaignCharacterState,
@@ -48,6 +53,7 @@ export type OverworldSessionSnapshotBuildState = {
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
   questCharacterDeathBoundary?: OverworldQuestCharacterDeathBoundary | null;
+  inspectedStoryReveals: ReadonlyMap<string, ReadonlySet<string>>;
   journey: JourneyContractSnapshot;
 };
 
@@ -98,6 +104,9 @@ export function buildOverworldSessionSnapshot(
             state.questCharacterDeathBoundary,
           ),
         }
+      : {}),
+    ...(state.inspectedStoryReveals.size > 0
+      ? { inspectedStoryReveals: sortedStringSetMap(state.inspectedStoryReveals) }
       : {}),
     journey: cloneJourneyContractSnapshot(state.journey),
   };

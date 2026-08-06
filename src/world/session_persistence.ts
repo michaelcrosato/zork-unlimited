@@ -29,6 +29,7 @@ export type OverworldSessionPersistenceState = OverworldSessionSnapshotRestoreSt
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
   questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundary | null;
+  inspectedStoryReveals: ReadonlyMap<string, ReadonlySet<string>>;
   journey: JourneyContractSnapshot;
   discoveredIds: Set<string>;
   visitedIds: Set<string>;
@@ -71,6 +72,7 @@ export function buildOverworldSessionSnapshotFromState(
     pendingRoadEncounter: state.pendingRoadEncounter,
     openingLeadSourceDecisionTrail: state.openingLeadSourceDecisionTrail,
     questCharacterDeathBoundary: state.questCharacterDeathBoundary,
+    inspectedStoryReveals: state.inspectedStoryReveals,
     journey: state.journey,
   });
 }

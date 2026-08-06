@@ -1,0 +1,14 @@
+# MUST FAIL: NO_WINNABLE_ENDING
+# Every declared ending is a death, so no play can finish the quest alive.
+meta: { id: bad_no_winnable_ending, title: "Bad No Winnable Ending", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "You die here.", death: true }]

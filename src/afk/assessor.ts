@@ -16,7 +16,7 @@
  * same repo ⇒ same ranking.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { isPureExitInterviewV2 } from "../blind/exit_interview.js";
 import { parseBlindRunSidecar } from "../blind/run_evidence.js";
 import { createToolApi } from "../mcp/tools.js";
@@ -211,9 +211,15 @@ export function findStaleDocRefs(docText: string, exists: (relPath: string) => b
  */
 const DOC_STALENESS_EXCLUDED_DOCS = new Set(["DECISION_LOG.md"]);
 
-function docStalenessDocs(root: string): string[] {
+export function docStalenessDocs(root: string): string[] {
   const out: string[] = [];
-  for (const f of ["AGENTS.md", "README.md"]) {
+  for (const f of [
+    "AGENTS.md",
+    "README.md",
+    "ADVENTUREFORGE_BUILD_SPEC.md",
+    "blind-tester/README.md",
+    "ui/README.md",
+  ]) {
     if (existsSync(join(root, f))) out.push(f);
   }
   const docsDir = join(root, "docs");
@@ -775,12 +781,19 @@ export function assess(root: string): Assessment {
   // loop with no high-impact non-content lever — yet a canonical doc can still rot
   // when a file it names is renamed/deleted. This fires when such a reference no
   // longer resolves and disarms when every one does. It scans only CURRENT-system
-  // docs (see docStalenessDocs): the historical AI_LOOP_STATE.md and the
-  // forward-looking ROADMAP/BUILD_SPEC are out of scope by construction.
+  // docs (see docStalenessDocs): historical archives/logs stay out of scope, while
+  // active root, build-spec, blind-tester, UI, and docs/ guidance stays inside it.
   const staleDocRefs: string[] = [];
   for (const docPath of docStalenessDocs(root)) {
     const text = readFileSync(join(root, docPath), "utf8");
-    for (const ref of findStaleDocRefs(text, (rel) => existsSync(join(root, rel)))) {
+    // Most active docs use repo-root paths. A nested guide may also name a path
+    // relative to itself (for example ui/README.md → scripts/inline-dist.mjs), so
+    // resolve both honest conventions before calling a reference stale.
+    const docDir = dirname(docPath);
+    for (const ref of findStaleDocRefs(
+      text,
+      (rel) => existsSync(join(root, rel)) || existsSync(join(root, docDir, rel)),
+    )) {
       staleDocRefs.push(`${docPath} → ${ref}`);
     }
   }

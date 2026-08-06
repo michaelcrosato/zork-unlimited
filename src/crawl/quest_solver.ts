@@ -29,6 +29,7 @@
  */
 import type { RpgAction } from "../api/types.js";
 import { makeStep } from "../core/engine.js";
+import { memoizeLegalActions, newLegalActionCache } from "../solve/legal_action_cache.js";
 import type { GameState } from "../core/state.js";
 import { enumerateRpgActions, initStateForRpgPack } from "../rpg/runner.js";
 import { isAuthoredInspectAction } from "../rpg/legal_actions.js";
@@ -123,7 +124,12 @@ export function solveToEnding(
   options: SolveToEndingOptions = {},
 ): SolveToEndingResult {
   const { index, rules } = prepared;
-  const step = makeStep(rules);
+  // The loop below enumerates each state's options and then steps them, and makeStep
+  // re-enumerates internally for its legality check — so every state was enumerated
+  // once per option plus once for the loop. Memoize by state identity; states are
+  // immutable and visited once, so the answer cannot go stale.
+  const cache = newLegalActionCache<RpgAction>();
+  const step = makeStep(memoizeLegalActions(rules, cache));
   const start = options.initialState ?? initStateForRpgPack(index, seed);
 
   const deathEndingIds = new Set(

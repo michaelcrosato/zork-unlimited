@@ -457,6 +457,12 @@ export const OverworldSessionSnapshotSchema = OverworldSessionSnapshotV8Schema.e
   character: CampaignCharacterStateSchema,
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrailSchema.optional(),
   questCharacterDeathBoundary: OverworldQuestCharacterDeathBoundarySchema.optional(),
+  // Progressive-disclosure reveals the player has opened, per story choice. OPTIONAL and
+  // omitted when empty, so a v9/v10 snapshot written before this field existed still
+  // parses and an unrevealed session hashes exactly as it did.
+  inspectedStoryReveals: z
+    .array(z.tuple([z.string().min(1), z.array(z.string().min(1)).min(1)]))
+    .optional(),
 })
   .strict()
   .superRefine((snapshot, ctx) => {
@@ -629,6 +635,14 @@ function cloneNumberTuples(values: readonly (readonly [string, number])[]): [str
   return clones;
 }
 
+function cloneStringArrayTuples(
+  values: readonly (readonly [string, readonly string[]])[],
+): [string, string[]][] {
+  const clones: [string, string[]][] = [];
+  for (const [key, entries] of values) clones.push([key, [...entries]]);
+  return clones;
+}
+
 export function cloneOverworldSessionSnapshot(
   snapshot: OverworldSessionSnapshot,
 ): OverworldSessionSnapshot {
@@ -653,6 +667,9 @@ export function cloneOverworldSessionSnapshot(
     exploredSiteIds: [...snapshot.exploredSiteIds],
     regionRenown: cloneNumberTuples(snapshot.regionRenown),
     completedRegionalArcIds: [...snapshot.completedRegionalArcIds],
+    ...(snapshot.inspectedStoryReveals
+      ? { inspectedStoryReveals: cloneStringArrayTuples(snapshot.inspectedStoryReveals) }
+      : {}),
     pendingRoadEncounter: snapshot.pendingRoadEncounter
       ? { ...snapshot.pendingRoadEncounter }
       : null,

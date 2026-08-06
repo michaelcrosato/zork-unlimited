@@ -71,3 +71,64 @@ describe("engine.step (§8.4 resolution order)", () => {
     expect(actionEquals(MICRO_ACTIONS.takeTorch, MICRO_ACTIONS.grabGold)).toBe(false);
   });
 });
+
+// decorateEvents is the engine's only extension seam, and its contract says the hook
+// is pure. The engine used to hand it the live array it was about to return, so the
+// contract was a promise the hook had to keep rather than a property the engine held.
+// microRules ships no decorateEvents, so each case supplies its own by spread.
+describe("engine.step decorateEvents seam (contract is enforced, not trusted)", () => {
+  const takeTorch = (rules: typeof microRules): ReturnType<ReturnType<typeof makeStep>> =>
+    makeStep(rules)(microInitState(), MICRO_ACTIONS.takeTorch);
+
+  const baseline = takeTorch(microRules);
+
+  it("baseline: the plain step produces at least one event", () => {
+    expect(baseline.ok).toBe(true);
+    expect(baseline.events.length).toBeGreaterThan(0);
+  });
+
+  it("a decorator that clears its argument cannot erase the step's events", () => {
+    const r = takeTorch({
+      ...microRules,
+      decorateEvents: (events) => {
+        events.length = 0;
+        return [{ type: "narration", text: "chrome" }];
+      },
+    });
+    expect(r.ok).toBe(true);
+    expect(r.events.slice(0, baseline.events.length)).toEqual(baseline.events);
+    expect(r.events.at(-1)).toEqual({ type: "narration", text: "chrome" });
+  });
+
+  it("a decorator that pushes into its argument cannot smuggle an event through", () => {
+    const r = takeTorch({
+      ...microRules,
+      decorateEvents: (events) => {
+        events.push({ type: "narration", text: "smuggled" });
+        return [];
+      },
+    });
+    expect(r.ok).toBe(true);
+    expect(r.events).toEqual(baseline.events);
+  });
+
+  it("a decorator that returns its own argument appends nothing (no duplication)", () => {
+    const r = takeTorch({ ...microRules, decorateEvents: (events) => events });
+    expect(r.ok).toBe(true);
+    expect(r.events).toEqual(baseline.events);
+  });
+
+  it("a well-behaved decorator still appends, last, after the action's own narration", () => {
+    const r = takeTorch({
+      ...microRules,
+      decorateEvents: (events) => [
+        { type: "narration", text: `saw ${String(events.length)} events` },
+      ],
+    });
+    expect(r.ok).toBe(true);
+    expect(r.events).toEqual([
+      ...baseline.events,
+      { type: "narration", text: `saw ${String(baseline.events.length)} events` },
+    ]);
+  });
+});

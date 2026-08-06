@@ -31,10 +31,7 @@ import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
-import type {
-  JourneyChoice,
-  JourneyStoryChoicePrompt,
-} from "../../src/world/journey_contract.js";
+import type { JourneyChoice, JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
@@ -47,7 +44,9 @@ const packsByPath = new Map(PACKS.map((pack) => [normalizePackPath(pack.path), p
 // is what a PLAYER knows); the pack path lives only on the manifest quest.
 const questsById = new Map<string, OverworldQuest>(OVERWORLD.quests.map((q) => [q.id, q]));
 const poiTitlesById = new Map(OVERWORLD.points_of_interest.map((poi) => [poi.id, poi.title]));
-const characterNamesById = new Map(OVERWORLD.characters.map((character) => [character.id, character.name]));
+const characterNamesById = new Map(
+  OVERWORLD.characters.map((character) => [character.id, character.name]),
+);
 const OVERWORLD_SAVE_KEY = "adventureforge:new-york-overworld:v1";
 
 function jobChoiceKey(jobId: string, optionId: string): string {
@@ -152,9 +151,9 @@ export function ServiceAction({
         {action === "rest" ? "Rest" : action === "care" ? "Receive Care" : "Resupply"}
       </button>
       <small className="service-action-preview" id={previewId}>
-        {serviceAction.message} {serviceAction.minutes} min · supplies {serviceAction.suppliesBefore}
-        →{serviceAction.suppliesAfter} · fatigue {serviceAction.fatigueBefore}→
-        {serviceAction.fatigueAfter}
+        {serviceAction.message} {serviceAction.minutes} min · supplies{" "}
+        {serviceAction.suppliesBefore}→{serviceAction.suppliesAfter} · fatigue{" "}
+        {serviceAction.fatigueBefore}→{serviceAction.fatigueAfter}
       </small>
       <ServiceOfferTerms id={termsId} offer={offer} />
     </div>
@@ -268,9 +267,9 @@ export function QuestNotice({
                   </small>
                   {projection?.available ? (
                     <small className="quest-launch-projection">
-                      Projected arrival: {timeLabel(projection.minutesAfter)}; {suppliesLabel(
-                        projection.suppliesAfter!,
-                      )} remaining; fatigue {projection.fatigueAfter}; condition {projection.travelConditionAfter}.
+                      Projected arrival: {timeLabel(projection.minutesAfter)};{" "}
+                      {suppliesLabel(projection.suppliesAfter!)} remaining; fatigue{" "}
+                      {projection.fatigueAfter}; condition {projection.travelConditionAfter}.
                     </small>
                   ) : projection ? (
                     <small className="quest-launch-projection">
@@ -333,9 +332,7 @@ export function DepartureLaunchPanel({
 
 type StationDispatchBoardView = NonNullable<OverworldView["stationDispatchBoard"]>;
 
-function stationDispatchStatus(
-  support: StationDispatchBoardView["support"][number],
-): string {
+function stationDispatchStatus(support: StationDispatchBoardView["support"][number]): string {
   if (support.selectedTitle) return `Selected: ${support.selectedTitle}`;
   switch (support.status) {
     case "open_optional":
@@ -369,10 +366,7 @@ export function StationDispatchBoard({
   children: ReactNode;
 }): JSX.Element {
   return (
-    <section
-      className="station-dispatch-board"
-      aria-label={`${board.questTitle} field briefing`}
-    >
+    <section className="station-dispatch-board" aria-label={`${board.questTitle} field briefing`}>
       <h3>{board.questTitle} field briefing</h3>
       <p>{board.guidance}</p>
       {children}
@@ -383,30 +377,30 @@ export function StationDispatchBoard({
             const action = support.action;
             return (
               <article className="station-dispatch-support-row" key={support.slot}>
-              <h4>{support.label}</h4>
-              <p>
-                <b>Status:</b> {stationDispatchStatus(support)}
-              </p>
-              <p>{support.purpose}</p>
-              <small>{support.detailHint}</small>
-              {action?.kind === "inspect" && (
-                <button
-                  className="mini-command"
-                  type="button"
-                  onClick={() => onInspect(action.storyChoiceId)}
-                >
-                  Inspect {action.title}
-                </button>
-              )}
-              {action?.kind === "talk" && (
-                <button
-                  className="mini-command"
-                  type="button"
-                  onClick={() => onTalk(action.characterId)}
-                >
-                  Ask {action.contactName} about riding
-                </button>
-              )}
+                <h4>{support.label}</h4>
+                <p>
+                  <b>Status:</b> {stationDispatchStatus(support)}
+                </p>
+                <p>{support.purpose}</p>
+                <small>{support.detailHint}</small>
+                {action?.kind === "inspect" && (
+                  <button
+                    className="mini-command"
+                    type="button"
+                    onClick={() => onInspect(action.storyChoiceId)}
+                  >
+                    Inspect {action.title}
+                  </button>
+                )}
+                {action?.kind === "talk" && (
+                  <button
+                    className="mini-command"
+                    type="button"
+                    onClick={() => onTalk(action.characterId)}
+                  >
+                    Ask {action.contactName} about riding
+                  </button>
+                )}
               </article>
             );
           })}
@@ -433,9 +427,10 @@ export default function App(): JSX.Element {
   const [inspectedDepartureStory, setInspectedDepartureStory] =
     useState<JourneyStoryChoicePrompt | null>(null);
   const [log, setLog] = useState<string[]>(() => {
-    const opener = worldState.origin === "resume"
-      ? `Resumed in ${worldView.current.name}.`
-      : `You begin in ${worldView.current.name}. Roads leave town, but the work is local until you find it.`;
+    const opener =
+      worldState.origin === "resume"
+        ? `Resumed in ${worldView.current.name}.`
+        : `You begin in ${worldView.current.name}. Roads leave town, but the work is local until you find it.`;
     return worldState.notice ? [worldState.notice, opener] : [opener];
   });
   const [error, setError] = useState<string | null>(null);
@@ -454,18 +449,13 @@ export default function App(): JSX.Element {
     [worldView.exits],
   );
   const legalJobChoiceKeys = useMemo(
-    () =>
-      new Set(
-        worldView.jobChoices.map(([jobId, optionId]) => jobChoiceKey(jobId, optionId)),
-      ),
+    () => new Set(worldView.jobChoices.map(([jobId, optionId]) => jobChoiceKey(jobId, optionId))),
     [worldView.jobChoices],
   );
   const legalEventChoiceKeys = useMemo(
     () =>
       new Set(
-        worldView.eventChoices.map(([eventId, optionId]) =>
-          eventChoiceKey(eventId, optionId),
-        ),
+        worldView.eventChoices.map(([eventId, optionId]) => eventChoiceKey(eventId, optionId)),
       ),
     [worldView.eventChoices],
   );
@@ -579,9 +569,7 @@ export default function App(): JSX.Element {
       const result = action();
       setWorldView(worldSession.view());
       setLog((prev) => [
-        result.changed
-          ? `Spent ${result.minutes} min. ${result.message}`
-          : result.message,
+        result.changed ? `Spent ${result.minutes} min. ${result.message}` : result.message,
         ...prev,
       ]);
       setError(null);
@@ -623,7 +611,11 @@ export default function App(): JSX.Element {
     const out = questSession.choose(id);
     const view = questSession.view();
     setQuestView(view);
-    const lines = [`> ${label}`, ...out.narration, ...(out.rejection ? [`(${out.rejection})`] : [])];
+    const lines = [
+      `> ${label}`,
+      ...out.narration,
+      ...(out.rejection ? [`(${out.rejection})`] : []),
+    ];
     if (out.ok) {
       if (out.journeyActionId === null) throw new Error("Accepted quest action has no id.");
       worldSession.recordQuestDecision(
@@ -709,10 +701,7 @@ export default function App(): JSX.Element {
     const isReliefAllocation = storyChoice?.kind === "relief_allocation";
     const isReliefOath = storyChoice?.kind === "relief_oath";
     try {
-      const result = worldSession.chooseJourneyStory(
-        choiceId,
-        inspectedDepartureStory?.id,
-      );
+      const result = worldSession.chooseJourneyStory(choiceId, inspectedDepartureStory?.id);
       setWorldView(worldSession.view());
       setInspectedDepartureStory(null);
       setLog((previous) =>
@@ -775,10 +764,7 @@ export default function App(): JSX.Element {
 
   if (tutorialOpen) {
     return (
-      <NewJourneyTutorial
-        tutorial={FRESH_GAME_TUTORIAL}
-        onStart={() => setTutorialOpen(false)}
-      />
+      <NewJourneyTutorial tutorial={FRESH_GAME_TUTORIAL} onStart={() => setTutorialOpen(false)} />
     );
   }
 
@@ -790,15 +776,11 @@ export default function App(): JSX.Element {
     return (
       <JourneyStoryChoiceScreen
         journey={
-          inspectedDepartureStory
-            ? { ...journey, storyChoice: inspectedDepartureStory }
-            : journey
+          inspectedDepartureStory ? { ...journey, storyChoice: inspectedDepartureStory } : journey
         }
         departureRecap={worldView.departureRecap}
         onChoose={chooseJourneyStory}
-        {...(inspectedDepartureStory
-          ? { onDismiss: () => setInspectedDepartureStory(null) }
-          : {})}
+        {...(inspectedDepartureStory ? { onDismiss: () => setInspectedDepartureStory(null) } : {})}
       />
     );
   }
@@ -822,7 +804,9 @@ export default function App(): JSX.Element {
       <section className="overworld">
         <article className="location-panel">
           <div className="location-topline">
-            <span className={`settlement ${worldView.current.kind}`}>{worldView.current.kind.replace("_", " ")}</span>
+            <span className={`settlement ${worldView.current.kind}`}>
+              {worldView.current.kind.replace("_", " ")}
+            </span>
             <span>{worldView.timeLabel}</span>
           </div>
           <h2>{worldView.current.name}</h2>
@@ -860,9 +844,7 @@ export default function App(): JSX.Element {
               <ServiceAction
                 key={serviceAction.action}
                 serviceAction={serviceAction}
-                offer={worldView.serviceOffers.find(
-                  (offer) => offer.id === serviceAction.offerId,
-                )}
+                offer={worldView.serviceOffers.find((offer) => offer.id === serviceAction.offerId)}
                 onActivate={() =>
                   runServiceAction(() =>
                     serviceAction.action === "rest"
@@ -884,9 +866,7 @@ export default function App(): JSX.Element {
               recap={worldView.departureRecap}
               onInspect={inspectDepartureStory}
               onTalk={(characterId) => {
-                runWorldAction(() =>
-                  worldSession.talkToCharacter(characterId),
-                );
+                runWorldAction(() => worldSession.talkToCharacter(characterId));
               }}
             >
               {departureQuest && (
@@ -910,17 +890,13 @@ export default function App(): JSX.Element {
                 worldView.departureInteractions.length > 0 ||
                 worldView.departureContactLeads.length > 0) && (
                 <div className="departure-interactions">
-                  <h3>
-                    {departureQuest ? "Plan the dispatch (optional)" : "Before you depart"}
-                  </h3>
+                  <h3>{departureQuest ? "Plan the dispatch (optional)" : "Before you depart"}</h3>
                   <p>
                     Your accumulated dispatch plan and any optional Station decisions still open;
-                    {" you may inspect one or leave without choosing."} Optional contacts are
-                    listed alongside them.
+                    {" you may inspect one or leave without choosing."} Optional contacts are listed
+                    alongside them.
                   </p>
-                  {worldView.departureRecap && (
-                    <DepartureRecap recap={worldView.departureRecap} />
-                  )}
+                  {worldView.departureRecap && <DepartureRecap recap={worldView.departureRecap} />}
                   {worldView.departureInteractions.map((interaction) => (
                     <button
                       className="mini-command"
@@ -1012,7 +988,11 @@ export default function App(): JSX.Element {
                   {arc.resolvedInRegion}/{arc.requiredResolutions} anchor towns - {arc.region}
                 </span>
                 <p>
-                  Anchors: {arc.anchorTowns.slice(0, 4).map((town) => town.name).join(", ")}
+                  Anchors:{" "}
+                  {arc.anchorTowns
+                    .slice(0, 4)
+                    .map((town) => town.name)
+                    .join(", ")}
                 </p>
                 {arc.resolvedAnchorTowns.length > 0 && (
                   <p>Cleared: {arc.resolvedAnchorTowns.map((town) => town.name).join(", ")}</p>
@@ -1030,7 +1010,8 @@ export default function App(): JSX.Element {
             <div className={`road-encounter ${worldView.pendingRoadEncounter.event.risk}`}>
               <strong>{worldView.pendingRoadEncounter.event.title}</strong>
               <span>
-                {worldView.pendingRoadEncounter.route} - {worldView.pendingRoadEncounter.event.risk} risk
+                {worldView.pendingRoadEncounter.route} - {worldView.pendingRoadEncounter.event.risk}{" "}
+                risk
               </span>
               <p>{worldView.pendingRoadEncounter.event.summary}</p>
               <div className="encounter-actions">
@@ -1057,7 +1038,10 @@ export default function App(): JSX.Element {
           <ul className="road-list">
             {worldView.exits.map((exit) => (
               <li key={exit.id}>
-                <button disabled={worldView.pendingRoadEncounter !== null} onClick={() => travel(exit.id)}>
+                <button
+                  disabled={worldView.pendingRoadEncounter !== null}
+                  onClick={() => travel(exit.id)}
+                >
                   <span>{exit.destination.name}</span>
                   <small>
                     {exit.route} - {exit.distance_mi.toFixed(1)} mi - {exit.travel_minutes} min
@@ -1132,9 +1116,7 @@ export default function App(): JSX.Element {
               {worldView.jobs.map((job) => {
                 const scene = job.authored_scene;
                 const journalIds = new Set(worldView.journal.map((entry) => entry.id));
-                const hasPoi = scene
-                  ? journalIds.has(`scout:${scene.required_poi_id}`)
-                  : true;
+                const hasPoi = scene ? journalIds.has(`scout:${scene.required_poi_id}`) : true;
                 const contactPrefix = scene ? `talk:${scene.required_contact_id}` : "";
                 const hasContact = scene
                   ? [...journalIds].some(
@@ -1247,7 +1229,10 @@ export default function App(): JSX.Element {
               <div key={poi.id} className="poi">
                 <strong>{poi.title}</strong>
                 <span>{poi.summary}</span>
-                <button className="mini-command" onClick={() => runWorldAction(() => worldSession.scoutPoi(poi.id))}>
+                <button
+                  className="mini-command"
+                  onClick={() => runWorldAction(() => worldSession.scoutPoi(poi.id))}
+                >
                   Scout
                 </button>
               </div>
@@ -1309,9 +1294,7 @@ export default function App(): JSX.Element {
             {worldView.events.map((event) => {
               const scene = event.authored_scene;
               const journalIds = new Set(worldView.journal.map((entry) => entry.id));
-              const hasPoi = scene
-                ? journalIds.has(`scout:${scene.required_poi_id}`)
-                : true;
+              const hasPoi = scene ? journalIds.has(`scout:${scene.required_poi_id}`) : true;
               const contactPrefix = scene ? `talk:${scene.required_contact_id}` : "";
               const hasContact = scene
                 ? [...journalIds].some(
@@ -1422,8 +1405,8 @@ export default function App(): JSX.Element {
               {departureQuest
                 ? "No other posted work is known here."
                 : worldView.hiddenQuestCount > 0
-                ? "No posted work discovered yet. Scout, talk, or investigate to surface local leads."
-                : "No posted work is known here. Travel the road network to find more."}
+                  ? "No posted work discovered yet. Scout, talk, or investigate to surface local leads."
+                  : "No posted work is known here. Travel the road network to find more."}
             </p>
           ) : (
             <ul className="quest-list">

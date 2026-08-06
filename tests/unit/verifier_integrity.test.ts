@@ -12,6 +12,8 @@ import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 import {
   detectDisabledTests,
+  listTestFiles,
+  readAll,
   countTestCases,
   countAssertions,
   countStrongAssertions,
@@ -308,9 +310,9 @@ describe("parseGuardConstants — pure parse of the guard's own defensive surfac
   it("returns null on malformed text (a missing field is skipped, never a false alarm)", () => {
     // Has the MIN_* floors but no array literals → unparseable, so null (not a partial).
     const partial = [
-      "export const MIN_TEST_CASES = 120;",
-      "export const MIN_ASSERTIONS = 400;",
-      "export const MIN_STRONG_ASSERTIONS = 400;",
+      "export const MIN_TEST_CASES = 2600;",
+      "export const MIN_ASSERTIONS = 16200;",
+      "export const MIN_STRONG_ASSERTIONS = 15500;",
     ].join("\n");
     expect(parseGuardConstants(partial)).toBeNull();
     expect(parseGuardConstants("nothing parseable here")).toBeNull();
@@ -535,9 +537,31 @@ describe("runStatic on the real repo (this is the bar)", () => {
     expect(res.findings.filter((f) => f.code === "FORBIDDEN_TRACKED_FILE")).toEqual([]);
   });
 
-  it("the repo is comfortably above the test-count floor", () => {
-    expect(MIN_TEST_CASES).toBeGreaterThan(0);
+  it("passes the test-count floor — no mass deletion", () => {
+    expect(res.findings.filter((f) => f.code === "TEST_COUNT_FLOOR")).toEqual([]);
     // If this ever trips, tests were mass-removed — investigate, don't lower the floor.
+  });
+
+  // The three tests above assert only that the repo is ABOVE its floors, which stayed
+  // true for months while the floors sat at 2-4% of the real corpus and their comments
+  // claimed counts an order of magnitude stale. `> 0` is not a bar. Pin the floors to a
+  // real FRACTION of the live suite instead, so going stale is itself a failure.
+  it("the floors are a meaningful fraction of the live corpus, not a token", () => {
+    const files = readAll(process.cwd(), listTestFiles(process.cwd()));
+    const cases = countTestCases(files);
+    const assertions = countAssertions(files);
+    const strong = countStrongAssertions(files);
+
+    // Above half: a floor far below this cannot catch a mass deletion.
+    expect(MIN_TEST_CASES / cases).toBeGreaterThan(0.5);
+    expect(MIN_ASSERTIONS / assertions).toBeGreaterThan(0.5);
+    expect(MIN_STRONG_ASSERTIONS / strong).toBeGreaterThan(0.5);
+
+    // Below the live counts: a floor at or above them would red the repo on any
+    // legitimate consolidation, and the fix for that is always to re-measure.
+    expect(MIN_TEST_CASES).toBeLessThan(cases);
+    expect(MIN_ASSERTIONS).toBeLessThan(assertions);
+    expect(MIN_STRONG_ASSERTIONS).toBeLessThan(strong);
   });
 
   it("passes the assertion-count floor — no test body has been mass-gutted", () => {

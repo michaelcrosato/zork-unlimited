@@ -35,10 +35,7 @@ import {
   parseCampaignCharacterState,
   type CampaignCharacterState,
 } from "../../src/world/campaign_character_state.js";
-import {
-  buildRpgObservation,
-  type RpgObservation,
-} from "../../src/rpg/observation.js";
+import { buildRpgObservation, type RpgObservation } from "../../src/rpg/observation.js";
 import {
   buildEmbeddedQuestCharacterContinuity,
   projectEmbeddedQuestCharacterContinuity,
@@ -313,9 +310,7 @@ function signed(value: number): string {
 }
 
 function pressureFact(track: NonNullable<RpgObservation["pressure_tracks"]>[number]): string {
-  const next = track.next
-    ? `; next ${track.next.label} at ${track.next.min}`
-    : "; highest band";
+  const next = track.next ? `; next ${track.next.label} at ${track.next.min}` : "; highest band";
   const description = track.band.description ? ` — ${track.band.description}` : "";
   return `pressure: ${track.title} — ${track.band.label} (${track.value}${next})${description}`;
 }

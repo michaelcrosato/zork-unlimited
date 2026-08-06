@@ -101,7 +101,8 @@ function conditionStateReads(condition: Condition): string[] {
   if ("var_lte" in condition) return [stateRef("var", condition.var_lte.name)];
   if ("var_eq" in condition) return [stateRef("var", condition.var_eq.name)];
   if ("is_open" in condition) return [stateRef("object", condition.is_open)];
-  if ("is_unlocked" in condition) return [stateRef("object", condition.is_unlocked)];
+  if ("is_explicitly_unlocked" in condition)
+    return [stateRef("object", condition.is_explicitly_unlocked)];
   if ("quest_stage" in condition) return [stateRef("quest", condition.quest_stage.quest)];
   if ("all_of" in condition) return condition.all_of.flatMap(conditionStateReads);
   if ("any_of" in condition) return condition.any_of.flatMap(conditionStateReads);

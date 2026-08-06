@@ -27,14 +27,11 @@ export const EffectSchema = z.union([
   z.object({ dec_var: NameBy }).strict(),
   z.object({ add_journal: z.string() }).strict(),
   z.object({ goto: z.string().min(1) }).strict(),
-  z
-    .object({ unlock_exit: z.object({ from: z.string().min(1), to: z.string().min(1) }).strict() })
-    .strict(),
   z.object({ open_object: z.string().min(1) }).strict(),
   // The inverse of open_object (first-class CLOSE verb). Open-state is NOT
   // monotone once this exists: the RPG validator's `is_open` win-stability
   // check tracks close_object falsifiers exactly as relocks falsify
-  // is_unlocked. Additive — no shipped pack emits it, so every existing pack
+  // is_explicitly_unlocked. Additive — no shipped pack emits it, so every existing pack
   // compiles byte-identically and all recorded traces replay unchanged.
   z.object({ close_object: z.string().min(1) }).strict(),
   z
@@ -65,11 +62,6 @@ export const EffectSchema = z.union([
 ]);
 
 export type Effect = z.infer<typeof EffectSchema>;
-
-/** Canonical flag key for an unlocked exit. The parser stage gates exits on this. */
-export function exitFlag(from: string, to: string): string {
-  return `__exit:${from}->${to}`;
-}
 
 function patchObject(
   state: GameState,
@@ -204,13 +196,6 @@ export function applyEffect(
     return {
       state: { ...state, current: effect.goto, visited: { ...state.visited, [effect.goto]: true } },
       event: { type: "move", from, to: effect.goto },
-    };
-  }
-  if ("unlock_exit" in effect) {
-    const key = exitFlag(effect.unlock_exit.from, effect.unlock_exit.to);
-    return {
-      state: { ...state, flags: { ...state.flags, [key]: true } },
-      event: { type: "unlock_exit", from: effect.unlock_exit.from, to: effect.unlock_exit.to },
     };
   }
   if ("open_object" in effect) {
