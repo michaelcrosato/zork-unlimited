@@ -11,10 +11,11 @@
  */
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
-import type { GameState } from "../../src/core/state.js";
+import { MAX_ENGINE_STEP, type GameState } from "../../src/core/state.js";
 import type { GameEvent } from "../../src/core/events.js";
 import { makeStep } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
+import { rngForStep } from "../../src/core/rng.js";
 import { save, load } from "../../src/persist/save_load.js";
 import type { RpgAction } from "../../src/api/types.js";
 import { microRules, microInitState, MICRO_CONTENT_HASH } from "../../src/demo/micro.js";
@@ -141,6 +142,7 @@ const seedArb = fc.oneof(
       1,
       2 ** 32,
       2 ** 32 + 1,
+      2 ** 32 + 0x27d4eb2f,
       4294967295,
       Number.MAX_SAFE_INTEGER,
       Number.MIN_SAFE_INTEGER,
@@ -148,6 +150,23 @@ const seedArb = fc.oneof(
     weight: 1,
   },
 );
+
+const formerWholeStreamAlias = 2 ** 32 + 0x27d4eb2f;
+
+describe("wide-seed RNG state separation", () => {
+  it("the confirmed high-word XOR alias stays separated across the accepted step domain", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: MAX_ENGINE_STEP }), (step) => {
+        const narrow = rngForStep(0, step);
+        const wide = rngForStep(formerWholeStreamAlias, step);
+        const narrowPrefix = [narrow.next(), narrow.next(), narrow.next()];
+        const widePrefix = [wide.next(), wide.next(), wide.next()];
+        expect(widePrefix).not.toEqual(narrowPrefix);
+      }),
+      { numRuns: 500 },
+    );
+  });
+});
 
 /**
  * Pinned rather than left to fast-check's default so a future default change cannot

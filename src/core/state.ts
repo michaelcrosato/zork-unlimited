@@ -88,8 +88,13 @@ export type InitOptions = {
 export function initState(opts: InitOptions): GameState {
   assertRuntimeSeed(opts.seed, "GameState seed");
   assertFiniteVars(opts.varsInit, "GameState varsInit");
-  const flags: Record<string, boolean> = {};
-  for (const f of opts.flagsInit ?? []) flags[f] = true;
+  // Object.fromEntries defines reserved names such as `__proto__` as own data
+  // properties. Bracket assignment on `{}` would invoke Object.prototype's
+  // legacy setter and silently lose a schema-valid flag id.
+  const flags = Object.fromEntries((opts.flagsInit ?? []).map((id) => [id, true])) as Record<
+    string,
+    boolean
+  >;
   return {
     seed: opts.seed,
     step: 0,
@@ -107,10 +112,12 @@ export function initState(opts: InitOptions): GameState {
 }
 
 export function cloneGameState(state: GameState): GameState {
-  const objectState: GameState["objectState"] = {};
-  for (const [id, object] of Object.entries(state.objectState)) {
-    objectState[id] = { ...object };
-  }
+  // Object ids are arbitrary schema-valid strings. Object.fromEntries
+  // defines an own data property even for `__proto__`; bracket assignment on `{}`
+  // would invoke the legacy prototype setter and silently drop that state entry.
+  const objectState = Object.fromEntries(
+    Object.entries(state.objectState).map(([id, object]) => [id, { ...object }]),
+  ) as GameState["objectState"];
   return {
     ...state,
     visited: { ...state.visited },

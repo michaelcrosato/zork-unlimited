@@ -269,6 +269,7 @@ describe("overworld session snapshots", () => {
 
   it("clones saved arrays, tuples, journals, and pending encounters", () => {
     const snapshot = baseSnapshot();
+    snapshot.inspectedStoryReveals = [["story:oath", ["reveal:duties"]]];
     const clone = cloneOverworldSessionSnapshot(snapshot);
 
     clone.discoveredIds.push("colonie_town");
@@ -277,6 +278,7 @@ describe("overworld session snapshots", () => {
     clone.journalEntries[0]!.title = "Changed";
     clone.questOutcomes.push(["wolf_winter", "ending_held"]);
     clone.regionRenown[0]![1] = 9;
+    clone.inspectedStoryReveals![0]![1].push("reveal:mutated");
     clone.pendingRoadEncounter!.edgeId = "changed_road";
     clone.journey.goal.status = "completed";
     clone.character.health.current = 1;
@@ -287,6 +289,7 @@ describe("overworld session snapshots", () => {
     expect(snapshot.journalEntries[0]?.title).toBe("Capitol Hill");
     expect(snapshot.questOutcomes).toEqual([]);
     expect(snapshot.regionRenown[0]).toEqual(["Capital / Mohawk", 1]);
+    expect(snapshot.inspectedStoryReveals).toEqual([["story:oath", ["reveal:duties"]]]);
     expect(snapshot.pendingRoadEncounter?.edgeId).toBe("road:albany:colonie");
     expect(snapshot.journey.goal.status).toBe("active");
     expect(snapshot.character.health.current).toBe(30);

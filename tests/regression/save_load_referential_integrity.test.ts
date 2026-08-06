@@ -375,12 +375,12 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     expect(() => api().load_game({ save: forged })).toThrow(/unknown object room/);
   });
 
-  // ObjectRuntime carried a `contents` field no effect ever wrote and the pack-aware
-  // gate unconditionally rejected. It is gone, so a forged save carrying it is now
-  // refused one layer earlier, by the .strict() schema, rather than by a bespoke check.
-  // The rejection direction is what matters and it is unchanged: such a save never loads.
-  it("RPG: runtime container contents are refused at the strict state schema", () => {
-    for (const contents of [["no_such_object"], ["iron_bar"]]) {
+  // ObjectRuntime.contents existed in legacy save version 1, so the load migration
+  // accepts its exact historical string-array shape and strips it. It
+  // must not become a general unknown-field escape hatch: malformed old values
+  // are still rejected by the strict compatibility schema.
+  it("RPG: malformed legacy runtime contents are refused at the strict v1 schema", () => {
+    for (const contents of ["iron_bar", [1], null]) {
       const forged = forgeSave((s) => {
         (s.objectState as Record<string, unknown>) = { sarcophagus: { contents } };
       });

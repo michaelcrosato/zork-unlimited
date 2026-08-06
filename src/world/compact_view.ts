@@ -4,6 +4,7 @@ import type { OverworldView } from "./session_view.js";
 import {
   resolveOverworldTravelLeg,
   type OverworldRoadEncounterOption,
+  type OverworldTravelLegResult,
   type OverworldTravelResourceState,
 } from "./travel_mechanics.js";
 import { compactText } from "../core/compact_text.js";
@@ -59,7 +60,10 @@ export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
 // v44: `roads` rows now carry each direct road's own cost. They previously carried the
 // shortest-route estimate to the same destination, which for eight ordered road pairs in
 // the shipped world is a two-hop detour and not what travel_overworld_session charges.
-export const OVERWORLD_COMPACT_VIEW_VERSION = 44 as const;
+// v45: full-view direct exits carry detached travel estimates, preserving the v44 road
+// contract when a full view is spread, cloned, serialized, and compacted again. This also
+// makes direct-edge event fatigue part of the authenticated public projection.
+export const OVERWORLD_COMPACT_VIEW_VERSION = 45 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -963,6 +967,7 @@ type OverworldCompactRouteSource = {
   id: string;
   destination: { id: string };
   travel_minutes: number;
+  estimate?: OverworldTravelLegResult;
 };
 
 export function compactOverworldAreaRoutes(
@@ -996,14 +1001,17 @@ export function compactOverworldAreaRoutes(
  * plan; the two collections answer different questions. For a road whose shortest
  * plan IS the direct road this reproduces the old number exactly, since the inputs
  * are identical. Road events only feed fatigue gain (`travelFatigueGain`), never
- * minutes or supplies, and the plans carry the event for every edge they traverse,
- * so harvesting them keeps fatigue exact wherever the planner has looked.
+ * minutes or supplies. The session projection supplies canonical previews for every
+ * direct edge because a dominated direct edge may not occur in ANY shortest-path
+ * option. Full-view exits carry a detached copy of that preview so spread and JSON
+ * round trips stay truthful. The route-plan lookup remains a compatibility fallback.
  */
 export function compactOverworldRoads(
   exits: readonly OverworldCompactRouteSource[],
   routeOptions: readonly OverworldSessionRoutePlan[],
   resources: OverworldTravelResourceState,
   limit = OVERWORLD_COMPACT_MOVEMENT_LIMIT,
+  directRoadTravelLegs?: ReadonlyMap<string, OverworldTravelLegResult>,
 ): OverworldCompactRoad[] {
   const roadEventByEdgeId = new Map<string, OverworldRoadEvent>();
   for (const plan of routeOptions) {
@@ -1016,11 +1024,14 @@ export function compactOverworldRoads(
   const capped = Math.min(exits.length, limit);
   for (let index = 0; index < capped; index += 1) {
     const exit = exits[index]!;
-    const leg = resolveOverworldTravelLeg(
-      exit.travel_minutes,
-      roadEventByEdgeId.get(exit.id) ?? null,
-      resources,
-    );
+    const leg =
+      exit.estimate ??
+      directRoadTravelLegs?.get(exit.id) ??
+      resolveOverworldTravelLeg(
+        exit.travel_minutes,
+        roadEventByEdgeId.get(exit.id) ?? null,
+        resources,
+      );
     compact.push([exit.destination.id, leg.elapsedMinutes, leg.suppliesNeeded, leg.fatigueAfter]);
   }
   return compact;

@@ -110,8 +110,9 @@ Wolf-Winter is the strongest existing gameplay proof:
   changes a one-time Albany service;
 - Albany's dawn dispatch creates a mutually exclusive return fork between
   Jamie's Market resupply credit and Emery's Greenway rest claim;
-- twelve truthful non-death victory identities reach Albany's campaign
-  presentation.
+- sixteen truthful accepted non-death outcome identities reach Albany's
+  campaign presentation: eight hunt, three lure, two fortify, and three drive
+  endings.
 
 Relevant guards include
 [`wolf_winter_cross_encounter_agency.test.ts`](../tests/regression/wolf_winter_cross_encounter_agency.test.ts)
@@ -183,7 +184,7 @@ it is **not yet milestone-certified**:
   deep Greenway surveys are lawful without altering first-goal completion;
 - prepared combat, fully noncombat diversion, bounded mixed recovery,
   drive/evacuate, and fortify/outlast now supply four distinct resolution
-  families; all twelve counted forks have paired deterministic proof, while
+  families; all nineteen ledgered material forks have paired deterministic proof, while
   fleet-level strategy balance and the final numeric quality bar remain
   unproven;
 - Wolf-Winter now starts through one visible, replay-bound hill-route choice
@@ -207,9 +208,9 @@ it is **not yet milestone-certified**:
   removed;
 - the launch-first Station follow-up now keeps both legal hill roads ahead of
   optional support in terminal and browser clients. The authenticated full
-  board v2 carries the dispatch clock, all six selected/open plan rows, mapped
-  support actions, and launch card; compact v42 emits only
-  `[2, questId, guidance, dispatch|null, rows]` and retains canonical road
+  board v3 carries the dispatch clock, all six selected/open plan rows, mapped
+  support actions, and launch card; compact v45 emits only
+  `[3, questId, guidance, dispatch|null, rows]` and retains canonical road
   detail in `quests` / `quest_starts`. It omits redundant compact
   `departure_recap`, `departure_interactions`, and `departure_contact_leads`
   only when every current action and status is exactly indexed; malformed or
@@ -224,7 +225,7 @@ it is **not yet milestone-certified**:
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.
 
-The causal ledger marks all twelve material forks as structurally proven. That
+The causal ledger marks all nineteen material forks as structurally proven. That
 does not certify the greater-than-BG3 target: certification still requires the
 current deep crawl, 100-player pure fleet, numeric thresholds, and severity
 audit named below.
@@ -257,13 +258,14 @@ of contemporary New York infrastructure with the steading-scale TTRPG crisis.
 That explanation must be playable context, not a lore dump.
 
 Foundation status: campaign-character v1 now has strict canonical schemas,
-deterministic cloning/serialization, overworld snapshot v9 persistence, explicit
-v8 migration, full/UI read-only projection, bounded compact projection, and
+deterministic cloning/serialization, overworld snapshot v10 persistence, v9
+compatibility, explicit v8 migration, full/UI read-only projection, bounded
+compact projection, and
 tamper guards. A generic quest-export catalog applies relationship
 memories/floors and derives historical world facts from canonical outcome ids;
 character-conditioned effects additionally resolve promises and add or remove
 companions in canonical completion order.
-Wolf-Winter's twelve non-death endings create distinct Cade, Emery, and Hayden
+Wolf-Winter's sixteen non-death endings create distinct Cade, Emery, and Hayden
 memories plus byre/gate/timber/wolf/cattle/property/relief-stock facts; restore replays the character result,
 rejects forged outcome/journal/state combinations, and fences prior manifests
 to one exact migration target. Generic campaign service rules can now consume
@@ -971,7 +973,8 @@ different mutually exclusive repair dispatches, while fortified no-loss
 returns expose none. The chosen dispatch consumes time, changes standing, and
 creates or consolidates an exact one-use Albany service without duplicating a
 legacy returned-rig cache. Migration, replay, action-order, full/compact/UI/MCP,
-and all twelve non-death ending counterfactuals are proved by
+and all eleven Cade-packet outcome rows across both dawn-dispatch choices are
+proved by
 [`cade_return_packet_counterfactual.test.ts`](../tests/starting_slice/cade_return_packet_counterfactual.test.ts).
 Jamie's Market policy and disputed-crates pair adds a second authored event and
 fifth authored job: household-price protection consistently buys more standing

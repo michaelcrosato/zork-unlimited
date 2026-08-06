@@ -29,15 +29,21 @@ graph.
   overworld data source AND the shipped RPG quest registry (each quest maps a
   `world_quest_id` to its `content/rpg/quests/*.yaml` source).
 - `src/world/session.ts` is the primary stateful overworld runtime.
-- `src/mcp/tools.ts` is the tested ToolApi source of truth.
+- `src/mcp/server.ts` owns registered public MCP names, descriptions, and
+  argument schemas; `src/mcp/tools.ts` owns the tested transport-independent
+  ToolApi handlers.
 - `src/validate/rpg_foundation_validator.ts` carries high-depth RPG foundation
   checks.
 - `docs/STARTING_SLICE.md` is the active durable product milestone and
   `docs/starting_slice_causal_matrix.json` is its machine-readable proof ledger.
-- `docs/CURRENT_PLAN.md` is the rolling plan (overwritten each ultraplan; the
-  implementation subagent's sole hand-off), while `AI_LOOP_STATE.md` is the
-  rotating per-cycle result log (machine-parsed). Superseded planning docs move
-  to `docs/archive/`; detail not worth keeping goes to git history.
+- `docs/CURRENT_PLAN.md` is the durable short router to the milestone contract,
+  matrix, loop history, and current local evidence. An ultraplan writes its sole
+  fresh-implementer handoff to ignored
+  `ai-runs/<cycle>/current-plan.md` and records that path as `currentPlanRecord`
+  in `ai-runs/latest-cycle.json`; it never overwrites the router.
+  `AI_LOOP_STATE.md` is the rotating per-cycle result log (machine-parsed).
+  Superseded planning docs move to `docs/archive/`; detail not worth keeping
+  goes to git history.
 
 ## Priority Order
 
@@ -55,44 +61,38 @@ graph.
 
 ## Near-Term Work Queue
 
-(Refreshed 2026-07-12. Landed since the 2026-07-07 refresh: the three-tier
-**testing pyramid** — mechanical crawler, blind fleet + mock, feedback compiler
-(`docs/testing_pyramid.md`, PR #79); the `tide_mill` quest, bringing the shipped
-registry to 12 (PR #80); the versioned **journey contract** (v1 → v3) with
-pure-blind retention cohorts feeding `docs/BLIND_FEEDBACK_LEDGER.md`; and the
-**Goal Passage** — the current objective's road as one interruptible,
-game-native travel decision shared by UI and MCP. The earlier one-off 50-run
-soak measurements are superseded by the continuous pure-blind fleet and the
-compiled feedback ledger.)
+(Refreshed 2026-08-05. The causal matrix now records 19 implemented, proven
+forks, but the milestone remains `active_unproven` until one current,
+authenticated cohort satisfies every final gate in `docs/STARTING_SLICE.md`.)
 
 The active product milestone is now the bounded Albany → Wolf-Winter → truthful
 Albany-return starting slice. New towns and unrelated quest ports are frozen
 until its contract in `docs/STARTING_SLICE.md` is proven.
 
-- **Keep the pure-blind cohorts flowing**: fresh fleet seeds per cycle, with
-  the feedback compiler's three-report threshold deciding when a new hotspot
-  is actionable; vary start town / seed so the other 11 quests beyond
-  `wolf_winter` stay exercised before drawing content-quality conclusions.
-- Build the starting slice's reusable campaign-character and data-driven
-  consequence boundary before adding more Wolf-specific branches.
-- Keep the visible Albany slice's authored boundary closed: all six district
-  jobs and all six district events now consume persistent state through
-  authored scenes. Station's optional post-Wolf filing standard completes the
-  set by adding one exact no-service Cade packet closure without closing the
-  packet at filing time, and it expires after any packet method is complete.
-  Every truthful physical-loss dispatch remains available until then. Depth
-  Contract #11 is closed; new generic district transactions must not re-enter
-  the slice.
-- Deepen Wolf-Winter into combat, fully noncombat, and hybrid resolution
-  families with deterministic counterfactual and failure-forward proofs.
-- Tighten the remaining restore-time sequencing proofs beyond discovery prefixes.
-- Extend token/cost telemetry to the loop's agent work turns (blind-run
-  telemetry landed 2026-07-06: `blind-tester/telemetry.mjs` records every run
-  to the ignored `ai-runs/blind-telemetry.jsonl`; `npm run blind:telemetry`
-  summarizes) so the whole cycle's efficiency is measured, not guessed.
-- Shrink low-level debug helpers that still leak raw pack paths in diagnostics.
-- Keep active docs short and current; move superseded planning docs to
-  `docs/archive/`.
+- Keep routine pure-blind evidence flowing from clean, frozen builds: one fresh
+  journey per normal cycle, then compile when at least three new verified
+  reports exist. Treat the tracked feedback ledger as a historical snapshot;
+  current decisions must use the intended local report set and newest compiled
+  hot spots.
+- Use accumulated evidence to reduce repeated Albany setup and Station-planning
+  density and to test the observed strategy skew without deleting causal
+  choices. All four Wolf-Winter strategy families and all 16 accepted non-death
+  endings must remain truthful and reachable.
+- Run a fresh, homogeneous, no-resume/no-retry ten-player pilot on the exact
+  candidate build. It must pass the documented completion, pacing, clarity,
+  enjoyment, continuation, severity, and organic-strategy gates before any
+  authoritative spend.
+- Only after a passing comparable pilot, freeze that build and run the
+  authenticated 100-player cohort, then evaluate it with
+  `npm run starting-slice:certify`. Only that evidence can change the milestone
+  from `active_unproven`.
+- Preserve the 19 proven matrix forks across full and compact MCP, terminal, UI,
+  save/restore, and tamper/sequence checks. Any causal change must update
+  `docs/starting_slice_causal_matrix.json` and its focused proofs in the same
+  increment.
+- Keep the visible Albany authored boundary closed. New towns, unrelated quest
+  ports, generic district transactions, and prose-only branches remain outside
+  this milestone until certification succeeds.
 
 ## Verification
 

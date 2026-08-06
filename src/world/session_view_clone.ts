@@ -32,7 +32,10 @@ export function cloneOverworldView(view: OverworldView): OverworldView {
     current: cloneOverworldNode(view.current),
     currentArea: view.currentArea ? cloneOverworldArea(view.currentArea) : null,
     areaExits: view.areaExits.map(cloneOverworldAreaExit),
-    exits: view.exits.map(cloneOverworldExit),
+    exits: view.exits.map((exit) => ({
+      ...cloneOverworldExit(exit),
+      estimate: { ...exit.estimate },
+    })),
     areas: view.areas.map(cloneOverworldArea),
     pois: view.pois.map(cloneOverworldPoi),
     characters: view.characters.map(cloneOverworldCharacterView),

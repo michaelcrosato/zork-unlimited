@@ -2,6 +2,14 @@
 
 Generated deterministically from verified blind reports. The latest entries stay explicit; older entries are collapsed into trait counts so repeated feedback remains visible without turning this file into a transcript.
 
+**Tracked historical snapshot:** These counts end at report stamp
+`20260721T145019Z` and describe only the local report set present when this file
+was generated. `blind-tester/reports/` and `ai-runs/` are intentionally
+Git-ignored, so a clean clone does not contain the source evidence and cannot
+reproduce or extend these totals. Later per-cycle evidence recorded in
+`AI_LOOP_STATE.md` is not included until an operator regenerates this ledger
+from the intended local reports.
+
 ## Summary
 
 - Reports dir: `blind-tester/reports`

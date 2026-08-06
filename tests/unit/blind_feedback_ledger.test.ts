@@ -88,6 +88,8 @@ describe("blind feedback ledger", () => {
       const markdown = renderBlindFeedbackLedgerMarkdown(ledger);
       expect(markdown).toContain("## Recent Entries");
       expect(markdown).toContain("20260708T120000Z");
+      expect(markdown).toContain("Tracked historical snapshot");
+      expect(markdown).toContain("clean clone does not contain the source evidence");
       expect(markdown).toContain("Archived accepted entries collapsed into traits: 1");
     } finally {
       rmSync(root, { recursive: true, force: true });

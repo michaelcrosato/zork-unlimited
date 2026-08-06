@@ -23,7 +23,11 @@ import {
   type OverworldPendingRoadEncounter,
   type TravelLogEntry,
 } from "./session_snapshot.js";
-import { OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES, travelCondition } from "./travel_mechanics.js";
+import {
+  OVERWORLD_MAX_SUPPLIES as MAX_SUPPLIES,
+  travelCondition,
+  type OverworldTravelLegResult,
+} from "./travel_mechanics.js";
 import type { CampaignCharacterView } from "./campaign_character_view.js";
 import type { CampaignServiceOffer } from "./campaign_service_rules.js";
 import {
@@ -55,6 +59,11 @@ export type OverworldPendingRoadEncounterView = OverworldPendingRoadEncounter & 
   nextAction: OverworldRoadEncounterNextAction;
 };
 
+/** A direct road plus the exact resource projection travel will apply now. */
+export type OverworldDirectRoadView = OverworldExit & {
+  estimate: OverworldTravelLegResult;
+};
+
 export type OverworldView = {
   character: CampaignCharacterView;
   world: string;
@@ -62,7 +71,7 @@ export type OverworldView = {
   current: OverworldNode;
   currentArea: OverworldArea | null;
   areaExits: OverworldAreaExit[];
-  exits: OverworldExit[];
+  exits: OverworldDirectRoadView[];
   areas: OverworldArea[];
   hiddenAreaCount: number;
   pois: OverworldPoi[];
@@ -126,6 +135,7 @@ export type OverworldSessionViewState = {
   departureRecap: OpeningDepartureRecap | null;
   stationDispatchBoard: StationDispatchBoard | null;
   roads: readonly OverworldExit[];
+  directRoadTravelLegs: ReadonlyMap<string, OverworldTravelLegResult>;
   areaExits: readonly OverworldAreaExit[];
   areas: readonly OverworldArea[];
   hiddenAreaCount: number;
@@ -201,7 +211,11 @@ export function buildOverworldSessionView(state: OverworldSessionViewState): Ove
     current: state.current,
     currentArea: state.currentArea,
     areaExits: [...state.areaExits],
-    exits: [...state.roads],
+    exits: state.roads.map((road) => {
+      const estimate = state.directRoadTravelLegs.get(road.id);
+      if (!estimate) throw new Error(`Direct road "${road.id}" is missing its travel estimate.`);
+      return { ...road, estimate: { ...estimate } };
+    }),
     areas: [...state.areas],
     hiddenAreaCount: state.hiddenAreaCount,
     pois: [...state.poi],

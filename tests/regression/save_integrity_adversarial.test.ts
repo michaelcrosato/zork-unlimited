@@ -16,7 +16,13 @@
  * byte-identically (so no hash moves).
  */
 import { describe, it, expect } from "vitest";
-import { save, load, SaveIntegrityError } from "../../src/persist/save_load.js";
+import {
+  save,
+  load,
+  SaveIntegrityError,
+  LEGACY_SAVE_VERSION,
+  SAVE_VERSION,
+} from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
 import { MAX_ENGINE_STEP, type GameState } from "../../src/core/state.js";
 import { microInitState, MICRO_CONTENT_HASH } from "../../src/demo/micro.js";
@@ -95,9 +101,9 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
 
   it("WITNESS: seed = 1.5 (fractional, truncates to a different stream) is a hard SaveIntegrityError", () => {
     // 1.5 is finite, so the old `.finite()` gate accepted it — but `rngForStep`
-    // consumes `seed >>> 0`, and `1.5 >>> 0 === 1`, so the loaded game would run
-    // a DIFFERENT deterministic stream than the value the save's content hash
-    // committed to (hash.ts canonicalizes the raw 1.5). The `.int()` gate rejects.
+    // accepts integer seed identities only (32-bit or exact BigInt state). The loaded
+    // game would otherwise run a DIFFERENT deterministic stream than the value the
+    // save's content hash committed to. The `.int()` gate rejects.
     const forged = forgeWithToken((s) => ({ ...microInitState(), seed: s }), "1.5");
     expect((JSON.parse(forged) as { state: { seed: number } }).state.seed).toBe(1.5);
     expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
@@ -105,9 +111,8 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
 
   it("WITNESS: seed = 4294967301.5 (fractional, > 2^32-1) is a hard SaveIntegrityError", () => {
     // A fractional seed ABOVE the 2^32 range: finite (so the old `.finite()` gate
-    // accepted it) but non-integer, and `>>> 0` both truncates the fraction AND
-    // wraps the magnitude (4294967301.5 >>> 0 === 5) — doubly divergent from the
-    // hash-committed value. A safe integer above 2^32-1 is still accepted, but
+    // accepted it) but non-integer, and therefore not representable by the exact
+    // 64-bit state route. A safe integer above 2^32-1 is still accepted, but
     // non-integers and unsafe integers are not valid persisted seed identities.
     const forged = forgeWithToken((s) => ({ ...microInitState(), seed: s }), "4294967301.5");
     expect((JSON.parse(forged) as { state: { seed: number } }).state.seed).toBe(4294967301.5);
@@ -115,9 +120,9 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
   });
 
   it("WITNESS: an unsafe seed integer is a hard SaveIntegrityError", () => {
-    // The runtime RNG narrows to 32 bits, but the persisted seed is still a JS
-    // number identity. Unsafe integers cannot be represented precisely, so a
-    // forged save must not be allowed to commit one as the replay seed.
+    // The runtime RNG gives every accepted seed exact state, but the persisted
+    // identity starts as a JS number. Unsafe integers cannot be represented
+    // precisely, so a forged save must not commit one as the replay seed.
     const forged = forgeWithToken((s) => ({ ...microInitState(), seed: s }), "9007199254740992");
     const seed = (JSON.parse(forged) as { state: { seed: number } }).state.seed;
     expect(seed).toBe(Number.MAX_SAFE_INTEGER + 1);
@@ -172,6 +177,30 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
     });
     expect(() => load(bytes, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
   });
+
+  it.each([
+    ["visited", '{"__proto__":"yes"}'],
+    ["flags", '{"__proto__":"yes"}'],
+    ["vars", '{"__proto__":"not-a-number"}'],
+    ["objectState", '{"__proto__":{"open":"yes"}}'],
+    ["questStage", '{"__proto__":7}'],
+  ] as const)(
+    "wrong-typed own __proto__ in %s is rejected in both persisted versions",
+    (field, recordJson) => {
+      const bundle = JSON.parse(cleanBytes()) as {
+        version: number;
+        state: Record<string, unknown>;
+      };
+      bundle.state[field] = JSON.parse(recordJson) as unknown;
+
+      for (const version of [LEGACY_SAVE_VERSION, SAVE_VERSION]) {
+        bundle.version = version;
+        const forged = JSON.stringify(bundle);
+        expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+        expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(/malformed or non-finite/);
+      }
+    },
+  );
 });
 
 describe("save/load integrity gate — GREEN round-trip (no false rejection)", () => {
@@ -187,9 +216,9 @@ describe("save/load integrity gate — GREEN round-trip (no false rejection)", (
   });
 
   it("OVER-RESTRICTION GUARD: a NEGATIVE integer seed (seed:-3) still round-trips with hash unchanged", () => {
-    // A negative safe seed is legitimate (`mulberry32(-3 >>> 0)` is
-    // well-defined), so it MUST NOT be false-rejected. This proves the gate did
-    // NOT over-restrict to `gte(0)` / an unsigned 32-bit range bound.
+    // A negative safe seed is a legitimate exact 64-bit RNG identity, so it MUST
+    // NOT be false-rejected. This proves the gate did NOT over-restrict to
+    // `gte(0)` / an unsigned 32-bit range bound.
     const s: GameState = { ...microInitState(), seed: -3, step: 0 };
     const bytes = cleanBytes(s);
     let loaded!: ReturnType<typeof load>;

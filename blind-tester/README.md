@@ -9,11 +9,11 @@ Codex** subscription CLI provider: no API key is passed to the game or harness.
 
 There are two different ways a model touches this project, with different auth:
 
-|                     | Authoring (`adapt_story`)       | **Blind playing (this harness)**               |
-| ------------------- | ------------------------------- | ---------------------------------------------- |
-| Who calls the model | the repo's own code, in-process | an isolated external `codex` CLI               |
-| Authentication      | provider API key                | the selected CLI's existing subscription login |
-| Needs a harness key | yes                             | **no**                                         |
+|                     | Authoring (`adapt_story`)         | **Blind playing (this harness)**               |
+| ------------------- | --------------------------------- | ---------------------------------------------- |
+| Who calls the model | the repo's own code, in-process   | an isolated external `codex` CLI               |
+| Authentication      | none (keyless deterministic mock) | the selected CLI's existing subscription login |
+| Needs a harness key | no                                | **no**                                         |
 
 This harness is the right-hand column: the model is an external player that reaches
 the game **only** through the `mcp__adventureforge__*` MCP tools. That uses your

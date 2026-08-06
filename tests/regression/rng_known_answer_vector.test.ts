@@ -86,14 +86,14 @@ describe("rng absolute known-answer vector (determinism keystone, §4.1/§8.5)",
     expect(new Set([a, b, c, d]).size).toBe(4);
   });
 
-  // `isRuntimeSeed` accepts any safe integer, but rngForStep used to fold the seed with a
-  // bare `seed >>> 0`, silently discarding 21 bits. Seeds 1 and 4294967297 therefore played
-  // byte-identically while hashing differently — two runs the same in every observable way
-  // but claiming distinct identities — and the determinism property test could not see it,
-  // because its generator only sampled [0, 2**31).
+  // `isRuntimeSeed` accepts any safe integer. A bare `seed >>> 0` discarded 21 bits;
+  // the first high-word XOR repair still mapped a 54-bit domain into only 32 bits and
+  // therefore retained whole-stream aliases. Signed/wide seeds now use injective 64-bit
+  // initial state while the historical unsigned-32-bit route remains frozen below.
   it("distinct accepted seeds produce distinct streams across the 32-bit boundary", () => {
     const pairs: [number, number][] = [
       [0, 2 ** 32],
+      [0, 2 ** 32 + 0x27d4eb2f],
       [1, 2 ** 32 + 1],
       [5, 4294967301],
       [-1, 4294967295],
@@ -109,7 +109,14 @@ describe("rng absolute known-answer vector (determinism keystone, §4.1/§8.5)",
     }
   });
 
-  it("mixing the seed's high word left every sub-2^32 stream byte-identical", () => {
+  it("pins the 64-bit stream for the confirmed high-word XOR alias seed", () => {
+    const r = rngForStep(2 ** 32 + 0x27d4eb2f, 0);
+    expect([r.next(), r.next(), r.next()]).toEqual([
+      0.4852148871553811, 0.5238291275419239, 0.559851012362939,
+    ]);
+  });
+
+  it("the wide-seed route left every sub-2^32 stream byte-identical", () => {
     // The whole range any shipped artifact uses. If this moves, every pinned trace
     // expected_final_hash and every reachability bracket moves with it.
     expect(rngForStep(0, 0).next()).toBe(0.26642920868471265);

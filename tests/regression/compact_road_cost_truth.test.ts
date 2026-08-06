@@ -18,7 +18,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { compactOverworldRoads } from "../../src/world/compact_view.js";
+import { compactOverworldRoads, compactOverworldView } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -36,12 +36,13 @@ describe("compact roads quote the direct road, not a cheaper detour", () => {
       const session = new OverworldSession(world);
       const row = session.compactView().roads.find((candidate) => candidate[0] === destination);
       expect(row, `no compact road row for ${destination}`).toBeDefined();
-      const [, promisedMinutes, promisedSupplies] = row!;
+      const [, promisedMinutes, promisedSupplies, promisedFatigue] = row!;
 
       // travelTo returns the TravelLogEntry it just wrote — the charge of record.
       const travel = new OverworldSession(world).travelTo(destination);
       expect(travel.minutes, `${destination} minutes`).toBe(promisedMinutes);
       expect(travel.suppliesUsed, `${destination} supplies`).toBe(promisedSupplies);
+      expect(travel.fatigueAfter, `${destination} fatigue`).toBe(promisedFatigue);
     }
   });
 
@@ -58,6 +59,36 @@ describe("compact roads quote the direct road, not a cheaper detour", () => {
 
     const row = compact.roads.find((candidate) => candidate[0] === "schenectady_city");
     expect(row?.[1]).toBe(18);
+
+    // NY 5 carries a medium-risk road report, so the direct charge is two fatigue.
+    // The cheaper Colonie detour never traverses that edge and cannot supply its event.
+    const travel = new OverworldSession(world).travelTo("schenectady_city");
+    expect(travel.fatigueAfter).toBe(2);
+    expect(row?.[3]).toBe(travel.fatigueAfter);
+    expect(direct!.estimate.fatigueAfter).toBe(travel.fatigueAfter);
+
+    const spreadCompact = compactOverworldView({ ...view });
+    expect(spreadCompact.roads.find((candidate) => candidate[0] === "schenectady_city")?.[3]).toBe(
+      travel.fatigueAfter,
+    );
+
+    const jsonView = JSON.parse(JSON.stringify(view)) as typeof view;
+    const jsonCompact = compactOverworldView(jsonView);
+    expect(jsonCompact.roads.find((candidate) => candidate[0] === "schenectady_city")?.[3]).toBe(
+      travel.fatigueAfter,
+    );
+
+    // Every returned full view owns its estimate. Mutating one detached response
+    // cannot poison the cached view or a later compact conversion.
+    direct!.estimate.fatigueAfter = 99;
+    const freshView = session.view();
+    const freshDirect = freshView.exits.find((exit) => exit.destination.id === "schenectady_city");
+    expect(freshDirect?.estimate.fatigueAfter).toBe(travel.fatigueAfter);
+    expect(
+      compactOverworldView(freshView).roads.find(
+        (candidate) => candidate[0] === "schenectady_city",
+      )?.[3],
+    ).toBe(travel.fatigueAfter);
 
     const plan = compact.route_options?.find((candidate) => candidate[0] === "schenectady_city");
     if (plan) {

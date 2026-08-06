@@ -970,3 +970,34 @@ reviewer does not read the gaps as oversights.
   deleting the save-migration ladder, the assessor's fate, and the README claims.
   The review assigns every one of them to the repository owner as a human decision.
   `AI_LOOP_ALLOW_VERIFIER_EDITS` was never set.
+
+### Repository closeout supersession — 2026-08-05
+
+**Ultraplan handoff contract corrected.** Older entries above describe
+`docs/CURRENT_PLAN.md` as an overwritten rolling handoff. That is historical
+behavior, not current guidance. The tracked file is now a durable router. Each
+ultraplan writes its sole fresh-agent handoff to ignored
+`ai-runs/<cycle>/current-plan.md`, and `ai-runs/latest-cycle.json` records it as
+`currentPlanRecord`. This prevents an unattended cycle from turning transient
+planning into unrelated tracked churn.
+
+**Pure evidence now names an exact revision.** In commit-enabled cycles, focused
+checks and a local provisional commit precede the pure blind run; the tree must
+be exactly clean and the provisional revision is never pushed. Post-play, only
+`AI_LOOP_STATE.md` may differ before the outer crawl, health, integrity-drift,
+and playtest-record gates. Evidence-only cycles instead play the clean baseline
+before editing and must not claim that report validates their uncommitted work.
+
+**External-remediation review corrections.** A second independent pass found
+five integration defects in the immediately preceding remediation sequence and
+closed them with one explicit additive projection change: nested story-reveal
+receipts are deep-cloned; full story inspection hashes the post-reveal state;
+direct full-view roads carry detached exact estimates so compact v45 preserves
+their own event fatigue across clone and serialization; signed/wide seeds use an
+injective 64-bit stream while the historical unsigned-32-bit stream remains
+byte-identical; and RPG save v2 identifies that RNG boundary. Version-1 narrow
+seeds migrate because their continuation is unchanged, while signed/wide v1
+seeds fail explicitly instead of resuming on different rolls. Strict legacy
+loading strips the retired `ObjectRuntime.contents` field, and own-entry
+validation preserves and type-checks every schema-valid state-record key before
+current-schema validation. Frozen regressions cover each boundary.

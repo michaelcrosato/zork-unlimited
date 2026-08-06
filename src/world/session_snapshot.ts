@@ -635,6 +635,14 @@ function cloneNumberTuples(values: readonly (readonly [string, number])[]): [str
   return clones;
 }
 
+function cloneStringArrayTuples(
+  values: readonly (readonly [string, readonly string[]])[],
+): [string, string[]][] {
+  const clones: [string, string[]][] = [];
+  for (const [key, entries] of values) clones.push([key, [...entries]]);
+  return clones;
+}
+
 export function cloneOverworldSessionSnapshot(
   snapshot: OverworldSessionSnapshot,
 ): OverworldSessionSnapshot {
@@ -659,6 +667,9 @@ export function cloneOverworldSessionSnapshot(
     exploredSiteIds: [...snapshot.exploredSiteIds],
     regionRenown: cloneNumberTuples(snapshot.regionRenown),
     completedRegionalArcIds: [...snapshot.completedRegionalArcIds],
+    ...(snapshot.inspectedStoryReveals
+      ? { inspectedStoryReveals: cloneStringArrayTuples(snapshot.inspectedStoryReveals) }
+      : {}),
     pendingRoadEncounter: snapshot.pendingRoadEncounter
       ? { ...snapshot.pendingRoadEncounter }
       : null,

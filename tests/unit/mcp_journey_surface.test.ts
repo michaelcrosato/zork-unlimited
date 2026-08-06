@@ -1478,6 +1478,21 @@ describe("MCP journey surface", () => {
     expect(afterReveal).not.toEqual(before);
     expect(afterReveal.snapshot.inspectedStoryReveals).toEqual([[oath.id, [disclosure.reveal.id]]]);
 
+    const detachedRevealSnapshot = a.export_overworld_session({ session_id: started.session_id });
+    if (!detachedRevealSnapshot.ok) throw new Error("expected a detached reveal snapshot");
+    const detachedRevealIds = detachedRevealSnapshot.snapshot.inspectedStoryReveals?.[0]?.[1];
+    if (!detachedRevealIds) throw new Error("expected the detached reveal receipt");
+    detachedRevealIds.push("mutated_outside_the_session");
+    const intactRevealSnapshot = a.export_overworld_session({ session_id: started.session_id });
+    if (!intactRevealSnapshot.ok) throw new Error("expected the intact reveal snapshot");
+    // Returned snapshots must not alias the cached nested receipt arrays. Otherwise
+    // callers can rewrite session state while the cached hash keeps authenticating
+    // the old bytes.
+    expect(intactRevealSnapshot.snapshot_hash).toBe(detachedRevealSnapshot.snapshot_hash);
+    expect(intactRevealSnapshot.snapshot.inspectedStoryReveals).toEqual([
+      [oath.id, [disclosure.reveal.id]],
+    ]);
+
     // THE POINT OF PERSISTING IT: a session exported after the reveal restores WITH the
     // gate satisfied. Previously the receipt was excluded from the snapshot, so a player
     // who opened the compass, exported, and restored could no longer take the choice they
@@ -1526,12 +1541,24 @@ describe("MCP journey surface", () => {
       story_choice_id: oath.id,
       reveal_id: disclosure.reveal.id,
     });
-    a.inspect_overworld_session_story({
+    const fullExpandedInspection = a.inspect_overworld_session_story({
       session_id: fullExpandedBranch.session_id,
       story_choice_id: oath.id,
       reveal_id: disclosure.reveal.id,
       ...FULL_OVERWORLD,
     });
+    expect(fullExpandedInspection.snapshot_hash).not.toBe(before.snapshot_hash);
+    expect(fullExpandedInspection.snapshot_hash).toBe(revealedHash);
+    const fullExpandedExport = a.export_overworld_session({
+      session_id: fullExpandedBranch.session_id,
+    });
+    if (!fullExpandedExport.ok) throw new Error("expected an exportable full reveal");
+    // Full and compact inspection both return the snapshot that already contains
+    // the reveal receipt; neither may hand back the pre-reveal hash.
+    expect(fullExpandedExport.snapshot_hash).toBe(fullExpandedInspection.snapshot_hash);
+    expect(fullExpandedExport.snapshot.inspectedStoryReveals).toEqual([
+      [oath.id, [disclosure.reveal.id]],
+    ]);
     a.inspect_overworld_session_story({
       session_id: shortcutExpandedBranch.session_id,
       story_choice_id: oath.id,

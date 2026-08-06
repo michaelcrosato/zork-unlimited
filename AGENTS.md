@@ -20,12 +20,15 @@ improvement loop, and this charter orients the agent driving it.
 ## The loop (one cycle)
 
 `loop.sh` runs it; `docs/afk_loop.md` is the full protocol; the three-tier
-testing pyramid behind it is `docs/testing_pyramid.md`. Each cycle:
+testing pyramid (on its always-on Tier 0 dev foundation) is
+`docs/testing_pyramid.md`. Each cycle:
 
 1. **Assess** — `npm run ai:loop` ranks the next-best improvement (compiled hot spots, when present, are a primary input).
 2. **Crawl gate (pre)** — `npm run crawl:smoke` must be green before touching anything.
 3. **One change** — make a single focused improvement (engine, content, or tooling).
-4. **Crawl gate (post)** — `npm run crawl:smoke` again; a new finding is YOUR regression.
+4. **Freeze the revision** — run focused checks, then make a local provisional
+   commit. Never push it. Pure evidence starts only when `git status --porcelain`
+   is exactly empty; a later red gate resets this provisional commit.
 5. **Blind playtest** — one fresh blind reasoning agent per normal cycle uses the
    canonical `pure` mode (protocol: docs/blind_playtest_protocol.md). It starts a
    brand-new overworld game and receives only the tutorial, goal, state, legal
@@ -38,9 +41,18 @@ testing pyramid behind it is `docs/testing_pyramid.md`. Each cycle:
    cycles (every ~10 cycles, or when the ledger's open questions outgrow single
    reports) run `npm run fleet -- --count 100` instead.
 6. **Compile feedback** — when ≥3 new verified reports exist since the last compile: `npm run feedback:compile`;
-   triage from `hotspots.md`.
-7. **Verify** — `npm run health` must pass; no playtest report ⇒ no commit.
-8. **Commit** — one green increment, terse note in `AI_LOOP_STATE.md`.
+   count actual verified artifacts rather than guessing, then triage from `hotspots.md`.
+7. **Outer gates** — `npm run crawl:smoke` again, then `npm run health`, integrity
+   drift against the cycle-start ref, and the playtest-record gate. A new crawl
+   finding is YOUR regression; any red gate resets the provisional commit.
+8. **Finalize** — complete only the terse `AI_LOOP_STATE.md` entry and commit that
+   ledger update after every gate is green. Optional push happens only afterward.
+
+With `AI_LOOP_COMMIT=0`, no provisional commit is allowed. The safe evidence-only
+ordering is instead clean-baseline pure play first, then uncommitted work and focused
+checks; never claim an uncommitted build was the revision the baseline exercised.
+The driver rechecks cleanliness at every cycle boundary and stops continuous mode
+after a successful evidence-only cycle leaves pending work.
 
 ## Authority
 

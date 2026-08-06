@@ -23,18 +23,19 @@ root_cause: >
   was budgeted from the wrong numbers.
 fix: >
   Compute each roads row from its own edge via resolveOverworldTravelLeg, the same helper
-  the travel path uses, with the session's real fatigue and supplies. route_options keeps
-  the multi-hop plan; the two collections answer different questions and no longer share an
-  estimate. Road events only feed fatigue gain, never minutes or supplies, and the plans
-  carry the event for every edge they traverse, so those are harvested to keep fatigue exact
-  wherever the planner has looked. Where the shortest plan IS the direct road the emitted
-  numbers are unchanged, since the inputs are identical.
-surface_version: "OVERWORLD_COMPACT_VIEW_VERSION 43 -> 44; roads legend now states the cost is that one road's own"
+  the travel path uses, with the session's real fatigue, supplies, and contextual road event.
+  route_options keeps the multi-hop plan; the two collections answer different questions.
+  Every full-view direct exit carries a detached exact estimate, so clone, shallow-spread,
+  and JSON-roundtrip projections preserve the charge without an object-identity side channel.
+  Where the shortest plan IS the direct road the emitted numbers are unchanged, since the
+  inputs are identical.
+surface_version: "OVERWORLD_COMPACT_VIEW_VERSION 43 -> 44 for direct-edge cost, then 45 for serialized exact event-fatigue estimates"
 deterministic_witnesses:
   - state: "fresh default session at albany_city, turn 1"
     before: "roads row [schenectady_city, 16, 2, 2]; travel_to charges 18 minutes, 1 supply"
-    after: "roads row [schenectady_city, 18, 1, 1]; travel_to charges 18 minutes, 1 supply"
-  - property: "for every direct road out of the start town, the advertised minutes and supplies equal what travelTo charges"
+    after: "roads row [schenectady_city, 18, 1, 2]; travel_to charges 18 minutes, 1 supply and ends at fatigue 2"
+  - property: "for every direct road out of the start town, advertised minutes, supplies, and fatigue equal what travelTo charges"
+  - property: "clone, shallow spread, and JSON roundtrip keep the exact direct-edge fatigue; mutating one returned estimate cannot poison a later view"
   - property: "across all 344 edges in both directions, no row undercuts its own edge's base minutes"
 tests:
   - tests/regression/compact_road_cost_truth.test.ts

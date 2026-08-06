@@ -1,13 +1,17 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   save,
   load,
   assertSaveContentHash,
   SaveIntegrityError,
+  LEGACY_SAVE_VERSION,
+  SAVE_VERSION,
   SAVE_MODE,
   type SaveMetadata,
 } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
+import { cloneGameState, initState, type GameState } from "../../src/core/state.js";
 import { recordTrace, traceSourceLabel, type RecordOptions } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -31,6 +35,10 @@ const WIN: RpgAction[] = [
 ];
 const UNSAFE_GENERATED_RPG_SEED = Number.MAX_SAFE_INTEGER + 1;
 const MICRO_WORLD_QUEST_ID = "sunken_barrow";
+const LEGACY_V1_RUNTIME_CONTENTS_SAVE = readFileSync(
+  new URL("../regression/fixtures/save_v1_object_runtime_contents.json", import.meta.url),
+  "utf8",
+);
 const PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
   "Scenario-local numbers and issued kit govern this quest. Your persistent record remains intact; only authored campaign import and export effects cross the quest boundary.";
 const MICRO_SAVE_SOURCE: SaveMetadata = { worldQuestId: MICRO_WORLD_QUEST_ID };
@@ -84,6 +92,130 @@ describe("save / load (§8.7)", () => {
     expect("worldQuestId" in raw).toBe(false);
     expect("generatedRpgSeed" in raw).toBe(false);
     expect("embedded_character_continuity" in raw).toBe(false);
+    expect(raw["version"]).toBe(SAVE_VERSION);
+  });
+
+  it("migrates the frozen v1 ObjectRuntime.contents fixture and keeps new saves clean", () => {
+    expect((JSON.parse(LEGACY_V1_RUNTIME_CONTENTS_SAVE) as { version: unknown }).version).toBe(
+      LEGACY_SAVE_VERSION,
+    );
+    const loaded = load(LEGACY_V1_RUNTIME_CONTENTS_SAVE, MICRO_CONTENT_HASH);
+
+    expect(loaded.version).toBe(SAVE_VERSION);
+    expect(loaded.state.objectState["chest"]).toEqual({
+      open: true,
+      locked: false,
+      takenBy: "world",
+      room: "start",
+    });
+    expect("contents" in loaded.state.objectState["chest"]!).toBe(false);
+    expect(Object.isFrozen(loaded)).toBe(true);
+    expect(Object.isFrozen(loaded.state)).toBe(true);
+    expect(Object.isFrozen(loaded.state.objectState)).toBe(true);
+    expect(Object.isFrozen(loaded.state.objectState["chest"])).toBe(true);
+
+    const legacyState = (JSON.parse(LEGACY_V1_RUNTIME_CONTENTS_SAVE) as { state: unknown }).state;
+    expect(() =>
+      save(legacyState as ReturnType<typeof microInitState>, MICRO_CONTENT_HASH, SAVE_MODE, {
+        worldQuestId: MICRO_WORLD_QUEST_ID,
+      }),
+    ).toThrow(/malformed or non-finite/i);
+
+    const forgedV2 = JSON.parse(LEGACY_V1_RUNTIME_CONTENTS_SAVE) as { version: number };
+    forgedV2.version = SAVE_VERSION;
+    expect(() => load(JSON.stringify(forgedV2), MICRO_CONTENT_HASH)).toThrow(
+      /malformed or non-finite/i,
+    );
+
+    const rewritten = save(loaded.state, loaded.contentHash, loaded.mode, {
+      worldQuestId: MICRO_WORLD_QUEST_ID,
+    });
+    const rewrittenBundle = JSON.parse(rewritten) as {
+      version: unknown;
+      state: { objectState: unknown };
+    };
+    expect(rewrittenBundle.version).toBe(SAVE_VERSION);
+    const rewrittenState = rewrittenBundle.state;
+    expect(rewrittenState.objectState).toEqual({
+      chest: { open: true, locked: false, takenBy: "world", room: "start" },
+    });
+  });
+
+  it("preserves schema-valid reserved keys in every v2 state record and in constructors", () => {
+    const state: GameState = {
+      ...microInitState(),
+      visited: JSON.parse('{"start":true,"__proto__":true}') as Record<string, boolean>,
+      flags: JSON.parse('{"__proto__":true}') as Record<string, boolean>,
+      vars: JSON.parse('{"__proto__":17}') as Record<string, number>,
+      objectState: JSON.parse('{"__proto__":{"open":true}}') as GameState["objectState"],
+      questStage: JSON.parse('{"__proto__":"opened"}') as Record<string, string>,
+    };
+
+    const initialized = initState({
+      seed: 9,
+      start: "__proto__",
+      flagsInit: ["__proto__"],
+      varsInit: JSON.parse('{"__proto__":3}') as Record<string, number>,
+    });
+    expect(Object.hasOwn(initialized.visited, "__proto__")).toBe(true);
+    expect(Object.hasOwn(initialized.flags, "__proto__")).toBe(true);
+    expect(Object.hasOwn(initialized.vars, "__proto__")).toBe(true);
+
+    const clone = cloneGameState(state);
+    for (const field of ["visited", "flags", "vars", "objectState", "questStage"] as const) {
+      expect(Object.hasOwn(clone[field], "__proto__"), field).toBe(true);
+    }
+
+    const bytes = saveMicro(state);
+    expect((JSON.parse(bytes) as { version: unknown }).version).toBe(SAVE_VERSION);
+    const loaded = load(bytes, MICRO_CONTENT_HASH);
+    expect(loaded.state.visited["__proto__"]).toBe(true);
+    expect(loaded.state.flags["__proto__"]).toBe(true);
+    expect(loaded.state.vars["__proto__"]).toBe(17);
+    expect(loaded.state.objectState["__proto__"]).toEqual({ open: true });
+    expect(loaded.state.questStage["__proto__"]).toBe("opened");
+    for (const field of ["visited", "flags", "vars", "objectState", "questStage"] as const) {
+      expect(Object.hasOwn(loaded.state[field], "__proto__"), field).toBe(true);
+    }
+    expect(hashState(loaded.state)).toBe(hashState(state));
+  });
+
+  it("preserves an own __proto__ object id through v1 normalization", () => {
+    const state: GameState = {
+      ...microInitState(),
+      objectState: JSON.parse('{"__proto__":{"open":true}}') as GameState["objectState"],
+    };
+    const legacy = JSON.parse(saveMicro(state)) as { version: number };
+    legacy.version = LEGACY_SAVE_VERSION;
+
+    const loaded = load(JSON.stringify(legacy), MICRO_CONTENT_HASH);
+    expect(loaded.version).toBe(SAVE_VERSION);
+    expect(Object.hasOwn(loaded.state.objectState, "__proto__")).toBe(true);
+    expect(loaded.state.objectState["__proto__"]).toEqual({ open: true });
+    expect(hashState(loaded.state)).toBe(hashState(state));
+  });
+
+  it("makes the v1 RNG continuation boundary explicit while v2 supports signed/wide seeds", () => {
+    for (const seed of [0, 2 ** 32 - 1]) {
+      const state = { ...microInitState(), seed };
+      const legacy = JSON.parse(saveMicro(state)) as { version: number };
+      legacy.version = LEGACY_SAVE_VERSION;
+      const loaded = load(JSON.stringify(legacy), MICRO_CONTENT_HASH);
+      expect(loaded.version).toBe(SAVE_VERSION);
+      expect(hashState(loaded.state)).toBe(hashState(state));
+    }
+
+    for (const seed of [-1, 2 ** 32, 2 ** 32 + 0x27d4eb2f]) {
+      const state = { ...microInitState(), seed };
+      const current = saveMicro(state);
+      expect(load(current, MICRO_CONTENT_HASH).state.seed).toBe(seed);
+
+      const legacy = JSON.parse(current) as { version: number };
+      legacy.version = LEGACY_SAVE_VERSION;
+      const resumeLegacy = () => load(JSON.stringify(legacy), MICRO_CONTENT_HASH);
+      expect(resumeLegacy).toThrow(SaveIntegrityError);
+      expect(resumeLegacy).toThrow(/signed\/wide RNG streams changed in save version 2/);
+    }
   });
 
   it("round-trips and freezes independently-versioned embedded continuity metadata", () => {
@@ -385,7 +517,7 @@ describe("save / load (§8.7)", () => {
 
   it("rejects package-only source fallback saves at the load boundary", () => {
     const bytes = JSON.stringify({
-      version: 1,
+      version: SAVE_VERSION,
       contentHash: MICRO_CONTENT_HASH,
       mode: SAVE_MODE,
       source_ref: ["pack", MICRO_PACK_ID],

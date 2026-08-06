@@ -63,8 +63,9 @@ produce the same state hash.
 
 ### Layer 3: Agent And Tool Surfaces
 
-- `src/mcp/server.ts` exposes tools over MCP.
-- `src/mcp/tools.ts` is the tested ToolApi source of truth.
+- `src/mcp/server.ts` owns the registered public MCP tool names, descriptions,
+  and argument schemas.
+- `src/mcp/tools.ts` owns the tested, transport-independent ToolApi handlers.
 - `bin/validate.ts`, `bin/replay.ts`, `bin/inspect.ts`, `bin/rpg_play.ts`,
   `bin/author.ts`, and `bin/assess.ts` are operator surfaces.
 - `agents/`, `src/ai-loop.ts`, and `src/afk/` (the assessor) coordinate
@@ -77,7 +78,8 @@ thin. Engine behavior belongs below the MCP and CLI layers.
 ## Public Gameplay Contract
 
 Use these surfaces for shipped world play (the listed args are the primary
-options, not exhaustive signatures — `src/mcp/tools.ts` is the source of truth):
+options, not exhaustive signatures — `src/mcp/server.ts` defines the public MCP
+registration and argument schemas, while `src/mcp/tools.ts` defines behavior):
 
 - `list_overworld({ include_design_notes? })` — the world + quest registry summary
 - `start_overworld({ … })` then travel/scout/talk/explore to discover and

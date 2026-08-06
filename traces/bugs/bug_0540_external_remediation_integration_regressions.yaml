@@ -1,0 +1,43 @@
+id: bug_0540
+title: "External remediation boundaries remained version- or copy-incomplete"
+pack: repository integration
+reported_by: independent repository closeout review, 2026-08-05
+reports:
+  - docs/DECISION_LOG.md
+severity: S1
+symptom: >
+  Five individually plausible remediation changes left cross-boundary defects: a returned
+  reveal snapshot aliased nested session state, full story inspection returned the pre-reveal
+  hash, a dominated direct road omitted its own event fatigue, signed/wide seed widening
+  silently changed legacy save continuation, and strict v1 ObjectRuntime migration could
+  discard schema-valid reserved-name record keys.
+root_cause: >
+  The first pass verified each local representation but not every serialization, clone,
+  response-construction, and version-compatibility boundary. JavaScript's legacy __proto__
+  setter and record-parser behavior made ordinary object accumulation especially unsafe for
+  arbitrary schema-valid ids.
+fix: >
+  Deep-clone nested reveal receipts; record reveals before response hashing; serialize a
+  detached exact estimate on every full-view direct road and compact from it; use a separate
+  64-bit stream for signed/wide seeds while retaining the historical unsigned-32-bit stream;
+  and version the RPG save boundary so legacy streams are either proven compatible or
+  rejected explicitly. Validate and reconstruct every GameState record from own entries so
+  reserved-name keys are preserved and type-checked.
+deterministic_witnesses:
+  - "mutating an exported inspectedStoryReveals child array leaves the next export and cached hash unchanged"
+  - "full and compact story inspection return the same post-reveal snapshot hash"
+  - "Albany to Schenectady advertises and charges [18 minutes, 1 supply, fatigue 2] after clone and JSON roundtrip"
+  - "seed 0 and the former whole-stream wide alias differ at every sampled step while all historical unsigned-32-bit KATs stay byte-identical"
+  - "legacy v1 narrow/content-bearing saves migrate; legacy signed/wide saves fail loudly; current signed/wide saves roundtrip"
+  - "own __proto__ keys in each GameState record are validated, preserved, cloned, and hash-identical"
+tests:
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/world_session_snapshot.test.ts
+  - tests/regression/compact_road_cost_truth.test.ts
+  - tests/property/determinism.test.ts
+  - tests/regression/rng_known_answer_vector.test.ts
+  - tests/regression/save_integrity_adversarial.test.ts
+  - tests/unit/save_trace.test.ts
+verification:
+  - npm run crawl:smoke
+  - npm run health

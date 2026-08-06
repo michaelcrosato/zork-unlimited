@@ -15,9 +15,16 @@ Use these authoritative sources:
 - The newest verified `ai-runs/feedback/*/hotspots.md` — current experiential
   evidence; generated artifacts remain ignored and local.
 
-For each increment, follow the repository loop in `AGENTS.md`: assess, pass the
-pre-crawl gate, make one focused change, pass the post-crawl gate, run one fresh
-pure blind playtest, compile enough new verified feedback, pass health, and land
-the green increment. Run milestone pilots and fleets only on a frozen build when
-the contract calls for them; do not infer certification readiness from this
+For each commit-enabled increment, follow the repository loop in `AGENTS.md`:
+assess, pass the pre-crawl gate, make one focused change, run focused checks,
+freeze the implementation in a local provisional commit, and require an exactly
+clean tree before one fresh pure blind playtest. Count actual verified reports
+and compile only when at least three are new; then pass the post-crawl, health,
+integrity-drift, and playtest-record gates before committing the terse
+`AI_LOOP_STATE.md` result. Evidence-only cycles instead capture their clean
+baseline play before any uncommitted edit and never represent that baseline as
+evidence for the later work. Run milestone pilots and fleets only on a frozen
+build when the contract calls for them. The driver stops continuous
+evidence-only mode when a completed cycle leaves pending work, so the next clean
+baseline cannot be mislabeled. Do not infer certification readiness from this
 router.

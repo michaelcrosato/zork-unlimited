@@ -972,14 +972,15 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           (session) => {
             const story = inspectStory(session);
             validateInspectionArgs(session, story);
+            // The reveal receipt is session state. Record it inside the action so
+            // `run` builds the observation and snapshot hash from the post-reveal
+            // state, exactly as the compact response path does below.
+            if (args.reveal_id !== undefined) {
+              session.rememberStoryReveal(args.story_choice_id, args.reveal_id);
+            }
             return story;
           },
         );
-        if (response.ok === true && args.reveal_id !== undefined) {
-          overworldSessions
-            .get(args.session_id)
-            .rememberStoryReveal(args.story_choice_id, args.reveal_id);
-        }
         return response as unknown as OverworldJourneyStoryInspectionResponse<Args>;
       }
       const guarded = overworldSessions.guardedSession(responseOptions, args.session_id);
