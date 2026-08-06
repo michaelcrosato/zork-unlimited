@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 735 -->
+<!-- historical_cycle_count: 736 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - repository_closeout
+
+- Scope/effect: reconciled the 22-commit external-remediation line with current main, refreshed every active guide/contract/census, normalized cross-platform text, and brought root/UI dependency audits to zero findings.
+- Correctness: independent review closed reveal snapshot/hash aliasing, exact direct-road event fatigue through serialized compact v45, wide-seed aliases with save-v2 compatibility, reserved-name state-record loss, and unsafe AFK evidence/rollback edges; frozen regressions cover each boundary.
+- Pure evidence: exact-clean Terra seed 8 on `4d3c56a3` completed The Wolf-Winter by all-wolves-alive/full-herd LURE, continued through checkpoint 40, won The Gallowmere by HUNT, and ended naturally at decision 53; clarity/enjoyment 4/4, replay-yes, no bug or stuck state.
+- Failed evidence: the default Spark seed-7 attempt completed three goals and ended at decision 71 but exhausted provider context before its interview; strict-stream rejection published no evidence and was not counted.
+- Self-critique/follow-through: the verified player still found layered Station setup and compact technical phrasing denser than the quests; one new verified report is below the three-report compile threshold, so no premature compile or fleet ran.
+- Guard: post-crawl `20260806T040320Z` covers all 247 nodes/344 edges/12 quests; exact health passes 463 files/4,002 tests, both typechecks, all 12 packs, and authority-verified pure evidence, with root/UI audits clean.
 
 ### Cycle result - role_matched_setup_actionable
 
@@ -155,13 +164,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the accepted first attempt used 4.604M raw / 157,475 uncached input + 11,073 output at 96.58% input-cache reuse (168,548 useful, about 3,180/decision); an earlier fresh seed failed closed before gameplay on a noncanonical wrapper pragma and published no report.
 - Self-critique/follow-through: the canary proves truthful copy and clean-build safety, not strategy diversity; it again chose LURE and named Station density S1, so the next decisive evidence remains a fresh landed-build 10-player Terra pilot.
 - Guard: review regressions pin raw presenter, MCP, terminal, UI, receipt, and manifest-drift behavior; pre/post crawls `20260802T091005Z` / `20260802T105904Z` have zero findings, and exact health passes 456 files/3,786 tests plus all 12 packs with liveness isolated but otherwise unchanged.
-
-### Cycle result - albany_plan_compass
-
-- Evidence choice: the latest verified 10-player Terra pilot chose LURE 9 / FORTIFY 1, continued 6/10, and independently clustered six Albany-density reports; the selected role's generic `Standard packet` still hid its permanent duty + evidence pair and emphasized support without a balanced plan-cost primer.
-- Surface/effect: the card is now an honest `Quick setup — duty + evidence`, says no field plan is chosen, summarizes each role's real support, and puts a neutral HUNT/LURE/DRIVE/FORTIFY risk compass behind the existing comparison reveal; exact mechanics remain inspectable.
-- Counterfactual/integrity: selection order, legality, mechanics, RNG, state, saves, outcomes, content, schema, and protected world hash are unchanged; concise support is a presentation overlay with exact-trigger fallback rather than a migration-producing manifest field.
-- Pure evidence: exact-clean Terra seed 681500 understood Aid-Only + Hayden, completed The Wolf-Winter through LURE, continued twice, won The Gallowmere at decision 56, rated clarity/enjoyment 4/4 and replay-yes, and reported no loop, soft-lock, or stuck state.
-- Economy: the first attempt used 5.312M raw / 165,736 uncached input + 12,552 output at 96.88% input-cache reuse (178,288 useful, about 3,184/decision); no retry, fallback, or extra certifying player ran.
-- Self-critique/follow-through: the canary proves the pair is legible and the build is safe, not strategy diversity; it still chose LURE and repeated Station planning density as S1, so the next decisive evidence is a fresh landed-build 10-player Terra pilot, not a 100-player fleet.
-- Guard: two independent reviews are clean, 62 focused/hash-migration tests pass, crawl `20260802T035007Z` has zero findings, and exact-tree health passes 456 files/3,785 tests plus all 12 packs when serialized to prevent unrelated exhaustive-project CPU contention.
