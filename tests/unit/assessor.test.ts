@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { hashState } from "../../src/core/hash.js";
 import {
   assess,
+  assessmentRecommendationKind,
   allGeneratedChecksClean,
   blindReportAttendanceOffsets,
   formatAssessment,
@@ -332,12 +333,21 @@ describe("assess()", () => {
     );
   });
 
-  it("formatAssessment renders the recommendation", () => {
+  it("formatAssessment renders the classified recommendation", () => {
     const out = formatAssessment(a);
-    expect(out).toContain("next best improvement");
+    const strategic = assessmentRecommendationKind(a) === "strategic";
+    expect(out).toContain(
+      strategic
+        ? "# AFK assessment — next best improvement"
+        : "# AFK assessment — maintenance rotation only",
+    );
     expect(out).toContain("RPG catalog:");
     expect(out).toContain("RPG generator mint-and-check: clean");
-    expect(out).toContain("Recommended next");
+    expect(out).toContain(
+      strategic
+        ? "## ▶ Recommended next:"
+        : "Maintenance rotation only — no strategic recommendation",
+    );
     expect(out).not.toContain("Packs by mode");
     expect(out).toContain("Quest health");
     expect(out).not.toContain("Pack health");
