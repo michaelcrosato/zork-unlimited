@@ -44,6 +44,8 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    exist since the last compile: `npm run feedback:compile`; count actual verified
    pure, legacy-guided, or structural-smoke artifacts rather than guessing.
    Deterministic structural mocks never satisfy this product-feedback threshold.
+   With no `--in`, the compiler discovers the local report ledger, build-bound
+   pure V2 `ai-runs/<cycle>/playtest.*` publications, and newest crawl findings.
    Then triage from `hotspots.md`; `loop.sh` does not independently count or invoke
    this command.
 7. **Outer gates** — `npm run crawl:smoke` again, then `npm run health`, integrity

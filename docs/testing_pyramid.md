@@ -101,7 +101,7 @@ npm run fleet:mock -- --count 2                    # structural, zero-token, CI-
 npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 
 # Tier 3 — feedback compiler
-npm run feedback:compile                           # defaults: --in blind-tester/reports + newest crawl findings
+npm run feedback:compile                           # defaults: report ledger + pure V2 cycle reports + newest crawl
 npm run feedback:compile -- --in <dir|jsonl> --out <dir> --top 10 --prev <dir> --llm-labels
 
 # Consuming the pyramid
@@ -306,10 +306,12 @@ validator | test`.
   reproducing action sequence, written as a `traces/bugs/` artifact plus a
   regression test that fails if the defect returns. First real catch:
   `bug_0496` (`traces/bugs/bug_0496_overworld_renown_restore.yaml`).
-- **Fleet → fix**: exit interviews accumulate in `blind-tester/reports/`;
-  `feedback:compile` clusters and ranks them into hot spots; the assessor
+- **Fleet → fix**: exit interviews accumulate in `blind-tester/reports/` and
+  verified cycle-style `ai-runs/<cycle>/playtest.*` bundles; `feedback:compile`
+  discovers, deduplicates, clusters, and ranks them into hot spots; the assessor
   (`npm run assess` / `ai:loop`) takes the top few as candidates — never
   outranking an unplayable-quest fix — and the loop makes ONE fix per cycle.
-- **Proving movement**: the next `feedback:compile` diffs against the
+- **Comparison signal**: the next `feedback:compile` diffs against the
   previous run (`--prev`) and tags each hotspot `improved | regressed | new |
-flat` — the trend line is the evidence a fix actually worked.
+flat`. These cumulative-corpus trends show score movement, not causal proof
+  that a fix worked; current-cohort freshness remains a separate policy layer.

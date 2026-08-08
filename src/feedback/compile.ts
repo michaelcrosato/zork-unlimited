@@ -17,20 +17,29 @@
  *   retention evidence) + hotspots.md (human report).
  */
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import {
   isPureExitInterviewV2,
   isStructuralExitInterviewV2,
   type ExitInterview,
 } from "../blind/exit_interview.js";
-import { verifyBlindReportText } from "../blind/report_verifier.js";
+import { verifyBlindReportText, type RequiredBlindPlayMode } from "../blind/report_verifier.js";
 import { parseBlindRunSidecar } from "../blind/run_evidence.js";
 import { validateAdjacentPureProviderAuthority } from "../blind/pure_artifact_gate.js";
 import { CrawlFindingSchema, type CrawlFinding } from "../crawl/findings.js";
-import { canonicalize, shortHash } from "../core/hash.js";
+import { canonicalize, hashState, shortHash } from "../core/hash.js";
 import { clusterIssues, type IssueCluster, type IssueRecord } from "./cluster.js";
 import { summarizeFeedbackEvidence, type FeedbackEvidenceSummary } from "./evidence_summary.js";
+import { canonicalCycleReportRef } from "./inputs.js";
 import {
   sycophancyTelemetry,
   targetMetrics,
@@ -85,10 +94,19 @@ export function readLatestHotspots(root: string): HotspotsFile | null {
 // --- collectInputs -----------------------------------------------------------
 
 const LEDGER_RE = /^(\d{8}T\d{6}Z)_(.+)_seed(-?\d+)\.md$/;
+const WINDOWS_LEDGER_RE = /^(\d{8}T\d{6}Z)_(.+)_seed(-?\d+)\.md$/iu;
 
-function parseLedgerFilename(name: string): { slug: string } | null {
-  const m = LEDGER_RE.exec(name);
-  return m ? { slug: m[2]! } : null;
+function parseLedgerFilename(name: string): { slug: string; ref: string } | null {
+  const m = (process.platform === "win32" ? WINDOWS_LEDGER_RE : LEDGER_RE).exec(name);
+  if (!m) return null;
+  if (process.platform !== "win32") return { slug: m[2]!, ref: name };
+  const timestamp = m[1]!.toLocaleUpperCase("en-US");
+  const slug = m[2]!.toLocaleLowerCase("en-US");
+  return { slug, ref: `${timestamp}_${slug}_seed${m[3]!}.md` };
+}
+
+function manifestKey(name: string): string {
+  return process.platform === "win32" ? name.toLocaleLowerCase("en-US") : name;
 }
 
 function targetFromSlug(slug: string): string {
@@ -134,14 +152,14 @@ function buildManifestIndex(root: string): Map<string, ManifestRow> {
       const r = row as Record<string, unknown>;
       if (typeof r.report !== "string" || typeof r.target !== "string") continue;
       const persona = typeof r.persona === "string" ? r.persona : null;
-      index.set(basename(r.report), { persona, target: r.target });
+      index.set(manifestKey(basename(r.report)), { persona, target: r.target });
     }
   }
   return index;
 }
 
 export type CollectedInterview = {
-  /** Report basename — the evidence `ref` every IssueRecord from this report cites. */
+  /** Stable evidence `ref` every IssueRecord from this report cites. */
   ref: string;
   persona: string | null;
   target: string; // "overworld" | "quest:<id>"
@@ -159,7 +177,12 @@ export type CollectInputsResult = {
   crawlFiles: string[];
 };
 
-type ReportOutcome = CollectedInterview | { rejected: true };
+type ResolvedInterview = CollectedInterview & {
+  /** Canonical parsed-sidecar identity; null for legacy/structural reports. */
+  pureRunKey: string | null;
+};
+
+type ReportOutcome = ResolvedInterview | { rejected: true };
 
 /**
  * Deterministic mocks prove the fleet/report/compiler plumbing, but their
@@ -175,11 +198,13 @@ export function contributesToActionableFeedback(interview: ExitInterview): boole
 function resolveReport(
   filePath: string,
   fileName: string,
+  ref: string,
   text: string,
   manifestIndex: ReadonlyMap<string, ManifestRow>,
+  requiredPlayMode?: RequiredBlindPlayMode,
 ): ReportOutcome {
   const verifyWithAdjacentPureSidecar = () => {
-    const sidecarPath = filePath.replace(/\.md$/, ".run.json");
+    const sidecarPath = filePath.replace(/\.md$/iu, ".run.json");
     if (!existsSync(sidecarPath)) return null;
     if (statSync(sidecarPath).mtimeMs < statSync(filePath).mtimeMs) return null;
     const sidecar = parseBlindRunSidecar(readFileSync(sidecarPath, "utf8"));
@@ -191,7 +216,10 @@ function resolveReport(
       runSidecar: sidecar.sidecar,
     });
   };
-  let verification = verifyBlindReportText(text);
+  let verification = verifyBlindReportText(
+    text,
+    requiredPlayMode === undefined ? {} : { requiredPlayMode },
+  );
   let pureSidecarVerified = false;
   if (!verification.ok) {
     const pureVerification = verifyWithAdjacentPureSidecar();
@@ -215,22 +243,59 @@ function resolveReport(
     verification = pureVerification;
   }
 
-  const manifestRow = manifestIndex.get(fileName);
+  const ledger = parseLedgerFilename(fileName);
+  // Fleet manifests intentionally use basenames because reports may move, but
+  // that weak join key is valid only for the fleet's unique ledger filename.
+  // A manifest row named playtest.md must never relabel a cycle report.
+  const manifestRow = ledger ? manifestIndex.get(manifestKey(fileName)) : undefined;
+  const pureRunKey = verification.run?.play_mode === "pure" ? hashState(verification.run) : null;
   if (manifestRow) {
     return {
-      ref: fileName,
+      ref,
       persona: manifestRow.persona,
       target: manifestRow.target,
       interview: verification.interview,
+      pureRunKey,
     };
   }
-  const ledger = parseLedgerFilename(fileName);
   return {
-    ref: fileName,
+    ref,
     persona: null,
     target: ledger ? targetFromSlug(ledger.slug) : "overworld",
     interview: verification.interview,
+    pureRunKey,
   };
+}
+
+function reportEvidenceRef(root: string, filePath: string, fileName: string): string {
+  const rel = relative(resolve(root), resolve(filePath)).replaceAll("\\", "/");
+  if (rel.length === 0 || rel === ".." || rel.startsWith("../") || isAbsolute(rel)) {
+    // External explicit inputs are supported, but absolute paths can expose a
+    // private workspace and basenames collide. Hash the resolved path into a
+    // stable opaque namespace while retaining the human-readable filename.
+    return `external/${shortHash(resolve(filePath))}/${fileName}`;
+  }
+  const ledger = parseLedgerFilename(fileName);
+  if (ledger) return ledger.ref;
+  const cycleRef = canonicalCycleReportRef(root, filePath);
+  if (cycleRef) return cycleRef;
+  return rel;
+}
+
+function reportPathKey(filePath: string): string {
+  let key: string;
+  try {
+    key = realpathSync.native(filePath);
+  } catch {
+    key = resolve(filePath);
+  }
+  return process.platform === "win32" ? key.toLocaleLowerCase("en-US") : key;
+}
+
+function hasInputExtension(path: string, extension: string): boolean {
+  return process.platform === "win32"
+    ? path.toLocaleLowerCase("en-US").endsWith(extension)
+    : path.endsWith(extension);
 }
 
 /**
@@ -252,16 +317,35 @@ export function collectInputs(root: string, inputs: string[]): CollectInputsResu
   let rejected = 0;
   const reportDirs: string[] = [];
   const crawlFiles: string[] = [];
+  const seenReportPaths = new Set<string>();
+  const seenPureRuns = new Set<string>();
 
   const addReport = (filePath: string, fileName: string): void => {
+    const resolvedPath = reportPathKey(filePath);
+    if (seenReportPaths.has(resolvedPath)) return;
+    seenReportPaths.add(resolvedPath);
+
     const text = readFileSync(filePath, "utf8");
-    const outcome = resolveReport(filePath, fileName, text, manifestIndex);
+    const cycleRef = canonicalCycleReportRef(root, filePath);
+    const ref = reportEvidenceRef(root, filePath, fileName);
+    const outcome = resolveReport(
+      filePath,
+      fileName,
+      ref,
+      text,
+      manifestIndex,
+      cycleRef ? "pure" : undefined,
+    );
     if ("rejected" in outcome) {
       rejected++;
       return;
     }
+    if (outcome.pureRunKey && seenPureRuns.has(outcome.pureRunKey)) return;
+    if (outcome.pureRunKey) seenPureRuns.add(outcome.pureRunKey);
+
+    const { pureRunKey: _pureRunKey, ...interview } = outcome;
     verified++;
-    interviews.push(outcome);
+    interviews.push(interview);
   };
 
   for (const input of inputs) {
@@ -273,10 +357,10 @@ export function collectInputs(root: string, inputs: string[]): CollectInputsResu
     if (stat.isDirectory()) {
       reportDirs.push(input);
       const mdFiles = readdirSync(resolved)
-        .filter((f) => f.endsWith(".md"))
+        .filter((f) => hasInputExtension(f, ".md"))
         .sort();
       for (const f of mdFiles) addReport(join(resolved, f), f);
-    } else if (resolved.endsWith(".jsonl")) {
+    } else if (hasInputExtension(resolved, ".jsonl")) {
       crawlFiles.push(input);
       const base = basename(resolved);
       const lines = readFileSync(resolved, "utf8")
@@ -288,7 +372,7 @@ export function collectInputs(root: string, inputs: string[]): CollectInputsResu
         crawlFindings.push(finding);
         crawlFindingRefs.push(`${base}#${i}`);
       });
-    } else if (resolved.endsWith(".md")) {
+    } else if (hasInputExtension(resolved, ".md")) {
       reportDirs.push(input);
       addReport(resolved, basename(resolved));
     } else {

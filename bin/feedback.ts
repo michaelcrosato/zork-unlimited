@@ -1,7 +1,7 @@
 #!/usr/bin/env -S npx tsx
 /**
  * bin/feedback — CLI front end for the feedback compiler (Task 16): compiles
- * verified blind-tester reports + crawler findings into ranked
+ * verified blind-tester ledger/cycle reports + crawler findings into ranked
  * `hotspots.json` / `hotspots.md` plus the mode-separated `retention.json`.
  *
  * Usage:
@@ -12,9 +12,9 @@
  * actual logic lives in src/feedback/compile.ts, unit-tested there) -> print
  * a short summary + the artifact paths.
  */
-import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { compileFeedback, type CompileOptions } from "../src/feedback/compile.js";
+import { resolveFeedbackInputs } from "../src/feedback/inputs.js";
 
 class FeedbackUsageError extends Error {}
 
@@ -82,28 +82,6 @@ function defaultOutDir(): string {
   return join("ai-runs", "feedback", utcStamp());
 }
 
-/** Newest (lexicographically last) `ai-runs/crawl/<stamp>/findings.jsonl` under
- *  `root`, or null if `ai-runs/crawl` doesn't exist or holds no findings.jsonl —
- *  used only to fill in the default `--in` set when the caller passes none. */
-function findNewestCrawlFindings(root: string): string | null {
-  const crawlRoot = join(root, "ai-runs", "crawl");
-  if (!existsSync(crawlRoot)) return null;
-  const dirNames = readdirSync(crawlRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .filter((name) => existsSync(join(crawlRoot, name, "findings.jsonl")))
-    .sort();
-  const newest = dirNames[dirNames.length - 1];
-  return newest ? join("ai-runs", "crawl", newest, "findings.jsonl") : null;
-}
-
-function defaultInputs(root: string): string[] {
-  const inputs = ["blind-tester/reports"];
-  const crawlFindings = findNewestCrawlFindings(root);
-  if (crawlFindings) inputs.push(crawlFindings);
-  return inputs;
-}
-
 function main(): void {
   let parsed: ParsedArgs;
   try {
@@ -117,7 +95,7 @@ function main(): void {
   }
 
   const root = process.cwd();
-  const inputs = parsed.inputs.length > 0 ? parsed.inputs : defaultInputs(root);
+  const inputs = resolveFeedbackInputs(root, parsed.inputs);
   const outDir = parsed.outDir ?? defaultOutDir();
 
   if (parsed.llmLabels) {

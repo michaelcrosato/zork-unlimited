@@ -96,7 +96,11 @@ describe("bug_0541 — mock feedback provenance quarantine", () => {
     expect(evidence.report_modes).toEqual({ pure: 0, structural: 2, legacy_guided: 0 });
     expect(excludedMockReports).toBe(1);
     expect(file.hotspots).toHaveLength(1);
-    expect(file.hotspots[0]!.evidence.map((row) => row.ref)).toEqual([smokeRef]);
+    expect(file.hotspots[0]!.evidence.map((row) => row.ref)).toEqual([
+      expect.stringMatching(
+        new RegExp(`^external/[0-9a-f]{8}/${smokeRef.replace(".", "\\.")}$`, "u"),
+      ),
+    ]);
     expect(JSON.stringify(file)).not.toContain("PLANTED_MOCK_SENTINEL");
     expect(file.metrics).toHaveLength(1);
     expect(file.metrics[0]!.reports).toBe(1);

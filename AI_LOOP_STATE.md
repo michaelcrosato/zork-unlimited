@@ -162,3 +162,10 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 682713 chose Aid-Only LURE, redirected all wolves alive with the herd whole, ended at decision 30, rated clarity/enjoyment 4/4 and replay-yes, and reported no bug, rejection, loop, stuck state, or soft-lock.
 - Spark/economy: the frozen Spark-10 verified 1/10 with nine strict-wrapper rejections; measured Terra + Spark evidence used 3.313M raw / 181,534 uncached input + 23,122 output at 94.52% cache reuse (204,656 useful), while nine Spark and one earlier Terra rejection remain unrecoverable rather than guessed.
 - Self-critique/guard: both verified players chose LURE and ended at the first goal, so this proves build safety rather than diversity; Spark's S2 hash report was its own one-character transcription error, and focused counterfactuals, crawl `20260802T223524Z`, exact 457-file/3,792-test health, UI typecheck, and all 12 packs are green.
+
+## AFK Cycle 2026-08-08T20-49-36-529Z
+
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-4a89fb42 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
