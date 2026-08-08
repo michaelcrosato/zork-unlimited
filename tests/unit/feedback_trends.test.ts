@@ -47,6 +47,8 @@ function hotspotsFile(hotspots: Hotspot[]): HotspotsFile {
       report_dirs: ["blind-tester/reports"],
       crawl_files: [],
       verified_reports: 4,
+      actionable_reports: 4,
+      excluded_mock_reports: 0,
       rejected_reports: 0,
       crawl_findings: 0,
     },

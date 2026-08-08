@@ -203,8 +203,10 @@ describe("fleet:mock end to end (zero tokens)", () => {
     });
   }, 180_000);
 
-  it("compiles mock reports + crawl findings into ranked hotspots with the planted overlap on top", () => {
-    // reuse the tmp report dir from the previous test via a module-level variable, or regenerate --count 6
+  it("accounts for mock reports without promoting planted findings to product hot spots", () => {
+    // Reuse the tmp report dir from the first test. These reports deliberately
+    // carry planted overlap so this boundary proves fixtures cannot steer the
+    // real assessor even though they remain verifier-passing QA artifacts.
     const out2 = mkdtempSync(join(tmpdir(), "hotspots-"));
     execFileSync(
       process.execPath,
@@ -212,12 +214,21 @@ describe("fleet:mock end to end (zero tokens)", () => {
       { stdio: "pipe", timeout: 120_000 },
     );
     const hs = JSON.parse(readFileSync(join(out2, "hotspots.json"), "utf8"));
-    expect(hs.hotspots[0].title).toMatch(/notice board|albany station/i); // planted overlap ranks #1
-    expect(hs.recommended_next_fix.hotspot_id).toBe(hs.hotspots[0].id);
-    expect(hs.sycophancy.reports).toBeGreaterThan(0);
+    const retention = JSON.parse(readFileSync(join(out2, "retention.json"), "utf8"));
+    expect(hs.inputs.verified_reports).toBe(4);
+    expect(hs.inputs.actionable_reports).toBe(0);
+    expect(hs.inputs.excluded_mock_reports).toBe(4);
+    expect(retention.report_modes).toMatchObject({ pure: 0, structural: 4 });
+    expect(hs.hotspots).toEqual([]);
+    expect(hs.recommended_next_fix).toBeNull();
+    expect(hs.metrics).toEqual([]);
+    expect(hs.sycophancy.reports).toBe(0);
+    expect(readFileSync(join(out2, "hotspots.md"), "utf8")).toContain(
+      "Deterministic structural mocks excluded from product evidence: 4",
+    );
 
-    // second compile with the SAME inputs → all trends flat, and prev linkage works
-    // trends read ai-runs/feedback/ by default — pass the previous dir explicitly instead: implement --prev <dir> for testability
+    // A second compile with the same mock-only inputs stays empty and valid;
+    // passing --prev also proves the trend reader accepts an empty predecessor.
     const out3 = mkdtempSync(join(tmpdir(), "hotspots2-"));
     execFileSync(
       process.execPath,
@@ -225,13 +236,7 @@ describe("fleet:mock end to end (zero tokens)", () => {
       { stdio: "pipe", timeout: 120_000 },
     );
     const hs2 = JSON.parse(readFileSync(join(out3, "hotspots.json"), "utf8"));
-    expect(hs2.hotspots.length).toBeGreaterThan(0);
-    const prevScoreById = new Map(
-      hs.hotspots.map((h: { id: string; score: number }) => [h.id, h.score]),
-    );
-    for (const h of hs2.hotspots as { id: string; trend: string; prev_score: number | null }[]) {
-      expect(h.trend).toBe("flat");
-      expect(h.prev_score).toBe(prevScoreById.get(h.id));
-    }
+    expect(hs2.hotspots).toEqual([]);
+    expect(hs2.recommended_next_fix).toBeNull();
   }, 180_000);
 });

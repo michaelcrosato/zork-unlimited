@@ -46,11 +46,13 @@ loop.sh  (outer driver — orchestration + the bar)
 │          smoke/mock modes are structural QA, never pure retention evidence.
 │          Milestone/harvest cycles run `npm run fleet -- --count 100` instead of
 │          a single pure player (docs/testing_pyramid.md).
-│       d. FEEDBACK + LEDGER — count actual verified reports since the newest
-│          successful compile. Run `npm run feedback:compile` iff there are ≥3;
-│          never invent a count. This is a prompted-agent action, not a loop.sh
-│          helper or gate. Complete AI_LOOP_STATE.md after play; it must be the
-│          only tracked change left outside the provisional commit.
+│       d. FEEDBACK + LEDGER — count actual actionable reports since the newest
+│          successful compile. Verified pure, legacy-guided, and structural-smoke
+│          artifacts count; deterministic structural mocks do not. Run
+│          `npm run feedback:compile` iff there are ≥3; never invent a count. This
+│          is a prompted-agent action, not a loop.sh helper or gate. Complete
+│          AI_LOOP_STATE.md after play; it must be the only tracked change left
+│          outside the provisional commit.
 │
 ├─ 4. CRAWL GATE (post)  npm run crawl:smoke again — a new finding here is a
 │     regression the cycle itself just introduced; the cycle halts and reverts.
@@ -94,7 +96,8 @@ outer loop continues until its circuit breakers stop it (5 consecutive / 15 tota
 failures by default).
 
 **Feedback-compile ownership.** The cycle prompt tells the operating agent to
-count verified artifacts and invoke `npm run feedback:compile` at the threshold.
+count actionable verified artifacts (never deterministic structural mocks) and
+invoke `npm run feedback:compile` at the threshold.
 `loop.sh` itself does not perform that count or call the compiler; it enforces the
 subsequent crawl, health, integrity, playtest, and ledger-only gates. This makes
 the current implementation boundary explicit rather than presenting the protocol

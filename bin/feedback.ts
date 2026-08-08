@@ -133,7 +133,8 @@ function main(): void {
     prevDir: parsed.prevDir,
   };
 
-  const { file, evidence, jsonPath, mdPath, retentionPath } = compileFeedback(opts);
+  const { file, evidence, excludedMockReports, jsonPath, mdPath, retentionPath } =
+    compileFeedback(opts);
 
   console.log(
     `feedback:compile — ${file.inputs.verified_reports} verified reports ` +
@@ -154,6 +155,10 @@ function main(): void {
       }; ` +
       `other verified modes: ${evidence.report_modes.structural} structural, ` +
       `${evidence.report_modes.legacy_guided} legacy-guided.`,
+  );
+  console.log(
+    `Product evidence: ${file.inputs.actionable_reports} actionable reports; ` +
+      `${excludedMockReports} deterministic structural mocks excluded.`,
   );
   if (file.recommended_next_fix) {
     console.log(`Recommended next fix: ${file.recommended_next_fix.hotspot_id}`);

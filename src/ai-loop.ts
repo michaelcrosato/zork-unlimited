@@ -357,8 +357,9 @@ export function buildPrompt(ctx: {
     "  the exact provisional commit before the final commit in commit-enabled cycles.",
   ];
   const feedbackInstructions = [
-    "- Count new verified reports since the newest successful feedback compile from the",
-    "  actual report artifacts. If and only if that count is at least 3, run",
+    "- Count new actionable reports since the newest successful feedback compile from",
+    "  actual verified artifacts. Pure, legacy-guided, and structural-smoke reports count;",
+    "  deterministic structural mocks do not. If and only if that count is at least 3, run",
     "  `npm run feedback:compile`; otherwise record that compilation was skipped.",
     "  Never guess or fabricate a report count.",
   ];
@@ -539,8 +540,9 @@ export function buildUltraplanPrompt(ctx: {
         "- Do not edit source after play; record new findings only as next focus.",
         "",
         "## STEP 6 — Compile only at the real threshold, then finish the ledger",
-        "- Count new verified reports since the newest successful feedback compile from",
-        "  actual report artifacts. If and only if the count is at least 3, run",
+        "- Count new actionable reports since the newest successful feedback compile from",
+        "  actual verified artifacts. Pure, legacy-guided, and structural-smoke reports count;",
+        "  deterministic structural mocks do not. If and only if the count is at least 3, run",
         "  `npm run feedback:compile`; otherwise record a skip. Never fabricate the count.",
         "- Complete AI_LOOP_STATE.md TERSELY (≤8 lines): ultraplan choice, play evidence,",
         "  self-critique, and next focus. It must be the ONLY tracked post-provisional change.",
@@ -549,9 +551,10 @@ export function buildUltraplanPrompt(ctx: {
       ]
     : [
         "## STEP 4 — Self-critique, focused checks, and evidence-only ledger",
-        "- Run the focused tests/validation for the change. Count verified reports since the",
-        "  newest successful compile from actual artifacts; run `npm run feedback:compile`",
-        "  if and only if at least 3 are new. Never guess or fabricate the count.",
+        "- Run the focused tests/validation for the change. Count actionable reports since",
+        "  the newest successful compile from actual verified artifacts; pure, legacy-guided,",
+        "  and structural-smoke reports count, while deterministic structural mocks do not.",
+        "  Run `npm run feedback:compile` iff at least 3 are new; never fabricate the count.",
         "- Append a TERSE AI_LOOP_STATE.md entry (≤8 lines): baseline play, ultraplan choice,",
         "  self-critique, evidence, and next focus.",
         "- Do not commit or push. loop.sh still runs post-crawl, health, and integrity drift",

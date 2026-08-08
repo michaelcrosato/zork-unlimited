@@ -1,10 +1,11 @@
 /**
  * Machine-readable evidence accounting for a feedback compile.
  *
- * Hotspots intentionally continue to use every verified report as experience
- * or QA evidence. Retention is narrower: only independently reverified pure
- * reports enter this summary, and incompatible journey-contract versions are
- * never pooled into one decision curve.
+ * This summary accounts for every verified report mode. The feedback compiler
+ * separately excludes deterministic structural mocks from product hot spots
+ * and experience metrics while retaining them here as explicit QA artifacts.
+ * Retention is narrower still: only independently reverified pure reports enter
+ * its curves, and incompatible journey-contract versions are never pooled.
  */
 import { z } from "zod";
 import {

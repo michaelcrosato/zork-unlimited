@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 737 -->
+<!-- historical_cycle_count: 738 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - mock_feedback_provenance
+
+- Evidence choice: the assessor's 130-report Albany Station S3 came entirely from planted structural mocks on a month-old build; a clean current-HEAD baseline completed Wolf-Winter/Gallowmere at clarity/enjoyment 4/4 without reproducing it.
+- Surface/effect: hotspot schema v2 now records 511 actionable reports and 302 excluded mocks; mocks retain verifier/mode QA accounting but cannot affect hotspots, metrics, sycophancy, or recommendations, while pure/legacy/smoke/crawler evidence stays actionable.
+- Cadence/integrity: the three-report compile threshold now excludes deterministic mocks, and schema invariants require actionable + excluded = verified with telemetry covering every actionable report.
+- Pure evidence: exact-clean Spark seed 7 on `51311a85` won The Wolf-Winter by HUNT/The Byre Held, ended naturally at decision 18, rated clarity/enjoyment 4/4 and replay-yes, and reported no bug or stuck state; the repository playtest gate accepts the receipt-bound artifacts.
+- Feedback/self-critique: 10 unique actionable verified runs triggered a fresh v2 compile and the false Station priority vanished, but normal `ai-runs/<cycle>/playtest.*` evidence remains absent from default compilation; that discovery/freshness gap is the next target.
+- Guard: independent review is clean; 75 focused tests, both static checks, formatting, trace integrity, exact-build pure evidence, and the required outer crawl/health/integrity gates protect the landing.
 
 ### Cycle result - external_review_completion
 
@@ -153,13 +162,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 682713 chose Aid-Only LURE, redirected all wolves alive with the herd whole, ended at decision 30, rated clarity/enjoyment 4/4 and replay-yes, and reported no bug, rejection, loop, stuck state, or soft-lock.
 - Spark/economy: the frozen Spark-10 verified 1/10 with nine strict-wrapper rejections; measured Terra + Spark evidence used 3.313M raw / 181,534 uncached input + 23,122 output at 94.52% cache reuse (204,656 useful), while nine Spark and one earlier Terra rejection remain unrecoverable rather than guessed.
 - Self-critique/guard: both verified players chose LURE and ended at the first goal, so this proves build safety rather than diversity; Spark's S2 hash report was its own one-character transcription error, and focused counterfactuals, crawl `20260802T223524Z`, exact 457-file/3,792-test health, UI typecheck, and all 12 packs are green.
-
-### Cycle result - wolf_strategy_consequence_card
-
-- Evidence choice: the landed 10-player Terra pilot chose LURE 10/10 and missed its clarity/enjoyment and strategy-diversity gates; all four strategies were legal, but Cade's root compared tonight's protection more clearly than each cost's Albany return.
-- Surface/effect: Cade now gives HUNT, LURE, DRIVE, and FORTIFY the same `Tonight / Cost / Albany` decision contract, truthfully warns that HUNT can lose cattle/line and that asking may teach without committing, and keeps the irreversible boundaries visible within the 1,120-character compact budget (1,067 used).
-- Counterfactual: this is one shared presentation overlay across MCP, terminal, and UI; actions, commitments, mechanics, RNG, state, saves, hashes, and outcomes are unchanged.
-- Verifier efficiency: immutable-state legal-action memoization preserves every roll, transition, state, and comparison while turning the exact Wolf relabeling proof from a 1,612-second timeout into a 731-second pass; full health fell 5,293→4,224 seconds (20%) without raising a timeout or reducing coverage.
-- Pure evidence: exact-clean Terra seed 682600 read the card, chose its deliberately cattle-first/Aid-Only/fodder/Drover-supported LURE, diverted all wolves alive, continued twice, won The Gallowmere at decision 54, rated clarity/enjoyment 4/4 and replay-yes, and reported no rejection, loop, soft-lock, stuck state, or functional bug.
-- Economy/admission: the first attempt used 4.884M raw / 155,625 uncached input + 10,597 output at 96.81% cache reuse (166,222 useful); Spark admission verified 0/4—three strict wrapper rejections plus one post-gate client probe failure—so no retry or scale ran and unrecoverable usage is not guessed.
-- Self-critique/guard: one observed card plus another LURE does not prove diversity, and Albany planning density remains S1; an independent mechanics audit, focused cross-surface/boundary checks, crawls `20260802T141640Z` / `20260802T143946Z`, exact 456-file/3,786-test health, UI typecheck, and all 12 pack validations are green.

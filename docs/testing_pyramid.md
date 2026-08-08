@@ -35,8 +35,10 @@ reference for what each tier does, when it runs, and its exact shapes.
 - **Tier 3 — feedback compiler** (`src/feedback/`): reads verified Tier-2
   reports plus Tier-1 findings, clusters them, ranks by severity and source
   agreement, and emits `hotspots.{json,md}` plus mode-separated
-  `retention.json`. Structural/legacy reports remain useful QA/experience
-  inputs; only sidecar-verified pure exits enter retention.
+  `retention.json`. Structural smoke and legacy reports remain useful
+  QA/experience inputs; deterministic structural mocks verify the pipeline but
+  cannot create product hot spots or experience metrics. Only sidecar-verified
+  pure exits enter retention.
 
 ```
    Tier 0 (always)              Tier 1: crawl:smoke/deep        Tier 2: pure blind / fleet
@@ -70,7 +72,7 @@ reference for what each tier does, when it runs, and its exact shapes.
 | `starting-slice:pilot`        | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-member homogeneous-provider/model no-retry cohort as a go/no-go pilot; never certification                                                                                               | free                      |
 | `starting-slice:certify`      | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                                                  | free                      |
 | `fleet:mock`                  | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                         | zero tokens               |
-| `feedback:compile`            | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                   | free                      |
+| `feedback:compile`            | whenever ≥3 new actionable reports exist since the last compile (structural mocks excluded)                 | seconds (deterministic clustering)                                                                                                                                                                                   | free                      |
 
 ## 3. Exact commands
 
@@ -283,14 +285,15 @@ quality gates, outcome mapping, and the conservative fleet-local issue-scope rul
 live in [`STARTING_SLICE.md`](STARTING_SLICE.md); `would_replay` is not
 continuation, and global feedback history never certifies the slice.
 
-**Hotspots file** (`src/feedback/schema.ts`, zod `.strict()`),
+**Hotspots file v2** (`src/feedback/schema.ts`, zod `.strict()`),
 `hotspots.json` top level: `{ version, generated_at, commit, inputs, metrics,
 sycophancy, hotspots, recommended_next_fix }`. Each `Hotspot`: `{ id, title,
 location, severity_band, max_severity, count, sources, personas, score,
 fix_layer, evidence, trend, prev_score }`. `score = count × severity_weight ×
 source_diversity` (§ `src/feedback/rank.ts`: `S0=1 … S4=16`; both sources
-agreeing doubles the score). `sycophancy` carries zero-negative rates and
-1–5 histograms, overall and per-persona.
+agreeing doubles the score). `inputs` reconciles `verified_reports` as
+`actionable_reports + excluded_mock_reports`; `sycophancy` carries zero-negative
+rates and 1–5 histograms over actionable reports, overall and per-persona.
 
 **Severity polarity**: S0 = cosmetic, S4 = blocking.
 

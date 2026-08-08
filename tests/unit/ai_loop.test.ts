@@ -334,6 +334,7 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(ledger).toBeGreaterThan(play);
     expect(prompt).toContain("Never push");
     expect(prompt).toContain("If and only if that count is at least 3");
+    expect(prompt).toContain("deterministic structural mocks do not");
     expect(prompt).toContain("Never guess or fabricate a report count");
     expect(prompt).not.toContain("clean evidence-only baseline");
     expectFreshOverworldContract(prompt);
@@ -367,6 +368,7 @@ describe("buildUltraplanPrompt blind-playtest contract", () => {
       prompt.indexOf("## STEP 5 — Play the exact provisional revision"),
     );
     expect(prompt).toMatch(/if and only if the count is at least 3/i);
+    expect(prompt).toContain("deterministic structural mocks do not");
   });
 
   it("plays a clean baseline first when ultraplan commits are disabled", () => {
