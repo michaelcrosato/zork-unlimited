@@ -225,7 +225,9 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   (`npm run feedback:compile`), writes a separate `retention.json` that admits
   only sidecar-verified pure exits and groups their decision/checkpoint curves
   by journey-contract version (historical v1/v2 and current v3 are never pooled),
-  tracks trend (improved/regressed/new/flat), and feeds the assessor's ranking.
+  excludes deterministic structural mocks from product hot spots and experience
+  metrics, tracks trend (improved/regressed/new/flat), and feeds the assessor's
+  ranking.
 
 Every pure playtest MUST end through the game's journey choice and then provide
 a V2 **structured exit interview**. The fenced `json exit-interview` block

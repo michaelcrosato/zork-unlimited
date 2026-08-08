@@ -1,0 +1,36 @@
+id: bug_0541
+title: "Deterministic mock findings could become the assessor's top product priority"
+pack: n/a (feedback and AFK-loop tooling)
+reported_by: 2026-08-08 AFK assessment plus clean pure baseline audit
+severity: S3
+symptom: >
+  The assessor ranked Albany Station notice-board confusion as the next best improvement
+  from 130 apparently independent S3 reports. Every cited report was actually a
+  deterministic structural mock carrying a planted compiler-test finding, and the current
+  pure player completed the opening and two quests without reproducing it.
+root_cause: >
+  src/feedback/compile.ts verified report provenance but then sent every accepted interview
+  through the same fleetIssueRecords, targetMetrics, and sycophancy paths. Conversion to a
+  generic fleet issue discarded structural_kind, so the compiled hotspot schema and
+  src/afk/assessor.ts could no longer distinguish fixture output from observed evidence.
+fix: >
+  Retain deterministic mocks in verified input counts and mode-separated QA accounting, but
+  exclude only structural_kind mock interviews from product hotspots and experience metrics.
+  Persist actionable and excluded counts in the v2 hotspot schema, and define the three-report
+  compile threshold in terms of actionable artifacts. Pure, legacy-guided, structural smoke,
+  and crawler evidence remain actionable.
+deterministic_witnesses:
+  - "a dominant planted S4 mock sentinel is absent from hotspots and recommendation input"
+  - "the same mock remains counted as a verified structural artifact"
+  - "a structural smoke finding in the same compile remains actionable"
+  - "actionable_reports plus excluded_mock_reports must equal verified_reports"
+  - "three deterministic mock artifacts cannot satisfy the product-feedback compile threshold"
+tests:
+  - tests/regression/feedback_mock_hotspot_quarantine.test.ts
+  - tests/acceptance/fleet_mock_pipeline.test.ts
+  - tests/unit/feedback_schema.test.ts
+  - tests/unit/ai_loop.test.ts
+verification:
+  - npm run test -- tests/regression/feedback_mock_hotspot_quarantine.test.ts
+  - npm run test -- tests/acceptance/fleet_mock_pipeline.test.ts
+  - npm run health

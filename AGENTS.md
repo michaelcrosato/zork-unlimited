@@ -40,10 +40,12 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    instruments and never pure retention evidence. Milestone or feedback-harvest
    cycles (every ~10 cycles, or when the ledger's open questions outgrow single
    reports) run `npm run fleet -- --count 100` instead.
-6. **Compile feedback (prompted-agent step)** — when ≥3 new verified reports exist
-   since the last compile: `npm run feedback:compile`; count actual verified
-   artifacts rather than guessing, then triage from `hotspots.md`. `loop.sh` does
-   not independently count or invoke this command.
+6. **Compile feedback (prompted-agent step)** — when ≥3 new actionable reports
+   exist since the last compile: `npm run feedback:compile`; count actual verified
+   pure, legacy-guided, or structural-smoke artifacts rather than guessing.
+   Deterministic structural mocks never satisfy this product-feedback threshold.
+   Then triage from `hotspots.md`; `loop.sh` does not independently count or invoke
+   this command.
 7. **Outer gates** — `npm run crawl:smoke` again, then `npm run health`, integrity
    drift against the cycle-start ref, and the playtest gate (schema-valid pure V2
    report + receipt sidecar bound to the clean provisional HEAD). A new crawl

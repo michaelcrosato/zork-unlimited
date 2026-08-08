@@ -8,7 +8,7 @@
 import { z } from "zod";
 
 /** Bump whenever the hotspots file shape changes in a way readers must react to. */
-export const HOTSPOTS_VERSION = 1;
+export const HOTSPOTS_VERSION = 2;
 
 export const FixLayerSchema = z.enum([
   "content",
@@ -110,6 +110,8 @@ export const HotspotsFileSchema = z
         report_dirs: z.array(z.string()),
         crawl_files: z.array(z.string()),
         verified_reports: z.number().int(),
+        actionable_reports: z.number().int().nonnegative(),
+        excluded_mock_reports: z.number().int().nonnegative(),
         rejected_reports: z.number().int(),
         crawl_findings: z.number().int(),
       })
@@ -122,7 +124,26 @@ export const HotspotsFileSchema = z
       .strict()
       .nullable(),
   })
-  .strict();
+  .strict()
+  .superRefine((file, ctx) => {
+    if (
+      file.inputs.actionable_reports + file.inputs.excluded_mock_reports !==
+      file.inputs.verified_reports
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["inputs", "actionable_reports"],
+        message: "actionable and excluded mock reports must account for every verified report",
+      });
+    }
+    if (file.sycophancy.reports !== file.inputs.actionable_reports) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sycophancy", "reports"],
+        message: "experience telemetry must cover every actionable report exactly once",
+      });
+    }
+  });
 
 export type HotspotsFile = z.infer<typeof HotspotsFileSchema>;
 export type Hotspot = z.infer<typeof HotspotSchema>;

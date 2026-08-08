@@ -166,13 +166,15 @@ function writeFixtureQuestRoot(root: string): void {
  *  file, so it normalizes to impact 5 regardless of its raw magnitude. */
 function validHotspotsFile(hotspotId: string): unknown {
   return {
-    version: 1,
+    version: 2,
     generated_at: "2026-07-09T00:00:00.000Z",
     commit: "abc1234",
     inputs: {
       report_dirs: ["blind-tester/reports"],
       crawl_files: [],
       verified_reports: 1,
+      actionable_reports: 1,
+      excluded_mock_reports: 0,
       rejected_reports: 0,
       crawl_findings: 0,
     },
@@ -258,13 +260,15 @@ function baseHotspot(overrides: Record<string, unknown> & { id: string }): Recor
  *  via {@link baseHotspot}); `recommended_next_fix` cites the first one. */
 function hotspotsFileWith(hotspots: Array<Record<string, unknown>>): unknown {
   return {
-    version: 1,
+    version: 2,
     generated_at: "2026-07-09T00:00:00.000Z",
     commit: "abc1234",
     inputs: {
       report_dirs: ["blind-tester/reports"],
       crawl_files: [],
       verified_reports: 1,
+      actionable_reports: 1,
+      excluded_mock_reports: 0,
       rejected_reports: 0,
       crawl_findings: 0,
     },

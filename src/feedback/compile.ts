@@ -19,7 +19,11 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { isPureExitInterviewV2, type ExitInterview } from "../blind/exit_interview.js";
+import {
+  isPureExitInterviewV2,
+  isStructuralExitInterviewV2,
+  type ExitInterview,
+} from "../blind/exit_interview.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { parseBlindRunSidecar } from "../blind/run_evidence.js";
 import { validateAdjacentPureProviderAuthority } from "../blind/pure_artifact_gate.js";
@@ -156,6 +160,17 @@ export type CollectInputsResult = {
 };
 
 type ReportOutcome = CollectedInterview | { rejected: true };
+
+/**
+ * Deterministic mocks prove the fleet/report/compiler plumbing, but their
+ * planted ratings and findings are fixtures rather than observations about
+ * the product. Keep them in verification and mode accounting while preventing
+ * them from steering player-facing hot spots or experience metrics. Structural
+ * smoke reports remain actionable QA evidence.
+ */
+export function contributesToActionableFeedback(interview: ExitInterview): boolean {
+  return !(isStructuralExitInterviewV2(interview) && interview.structural_kind === "mock");
+}
 
 function resolveReport(
   filePath: string,
@@ -500,6 +515,7 @@ function renderHotspotsMarkdown(
   file: HotspotsFile,
   rows: readonly HotspotRenderRow[],
   evidence: FeedbackEvidenceSummary,
+  excludedMockReports: number,
 ): string {
   const lines: string[] = [];
   lines.push("# Feedback Hotspots");
@@ -512,13 +528,17 @@ function renderHotspotsMarkdown(
   lines.push(`- Report dirs: ${file.inputs.report_dirs.join(", ") || "(none)"}`);
   lines.push(`- Crawl files: ${file.inputs.crawl_files.join(", ") || "(none)"}`);
   lines.push(`- Verified reports: ${file.inputs.verified_reports}`);
+  lines.push(`- Actionable product reports: ${file.inputs.actionable_reports}`);
   lines.push(`- Rejected reports: ${file.inputs.rejected_reports}`);
   lines.push(`- Crawl findings: ${file.inputs.crawl_findings}`);
   lines.push(
     `- Verified report modes: pure ${evidence.report_modes.pure}, structural ${evidence.report_modes.structural}, legacy-guided ${evidence.report_modes.legacy_guided}`,
   );
   lines.push(
-    "- Experience metrics and hot spots include every verified mode; only the pure count below is retention evidence.",
+    "- Experience metrics and hot spots include pure, legacy-guided, and structural smoke reports; deterministic structural mocks remain verified QA artifacts but are excluded from product evidence.",
+  );
+  lines.push(
+    `- Deterministic structural mocks excluded from product evidence: ${excludedMockReports}`,
   );
   lines.push("");
 
@@ -647,6 +667,7 @@ function renderHotspotsMarkdown(
 export function compileFeedback(opts: CompileOptions): {
   file: HotspotsFile;
   evidence: FeedbackEvidenceSummary;
+  excludedMockReports: number;
   jsonPath: string;
   mdPath: string;
   retentionPath: string;
@@ -654,9 +675,13 @@ export function compileFeedback(opts: CompileOptions): {
   const idx = buildLocationIndex(opts.root);
   const collected = collectInputs(opts.root, opts.inputs);
   const evidence = summarizeFeedbackEvidence(collected.interviews);
+  const actionableInterviews = collected.interviews.filter(({ interview }) =>
+    contributesToActionableFeedback(interview),
+  );
+  const excludedMockReports = collected.interviews.length - actionableInterviews.length;
 
   const issues = [
-    ...fleetIssueRecords(collected.interviews, idx),
+    ...fleetIssueRecords(actionableInterviews, idx),
     ...crawlerIssueRecords(collected.crawlFindings, collected.crawlFindingRefs, idx),
   ];
   const clusters = clusterIssues(issues);
@@ -676,12 +701,12 @@ export function compileFeedback(opts: CompileOptions): {
     ? { hotspot_id: shortHash(recommendation.hotspot_id), rationale: recommendation.rationale }
     : null;
 
-  const targetInterviews: TargetInterview[] = collected.interviews.map((r) => ({
+  const targetInterviews: TargetInterview[] = actionableInterviews.map((r) => ({
     target: r.target,
     persona: r.persona,
     interview: r.interview,
   }));
-  const personaInterviews: PersonaInterview[] = collected.interviews.map((r) => ({
+  const personaInterviews: PersonaInterview[] = actionableInterviews.map((r) => ({
     persona: r.persona,
     interview: r.interview,
   }));
@@ -694,6 +719,8 @@ export function compileFeedback(opts: CompileOptions): {
       report_dirs: collected.reportDirs,
       crawl_files: collected.crawlFiles,
       verified_reports: collected.verified,
+      actionable_reports: actionableInterviews.length,
+      excluded_mock_reports: excludedMockReports,
       rejected_reports: collected.rejected,
       crawl_findings: collected.crawlFindings.length,
     },
@@ -718,7 +745,11 @@ export function compileFeedback(opts: CompileOptions): {
     distinctReports: new Set(cluster.issues.map((issue) => issue.ref)).size,
   }));
   const mdPath = join(opts.outDir, "hotspots.md");
-  writeFileSync(mdPath, renderHotspotsMarkdown(validated, rows, evidence), "utf8");
+  writeFileSync(
+    mdPath,
+    renderHotspotsMarkdown(validated, rows, evidence, excludedMockReports),
+    "utf8",
+  );
 
-  return { file: validated, evidence, jsonPath, mdPath, retentionPath };
+  return { file: validated, evidence, excludedMockReports, jsonPath, mdPath, retentionPath };
 }

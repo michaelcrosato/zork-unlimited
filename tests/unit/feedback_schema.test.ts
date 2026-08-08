@@ -37,6 +37,8 @@ function validHotspotsFile() {
       report_dirs: ["blind-tester/reports"],
       crawl_files: ["crawl-results/latest.json"],
       verified_reports: 12,
+      actionable_reports: 10,
+      excluded_mock_reports: 2,
       rejected_reports: 2,
       crawl_findings: 5,
     },
@@ -54,7 +56,7 @@ function validHotspotsFile() {
       },
     ],
     sycophancy: {
-      reports: 4,
+      reports: 10,
       zero_negative_rate: 0.25,
       clarity_histogram: [0, 1, 1, 1, 1],
       enjoyment_histogram: [0, 0, 1, 1, 2],
@@ -117,7 +119,15 @@ describe("hotspots file schema", () => {
   });
 
   it("enforces the version literal", () => {
-    const result = HotspotsFileSchema.safeParse({ ...validHotspotsFile(), version: 2 });
+    const result = HotspotsFileSchema.safeParse({ ...validHotspotsFile(), version: 1 });
+    expect(result.success).toBe(false);
+  });
+
+  it("requires product-evidence provenance counts to reconcile", () => {
+    const result = HotspotsFileSchema.safeParse({
+      ...validHotspotsFile(),
+      inputs: { ...validHotspotsFile().inputs, actionable_reports: 11 },
+    });
     expect(result.success).toBe(false);
   });
 });
