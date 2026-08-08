@@ -120,7 +120,7 @@ export interface PureFleetRunArtifactPaths {
 }
 
 export function pureFleetRunArtifactPaths(reportPath: string): PureFleetRunArtifactPaths {
-  const prefix = reportPath.endsWith(".md") ? reportPath.slice(0, -".md".length) : reportPath;
+  const prefix = /\.md$/iu.test(reportPath) ? reportPath.slice(0, -".md".length) : reportPath;
   return {
     report: reportPath,
     runSidecar: `${prefix}.run.json`,

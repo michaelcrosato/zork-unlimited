@@ -98,6 +98,11 @@ failures by default).
 **Feedback-compile ownership.** The cycle prompt tells the operating agent to
 count actionable verified artifacts (never deterministic structural mocks) and
 invoke `npm run feedback:compile` at the threshold.
+The no-flags compiler discovers both the local `blind-tester/reports` ledger
+and pure V2 `ai-runs/<cycle>/playtest.*` publication candidates, plus the newest
+crawl findings; existing report/receipt/provider gates still decide admission,
+and copied pure runs are counted once after full verification. Discovery does
+not imply current-HEAD freshness or define a new feedback cohort.
 `loop.sh` itself does not perform that count or call the compiler; it enforces the
 subsequent crawl, health, integrity, playtest, and ledger-only gates. This makes
 the current implementation boundary explicit rather than presenting the protocol
@@ -203,7 +208,7 @@ npm run crawl:smoke               # the crawl gate itself, run standalone (docs/
 npm run blind                     # canonical pure player, fresh overworld
 npm run fleet -- --count 100      # milestone/harvest pure fleet (real tokens)
 npm run fleet:mock -- --count 2   # explicit structural, zero-token dry run
-npm run feedback:compile          # compile hot spots + mode-separated pure retention evidence
+npm run feedback:compile          # compile ledger + cycle evidence + crawl hot spots/retention
 ```
 
 `loop.sh` installs missing root and UI dependencies before starting cycles because

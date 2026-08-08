@@ -1,0 +1,39 @@
+id: bug_0542
+title: "Verified cycle playtests were absent from default feedback compilation"
+pack: n/a (feedback and AFK-loop tooling)
+reported_by: 2026-08-08 AFK feedback-provenance audit
+severity: S3
+symptom: >
+  Cycle-directed pure playtests published build-bound V2 report bundles under
+  ai-runs/<cycle>/playtest.*, but the no-flags feedback compiler scanned only the local
+  blind-tester/reports directory and newest crawl output. Current player evidence therefore
+  failed to reach retention summaries or product triage. Passing cycle reports explicitly
+  also cited every one as playtest.md, collapsing evidence attribution onto one ref.
+root_cause: >
+  bin/feedback.ts had a closed default input list. collectInputs used report basenames as
+  universal evidence identity, joined all basenames against fleet manifests, and had no
+  verified-run deduplication boundary. It could neither discover the canonical cycle path
+  nor safely distinguish it from copied or manifest-colliding reports.
+fix: >
+  Discover only immediate ISO-stamped playtest.md publications with regular adjacent pure
+  V2 sidecars, then pass them through the unchanged report/receipt/provider authority gates.
+  Give non-ledger evidence stable repository-relative in-root refs or opaque external refs,
+  restrict basename manifest joins to canonical fleet ledger names, and deduplicate pure
+  copies by the canonical parsed sidecar only after successful verification. Explicit --in
+  arguments still replace defaults.
+  This closes discovery and identity only; current-revision cohort freshness remains separate.
+deterministic_witnesses:
+  - "default discovery includes sorted report + parseable pure-V2 sidecar candidates and newest crawl"
+  - "legacy V1, structural, malformed, partial, nested, and alternate-name bundles stay out"
+  - "two cycle sessions retain distinct ai-runs/<cycle>/playtest.md evidence refs"
+  - "a fleet manifest row named playtest.md cannot relabel cycle evidence"
+  - "reformatted copies of one verified pure sidecar count once; distinct sessions count twice"
+  - "an invalid earlier copy cannot suppress a later authority-verified publication"
+tests:
+  - tests/regression/feedback_cycle_input_discovery.test.ts
+  - tests/unit/feedback_compile.test.ts
+verification:
+  - npx vitest run tests/regression/feedback_cycle_input_discovery.test.ts tests/unit/feedback_compile.test.ts
+  - npm run feedback:compile
+  - npm run crawl:smoke
+  - npm run health

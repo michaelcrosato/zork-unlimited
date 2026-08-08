@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, beforeAll } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { collectInputs, compileFeedback } from "../../src/feedback/compile.js";
@@ -10,8 +17,10 @@ import {
 } from "../../src/feedback/evidence_summary.js";
 import { PureExitInterviewV2Schema } from "../../src/blind/exit_interview.js";
 import { HotspotsFileSchema } from "../../src/feedback/schema.js";
+import { resolveFeedbackInputs } from "../../src/feedback/inputs.js";
 import { CrawlFindingSchema, type CrawlFinding } from "../../src/crawl/findings.js";
 import { hashState } from "../../src/core/hash.js";
+import { pureFleetRunArtifactPaths } from "../../src/starting_slice/fleet_run_artifacts.js";
 
 // Three hand-written, verifier-passing report skeletons (a real "Playthrough
 // log"/"Verdict"/clarity+enjoyment rating section plus a fenced exit-interview
@@ -613,6 +622,12 @@ beforeAll(() => {
 });
 
 describe("collectInputs", () => {
+  it("derives pure bundle siblings from a case-varied markdown suffix", () => {
+    expect(pureFleetRunArtifactPaths("C:/evidence/PLAYTEST.MD").runSidecar).toBe(
+      "C:/evidence/PLAYTEST.run.json",
+    );
+  });
+
   it("excludes a rejected report from the verified count and interview list", () => {
     const result = collectInputs(process.cwd(), [reportsDir]);
     expect(result.verified).toBe(2);
@@ -709,6 +724,272 @@ describe("collectInputs", () => {
       rejected: 1,
     });
   });
+
+  it("keeps canonical cycle refs unique and immune to fleet-manifest basename collisions", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-cycle-refs-"));
+    const writeCycle = (stamp: string, proofCharacter: string, providerSession: string) => {
+      const dir = join(root, "ai-runs", stamp);
+      mkdirSync(dir, { recursive: true });
+      const base = join(dir, "playtest");
+      const fixture = pureReportAndSidecar({ proofCharacter });
+      writeFileSync(`${base}.md`, fixture.report);
+      writeCodexGameplayArtifacts(base, fixture.report, fixture.sidecar, {
+        session: providerSession,
+      });
+      return `${base}.md`;
+    };
+    const first = writeCycle(
+      "2026-08-08T20-00-00-001Z",
+      "d",
+      "319f7250-1ed0-7102-be6c-4f1d5513d91e",
+    );
+    const second = writeCycle(
+      "2026-08-08T20-00-00-002Z",
+      "e",
+      "419f7250-1ed0-7102-be6c-4f1d5513d91e",
+    );
+    const fleetDir = join(root, "ai-runs", "fleet", "basename-collision");
+    mkdirSync(fleetDir, { recursive: true });
+    writeFileSync(
+      join(fleetDir, "manifest.jsonl"),
+      `${JSON.stringify({ report: "playtest.md", persona: "speedrunner", target: "quest:wolf_winter" })}\n`,
+    );
+
+    const result = collectInputs(root, [first, second]);
+    expect(result).toMatchObject({ verified: 2, rejected: 0 });
+    expect(result.interviews).toEqual([
+      expect.objectContaining({
+        ref: "ai-runs/2026-08-08T20-00-00-001Z/playtest.md",
+        persona: null,
+        target: "overworld",
+      }),
+      expect.objectContaining({
+        ref: "ai-runs/2026-08-08T20-00-00-002Z/playtest.md",
+        persona: null,
+        target: "overworld",
+      }),
+    ]);
+  });
+
+  it("admits discovered default cycle evidence only through the full authority gate", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-cycle-default-admission-"));
+    mkdirSync(join(root, "blind-tester", "reports"), { recursive: true });
+    const cycleDir = join(root, "ai-runs", "2026-08-08T20-00-00-010Z");
+    mkdirSync(cycleDir, { recursive: true });
+    const base = join(cycleDir, "playtest");
+    const fixture = pureReportAndSidecar({ proofCharacter: "b" });
+    writeFileSync(`${base}.md`, fixture.report);
+    writeCodexGameplayArtifacts(base, fixture.report, fixture.sidecar, {
+      session: "619f7250-1ed0-7102-be6c-4f1d5513d91e",
+    });
+
+    const inputs = resolveFeedbackInputs(root, []);
+    expect(inputs).toEqual([
+      "blind-tester/reports",
+      "ai-runs/2026-08-08T20-00-00-010Z/playtest.md",
+    ]);
+    const result = collectInputs(root, inputs);
+    expect(result).toMatchObject({ verified: 1, rejected: 0 });
+    expect(result.interviews[0]).toMatchObject({
+      ref: "ai-runs/2026-08-08T20-00-00-010Z/playtest.md",
+      target: "overworld",
+    });
+  });
+
+  it("deduplicates copied pure runs by parsed sidecar identity after full verification", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-cycle-dedupe-"));
+    const fixture = pureReportAndSidecar({ proofCharacter: "f" });
+    const ledgerDir = join(root, "blind-tester", "reports");
+    const cycleDir = join(root, "ai-runs", "2026-08-08T20-00-00-003Z");
+    mkdirSync(ledgerDir, { recursive: true });
+    mkdirSync(cycleDir, { recursive: true });
+    const ledgerBase = join(ledgerDir, "20260808T200000Z_overworld_seed7");
+    const cycleBase = join(cycleDir, "playtest");
+    writeFileSync(`${ledgerBase}.md`, fixture.report);
+    writeCodexGameplayArtifacts(ledgerBase, fixture.report, fixture.sidecar);
+    writeFileSync(`${cycleBase}.md`, fixture.report);
+    writeCodexGameplayArtifacts(cycleBase, fixture.report, fixture.sidecar);
+
+    // Formatting/key whitespace is not report identity; collectInputs hashes the
+    // parsed sidecar after authority verification rather than its raw bytes.
+    const parsedCycleSidecar = JSON.parse(readFileSync(`${cycleBase}.run.json`, "utf8"));
+    writeFileSync(`${cycleBase}.run.json`, `${JSON.stringify(parsedCycleSidecar, null, 2)}\n`);
+
+    const result = collectInputs(root, [ledgerDir, `${cycleBase}.md`, `${cycleBase}.md`]);
+    expect(result).toMatchObject({ verified: 1, rejected: 0 });
+    expect(result.interviews).toHaveLength(1);
+    expect(result.interviews[0]!.ref).toBe("20260808T200000Z_overworld_seed7.md");
+  });
+
+  it("does not let an invalid first copy suppress a later verified pure run", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-cycle-invalid-copy-"));
+    const fixture = pureReportAndSidecar({ proofCharacter: "c" });
+    const ledgerDir = join(root, "blind-tester", "reports");
+    const cycleDir = join(root, "ai-runs", "2026-08-08T20-00-00-004Z");
+    mkdirSync(ledgerDir, { recursive: true });
+    mkdirSync(cycleDir, { recursive: true });
+    writeFileSync(join(ledgerDir, "20260808T200001Z_overworld_seed7.md"), fixture.report);
+    const cycleBase = join(cycleDir, "playtest");
+    writeFileSync(`${cycleBase}.md`, fixture.report);
+    writeCodexGameplayArtifacts(cycleBase, fixture.report, fixture.sidecar);
+
+    const result = collectInputs(root, [ledgerDir, `${cycleBase}.md`]);
+    expect(result).toMatchObject({ verified: 1, rejected: 1 });
+    expect(result.interviews[0]!.ref).toBe("ai-runs/2026-08-08T20-00-00-004Z/playtest.md");
+  });
+
+  it("retains independent sessions even when their exit receipts are identical", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-cycle-distinct-sessions-"));
+    const fixture = pureReportAndSidecar({ proofCharacter: "a" });
+    const paths: string[] = [];
+    for (const [index, sessionId] of ["o-h-one", "o-h-two"].entries()) {
+      const dir = join(root, "ai-runs", `2026-08-08T20-00-00-00${index + 5}Z`);
+      mkdirSync(dir, { recursive: true });
+      const base = join(dir, "playtest");
+      const sidecar = JSON.parse(fixture.sidecar) as Record<string, unknown>;
+      sidecar.session_id = sessionId;
+      writeFileSync(`${base}.md`, fixture.report);
+      writeCodexGameplayArtifacts(base, fixture.report, JSON.stringify(sidecar), {
+        session: `${index + 5}19f7250-1ed0-7102-be6c-4f1d5513d91e`,
+      });
+      paths.push(`${base}.md`);
+    }
+
+    const result = collectInputs(root, paths);
+    expect(result).toMatchObject({ verified: 2, rejected: 0 });
+    expect(new Set(result.interviews.map((interview) => interview.ref)).size).toBe(2);
+  });
+
+  it("requires pure evidence for a canonical cycle report slot", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-cycle-mode-"));
+    const dir = join(root, "ai-runs", "2026-08-08T20-00-00-007Z");
+    mkdirSync(dir, { recursive: true });
+    const report = join(dir, "playtest.md");
+    writeFileSync(report, REPORT_A);
+    expect(collectInputs(root, [report])).toMatchObject({ verified: 0, rejected: 1 });
+
+    writeFileSync(report, structuralReport());
+    writeFileSync(
+      join(dir, "playtest.run.json"),
+      JSON.stringify({
+        schema_version: 1,
+        report_schema_version: 2,
+        play_mode: "structural",
+        start_surface: "fresh_overworld",
+        retention_eligible: false,
+        evidence_status: "not_applicable",
+        structural_kind: "mock",
+      }),
+    );
+    expect(collectInputs(root, [report])).toMatchObject({ verified: 0, rejected: 1 });
+  });
+
+  it.runIf(process.platform === "win32")(
+    "keeps canonical pure-mode enforcement through Windows path-case aliases",
+    () => {
+      const root = mkdtempSync(join(tmpdir(), "feedback-cycle-case-alias-"));
+      const dir = join(root, "ai-runs", "2026-08-08T20-00-00-012Z");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "playtest.md"), structuralReport());
+      writeFileSync(
+        join(dir, "playtest.run.json"),
+        JSON.stringify({
+          schema_version: 1,
+          report_schema_version: 2,
+          play_mode: "structural",
+          start_surface: "fresh_overworld",
+          retention_eligible: false,
+          evidence_status: "not_applicable",
+          structural_kind: "mock",
+        }),
+      );
+      const aliased = join(root, "AI-RUNS", "2026-08-08T20-00-00-012Z", "PLAYTEST.MD");
+      expect(collectInputs(root, [aliased])).toMatchObject({ verified: 0, rejected: 1 });
+
+      const fixture = pureReportAndSidecar({ proofCharacter: "c" });
+      const base = join(dir, "playtest");
+      writeFileSync(`${base}.md`, fixture.report);
+      writeCodexGameplayArtifacts(base, fixture.report, fixture.sidecar, {
+        session: "719f7250-1ed0-7102-be6c-4f1d5513d91e",
+      });
+      expect(collectInputs(root, [aliased])).toMatchObject({ verified: 1, rejected: 0 });
+    },
+  );
+
+  it.runIf(process.platform === "win32")(
+    "preserves fleet-ledger metadata through Windows filename-case aliases",
+    () => {
+      const root = mkdtempSync(join(tmpdir(), "feedback-ledger-case-alias-"));
+      const reports = join(root, "reports");
+      const fleetDir = join(root, "ai-runs", "fleet", "case-alias");
+      mkdirSync(reports, { recursive: true });
+      mkdirSync(fleetDir, { recursive: true });
+      const fileName = "20260808T200000Z_wolf_winter_seed7.md";
+      const base = join(reports, fileName.slice(0, -".md".length));
+      const fixture = pureReportAndSidecar({ proofCharacter: "d" });
+      writeFileSync(`${base}.md`, fixture.report);
+      writeCodexGameplayArtifacts(base, fixture.report, fixture.sidecar, {
+        session: "819f7250-1ed0-7102-be6c-4f1d5513d91e",
+      });
+      writeFileSync(
+        join(fleetDir, "manifest.jsonl"),
+        `${JSON.stringify({ report: fileName, persona: "completionist", target: "quest:wolf_winter" })}\n`,
+      );
+
+      const aliased = join(reports, fileName.toLocaleUpperCase("en-US"));
+      const result = collectInputs(root, [aliased]);
+      expect(result).toMatchObject({ verified: 1, rejected: 0 });
+      expect(result.interviews[0]).toMatchObject({
+        ref: fileName,
+        persona: "completionist",
+        target: "quest:wolf_winter",
+      });
+    },
+  );
+
+  it("keeps a symlinked canonical cycle slot pure-only", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-cycle-linked-slot-"));
+    const external = mkdtempSync(join(tmpdir(), "feedback-cycle-linked-source-"));
+    mkdirSync(join(root, "ai-runs"), { recursive: true });
+    writeFileSync(join(external, "playtest.md"), structuralReport());
+    writeFileSync(
+      join(external, "playtest.run.json"),
+      JSON.stringify({
+        schema_version: 1,
+        report_schema_version: 2,
+        play_mode: "structural",
+        start_surface: "fresh_overworld",
+        retention_eligible: false,
+        evidence_status: "not_applicable",
+        structural_kind: "mock",
+      }),
+    );
+    const linked = join(root, "ai-runs", "2026-08-08T20-00-00-013Z");
+    symlinkSync(external, linked, process.platform === "win32" ? "junction" : "dir");
+    expect(collectInputs(root, [join(linked, "playtest.md")])).toMatchObject({
+      verified: 0,
+      rejected: 1,
+    });
+  });
+
+  it("gives same-named explicit reports outside the root distinct opaque refs", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-external-root-"));
+    const firstDir = mkdtempSync(join(tmpdir(), "feedback-external-a-"));
+    const secondDir = mkdtempSync(join(tmpdir(), "feedback-external-b-"));
+    const fileName = "20260808T200000Z_overworld_seed7.md";
+    const first = join(firstDir, fileName);
+    const second = join(secondDir, fileName);
+    writeFileSync(first, REPORT_A);
+    writeFileSync(second, REPORT_B);
+
+    const result = collectInputs(root, [first, second]);
+    expect(result).toMatchObject({ verified: 2, rejected: 0 });
+    expect(result.interviews.map((interview) => interview.ref)).toEqual([
+      expect.stringMatching(/^external\/[0-9a-f]{8}\/20260808T200000Z_overworld_seed7\.md$/u),
+      expect.stringMatching(/^external\/[0-9a-f]{8}\/20260808T200000Z_overworld_seed7\.md$/u),
+    ]);
+    expect(new Set(result.interviews.map((interview) => interview.ref)).size).toBe(2);
+  });
 });
 
 describe("compileFeedback", () => {
@@ -741,6 +1022,39 @@ describe("compileFeedback", () => {
 
     const md = readFileSync(mdPath, "utf8");
     expect(md).toContain("Recommended next fix");
+  });
+
+  it("keeps all persisted counts unique when the same verified pure run is copied", () => {
+    const dir = mkdtempSync(join(tmpdir(), "feedback-compile-dedupe-input-"));
+    const fixture = pureReportAndSidecar({ proofCharacter: "d" });
+    for (const [stamp, seed] of [
+      ["20260101T000030Z", 30],
+      ["20260101T000031Z", 31],
+    ] as const) {
+      const base = join(dir, `${stamp}_overworld_seed${seed}`);
+      writeFileSync(`${base}.md`, fixture.report);
+      writeFileSync(`${base}.run.json`, fixture.sidecar);
+    }
+    const outDir = mkdtempSync(join(tmpdir(), "feedback-compile-dedupe-out-"));
+    const { file, evidence } = compileFeedback({
+      root: process.cwd(),
+      inputs: [dir],
+      outDir,
+      topK: 5,
+      llmLabels: false,
+      prevDir: null,
+    });
+
+    expect(file.inputs).toMatchObject({
+      verified_reports: 1,
+      actionable_reports: 1,
+      excluded_mock_reports: 0,
+      rejected_reports: 0,
+    });
+    expect(file.metrics).toEqual([expect.objectContaining({ target: "overworld", reports: 1 })]);
+    expect(file.sycophancy.reports).toBe(1);
+    expect(evidence.report_modes).toEqual({ pure: 1, structural: 0, legacy_guided: 0 });
+    expect(evidence.pure_retention.eligible_reports).toBe(1);
   });
 
   it("separates report modes and summarizes game choices from sidecar-gated pure exits", () => {
