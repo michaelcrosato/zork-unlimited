@@ -18,7 +18,6 @@ import { hashState } from "../../src/core/hash.js";
 import { rngForStep } from "../../src/core/rng.js";
 import { save, load } from "../../src/persist/save_load.js";
 import type { RpgAction } from "../../src/api/types.js";
-import { microRules, microInitState, MICRO_CONTENT_HASH } from "../../src/demo/micro.js";
 import type { Rules } from "../../src/core/engine.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -33,7 +32,8 @@ const ILLEGAL_REASON = "That action is not available right now.";
  * objectState, no quest stages, no dialogue. Determinism and purity held there
  * trivially, because almost none of the state the engine actually carries existed to
  * be non-deterministic or mutated. Properties are what establish correctness here, so
- * they belong on shipped content; the toy stays as the fast, minimal witness.
+ * they run only on shipped content. Unit tests retain the toy as a minimal engine
+ * witness; it is not evidence for the production state graph.
  */
 type Subject = {
   label: string;
@@ -58,13 +58,6 @@ function shippedSubject(path: string, label: string, maxSteps: number): Subject 
 }
 
 const SUBJECTS: Subject[] = [
-  {
-    label: "demo/micro",
-    rules: microRules,
-    initState: microInitState,
-    contentHash: MICRO_CONTENT_HASH,
-    maxSteps: 20,
-  },
   // The smallest shipped quest: real rooms, objects, containers, an NPC, combat, and a
   // score var, so the state graph these properties quantify over is the real one.
   shippedSubject("content/rpg/quests/sunken_barrow.yaml", "sunken_barrow", 40),

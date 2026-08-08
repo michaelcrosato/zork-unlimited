@@ -1,4 +1,4 @@
-id: bug_0113
+id: bug_0113_winnability_proof_contract_honest
 title: "The RPG combat-winnability proof's contract is now honest — best-case lower bound, not a worst-case-roll survival guarantee"
 kind: validator
 mode: rpg

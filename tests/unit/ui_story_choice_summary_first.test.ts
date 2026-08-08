@@ -57,6 +57,12 @@ function ledgerReliefOathJourney(): ReturnType<OverworldSession["journey"]> {
   return session.journey();
 }
 
+function revealCurrentStoryOptions(session: OverworldSession): void {
+  const story = session.journey().storyChoice;
+  const disclosure = story?.progressiveDisclosure;
+  if (story && disclosure) session.revealJourneyStory(story.id, disclosure.reveal.id);
+}
+
 function leadSourceJourney(): ReturnType<OverworldSession["journey"]> {
   const session = new OverworldSession(WORLD);
   const registration = WORLD.opening_registration!;
@@ -64,6 +70,7 @@ function leadSourceJourney(): ReturnType<OverworldSession["journey"]> {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
   session.chooseJourneyStory(registration.profiles[0]!.id);
+  revealCurrentStoryOptions(session);
   session.chooseJourneyStory(oath.options[0]!.id);
   return session.journey();
 }
@@ -80,6 +87,7 @@ function preparationJourney(): ReturnType<OverworldSession["journey"]> {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
   session.chooseJourneyStory(registration.profiles[0]!.id);
+  revealCurrentStoryOptions(session);
   session.chooseJourneyStory(oath.options[0]!.id);
   session.chooseJourneyStory(source.options[0]!.id);
   const route = session
@@ -104,6 +112,7 @@ function reliefAllocationJourney(): ReturnType<OverworldSession["journey"]> {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
   session.chooseJourneyStory(registration.profiles[0]!.id);
+  revealCurrentStoryOptions(session);
   session.chooseJourneyStory(oath.options[0]!.id);
   session.chooseJourneyStory(source.options[0]!.id);
   const route = session
@@ -126,6 +135,7 @@ function allyJourney(): ReturnType<OverworldSession["journey"]> {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
   session.chooseJourneyStory(registration.profiles[0]!.id);
+  revealCurrentStoryOptions(session);
   session.chooseJourneyStory(oath.options[0]!.id);
   session.chooseJourneyStory(source.options[0]!.id);
   const route = session
@@ -389,14 +399,22 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
           "Expected the Road-Warden relief oath to offer a progressive standard packet.",
         );
       }
-      await act(async () => {
-        root!.render(
-          react.createElement(module.JourneyStoryChoiceScreen, {
-            journey: standardPacketJourney,
-            onChoose: (choiceId: string) => selected.push(choiceId),
-          }),
-        );
-      });
+      const revealRequests: Array<[string, string]> = [];
+      const renderStandardPacket = async (visibleOptionIds?: readonly string[]): Promise<void> => {
+        await act!(async () => {
+          root!.render(
+            react.createElement(module.JourneyStoryChoiceScreen, {
+              journey: standardPacketJourney,
+              onChoose: (choiceId: string) => selected.push(choiceId),
+              onReveal: (storyChoiceId: string, revealId: string) => {
+                revealRequests.push([storyChoiceId, revealId]);
+              },
+              ...(visibleOptionIds ? { visibleOptionIds } : {}),
+            }),
+          );
+        });
+      };
+      await renderStandardPacket();
       const standardPacketButtons = Array.from(
         rootElement.querySelectorAll(".journey-choice-card > button"),
       ) as Array<{ click: () => void; textContent: string | null }>;
@@ -454,15 +472,23 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         customize.click();
       });
       expect(selected).toEqual(selectedBeforeCustomize);
-      expect(customize.getAttribute("aria-expanded")).toBe("true");
+      expect(revealRequests).toEqual([
+        [standardPacketChoice.id, standardPacketChoice.progressiveDisclosure.reveal.id],
+      ]);
+      await renderStandardPacket([
+        ...standardPacketChoice.progressiveDisclosure.initialOptionIds,
+        ...standardPacketChoice.progressiveDisclosure.reveal.optionIds,
+      ]);
+      const expandedCustomize = rootElement.querySelector(
+        ".journey-choice-progressive-disclosure > button",
+      ) as { click: () => void; getAttribute: (name: string) => string | null } | null;
+      if (!expandedCustomize) throw new Error("Expected the expanded disclosure button.");
+      expect(expandedCustomize.getAttribute("aria-expanded")).toBe("true");
       await act(async () => {
-        customize.click();
+        expandedCustomize.click();
       });
       expect(selected).toEqual(selectedBeforeCustomize);
-      expect(customize.getAttribute("aria-expanded")).toBe("false");
-      await act(async () => {
-        customize.click();
-      });
+      expect(revealRequests).toHaveLength(1);
       const revealedCards = Array.from(
         rootElement.querySelectorAll(`[id="${customSectionId}"] .journey-choice-card > button`),
       ) as Array<{ textContent: string | null; click: () => void }>;

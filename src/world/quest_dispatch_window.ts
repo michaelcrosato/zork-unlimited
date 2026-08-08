@@ -117,7 +117,6 @@ export type QuestDispatchWindowInputs = Readonly<{
   openingPreparation?: OpeningPreparation | null;
   openingReliefAllocation?: OpeningReliefAllocation | null;
   openingAlly?: OpeningAlly | null;
-  trustedLegacySourceWorldHash?: string | null;
 }>;
 
 export type QuestDispatchLaunchSealSlot = Readonly<
@@ -214,10 +213,8 @@ function authenticatedDispatchState(
     registrationProof,
     journalEntries: args.journalEntries,
     expectedTown: null,
-    trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
   });
   if (
-    reliefOathProof.legacy ||
     !reliefOathProof.option ||
     !reliefOathProof.terms ||
     !reliefOathProof.selectionBoundary ||
@@ -247,9 +244,7 @@ function authenticatedDispatchState(
     leadSourceProof,
     journalEntries: args.journalEntries,
     expectedTown: null,
-    trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
   });
-  if (preparationProof.legacy) return null;
 
   const reliefAllocationProof = proveOpeningReliefAllocationJournal({
     scene: args.openingReliefAllocation!,
@@ -258,9 +253,7 @@ function authenticatedDispatchState(
     preparationScene: args.openingPreparation!,
     journalEntries: args.journalEntries,
     expectedTown: null,
-    trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
   });
-  if (reliefAllocationProof.legacy) return null;
 
   const allyProof = proveOpeningAllyJournal({
     scene: args.openingAlly!,
@@ -271,9 +264,7 @@ function authenticatedDispatchState(
     reliefAllocationScene: args.openingReliefAllocation!,
     journalEntries: args.journalEntries,
     expectedTown: null,
-    trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
   });
-  if (allyProof.legacy) return null;
 
   const preparation =
     preparationProof.profile &&

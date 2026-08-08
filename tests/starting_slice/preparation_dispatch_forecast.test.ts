@@ -14,9 +14,11 @@ import {
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
+const RELIEF_OATH = WORLD.opening_relief_oath!;
 const PREPARATION = WORLD.opening_preparation!;
 const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
@@ -41,6 +43,7 @@ function preparationSession(
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(args.registrationId ?? "albany:road_warden");
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory(args.oathId ?? "albany:oath_limited_aid_only");
   session.chooseJourneyStory(args.sourceId ?? "albany:source_jamie_market_testimony");
   moveToPreparation(session);
@@ -269,6 +272,7 @@ function preparationSessionForUi(): UiOverworldSession {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory("albany:road_warden");
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_jamie_market_testimony");
   const route = session

@@ -254,34 +254,6 @@ describe("overworld quest launch", () => {
         LAUNCH.options[1]!.return_summary,
     );
     expect(plan.quest.launch).toBeUndefined();
-
-    const legacyPlan = planOverworldQuestCompletion({
-      questId: quest.id,
-      outcome: { endingId: "test_ending", endingTitle: "Test Ending", death: false },
-      character: createInitialCampaignCharacterState(),
-      questsById: new Map([[quest.id, quest]]),
-      areasById: new Map([[area.id, area]]),
-      nodesById: new Map([[node.id, node]]),
-      questOutcomeIds: new Map(),
-      startedQuestIds: new Set([quest.id]),
-      journalEntriesById: new Map([
-        [
-          startEntry.id,
-          {
-            ...startEntry,
-            questStartProof: {
-              kind: "legacy",
-              sourceWorldHash: "1".repeat(64),
-              boundary: { ...startEntry.questStartProof!.boundary },
-            },
-          },
-        ],
-      ]),
-    });
-    expect(legacyPlan.entryDraft.text).toBe(
-      "The quest closed at Test Ending after 130 minutes of local work.",
-    );
-    expect(legacyPlan.quest.launch).toBeUndefined();
   });
 
   it("applies only the authored character effects to a detached character", () => {

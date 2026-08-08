@@ -52,7 +52,8 @@ improvement:
         gating/reachable-ending change; the route still wins ending_victory at 35/35 on `go_north`.
 verification:
   - validate_pack content/parser/pack/sealed_crypt.yaml          # ok:true, findings:[] (variants/narration carry no effects; reachability/scoring unaffected)
-  - live MCP replay (seed 29): full win route → at the gate-unlock step score=35/35, the unlock narration AND the open-gate room text both name the north step; go_north → ending_victory, "Final score: 35 of 35", ended:true
+  - >-
+    live MCP replay (seed 29): full win route → at the gate-unlock step score=35/35, the unlock narration AND the open-gate room text both name the north step; go_north → ending_victory, "Final score: 35 of 35", ended:true
   - npm run health                                               # exit 0 (verify:integrity static + typecheck + ESLint + Prettier + tests + every pack validate + watchtower coverage + mandated playtest record present)
 locked_by:
   - tests/regression/sealed_crypt_final_step_legibility.test.ts  # before unlock: gate "bars the way", no north exit; at unlock: narration + open-gate text both point north, north exit present, score 35; full route still wins ending_victory 35/35

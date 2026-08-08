@@ -421,11 +421,7 @@ describe("opening registration journal", () => {
     ).toThrow(/no replayable opening offer/i);
   });
 
-  it.each([
-    ["id", { id: "registration_offer:albany:forged" }],
-    ["title", { title: "Forged opening title" }],
-    ["text", { text: "Forged opening instructions." }],
-  ] as const)("rejects a tampered opening-offer %s", (_field, tamper) => {
+  it("rejects a tampered opening-offer id", () => {
     const scene = registration();
     const recordedAt = timeLabel(75);
     const offer = offerEntry(scene, recordedAt);
@@ -433,10 +429,29 @@ describe("opening registration journal", () => {
     expect(() =>
       proveOpeningRegistrationJournal({
         registration: scene,
-        journalEntries: [{ ...offer, ...tamper }, contactEntry(scene, recordedAt)],
+        journalEntries: [
+          { ...offer, id: "registration_offer:albany:forged" },
+          contactEntry(scene, recordedAt),
+        ],
         expectedTown: "Albany",
       }),
-    ).toThrow(/registration offer.*does not match its authored copy/i);
+    ).toThrow(/registration offer.*unknown evidence/i);
+  });
+
+  it.each([
+    ["title", { title: "Earlier opening title" }],
+    ["text", { text: "Earlier opening instructions." }],
+  ] as const)("accepts historical opening-offer %s copy", (_field, historicalCopy) => {
+    const scene = registration();
+    const recordedAt = timeLabel(75);
+    const offer = offerEntry(scene, recordedAt);
+    expect(() =>
+      proveOpeningRegistrationJournal({
+        registration: scene,
+        journalEntries: [{ ...offer, ...historicalCopy }, contactEntry(scene, recordedAt)],
+        expectedTown: "Albany",
+      }),
+    ).not.toThrow();
   });
 
   it("rejects duplicate opening-offer evidence", () => {
@@ -457,7 +472,7 @@ describe("opening registration journal", () => {
   it.each([
     ["title", { title: "Registered: forged profile" }],
     ["text", { text: "Forged registration effects." }],
-  ] as const)("rejects tampered authored %s copy", (_field, tamper) => {
+  ] as const)("accepts historical selected %s copy", (_field, historicalCopy) => {
     const scene = registration();
     const recordedAt = timeLabel(75);
     const selectedEntry = registrationEntry(scene, PROFILE_IDS[0], recordedAt);
@@ -466,13 +481,13 @@ describe("opening registration journal", () => {
       proveOpeningRegistrationJournal({
         registration: scene,
         journalEntries: [
-          { ...selectedEntry, ...tamper },
+          { ...selectedEntry, ...historicalCopy },
           offerEntry(scene, recordedAt),
           contactEntry(scene, recordedAt),
         ],
         expectedTown: "Albany",
       }),
-    ).toThrow(/does not match its authored copy/i);
+    ).not.toThrow();
   });
 
   it("rejects evidence bound to the wrong town", () => {

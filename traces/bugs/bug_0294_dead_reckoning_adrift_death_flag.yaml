@@ -1,5 +1,5 @@
 id: bug_0294
-title: dead_reckoning ending_adrift missing death: true
+title: "dead_reckoning ending_adrift missing death: true"
 class: content_fix
 severity: data_integrity
 pack: content/cyoa/pack/dead_reckoning.yaml

@@ -75,7 +75,8 @@ within_bar: >
   synthetic-action injection would create, which no static check sees.
 result:
   shipped_packs_all_unique: true   # no reachable state of any of the 5 shipped CYOA packs ever offers two actions with the same id
-  reachable_region: default progress-action BFS — well under the 200k cap (largest: watchtower_road)
+  reachable_region: >-
+    default progress-action BFS — well under the 200k cap (largest: watchtower_road)
 regression_test: tests/regression/cyoa_action_id_unique.test.ts
 test_cases:
   - "discovers the shipped CYOA packs (guards against a vacuous pass if the glob yields nothing)"

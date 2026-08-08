@@ -20,13 +20,7 @@ import type {
 } from "./session_snapshot.js";
 
 export const OPENING_RELIEF_OATH_JOURNAL_PREFIX = "relief_oath:" as const;
-export const OPENING_RELIEF_OATH_LEGACY_JOURNAL_PREFIX = "relief_oath_legacy:" as const;
 export const OPENING_RELIEF_OATH_OFFER_JOURNAL_PREFIX = "relief_oath_offer:" as const;
-
-const WORLD_HASH_PATTERN = /^[0-9a-f]{64}$/;
-const OPENING_RELIEF_OATH_LEGACY_JOURNAL_TITLE = "Legacy journey: Albany relief oath grandfathered";
-const OPENING_RELIEF_OATH_LEGACY_JOURNAL_TEXT =
-  "This journey crossed Albany's relief-oath boundary under a trusted earlier docket. It receives no retroactive oath, access, duty, campaign-character effect, or time cost.";
 
 export type OpeningReliefOathJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">
@@ -35,8 +29,6 @@ export type OpeningReliefOathJournalDraft = Readonly<
 export type OpeningReliefOathJournalProof = Readonly<{
   characterAfterOath: CampaignCharacterState;
   offered: boolean;
-  legacy: boolean;
-  legacySourceWorldHash: string | null;
   offerBoundary: OverworldJournalDecisionBoundary | null;
   option: OpeningReliefOathOption | null;
   selectionBoundary: OverworldJournalDecisionBoundary | null;
@@ -51,12 +43,6 @@ export function openingReliefOathOfferJournalId(sceneId: string): string {
 
 export function openingReliefOathJournalId(sceneId: string, optionId: string): string {
   return `${OPENING_RELIEF_OATH_JOURNAL_PREFIX}${sceneId}:${optionId}`;
-}
-
-export function openingReliefOathLegacySourceWorldHash(entryId: string): string | null {
-  if (!entryId.startsWith(OPENING_RELIEF_OATH_LEGACY_JOURNAL_PREFIX)) return null;
-  const sourceWorldHash = entryId.slice(OPENING_RELIEF_OATH_LEGACY_JOURNAL_PREFIX.length);
-  return WORLD_HASH_PATTERN.test(sourceWorldHash) ? sourceWorldHash : null;
 }
 
 export function openingReliefOathOfferJournalDraft(
@@ -109,20 +95,6 @@ export function allOpeningReliefOathJournalDrafts(
   );
 }
 
-export function openingReliefOathLegacyJournalDraft(
-  sourceWorldHash: string,
-): OpeningReliefOathJournalDraft {
-  if (!WORLD_HASH_PATTERN.test(sourceWorldHash)) {
-    throw new Error(`Invalid legacy opening relief-oath hash "${sourceWorldHash}".`);
-  }
-  return Object.freeze({
-    id: `${OPENING_RELIEF_OATH_LEGACY_JOURNAL_PREFIX}${sourceWorldHash}`,
-    kind: "relief_oath_legacy" as const,
-    title: OPENING_RELIEF_OATH_LEGACY_JOURNAL_TITLE,
-    text: OPENING_RELIEF_OATH_LEGACY_JOURNAL_TEXT,
-  });
-}
-
 function freezeBoundary(
   boundary: OverworldJournalDecisionBoundary,
 ): OverworldJournalDecisionBoundary {
@@ -159,24 +131,6 @@ export function openingReliefOathJournalEntry(args: {
   });
 }
 
-/**
- * Migration-only evidence. Restore must supply the same trusted predecessor
- * hash to proof; an ordinary current session cannot mint this authority.
- */
-export function openingReliefOathLegacyJournalEntry(args: {
-  sourceWorldHash: string;
-  town: string;
-  recordedAt: string;
-  storyChoiceBoundary: OverworldJournalDecisionBoundary;
-}): OverworldJournalEntry {
-  return Object.freeze({
-    ...openingReliefOathLegacyJournalDraft(args.sourceWorldHash),
-    town: args.town,
-    recordedAt: args.recordedAt,
-    storyChoiceBoundary: freezeBoundary(args.storyChoiceBoundary),
-  });
-}
-
 function boundariesEqual(
   left: OverworldJournalDecisionBoundary,
   right: OverworldJournalDecisionBoundary,
@@ -194,8 +148,6 @@ function emptyReliefOathProof(character: CampaignCharacterState): OpeningReliefO
   return Object.freeze({
     characterAfterOath: cloneCampaignCharacterState(character),
     offered: false,
-    legacy: false,
-    legacySourceWorldHash: null,
     offerBoundary: null,
     option: null,
     selectionBoundary: null,
@@ -206,15 +158,14 @@ function emptyReliefOathProof(character: CampaignCharacterState): OpeningReliefO
 }
 
 /**
- * Replay the registration-adjacent relief-oath offer, its paid selection, or
- * one trusted neutral predecessor marker without trusting saved character data.
+ * Replay the registration-adjacent relief-oath offer and its paid selection
+ * without trusting saved character data.
  */
 export function proveOpeningReliefOathJournal(args: {
   scene: OpeningReliefOath | null | undefined;
   registrationProof: OpeningRegistrationJournalProof;
   journalEntries: readonly OverworldJournalEntry[];
   expectedTown: string | null;
-  trustedLegacySourceWorldHash?: string | null;
 }): OpeningReliefOathJournalProof {
   const selections = args.journalEntries
     .map((entry, index) => ({ entry, index }))
@@ -222,9 +173,6 @@ export function proveOpeningReliefOathJournal(args: {
   const offers = args.journalEntries
     .map((entry, index) => ({ entry, index }))
     .filter(({ entry }) => entry.kind === "relief_oath_offer");
-  const legacies = args.journalEntries
-    .map((entry, index) => ({ entry, index }))
-    .filter(({ entry }) => entry.kind === "relief_oath_legacy");
   if (selections.length > 1) {
     throw new Error("Overworld session snapshot must contain at most one opening relief oath.");
   }
@@ -233,17 +181,7 @@ export function proveOpeningReliefOathJournal(args: {
       "Overworld session snapshot must contain at most one opening relief-oath offer.",
     );
   }
-  if (legacies.length > 1) {
-    throw new Error(
-      "Overworld session snapshot must contain at most one legacy opening relief oath.",
-    );
-  }
-  if (legacies.length > 0 && (selections.length > 0 || offers.length > 0)) {
-    throw new Error(
-      "Overworld session snapshot cannot combine legacy and current opening relief-oath evidence.",
-    );
-  }
-  if (selections.length === 0 && offers.length === 0 && legacies.length === 0) {
+  if (selections.length === 0 && offers.length === 0) {
     return emptyReliefOathProof(args.registrationProof.characterAtRegistration);
   }
   if (!args.scene) {
@@ -270,72 +208,14 @@ export function proveOpeningReliefOathJournal(args: {
     );
   }
 
-  const legacy = legacies[0];
-  if (legacy) {
-    const sourceWorldHash = openingReliefOathLegacySourceWorldHash(legacy.entry.id);
-    if (
-      !sourceWorldHash ||
-      args.trustedLegacySourceWorldHash === undefined ||
-      args.trustedLegacySourceWorldHash === null ||
-      sourceWorldHash !== args.trustedLegacySourceWorldHash
-    ) {
-      throw new Error(
-        "Overworld session snapshot legacy opening relief oath has no matching trusted predecessor hash.",
-      );
-    }
-    const expected = openingReliefOathLegacyJournalDraft(sourceWorldHash);
-    if (legacy.entry.title !== expected.title || legacy.entry.text !== expected.text) {
-      throw new Error(
-        `Overworld session snapshot legacy opening relief-oath entry "${legacy.entry.id}" does not match its canonical neutral copy.`,
-      );
-    }
-    if (args.expectedTown !== null && legacy.entry.town !== args.expectedTown) {
-      throw new Error(
-        `Overworld session snapshot legacy opening relief-oath entry "${legacy.entry.id}" is bound to town "${legacy.entry.town}", expected "${args.expectedTown}".`,
-      );
-    }
-    const legacyBoundary = legacy.entry.storyChoiceBoundary;
-    if (
-      !legacyBoundary ||
-      legacy.index + 1 !== registrationJournalIndex ||
-      legacy.entry.recordedAt !== registrationEntry.recordedAt ||
-      !boundariesEqual(legacyBoundary, registrationBoundary) ||
-      legacyBoundary.townId !== scene.home ||
-      legacyBoundary.areaId !== scene.area ||
-      legacyBoundary.minutes !== parseTimeLabel(legacy.entry.recordedAt)
-    ) {
-      throw new Error(
-        "Overworld session snapshot legacy opening relief oath must sit immediately newer than registration and share its exact story boundary.",
-      );
-    }
-    return Object.freeze({
-      characterAfterOath: cloneCampaignCharacterState(
-        args.registrationProof.characterAtRegistration,
-      ),
-      offered: false,
-      legacy: true,
-      legacySourceWorldHash: sourceWorldHash,
-      offerBoundary: null,
-      option: null,
-      selectionBoundary: null,
-      terms: null,
-      journalIndex: legacy.index,
-      recordedAt: parseTimeLabel(legacy.entry.recordedAt),
-    });
-  }
-
   const offered = offers[0];
   if (!offered) {
     throw new Error("Overworld session snapshot relief-oath selection has no replayable offer.");
   }
   const expectedOffer = openingReliefOathOfferJournalDraft(scene);
-  if (
-    offered.entry.id !== expectedOffer.id ||
-    offered.entry.title !== expectedOffer.title ||
-    offered.entry.text !== expectedOffer.text
-  ) {
+  if (offered.entry.id !== expectedOffer.id) {
     throw new Error(
-      `Overworld session snapshot relief-oath offer "${offered.entry.id}" does not match its authored copy.`,
+      `Overworld session snapshot relief-oath offer "${offered.entry.id}" references unknown evidence.`,
     );
   }
   if (args.expectedTown !== null && offered.entry.town !== args.expectedTown) {
@@ -381,8 +261,6 @@ export function proveOpeningReliefOathJournal(args: {
         args.registrationProof.characterAtRegistration,
       ),
       offered: true,
-      legacy: false,
-      legacySourceWorldHash: null,
       offerBoundary: { ...offerBoundary },
       option: null,
       selectionBoundary: null,
@@ -406,19 +284,6 @@ export function proveOpeningReliefOathJournal(args: {
     character: args.registrationProof.characterAtRegistration,
     optionId: option.id,
   });
-  const expectedSelection = openingReliefOathJournalDraft({
-    scene,
-    character: args.registrationProof.characterAtRegistration,
-    optionId: option.id,
-  });
-  if (
-    selected.entry.title !== expectedSelection.title ||
-    selected.entry.text !== expectedSelection.text
-  ) {
-    throw new Error(
-      `Overworld session snapshot relief-oath entry "${selected.entry.id}" does not match its authored terms and copy.`,
-    );
-  }
   if (args.expectedTown !== null && selected.entry.town !== args.expectedTown) {
     throw new Error(
       `Overworld session snapshot relief-oath entry "${selected.entry.id}" is bound to town "${selected.entry.town}", expected "${args.expectedTown}".`,
@@ -462,8 +327,6 @@ export function proveOpeningReliefOathJournal(args: {
   return Object.freeze({
     characterAfterOath: cloneCampaignCharacterState(application.characterAfter),
     offered: true,
-    legacy: false,
-    legacySourceWorldHash: null,
     offerBoundary: { ...offerBoundary },
     option,
     selectionBoundary: { ...selectionBoundary },

@@ -24,6 +24,7 @@ import {
 import { classifyRpgJourneyDecision } from "../../src/world/journey_decision.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/gallowmere.yaml");
 if (!loaded.ok) throw new Error("gallowmere must compile");
@@ -109,6 +110,7 @@ function registeredQueensburyMarketSession(): OverworldSession {
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:road_warden");
   if (session.journey().storyChoice?.kind === "relief_oath") {
+    revealCurrentJourneyStoryOptions(session);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
   }
   if (session.journey().storyChoice?.kind === "lead_source") {

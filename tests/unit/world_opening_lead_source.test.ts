@@ -33,7 +33,6 @@ import type { OpeningRegistrationJournalProof } from "../../src/world/opening_re
 import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oath.js";
 import {
   openingReliefOathJournalEntry,
-  openingReliefOathLegacyJournalEntry,
   openingReliefOathOfferJournalEntry,
   type OpeningReliefOathJournalProof,
 } from "../../src/world/opening_relief_oath_journal.js";
@@ -417,7 +416,6 @@ describe("Albany opening lead-source authoring", () => {
 
 const JOURNAL_TOWN = "Albany city";
 const JOURNAL_BASE_HASH = "a".repeat(64);
-const JOURNAL_LEGACY_HASH = "7".repeat(64);
 const JOURNAL_PROFILE_ID = "albany:unaffiliated_courier";
 const JOURNAL_OATH_OPTION_ID = "albany:oath_unaffiliated_personal_bond";
 const JOURNAL_SOURCE_OPTION_ID = "albany:source_jamie_market_testimony";
@@ -563,8 +561,6 @@ function selectedOathLeadFixture() {
   const reliefOathProof: OpeningReliefOathJournalProof = {
     characterAfterOath: cloneCampaignCharacterState(oathApplication.characterAfter),
     offered: true,
-    legacy: false,
-    legacySourceWorldHash: null,
     offerBoundary: { ...registrationBoundary },
     option: oathApplication.option,
     selectionBoundary: { ...oathBoundary },
@@ -585,45 +581,6 @@ function selectedOathLeadFixture() {
   };
 }
 
-function legacyOathLeadFixture() {
-  const registrationCharacter = journalRegistrationCharacter();
-  const registrationBoundary = journalRegistrationBoundary();
-  const legacyMarker = openingReliefOathLegacyJournalEntry({
-    sourceWorldHash: JOURNAL_LEGACY_HASH,
-    town: JOURNAL_TOWN,
-    recordedAt: timeLabel(registrationBoundary.minutes),
-    storyChoiceBoundary: registrationBoundary,
-  });
-  const lead = leadEvidence({
-    character: registrationCharacter,
-    predecessorBoundary: registrationBoundary,
-    olderEntries: [legacyMarker, journalRegistrationEntry(registrationBoundary)],
-  });
-  const reliefOathProof: OpeningReliefOathJournalProof = {
-    characterAfterOath: cloneCampaignCharacterState(registrationCharacter),
-    offered: false,
-    legacy: true,
-    legacySourceWorldHash: JOURNAL_LEGACY_HASH,
-    offerBoundary: null,
-    option: null,
-    selectionBoundary: null,
-    terms: null,
-    journalIndex: 2,
-    recordedAt: registrationBoundary.minutes,
-  };
-  return {
-    ...lead,
-    registrationCharacter,
-    registrationBoundary,
-    registrationProof: journalRegistrationProof({
-      character: registrationCharacter,
-      boundary: registrationBoundary,
-      journalIndex: 3,
-    }),
-    reliefOathProof,
-  };
-}
-
 function registrationAdjacentLeadFixture() {
   const registrationCharacter = journalRegistrationCharacter();
   const registrationBoundary = journalRegistrationBoundary();
@@ -637,24 +594,11 @@ function registrationAdjacentLeadFixture() {
     boundary: registrationBoundary,
     journalIndex: 2,
   });
-  const emptyReliefOathProof: OpeningReliefOathJournalProof = {
-    characterAfterOath: cloneCampaignCharacterState(registrationCharacter),
-    offered: false,
-    legacy: false,
-    legacySourceWorldHash: null,
-    offerBoundary: null,
-    option: null,
-    selectionBoundary: null,
-    terms: null,
-    journalIndex: null,
-    recordedAt: null,
-  };
   return {
     ...lead,
     registrationCharacter,
     registrationBoundary,
     registrationProof,
-    emptyReliefOathProof,
   };
 }
 
@@ -702,104 +646,17 @@ describe("opening lead-source relief-oath chronology", () => {
     ).toThrow(/immediately follow the selected relief oath/i);
   });
 
-  it("follows a trusted oath legacy marker at its exact neutral boundary", () => {
-    const fixture = legacyOathLeadFixture();
+  it("follows registration directly when the world has no relief-oath scene", () => {
+    const fixture = registrationAdjacentLeadFixture();
     const result = proveOpeningLeadSourceJournal({
       scene: journalLeadSourceScene,
       registrationProof: fixture.registrationProof,
-      reliefOathProof: fixture.reliefOathProof,
       journalEntries: fixture.entries,
       expectedTown: JOURNAL_TOWN,
     });
-
     expect(result.option?.id).toBe(JOURNAL_SOURCE_OPTION_ID);
     expect(result.characterAfterSource.knowledge).toContain(
       "albany:knowledge_wolf_market_testimony",
     );
-    expect(result.characterAfterSource.knowledge).not.toContain(
-      "albany:knowledge_wolf_unaffiliated_bond",
-    );
-
-    const forgedBoundary = structuredClone(fixture.entries);
-    forgedBoundary[2]!.storyChoiceBoundary!.decisionProofHash = "0".repeat(64);
-    expect(() =>
-      proveOpeningLeadSourceJournal({
-        scene: journalLeadSourceScene,
-        registrationProof: fixture.registrationProof,
-        reliefOathProof: fixture.reliefOathProof,
-        journalEntries: forgedBoundary,
-        expectedTown: JOURNAL_TOWN,
-      }),
-    ).toThrow(/trusted legacy relief-oath marker/i);
-
-    const separated = structuredClone(fixture.entries);
-    separated.splice(2, 0, {
-      id: "area:interposed_legacy_oath",
-      kind: "area",
-      town: JOURNAL_TOWN,
-      title: "Interposed",
-      text: "This cannot divide the source offer from the legacy oath marker.",
-      recordedAt: timeLabel(fixture.registrationBoundary.minutes),
-    });
-    expect(() =>
-      proveOpeningLeadSourceJournal({
-        scene: journalLeadSourceScene,
-        registrationProof: { ...fixture.registrationProof, journalIndex: 4 },
-        reliefOathProof: { ...fixture.reliefOathProof, journalIndex: 3 },
-        journalEntries: separated,
-        expectedTown: JOURNAL_TOWN,
-      }),
-    ).toThrow(/immediately follow the trusted legacy relief-oath marker/i);
-  });
-
-  it("fails closed on an empty oath proof and opens only the explicit migration gap", () => {
-    const fixture = registrationAdjacentLeadFixture();
-    const withoutOathWorld = proveOpeningLeadSourceJournal({
-      scene: journalLeadSourceScene,
-      registrationProof: fixture.registrationProof,
-      journalEntries: fixture.entries,
-      expectedTown: JOURNAL_TOWN,
-    });
-    expect(withoutOathWorld.option?.id).toBe(JOURNAL_SOURCE_OPTION_ID);
-
-    expect(() =>
-      proveOpeningLeadSourceJournal({
-        scene: journalLeadSourceScene,
-        registrationProof: fixture.registrationProof,
-        reliefOathProof: fixture.emptyReliefOathProof,
-        journalEntries: fixture.entries,
-        expectedTown: JOURNAL_TOWN,
-      }),
-    ).toThrow(/missing.*relief-oath predecessor.*trusted migration/i);
-
-    const migrated = proveOpeningLeadSourceJournal({
-      scene: journalLeadSourceScene,
-      registrationProof: fixture.registrationProof,
-      reliefOathProof: fixture.emptyReliefOathProof,
-      journalEntries: fixture.entries,
-      expectedTown: JOURNAL_TOWN,
-      allowMissingReliefOathForMigration: true,
-    });
-    expect(migrated.option?.id).toBe(JOURNAL_SOURCE_OPTION_ID);
-    expect(migrated.characterAfterSource.knowledge).toContain(
-      "albany:knowledge_wolf_market_testimony",
-    );
-
-    const pendingProof: OpeningReliefOathJournalProof = {
-      ...fixture.emptyReliefOathProof,
-      offered: true,
-      offerBoundary: { ...fixture.registrationBoundary },
-      recordedAt: fixture.registrationBoundary.minutes,
-    };
-    expect(() =>
-      proveOpeningLeadSourceJournal({
-        scene: journalLeadSourceScene,
-        registrationProof: fixture.registrationProof,
-        reliefOathProof: pendingProof,
-        journalEntries: fixture.entries,
-        expectedTown: JOURNAL_TOWN,
-        allowMissingReliefOathForMigration: true,
-      }),
-    ).toThrow(/selected or trusted legacy relief-oath predecessor/i);
   });
 });

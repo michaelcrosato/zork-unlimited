@@ -1,0 +1,63 @@
+name: Deep audit
+
+# Expensive, zero-token checks run outside the PR critical path. Operators can also
+# dispatch the exact same jobs when reviewing a risky engine or content change.
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deep-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deep-crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Deep deterministic quest and overworld crawl
+        run: npm run crawl:deep
+
+  non-player-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install UI dependencies used by root SSR tests
+        run: npm --prefix ui ci
+      - name: Restore rolling performance baselines
+        uses: actions/cache@v4
+        with:
+          path: ai-runs/performance-budget-history.json
+          key: deep-audit-performance-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            deep-audit-performance-${{ github.ref_name }}-
+      - name: Trace, density, ending-proof, and standard-coverage audit
+        run: npm run audit:non-player
+      - name: Upload browsable coverage report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: standard-suite-coverage-${{ github.run_id }}
+          path: coverage/
+          if-no-files-found: warn
+          retention-days: 30

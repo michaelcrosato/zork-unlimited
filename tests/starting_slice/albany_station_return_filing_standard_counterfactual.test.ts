@@ -5,19 +5,14 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import {
-  AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
-  authoredLocalEventLegacyOptionId,
-} from "../../src/world/local_event_scene_legacy.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { planOverworldEventResolution } from "../../src/world/session_event_resolution.js";
-import { OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import { exactAlbanyStationEventPredecessor } from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGION = "Capital / Mohawk";
@@ -94,6 +89,7 @@ function openedAlbany(world: OverworldManifest = WORLD): OverworldSession {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(world.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
@@ -369,86 +365,6 @@ describe("Albany Station return filing standard", () => {
     },
   );
 
-  it("keeps a neutral predecessor event neutral and unlocks neither closure", () => {
-    const predecessor = exactAlbanyStationEventPredecessor(WORLD);
-    expect(hashState(predecessor)).toBe(AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH);
-    expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    const legacy = returnedHeld({ inspect: false }, predecessor);
-    legacy.investigateEvent(EVENT);
-    legacy.resolveEvent(EVENT);
-
-    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
-    expect(restored.view().jobChoices).toEqual(expectedChoices());
-    expect(JSON.stringify(restored.snapshot())).not.toContain(ROUTE_CLOSE);
-    expect(JSON.stringify(restored.snapshot())).not.toContain(WITNESS_CLOSE);
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: EVENT_SCENE,
-      optionId: authoredLocalEventLegacyOptionId(
-        AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
-      ),
-      sourceWorldHash: AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
-    });
-  });
-
-  it("migrates an unresolved predecessor investigation durably without inventing a filing choice", () => {
-    const predecessor = exactAlbanyStationEventPredecessor(WORLD);
-    const legacy = openedAlbany(predecessor);
-    legacy.scoutPoi(STATION_POI);
-    legacy.talkToCharacter(STATION_CONTACT);
-    legacy.investigateEvent(EVENT);
-    expect(legacy.snapshot().resolvedEventIds).not.toContain(EVENT);
-
-    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
-    const investigation = restored
-      .snapshot()
-      .journalEntries.find((entry) => entry.id === `investigate:${EVENT}`);
-    expect(investigation).toMatchObject({
-      kind: "event",
-      sourceWorldHash: AUTHORED_ALBANY_STATION_EVENT_PREDECESSOR_WORLD_HASH,
-    });
-    expect(restored.view().events.map((event) => event.id)).not.toContain(EVENT);
-    expect(OverworldSession.restore(WORLD, restored.snapshot()).snapshot()).toEqual(
-      restored.snapshot(),
-    );
-
-    const wolf = restored.view().quests.find((quest) => quest.id === "wolf_winter");
-    if (!wolf) throw new Error("Expected Wolf-Winter after the migrated Station investigation.");
-    restored.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway");
-    restored.completeQuest(wolf.id, {
-      endingId: "ending_held",
-      endingTitle: "The Byre Held",
-      death: false,
-    });
-    restored.chooseJourney("continue");
-    restored.chooseJourneyStory("send_wardens_north");
-    expect(restored.view().eventChoices).toEqual([
-      [EVENT, ROUTE_STANDARD],
-      [EVENT, WITNESS_STANDARD],
-    ]);
-
-    for (const mutate of [
-      (entry: NonNullable<typeof investigation>) => {
-        entry.sourceWorldHash = "f".repeat(64);
-      },
-      (entry: NonNullable<typeof investigation>) => {
-        entry.text += " forged";
-      },
-    ]) {
-      const forged = structuredClone(OverworldSession.restore(WORLD, legacy.snapshot()).snapshot());
-      const forgedInvestigation = forged.journalEntries.find(
-        (entry) => entry.id === `investigate:${EVENT}`,
-      );
-      if (!forgedInvestigation) throw new Error("Expected migrated Station investigation.");
-      mutate(forgedInvestigation);
-      expect(() => OverworldSession.restore(WORLD, forged)).toThrow(
-        /untrusted legacy investigation evidence/i,
-      );
-    }
-  });
-
   it("expires the filing standard after a physical Cade dispatch instead of offering dead choices", () => {
     const investigated = returnedHeld();
     investigated.workLocalJob(JOB, PALING);
@@ -465,25 +381,6 @@ describe("Albany Station return filing standard", () => {
     expect(() => uninvestigated.investigateEvent(EVENT)).toThrow(
       /before completing local job.*transport_hub__job/i,
     );
-  });
-
-  it("preserves a predecessor-native physical Cade proof and its existing service", () => {
-    const predecessor = exactAlbanyStationEventPredecessor(WORLD);
-    const legacy = returnedHeld({ inspect: false }, predecessor);
-    legacy.investigateEvent(EVENT);
-    legacy.resolveEvent(EVENT);
-    legacy.workLocalJob(JOB, PALING);
-
-    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
-        ?.localSceneProof,
-    ).toMatchObject({ sceneId: JOB_SCENE, optionId: PALING });
-    expect(JSON.stringify(restored.snapshot())).not.toContain(ROUTE_CLOSE);
-    expect(JSON.stringify(restored.snapshot())).not.toContain(WITNESS_CLOSE);
-    addRoadStrain(restored);
-    moveToArea(restored, WORKS);
-    expect(restored.view().serviceOffers.map((offer) => offer.id)).toContain(PALING_REST);
   });
 
   it("rejects altered event/job proofs, reversed chronology, and an untrusted hash", () => {
@@ -524,6 +421,10 @@ describe("Albany Station return filing standard", () => {
 
     const untrusted = structuredClone(snapshot);
     untrusted.worldHash = "f".repeat(64);
-    expect(() => OverworldSession.restore(WORLD, untrusted)).toThrow(/different world manifest/i);
+    const restoredAcrossContentRevision = OverworldSession.restore(WORLD, untrusted);
+    expect(restoredAcrossContentRevision.snapshot()).toEqual(snapshot);
+    expect(restoredAcrossContentRevision.restoreWarnings()).toEqual([
+      OVERWORLD_CONTENT_HASH_MISMATCH_WARNING,
+    ]);
   });
 });

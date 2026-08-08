@@ -49,7 +49,8 @@ improvement:
         variant (bug_0047), the one-shot retire (bug_0015), the on_failure retry guidance (bug_0027), and the
         seeded DC-12 might check are all untouched.
 verification:
-  - live engine replay (seeds 1 & 2): base examine reads the new first-heave-or-several prose, names no grind-
+  - >-
+    live engine replay (seeds 1 & 2): base examine reads the new first-heave-or-several prose, names no grind-
     promise and no "real might"; seed-1 first lever still SUCCEEDS and wins ending_victory 50/50; seed-2 first
     lever still FAILS penalty-free, surfaces the bug_0027 "keep at it" retry guidance, and is retryable
   - npm run validate -- content/rpg/quests/sunken_barrow.yaml       # OK 0/0

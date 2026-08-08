@@ -1,13 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { planOverworldRoute } from "../../src/world/overworld.js";
-import {
-  authoredLocalJobLegacyCompletion,
-  describeAuthoredLocalJobLegacyAction,
-  migrateAuthoredLocalJobLegacyEntry,
-} from "../../src/world/local_job_scene_legacy.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";
 
 const world = loadOverworldManifest(process.cwd());
 
@@ -44,6 +40,7 @@ function startAlbanyWolf(session: OverworldSession): void {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
   if (session.journey().storyChoice?.kind === "relief_oath") {
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
   }
   if (session.journey().storyChoice?.kind === "lead_source") {
@@ -73,6 +70,7 @@ function revealAlbanyWolfAtStation(session: OverworldSession): void {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
   if (session.journey().storyChoice?.kind === "relief_oath") {
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
   }
   if (session.journey().storyChoice?.kind === "lead_source") {
@@ -416,64 +414,14 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     expect([...new Set(bothClosedCopies)]).toHaveLength(1);
   });
 
-  it("restores an authored job after a newer reactive talk without losing its older setup talk", () => {
-    const syntheticWorld = structuredClone(world);
-    const stationJob = syntheticWorld.local_jobs.find(
-      (job) => job.id === "albany_city__transport_hub__job",
-    );
-    const worksScene = syntheticWorld.local_jobs.find(
-      (job) => job.id === "albany_city__industrial__job",
-    )?.authored_scene;
-    if (!stationJob || !worksScene) throw new Error("Expected station job and authored fixture.");
-    stationJob.authored_scene = {
-      ...structuredClone(worksScene),
-      id: "test:station-dispatch-authored-job",
-      required_poi_id: "albany_city__transport_hub__poi",
-      required_contact_id: HAYDEN_ID,
-    };
+  it("restores an authored job between its older setup talk and a newer reactive talk", () => {
+    const stationJob = world.local_jobs.find((job) => job.id === "albany_city__transport_hub__job");
+    const option = stationJob?.authored_scene?.options[0];
+    if (!stationJob?.authored_scene || !option) {
+      throw new Error("Expected the authored Albany station job.");
+    }
 
-    // Prove the same reusable migration machinery on this second job using a
-    // real generic predecessor execution, rather than only parsing a fixture.
-    const predecessorWorld = structuredClone(syntheticWorld);
-    const predecessorJob = predecessorWorld.local_jobs.find((job) => job.id === stationJob.id);
-    if (!predecessorJob) throw new Error("Expected synthetic predecessor station job.");
-    delete predecessorJob.authored_scene;
-    const predecessor = new OverworldSession(predecessorWorld);
-    completeWolfWithBaseHaydenAtDecision22(predecessor);
-    predecessor.chooseJourney("continue");
-    predecessor.chooseJourneyStory("send_wardens_north");
-    predecessor.scoutPoi("albany_city__transport_hub__poi");
-    predecessor.talkToCharacter(HAYDEN_ID);
-    predecessor.workLocalJob(predecessorJob.id);
-    const predecessorSnapshot = predecessor.snapshot();
-    const predecessorEntry = predecessorSnapshot.journalEntries.find(
-      (entry) => entry.id === `job:${predecessorJob.id}`,
-    );
-    if (!predecessorEntry) throw new Error("Expected executed generic predecessor job entry.");
-    const legacyDefinition = {
-      sourceWorldHash: predecessorSnapshot.worldHash,
-      jobId: stationJob.id,
-      sceneId: stationJob.authored_scene.id,
-      legacyJob: predecessorJob,
-    };
-    const migratedEntry = migrateAuthoredLocalJobLegacyEntry({
-      area: syntheticWorld.areas.find((area) => area.id === stationJob.area) ?? null,
-      currentJob: stationJob,
-      definition: legacyDefinition,
-      entry: predecessorEntry,
-      townName: predecessorEntry.town,
-    });
-    const migratedCompletion = authoredLocalJobLegacyCompletion(
-      stationJob.id,
-      migratedEntry.localSceneProof,
-      [legacyDefinition],
-    );
-    expect(migratedCompletion).not.toBeNull();
-    expect(describeAuthoredLocalJobLegacyAction(migratedCompletion!, null).minutes).toBe(
-      predecessorJob.minutes,
-    );
-
-    const session = new OverworldSession(syntheticWorld);
+    const session = new OverworldSession(world);
     completeWolfWithBaseHaydenAtDecision22(session);
     session.chooseJourney("continue");
     session.chooseJourneyStory("send_wardens_north");
@@ -481,7 +429,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     expect(session.talkToCharacter(HAYDEN_ID).entry.id).toBe(
       `talk:${HAYDEN_ID}@wolf_winter_closed`,
     );
-    session.workLocalJob(stationJob.id, stationJob.authored_scene.options[0]!.id);
+    session.workLocalJob(stationJob.id, option.id);
 
     travelToQueensburyMarket(session);
     session.startQuest("gallowmere");
@@ -508,7 +456,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     );
     expect(newerTalkIndex).toBeLessThan(jobIndex);
     expect(olderTalkIndex).toBeGreaterThan(jobIndex);
-    expect(OverworldSession.restore(syntheticWorld, snapshot).snapshot()).toEqual(snapshot);
+    expect(OverworldSession.restore(world, snapshot).snapshot()).toEqual(snapshot);
   });
 
   it("folds an already-completed Gallowmere goal honestly and advances to the next live lead", () => {
@@ -516,6 +464,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     session.scoutPoi("albany_city__civic_core__poi");
     session.talkToCharacter("albany_city__civic_core__contact");
     session.chooseJourneyStory("albany:ledger_advocate");
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     moveToArea(session, world.opening_preparation!.area);

@@ -85,7 +85,8 @@ test_updates:
       die assertion for "use black phial", and the non-self-use rope cases are unchanged — no
       assertion weakened.
 closes:
-  - bug_0073 deferred note: "the death action reads `use black phial` rather than a clearer
+  - >-
+    bug_0073 deferred note: "the death action reads `use black phial` rather than a clearer
     `drink black phial` (would need an engine per-interaction verb/label)" — now implemented.
 deferred:
   - The alchemists water-add step is unsignposted until the herb steeps, and scoring is

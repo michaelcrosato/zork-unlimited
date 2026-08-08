@@ -22,13 +22,15 @@ import {
   isLocked,
   isOpen,
   locateObject,
+  nodeText,
   nodeOrdinal,
+  npcForState,
+  npcsInRoom,
   objectDescription,
   objectName,
   roomDescription,
   visibleObjectIds,
 } from "./model.js";
-import { dialogueNodeText, dialogueTopicPrompt } from "./dialogue_presentation.js";
 
 // A USE action that carries a `skill_check` (resolved by the runner as a d20 + skill
 // roll, parser/RPG alike) is annotated with the rolled stat + difficulty + die type, so a
@@ -312,8 +314,8 @@ function resolveRpgActionCore(
         return null;
       if (o.key_id === undefined || action.with !== o.key_id || !state.inventory.includes(o.key_id))
         return null;
-      // A keyed lock may carry its own narration + effects (score, unlock_exit,
-      // set_flag) so a climactic unlock no longer needs a bespoke `USE key on lock`
+      // A keyed lock may carry its own narration + effects (score, set_flag, etc.)
+      // so a climactic unlock no longer needs a bespoke `USE key on lock`
       // interaction to award points or narrate richly — both grammars now lead to the
       // engine's first-class UNLOCK (bug_0077). Default narration/effects are unchanged
       // when the pack declares neither, so existing packs resolve byte-identically.
@@ -341,7 +343,8 @@ function resolveRpgActionCore(
       return { conditions: exit.conditions, effects: [{ goto: exit.to }] };
     }
     case "TALK": {
-      const npc = index.npcs.get(action.npc);
+      const candidate = index.npcs.get(action.npc);
+      const npc = candidate ? npcForState(candidate, state) : undefined;
       if (!npc || npc.room !== here || activeDialogue(index, state)) return null;
       const ord = nodeOrdinal(npc, npc.dialogue.root);
       const root = npc.dialogue.nodes[ord - 1];
@@ -351,7 +354,7 @@ function resolveRpgActionCore(
         effects: [
           { set_var: { name: dlgVar(npc.id), value: ord } },
           ...root.effects,
-          { narrate: `${npc.name}: "${dialogueNodeText(state, root)}"` },
+          { narrate: `${npc.name}: "${nodeText(root, state)}"` },
         ],
       };
     }
@@ -415,7 +418,7 @@ function resolveRpgActionCore(
           { set_var: { name: dlgVar(active.npc.id), value: targetOrd } },
           ...target.effects,
           {
-            narrate: `${active.npc.name}: "${dialogueNodeText(state, target)}"`,
+            narrate: `${active.npc.name}: "${nodeText(target, state)}"`,
           },
           ...(autoResumesRoot
             ? [{ set_var: { name: dlgVar(active.npc.id), value: rootOrd } } satisfies Effect]
@@ -583,7 +586,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   const active = activeDialogue(index, state);
   if (active) {
     for (const t of active.node.topics) {
-      const projected = option(index, state, `ask_${t.id}`, `ask: ${dialogueTopicPrompt(t)}`, {
+      const projected = option(index, state, `ask_${t.id}`, `ask: ${t.prompt}`, {
         type: "ASK",
         npc: active.npc.id,
         topic: t.id,
@@ -684,8 +687,7 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
   }
 
   // NPCs present.
-  for (const npc of index.npcByRoom.get(here) ?? []) {
-    if (!evalConditions(npc.conditions ?? [], state)) continue;
+  for (const npc of npcsInRoom(index, state, here)) {
     push(
       option(index, state, `talk_${npc.id}`, `talk to ${npc.name}`, { type: "TALK", npc: npc.id }),
     );

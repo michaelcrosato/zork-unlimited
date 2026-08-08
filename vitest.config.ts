@@ -33,6 +33,13 @@ const commonProject = {
 
 export default defineConfig({
   test: {
+    coverage: {
+      provider: "v8",
+      reportsDirectory: "coverage",
+      reporter: ["text-summary", "json-summary", "html"],
+      include: ["src/**/*.ts", "bin/**/*.ts", "scripts/**/*.ts", "agents/**/*.ts"],
+      exclude: ["**/*.d.ts"],
+    },
     projects: [
       {
         test: {

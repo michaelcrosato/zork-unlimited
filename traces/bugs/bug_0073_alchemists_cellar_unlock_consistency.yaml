@@ -83,7 +83,8 @@ closes:
   - bug_0033 deferred flavor note "'use black phial' self-target verb reads slightly unnatural" is a
     SEPARATE nit and remains deferred; this fix addresses only the unlock-verb split.
 deferred:
-  - alchemists_tower flavor-only nits (not defects, logged for a future cycle): the death action
+  - >-
+    alchemists_tower flavor-only nits (not defects, logged for a future cycle): the death action
     reads `use black phial` rather than a clearer `drink black phial` (would need an engine per-
     interaction verb/label); the water-add step is unsignposted until the herb steeps; scoring is
     back-loaded. sealed_crypt (seed 5): bug-free but very short/linear, hints arrive after a curious

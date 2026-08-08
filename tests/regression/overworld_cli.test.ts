@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import {
   render,
@@ -29,7 +29,9 @@ import { compactJourneyStoryChoiceComparison } from "../../src/mcp/journey_proje
 import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";
 
 const ROOT = process.cwd();
 const WORLD = loadOverworldManifest(ROOT);
@@ -136,6 +138,7 @@ function sessionAtCompletedWolfGoal(): OverworldSession {
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(opening.characters[0]!.id);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);
@@ -165,6 +168,7 @@ function sessionAtOpeningStation(): OverworldSession {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
   session.chooseJourneyStory(registration.profiles[0]!.id);
+  revealCurrentJourneyStoryOptions(session, oath.id);
   session.chooseJourneyStory(oath.options[0]!.id);
   session.chooseJourneyStory(source.options[0]!.id);
   moveToArea(session, preparation.area);
@@ -184,16 +188,6 @@ function sessionWithResolvedStationChoices(): OverworldSession {
   session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
   session.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
   return session;
-}
-
-function migratedLegacyResolvedStationChoices(): OverworldSession {
-  const fixture = JSON.parse(
-    readFileSync(
-      join(ROOT, "tests", "regression", "fixtures", "campaign_service_742_started.json"),
-      "utf8",
-    ),
-  ) as { snapshot: unknown };
-  return OverworldSession.restore(WORLD, structuredClone(fixture.snapshot));
 }
 
 function chooseNorthGoal(session: OverworldSession): void {
@@ -220,6 +214,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     if (!rowan) throw new Error("Expected Rowan in Albany's opening area.");
     session.talkToCharacter(rowan.id);
     session.chooseJourneyStory("albany:ledger_advocate");
+    revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
 
@@ -528,6 +523,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(registration.contact);
     session.chooseJourneyStory(registration.profiles[0]!.id);
+    revealCurrentJourneyStoryOptions(session, oath.id);
     session.chooseJourneyStory(oath.options[0]!.id);
     session.chooseJourneyStory(source.options[0]!.id);
     moveToArea(session, preparation.area);
@@ -595,6 +591,31 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
 });
 
 describe("overworld_play CLI (scripted mode)", () => {
+  it("prints content-revision warnings for startup restore and in-session load", () => {
+    const snapshot = new OverworldSession(WORLD).snapshot();
+    snapshot.worldHash = "0".repeat(64);
+    const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-content-warning-"));
+    const snapshotPath = join(temp, "content-revision.json");
+    const saveName = "d10-content-revision-warning";
+    const loadPath = join(ROOT, "saves", `${saveName}.json`);
+    writeFileSync(snapshotPath, JSON.stringify(snapshot));
+    mkdirSync(join(ROOT, "saves"), { recursive: true });
+    writeFileSync(loadPath, JSON.stringify(snapshot));
+    try {
+      const restored = runCli(["--restore", snapshotPath, "--commands", "quit"]);
+      expect(restored.status, restored.output).toBe(0);
+      expect(restored.output).toContain(`Warning: ${OVERWORLD_CONTENT_HASH_MISMATCH_WARNING}`);
+
+      const loaded = runCli(["--commands", `load ${saveName}; quit`]);
+      expect(loaded.status, loaded.output).toBe(0);
+      expect(loaded.output).toContain(`Warning: ${OVERWORLD_CONTENT_HASH_MISMATCH_WARNING}`);
+      expect(loaded.output).toContain(`Restored ${join("saves", `${saveName}.json`)}.`);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+      rmSync(loadPath, { force: true });
+    }
+  });
+
   it("uses an executable start command and read-only support review for the promoted Station launch preview", () => {
     const stationed = sessionAtOpeningStation();
     const baselineHash = stationed.snapshotHash();
@@ -1006,7 +1027,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     }
   });
 
-  it("classifies only exact current and migrated legacy Station resolutions read-only", () => {
+  it("classifies only exact current Station resolutions read-only", () => {
     const preparation = WORLD.opening_preparation;
     const allocation = WORLD.opening_relief_allocation;
     const registration = WORLD.opening_registration;
@@ -1035,61 +1056,49 @@ describe("overworld_play CLI (scripted mode)", () => {
 
     current.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
 
-    for (const resolved of [current, migratedLegacyResolvedStationChoices()]) {
-      const beforeHash = resolved.snapshotHash();
-      expect(resolved.isDepartureStoryChoiceResolved(preparation.id)).toBe(true);
-      expect(resolved.isDepartureStoryChoiceResolved(allocation.id)).toBe(true);
-      expect(resolved.isDepartureStoryChoiceResolved(registration.id)).toBe(false);
-      expect(resolved.isDepartureStoryChoiceResolved(preparation.profiles[0]!.id)).toBe(false);
-      expect(resolved.isDepartureStoryChoiceResolved("albany:not_an_authored_story_choice")).toBe(
-        false,
-      );
-      expect(resolved.snapshotHash()).toBe(beforeHash);
-    }
+    const beforeHash = current.snapshotHash();
+    expect(current.isDepartureStoryChoiceResolved(preparation.id)).toBe(true);
+    expect(current.isDepartureStoryChoiceResolved(allocation.id)).toBe(true);
+    expect(current.isDepartureStoryChoiceResolved(registration.id)).toBe(false);
+    expect(current.isDepartureStoryChoiceResolved(preparation.profiles[0]!.id)).toBe(false);
+    expect(current.isDepartureStoryChoiceResolved("albany:not_an_authored_story_choice")).toBe(
+      false,
+    );
+    expect(current.snapshotHash()).toBe(beforeHash);
   });
 
-  it.each([
-    ["current", sessionWithResolvedStationChoices],
-    ["migrated legacy", migratedLegacyResolvedStationChoices],
-  ])(
-    "reports both %s optional Station resolutions without changing their snapshot",
-    (_label, createSession) => {
-      const preparation = WORLD.opening_preparation;
-      const allocation = WORLD.opening_relief_allocation;
-      if (!preparation || !allocation) {
-        throw new Error("Expected Albany's optional Station decisions.");
-      }
-      const session = createSession();
-      const baselineHash = session.snapshotHash();
-      const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-resolved-story-"));
-      const snapshotPath = join(temp, "resolved.json");
-      writeFileSync(snapshotPath, JSON.stringify(session.snapshot()));
-      try {
-        const run = runCli([
-          "--restore",
-          snapshotPath,
-          "--commands",
-          `hash; inspect ${preparation.id}; hash; inspect ${allocation.id}; hash`,
-        ]);
+  it("reports both current optional Station resolutions without changing their snapshot", () => {
+    const preparation = WORLD.opening_preparation;
+    const allocation = WORLD.opening_relief_allocation;
+    if (!preparation || !allocation) {
+      throw new Error("Expected Albany's optional Station decisions.");
+    }
+    const session = sessionWithResolvedStationChoices();
+    const baselineHash = session.snapshotHash();
+    const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-resolved-story-"));
+    const snapshotPath = join(temp, "resolved.json");
+    writeFileSync(snapshotPath, JSON.stringify(session.snapshot()));
+    try {
+      const run = runCli([
+        "--restore",
+        snapshotPath,
+        "--commands",
+        `hash; inspect ${preparation.id}; hash; inspect ${allocation.id}; hash`,
+      ]);
 
-        expect(run.status, run.output).toBe(1);
-        expect(outputSnapshotHashes(run.output)).toEqual([
-          baselineHash,
-          baselineHash,
-          baselineHash,
-        ]);
-        for (const id of [preparation.id, allocation.id]) {
-          expect(run.output).toContain(
-            `Optional story choice "${id}" has already been resolved. Use \`look\` to see what is available now.`,
-          );
-        }
-        expect(run.output).not.toContain("No optional story choice exactly matches");
-        expect(run.output.match(/A scripted command was rejected\./g) ?? []).toHaveLength(1);
-      } finally {
-        rmSync(temp, { recursive: true, force: true });
+      expect(run.status, run.output).toBe(1);
+      expect(outputSnapshotHashes(run.output)).toEqual([baselineHash, baselineHash, baselineHash]);
+      for (const id of [preparation.id, allocation.id]) {
+        expect(run.output).toContain(
+          `Optional story choice "${id}" has already been resolved. Use \`look\` to see what is available now.`,
+        );
       }
-    },
-  );
+      expect(run.output).not.toContain("No optional story choice exactly matches");
+      expect(run.output.match(/A scripted command was rejected\./g) ?? []).toHaveLength(1);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
 
   it("keeps unresolved-away, mandatory, option, and unknown inspect ids generic and neutral", () => {
     const preparation = WORLD.opening_preparation;

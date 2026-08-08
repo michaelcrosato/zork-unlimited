@@ -204,8 +204,6 @@ function stationDispatchStatus(support: StationDispatchBoardView["support"][numb
       return "Choose a field kit first";
     case "solo_default":
       return "Leave alone now";
-    case "legacy":
-      return "Legacy choice preserved";
     case "selected":
       return "Selected";
   }
@@ -267,7 +265,6 @@ function departureRecapValue(
     return "Available after choosing preparation";
   }
   if (entry.status === "solo_default") return "Solo departure";
-  if (entry.status === "legacy") return "Legacy choice preserved";
   return "Selected";
 }
 
@@ -734,6 +731,10 @@ async function controlTerminalStoryChoice(args: {
     choose: (option) => {
       args.session.chooseJourneyStory(option.id, args.prompt.id);
     },
+    reveal: (revealId) => {
+      args.session.revealJourneyStory(args.prompt.id, revealId);
+    },
+    presentedOptions: () => args.session.journeyStoryOptionsForPresentation(args.prompt.id),
     allowComparisonExit: args.allowComparisonExit,
     onAuxiliary: args.onAuxiliary,
   });
@@ -772,6 +773,7 @@ async function main(): Promise<void> {
   let session: OverworldSession;
   if (restorePath !== undefined) {
     session = OverworldSession.restore(manifest, JSON.parse(readFileSync(restorePath, "utf8")));
+    printRestoreWarnings(session);
     if (session.journey().status !== "ended") {
       console.log(`Resumed in ${session.view().current.name}.`);
     }
@@ -858,6 +860,7 @@ async function main(): Promise<void> {
         if (verb === "load") {
           const path = savePath(rest);
           session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
+          printRestoreWarnings(session);
           if (session.journey().status !== "ended") {
             console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
             console.log(renderJourneyStatus(session.journey()));
@@ -922,6 +925,7 @@ async function main(): Promise<void> {
           } else if (verb === "load") {
             const path = savePath(rest);
             session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
+            printRestoreWarnings(session);
             if (session.journey().status !== "ended") {
               console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
               console.log(renderJourneyStatus(session.journey()));
@@ -1233,6 +1237,7 @@ async function main(): Promise<void> {
           case "load": {
             const path = savePath(rest);
             session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
+            printRestoreWarnings(session);
             if (session.journey().status !== "ended") {
               console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
               console.log(renderJourneyStatus(session.journey()));
@@ -1425,6 +1430,10 @@ function saveSnapshot(session: OverworldSession, name: string): void {
   mkdirSync(SAVE_DIR, { recursive: true });
   writeFileSync(path, JSON.stringify(session.snapshot(), null, 2));
   console.log(`Saved journey to ${path}.`);
+}
+
+function printRestoreWarnings(session: OverworldSession): void {
+  for (const warning of session.restoreWarnings()) console.log(`Warning: ${warning}`);
 }
 
 function savePath(name: string): string {

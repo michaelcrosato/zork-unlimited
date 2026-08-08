@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   journeyStoryChoiceOptionsForPresentation,
   type JourneyPresentation,
@@ -16,6 +16,8 @@ type JourneyStoryChoiceScreenProps = {
   journey: JourneyPresentation;
   departureRecap?: OverworldView["departureRecap"];
   onChoose: (choiceId: string) => void;
+  onReveal?: (storyChoiceId: string, revealId: string) => boolean | void;
+  visibleOptionIds?: readonly string[];
   onDismiss?: () => void;
 };
 
@@ -23,28 +25,16 @@ export function JourneyStoryChoiceScreen({
   journey,
   departureRecap,
   onChoose,
+  onReveal,
+  visibleOptionIds,
   onDismiss,
 }: JourneyStoryChoiceScreenProps): JSX.Element {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const storyChoice = journey.storyChoice;
-  const [revealedStoryChoice, setRevealedStoryChoice] = useState<Readonly<{
-    storyChoiceId: string;
-    revealId: string;
-  }> | null>(null);
-  const storyChoicePresentationKey = [
-    journey.decisionProof.hash,
-    storyChoice?.id ?? "",
-    storyChoice?.progressiveDisclosure?.reveal.id ?? "",
-    ...(storyChoice?.progressiveDisclosure?.reveal.optionIds ?? []),
-  ].join("\u0000");
 
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    setRevealedStoryChoice(null);
-  }, [storyChoicePresentationKey]);
 
   if (!storyChoice) {
     throw new Error("JourneyStoryChoiceScreen requires a pending story choice.");
@@ -59,18 +49,17 @@ export function JourneyStoryChoiceScreen({
   const hasRoleShortcut = progressiveDisclosure !== undefined;
   const requiresOutcomeComparison = progressiveDisclosure?.initialOptionIds.length === 0;
   const initialOptions = journeyStoryChoiceOptionsForPresentation(storyChoice);
+  const visibleIds = new Set(visibleOptionIds ?? initialOptions.map((option) => option.id));
   const isProgressiveDisclosureRevealed =
     progressiveDisclosure !== undefined &&
-    revealedStoryChoice?.storyChoiceId === storyChoice.id &&
-    revealedStoryChoice.revealId === progressiveDisclosure.reveal.id;
+    progressiveDisclosure.reveal.optionIds.some((id) => visibleIds.has(id));
   const revealedOptions =
     progressiveDisclosure && isProgressiveDisclosureRevealed
-      ? journeyStoryChoiceOptionsForPresentation(
-          storyChoice,
-          progressiveDisclosure.reveal.id,
-        ).filter(
-          (option) => !initialOptions.some((initialOption) => initialOption.id === option.id),
-        )
+      ? storyChoice.options
+          .filter((option) => visibleIds.has(option.id))
+          .filter(
+            (option) => !initialOptions.some((initialOption) => initialOption.id === option.id),
+          )
       : [];
   const keepsCurrentObjective =
     isRegistration || isLeadSource || isPreparation || isAlly || isReliefAllocation || isReliefOath;
@@ -254,14 +243,10 @@ export function JourneyStoryChoiceScreen({
               aria-expanded={isProgressiveDisclosureRevealed}
               aria-controls={`journey-story-choice-${progressiveDisclosure.reveal.id}`}
               aria-describedby={`journey-story-choice-${progressiveDisclosure.reveal.id}-description`}
-              onClick={() =>
-                setRevealedStoryChoice((current) =>
-                  current?.storyChoiceId === storyChoice.id &&
-                  current.revealId === progressiveDisclosure.reveal.id
-                    ? null
-                    : { storyChoiceId: storyChoice.id, revealId: progressiveDisclosure.reveal.id },
-                )
-              }
+              onClick={() => {
+                if (isProgressiveDisclosureRevealed) return;
+                if (onReveal?.(storyChoice.id, progressiveDisclosure.reveal.id) === false) return;
+              }}
             >
               {progressiveDisclosure.reveal.label}
             </button>

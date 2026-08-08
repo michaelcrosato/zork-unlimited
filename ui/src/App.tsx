@@ -81,10 +81,12 @@ function loadInitialWorldSession(): InitialWorldSession {
 
   try {
     const snapshot = JSON.parse(raw) as OverworldSessionSnapshot;
+    const session = OverworldSession.restore(OVERWORLD, snapshot);
+    const warnings = session.restoreWarnings();
     return {
-      session: OverworldSession.restore(OVERWORLD, snapshot),
+      session,
       origin: "resume",
-      notice: null,
+      notice: warnings.length > 0 ? `Warning: ${warnings.join(" ")}` : null,
     };
   } catch (e) {
     storage?.removeItem(OVERWORLD_SAVE_KEY);
@@ -341,8 +343,6 @@ function stationDispatchStatus(support: StationDispatchBoardView["support"][numb
       return "Choose a field kit first";
     case "solo_default":
       return "Leave alone now";
-    case "legacy":
-      return "Legacy choice preserved";
     case "selected":
       return "Selected";
   }
@@ -762,6 +762,19 @@ export default function App(): JSX.Element {
     }
   }
 
+  function revealJourneyStory(storyChoiceId: string, revealId: string): boolean {
+    try {
+      const story = worldSession.revealJourneyStory(storyChoiceId, revealId);
+      setWorldView(worldSession.view());
+      if (inspectedDepartureStory?.id === storyChoiceId) setInspectedDepartureStory(story);
+      setError(null);
+      return true;
+    } catch (e) {
+      setError((e as Error).message);
+      return false;
+    }
+  }
+
   if (tutorialOpen) {
     return (
       <NewJourneyTutorial tutorial={FRESH_GAME_TUTORIAL} onStart={() => setTutorialOpen(false)} />
@@ -773,6 +786,7 @@ export default function App(): JSX.Element {
   }
 
   if (journey.storyChoice || inspectedDepartureStory) {
+    const presentedStoryChoice = inspectedDepartureStory ?? journey.storyChoice;
     return (
       <JourneyStoryChoiceScreen
         journey={
@@ -780,6 +794,14 @@ export default function App(): JSX.Element {
         }
         departureRecap={worldView.departureRecap}
         onChoose={chooseJourneyStory}
+        onReveal={revealJourneyStory}
+        visibleOptionIds={
+          presentedStoryChoice
+            ? worldSession
+                .journeyStoryOptionsForPresentation(presentedStoryChoice.id)
+                .map((option) => option.id)
+            : []
+        }
         {...(inspectedDepartureStory ? { onDismiss: () => setInspectedDepartureStory(null) } : {})}
       />
     );

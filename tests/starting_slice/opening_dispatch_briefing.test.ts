@@ -356,6 +356,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     );
     expect(ledgerOath.message).not.toContain("standard packet for duty + evidence");
 
+    session.revealJourneyStory(oath.id, oath.progressiveDisclosure!.reveal.id);
     session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
     const source = expectStage(session, {
       id: LEAD_SOURCE.id,
@@ -486,7 +487,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(ally);
   });
 
-  it("makes every role-matched packet immediately actionable and keeps customization read-only", () => {
+  it("keeps role packets immediate and makes customization a durable session receipt", () => {
     for (const doctrine of REGISTRATION.doctrines ?? []) {
       const session = new OverworldSession(WORLD);
       session.scoutPoi(session.view().pois[0]!.id);
@@ -511,6 +512,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
         doctrine.id,
       ]);
 
+      const customDuty = RELIEF_OATH.options[0]!;
+      expect(() => session.inspectJourneyStoryOption(oath.id, customDuty.id)).toThrow(/hidden/i);
+      expect(() => session.chooseJourneyStory(customDuty.id, oath.id)).toThrow(/hidden/i);
+
       const revealed = compactJourneyStoryChoiceComparison(oath, undefined, disclosure.reveal.id);
       expect(revealed.options.map((option) => option.id)).toEqual([
         doctrine.id,
@@ -519,7 +524,60 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       expect(session.snapshot()).toEqual(beforeReveal);
       expect(session.journey()).toEqual(beforeJourney);
       expect(OverworldSession.restore(WORLD, beforeReveal).journey()).toEqual(beforeJourney);
+
+      session.revealJourneyStory(oath.id, disclosure.reveal.id);
+      const afterReveal = session.snapshot();
+      expect(afterReveal).not.toEqual(beforeReveal);
+      expect(afterReveal.inspectedStoryReveals).toContainEqual([oath.id, [disclosure.reveal.id]]);
+      expect(session.journey()).toEqual(beforeJourney);
+      expect(session.inspectJourneyStoryOption(oath.id, customDuty.id)).toEqual(oath);
+
+      const restored = OverworldSession.restore(WORLD, afterReveal);
+      expect(restored.inspectJourneyStoryOption(oath.id, customDuty.id)).toEqual(oath);
+      expect(() => restored.chooseJourneyStory(customDuty.id, oath.id)).not.toThrow();
     }
+  });
+
+  it("rejects forged, duplicate, and unavailable progressive-disclosure receipts", () => {
+    const session = new OverworldSession(WORLD);
+    session.scoutPoi(session.view().pois[0]!.id);
+    session.talkToCharacter(REGISTRATION.contact);
+    session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    const oath = currentStoryChoice(session);
+    const revealId = oath.progressiveDisclosure?.reveal.id;
+    if (!revealId) throw new Error("Expected the standard oath to offer customization.");
+    session.revealJourneyStory(oath.id, revealId);
+    const snapshot = session.snapshot();
+
+    expect(OverworldSession.restore(WORLD, snapshot).snapshot()).toEqual(snapshot);
+
+    const duplicateStory = structuredClone(snapshot);
+    duplicateStory.inspectedStoryReveals!.push([oath.id, [revealId]]);
+    expect(() => OverworldSession.restore(WORLD, duplicateStory)).toThrow(
+      /repeats story reveal receipt/i,
+    );
+
+    const duplicateReveal = structuredClone(snapshot);
+    duplicateReveal.inspectedStoryReveals![0]![1].push(revealId);
+    expect(() => OverworldSession.restore(WORLD, duplicateReveal)).toThrow(/repeats a reveal id/i);
+
+    const forgedReveal = structuredClone(snapshot);
+    forgedReveal.inspectedStoryReveals![0]![1] = ["reveal:forged"];
+    expect(() => OverworldSession.restore(WORLD, forgedReveal)).toThrow(
+      /exactly its authored progressive-disclosure id/i,
+    );
+
+    const multipleReveals = structuredClone(snapshot);
+    multipleReveals.inspectedStoryReveals![0]![1].push("reveal:forged");
+    expect(() => OverworldSession.restore(WORLD, multipleReveals)).toThrow(
+      /exactly its authored progressive-disclosure id/i,
+    );
+
+    const unavailableStory = structuredClone(snapshot);
+    unavailableStory.inspectedStoryReveals![0]![0] = REGISTRATION.id;
+    expect(() => OverworldSession.restore(WORLD, unavailableStory)).toThrow(
+      /not currently inspectable/i,
+    );
   });
 
   it("presents the exact same first briefing through UI and MCP", () => {

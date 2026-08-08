@@ -3,8 +3,8 @@
  *
  * One cycle of the autonomous improvement loop. This driver is deterministic
  * tooling (not the engine): it
- *   1. ASSESSES the whole project (src/afk/assessor.ts) to rank the next-best
- *      improvement across content_new / content_fix / engine / repo;
+ *   1. ASSESSES the whole project (src/afk/assessor.ts) to distinguish strategic
+ *      recommendations from routine maintenance rotation across content / engine / repo;
  *   2. fixes the live playtest launch target to the CORE GAME — the overworld
  *      from a fresh start — independently of which quest/code target the
  *      assessor recommends, matching the default `npm run blind`;
@@ -27,6 +27,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   assess,
+  assessmentRecommendationKind,
   formatAssessment,
   isSaturated,
   OVERWORLD_PLAYTEST_TARGET,
@@ -195,7 +196,12 @@ function main(): void {
     : null;
 
   const prompt = ultraplan
-    ? buildUltraplanPrompt({ playtestRecord, currentPlanRecord: currentPlanRecord!, commitEnabled })
+    ? buildUltraplanPrompt({
+        a,
+        playtestRecord,
+        currentPlanRecord: currentPlanRecord!,
+        commitEnabled,
+      })
     : buildPrompt({ a, top, playtestRecord, commitEnabled });
 
   // Per-cycle agent budget: ultraplan (multi-agent re-aim) and content_new (L-effort
@@ -249,7 +255,17 @@ function main(): void {
   console.log(`  prompt:     ${runDir}/prompt.md`);
   console.log(`  playtest record required at: ${playtestRecord}`);
   if (ultraplan) console.log(`  ⟳ saturation re-aim → ultraplan; handoff → ${currentPlanRecord}`);
-  console.log(`  ▶ next best improvement: ${top?.title ?? "(none — game is healthy)"}`);
+  console.log(formatRecommendationConsoleLine(a));
+}
+
+/** Honest one-line assessor status for the CLI without changing cycle execution. */
+export function formatRecommendationConsoleLine(a: Assessment): string {
+  const kind = assessmentRecommendationKind(a);
+  if (kind === "strategic") return `  ▶ next best improvement: ${a.top!.title}`;
+  if (kind === "maintenance") {
+    return `  ↻ maintenance rotation only — no strategic recommendation: ${a.top!.title}`;
+  }
+  return "  • no strategic recommendation (the assessor produced no candidate)";
 }
 
 export function buildPrompt(ctx: {
@@ -258,10 +274,61 @@ export function buildPrompt(ctx: {
   playtestRecord: string;
   commitEnabled?: boolean;
 }): string {
-  const { a, top, playtestRecord, commitEnabled = false } = ctx;
+  const { a, playtestRecord, commitEnabled = false } = ctx;
+  const top = a.top;
+  const recommendationKind = assessmentRecommendationKind(a);
+  const playtestPrefix = playtestRecord.replace(/\.md$/, "");
+  const playtestSidecar = `${playtestPrefix}.run.json`;
   const ranked = a.candidates
     .slice(0, 6)
     .map((c, i) => `  ${i + 1}. [${c.score}] (${c.category}/${c.effort}) ${c.title}`);
+  const assessorSection =
+    recommendationKind === "strategic"
+      ? [
+          "## The assessor's ranked next-best improvements (deterministic)",
+          ...ranked,
+          "",
+          `▶ Recommended: ${top!.title}`,
+          `   why: ${top!.rationale}`,
+          `   evidence: ${top!.evidence.join("; ")}`,
+          "",
+          "You MAY pick a different candidate (or something off-list) if your judgement and",
+          "the available evidence say it is higher value — but justify it in AI_LOOP_STATE.md.",
+        ]
+      : recommendationKind === "maintenance"
+        ? [
+            "## The assessor's maintenance rotation (deterministic; not strategic direction)",
+            ...ranked,
+            "",
+            `↻ Maintenance rotation only — no strategic recommendation: ${top!.title}`,
+            `   why: ${top!.rationale}`,
+            `   evidence: ${top!.evidence.join("; ")}`,
+            "",
+            "This floor candidate remains executable routine maintenance. Treat it as rotation",
+            "context, not as evidence that it is the project's strategic next-best move.",
+          ]
+        : [
+            "## Assessor status (deterministic)",
+            "• No candidate and no strategic recommendation.",
+            "",
+            "Use verified playtest or repo evidence to choose one focused maintenance task;",
+            "do not invent an assessor ranking.",
+          ];
+  const cycleCharge =
+    recommendationKind === "strategic"
+      ? [
+          "Make exactly one focused, high-impact AdventureForge maintenance improvement within this repo",
+          "and leave it green. Use the available repo context to choose and verify the improvement;",
+        ]
+      : recommendationKind === "maintenance"
+        ? [
+            "Make exactly one focused AdventureForge maintenance improvement within this repo and leave it green.",
+            "The assessor's floor pick is routine rotation, not evidence of strategic priority;",
+          ]
+        : [
+            "Make exactly one focused AdventureForge maintenance improvement within this repo and leave it green.",
+            "The assessor supplied no candidate; ground the choice in verified playtest or repo evidence;",
+          ];
   const improvementInstructions = [
     "- content_fix: edit the quest source (or apply_content_patch); re-validate.",
     "- content_new: add and register one world-graph RPG quest, not a detached source file;",
@@ -280,13 +347,14 @@ export function buildPrompt(ctx: {
     "",
     "Start the CORE GAME — the open-world overworld from a FRESH start.",
     "",
-    "- Run `npm run blind` with its default `play_mode: pure`, neutral persona,",
-    "  and one `start_surface: fresh_overworld` session.",
+    `- Run \`npm run blind -- --out ${playtestPrefix}\` with its default`,
+    "  `play_mode: pure`, neutral persona, and one `start_surface: fresh_overworld` session.",
     "- Do not pass `--quest`, a quest id, a persona overlay, or a saved session. Do not add",
     "  coverage tasks, routes, solutions, content targets, or a call-count stopping rule.",
     "  The game supplies the goal and continue/end checkpoints; interview only after exit.",
-    `- After play, copy the V2 player report and game-returned journey receipt to: ${playtestRecord}`,
-    "  loop.sh checks for this report before the final commit in commit-enabled cycles.",
+    `- The runner must publish ${playtestRecord} and then its verified adjacent`,
+    `  V2 build/receipt sidecar ${playtestSidecar}. loop.sh validates both against`,
+    "  the exact provisional commit before the final commit in commit-enabled cycles.",
   ];
   const feedbackInstructions = [
     "- Count new verified reports since the newest successful feedback compile from the",
@@ -355,19 +423,10 @@ export function buildPrompt(ctx: {
     "# AdventureForge AFK improvement cycle (trust, but verify)",
     "",
     "This cycle improves AdventureForge, a local fictional text-based TTRPG project.",
-    "Make exactly one focused, high-impact AdventureForge maintenance improvement within this repo",
-    "and leave it green. Use the available repo context to choose and verify the improvement;",
+    ...cycleCharge,
     "do not route around the verifier.",
     "",
-    "## The assessor's ranked next-best improvements (deterministic)",
-    ...ranked,
-    "",
-    `▶ Recommended: ${top ? `${top.title}` : "(none)"}`,
-    top ? `   why: ${top.rationale}` : "",
-    top ? `   evidence: ${top.evidence.join("; ")}` : "",
-    "",
-    "You MAY pick a different candidate (or something off-list) if your judgement and",
-    "the available evidence say it is higher value — but justify it in AI_LOOP_STATE.md.",
+    ...assessorSection,
     "",
     ...workflow,
     "",
@@ -419,21 +478,41 @@ export function formatLoopStateAppend(
  * mandatory-playtest + green-bar discipline as a standard cycle.
  */
 export function buildUltraplanPrompt(ctx: {
+  a: Assessment;
   playtestRecord: string;
   currentPlanRecord?: string;
   commitEnabled?: boolean;
 }): string {
-  const { playtestRecord, commitEnabled = false } = ctx;
+  const { a, playtestRecord, commitEnabled = false } = ctx;
+  const recommendationKind = assessmentRecommendationKind(a);
+  if (recommendationKind === "strategic") {
+    throw new Error("Ultraplan mode requires a saturated assessment, not strategic direction.");
+  }
+  const assessorStatus =
+    recommendationKind === "maintenance"
+      ? [
+          "## Assessor status — maintenance floor, not strategic direction",
+          `↻ Maintenance rotation only — no strategic recommendation: ${a.top!.title}`,
+          "Do not carry this floor ordering into the ultraplan as a recommendation. The bounded",
+          "repo review below independently selects and justifies the structural re-aim.",
+        ]
+      : [
+          "## Assessor status — no candidate and no strategic recommendation",
+          "The bounded repo review below independently selects and justifies the structural re-aim.",
+        ];
+  const playtestPrefix = playtestRecord.replace(/\.md$/, "");
+  const playtestSidecar = `${playtestPrefix}.run.json`;
   const currentPlanRecord =
     ctx.currentPlanRecord ?? playtestRecord.replace(/playtest\.md$/, "current-plan.md");
   const blindInstructions = [
-    "- Play the CORE GAME — the overworld from a FRESH start — with the default",
-    "  `npm run blind` neutral-player setup.",
+    "- Play the CORE GAME — the overworld from a FRESH start — with",
+    `  \`npm run blind -- --out ${playtestPrefix}\` and the default neutral-player setup.`,
     "- Do not pass `--quest`, a quest id, a persona overlay, or a saved session; every",
     "  live blind player must discover and enter quests only through normal overworld play.",
     "  Add no coverage route, solution, content target, or call-count stopping rule; the",
     "  game's goal/checkpoint choice governs exit, and the interview happens only afterward.",
-    `- Copy its structured V2 report and journey receipt to ${playtestRecord}.`,
+    `- Require the runner to publish ${playtestRecord}, followed by its verified`,
+    `  V2 build/receipt sidecar ${playtestSidecar}; loop.sh binds both to provisional HEAD.`,
   ];
   const evidenceOnlyPrelude = commitEnabled
     ? []
@@ -485,6 +564,8 @@ export function buildUltraplanPrompt(ctx: {
     "only routine 0.5-floor blind passes remain. That is the signal to RE-AIM the",
     "project with a multi-agent ultraplan rather than spend another cycle on polish.",
     "Keep this repo-local: use the ultraplan to select one focused AdventureForge maintenance improvement, then verify it completely.",
+    "",
+    ...assessorStatus,
     "",
     ...evidenceOnlyPrelude,
     `## STEP 0 — Read the decision log FIRST (${DECISION_LOG_DOC})`,

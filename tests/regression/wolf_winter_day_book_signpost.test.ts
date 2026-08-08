@@ -104,8 +104,7 @@ describe("bug_0399 — wolf_winter signposts the score-bearing day-book", () => 
         ],
       }).findings.filter((finding) => finding.severity === "error"),
     ).toHaveLength(0);
-    // Errors only: wolf_winter carries standing AMBIGUOUS_NPC_NAME warnings for the four
-    // same-named June declarations until they move onto a variant affordance. This test is
-    // about the day-book award, and warnings never flip report.ok.
+    // June's route-specific presentations share one NPC identity, so the pack carries
+    // no duplicate-name exception while this test focuses on the day-book award.
   });
 });

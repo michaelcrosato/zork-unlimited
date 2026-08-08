@@ -48,8 +48,9 @@ loop.sh  (outer driver — orchestration + the bar)
 │          a single pure player (docs/testing_pyramid.md).
 │       d. FEEDBACK + LEDGER — count actual verified reports since the newest
 │          successful compile. Run `npm run feedback:compile` iff there are ≥3;
-│          never invent a count. Complete AI_LOOP_STATE.md after play; it must be
-│          the only tracked change left outside the provisional commit.
+│          never invent a count. This is a prompted-agent action, not a loop.sh
+│          helper or gate. Complete AI_LOOP_STATE.md after play; it must be the
+│          only tracked change left outside the provisional commit.
 │
 ├─ 4. CRAWL GATE (post)  npm run crawl:smoke again — a new finding here is a
 │     regression the cycle itself just introduced; the cycle halts and reverts.
@@ -64,7 +65,9 @@ loop.sh  (outer driver — orchestration + the bar)
 │                                                      deleted/disabled tests, dropped
 │                                                      test count, or a re-pin with no
 │                                                      content change; legit re-pins warn)
-│       require_playtest_record    (no blind-playtest report ⇒ no commit)
+│       require_playtest_record    (pure V2 report + raw server evidence + sidecar
+│                                    must reproduce one another and bind the current
+│                                    world/build to exact provisional HEAD)
 │       require_final_ledger_only  (only AI_LOOP_STATE.md may differ after play)
 │
 └─ 6. FINALIZE/PUSH   commit only the completed AI_LOOP_STATE.md entry after the
@@ -82,8 +85,20 @@ its exact non-ignored untracked paths. A red gate fails explicitly (`|| return 1
 only untracked paths absent from that snapshot are cleaned, across the whole repo.
 Preexisting untracked paths are not intentionally deleted. Under the dirty override,
 however, reset still destroys tracked edits and no cleanup can restore a preexisting
-untracked file that the agent staged/committed, edited, moved, or removed. The outer loop continues
-until its circuit breakers stop it (5 consecutive / 15 total failures by default).
+untracked file that the agent staged/committed, edited, moved, or removed. A
+nonzero or timed-out agent turn is itself a failed cycle; partial output does not
+fall through to the gates. Every failure is classified and appended atomically to
+the bounded ignored `ai-runs/failure-ledger.json` history (100 entries by default),
+which `npm run loop:status` displays even when no wrapper log was captured. The
+outer loop continues until its circuit breakers stop it (5 consecutive / 15 total
+failures by default).
+
+**Feedback-compile ownership.** The cycle prompt tells the operating agent to
+count verified artifacts and invoke `npm run feedback:compile` at the threshold.
+`loop.sh` itself does not perform that count or call the compiler; it enforces the
+subsequent crawl, health, integrity, playtest, and ledger-only gates. This makes
+the current implementation boundary explicit rather than presenting the protocol
+step as a shell-driver guarantee.
 
 **Evidence-only mode.** With `AI_LOOP_COMMIT=0`, `npm run ai:loop` does not rotate or
 append to the tracked loop ledger before the agent starts. The prompt requires an
@@ -178,8 +193,8 @@ npm run assess          # just print the ranked next-best-improvement backlog
 npm run ai:loop         # one cycle: assess + emit the cycle prompt + artifacts
 ./loop.sh --once        # full cycle (pre-crawl → change/provisional/play → outer gates → ledger commit)
 ./loop.sh               # continuous (AI_LOOP_MAX_CYCLES, AI_LOOP_DELAY_SECONDS to bound)
-npm run loop:status     # project-scoped status (breaker/velocity telemetry needs
-npm run loop:stop       #   a wrapper log: ./loop.sh 2>&1 | tee ai-runs/wrapper.log)
+npm run loop:status     # project-scoped status + durable latest failure; optional
+npm run loop:stop       #   velocity telemetry uses: ./loop.sh 2>&1 | tee ai-runs/wrapper.log
 
 npm run crawl:smoke               # the crawl gate itself, run standalone (docs/testing_pyramid.md)
 npm run blind                     # canonical pure player, fresh overworld
@@ -191,6 +206,14 @@ npm run feedback:compile          # compile hot spots + mode-separated pure rete
 `loop.sh` installs missing root and UI dependencies before starting cycles because
 `npm run health` includes `ui:typecheck`.
 
+The scheduled deep audit wraps the isolated `ending-render-proof` and standard
+coverage suite with non-blocking performance warnings at 420 s and 4,200 s. It
+caches the last five green durations per proof and also warns above 1.5× their
+rolling median. These warnings never change the commands' exit status, hard job
+timeouts, state caps, or proof completeness. The instrumented standard suite has
+a coverage-command-only 300-second per-test ceiling for full-suite V8 worker
+contention; ordinary standard tests retain their 60-second fail-fast ceiling.
+
 Key env (loop.sh's header comment is the authoritative reference): `AI_LOOP_COMMIT=1`
 to enable the local provisional and final-ledger commits, `AI_LOOP_PUSH=1` to push
 (rejected against protected main — see the cycle
@@ -200,16 +223,17 @@ the outer loop does not inspect local credential files or choose a fallback prov
 `AI_AGENT_TIMEOUT_SECONDS` (default 2400)
 to hang-kill a stuck turn, `AI_LOOP_MAX_CONSECUTIVE_FAILURES` / `AI_LOOP_MAX_TOTAL_FAILURES`
 for the circuit breakers, and `AI_LOOP_ALLOW_VERIFIER_EDITS=1` to acknowledge a
-deliberate verifier change.
+deliberate verifier change. `AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES` bounds retained
+failure records (default 100).
 
 ## Honest limits
 
-- loop.sh's own gate enforces only that a playtest record exists. The pure
-  runner's stronger verifier checks a server-authored fresh-start/exit evidence
-  pair and exact journey receipt against the schema-valid V2 interview. It still
-  cannot prove the model's private motivation, but it does prove the recorded
-  session followed the enforced player surface and ended through the game
-  contract.
+- loop.sh requires the pure runner's sidecar-last publication, a schema-valid V2
+  interview, an exact game receipt match, `tracked_worktree_clean: true`, and a
+  build commit equal to provisional HEAD. This rejects empty, fabricated-shape,
+  interrupted, dirty-build, and stale-revision artifacts. It still cannot prove
+  the model's private motivation, but it does prove the recorded session followed
+  the enforced player surface and ended through the game contract.
 - The verifier-integrity guard catches _mechanical_ tampering (skip/delete/empty/
   re-pin), not _semantic_ weakening (a future LLM-judge could).
 - The loop makes one change per cycle by design; broad multi-step work should be

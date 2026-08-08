@@ -1,4 +1,4 @@
-# MUST WARN: AMBIGUOUS_NPC_NAME
+# MUST FAIL: AMBIGUOUS_NPC_NAME
 # Two NPCs share a display name, so the name the player reads off the action menu
 # does not identify either of them. AMBIGUOUS_ALIAS covered the same hazard for
 # objects and never looked at pack.npcs.

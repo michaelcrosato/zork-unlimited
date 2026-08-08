@@ -28,6 +28,7 @@ import { buildCampaignCharacterState } from "../../src/world/campaign_character_
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { GameSession } from "../../ui/src/engine.js";
+import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";
 
 const SOURCE_PATH = "content/rpg/quests/gallowmere.yaml";
 const SOURCE = readFileSync(SOURCE_PATH, "utf8");
@@ -69,6 +70,7 @@ function registeredQueensburyMarketSession(): OverworldSession {
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:road_warden");
   if (session.journey().storyChoice?.kind === "relief_oath") {
+    revealCurrentJourneyStoryOptions(session);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
   }
   if (session.journey().storyChoice?.kind === "lead_source") {

@@ -3872,12 +3872,15 @@ npcs:
       root: cade_root
       nodes:
         - id: cade_root
-          npc_text: >
-            Albany sent you. Save/cost—HUNT: herd+stores/wolves risk death; LURE:
-            herd+pack/feed+paling/cattle risk; DRIVE: people+pack/outer line;
-            crisis=wound/2 cattle/rig; FORTIFY: herd+pack+byre/property vs seals+help.
-            Name HUNT here, or cross uncommitted into it; crossing north commits it and closes
-            the other plans.
+          npc_text: |-
+            Albany sent you. Choose what must stand at dawn. Every plan can finish Wolf-Winter; none saves everything, and I name no best answer.
+
+            HUNT — Outcome: hold Cade's ground, herd, and relief stores with prepared combat. Cost: wolves may die; failure can lose cattle or the line. Albany: bloodshed changes Greenway work; damage remains.
+            LURE — Outcome: relocate the pack beyond the breach and keep the herd. Cost: last feed, broken paling, two cattle risked on a first-cast foul. Albany: broken boundary or scattered cattle change Station response.
+            DRIVE — Outcome: evacuate people and herd; force the pack clear. Cost: abandon the outer steading; Crisis takes a wound, two cattle, or rig. Albany: the line and chosen loss remain.
+            FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost: no retreat; expose property for Cade's aid or spend public seals without it. Albany: terms remain; a no-loss hold opens no Cade repair dispatch.
+
+            Questions teach; they do not commit. HUNT commits on uncommitted north crossing; other plans commit in branches. Any commitment closes the other three.
           variants:
             - when: [{ has_flag: pack_diverted }]
               text: >
@@ -3938,21 +3941,21 @@ npcs:
               text: >
                 Both lessons are yours. You do not choose a road here: commit to the quick
                 or guarded combat line later, at the wolves, when each opening makes the
-                choice real. Living plans must be committed before you enter the breach.
+                choice real. LURE, DRIVE, and FORTIFY must be committed before you enter the breach.
             - when: [{ has_flag: heard_counsel }, { not_flag: heard_plan }]
               text: >
                 You have the quick spear-hand. The guarded spear-fighting plan is still
                 yours to learn: rail, breach, and patient line. Ask for it—or leave and
-                accept that crossing without a living commitment means hunt-and-hold.
+                accept that crossing without a LURE, DRIVE, or FORTIFY commitment means hunt-and-hold.
             - when: [{ has_flag: heard_plan }, { not_flag: heard_counsel }]
               text: >
                 You have the guarded spear-fighting plan. The quick spear-hand is still
                 yours to learn: set, wheel, and violent close. Ask for it—or leave and
-                accept that crossing without a living commitment means hunt-and-hold.
+                accept that crossing without a LURE, DRIVE, or FORTIFY commitment means hunt-and-hold.
           topics:
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "HUNT — Hold breach: cattle/reserves safe; wolves may die. Learn +2 attack/+5 tally. Leave; if June, acknowledge; north = HUNT; close LURE/DRIVE/FORTIFY."
+              prompt: "HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: june_hunt_released }
@@ -3981,7 +3984,7 @@ npcs:
               goto: cade_byre
             - id: commit_hunt_and_hold
               aliases: [choose_hunt_and_hold, commit_hunt]
-              prompt: "Commit HUNT when you cross north — Hold breach: cattle/reserves safe; wolves may die; LURE/DRIVE/FORTIFY then close."
+              prompt: "Commit HUNT north — Hold ground in prepared combat. Risk: wolf deaths; failure risks cattle/line. Closes LURE/DRIVE/FORTIFY."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -3991,7 +3994,7 @@ npcs:
               end: true
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "LURE — Draw the pack out; protects cattle and wolves; spends finite feed, leaves the paling broken, and a foul risks cattle. Inspect."
+              prompt: "LURE — Relocate pack beyond the breach; keep the herd. Cost: last feed, broken paling, two cattle risked on a foul. Inspect."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4001,7 +4004,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "DRIVE — Move herd and pack; protects people and wolves; abandons the outer line, then a crisis costs wound, cattle, or rig. Inspect."
+              prompt: "DRIVE — Evacuate people/herd; force pack clear. Cost: abandon outer steading; Crisis takes wound, two cattle, or rig. Inspect."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4011,7 +4014,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "FORTIFY — Seal until dawn; protects byre, cattle, and wolves; trade outer property against public seals and Cade's aid. Inspect."
+              prompt: "FORTIFY — Keep household/herd/pack apart to dawn. Cost: no retreat; expose property/Cade aid or spend seals/no aid. Inspect."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4053,7 +4056,7 @@ npcs:
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "Ask how Cade could draw the pack out alive instead."
+              prompt: "Ask how Cade could relocate the pack beyond the breach with feed."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4109,7 +4112,7 @@ npcs:
               goto: cade_wolves
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "Ask how Cade could draw the pack out alive instead."
+              prompt: "Ask how Cade could relocate the pack beyond the breach with feed."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4146,7 +4149,8 @@ npcs:
               end: true
         - id: cade_lure
           npc_text: >
-            FEED LURE can save pack/herd; spends last feed, leaves paling broken. Three casts;
+            FEED LURE relocates pack beyond the breach while holding the herd at Cade's yard;
+            spends last feed, leaves paling broken. Three casts;
             first foul risks two cattle; no retry, rail recovery. Supports: Fieldcraft, fodder,
             aid-only. Commit here. Cross uncommitted chooses HUNT, closing lure/drive/fortify.
           variants:
@@ -4156,8 +4160,9 @@ npcs:
                 - { not_flag: strategy_lure_committed }
               text: >
                 AID-ONLY LURE BENEFIT: If the first cast stays clean, the witnessed count skips
-                the final ordinary +1 alarm; a fouled opening keeps it. FEED LURE can save pack/herd;
-                spends last feed, leaves paling broken. Three casts; first foul risks two cattle;
+                the final ordinary +1 alarm; a fouled opening keeps it. FEED LURE relocates pack
+                beyond the breach while holding the herd at Cade's yard; spends last feed, leaves
+                paling broken. Three casts; first foul risks two cattle;
                 no retry, rail recovery. Fieldcraft/fodder help. Choose QUICK LESSON first: +2
                 attack, +5 final tally; commitment closes it. Cross uncommitted chooses HUNT;
                 other plans close.
@@ -4165,7 +4170,8 @@ npcs:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
               text: >
-                FEED LURE can save pack/herd; spends last feed, leaves paling broken. Three casts;
+                FEED LURE relocates pack beyond the breach while holding the herd at Cade's yard;
+                spends last feed, leaves paling broken. Three casts;
                 first foul risks two cattle; no retry, rail recovery. Supports: Fieldcraft,
                 fodder, aid-only. Choose QUICK LESSON first: +2 attack, +5 final tally;
                 commitment closes it. Cross uncommitted chooses HUNT, closing lure/drive/fortify.
@@ -4174,8 +4180,9 @@ npcs:
                 - { not_flag: strategy_lure_committed }
               text: >
                 AID-ONLY LURE BENEFIT: If the first cast stays clean, the witnessed count skips
-                the final ordinary +1 alarm; a fouled opening keeps it. FEED LURE can save pack/herd;
-                spends last feed, leaves paling broken. Three casts; first foul risks two cattle;
+                the final ordinary +1 alarm; a fouled opening keeps it. FEED LURE relocates pack
+                beyond the breach while holding the herd at Cade's yard; spends last feed, leaves
+                paling broken. Three casts; first foul risks two cattle;
                 no retry, rail recovery. Fieldcraft/fodder help. Commit here. Cross uncommitted
                 chooses HUNT; other plans close.
           topics:
@@ -4200,7 +4207,7 @@ npcs:
                 - { not_visited: paling_gap }
               goto: cade_lure_committed
             - id: lure_back
-              prompt: "Decline for now; crossing uncommitted chooses hunt-and-hold and permanently retires all living plans."
+              prompt: "Decline for now; crossing uncommitted chooses HUNT and permanently retires LURE, DRIVE, and FORTIFY."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
@@ -4238,7 +4245,8 @@ npcs:
               end: true
         - id: cade_drive
           npc_text: >
-            Prepare/don gear first. SIGNAL DRIVE can spare pack/people; outer defense
+            Prepare/don gear first. SIGNAL DRIVE evacuates people/herd while forcing the pack clear;
+            outer defense
             always lost. Commit starts herd and closes lure/hunt/fortify. Two charges; miss:
             no retry, hurdle recovery. Crisis costs wound, two cattle, or rig. Bond/June help.
           variants:
@@ -4247,7 +4255,8 @@ npcs:
                 - { has_flag: june_pike_present }
                 - { not_flag: strategy_drive_committed }
               text: >
-                BOND+JUNE MATCH: DRIVE spares pack/people; loses outer defense. Commit starts
+                BOND+JUNE MATCH: DRIVE evacuates people/herd while forcing the pack clear; loses
+                outer defense. Commit starts
                 herd/closes alternatives. Unmarked cut aids first shutter; June holds gate.
                 Two charges; first miss: no retry, hurdle recovery. Crisis: wound/two
                 cattle/rig. Don gear first.
@@ -4255,7 +4264,8 @@ npcs:
                 - { has_flag: relief_oath_unaffiliated_bond }
                 - { not_flag: strategy_drive_committed }
               text: >
-                BOND MATCH: DRIVE spares pack/people; loses outer defense. Commit starts
+                BOND MATCH: DRIVE evacuates people/herd while forcing the pack clear; loses outer
+                defense. Commit starts
                 herd/closes alternatives. Unmarked cut lowers first shutter. Two charges;
                 first miss: no retry, hurdle recovery. Crisis: wound/two cattle/rig. June can
                 help. Don gear first.
@@ -4263,7 +4273,8 @@ npcs:
                 - { has_flag: june_pike_present }
                 - { not_flag: strategy_drive_committed }
               text: >
-                JUNE MATCH: DRIVE spares pack/people; loses outer defense. Commit starts
+                JUNE MATCH: DRIVE evacuates people/herd while forcing the pack clear; loses outer
+                defense. Commit starts
                 herd/closes alternatives. June holds lower gate. Two charges; first miss: no
                 retry, hurdle recovery. Crisis: wound/two cattle/rig. Bond can help. Don gear
                 first.
@@ -4306,7 +4317,8 @@ npcs:
               end: true
         - id: cade_fortify
           npc_text: >
-            FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD TERMS: property risk,
+            FORTIFY keeps household/herd/pack apart through dawn; no retreat/switch. HOUSEHOLD
+            TERMS: property risk,
             seals saved, Cade aid. ALBANY: property safe, seals spent, no Cade aid. Works eases
             first DC; mobile stabilizes a recovered miss. If intact June rides, her paid line
             prevents 2 HP only after an unstabilized failed seal reaches pressure 3+; solo or
@@ -4322,7 +4334,8 @@ npcs:
                 or pressure-2 dawn costs no HP. Reach dawn.
             - when: [{ has_flag: relief_oath_limited_duty }]
               text: >
-                AID-ONLY CADE-TERMS FORTIFY FIT: FORTIFY saves lives/herd/byre; no retreat/switch.
+                AID-ONLY CADE-TERMS FORTIFY FIT: FORTIFY keeps household/herd/pack apart through
+                dawn; no retreat/switch.
                 HOUSEHOLD fits duty: exposes property, saves public seals, gains Cade aid. ALBANY
                 exceeds duty: saves property, spends seals, no Cade aid. Works/mobile support
                 first seam. If intact June rides, her paid line prevents 2 HP only after an
@@ -4330,7 +4343,8 @@ npcs:
                 Mobile-stabilized or pressure-2 dawn costs no HP.
             - when: [{ has_flag: relief_oath_unaffiliated_bond }]
               text: >
-                BOND MATCH: FORTIFY saves lives/herd/byre; no retreat/switch. HOUSEHOLD fits
+                BOND MATCH: FORTIFY keeps household/herd/pack apart through dawn; no
+                retreat/switch. HOUSEHOLD fits
                 bond: exposes property, saves public seals, gains Cade aid. ALBANY breaks bond:
                 saves property, spends seals, no Cade aid. Works/mobile support first seam.
                 If intact June rides, her paid line prevents 2 HP only after an unstabilized
@@ -4429,11 +4443,10 @@ npcs:
               prompt: "Leave Cade and begin the committed public fortification."
               end: true
 
-  # Before the first paling visit, June makes the ordinary hunt's commitment boundary
-  # explicit. The player can still ask Cade for any living strategy without speaking to
-  # her; only an uncommitted north crossing waits for this acknowledgement. This prevents
-  # the rail's defensive vocabulary from silently masquerading as a bloodless route.
-  - id: june_pike_combat_boundary
+  # June has one stable identity. Conditional presentation variants move her between
+  # the commitment boundary and the three cattle-first intervention beats without
+  # duplicating an NPC merely to change room, description, or dialogue root.
+  - id: june_pike
     name: "Road Warden June Pike"
     description: >
       June Pike holds the byre-yard's north gate with her cattle rope across the latch.
@@ -4443,63 +4456,128 @@ npcs:
     conditions:
       - { has_flag: june_pike_present }
       - { not_flag: june_blood_condition_broken }
-      - { not_flag: june_combat_line_acknowledged }
-      - { not_flag: strategy_lure_committed }
-      - { not_flag: strategy_drive_committed }
-      - { not_flag: strategy_fortify_committed }
-      - { not_visited: paling_gap }
+      - any_of:
+          - all_of:
+              - { not_flag: june_combat_line_acknowledged }
+              - { not_flag: strategy_lure_committed }
+              - { not_flag: strategy_drive_committed }
+              - { not_flag: strategy_fortify_committed }
+              - { not_visited: paling_gap }
+          - all_of:
+              - { has_flag: strategy_lure_committed }
+              - { has_flag: lure_trail_fouled }
+              - { has_flag: yearling_redirected }
+              - { has_flag: flank_redirected }
+              - { not_flag: june_cattle_line_taken }
+          - all_of:
+              - { has_flag: strategy_drive_committed }
+              - { has_flag: drive_flank_turned }
+              - none_of:
+                  - { has_flag: drive_courier_wounded }
+                  - { has_flag: drive_cattle_lost }
+                  - { has_flag: drive_reserve_spent }
+              - { not_flag: june_drive_cattle_line_taken }
+          - all_of:
+              - { has_flag: strategy_fortify_committed }
+              - { has_flag: fortify_threshold_sealed }
+              - { not_flag: fortify_dawn_held }
+              - { not_flag: june_fortify_cattle_line_taken }
+    variants:
+      # Each intervention root records its cattle line as soon as June speaks.
+      # Keep the matching room/root stable through the active acknowledgement;
+      # the NPC's outer conditions still retire a new TALK once that flag is set.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: lure_trail_fouled }
+          - { has_flag: yearling_redirected }
+          - { has_flag: flank_redirected }
+        room: byre_mouth
+        description: >
+          June Pike stands at the inner rail with her cattle rope looped short. She came
+          under cattle-first authority, not as another spear, and the recovered lure has
+          kept her blood condition intact this far.
+        dialogue_root: june_cattle_first
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_flank_turned }
+          - none_of:
+              - { has_flag: drive_courier_wounded }
+              - { has_flag: drive_cattle_lost }
+              - { has_flag: drive_reserve_spent }
+        room: byre_mouth
+        description: >
+          June Pike reaches the lower swing-gate with her cattle rope already set. She will
+          not take over the player's signal line; her Albany authority is cattle-first. If
+          the first signal folded, her lower-gate line can absorb its extra Overrun beat
+          without the player's -2 HP brace. A clean signal is already at Crisis and gains no
+          extra reduction.
+        dialogue_root: june_drive_cattle_first
+      - when:
+          - { has_flag: strategy_fortify_committed }
+          - { has_flag: fortify_threshold_sealed }
+          - { not_flag: fortify_dawn_held }
+        room: byre_mouth
+        description: >
+          June Pike reaches the lower cattle brace while the living pack hammers both sealed
+          lines. Her cattle-first authority still governs her: she will secure that separate
+          brace, not become Cade's labor or alter the pressure already fixed at the byre. After
+          an unstabilized failed seal reaches pressure 3 or higher, her line prevents the rider's
+          persistent -2 HP dawn strain. A mobile-stabilized line costs no HP even at pressure 3;
+          clean pressure 2 also costs nothing, and neither gains a June injury benefit.
+        dialogue_root: june_fortify_cattle_first
     dialogue:
       root: june_wolf_line_boundary
       nodes:
         - id: june_wolf_line_boundary
-          npc_text: >
-            Rail now: spear funnel, not a living turn. If a committed first feed cast fouls,
-            a brace can pen the yearling alive. Commit feed, drive, or seals before crossing.
-            Name HUNT here to hold the breach, or choose a living plan; crossing north commits
-            it, and first wolf down ends our agreement.
+          npc_text: >-
+            Choose by outcome. HUNT holds Cade's ground through prepared combat; LURE relocates
+            the pack; DRIVE evacuates the outer line; FORTIFY keeps household, herd, and pack
+            apart until dawn. Cade commits the three noncombat plans before you cross. For HUNT,
+            release me now to preserve our agreement without field aid, or keep me on cattle and
+            accept that the first wolf death breaks it. Crossing north commits HUNT.
           topics:
             - id: release_june_for_hunt
               aliases: [release_june, preserve_june_agreement, choose_hunt_without_june]
-              prompt: "Release June and commit HUNT now — Preserve the relationship; close LURE/DRIVE/FORTIFY; forfeit every later June field intervention; gain no combat or cattle bonus."
+              prompt: "HUNT / release June — Hold ground alone; preserve agreement; lose June's field aid. Commits HUNT; closes LURE/DRIVE/FORTIFY."
               goto: june_released_before_hunt
             - id: commit_hunt_and_hold
               aliases: [accept_wolf_line, choose_hunt_and_hold, acknowledge_combat_line]
-              prompt: "Commit HUNT when you cross north and keep June — Hold breach; LURE/DRIVE/FORTIFY then close; first wolf death ends June's agreement by breaking it."
+              prompt: "HUNT / keep June — Hold ground; June stays cattle-first. First wolf death breaks agreement. North commits; closes other plans."
               goto: june_combat_line_disclosed
             - id: keep_cattle_terms
               aliases: [choose_living_plan, ask_cade]
-              prompt: "Keep June's terms and ask Cade here for the feed lure, pack drive, or joined-seal plan."
+              prompt: "Choose a noncombat plan — Ask Cade to commit LURE relocation, DRIVE evacuation, or FORTIFY until dawn."
               goto: june_cattle_terms_confirmed
         - id: june_combat_line_disclosed
-          npc_text: >
-            Exact: wedge or bind for a safer spear line, but neither spares the yearling
-            on an ordinary hunt. I take cattle. Cade's living plans close when you cross.
-            Once a wolf falls, I return alone.
+          npc_text: >-
+            Exact: wedge or bind for safer combat, but HUNT still means a wolf can die. I hold
+            cattle until that happens; then our agreement breaks and I return alone. Cade's
+            three noncombat plans close when you cross.
           effects:
             - set_flag: june_combat_line_acknowledged
             - add_journal: "June: ordinary rail means combat. Cross without a living plan and choose hunt-and-hold; first wolf death ends her agreement."
           topics:
             - id: leave_june_boundary
               aliases: [cross_to_paling, leave_june]
-              prompt: "End the exchange; the north gate is open, and Cade's living commitments remain available until you cross."
+              prompt: "End exchange; north is open. Cade's LURE, DRIVE, and FORTIFY commitments remain until you cross."
               end: true
         - id: june_cattle_terms_confirmed
           npc_text: >-
             Your cattle-first terms already stand; nothing here commits a plan. Cade waits
-            beside the day-book: settle the feed lure, pack drive, or joined seals with him.
-            Until one is committed, north remains closed.
+            beside the day-book: settle LURE relocation, DRIVE evacuation, or FORTIFY until
+            dawn with him. Until one is committed, north remains closed.
           topics:
             - id: return_to_cade
               aliases: [leave_june_boundary, ask_cade]
-              prompt: "End the exchange and return to Cade beside the day-book; all three living plans remain open, and north remains closed."
+              prompt: "End exchange; return to Cade; LURE, DRIVE, and FORTIFY remain open, and north remains closed."
               end: true
         - id: june_released_before_hunt
-          npc_text: >
-            Agreed. I take the cattle-first return before your spear crosses. Our word
-            stays intact, but my rope, lower gate, and dawn brace go with me: no later
-            LURE, DRIVE, or FORTIFY intervention, and no help against a wolf. Choosing
-            release commits HUNT now and closes those three living plans. North opens under
-            your hand alone; ordinary yard preparation and backtracking remain available.
+          npc_text: >-
+            Agreed. I take the cattle-first return before your spear crosses. Our word stays
+            intact, but my rope, lower gate, and dawn brace go with me: no later field
+            intervention and no help against a wolf. Release commits HUNT now and closes LURE,
+            DRIVE, and FORTIFY. North opens under your hand alone; ordinary yard preparation
+            and backtracking remain available.
           effects:
             - set_flag: june_hunt_released
             - set_flag: june_combat_line_acknowledged
@@ -4508,32 +4586,10 @@ npcs:
           topics:
             - id: leave_after_june_release
               aliases: [cross_to_paling, leave_june]
-              prompt: "End the exchange; HUNT is committed and north is open. Yard preparation remains, but June and the three living plans do not reopen."
+              prompt: "End exchange; HUNT is committed and north is open. Yard prep remains; June, LURE, DRIVE, and FORTIFY do not reopen."
               end: true
 
-  # June is an optional campaign companion, never a direct-start assumption or
-  # another combatant. She appears only after the failed lure has been recovered
-  # alive through both younger wolves. Speaking to her triggers the independent
-  # cattle-first decision Albany disclosed: she refuses the grey-wolf line, takes
-  # the herd instead, and retires after changing pressure once.
-  - id: june_pike
-    name: "Road Warden June Pike"
-    description: >
-      June Pike stands at the inner rail with her cattle rope looped short. She came
-      under cattle-first authority, not as another spear, and the recovered lure has
-      kept her blood condition intact this far.
-    room: byre_mouth
-    conditions:
-      - { has_flag: june_pike_present }
-      - { has_flag: strategy_lure_committed }
-      - { has_flag: lure_trail_fouled }
-      - { has_flag: yearling_redirected }
-      - { has_flag: flank_redirected }
-      - { not_flag: june_blood_condition_broken }
-      - { not_flag: june_cattle_line_taken }
-    dialogue:
-      root: june_cattle_first
-      nodes:
+        # LURE: June independently takes the cattle line after the living recovery.
         - id: june_cattle_first
           npc_text: >
             No. I will not join the line on old grey. You granted me the cattle call,
@@ -4549,34 +4605,7 @@ npcs:
               prompt: "Acknowledge June's decision and face old grey."
               end: true
 
-  # On the drive family June remains cattle-first rather than becoming a second
-  # player-controlled tool. Her separate NPC surface preserves the established lure
-  # conversation unchanged. When present she independently takes the lower swing-gate:
-  # Pack Drive stays at Crisis on a clean opening, while her line absorbs the failed
-  # opening's extra Overrun beat without the solo route's -2 HP brace. The crisis menu
-  # waits for that decision, but every solo route remains complete.
-  - id: june_pike_drive
-    name: "Road Warden June Pike"
-    description: >
-      June Pike reaches the lower swing-gate with her cattle rope already set. She will
-      not take over the player's signal line; her Albany authority is cattle-first. If
-      the first signal folded, her lower-gate line can absorb its extra Overrun beat
-      without the player's -2 HP brace. A clean signal is already at Crisis and gains no
-      extra reduction.
-    room: byre_mouth
-    conditions:
-      - { has_flag: june_pike_present }
-      - { has_flag: strategy_drive_committed }
-      - { has_flag: drive_flank_turned }
-      - none_of:
-          - { has_flag: drive_courier_wounded }
-          - { has_flag: drive_cattle_lost }
-          - { has_flag: drive_reserve_spent }
-      - { not_flag: june_blood_condition_broken }
-      - { not_flag: june_drive_cattle_line_taken }
-    dialogue:
-      root: june_drive_cattle_first
-      nodes:
+        # DRIVE: the lower swing-gate absorbs only the failed opening's extra beat.
         - id: june_drive_cattle_first
           npc_text: >
             I take the lower swing-gate under your cattle-first authority, not command of
@@ -4594,29 +4623,7 @@ npcs:
               prompt: "Acknowledge June's cattle line and choose the crisis priority."
               end: true
 
-  # Fortification keeps June independent without changing the monotonic siege track. She
-  # takes the lower cattle brace under her existing authority; the dawn watch waits for her
-  # decision when she is present, while solo routes need no synthetic substitute action.
-  - id: june_pike_fortify
-    name: "Road Warden June Pike"
-    description: >
-      June Pike reaches the lower cattle brace while the living pack hammers both sealed
-      lines. Her cattle-first authority still governs her: she will secure that separate
-      brace, not become Cade's labor or alter the pressure already fixed at the byre. After
-      an unstabilized failed seal reaches pressure 3 or higher, her line prevents the rider's
-      persistent -2 HP dawn strain. A mobile-stabilized line costs no HP even at pressure 3;
-      clean pressure 2 also costs nothing, and neither gains a June injury benefit.
-    room: byre_mouth
-    conditions:
-      - { has_flag: june_pike_present }
-      - { has_flag: strategy_fortify_committed }
-      - { has_flag: fortify_threshold_sealed }
-      - { not_flag: fortify_dawn_held }
-      - { not_flag: june_blood_condition_broken }
-      - { not_flag: june_fortify_cattle_line_taken }
-    dialogue:
-      root: june_fortify_cattle_first
-      nodes:
+        # FORTIFY: the lower cattle brace preserves the authored pressure track.
         - id: june_fortify_cattle_first
           npc_text: >
             Your joined seals are the wolf line. I am taking the lower cattle brace under

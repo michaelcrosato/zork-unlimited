@@ -18,6 +18,7 @@ import {
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { GameSession } from "../../ui/src/engine.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const ROOT = process.cwd();
 const SHELTERED_APPROACH_ID = "albany:wolf_approach_sheltered_stockway";
@@ -88,6 +89,7 @@ function revealAlbanyWolf(session: OverworldSession) {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
   expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory(LIMITED_AID_OATH_ID);
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");

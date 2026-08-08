@@ -23,6 +23,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
 import { renderQuestCompletion } from "../../bin/overworld_play.js";
 import { compactOverworldQuestCompletionResult } from "../../src/mcp/compact_overworld_result.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -96,6 +97,7 @@ function wolfBoundary(profileId: string): ReturnType<OverworldSession["snapshot"
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(profileId);
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory(DEFAULT_OATH);
   session.chooseJourneyStory(DEFAULT_SOURCE);
   moveToArea(session, PREPARATION.area);

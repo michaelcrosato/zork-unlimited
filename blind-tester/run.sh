@@ -101,6 +101,7 @@ shell_path_arg() {
 
 CODEX_ROLLOUT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-rollout.mjs")"
 CODEX_STRICT_STREAM_SCRIPT="$(node_path_arg "$SCRIPT_DIR/codex-strict-stream.mjs")"
+PUBLISH_ARTIFACT_SCRIPT="$(node_path_arg "$SCRIPT_DIR/publish-artifact.mjs")"
 
 is_absolute_output_prefix() {
   case "$1" in
@@ -1282,25 +1283,16 @@ if ! assert_launch_provenance_unchanged; then
 fi
 
 # Persist the exact server-authored JSONL only after the report and private
-# sidecar have passed their final verification. COPYFILE_EXCL preserves the
-# one-prefix/one-attempt contract, and the byte comparison guards publication.
+# sidecar have passed their final verification. The publisher materializes and
+# syncs a regular file before an exclusive atomic link makes it canonical. It
+# also gives the evidence its publication timestamp instead of inheriting the
+# earlier live-capture timestamp from WORK.
 DURABLE_RUN_EVIDENCE_ARG="$(node_path_arg "$DURABLE_RUN_EVIDENCE")"
 set +e
-"$NODE_CMD" -e '
-const fs = require("node:fs");
-const source = process.argv[1];
-const destination = process.argv[2];
-try {
-  fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
-  if (!fs.readFileSync(source).equals(fs.readFileSync(destination))) {
-    throw new Error("published evidence bytes differ from private evidence");
-  }
-} catch (error) {
-  try { fs.rmSync(destination, { force: true }); } catch {}
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-}
-' "$RUN_EVIDENCE_ARG" "$DURABLE_RUN_EVIDENCE_ARG" >"$OUT.evidence-publish.log" 2>&1
+"$NODE_CMD" "$PUBLISH_ARTIFACT_SCRIPT" \
+  --source "$RUN_EVIDENCE_ARG" \
+  --destination "$DURABLE_RUN_EVIDENCE_ARG" \
+  --after "$REPORT_MD" >"$OUT.evidence-publish.log" 2>&1
 EVIDENCE_PUBLISH_STATUS=$?
 set -e
 if [[ "$EVIDENCE_PUBLISH_STATUS" -ne 0 ]]; then
@@ -1378,25 +1370,16 @@ if ! assert_launch_provenance_unchanged; then
 fi
 
 # Commit the pure publication transaction by creating the canonical adjacent
-# sidecar LAST. Until this exclusive, byte-checked copy succeeds, feedback,
-# resume, and fleet consumers reject the report as unpublished. No verifier
-# ever receives this canonical destination as an output path.
+# sidecar LAST. The same atomic regular-file publisher gives the marker a
+# timestamp at or after the durable evidence. Until this exclusive publication
+# succeeds, feedback, resume, and fleet consumers reject the report as
+# unpublished. No verifier ever receives this canonical destination as an
+# output path.
 set +e
-"$NODE_CMD" -e '
-const fs = require("node:fs");
-const source = process.argv[1];
-const destination = process.argv[2];
-try {
-  fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
-  if (!fs.readFileSync(source).equals(fs.readFileSync(destination))) {
-    throw new Error("published sidecar bytes differ from private sidecar");
-  }
-} catch (error) {
-  try { fs.rmSync(destination, { force: true }); } catch {}
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-}
-' "$PRIVATE_RUN_SIDECAR_ARG" "$RUN_SIDECAR_ARG" >"$OUT.sidecar-publish.log" 2>&1
+"$NODE_CMD" "$PUBLISH_ARTIFACT_SCRIPT" \
+  --source "$PRIVATE_RUN_SIDECAR_ARG" \
+  --destination "$RUN_SIDECAR_ARG" \
+  --after "$DURABLE_RUN_EVIDENCE_ARG" >"$OUT.sidecar-publish.log" 2>&1
 SIDECAR_PUBLISH_STATUS=$?
 set -e
 if [[ "$SIDECAR_PUBLISH_STATUS" -ne 0 ]]; then

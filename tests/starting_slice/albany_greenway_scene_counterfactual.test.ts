@@ -4,31 +4,16 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import {
-  AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-  AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
-  authoredLocalEventLegacyOptionId,
-} from "../../src/world/local_event_scene_legacy.js";
-import { authoredLocalJobLegacyOptionId } from "../../src/world/local_job_scene_legacy.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { cloneOverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
-import { OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import {
-  exactAlbanyGreenwayDepthPredecessor,
-  exactAlbanyMarketDepthPredecessor,
-  exactCadeReturnPacketPredecessor,
-  exactCivicPreparationPredecessor,
-  exactWinterReturnDocketPredecessor,
-} from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
-const PREDECESSOR = exactAlbanyGreenwayDepthPredecessor(WORLD);
-const FOUNDATION_PREDECESSOR = exactAlbanyMarketDepthPredecessor(WORLD);
 const REGION = "Capital / Mohawk";
 const AREA = "albany_city__greenway";
 const POI = "albany_city__greenway__poi";
@@ -39,7 +24,6 @@ const PUBLIC = "post_accessible_public_detour";
 const QUIET = "place_quiet_corridor_markers";
 const CUSTODY = "open_bloodshed_evidence_custody";
 const JOB = "albany_city__greenway__job";
-const JOB_SCENE = "albany:greenway-corridor-survey";
 const PUBLIC_FAST = "stake_shortest_accessible_detour";
 const PUBLIC_DEEP = "map_all_weather_public_loop";
 const QUIET_FAST = "reset_steward_markers";
@@ -48,15 +32,6 @@ const CUSTODY_FAST = "secure_minimum_bloodshed_custody_marks";
 const CUSTODY_DEEP = "trace_bloodshed_chain_of_custody_with_witness_points";
 const OUTCOME_NEUTRAL_EVENT_PROMPT =
   "Emery offers two lawful permanent records for the damaged crossing. Choose one irreversible record; the later corridor survey must match the access promise and account entered here.";
-const MARKET_AREA = "albany_city__market";
-const MARKET_POI = "albany_city__market__poi";
-const MARKET_CONTACT = "albany_city__market__contact";
-const MARKET_EVENT = "albany_city__market__event";
-const MARKET_EVENT_SCENE = "albany:winter-price-policy";
-const MARKET_POLICY = "hold_household_kitchen_prices";
-const MARKET_JOB = "albany_city__market__job";
-const MARKET_JOB_SCENE = "albany:disputed-winter-crates";
-const MARKET_SETTLEMENT = "release_price_hold_operational";
 const CIVIC_RECOVERY = "albany:works_public_shift_civic_rest";
 const FULL = { compact_context: false, compact_result: false } as const;
 
@@ -111,6 +86,7 @@ function returnedToGreenway(
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(world.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
@@ -677,11 +653,22 @@ describe("Albany Greenway trail policy and corridor survey", () => {
     shiftedJob.localSceneProof.boundary.minutes += 1;
     expect(() => OverworldSession.restore(WORLD, shiftedClock)).toThrow(/boundary time/i);
 
-    const alteredCopy = structuredClone(snapshot);
-    const jobEntry = alteredCopy.journalEntries.find((entry) => entry.id === `job:${JOB}`);
-    if (!jobEntry) throw new Error("Expected Greenway job journal entry.");
-    jobEntry.text = `${jobEntry.text} altered`;
-    expect(() => OverworldSession.restore(WORLD, alteredCopy)).toThrow(/canonical option copy/i);
+    const revisedWorld = structuredClone(WORLD);
+    const revisedJob = revisedWorld.local_jobs.find((job) => job.id === JOB);
+    const revisedOption = revisedJob?.authored_scene?.options.find(
+      (option) => option.id === QUIET_DEEP,
+    );
+    if (!revisedJob?.authored_scene || !revisedOption) {
+      throw new Error("Expected Greenway authored job copy.");
+    }
+    revisedJob.authored_scene.prompt = `${revisedJob.authored_scene.prompt} Revised.`;
+    revisedOption.title = `${revisedOption.title} Revised`;
+    revisedOption.consequence = `${revisedOption.consequence} Revised.`;
+    const restoredRevision = OverworldSession.restore(revisedWorld, snapshot);
+    expect(restoredRevision.restoreWarnings()).toEqual([OVERWORLD_CONTENT_HASH_MISMATCH_WARNING]);
+    expect(
+      restoredRevision.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)?.text,
+    ).toBe(snapshot.journalEntries.find((entry) => entry.id === `job:${JOB}`)?.text);
   });
 
   it("rejects missing, relabeled, cloned, and causally backdated authored proof", () => {
@@ -747,272 +734,5 @@ describe("Albany Greenway trail policy and corridor survey", () => {
     expect(() => OverworldSession.restore(WORLD, beforePolicy)).toThrow(
       /earlier event|requirements|newest-first/i,
     );
-  });
-
-  it.each([
-    [
-      "Winter Return docket",
-      exactWinterReturnDocketPredecessor(WORLD),
-      "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636",
-    ],
-    [
-      "field-timed preparation",
-      exactCivicPreparationPredecessor(WORLD),
-      "be2bb804d5e107449aeab1fd6e96cbfb6f0b71d587ee40283d0aac8b28298f6f",
-    ],
-    [
-      "Cade Station packet",
-      exactCadeReturnPacketPredecessor(WORLD),
-      "a27b2db04b359e9ca38380ca2b0b7a328df4008d1f899bf65e1332d0998aa6b2",
-    ],
-    ["Market policy", FOUNDATION_PREDECESSOR, AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH],
-    ["immediate Greenway", PREDECESSOR, AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH],
-  ] as const)(
-    "migrates generic Greenway event-only and event-plus-job completions from %s without inventing authored choices",
-    (_label, sourceWorld, expectedSourceWorldHash) => {
-      const sourceWorldHash = hashState(sourceWorld);
-      expect(sourceWorldHash).toBe(expectedSourceWorldHash);
-      const genericEventOption = authoredLocalEventLegacyOptionId(sourceWorldHash);
-      const genericJobOption = authoredLocalJobLegacyOptionId(sourceWorldHash);
-      const authoredOptions = [
-        PUBLIC,
-        QUIET,
-        CUSTODY,
-        PUBLIC_FAST,
-        PUBLIC_DEEP,
-        QUIET_FAST,
-        QUIET_DEEP,
-        CUSTODY_FAST,
-        CUSTODY_DEEP,
-      ];
-
-      const eventOnlyLegacy = returnedToGreenway(sourceWorld);
-      eventOnlyLegacy.investigateEvent(EVENT);
-      eventOnlyLegacy.resolveEvent(EVENT);
-      const eventOnlySnapshot = eventOnlyLegacy.snapshot();
-      expect(eventOnlySnapshot.worldHash).toBe(sourceWorldHash);
-
-      const eventOnly = OverworldSession.restore(WORLD, eventOnlySnapshot);
-      const eventOnlyMigrated = eventOnly.snapshot();
-      expect(
-        eventOnlyMigrated.journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
-          ?.localSceneProof,
-      ).toMatchObject({
-        sceneId: EVENT_SCENE,
-        optionId: genericEventOption,
-        sourceWorldHash,
-      });
-      expect(eventOnly.view().eventChoices).toEqual([]);
-      expect(eventOnly.view().jobChoices).toEqual([]);
-      expect(eventOnly.view().jobs.map((job) => job.id)).not.toContain(JOB);
-      for (const optionId of authoredOptions) {
-        expect(JSON.stringify(eventOnlyMigrated)).not.toContain(optionId);
-      }
-      const eventOnlyRoundTrip = OverworldSession.restore(WORLD, eventOnlyMigrated);
-      expect(eventOnlyRoundTrip.snapshot()).toEqual(eventOnlyMigrated);
-      expect(OverworldSession.restore(WORLD, eventOnlyRoundTrip.snapshot()).snapshot()).toEqual(
-        eventOnlyMigrated,
-      );
-
-      const completedLegacy = returnedToGreenway(sourceWorld);
-      completedLegacy.investigateEvent(EVENT);
-      completedLegacy.resolveEvent(EVENT);
-      completedLegacy.workLocalJob(JOB);
-      const completedSnapshot = completedLegacy.snapshot();
-      expect(completedSnapshot.worldHash).toBe(sourceWorldHash);
-
-      const completed = OverworldSession.restore(WORLD, completedSnapshot);
-      const completedMigrated = completed.snapshot();
-      for (const [entryId, sceneId, optionId] of [
-        [`resolve:${EVENT}`, EVENT_SCENE, genericEventOption],
-        [`job:${JOB}`, JOB_SCENE, genericJobOption],
-      ] as const) {
-        expect(
-          completedMigrated.journalEntries.find((entry) => entry.id === entryId)?.localSceneProof,
-        ).toMatchObject({ sceneId, optionId, sourceWorldHash });
-      }
-      expect(completed.view().eventChoices).toEqual([]);
-      expect(completed.view().jobChoices).toEqual([]);
-      for (const optionId of authoredOptions) {
-        expect(JSON.stringify(completedMigrated)).not.toContain(optionId);
-      }
-      const completedRoundTrip = OverworldSession.restore(WORLD, completedMigrated);
-      expect(completedRoundTrip.snapshot()).toEqual(completedMigrated);
-      expect(OverworldSession.restore(WORLD, completedRoundTrip.snapshot()).snapshot()).toEqual(
-        completedMigrated,
-      );
-    },
-  );
-
-  it("migrates only the exact generic predecessor and invents neither policy nor survey option", () => {
-    expect(hashState(PREDECESSOR)).toBe(AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH);
-    expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-
-    const legacy = returnedToGreenway(PREDECESSOR);
-    legacy.investigateEvent(EVENT);
-    legacy.resolveEvent(EVENT);
-
-    const eventOnly = OverworldSession.restore(WORLD, legacy.snapshot());
-    expect(eventOnly.view().jobChoices).toEqual([]);
-    expect(eventOnly.view().jobs.map((candidate) => candidate.id)).not.toContain(JOB);
-
-    legacy.workLocalJob(JOB);
-    const legacySnapshot = legacy.snapshot();
-    const restored = OverworldSession.restore(WORLD, legacySnapshot);
-    const migrated = restored.snapshot();
-    expect(migrated.worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    expect(migrated.regionRenown).toEqual(legacySnapshot.regionRenown);
-    expect(
-      migrated.journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)?.localSceneProof,
-    ).toMatchObject({
-      sceneId: EVENT_SCENE,
-      optionId: authoredLocalEventLegacyOptionId(AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH),
-      sourceWorldHash: AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-    });
-    expect(
-      migrated.journalEntries.find((entry) => entry.id === `job:${JOB}`)?.localSceneProof,
-    ).toMatchObject({
-      sceneId: JOB_SCENE,
-      optionId: authoredLocalJobLegacyOptionId(AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH),
-      sourceWorldHash: AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-    });
-    expect(restored.view().eventChoices).toEqual([]);
-    expect(restored.view().jobChoices).toEqual([]);
-    expect(OverworldSession.restore(WORLD, migrated).snapshot()).toEqual(migrated);
-
-    const altered = structuredClone(legacySnapshot);
-    const legacyEvent = altered.journalEntries.find((entry) => entry.id === `resolve:${EVENT}`);
-    if (!legacyEvent) throw new Error("Expected generic Greenway event entry.");
-    legacyEvent.text = `${legacyEvent.text} forged`;
-    expect(() => OverworldSession.restore(WORLD, altered)).toThrow(/exact trusted copy/i);
-
-    const unknown = structuredClone(legacySnapshot);
-    unknown.worldHash = "f".repeat(64);
-    expect(() => OverworldSession.restore(WORLD, unknown)).toThrow(/different world manifest/i);
-  });
-
-  it("migrates foundation-era generic Market and Greenway completions as neutral markers", () => {
-    expect(hashState(FOUNDATION_PREDECESSOR)).toBe(AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH);
-    const legacy = returnedToGreenway(FOUNDATION_PREDECESSOR);
-    legacy.investigateEvent(EVENT);
-    legacy.resolveEvent(EVENT);
-    legacy.workLocalJob(JOB);
-
-    moveToArea(legacy, MARKET_AREA, FOUNDATION_PREDECESSOR);
-    legacy.scoutPoi(MARKET_POI);
-    legacy.talkToCharacter(MARKET_CONTACT);
-    legacy.investigateEvent(MARKET_EVENT);
-    legacy.resolveEvent(MARKET_EVENT);
-    legacy.workLocalJob(MARKET_JOB);
-
-    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
-    for (const [entryId, sceneId] of [
-      [`resolve:${MARKET_EVENT}`, MARKET_EVENT_SCENE],
-      [`job:${MARKET_JOB}`, MARKET_JOB_SCENE],
-      [`resolve:${EVENT}`, EVENT_SCENE],
-      [`job:${JOB}`, JOB_SCENE],
-    ] as const) {
-      expect(
-        restored.snapshot().journalEntries.find((entry) => entry.id === entryId)?.localSceneProof,
-      ).toMatchObject({
-        sceneId,
-        optionId: entryId.startsWith("resolve:")
-          ? authoredLocalEventLegacyOptionId(AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH)
-          : authoredLocalJobLegacyOptionId(AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH),
-        sourceWorldHash: AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
-      });
-    }
-    expect(restored.view().eventChoices).toEqual([]);
-    expect(restored.view().jobChoices).toEqual([]);
-    expect(() => restored.resolveEvent(MARKET_EVENT, MARKET_POLICY)).toThrow(
-      /different authored option/i,
-    );
-    expect(() => restored.workLocalJob(MARKET_JOB, MARKET_SETTLEMENT)).toThrow(
-      /different authored option|not available/i,
-    );
-  });
-
-  it("retains native Market proof while neutralizing only generic Greenway at 8e0b", () => {
-    const legacy = returnedToGreenway(PREDECESSOR);
-    moveToArea(legacy, MARKET_AREA, PREDECESSOR);
-    legacy.scoutPoi(MARKET_POI);
-    legacy.talkToCharacter(MARKET_CONTACT);
-    legacy.investigateEvent(MARKET_EVENT);
-    legacy.resolveEvent(MARKET_EVENT, MARKET_POLICY);
-    legacy.workLocalJob(MARKET_JOB, MARKET_SETTLEMENT);
-    const nativeMarketEntries = legacy
-      .snapshot()
-      .journalEntries.filter(
-        (entry) => entry.id === `resolve:${MARKET_EVENT}` || entry.id === `job:${MARKET_JOB}`,
-      );
-
-    moveToArea(legacy, AREA, PREDECESSOR);
-    legacy.investigateEvent(EVENT);
-    legacy.resolveEvent(EVENT);
-    legacy.workLocalJob(JOB);
-    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
-    expect(
-      restored
-        .snapshot()
-        .journalEntries.filter(
-          (entry) => entry.id === `resolve:${MARKET_EVENT}` || entry.id === `job:${MARKET_JOB}`,
-        ),
-    ).toEqual(nativeMarketEntries);
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `resolve:${MARKET_EVENT}`)
-        ?.localSceneProof,
-    ).toMatchObject({ sceneId: MARKET_EVENT_SCENE, optionId: MARKET_POLICY });
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${MARKET_JOB}`)
-        ?.localSceneProof,
-    ).toMatchObject({ sceneId: MARKET_JOB_SCENE, optionId: MARKET_SETTLEMENT });
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: EVENT_SCENE,
-      optionId: authoredLocalEventLegacyOptionId(AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH),
-      sourceWorldHash: AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-    });
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: JOB_SCENE,
-      optionId: authoredLocalJobLegacyOptionId(AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH),
-      sourceWorldHash: AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-    });
-  });
-
-  it("migrates an unresolved predecessor natively and preserves existing Albany authored scenes", () => {
-    const unresolved = returnedToGreenway(PREDECESSOR);
-    expect(unresolved.snapshot().resolvedEventIds).not.toContain(EVENT);
-    const restored = OverworldSession.restore(WORLD, unresolved.snapshot());
-    expect(restored.snapshot().resolvedEventIds).not.toContain(EVENT);
-    expect(restored.snapshot().completedJobIds).not.toContain(JOB);
-    expect(restored.view().events.map((candidate) => candidate.id)).toContain(EVENT);
-    expect(restored.view().eventChoices).toEqual([]);
-    restored.investigateEvent(EVENT);
-    expect(restored.view().eventChoices).toEqual([
-      [EVENT, PUBLIC],
-      [EVENT, QUIET],
-    ]);
-
-    expect(
-      WORLD.local_events.find((candidate) => candidate.id === "albany_city__civic_core__event")
-        ?.authored_scene?.id,
-    ).toBe("albany:winter-return-charter-record");
-    expect(
-      WORLD.local_jobs.find((candidate) => candidate.id === "albany_city__industrial__job")
-        ?.authored_scene?.id,
-    ).toBe("albany:works-yard-winter-shift");
-    expect(
-      WORLD.local_jobs.find((candidate) => candidate.id === "albany_city__campus__job")
-        ?.authored_scene?.id,
-    ).toBe("albany:campus-wolf-archive-query");
-    expect(
-      WORLD.local_jobs.find((candidate) => candidate.id === "albany_city__transport_hub__job")
-        ?.authored_scene?.id,
-    ).toBe("albany:cade-return-packet");
   });
 });

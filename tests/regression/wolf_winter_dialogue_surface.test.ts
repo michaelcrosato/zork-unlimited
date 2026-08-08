@@ -365,13 +365,13 @@ describe("Wolf-Winter dialogue surface", () => {
     state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
     state = act(state, { type: "ASK", npc: "houndsman", topic: "leave" });
     expect(legalActionIds(state)).not.toContain("go_north");
-    expect(legalActionIds(state)).toContain("talk_june_pike_combat_boundary");
+    expect(legalActionIds(state)).toContain("talk_june_pike");
     expect(buildRpgObservation(index, state).blocked_exits).toContainEqual({
       direction: "north",
       message: expect.stringMatching(/acknowledge a hunt-and-hold warning/i),
     });
 
-    state = act(state, { type: "TALK", npc: "june_pike_combat_boundary" });
+    state = act(state, { type: "TALK", npc: "june_pike" });
     const juneBoundary = buildRpgObservation(index, state);
     expect(juneBoundary.dialogue?.npc_text).toMatch(
       /Choose by outcome[^]*HUNT holds Cade's ground[^]*LURE relocates[^]*DRIVE evacuates[^]*FORTIFY keeps household, herd, and pack apart/i,
@@ -400,7 +400,7 @@ describe("Wolf-Winter dialogue surface", () => {
     ).toMatch(/HUNT \/ keep June[^]*June stays cattle-first[^]*first wolf death breaks agreement/i);
     state = act(state, {
       type: "ASK",
-      npc: "june_pike_combat_boundary",
+      npc: "june_pike",
       topic: "commit_hunt_and_hold",
     });
     expect(state.flags.june_combat_line_acknowledged).toBe(true);
@@ -438,7 +438,7 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(stepAction("go_north").ok).toBe(true);
     expect(stepAction("talk_houndsman").ok).toBe(true);
     expect(stepAction("ask_leave").ok).toBe(true);
-    expect(stepAction("talk_june_pike_combat_boundary").ok).toBe(true);
+    expect(stepAction("talk_june_pike").ok).toBe(true);
     const listed = api.list_legal_actions({
       session_id: started.session_id,
       compact_actions: false,

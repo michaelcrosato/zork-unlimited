@@ -6,12 +6,7 @@
  * RPG runtime no longer depends on the legacy parser model module for its core
  * world state layout.
  */
-import {
-  activeDialogue as coreActiveDialogue,
-  dlgVar,
-  nodeByOrdinal,
-  nodeOrdinal,
-} from "../core/dialogue_state.js";
+import { dlgVar, nodeByOrdinal, nodeOrdinal } from "../core/dialogue_state.js";
 import {
   indexObjectHomes,
   isLocked as coreIsLocked,
@@ -50,9 +45,12 @@ export function indexRpgModel(pack: RpgPack): RpgModelIndex {
   const npcs = new Map(pack.npcs.map((n) => [n.id, n]));
   const npcByRoom = new Map<string, Npc[]>();
   for (const n of pack.npcs) {
-    const list = npcByRoom.get(n.room) ?? [];
-    list.push(n);
-    npcByRoom.set(n.room, list);
+    const candidateRooms = new Set([n.room, ...(n.variants ?? []).flatMap((v) => v.room ?? [])]);
+    for (const room of candidateRooms) {
+      const list = npcByRoom.get(room) ?? [];
+      list.push(n);
+      npcByRoom.set(room, list);
+    }
   }
   const { homeRoom, containerOf } = indexObjectHomes(pack.rooms, pack.objects);
   const objectsWithUseInteractions = pack.objects.filter((o) =>
@@ -126,6 +124,32 @@ export function nodeText(node: DialogueNode, state: GameState): string {
   return reactiveText(node.npc_text, node.variants, state);
 }
 
+/** Resolve the first matching NPC presentation variant without changing identity. */
+export function npcForState(npc: Npc, state: GameState): Npc {
+  const variant = npc.variants?.find((candidate) => evalConditions(candidate.when, state));
+  if (!variant) return npc;
+  return {
+    ...npc,
+    name: variant.name ?? npc.name,
+    description: variant.description ?? npc.description,
+    room: variant.room ?? npc.room,
+    dialogue: {
+      ...npc.dialogue,
+      root: variant.dialogue_root ?? npc.dialogue.root,
+    },
+  };
+}
+
+/** Return each condition-satisfied NPC whose resolved presentation occupies a room. */
+export function npcsInRoom(index: RpgModelIndex, state: GameState, room: string): Npc[] {
+  const out: Npc[] = [];
+  for (const candidate of index.npcByRoom.get(room) ?? []) {
+    const npc = npcForState(candidate, state);
+    if (npc.room === room && evalConditions(npc.conditions ?? [], state)) out.push(npc);
+  }
+  return out;
+}
+
 export function endingText(ending: Ending, state: GameState): string {
   return reactiveText(ending.text, ending.variants, state);
 }
@@ -160,7 +184,14 @@ export function activeDialogue(
   index: RpgModelIndex,
   state: GameState,
 ): { npc: Npc; node: DialogueNode } | null {
-  return coreActiveDialogue(index, state);
+  for (const candidate of index.npcs.values()) {
+    const ordinal = state.vars[dlgVar(candidate.id)] ?? 0;
+    if (ordinal <= 0) continue;
+    const npc = npcForState(candidate, state);
+    const node = nodeByOrdinal(npc, ordinal);
+    if (node) return { npc, node };
+  }
+  return null;
 }
 
 export function initStateForRpgModel(

@@ -6,6 +6,7 @@ import {
   type OverworldSessionSnapshot,
 } from "../../src/world/session_snapshot.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const world = loadOverworldManifest(process.cwd());
 const DEATH_ENDING_ID = "ending_pulled_down";
@@ -23,6 +24,7 @@ function settleOpeningChoices(session: OverworldSession): void {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
   if (session.journey().storyChoice?.kind === "relief_oath") {
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
   }
   if (session.journey().storyChoice?.kind === "lead_source") {

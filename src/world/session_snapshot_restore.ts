@@ -1,22 +1,14 @@
-import type {
-  OverworldJournalDecisionBoundary,
-  OverworldJournalEntry,
-  OverworldOpeningLeadSourceDecisionTrail,
-  OverworldPendingRoadEncounter,
-  OverworldSessionSnapshot,
-  TravelLogEntry,
-  TravelLogEntrySnapshot,
-} from "./session_snapshot.js";
-import { overworldQuestCampaignEffectsForCharacter, type OverworldQuest } from "./overworld.js";
-import {
-  OVERWORLD_SESSION_SAVE_VERSION,
-  cloneOpeningLeadSourceDecisionTrail,
-} from "./session_snapshot.js";
+/**
+ * Structural validation and application for overworld snapshots.
+ *
+ * Save compatibility is governed by the snapshot/world schema version parsed in
+ * session_snapshot.ts. The world content hash remains useful provenance, but a
+ * content-only mismatch is not a migration trigger and never rewrites history.
+ */
 import { hashState } from "../core/hash.js";
 import {
   cloneCampaignCharacterState,
   createInitialCampaignCharacterState,
-  evolveCampaignCharacterState,
   serializeCampaignCharacterState,
   type CampaignCharacterState,
 } from "./campaign_character_state.js";
@@ -24,23 +16,72 @@ import {
   applyCampaignConsequences,
   type CampaignConsequenceEffect,
 } from "./campaign_consequences.js";
+import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
+import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
+import {
+  assertJourneyCampaignGoalCompletionProof,
+  assertJourneyCampaignJournalProof,
+  assertJourneyCampaignQuestOutcome,
+  journeyCampaignGoalDefinition,
+  journeyCampaignSelectedStoryChoiceRefs,
+} from "./journey_campaign.js";
+import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
 import { assertKnownIds, assertUniqueTupleMap, replaceStringSet } from "./session_collections.js";
-import { assertSnapshotTimeline } from "./session_journal_timeline.js";
-import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import {
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
-  describeOverworldEventResolution,
 } from "./session_event_resolution.js";
+import { assertSnapshotTimeline } from "./session_journal_timeline.js";
+import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import {
-  assertSnapshotContactPresentationProofs,
   assertSnapshotDiscoveredAreaCountReplay,
   assertSnapshotDiscoveredLocalSourceCountReplay,
+  assertSnapshotContactPresentationProofs,
   assertSnapshotDiscoveryLocality,
   assertSnapshotLocalActionDiscoveryChronology,
   assertSnapshotLocalActionJournalReachability,
   localActionJournalReplayIndex,
 } from "./session_local_action_journal.js";
+import {
+  localJobSceneOptionRequirementsMet,
+  localJobSceneRequirementsMet,
+  resolveLocalJobSceneOption,
+} from "./local_job_scene.js";
+import {
+  localEventSceneOptionRequirementsMet,
+  localEventSceneRequirementsMet,
+  resolveLocalEventSceneOption,
+} from "./local_event_scene.js";
+import {
+  replayOpeningDispatchChoices,
+  type OpeningDispatchReplayChoice,
+} from "./opening_dispatch_choice_replay.js";
+import { proveOpeningAllyJournal, type OpeningAllyJournalProof } from "./opening_ally_journal.js";
+import {
+  openingLeadSourceOfferJournalId,
+  proveOpeningLeadSourceJournal,
+  type OpeningLeadSourceJournalProof,
+} from "./opening_lead_source_journal.js";
+import {
+  proveOpeningPreparationJournal,
+  type OpeningPreparationJournalProof,
+} from "./opening_preparation_journal.js";
+import {
+  proveOpeningRegistrationJournal,
+  type OpeningRegistrationJournalProof,
+} from "./opening_registration_journal.js";
+import {
+  proveOpeningReliefAllocationJournal,
+  type OpeningReliefAllocationJournalProof,
+} from "./opening_relief_allocation_journal.js";
+import {
+  proveOpeningReliefOathJournal,
+  type OpeningReliefOathJournalProof,
+} from "./opening_relief_oath_journal.js";
+import type { OverworldQuest } from "./overworld.js";
+import { overworldQuestCampaignEffectsForCharacter } from "./overworld.js";
+import { parseGoalPassageJourneyActionId } from "./session_goal_passage.js";
+import { parseTimeLabel } from "./session_journal_codec.js";
 import type { OverworldSnapshotManifestIndex } from "./session_manifest_index.js";
 import {
   assertSnapshotProgressJournalBindings,
@@ -56,10 +97,21 @@ import {
   type OverworldCampaignBoundaryReplayIndex,
   type OverworldCampaignBoundaryReplayProof,
 } from "./session_resource_replay.js";
+import { restoreOverworldPendingRoadEncounter } from "./session_road_encounters.js";
 import {
-  assertSnapshotCurrentAreaReachability,
+  type OverworldJournalEntry,
+  type OverworldJournalDecisionBoundary,
+  type OverworldOpeningLeadSourceDecisionTrail,
+  type OverworldPendingRoadEncounter,
+  type OverworldSessionSnapshot,
+  type TravelLogEntry,
+  type TravelLogEntrySnapshot,
+  cloneOpeningLeadSourceDecisionTrail,
+} from "./session_snapshot.js";
+import {
   assertSnapshotCurrentAreaMapBindings,
   assertSnapshotCurrentAreaMapExact,
+  assertSnapshotCurrentAreaReachability,
   assertSnapshotCurrentLocationManifestBinding,
   assertSnapshotCurrentTownReachability,
   assertSnapshotDiscoveredAreaPrefix,
@@ -69,1478 +121,18 @@ import {
   assertSnapshotVisitedTownTravelProof,
 } from "./session_snapshot_proofs.js";
 import { snapshotTravelTimelineIndex } from "./session_snapshot_timeline.js";
-import { restoreOverworldPendingRoadEncounter } from "./session_road_encounters.js";
 import { restoreOverworldTravelLogEntries } from "./session_travel_log.js";
 import {
-  cloneJourneyContractSnapshot,
-  type JourneyContractSnapshot,
-  type JourneyDecisionProofLast,
-} from "./journey_contract.js";
-import {
-  assertJourneyCampaignGoalCompletionProof,
-  assertJourneyCampaignJournalProof,
-  assertJourneyCampaignQuestOutcome,
-  journeyCampaignGoalDefinition,
-  journeyCampaignSelectedStoryChoiceRefs,
-} from "./journey_campaign.js";
-import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
-import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
-import {
-  describeOverworldContactAction,
-  describeOverworldEventAction,
-  describeOverworldJobAction,
-} from "./local_actions.js";
-import {
-  localJobSceneOptionRequirementsMet,
-  localJobSceneRequirementsMet,
-  resolveLocalJobSceneOption,
-  type LocalJobSceneOption,
-} from "./local_job_scene.js";
-import {
-  AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS,
-  AUTHORED_ALBANY_STATION_JOB_ID,
-  AUTHORED_ALBANY_STATION_PASTURE_OPTION_ID,
-  AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE,
-  AUTHORED_ALBANY_STATION_STORY_PREDICATE_OPTION_IDS,
-  AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
-  AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES,
-  authoredLocalJobLegacyCompletion,
-  authoredLocalJobLegacyDefinitionsForSourceWorldHash,
-  authoredLocalJobPredicatePredecessorCompletion,
-  describeAuthoredLocalJobLegacyAction,
-  migrateAuthoredLocalJobLegacyEntry,
-  AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
-  AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
-} from "./local_job_scene_legacy.js";
-import {
-  OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
-  OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
-} from "./local_scene_legacy_sources.js";
-import {
-  AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-  AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS,
-  AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
-  AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
-  WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
-  WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
-  authoredLocalEventLegacyCompletion,
-  authoredLocalEventLegacyDefinitionsForSourceWorldHash,
-  migrateAuthoredLocalEventLegacyEntry,
-  type AuthoredLocalEventLegacyDefinition,
-} from "./local_event_scene_legacy.js";
-import {
-  localEventSceneRequirementsMet,
-  localEventSceneOptionRequirementsMet,
-  resolveLocalEventSceneOption,
-} from "./local_event_scene.js";
-import {
-  questCampaignExportForEnding,
-  questCompletionJournalEntryDraft,
-  questCompletionMinutes,
-  replayQuestCampaignConsequences,
-} from "./session_quests.js";
-import { deriveRegistrationPromiseFoldbackReceipt } from "./registration_promise_receipt.js";
-import {
-  openingAllyJournalDraft,
-  openingAllyOfferJournalDraft,
-  proveOpeningAllyJournal,
-  type OpeningAllyJournalProof,
-} from "./opening_ally_journal.js";
-import {
-  replayOpeningDispatchChoices,
-  type OpeningDispatchReplayChoice,
-} from "./opening_dispatch_choice_replay.js";
-import {
   assertQuestDispatchLaunchSeal,
-  createQuestDispatchLaunchSeal,
   deriveQuestDispatchWindow,
 } from "./quest_dispatch_window.js";
-import {
-  openingLeadSourceJournalId,
-  openingLeadSourceOfferJournalId,
-  proveOpeningLeadSourceJournal,
-  type OpeningLeadSourceJournalProof,
-} from "./opening_lead_source_journal.js";
-import {
-  openingPreparationJournalId,
-  openingPreparationLegacyJournalEntry,
-  openingPreparationLegacySourceWorldHash,
-  openingPreparationOfferJournalDraft,
-  openingPreparationOfferJournalEntry,
-  proveOpeningPreparationJournal,
-  type OpeningPreparationJournalProof,
-} from "./opening_preparation_journal.js";
-import {
-  normalizeOpeningPreparationJournalCopies,
-  openingPreparationJournalCopyMigrationsForSourceWorldHash,
-  OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES,
-} from "./opening_preparation_copy_migrations.js";
-import { FROST_JAMB_SIGNPOST_PREDECESSOR_COPY } from "./frost_jamb_signpost_legacy.js";
-import {
-  RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW,
-  RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY,
-} from "./relief_protocol_trigger_copy_legacy.js";
-import {
-  openingReliefAllocationLegacyJournalEntry,
-  openingReliefAllocationLegacySourceWorldHash,
-  proveOpeningReliefAllocationJournal,
-  type OpeningReliefAllocationJournalProof,
-} from "./opening_relief_allocation_journal.js";
-import {
-  openingReliefOathJournalId,
-  openingReliefOathLegacyJournalEntry,
-  openingReliefOathLegacySourceWorldHash,
-  openingReliefOathOfferJournalEntry,
-  proveOpeningReliefOathJournal,
-  type OpeningReliefOathJournalProof,
-} from "./opening_relief_oath_journal.js";
-import {
-  AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY,
-  RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY,
-} from "./relief_oath_strategy_parity_legacy.js";
-import {
-  openingRegistrationLegacyJournalDraft,
-  openingRegistrationLegacySourceWorldHash,
-  proveOpeningRegistrationJournal,
-  type OpeningRegistrationJournalProof,
-} from "./opening_registration_journal.js";
-import { parseTimeLabel, timeLabel } from "./session_journal_codec.js";
-import { parseGoalPassageJourneyActionId } from "./session_goal_passage.js";
-import {
-  isEmeryEvidenceCustodyPredecessorWorldHash,
-  EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES,
-  isEmeryFullCombatMemoryPredecessorWorldHash,
-} from "./emery_evidence_custody_legacy.js";
+import { questCampaignExportForEnding } from "./session_quests.js";
+import type { JourneyDecisionProofLast } from "./journey_contract.js";
 
-export const OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH =
-  "39d32c027d2e826f476dd299bb95cc3911994ec92b4fbf297be8d1216e5b6151";
-export const OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH =
-  "b9416e3c43d9d54085ed9465b4d875811daebaf9834793d3f4a1ffca93b486c4";
-export const OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH =
-  "cad75dafc291709f1d5c756dd70dd1002260bb06ca87d8e1e90aaf905f5f05c7";
-export const OVERWORLD_OPENING_REGISTRATION_WORLD_HASH =
-  "1d12330f65743a8a2c124f9dae3cf145e6fdcbca9ec59a4c699ecd8757e8e47b";
-export const OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH =
-  "07c2864bcad6eaadbd32e8ecff4460ddb7b63e6ed36b0316f4264aa866c1aa44";
-/** @deprecated Historical name retained for callers that identify the exports-era manifest. */
-export const OVERWORLD_CAMPAIGN_EXPORTS_MIGRATION_TARGET_WORLD_HASH =
-  OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH;
-// Updated whenever the trusted manifest changes. Prior hashes are accepted only
-// when they migrate directly into this exact manifest revision.
-export const OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH =
-  "2dbc97e2de8063be7b3a49fe3cb9108e8f80270d7d118efd781381659dba97c4";
-const OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
-  "albany:wolf_saved_timber_quick_resupply",
-  "albany:wolf_barred_gate_quick_rest",
-  "albany:dawn_wagon_solo_packet_resupply",
-  "albany:dawn_wardens_greenway_rest",
-]);
-const OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
-  "ending_held_gate_barred",
-  "ending_held_timber_saved",
-  "ending_held",
-]);
-export const OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH =
-  "742aa205a254b6f4382749fb63742caf1606024a1f6c044c2f433fda8dac6090";
-export const OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH =
-  OVERWORLD_CAMPAIGN_SERVICE_MIGRATION_TARGET_WORLD_HASH;
-const OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
-  "albany:wolf_live_pack_greenway_resupply",
-  "albany:wolf_works_fortification_return_resupply",
-  "albany:wolf_drover_route_return_rest",
-  "albany:wolf_relief_protocol_return_resupply",
-  "albany:wolf_saved_timber_quick_resupply",
-  "albany:wolf_barred_gate_quick_rest",
-  "albany:dawn_wagon_solo_packet_resupply",
-  "albany:dawn_wardens_greenway_rest",
-]);
-const OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
-  "ending_pack_diverted_after_blood",
-  "ending_pack_diverted_cattle_scattered",
-  "ending_pack_diverted",
-  "ending_held_gate_barred",
-  "ending_held_timber_saved",
-  "ending_held",
-]);
-export const OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH =
-  "f5835e15e6ccf5432ea6b39b87edf957ebc3ffb8a2518b48b46098f09aa92572";
-// Exact F04 manifest. Keep this historical value pinned: the current manifest
-// accepts it only through the bounded crisis-priority migration below.
-export const OVERWORLD_OPENING_ALLY_WORLD_HASH =
-  "2d10f959279a12166d521a774779acc46481fb6ff40d5982f9c955a30677a7b6";
-export const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH = OVERWORLD_OPENING_ALLY_WORLD_HASH;
-const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_BASE_CONTACT = Object.freeze({
-  id: "talk:albany_city__transport_hub__june_pike",
-  kind: "contact" as const,
-  title: "Talked to June Pike",
-  text: "June Pike checks a cattle rope, hooded lantern, and one empty field seat beside Hayden Hale's Wolf-Winter packet. June will ride only with cattle-first authority of her own. She offers one herd-pressure intervention after a bloodless recovery, not another spear, and remains in Albany if that condition is refused.",
-});
-const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER = Object.freeze({
-  id: "ally_offer:albany:wolf_ally_commitment",
-  kind: "ally_offer" as const,
-  title: "Choose the Wolf-Winter Field Team",
-  text: "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch. Capability: After a failed living-pack lure is recovered without blood, June can leave the wolf line at the final byre threshold and take the cattle line, lowering cattle alarm by 1. Condition: June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
-});
-const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_SELECTION = Object.freeze({
-  id: "ally:albany:wolf_ally_commitment:albany:ally_june_cattle_first",
-  kind: "ally" as const,
-  title: "Field team: Grant June Cattle-First Authority",
-  text: "Ask June Pike to ride as an independent Road-Warden ally. The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if the recovered lure still leaves the herd pressing. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement. Actual cost: 15 minutes. June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
-});
-const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT = Object.freeze({
-  id: "talk:albany_city__transport_hub__june_pike@joined_wolf_cattle_first",
-  kind: "contact" as const,
-  title: "Talked to June Pike",
-  text: "June has signed the Wolf-Winter field line beside your name and remembers that cattle-first authority was granted explicitly. She will take the cattle line after a failed lure is recovered alive, but the first wolf killed ends her place on the team.",
-});
-const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT = Object.freeze({
-  id: "talk:albany_city__transport_hub__june_pike@left_after_blood",
-  kind: "contact" as const,
-  title: "Talked to June Pike",
-  text: "June's field seat is empty. Her separate return says first blood broke the cattle-first line before she could take the lower rail. The promise is recorded broken, June has left the party, and no ally return claim is available; the completed Wolf-Winter result still stands.",
-});
-const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
-  "albany:wolf_live_pack_greenway_resupply",
-  "albany:wolf_works_fortification_return_resupply",
-  "albany:wolf_drover_route_return_rest",
-  "albany:wolf_relief_protocol_return_resupply",
-  "albany:june_kept_line_station_resupply",
-  "albany:june_relay_refusal_station_rest",
-  "albany:wolf_saved_timber_quick_resupply",
-  "albany:wolf_barred_gate_quick_rest",
-  "albany:dawn_wagon_solo_packet_resupply",
-  "albany:dawn_wardens_greenway_rest",
-]);
-const OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
-  "ending_pack_diverted_after_blood",
-  "ending_pack_diverted_cattle_scattered",
-  "ending_pack_diverted",
-  "ending_held_gate_barred",
-  "ending_held_timber_saved",
-  "ending_held",
-]);
-export const OVERWORLD_CRISIS_PRIORITY_WORLD_HASH =
-  "1e74d32c28c3d563f6e8103034768506e25f13ff1f8e410b190cbb344589add8";
-export const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH =
-  OVERWORLD_CRISIS_PRIORITY_WORLD_HASH;
-const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_BASE_CONTACT = Object.freeze({
-  id: "talk:albany_city__transport_hub__june_pike",
-  kind: "contact" as const,
-  title: "Talked to June Pike",
-  text: "June Pike checks a cattle rope, hooded lantern, and one empty field seat beside Hayden Hale's Wolf-Winter packet. June will ride only with cattle-first authority of her own. She offers one herd-pressure intervention after a bloodless recovery, not another spear, and remains in Albany if that condition is refused.",
-});
-const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_ALLY_OFFER = Object.freeze({
-  id: "ally_offer:albany:wolf_ally_commitment",
-  kind: "ally_offer" as const,
-  title: "Choose the Wolf-Winter Field Team",
-  text: "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch. Capability: On a bloodless living-pack line, June can leave the wolf line at the final byre threshold and take the cattle line once: she lowers cattle alarm after a recovered lure or opens the lower swing gate during a committed drive. Condition: June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
-});
-const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_SELECTION = Object.freeze({
-  id: "ally:albany:wolf_ally_commitment:albany:ally_june_cattle_first",
-  kind: "ally" as const,
-  title: "Field team: Grant June Cattle-First Authority",
-  text: "Ask June Pike to ride as an independent Road-Warden ally. The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing or a committed drive reaches the final threshold. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement. Actual cost: 15 minutes. June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
-});
-const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_JOINED_CONTACT = Object.freeze({
-  id: "talk:albany_city__transport_hub__june_pike@joined_wolf_cattle_first",
-  kind: "contact" as const,
-  title: "Talked to June Pike",
-  text: "June has signed the Wolf-Winter field line beside your name and remembers that cattle-first authority was granted explicitly. She will take the cattle line once after a failed lure is recovered alive or when a committed drive reaches its final threshold, but the first wolf killed ends her place on the team.",
-});
-const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
-  "albany:wolf_works_fortification_return_resupply",
-  "albany:wolf_drover_route_return_rest",
-  "albany:wolf_relief_protocol_return_resupply",
-  "albany:wolf_live_pack_greenway_resupply",
-  "albany:wolf_drive_reserve_returned_station_rest",
-  "albany:wolf_drive_whole_herd_greenway_resupply",
-  "albany:june_kept_line_station_resupply",
-  "albany:june_relay_refusal_station_rest",
-  "albany:wolf_saved_timber_quick_resupply",
-  "albany:wolf_barred_gate_quick_rest",
-  "albany:dawn_wagon_solo_packet_resupply",
-  "albany:dawn_wardens_greenway_rest",
-]);
-const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_DAWN_WAGON_SERVICE = Object.freeze({
-  id: "albany:dawn_wagon_solo_packet_resupply",
-  summary:
-    "Because you assigned the dawn wagon to rebuild Cade's outer line, Jamie Tanner holds a one-time Market road-store credit for carrying Hedrick's packet alone.",
-});
-const OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
-  "ending_pack_diverted_after_blood",
-  "ending_pack_diverted_cattle_scattered",
-  "ending_pack_diverted",
-  "ending_drive_cattle_wounded",
-  "ending_drive_person_cattle_lost",
-  "ending_drive_reserve_spent",
-  "ending_held_gate_barred",
-  "ending_held_timber_saved",
-  "ending_held",
-]);
-export const OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH =
-  "abd3b623a502b688a501bceae68994a4eb0e591d450420b5093532b5dae22179";
-export const OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH = OVERWORLD_FORTIFY_OUTLAST_WORLD_HASH;
-const OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
-  "albany:dawn_wagon_solo_packet_resupply",
-  "albany:dawn_wardens_greenway_rest",
-  "albany:june_kept_line_station_resupply",
-  "albany:june_relay_refusal_station_rest",
-  "albany:wolf_barred_gate_quick_rest",
-  "albany:wolf_drive_reserve_returned_station_rest",
-  "albany:wolf_drive_whole_herd_greenway_resupply",
-  "albany:wolf_drover_route_return_rest",
-  "albany:wolf_fortified_albany_authority_station_rest",
-  "albany:wolf_fortified_cade_terms_station_resupply",
-  "albany:wolf_live_pack_greenway_resupply",
-  "albany:wolf_relief_protocol_return_resupply",
-  "albany:wolf_saved_timber_quick_resupply",
-  "albany:wolf_works_fortification_return_resupply",
-]);
-const OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
-  "ending_drive_cattle_wounded",
-  "ending_drive_person_cattle_lost",
-  "ending_drive_reserve_spent",
-  "ending_fortified_albany_authority",
-  "ending_fortified_cade_terms",
-  "ending_held",
-  "ending_held_gate_barred",
-  "ending_held_timber_saved",
-  "ending_pack_diverted",
-  "ending_pack_diverted_after_blood",
-  "ending_pack_diverted_cattle_scattered",
-]);
-export const OVERWORLD_HILL_APPROACH_WORLD_HASH =
-  "634fd4e93143343fd813edd9c59d3a8c098c0d78b94497cf689988492de154e3";
-export const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH =
-  OVERWORLD_HILL_APPROACH_WORLD_HASH;
-export const OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH =
-  "50350884ebb7d118849fca040256a19c0c63ed4bfe3353d4cd202ee7a6ba8e7f";
-export const OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH =
-  "a2ddc6e9042a208f2821451f10b0152874ef55bc77b0f7801f3ea58591357474";
-export const OVERWORLD_JUNE_RETURN_COPY_WORLD_HASH =
-  "69604947643a24fc2d7c2377a85963742282ac7f83e7cec18a58bfc5eb8f53fc";
-export { OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH };
-export {
-  OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
-  OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
-} from "./local_scene_legacy_sources.js";
-/** Exact manifest immediately before the truthful frost-jamb signpost correction. */
-export const OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH =
-  "282cf14228d10495a12632919a50567960d06325e9182aa77232fc1c333d0aa9";
-/** Exact manifest immediately before the progressive Station preparation comparison. */
-export const OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH =
-  "951c541f10fefa869449427ef15666a7546ced7172144c85866e465d6f3f9de0";
-/** Exact manifest immediately before the Relief Allocation comparison gained trigger categories. */
-export const OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH =
-  "42357dc467518106d3a4753a246ea672de03638a2d8f0aca240f5818a579ed3d";
-/** Exact manifest before Wolf-Winter closed every selected registration obligation. */
-export const OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH =
-  "a37f9fc6bc1752017c69c175efe506e97c393f3052d9ae27a7c69b1d6c62962f";
-/** Exact manifest immediately before journey choices gained structured comparison cards. */
-export const OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH =
-  "3b7ccae1235ee3dd0fad5202594faf1d18e9c3f3d162bb214008d911cb2082d5";
-/** Exact manifest immediately before persistent Station wound care and Greenway recovery gates. */
-export const OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH =
-  "0770c6e8349923d1ed0c025d8b7e2e12323c53c457b7801667ea0574d90003ed";
-/** Exact manifest immediately before the bloodied byre gained a costly evacuation ending. */
-export const OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH =
-  "5757ef201328662d8145b1e4fbad87907996fc1d9dad10170c3c2f8d422d2077";
-/** Exact manifest immediately before Civic choice cards gained concise trigger categories. */
-export const OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH =
-  "155ab48207c496c158dd5bb07fb9d44502d75fa456e219f25abf148118f40b31";
-/** Exact manifest immediately before relief-oath strategy fit became explicit. */
-export const OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH =
-  "294bfefa9d3b17b21e5e2a48ded532e7b4c9b995ad7149b1519b1b4e490a9435";
-/** Exact manifest immediately before Starting Doctrine registration choices. */
-export const OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH =
-  "35d7ee917b8cd33c698e3771d7bd884d963763ab665e5b4ae919e971e013a50c";
-/** Exact manifest immediately before the bounded-Aid Starting Doctrine route was replaced. */
-export const OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH =
-  "56577688e463b98883aea1c9063a6e577d6a5d2bb4fa412ee32b0f47576d849c";
-/**
- * Exact June field-team copy from the manifest immediately before her DRIVE
- * cattle line gained a disclosed failed-signal Overrun consumer. Restore code
- * and historical manifest fixtures share this data so the accepted predecessor
- * cannot drift into a broad copy migration.
- */
-export const JUNE_DRIVE_OVERRUN_PREDECESSOR_COPY = Object.freeze({
-  capability:
-    "On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure, opens the lower swing gate during a committed drive, or takes the lower cattle brace before a fortification dawn watch.",
-  preview:
-    "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement.",
-  tradeoff:
-    "June controls the one cattle-pressure intervention; any wolf death ends the agreement.",
-  offerJournalText:
-    "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch. Capability: On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure, opens the lower swing gate during a committed drive, or takes the lower cattle brace before a fortification dawn watch. Condition: June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
-  juneSelectionJournalText:
-    "Ask June Pike to ride as an independent Road-Warden ally. The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. Her help is one pressure intervention, never a combat bonus; any wolf death ends the agreement. Actual cost: 15 minutes. June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
-});
-/** Exact manifest before June's DRIVE gate disclosed and absorbed failed-signal Overrun. */
-export const OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH =
-  "7b517d0a2ccae01b9548b415465391c51176c6357facc513c506808e7a115590";
-/**
- * Exact June copy after the DRIVE Overrun consequence and before her FORTIFY
- * cattle line gained a disclosed Strained-dawn HP consumer.
- */
-export const JUNE_FORTIFY_DAWN_PREDECESSOR_COPY = Object.freeze({
-  capability:
-    "On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure, catches a failed DRIVE signal's extra Overrun beat at the lower swing gate without the rider's -2 HP brace, or takes the lower cattle brace before a fortification dawn watch. A clean DRIVE signal is already at Crisis and gains no extra reduction.",
-  preview:
-    "The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. On DRIVE, her lower gate absorbs only a failed signal's extra Overrun beat and prevents the rider's -2 HP brace; a clean signal gains no extra reduction. Her help is one cattle-line intervention, never a combat bonus; any wolf death ends the agreement.",
-  tradeoff:
-    "June controls one cattle line; failed-signal DRIVE Overrun avoids the 2 HP brace. Any wolf death ends the agreement.",
-  offerJournalText:
-    "June Pike has one Road-Warden field seat beside Hayden's outgoing packet. She can ride with you, but only under a named division of authority; leaving without that agreement sends the relief rider alone and does not delay the dispatch. Capability: On a bloodless living-pack line, June can leave the wolf line at the final threshold and take the cattle line once: she lowers cattle alarm after a recovered lure, catches a failed DRIVE signal's extra Overrun beat at the lower swing gate without the rider's -2 HP brace, or takes the lower cattle brace before a fortification dawn watch. A clean DRIVE signal is already at Crisis and gains no extra reduction. Condition: June keeps cattle-first authority. She will not become an extra hunter, and the first wolf killed ends her place on the field team.",
-  juneSelectionJournalText:
-    "Ask June Pike to ride as an independent Road-Warden ally. The briefing takes 15 minutes. June joins the field team and records your promise that she chooses the cattle line if a recovered lure leaves the herd pressing, a committed drive reaches the final threshold, or a sealed fortification reaches its dawn watch. On DRIVE, her lower gate absorbs only a failed signal's extra Overrun beat and prevents the rider's -2 HP brace; a clean signal gains no extra reduction. Her help is one cattle-line intervention, never a combat bonus; any wolf death ends the agreement. Actual cost: 15 minutes. June signs beside your name, takes the second field seat, and remembers that you granted rather than merely borrowed her authority.",
-});
-/** Exact manifest before June's FORTIFY cattle line prevented Strained-dawn HP loss. */
-export const OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH =
-  "fbb3b0e57fdbada4a690921e8d321689dfe261deafa4c52192bbde04bb5bb2f6";
-/** Exact manifest before June could be released amicably at the pre-HUNT boundary. */
-export const OVERWORLD_JUNE_HUNT_RELEASE_PREDECESSOR_WORLD_HASH =
-  "ef222da19b289d9a32377e9ed2df0c38fa7af37f252fa87a63f3a58cb69ca486";
-/** Exact manifest immediately before Aid-Only named the clean first-cast prerequisite. */
-export const OVERWORLD_AID_ONLY_CLEAN_CAST_PREDECESSOR_WORLD_HASH =
-  "271f39351a549c0491c057dc372a80b8ecc899d0b9948d6c90df8ebc0729bd5a";
-export const OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH =
-  "33d93edc13833ad2c385a6cd39485546fdb6e38b81851b55e0ab92e256e523bf";
-/** Exact manifest immediately before Emery's bloodshed evidence-custody split. */
-export const OVERWORLD_EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASH =
-  "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3";
-/**
- * Exact post-Works manifests retained for the older preparation migration.
- * Authored-job support itself is derived from the scene registry below, so this
- * historical set cannot become an outer gate for later generic roots.
- */
-export const OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
-  new Set([
-    OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
-    WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
-    AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
-    AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH,
-    AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
-    AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-  ]);
-/**
- * Exact supported manifests that shipped the former Aid-Only oath preview.
- * These hashes were already trusted by their own migrations; this set only
- * selects the additional copy normalization and must not become an admission
- * path for an otherwise unknown manifest.
- */
-const OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_COPY_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
-  new Set([
-    OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
-    ...OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES,
-    OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
-    ...EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES,
-    OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH,
-  ]);
-/**
- * Existing admitted saves whose Aid-Only journals either carry the immediate
- * predecessor's clean-cast copy or are first advanced to it by the
- * strategy-parity normalizer above. This is a copy selector only: the direct
- * manifest-admission gate remains the single immediate predecessor below.
- */
-const OVERWORLD_AID_ONLY_CLEAN_CAST_COPY_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> = new Set([
-  OVERWORLD_AID_ONLY_CLEAN_CAST_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_JUNE_HUNT_RELEASE_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH,
-  ...OVERWORLD_DROVER_ROUTE_DRIVE_RECOVERY_TRUSTED_PREDECESSOR_WORLD_HASHES,
-  ...OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_COPY_PREDECESSOR_WORLD_HASHES,
-]);
-/** Exact supported manifests in which opening preparation was still anchored at Civic. */
-const OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES: ReadonlySet<string> = new Set([
-  OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
-  // These later authored-scene predecessors already carry the current
-  // field-timed proof; normalizing them as Civic evidence would move their
-  // authored boundary backward.
-  ...[...OVERWORLD_AUTHORED_LOCAL_JOB_TRUSTED_PREDECESSOR_WORLD_HASHES].filter(
-    (sourceWorldHash) =>
-      sourceWorldHash !== AUTHORED_ALBANY_STATION_PREDECESSOR_WORLD_HASH &&
-      sourceWorldHash !== AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH &&
-      sourceWorldHash !== AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-  ),
-]);
-/**
- * Every still-supported manifest before Campus Archive Query carried Blair's
- * former contact copy. Keep this exact hash fence separate from local-job
- * evidence: a player could have spoken to Blair without taking the generic job.
- */
-const OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
-  new Set([
-    ...WINTER_RETURN_DOCKET_GENERIC_PREDECESSOR_WORLD_HASHES,
-    AUTHORED_ALBANY_CAMPUS_PREDECESSOR_WORLD_HASH,
-  ]);
+export const OVERWORLD_CONTENT_HASH_MISMATCH_WARNING =
+  "This save was created from different authored world content; its prior journal is preserved, and current authored content governs future play.";
 
-type ExactSnapshotMigrationId =
-  | "aid_only_clean_cast"
-  | "campus_archive_contact"
-  | "civic_trigger_category"
-  | "frost_jamb_signpost"
-  | "june_return"
-  | "registration_promise_closure"
-  | "relief_oath_strategy_parity"
-  | "relief_protocol_trigger";
-
-/**
- * Exact historical normalizers must be fenced by the manifests that actually
- * shipped their predecessor state. Authored-scene registries are cumulative by
- * design, so using their broad migration booleans here would replay stale
- * changes for later conversions.
- */
-const EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES: Readonly<
-  Record<ExactSnapshotMigrationId, ReadonlySet<string>>
-> = Object.freeze({
-  aid_only_clean_cast: OVERWORLD_AID_ONLY_CLEAN_CAST_COPY_PREDECESSOR_WORLD_HASHES,
-  campus_archive_contact: OVERWORLD_CAMPUS_ARCHIVE_CONTACT_COPY_TRUSTED_PREDECESSOR_WORLD_HASHES,
-  civic_trigger_category: new Set([OVERWORLD_CIVIC_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH]),
-  frost_jamb_signpost: new Set([
-    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
-    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
-  ]),
-  june_return: new Set([
-    OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH,
-  ]),
-  registration_promise_closure: new Set([
-    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
-    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_WORLD_HASH,
-  ]),
-  relief_oath_strategy_parity: OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_COPY_PREDECESSOR_WORLD_HASHES,
-  relief_protocol_trigger: new Set([
-    ...AUTHORED_ALBANY_WORKS_EVENT_GENERIC_PREDECESSOR_WORLD_HASHES,
-    AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH,
-    OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH,
-  ]),
-});
-
-function exactSnapshotMigrationAppliesToSource(
-  migrationId: ExactSnapshotMigrationId,
-  sourceWorldHash: string,
-): boolean {
-  return EXACT_SNAPSHOT_MIGRATION_SOURCE_WORLD_HASHES[migrationId].has(sourceWorldHash);
-}
-/** @deprecated Relief-oath-era current-target name retained for existing callers. */
-export const OVERWORLD_RELIEF_OATH_WORLD_HASH = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
-/** @deprecated Current-target alias retained for earlier migration callers. */
-export const OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH = OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
-const OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT = Object.freeze({
-  id: "talk:albany_city__transport_hub__june_pike@left_after_blood",
-  kind: "contact" as const,
-  title: "Talked to June Pike",
-  text: "June's field seat is empty. Her separate return says the route crossed into combat before she could take the lower rail, ending the cattle-first field agreement. The promise is recorded broken, June has left the party, and no ally return claim is available; the completed Wolf-Winter result still stands.",
-});
-const OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT = Object.freeze({
-  id: "talk:albany_city__campus__contact",
-  kind: "contact" as const,
-  title: "Talked to Blair Drake",
-  text: "Blair Drake works as the field archivist in Albany Campus Row, watching how old maps, clinic notes, and experts with narrow hours affect Albany city. Wants a traveler to handle Albany Campus Row's local problems before they spread through the Capital / Mohawk road network.",
-});
-const OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_RULE_IDS: ReadonlySet<string> = new Set([
-  ...OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS,
-  "albany:resident_shelter_return_rest",
-  "albany:mobile_reserve_return_resupply",
-]);
-const OVERWORLD_RELIEF_OATH_PREDECESSOR_WOLF_OUTCOME_IDS =
-  OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS;
-const OVERWORLD_RELIEF_OATH_CHARACTER_IDS: ReadonlySet<string> = new Set([
-  "albany:knowledge_wolf_full_compact_duty",
-  "albany:knowledge_wolf_limited_aid_only",
-  "albany:knowledge_wolf_unaffiliated_bond",
-  "value:public_duty",
-  "value:bounded_authority",
-  "value:voluntary_aid",
-  "faction:albany_relief_compact",
-  "albany:memory_rowan_full_compact_duty",
-  "albany:memory_rowan_limited_aid_only",
-  "albany:memory_rowan_unaffiliated_personal_bond",
-  "albany:promise_wolf_full_compact_duty",
-  "albany:promise_wolf_limited_aid_only",
-  "albany:promise_wolf_unaffiliated_bond",
-]);
-const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_RULE_IDS =
-  OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS;
-const OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WOLF_OUTCOME_IDS =
-  OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS;
-const OVERWORLD_RELIEF_ALLOCATION_CHARACTER_IDS: ReadonlySet<string> = new Set([
-  "albany:knowledge_relief_cade_fodder",
-  "albany:knowledge_relief_resident_shelter",
-  "albany:knowledge_relief_mobile_reserve",
-  "albany:memory_emery_relief_cade_fodder_allocated",
-  "albany:memory_jamie_relief_resident_shelter_allocated",
-  "albany:memory_hayden_relief_mobile_reserve_allocated",
-]);
-const OVERWORLD_ALLY_ERA_WOLF_START = Object.freeze({
-  id: "quest:wolf_winter",
-  kind: "quest" as const,
-  title: "Started The Wolf-Winter",
-  text: "You turn the local lead \"A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The live dispatch has June Pike's optional second field seat, but starting without her cattle-first bond sends the relief rider alone on the established route.\" into an active quest.",
-});
-const OVERWORLD_PRE_ALLY_WOLF_START = Object.freeze({
-  id: "quest:wolf_winter",
-  kind: "quest" as const,
-  title: "Started The Wolf-Winter",
-  text: "You turn the local lead \"A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. The Wolf-Winter lead is the live dispatch attached to that hill road.\" into an active quest.",
-});
-const OVERWORLD_HILL_APPROACH_ROUTE_CHARACTER_IDS: ReadonlySet<string> = new Set([
-  "albany:knowledge_wolf_exposed_ridge",
-  "albany:knowledge_wolf_sheltered_stockway",
-  "albany:memory_hayden_dispatched_exposed_ridge",
-  "albany:memory_hayden_dispatched_sheltered_stockway",
-]);
-/** @deprecated Preparation-era current-target name retained for callers. */
-export const OVERWORLD_OPENING_PREPARATION_WORLD_HASH = OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH;
-export const OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH =
-  OVERWORLD_RELIEF_ALLOCATION_WORLD_HASH;
-/** @deprecated Lead-source target name retained as the current-target alias. */
-export const OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH =
-  OVERWORLD_OPENING_PREPARATION_MIGRATION_TARGET_WORLD_HASH;
-/** @deprecated Registration-era target name retained as the current-target alias. */
-export const OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH =
-  OVERWORLD_OPENING_LEAD_SOURCE_MIGRATION_TARGET_WORLD_HASH;
-/** @deprecated Current target alias retained for existing callers. */
-export const OVERWORLD_CAMPAIGN_IMPORTS_MIGRATION_TARGET_WORLD_HASH =
-  OVERWORLD_OPENING_REGISTRATION_MIGRATION_TARGET_WORLD_HASH;
-
-const OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES: ReadonlySet<string> =
-  new Set([
-    OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
-    OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
-    OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
-  ]);
-
-const OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<string> = new Set([
-  OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
-  OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
-  OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
-]);
-
-const OVERWORLD_LEGACY_WOLF_START_BY_WORLD_HASH: ReadonlyMap<
-  string,
-  Readonly<{
-    era: string;
-    entry: Readonly<{ id: string; kind: "quest"; title: string; text: string }>;
-  }>
-> = new Map([
-  [
-    OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
-    { era: "F11", entry: OVERWORLD_ALLY_ERA_WOLF_START },
-  ],
-  [
-    OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
-    { era: "F10", entry: OVERWORLD_ALLY_ERA_WOLF_START },
-  ],
-  [
-    OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
-    { era: "F04", entry: OVERWORLD_ALLY_ERA_WOLF_START },
-  ],
-  [
-    OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH,
-    { era: "pre-ally", entry: OVERWORLD_PRE_ALLY_WOLF_START },
-  ],
-  [
-    OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
-    { era: "pre-preparation", entry: OVERWORLD_PRE_ALLY_WOLF_START },
-  ],
-  [
-    OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
-    { era: "campaign-service", entry: OVERWORLD_PRE_ALLY_WOLF_START },
-  ],
-  [
-    OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
-    { era: "pre-lead-source", entry: OVERWORLD_PRE_ALLY_WOLF_START },
-  ],
-  [
-    OVERWORLD_OPENING_REGISTRATION_WORLD_HASH,
-    { era: "registration", entry: OVERWORLD_PRE_ALLY_WOLF_START },
-  ],
-  [
-    OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
-    { era: "pre-campaign-exports", entry: OVERWORLD_PRE_ALLY_WOLF_START },
-  ],
-  [
-    OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
-    { era: "campaign-exports", entry: OVERWORLD_PRE_ALLY_WOLF_START },
-  ],
-  [
-    OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
-    { era: "campaign-imports", entry: OVERWORLD_PRE_ALLY_WOLF_START },
-  ],
-]);
-const OVERWORLD_QUEST_START_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<string> = new Set(
-  OVERWORLD_LEGACY_WOLF_START_BY_WORLD_HASH.keys(),
-);
-const OVERWORLD_RELIEF_OATH_TRUSTED_LEGACY_WORLD_HASHES: ReadonlySet<string> = new Set([
-  OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH,
-  OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH,
-  OVERWORLD_OPENING_REGISTRATION_WORLD_HASH,
-  ...OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES,
-]);
-
-type TrustedMigrationEra =
-  | "field_timed_preparation"
-  | "relief_oath"
-  | "relief_allocation"
-  | "hill_approach"
-  | "fortify_outlast"
-  | "crisis_priority"
-  | "opening_ally"
-  | "opening_preparation"
-  | "campaign_service"
-  | "opening_lead_source"
-  | "opening_registration"
-  | "pre_registration"
-  | null;
-
-type OpeningRegistrationLegacyJournalProof = Readonly<{
-  entry: OverworldJournalEntry;
-  journalIndex: number;
-  sourceWorldHash: string;
-}>;
-
-function normalizeReliefOathStrategyParityPredecessorJournal(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  const oath = args.indexes.openingReliefOath;
-  const currentOffer = args.indexes.openingReliefOathOfferDraft;
-  const aid = oath?.options.find((option) => option.id === "albany:oath_limited_aid_only");
-  if (!oath || !currentOffer || !aid) {
-    throw new Error("Relief-oath strategy-parity migration target must retain the Aid-Only term.");
-  }
-  const aidSelectionId = openingReliefOathJournalId(oath.id, aid.id);
-  return args.journalEntries.map((entry) => {
-    if (
-      entry.id === currentOffer.id &&
-      RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.message !== currentOffer.text
-    ) {
-      if (
-        entry.kind !== currentOffer.kind ||
-        entry.title !== currentOffer.title ||
-        entry.text !== RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.message
-      ) {
-        throw new Error(
-          `Relief-oath strategy-parity predecessor offer "${entry.id}" does not match its exact authored copy.`,
-        );
-      }
-      return Object.freeze({ ...entry, text: currentOffer.text });
-    }
-    if (
-      entry.id !== aidSelectionId ||
-      RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.aidPreview === aid.preview
-    ) {
-      return entry;
-    }
-    if (entry.kind !== "relief_oath") {
-      throw new Error(
-        `Relief-oath strategy-parity predecessor entry "${entry.id}" is not an oath selection.`,
-      );
-    }
-    const before = RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_COPY.aidPreview;
-    const firstMatch = entry.text.indexOf(before);
-    if (firstMatch < 0) {
-      // An already-normalized exact entry is valid here and is proven against
-      // the current manifest below. This preserves idempotence and lets older
-      // migration-specific rejection checks retain their established order.
-      return entry;
-    }
-    if (entry.text.indexOf(before, firstMatch + before.length) >= 0) {
-      throw new Error(
-        `Relief-oath strategy-parity predecessor entry "${entry.id}" does not match its exact authored copy.`,
-      );
-    }
-    return Object.freeze({
-      ...entry,
-      text: `${entry.text.slice(0, firstMatch)}${aid.preview}${entry.text.slice(
-        firstMatch + before.length,
-      )}`,
-    });
-  });
-}
-
-/**
- * The immediately preceding manifest changed only the Aid-Only clean-cast
- * disclosure. Its oath selection and Rowan's reactive contact are durable
- * journals, so accept only their exact shipped forms before replaying them
- * against the current manifest.
- */
-function normalizeAidOnlyCleanCastPredecessorJournal(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  const oath = args.indexes.openingReliefOath;
-  const aid = oath?.options.find((option) => option.id === "albany:oath_limited_aid_only");
-  const rowanJournalId = "talk:albany_city__civic_core__contact@wolf_limited_aid_only_selected";
-  const rowanPresentation = args.indexes.contactPresentationsByJournalId.get(rowanJournalId);
-  if (!oath || !aid || !rowanPresentation) {
-    throw new Error(
-      "Aid-Only clean-cast migration target must retain the Aid-Only term and Rowan's selected contact.",
-    );
-  }
-  const aidSelectionId = openingReliefOathJournalId(oath.id, aid.id);
-  const currentRowanContact = describeOverworldContactAction(
-    rowanPresentation.contact,
-    rowanPresentation.presentationId,
-  );
-  const predecessorRowanContactText = `${rowanPresentation.contact.summary} ${AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.rowanAidOnlySelectedAgenda}`;
-
-  return args.journalEntries.map((entry) => {
-    if (entry.id === aidSelectionId) {
-      if (entry.kind !== "relief_oath") {
-        throw new Error(
-          `Aid-Only clean-cast predecessor entry "${entry.id}" is not an oath selection.`,
-        );
-      }
-      const before = AID_ONLY_CLEAN_CAST_PREDECESSOR_COPY.aidOnlyPreview;
-      const firstMatch = entry.text.indexOf(before);
-      if (firstMatch < 0) {
-        // Earlier strategy-parity sources are already advanced to the current
-        // Aid-Only selection receipt immediately before this composition step.
-        // The canonical replay below still rejects anything that is not exact.
-        const currentMatch = entry.text.indexOf(aid.preview);
-        if (
-          currentMatch < 0 ||
-          entry.text.indexOf(aid.preview, currentMatch + aid.preview.length) >= 0
-        ) {
-          throw new Error(
-            `Aid-Only clean-cast predecessor entry "${entry.id}" does not match its exact authored copy.`,
-          );
-        }
-        return entry;
-      }
-      if (entry.text.indexOf(before, firstMatch + before.length) >= 0) {
-        throw new Error(
-          `Aid-Only clean-cast predecessor entry "${entry.id}" does not match its exact authored copy.`,
-        );
-      }
-      return Object.freeze({
-        ...entry,
-        text: `${entry.text.slice(0, firstMatch)}${aid.preview}${entry.text.slice(
-          firstMatch + before.length,
-        )}`,
-      });
-    }
-
-    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
-    const canonicalEntryId =
-      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
-        ? repeatedContact[1]!
-        : entry.id;
-    if (canonicalEntryId !== rowanJournalId) return entry;
-    if (
-      entry.kind !== currentRowanContact.kind ||
-      entry.title !== currentRowanContact.title ||
-      entry.text !== predecessorRowanContactText ||
-      currentRowanContact.id !== canonicalEntryId
-    ) {
-      throw new Error(
-        `Aid-Only clean-cast predecessor contact "${entry.id}" does not match its exact authored copy.`,
-      );
-    }
-    return Object.freeze({
-      ...entry,
-      title: currentRowanContact.title,
-      text: currentRowanContact.text,
-    });
-  });
-}
-
-function normalizeReliefProtocolTriggerCopyPredecessorJournal(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  const preparation = args.indexes.openingPreparation;
-  const relief = preparation?.profiles.find(
-    (profile) => profile.id === "albany:prep_relief_protocol",
-  );
-  if (!preparation || !relief) {
-    throw new Error(
-      "Relief Protocol trigger-copy migration target must retain Jamie's preparation profile.",
-    );
-  }
-  const selectionId = openingPreparationJournalId(preparation.id, relief.id);
-  return args.journalEntries.map((entry) => {
-    if (entry.id !== selectionId) return entry;
-    if (entry.kind !== "preparation") {
-      throw new Error(
-        `Relief Protocol predecessor journal entry "${entry.id}" is not a preparation selection.`,
-      );
-    }
-    let text = entry.text;
-    for (const [before, after] of [
-      [RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_SUMMARY, relief.summary],
-      [RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_PREVIEW, relief.preview],
-    ] as const) {
-      const firstMatch = text.indexOf(before);
-      if (firstMatch < 0 || text.indexOf(before, firstMatch + before.length) >= 0) {
-        throw new Error(
-          `Relief Protocol predecessor journal entry "${entry.id}" does not match its exact authored copy.`,
-        );
-      }
-      text = `${text.slice(0, firstMatch)}${after}${text.slice(firstMatch + before.length)}`;
-    }
-    return Object.freeze({ ...entry, text });
-  });
-}
-
-function replaceFrostJambPredecessorCopy(args: {
-  entry: OverworldJournalEntry;
-  replacements: readonly (readonly [before: string, after: string])[];
-}): OverworldJournalEntry {
-  let text = args.entry.text;
-  for (const [before, after] of args.replacements) {
-    const firstMatch = text.indexOf(before);
-    if (firstMatch < 0 || text.indexOf(before, firstMatch + before.length) >= 0) {
-      throw new Error(
-        `Frost-jamb predecessor journal entry "${args.entry.id}" does not match its exact authored copy.`,
-      );
-    }
-    text = `${text.slice(0, firstMatch)}${after}${text.slice(firstMatch + before.length)}`;
-  }
-  return Object.freeze({ ...args.entry, text });
-}
-
-function normalizeFrostJambSignpostPredecessorJournal(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  const leadSource = args.indexes.openingLeadSource;
-  const preparation = args.indexes.openingPreparation;
-  const currentOffer = args.indexes.openingLeadSourceOfferDraft;
-  const haydenSource = leadSource?.options.find(
-    (option) => option.id === "albany:source_hayden_frost_report",
-  );
-  const worksPreparation = preparation?.profiles.find(
-    (profile) => profile.id === "albany:prep_works_fortification",
-  );
-  const frostContactJournalId = "talk:albany_city__transport_hub__contact@frost_report_certified";
-  const frostContactPresentation =
-    args.indexes.contactPresentationsByJournalId.get(frostContactJournalId);
-  if (
-    !leadSource ||
-    !preparation ||
-    !currentOffer ||
-    !haydenSource ||
-    !worksPreparation ||
-    !frostContactPresentation
-  ) {
-    throw new Error(
-      "Frost-jamb migration target must retain Hayden's source, contact, and Reese's preparation.",
-    );
-  }
-  const haydenSelectionId = openingLeadSourceJournalId(leadSource.id, haydenSource.id);
-  const worksSelectionId = openingPreparationJournalId(preparation.id, worksPreparation.id);
-  const currentFrostContact = describeOverworldContactAction(
-    frostContactPresentation.contact,
-    frostContactPresentation.presentationId,
-  );
-  const predecessorFrostContactText = `${frostContactPresentation.contact.summary} ${FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenAgenda}`;
-
-  return args.journalEntries.map((entry) => {
-    if (entry.id === currentOffer.id) {
-      if (
-        entry.kind !== currentOffer.kind ||
-        entry.title !== currentOffer.title ||
-        entry.text !== FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.leadMessage
-      ) {
-        throw new Error(
-          `Frost-jamb predecessor journal entry "${entry.id}" does not match its exact lead-source offer.`,
-        );
-      }
-      return Object.freeze({ ...entry, title: currentOffer.title, text: currentOffer.text });
-    }
-    if (entry.id === haydenSelectionId) {
-      if (entry.kind !== "lead_source") {
-        throw new Error(
-          `Frost-jamb predecessor journal entry "${entry.id}" is not a lead-source selection.`,
-        );
-      }
-      return replaceFrostJambPredecessorCopy({
-        entry,
-        replacements: [
-          [FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenPreview, haydenSource.preview],
-          [FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.haydenConsequence, haydenSource.consequence],
-        ],
-      });
-    }
-    if (entry.id === worksSelectionId) {
-      if (entry.kind !== "preparation") {
-        throw new Error(
-          `Frost-jamb predecessor journal entry "${entry.id}" is not a preparation selection.`,
-        );
-      }
-      return replaceFrostJambPredecessorCopy({
-        entry,
-        replacements: [
-          [FROST_JAMB_SIGNPOST_PREDECESSOR_COPY.worksPreview, worksPreparation.preview],
-        ],
-      });
-    }
-    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
-    const canonicalEntryId =
-      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
-        ? repeatedContact[1]!
-        : entry.id;
-    if (canonicalEntryId !== frostContactJournalId) return entry;
-    if (
-      entry.kind !== currentFrostContact.kind ||
-      entry.title !== currentFrostContact.title ||
-      entry.text !== predecessorFrostContactText
-    ) {
-      throw new Error(
-        `Frost-jamb predecessor journal entry "${entry.id}" does not match its exact Hayden contact copy.`,
-      );
-    }
-    return Object.freeze({
-      ...entry,
-      title: currentFrostContact.title,
-      text: currentFrostContact.text,
-    });
-  });
-}
-
-function normalizeJuneReturnCopyPredecessorJournal(args: {
-  currentContact: Readonly<{ id: string; text: string; title: string }>;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  return args.journalEntries.map((entry) => {
-    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
-    const canonicalEntryId =
-      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
-        ? repeatedContact[1]!
-        : entry.id;
-    if (canonicalEntryId !== OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.id) {
-      return entry;
-    }
-    if (
-      entry.title !== OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.title ||
-      entry.text !== OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.text ||
-      entry.kind !== OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.kind
-    ) {
-      throw new Error(
-        `June-return-copy predecessor journal entry "${entry.id}" does not match its exact authored contact copy.`,
-      );
-    }
-    if (args.currentContact.id !== canonicalEntryId) {
-      throw new Error(
-        `June-return-copy predecessor journal entry "${entry.id}" has no current authored counterpart.`,
-      );
-    }
-    return Object.freeze({
-      ...entry,
-      title: args.currentContact.title,
-      text: args.currentContact.text,
-    });
-  });
-}
-
-function normalizeCampusArchivePredecessorContactJournal(args: {
-  currentContact: Readonly<{ id: string; text: string; title: string }>;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  return args.journalEntries.map((entry) => {
-    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
-    const canonicalEntryId =
-      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
-        ? repeatedContact[1]!
-        : entry.id;
-    if (canonicalEntryId !== OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id) return entry;
-    if (
-      entry.kind !== OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.kind ||
-      entry.title !== OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.title ||
-      entry.text !== OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.text ||
-      args.currentContact.id !== canonicalEntryId
-    ) {
-      throw new Error(
-        `Campus-archive predecessor journal entry "${entry.id}" does not match its exact trusted contact copy.`,
-      );
-    }
-    return Object.freeze({
-      ...entry,
-      title: args.currentContact.title,
-      text: args.currentContact.text,
-    });
-  });
-}
-
-function normalizeCrisisPriorityPredecessorAllyJournalCopy(args: {
-  currentContacts: ReadonlyMap<string, Readonly<{ id: string; text: string; title: string }>>;
-  currentJuneSelection: Readonly<{ id: string; text: string; title: string }>;
-  currentOffer: Readonly<{ id: string; text: string; title: string }>;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  return args.journalEntries.map((entry) => {
-    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
-    const canonicalEntryId =
-      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
-        ? repeatedContact[1]!
-        : entry.id;
-    const predecessor =
-      canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_BASE_CONTACT.id
-        ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_BASE_CONTACT
-        : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER.id
-          ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER
-          : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_SELECTION.id
-            ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_SELECTION
-            : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT.id
-              ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT
-              : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT.id
-                ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT
-                : null;
-    if (predecessor === null) return entry;
-    if (
-      entry.title !== predecessor.title ||
-      entry.text !== predecessor.text ||
-      entry.kind !== predecessor.kind
-    ) {
-      throw new Error(
-        `Crisis-priority predecessor ally journal entry "${entry.id}" does not match its exact F04 authored copy.`,
-      );
-    }
-    const current =
-      canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_ALLY_OFFER.id
-        ? args.currentOffer
-        : canonicalEntryId === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_SELECTION.id
-          ? args.currentJuneSelection
-          : args.currentContacts.get(canonicalEntryId);
-    if (current?.id !== canonicalEntryId) {
-      throw new Error(
-        `Crisis-priority predecessor ally journal entry "${entry.id}" has no current authored counterpart.`,
-      );
-    }
-    return Object.freeze({ ...entry, title: current.title, text: current.text });
-  });
-}
-
-function normalizeFortifyOutlastPredecessorAllyJournalCopy(args: {
-  currentContacts: ReadonlyMap<string, Readonly<{ id: string; text: string; title: string }>>;
-  currentJuneSelection: Readonly<{ id: string; text: string; title: string }>;
-  currentOffer: Readonly<{ id: string; text: string; title: string }>;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  return args.journalEntries.map((entry) => {
-    const repeatedContact = /^(.*):(\d+)$/.exec(entry.id);
-    const canonicalEntryId =
-      repeatedContact !== null && Number(repeatedContact[2]) === parseTimeLabel(entry.recordedAt)
-        ? repeatedContact[1]!
-        : entry.id;
-    const predecessor =
-      canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_BASE_CONTACT.id
-        ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_BASE_CONTACT
-        : canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_ALLY_OFFER.id
-          ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_ALLY_OFFER
-          : canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_SELECTION.id
-            ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_SELECTION
-            : canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_JOINED_CONTACT.id
-              ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_JOINED_CONTACT
-              : null;
-    if (predecessor === null) return entry;
-    if (
-      entry.title !== predecessor.title ||
-      entry.text !== predecessor.text ||
-      entry.kind !== predecessor.kind
-    ) {
-      throw new Error(
-        `Fortify-outlast predecessor ally journal entry "${entry.id}" does not match its exact F10 authored copy.`,
-      );
-    }
-    const current =
-      canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_ALLY_OFFER.id
-        ? args.currentOffer
-        : canonicalEntryId === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_SELECTION.id
-          ? args.currentJuneSelection
-          : args.currentContacts.get(canonicalEntryId);
-    if (current?.id !== canonicalEntryId) {
-      throw new Error(
-        `Fortify-outlast predecessor ally journal entry "${entry.id}" has no current authored counterpart.`,
-      );
-    }
-    return Object.freeze({ ...entry, title: current.title, text: current.text });
-  });
-}
-
-const OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER = Object.freeze({
-  id: "ally_offer:albany:wolf_ally_commitment",
-  kind: "ally_offer" as const,
-  title: "Choose the Wolf-Winter Field Team",
-  text: JUNE_DRIVE_OVERRUN_PREDECESSOR_COPY.offerJournalText,
-});
-const OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_JUNE_SELECTION = Object.freeze({
-  id: "ally:albany:wolf_ally_commitment:albany:ally_june_cattle_first",
-  kind: "ally" as const,
-  title: "Field team: Grant June Cattle-First Authority",
-  text: JUNE_DRIVE_OVERRUN_PREDECESSOR_COPY.juneSelectionJournalText,
-});
-
-function normalizeJuneDriveOverrunPredecessorAllyJournalCopy(args: {
-  currentJuneSelection: Readonly<{ id: string; text: string; title: string }>;
-  currentOffer: Readonly<{ id: string; text: string; title: string }>;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  return args.journalEntries.map((entry) => {
-    const predecessor =
-      entry.id === OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER.id
-        ? OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER
-        : entry.id === OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_JUNE_SELECTION.id
-          ? OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_JUNE_SELECTION
-          : null;
-    if (predecessor === null) return entry;
-    if (
-      entry.kind !== predecessor.kind ||
-      entry.title !== predecessor.title ||
-      entry.text !== predecessor.text
-    ) {
-      throw new Error(
-        `June DRIVE Overrun predecessor ally journal entry "${entry.id}" does not match its exact authored copy.`,
-      );
-    }
-    const current =
-      entry.id === OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER.id
-        ? args.currentOffer
-        : args.currentJuneSelection;
-    if (current.id !== entry.id) {
-      throw new Error(
-        `June DRIVE Overrun predecessor ally journal entry "${entry.id}" has no current authored counterpart.`,
-      );
-    }
-    return Object.freeze({ ...entry, title: current.title, text: current.text });
-  });
-}
-
-const OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_ALLY_OFFER = Object.freeze({
-  id: "ally_offer:albany:wolf_ally_commitment",
-  kind: "ally_offer" as const,
-  title: "Choose the Wolf-Winter Field Team",
-  text: JUNE_FORTIFY_DAWN_PREDECESSOR_COPY.offerJournalText,
-});
-const OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_JUNE_SELECTION = Object.freeze({
-  id: "ally:albany:wolf_ally_commitment:albany:ally_june_cattle_first",
-  kind: "ally" as const,
-  title: "Field team: Grant June Cattle-First Authority",
-  text: JUNE_FORTIFY_DAWN_PREDECESSOR_COPY.juneSelectionJournalText,
-});
-
-function normalizeJuneFortifyDawnPredecessorAllyJournalCopy(args: {
-  currentJuneSelection: Readonly<{ id: string; text: string; title: string }>;
-  currentOffer: Readonly<{ id: string; text: string; title: string }>;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  return args.journalEntries.map((entry) => {
-    const predecessor =
-      entry.id === OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_ALLY_OFFER.id
-        ? OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_ALLY_OFFER
-        : entry.id === OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_JUNE_SELECTION.id
-          ? OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_JUNE_SELECTION
-          : null;
-    if (predecessor === null) return entry;
-    if (
-      entry.kind !== predecessor.kind ||
-      entry.title !== predecessor.title ||
-      entry.text !== predecessor.text
-    ) {
-      throw new Error(
-        `June FORTIFY dawn predecessor ally journal entry "${entry.id}" does not match its exact authored copy.`,
-      );
-    }
-    const current =
-      entry.id === OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_ALLY_OFFER.id
-        ? args.currentOffer
-        : args.currentJuneSelection;
-    if (current.id !== entry.id) {
-      throw new Error(
-        `June FORTIFY dawn predecessor ally journal entry "${entry.id}" has no current authored counterpart.`,
-      );
-    }
-    return Object.freeze({ ...entry, title: current.title, text: current.text });
-  });
-}
-
-function normalizePreFortifyAlbanyWagonJournalTitle(
-  journalEntries: readonly OverworldJournalEntry[],
-): OverworldJournalEntry[] {
-  return journalEntries.map((entry) => {
-    if (
-      entry.kind !== "campaign" ||
-      !/^campaign_goal:\d+:carry_hedricks_packet_north$/.test(entry.id)
-    ) {
-      return entry;
-    }
-    if (entry.title === "Send the wagon and wardens north") {
-      return entry;
-    }
-    if (entry.title !== "Send the wagon to rebuild Cade's outer line") {
-      throw new Error(
-        `Fortify-outlast predecessor campaign journal entry "${entry.id}" does not match its exact pre-F11 authored title.`,
-      );
-    }
-    return Object.freeze({ ...entry, title: "Send the wagon back to Cade" });
-  });
-}
-
-function normalizePreFortifyDawnWagonServiceJournalCopy(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-}): OverworldJournalEntry[] {
-  const currentRule = args.indexes.campaignServiceRulesById.get(
-    OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_DAWN_WAGON_SERVICE.id,
-  );
-  if (!currentRule) {
-    throw new Error("Fortify-outlast migration target has no dawn-wagon campaign service.");
-  }
-  const predecessorPrefix = `${OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_DAWN_WAGON_SERVICE.summary} `;
-  const currentPrefix = `${currentRule.summary.trim()} `;
-  return args.journalEntries.map((entry) => {
-    if (
-      entry.kind !== "service" ||
-      entry.serviceRuleId !== OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_DAWN_WAGON_SERVICE.id
-    ) {
-      return entry;
-    }
-    if (!entry.text.startsWith(predecessorPrefix)) {
-      throw new Error(
-        `Fortify-outlast predecessor service journal entry "${entry.id}" does not match its exact pre-F11 authored summary.`,
-      );
-    }
-    return Object.freeze({
-      ...entry,
-      text: `${currentPrefix}${entry.text.slice(predecessorPrefix.length)}`,
-    });
-  });
-}
-
-function proveOpeningRegistrationLegacyJournal(args: {
-  completedQuestIds: ReadonlySet<string>;
-  discoveredAreaIds: ReadonlySet<string>;
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-  migratesFromPreRegistrationManifest: boolean;
-  registrationProof: OpeningRegistrationJournalProof;
-  snapshot: OverworldSessionSnapshot;
-  startedQuestIds: ReadonlySet<string>;
-  visitedTownIds: ReadonlySet<string>;
-}): OpeningRegistrationLegacyJournalProof | null {
-  const markers = args.journalEntries
-    .map((entry, journalIndex) => ({ entry, journalIndex }))
-    .filter(({ entry }) => entry.kind === "registration_legacy");
-  if (markers.length > 1) {
-    throw new Error(
-      "Overworld session snapshot must contain at most one legacy opening registration marker.",
-    );
-  }
-  const marker = markers[0];
-  if (!marker) return null;
-  if (args.migratesFromPreRegistrationManifest) {
-    throw new Error(
-      "Legacy overworld session snapshot has opening registration evidence from a later manifest.",
-    );
-  }
-  if (args.registrationProof.offered) {
-    throw new Error(
-      "Overworld session snapshot cannot combine selected or pending registration with a legacy registration marker.",
-    );
-  }
-  if (args.startedQuestIds.size === 0 && args.completedQuestIds.size === 0) {
-    throw new Error(
-      "Overworld session snapshot legacy registration marker has no earlier quest progress to grandfather.",
-    );
-  }
-
-  const sourceWorldHash = openingRegistrationLegacySourceWorldHash(marker.entry.id);
-  if (
-    !sourceWorldHash ||
-    !OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(sourceWorldHash)
-  ) {
-    throw new Error(
-      `Overworld session snapshot legacy registration marker "${marker.entry.id}" has an untrusted source world hash.`,
-    );
-  }
-  const expected = openingRegistrationLegacyJournalDraft(sourceWorldHash);
-  if (marker.entry.title !== expected.title || marker.entry.text !== expected.text) {
-    throw new Error(
-      `Overworld session snapshot legacy registration marker "${marker.entry.id}" does not match its canonical copy.`,
-    );
-  }
-  const boundary = marker.entry.registrationBoundary;
-  if (!boundary) {
-    throw new Error(
-      "Overworld session snapshot legacy registration marker has no durable migration boundary.",
-    );
-  }
-  if (
-    !args.visitedTownIds.has(boundary.townId) ||
-    marker.entry.town !== args.indexes.townNameForSource(boundary.townId) ||
-    !args.discoveredAreaIds.has(boundary.areaId) ||
-    args.indexes.areaHomes.get(boundary.areaId) !== boundary.townId ||
-    boundary.minutes !== parseTimeLabel(marker.entry.recordedAt)
-  ) {
-    throw new Error(
-      "Overworld session snapshot legacy registration marker does not match its migration location and time.",
-    );
-  }
-  if (boundary.acceptedDecisions > args.snapshot.journey.acceptedDecisions) {
-    throw new Error(
-      "Overworld session snapshot legacy registration marker is ahead of its journey decision count.",
-    );
-  }
-  if (
-    boundary.acceptedDecisions === args.snapshot.journey.acceptedDecisions &&
-    boundary.decisionProofHash !== args.snapshot.journey.decisionProof.hash
-  ) {
-    throw new Error(
-      "Overworld session snapshot legacy registration marker does not match the current journey proof.",
-    );
-  }
-  const hasOlderQuestEvidence = args.journalEntries.slice(marker.journalIndex + 1).some((entry) => {
-    if (entry.kind === "quest") {
-      return args.startedQuestIds.has(entry.id.slice("quest:".length));
-    }
-    if (entry.kind === "quest_done") {
-      return args.completedQuestIds.has(entry.id.slice("quest_done:".length));
-    }
-    return false;
-  });
-  if (!hasOlderQuestEvidence) {
-    throw new Error(
-      "Overworld session snapshot legacy registration marker has no earlier quest journal evidence.",
-    );
-  }
-  return Object.freeze({
-    entry: marker.entry,
-    journalIndex: marker.journalIndex,
-    sourceWorldHash,
-  });
-}
-
-function proveOpeningLeadSourceDecisionTrail(args: {
+function proveOpeningDecisionTrail(args: {
   leadSourceProof: OpeningLeadSourceJournalProof;
   snapshot: OverworldSessionSnapshot;
   sourceSceneId: string | null;
@@ -1566,7 +158,6 @@ function proveOpeningLeadSourceDecisionTrail(args: {
   if (
     !boundary ||
     expectedAnchorId === null ||
-    expectedAnchorId === undefined ||
     trail.anchorId !== expectedAnchorId ||
     trail.baseAcceptedDecisions !== boundary.acceptedDecisions ||
     trail.baseDecisionProofHash !== boundary.decisionProofHash
@@ -1583,19 +174,15 @@ function proveOpeningLeadSourceDecisionTrail(args: {
     );
   }
 
-  const sourceDecisionPrefix =
-    args.sourceSceneId === null ? null : `campaign_story:${args.sourceSceneId}:`;
   let proofHash = trail.baseDecisionProofHash;
   for (const [index, decision] of trail.decisions.entries()) {
-    const expectedNumber = trail.baseAcceptedDecisions + index + 1;
-    if (decision.number !== expectedNumber) {
+    if (decision.number !== trail.baseAcceptedDecisions + index + 1) {
       throw new Error(
         "Overworld session snapshot lead-source decision trail is not a contiguous journey suffix.",
       );
     }
     proofHash = hashState({ previous: proofHash, ...decision });
   }
-
   const finalDecision = trail.decisions.at(-1) ?? null;
   if (
     proofHash !== args.snapshot.journey.decisionProof.hash ||
@@ -1613,7 +200,7 @@ function proveOpeningLeadSourceDecisionTrail(args: {
         "Overworld session snapshot pending lead-source offer has decisions beyond its offer boundary.",
       );
     }
-  } else if (args.leadSourceProof.option !== null) {
+  } else {
     const firstDecision = trail.decisions[0];
     const expectedFirstDecision = {
       number: boundary.acceptedDecisions + 1,
@@ -1633,257 +220,9 @@ function proveOpeningLeadSourceDecisionTrail(args: {
         "Overworld session snapshot selected lead source is not the first decision after its offer.",
       );
     }
-    if (
-      sourceDecisionPrefix !== null &&
-      trail.decisions
-        .slice(1)
-        .some((decision) => decision.actionId.startsWith(sourceDecisionPrefix))
-    ) {
-      throw new Error(
-        "Overworld session snapshot lead-source decision trail contains more than one source selection.",
-      );
-    }
   }
 
   return cloneOpeningLeadSourceDecisionTrail(trail);
-}
-
-function assertOpeningPreparationDecisionTrail(args: {
-  preparationProof: OpeningPreparationJournalProof;
-  preparationSceneId: string | null;
-  trail: OverworldOpeningLeadSourceDecisionTrail | null;
-}): void {
-  const prefix =
-    args.preparationSceneId === null ? null : `campaign_story:${args.preparationSceneId}:`;
-  const preparationDecisions =
-    prefix === null
-      ? []
-      : (args.trail?.decisions.filter((decision) => decision.actionId.startsWith(prefix)) ?? []);
-
-  if (args.preparationProof.legacy || !args.preparationProof.offered) {
-    if (preparationDecisions.length > 0) {
-      throw new Error(
-        "Overworld session snapshot preparation decision trail conflicts with its legacy or absent preparation evidence.",
-      );
-    }
-    return;
-  }
-
-  if (args.preparationProof.profile === null) {
-    if (preparationDecisions.length > 0) {
-      throw new Error(
-        "Overworld session snapshot pending preparation offer has a preparation decision in its journey suffix.",
-      );
-    }
-    return;
-  }
-
-  const boundary = args.preparationProof.selectionBoundary;
-  const expectedDecision =
-    boundary === null || args.preparationSceneId === null
-      ? null
-      : {
-          number: boundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${args.preparationSceneId}:${args.preparationProof.profile.id}`,
-          reason: "situation_changed" as const,
-        };
-  if (
-    expectedDecision === null ||
-    preparationDecisions.length !== 1 ||
-    JSON.stringify(preparationDecisions[0]) !== JSON.stringify(expectedDecision)
-  ) {
-    throw new Error(
-      "Overworld session snapshot selected preparation does not have exactly one canonical journey decision proof.",
-    );
-  }
-}
-
-function assertOpeningReliefAllocationDecisionTrail(args: {
-  reliefAllocationProof: OpeningReliefAllocationJournalProof;
-  reliefAllocationSceneId: string | null;
-  trail: OverworldOpeningLeadSourceDecisionTrail | null;
-}): void {
-  const prefix =
-    args.reliefAllocationSceneId === null
-      ? null
-      : `campaign_story:${args.reliefAllocationSceneId}:`;
-  const allocationDecisions =
-    prefix === null
-      ? []
-      : (args.trail?.decisions.filter((decision) => decision.actionId.startsWith(prefix)) ?? []);
-  if (args.reliefAllocationProof.legacy || !args.reliefAllocationProof.offered) {
-    if (allocationDecisions.length > 0) {
-      throw new Error(
-        "Overworld session snapshot relief allocation decision trail conflicts with absent or legacy evidence.",
-      );
-    }
-    return;
-  }
-  if (args.reliefAllocationProof.option === null) {
-    if (allocationDecisions.length > 0) {
-      throw new Error(
-        "Overworld session snapshot pending relief allocation has a selection decision in its journey suffix.",
-      );
-    }
-    return;
-  }
-  const boundary = args.reliefAllocationProof.selectionBoundary;
-  const expectedDecision =
-    boundary === null || args.reliefAllocationSceneId === null
-      ? null
-      : {
-          number: boundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${args.reliefAllocationSceneId}:${args.reliefAllocationProof.option.id}`,
-          reason: "situation_changed" as const,
-        };
-  if (
-    expectedDecision === null ||
-    allocationDecisions.length !== 1 ||
-    JSON.stringify(allocationDecisions[0]) !== JSON.stringify(expectedDecision)
-  ) {
-    throw new Error(
-      "Overworld session snapshot selected relief allocation does not have exactly one canonical journey decision proof.",
-    );
-  }
-}
-
-function assertOpeningAllyDecisionTrail(args: {
-  allyProof: OpeningAllyJournalProof;
-  allySceneId: string | null;
-  trail: OverworldOpeningLeadSourceDecisionTrail | null;
-}): void {
-  const prefix = args.allySceneId === null ? null : `campaign_story:${args.allySceneId}:`;
-  const allyDecisions =
-    prefix === null
-      ? []
-      : (args.trail?.decisions.filter((decision) => decision.actionId.startsWith(prefix)) ?? []);
-  if (args.allyProof.legacy || !args.allyProof.offered) {
-    if (allyDecisions.length > 0) {
-      throw new Error(
-        "Overworld session snapshot ally decision trail conflicts with absent or legacy ally evidence.",
-      );
-    }
-    return;
-  }
-  if (args.allyProof.option === null) {
-    if (allyDecisions.length > 0) {
-      throw new Error(
-        "Overworld session snapshot pending ally offer has an ally decision in its journey suffix.",
-      );
-    }
-    return;
-  }
-  const boundary = args.allyProof.selectionBoundary;
-  const expectedDecision =
-    boundary === null || args.allySceneId === null
-      ? null
-      : {
-          number: boundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${args.allySceneId}:${args.allyProof.option.id}`,
-          reason: "situation_changed" as const,
-        };
-  if (
-    expectedDecision === null ||
-    allyDecisions.length !== 1 ||
-    JSON.stringify(allyDecisions[0]) !== JSON.stringify(expectedDecision)
-  ) {
-    throw new Error(
-      "Overworld session snapshot selected ally does not have exactly one canonical journey decision proof.",
-    );
-  }
-}
-
-function assertOpeningAllyCampaignBoundaryReplay(args: {
-  allyProof: OpeningAllyJournalProof;
-  allyContactId: string | null;
-  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
-}): void {
-  const boundaries = [
-    ["offer", args.allyProof.offerBoundary],
-    ["selection", args.allyProof.selectionBoundary],
-  ] as const;
-  for (const [label, boundary] of boundaries) {
-    if (boundary === null) continue;
-    const replayed = args.campaignBoundaryReplay.byAcceptedDecisions.get(
-      boundary.acceptedDecisions,
-    );
-    if (
-      !replayed ||
-      replayed.decisionProofHash !== boundary.decisionProofHash ||
-      replayed.townId !== boundary.townId ||
-      replayed.areaId !== boundary.areaId ||
-      (label === "offer" &&
-        (args.allyContactId === null ||
-          replayed.decision?.surface !== "overworld" ||
-          replayed.decision.reason !== "substantive_dialogue" ||
-          replayed.decision.actionId !== `talk:${args.allyContactId}`))
-    ) {
-      throw new Error(
-        `Overworld session snapshot ally ${label} boundary does not match its replayed campaign decision proof and location.`,
-      );
-    }
-  }
-}
-
-function assertOpeningPreparationCampaignBoundaryReplay(args: {
-  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
-  leadSourceProof: OpeningLeadSourceJournalProof;
-  preparationProof: OpeningPreparationJournalProof;
-  preparationSceneId: string | null;
-  supportSceneIds: readonly string[];
-}): void {
-  if (args.preparationProof.legacy || !args.preparationProof.offered) return;
-  const boundaries = [
-    ["offer", args.preparationProof.offerBoundary],
-    ["selection", args.preparationProof.selectionBoundary],
-  ] as const;
-  for (const [label, boundary] of boundaries) {
-    if (boundary === null) continue;
-    const replayed = args.campaignBoundaryReplay.byAcceptedDecisions.get(
-      boundary.acceptedDecisions,
-    );
-    const sharesLeadSelectionBoundary =
-      label === "offer" &&
-      args.leadSourceProof.selectionBoundary !== null &&
-      JSON.stringify(boundary) === JSON.stringify(args.leadSourceProof.selectionBoundary);
-    const expectedSelectionActionId =
-      label === "selection" &&
-      args.preparationSceneId !== null &&
-      args.preparationProof.profile !== null
-        ? `campaign_story:${args.preparationSceneId}:${args.preparationProof.profile.id}`
-        : null;
-    const followsSupportSelection =
-      label === "offer" &&
-      replayed?.decision?.surface === "overworld" &&
-      replayed.decision.reason === "situation_changed" &&
-      args.supportSceneIds.some((sceneId) =>
-        replayed.decision!.actionId.startsWith(`campaign_story:${sceneId}:`),
-      );
-    if (
-      !replayed ||
-      replayed.decisionProofHash !== boundary.decisionProofHash ||
-      replayed.townId !== boundary.townId ||
-      replayed.areaId !== boundary.areaId ||
-      (label === "offer" &&
-        !sharesLeadSelectionBoundary &&
-        !followsSupportSelection &&
-        (replayed.decision?.surface !== "overworld" ||
-          replayed.decision.reason !== "movement" ||
-          !replayed.decision.actionId.startsWith("move_area:"))) ||
-      (label === "selection" &&
-        (expectedSelectionActionId === null ||
-          replayed.decision?.surface !== "overworld" ||
-          replayed.decision.reason !== "situation_changed" ||
-          replayed.decision.actionId !== expectedSelectionActionId))
-    ) {
-      throw new Error(
-        `Overworld session snapshot preparation ${label} boundary does not match its replayed campaign decision proof and location.`,
-      );
-    }
-  }
 }
 
 type MutableCampaignTrailLocation = {
@@ -1948,25 +287,24 @@ function replayCampaignTrailLocationDecision(
   indexes: OverworldSnapshotManifestIndex,
 ): void {
   if (decision.surface !== "overworld") return;
-  const actionId = decision.actionId;
   const areaPrefix = "move_area:";
-  if (actionId.startsWith(areaPrefix)) {
+  if (decision.actionId.startsWith(areaPrefix)) {
     if (decision.reason !== "movement") {
       throw new Error(
-        `Overworld session snapshot lead-source decision trail area movement "${actionId}" has the wrong decision reason.`,
+        `Overworld session snapshot lead-source decision trail area movement "${decision.actionId}" has the wrong decision reason.`,
       );
     }
-    const areaEdgeId = actionId.slice(areaPrefix.length);
-    const edge = indexes.areaEdgesById.get(areaEdgeId);
+    const edgeId = decision.actionId.slice(areaPrefix.length);
+    const edge = indexes.areaEdgesById.get(edgeId);
     if (!edge) {
       throw new Error(
-        `Overworld session snapshot lead-source decision trail references unknown area route "${areaEdgeId}".`,
+        `Overworld session snapshot lead-source decision trail references unknown area route "${edgeId}".`,
       );
     }
     if (location.townId === null || location.areaId === null) return;
     if (edge.home !== location.townId) {
       throw new Error(
-        `Overworld session snapshot lead-source decision trail area route "${areaEdgeId}" is not in town "${location.townId}".`,
+        `Overworld session snapshot lead-source decision trail area route "${edgeId}" is not in town "${location.townId}".`,
       );
     }
     const destinationAreaId =
@@ -1977,7 +315,7 @@ function replayCampaignTrailLocationDecision(
           : null;
     if (destinationAreaId === null) {
       throw new Error(
-        `Overworld session snapshot lead-source decision trail area route "${areaEdgeId}" is not reachable from "${location.areaId}".`,
+        `Overworld session snapshot lead-source decision trail area route "${edgeId}" is not reachable from "${location.areaId}".`,
       );
     }
     location.areaId = destinationAreaId;
@@ -1986,56 +324,52 @@ function replayCampaignTrailLocationDecision(
   }
 
   const travelPrefix = "travel:";
-  if (actionId.startsWith(travelPrefix)) {
+  if (decision.actionId.startsWith(travelPrefix)) {
     if (decision.reason !== "movement") {
       throw new Error(
-        `Overworld session snapshot lead-source decision trail road movement "${actionId}" has the wrong decision reason.`,
+        `Overworld session snapshot lead-source decision trail road movement "${decision.actionId}" has the wrong decision reason.`,
       );
     }
-    replayCampaignTrailRoad(actionId.slice(travelPrefix.length), location, indexes, actionId);
+    replayCampaignTrailRoad(
+      decision.actionId.slice(travelPrefix.length),
+      location,
+      indexes,
+      decision.actionId,
+    );
     return;
   }
 
-  const goalPassagePrefix = "follow_current_goal:";
-  if (!actionId.startsWith(goalPassagePrefix)) return;
+  if (!decision.actionId.startsWith("follow_current_goal:")) return;
   if (decision.reason !== "movement") {
     throw new Error(
-      `Overworld session snapshot lead-source decision trail goal passage "${actionId}" has the wrong decision reason.`,
+      `Overworld session snapshot lead-source decision trail goal passage "${decision.actionId}" has the wrong decision reason.`,
     );
   }
-  if (!actionId.includes(":via:")) {
-    // F03 goal-passage decisions did not encode their traversed roads. They
-    // remain loadable, but cannot establish a later campaign-service location.
+  if (!decision.actionId.includes(":via:")) {
     invalidateCampaignTrailLocation(location);
     location.travelProofOpaque = true;
     return;
   }
-  const passage = parseGoalPassageJourneyActionId(actionId);
+  const passage = parseGoalPassageJourneyActionId(decision.actionId);
   if (!passage) {
     throw new Error(
-      `Overworld session snapshot lead-source decision trail has malformed goal passage "${actionId}".`,
+      `Overworld session snapshot lead-source decision trail has malformed goal passage "${decision.actionId}".`,
     );
   }
   for (const edgeId of passage.edgeIds) {
-    replayCampaignTrailRoad(edgeId, location, indexes, actionId);
+    replayCampaignTrailRoad(edgeId, location, indexes, decision.actionId);
   }
 }
 
-function campaignBoundaryReplayIndex(args: {
+function replayCampaignBoundaries(args: {
   indexes: OverworldSnapshotManifestIndex;
   leadSourceProof: OpeningLeadSourceJournalProof;
   trail: OverworldOpeningLeadSourceDecisionTrail | null;
   travelEntries: readonly TravelLogEntrySnapshot[];
-}): OverworldCampaignBoundaryReplayIndex {
+}): Map<number, OverworldCampaignBoundaryReplayProof> {
   const byAcceptedDecisions = new Map<number, OverworldCampaignBoundaryReplayProof>();
   const boundary = args.leadSourceProof.offerBoundary;
-  if (!args.trail || !boundary) {
-    return {
-      byAcceptedDecisions,
-      worldFactProofOrdinalById: new Map(),
-      storyChoiceProofOrdinalByKey: new Map(),
-    };
-  }
+  if (!args.trail || !boundary) return byAcceptedDecisions;
   if (args.indexes.areaHomes.get(boundary.areaId) !== boundary.townId) {
     throw new Error(
       "Overworld session snapshot lead-source decision trail starts outside its boundary town and area.",
@@ -2072,520 +406,213 @@ function campaignBoundaryReplayIndex(args: {
       "Overworld session snapshot travel log is not fully represented by its lead-source decision trail.",
     );
   }
-  return {
-    byAcceptedDecisions,
-    worldFactProofOrdinalById: new Map(),
-    storyChoiceProofOrdinalByKey: new Map(),
-  };
+  return byAcceptedDecisions;
 }
 
-type ReplayedQuestStart = Readonly<{
-  questId: string;
-  journalIndex: number;
-  effects: readonly CampaignConsequenceEffect[];
-  returnSummary: string | null;
-}>;
+type CampaignReplayMutation =
+  | Readonly<{
+      kind: "effects";
+      journalIndex: number;
+      effects: readonly CampaignConsequenceEffect[];
+    }>
+  | Readonly<{
+      kind: "quest_completion";
+      journalIndex: number;
+      quest: OverworldQuest;
+      endingId: string;
+    }>;
 
-type ReplayedQuestStarts = Readonly<{
+type CurrentCampaignSnapshotProof = Readonly<{
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
   characterAfter: CampaignCharacterState;
-  journalEntries: readonly OverworldJournalEntry[];
-  starts: readonly ReplayedQuestStart[];
+  characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState;
+  openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
 }>;
 
-function assertCanonicalQuestStartJournalCopy(args: {
-  entry: OverworldJournalEntry;
-  expectedTown: string;
-  quest: OverworldQuest;
-  approachId: string | null;
-  sourceWorldHash: string | null;
+function assertCurrentOpeningStoryBoundary(args: {
+  label: string;
+  offered: boolean;
+  offerBoundary: OverworldJournalDecisionBoundary | null;
+  optionId: string | null;
+  sceneId: string | null;
+  selectionBoundary: OverworldJournalDecisionBoundary | null;
+  snapshot: OverworldSessionSnapshot;
 }): void {
-  const option =
-    args.approachId === null
-      ? null
-      : (args.quest.launch?.options.find((candidate) => candidate.id === args.approachId) ?? null);
-  if (args.approachId !== null && option === null) {
-    throw new Error(
-      `Overworld session snapshot quest launch "${args.entry.id}" references unknown approach "${args.approachId}".`,
-    );
+  if (!args.offered) return;
+  const offerBoundary = args.offerBoundary;
+  if (!offerBoundary) {
+    throw new Error(`Overworld session snapshot ${args.label} offer has no decision boundary.`);
   }
-  const canonicalIdentityMatches =
-    args.entry.id === `quest:${args.quest.id}` &&
-    args.entry.kind === "quest" &&
-    args.entry.town === args.expectedTown &&
-    args.entry.title === `Started ${args.quest.title}`;
-  if (args.sourceWorldHash !== null) {
-    if (!canonicalIdentityMatches) {
-      throw new Error(
-        `Overworld session snapshot legacy quest launch "${args.quest.id}" is not bound to its canonical identity.`,
-      );
-    }
-    const trustedCopy =
-      args.quest.id === "wolf_winter"
-        ? OVERWORLD_LEGACY_WOLF_START_BY_WORLD_HASH.get(args.sourceWorldHash)
-        : undefined;
+  if (args.selectionBoundary === null) {
     if (
-      !trustedCopy ||
-      args.entry.id !== trustedCopy.entry.id ||
-      args.entry.kind !== trustedCopy.entry.kind ||
-      args.entry.title !== trustedCopy.entry.title ||
-      args.entry.text !== trustedCopy.entry.text
+      args.snapshot.currentId !== offerBoundary.townId ||
+      args.snapshot.currentAreaId !== offerBoundary.areaId ||
+      args.snapshot.minutes !== offerBoundary.minutes ||
+      args.snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
+      args.snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
     ) {
       throw new Error(
-        `Overworld session snapshot legacy quest launch "${args.quest.id}" does not match its exact ${trustedCopy?.era ?? "trusted-source"} authored copy.`,
+        `Overworld session snapshot pending ${args.label} no longer matches its offered world and journey boundary.`,
       );
     }
     return;
   }
-  const expectedText =
-    `You turn the local lead "${args.quest.discovery}" into an active quest.` +
-    (option === null ? "" : ` Approach: ${option.title}. ${option.consequence}`);
-  if (!canonicalIdentityMatches || args.entry.text !== expectedText) {
+  const selectionBoundary = args.selectionBoundary;
+  if (args.snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
     throw new Error(
-      `Overworld session snapshot quest launch "${args.quest.id}" is not bound to its canonical journal copy.`,
+      `Overworld session snapshot ${args.label} selection is ahead of its journey decision count.`,
+    );
+  }
+  if (args.snapshot.journey.acceptedDecisions !== selectionBoundary.acceptedDecisions) return;
+  const expectedLast =
+    args.sceneId === null || args.optionId === null
+      ? null
+      : {
+          number: selectionBoundary.acceptedDecisions,
+          surface: "overworld" as const,
+          actionId: `campaign_story:${args.sceneId}:${args.optionId}`,
+          reason: "situation_changed" as const,
+        };
+  if (
+    expectedLast === null ||
+    args.snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
+    JSON.stringify(args.snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
+  ) {
+    throw new Error(
+      `Overworld session snapshot ${args.label} selection does not match the current journey proof.`,
     );
   }
 }
 
-function questStartDecisionBoundary(args: {
-  boundary: OverworldJournalDecisionBoundary | undefined;
-  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
+function assertCurrentQuestStartJournal(args: {
+  boundaryProofs: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
   entry: OverworldJournalEntry;
-  expectedActionId: string;
-  questId: string;
-}): OverworldJournalDecisionBoundary {
-  const actionPrefix = `quest_start:${args.questId}`;
-  const decisions = [...args.campaignBoundaryReplay.byAcceptedDecisions.entries()].filter(
-    ([, proof]) =>
-      proof.decision?.actionId === actionPrefix ||
-      proof.decision?.actionId.startsWith(`${actionPrefix}:`) === true,
-  );
-  if (decisions.length !== 1) {
-    throw new Error(
-      `Overworld session snapshot quest launch "${args.questId}" does not have exactly one canonical journey decision proof.`,
-    );
-  }
-  const [acceptedDecisions, replay] = decisions[0]!;
-  if (
-    replay.decision?.surface !== "overworld" ||
-    replay.decision.reason !== "situation_changed" ||
-    replay.decision.actionId !== args.expectedActionId
-  ) {
-    throw new Error(
-      `Overworld session snapshot quest launch "${args.questId}" does not match its selected approach decision.`,
-    );
-  }
-  if (replay.townId === null || replay.areaId === null) {
-    throw new Error(
-      `Overworld session snapshot quest launch "${args.questId}" has no replayable town and area.`,
-    );
-  }
-  const recordedAt = parseTimeLabel(args.entry.recordedAt);
-  const boundary =
-    args.boundary ??
-    Object.freeze({
-      acceptedDecisions,
-      decisionProofHash: replay.decisionProofHash,
-      townId: replay.townId,
-      areaId: replay.areaId,
-      minutes: recordedAt,
-    });
-  if (
-    boundary.acceptedDecisions !== acceptedDecisions ||
-    boundary.decisionProofHash !== replay.decisionProofHash ||
-    boundary.townId !== replay.townId ||
-    boundary.areaId !== replay.areaId ||
-    boundary.minutes !== recordedAt
-  ) {
-    throw new Error(
-      `Overworld session snapshot quest launch "${args.questId}" boundary does not match its accepted decision, location, and timestamp.`,
-    );
-  }
-  return boundary;
-}
-
-function reliefAllocationLegacyBoundaryBeforeQuest(args: {
-  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
-  entry: OverworldJournalEntry;
-  quest: OverworldQuest;
-}): OverworldJournalDecisionBoundary {
-  const startProof = args.entry.questStartProof;
-  if (!startProof) {
-    throw new Error(
-      "Relief-allocation legacy migration requires a replayed target-quest start proof.",
-    );
-  }
-  const previousAcceptedDecisions = startProof.boundary.acceptedDecisions - 1;
-  const previous = args.campaignBoundaryReplay.byAcceptedDecisions.get(previousAcceptedDecisions);
-  if (!previous || previous.townId === null || previous.areaId === null) {
-    throw new Error(
-      "Relief-allocation legacy migration cannot recover the exact pre-start journey boundary.",
-    );
-  }
-  const approachMinutes =
-    startProof.kind === "approach"
-      ? args.quest.launch?.options.find((option) => option.id === startProof.approachId)?.terms
-          .minutes
-      : 0;
-  if (approachMinutes === undefined) {
-    throw new Error(
-      "Relief-allocation legacy migration references an unknown predecessor approach.",
-    );
-  }
-  const minutes = startProof.boundary.minutes - approachMinutes;
-  if (minutes < 0) {
-    throw new Error(
-      "Relief-allocation legacy migration produced an impossible pre-start timestamp.",
-    );
-  }
-  return Object.freeze({
-    acceptedDecisions: previousAcceptedDecisions,
-    decisionProofHash: previous.decisionProofHash,
-    townId: previous.townId,
-    areaId: previous.areaId,
-    minutes,
-  });
-}
-
-function assertNoFortifyOutlastApproachEvidence(args: {
-  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
-  character: CampaignCharacterState;
-  journalEntries: readonly OverworldJournalEntry[];
-}): void {
-  if (args.journalEntries.some((entry) => entry.questStartProof !== undefined)) {
-    throw new Error(
-      "Fortify-outlast predecessor snapshot has quest-start proof evidence introduced by the hill-approach manifest.",
-    );
-  }
-  if (
-    [...args.campaignBoundaryReplay.byAcceptedDecisions.values()].some((proof) =>
-      proof.decision?.actionId.startsWith("quest_start:wolf_winter:"),
-    )
-  ) {
-    throw new Error(
-      "Fortify-outlast predecessor snapshot has a route-labelled Wolf-Winter start decision introduced by the hill-approach manifest.",
-    );
-  }
-  const hasRouteKnowledge = args.character.knowledge.some((id) =>
-    OVERWORLD_HILL_APPROACH_ROUTE_CHARACTER_IDS.has(id),
-  );
-  const hasRouteMemory = args.character.relationships.some((relationship) =>
-    relationship.memories.some((id) => OVERWORLD_HILL_APPROACH_ROUTE_CHARACTER_IDS.has(id)),
-  );
-  if (hasRouteKnowledge || hasRouteMemory) {
-    throw new Error(
-      "Fortify-outlast predecessor snapshot has route character evidence introduced by the hill-approach manifest.",
-    );
-  }
-}
-
-function hasOpeningReliefOathCharacterEvidence(character: CampaignCharacterState): boolean {
-  return (
-    character.knowledge.some((id) => OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(id)) ||
-    character.values.some((value) => OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(value.valueId)) ||
-    character.factionStanding.some((standing) =>
-      OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(standing.factionId),
-    ) ||
-    character.promises.some((promise) =>
-      OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(promise.promiseId),
-    ) ||
-    character.relationships.some((relationship) =>
-      relationship.memories.some((id) => OVERWORLD_RELIEF_OATH_CHARACTER_IDS.has(id)),
-    )
-  );
-}
-
-function replaySnapshotQuestStarts(args: {
-  campaignBoundaryReplay: OverworldCampaignBoundaryReplayIndex;
-  character: CampaignCharacterState;
   indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-  migrationEra: TrustedMigrationEra;
-  snapshotVersion: OverworldSessionSnapshot["version"];
-  snapshotWorldHash: string;
-  storedCharacter: CampaignCharacterState;
-  startedQuestIds: ReadonlySet<string>;
-}): ReplayedQuestStarts {
-  if (args.migrationEra === "relief_oath") {
-    const hasOathJournal = args.journalEntries.some(
-      (entry) =>
-        entry.kind === "relief_oath" ||
-        entry.kind === "relief_oath_legacy" ||
-        entry.kind === "relief_oath_offer",
+  journey: OverworldSessionSnapshot["journey"];
+  quest: OverworldQuest;
+}): readonly CampaignConsequenceEffect[] {
+  const proof = args.entry.questStartProof;
+  if (!proof || proof.kind !== "approach" || !args.quest.launch) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.quest.id}" lacks a persisted approach or legacy proof.`,
     );
-    const hasOathDecision = [...args.campaignBoundaryReplay.byAcceptedDecisions.values()].some(
-      (proof) => proof.decision?.actionId.startsWith("campaign_story:albany:wolf_relief_oath:"),
+  }
+  const option = args.quest.launch.options.find((candidate) => candidate.id === proof.approachId);
+  if (!option) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.quest.id}" references unknown approach "${proof.approachId}".`,
     );
-    if (
-      hasOathJournal ||
-      hasOathDecision ||
-      hasOpeningReliefOathCharacterEvidence(args.storedCharacter)
-    ) {
-      throw new Error(
-        "Relief-allocation predecessor snapshot has relief-oath evidence introduced by the later manifest.",
-      );
-    }
-  } else if (args.migrationEra === "relief_allocation") {
-    const hasAllocationJournal = args.journalEntries.some(
-      (entry) =>
-        entry.kind === "relief_allocation" ||
-        entry.kind === "relief_allocation_legacy" ||
-        entry.kind === "relief_allocation_offer",
-    );
-    const hasAllocationDecision = [
-      ...args.campaignBoundaryReplay.byAcceptedDecisions.values(),
-    ].some((proof) =>
-      proof.decision?.actionId.startsWith("campaign_story:albany:wolf_relief_allocation:"),
-    );
-    const hasAllocationKnowledge = args.storedCharacter.knowledge.some((id) =>
-      OVERWORLD_RELIEF_ALLOCATION_CHARACTER_IDS.has(id),
-    );
-    const hasAllocationMemory = args.storedCharacter.relationships.some((relationship) =>
-      relationship.memories.some((id) => OVERWORLD_RELIEF_ALLOCATION_CHARACTER_IDS.has(id)),
-    );
-    if (
-      hasAllocationJournal ||
-      hasAllocationDecision ||
-      hasAllocationKnowledge ||
-      hasAllocationMemory
-    ) {
-      throw new Error(
-        "Hill-approach predecessor snapshot has relief-allocation evidence introduced by the later manifest.",
-      );
-    }
-  } else if (args.migrationEra === "hill_approach") {
-    assertNoFortifyOutlastApproachEvidence({
-      campaignBoundaryReplay: args.campaignBoundaryReplay,
-      character: args.storedCharacter,
-      journalEntries: args.journalEntries,
-    });
-  } else if (
-    args.migrationEra !== null &&
-    args.migrationEra !== "field_timed_preparation" &&
-    args.journalEntries.some((entry) => entry.questStartProof !== undefined)
+  }
+  const expectedTown = args.indexes.questTownNames.get(args.quest.id) ?? args.quest.home;
+  if (
+    args.entry.id !== `quest:${args.quest.id}` ||
+    args.entry.kind !== "quest" ||
+    args.entry.town !== expectedTown
   ) {
     throw new Error(
-      "Trusted predecessor snapshot has quest-start proof evidence introduced by a later manifest.",
+      `Overworld session snapshot quest launch "${args.quest.id}" is not bound to its journal identity and town.`,
+    );
+  }
+  if (
+    proof.boundary.townId !== args.quest.home ||
+    proof.boundary.areaId !== args.quest.area ||
+    proof.boundary.minutes !== parseTimeLabel(args.entry.recordedAt)
+  ) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.quest.id}" is not anchored at its authored location and timestamp.`,
+    );
+  }
+  const expectedActionId = `quest_start:${args.quest.id}:${option.id}`;
+  const replayed = args.boundaryProofs.get(proof.boundary.acceptedDecisions);
+  if (
+    replayed &&
+    (replayed.decision?.surface !== "overworld" ||
+      replayed.decision.reason !== "situation_changed" ||
+      replayed.decision.actionId !== expectedActionId ||
+      replayed.decisionProofHash !== proof.boundary.decisionProofHash ||
+      replayed.townId !== proof.boundary.townId ||
+      replayed.areaId !== proof.boundary.areaId)
+  ) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.quest.id}" does not match its selected approach decision.`,
+    );
+  }
+  if (
+    proof.boundary.acceptedDecisions === args.journey.acceptedDecisions &&
+    (args.journey.decisionProof.hash !== proof.boundary.decisionProofHash ||
+      args.journey.decisionProof.last?.actionId !== expectedActionId)
+  ) {
+    throw new Error(
+      `Overworld session snapshot quest launch "${args.quest.id}" does not match the current journey proof.`,
     );
   }
 
-  const journalEntries = [...args.journalEntries];
-  const journalIndexById = new Map(
-    journalEntries.map((entry, index) => [entry.id, index] as const),
-  );
-  for (const entry of journalEntries) {
-    if (entry.questStartProof === undefined) continue;
-    const questId = entry.id.startsWith("quest:") ? entry.id.slice("quest:".length) : "";
-    const quest = args.indexes.questsById.get(questId);
-    if (!quest?.launch || !args.startedQuestIds.has(questId)) {
-      throw new Error(
-        `Overworld session snapshot quest-start proof "${entry.id}" has no started authored launch.`,
-      );
-    }
-  }
-
-  const starts: ReplayedQuestStart[] = [];
-  for (const [questId, quest] of args.indexes.questsById) {
-    if (!quest.launch || !args.startedQuestIds.has(questId)) continue;
-    const journalIndex = journalIndexById.get(`quest:${questId}`);
-    if (journalIndex === undefined) {
-      throw new Error(
-        `Overworld session snapshot started quest "${questId}" has no canonical launch journal.`,
-      );
-    }
-    const entry = journalEntries[journalIndex];
-    if (!entry || entry.kind !== "quest") {
-      throw new Error(
-        `Overworld session snapshot started quest "${questId}" has no canonical launch journal.`,
-      );
-    }
-
-    if (
-      args.migrationEra !== null &&
-      args.migrationEra !== "field_timed_preparation" &&
-      args.migrationEra !== "relief_oath" &&
-      args.migrationEra !== "relief_allocation"
-    ) {
-      assertCanonicalQuestStartJournalCopy({
-        entry,
-        expectedTown: args.indexes.questTownNames.get(questId) ?? quest.home,
-        quest,
-        approachId: null,
-        sourceWorldHash: args.snapshotWorldHash,
-      });
-      const boundary = questStartDecisionBoundary({
-        boundary: undefined,
-        campaignBoundaryReplay: args.campaignBoundaryReplay,
-        entry,
-        expectedActionId: `quest_start:${questId}`,
-        questId,
-      });
-      journalEntries[journalIndex] = Object.freeze({
-        ...entry,
-        questStartProof: Object.freeze({
-          kind: "legacy" as const,
-          sourceWorldHash: args.snapshotWorldHash,
-          boundary: Object.freeze({ ...boundary }),
-        }),
-      });
-      starts.push({ questId, journalIndex, effects: [], returnSummary: null });
-      continue;
-    }
-
-    const startProof = entry.questStartProof;
-    if (!startProof) {
-      throw new Error(
-        `Overworld session snapshot quest launch "${questId}" lacks a persisted approach or legacy proof.`,
-      );
-    }
-    if (startProof.kind === "legacy") {
-      if (!OVERWORLD_QUEST_START_TRUSTED_LEGACY_WORLD_HASHES.has(startProof.sourceWorldHash)) {
-        throw new Error(
-          `Overworld session snapshot quest launch "${questId}" has an untrusted legacy source manifest.`,
-        );
-      }
-      assertCanonicalQuestStartJournalCopy({
-        entry,
-        expectedTown: args.indexes.questTownNames.get(questId) ?? quest.home,
-        quest,
-        approachId: null,
-        sourceWorldHash: startProof.sourceWorldHash,
-      });
-      questStartDecisionBoundary({
-        boundary: startProof.boundary,
-        campaignBoundaryReplay: args.campaignBoundaryReplay,
-        entry,
-        expectedActionId: `quest_start:${questId}`,
-        questId,
-      });
-      starts.push({ questId, journalIndex, effects: [], returnSummary: null });
-      continue;
-    }
-
-    const option = quest.launch.options.find((candidate) => candidate.id === startProof.approachId);
-    if (!option) {
-      throw new Error(
-        `Overworld session snapshot quest launch "${questId}" references unknown approach "${startProof.approachId}".`,
-      );
-    }
-    assertCanonicalQuestStartJournalCopy({
-      entry,
-      expectedTown: args.indexes.questTownNames.get(questId) ?? quest.home,
-      quest,
-      approachId: option.id,
-      sourceWorldHash: null,
-    });
-    const boundary = questStartDecisionBoundary({
-      boundary: startProof.boundary,
-      campaignBoundaryReplay: args.campaignBoundaryReplay,
-      entry,
-      expectedActionId: `quest_start:${questId}:${option.id}`,
-      questId,
-    });
-    if (boundary.townId !== quest.home || boundary.areaId !== quest.area) {
-      throw new Error(
-        `Overworld session snapshot quest launch "${questId}" is not anchored at its authored home and area.`,
-      );
-    }
-    const currentDispatchChain =
-      questId === "wolf_winter" &&
-      args.indexes.openingRegistration !== null &&
-      args.indexes.openingReliefOath?.target_quest === questId &&
-      args.indexes.openingLeadSource?.target_quest === questId &&
-      args.indexes.openingPreparation?.target_quest === questId &&
-      args.indexes.openingReliefAllocation?.target_quest === questId &&
-      args.indexes.openingAlly?.target_quest === questId;
-    if (currentDispatchChain || startProof.dispatchSeal) {
-      const expectedWindow = deriveQuestDispatchWindow({
-        questId,
-        // Only evidence older than the newest-first quest boundary can
-        // authorize what was true at launch.
-        journalEntries: journalEntries.slice(journalIndex + 1),
-        openingRegistration: args.indexes.openingRegistration,
-        openingReliefOath: args.indexes.openingReliefOath,
-        openingLeadSource: args.indexes.openingLeadSource,
-        openingPreparation: args.indexes.openingPreparation,
-        openingReliefAllocation: args.indexes.openingReliefAllocation,
-        openingAlly: args.indexes.openingAlly,
-      });
-      const currentReceipt = expectedWindow.status !== "legacy_neutral";
-      if (
-        args.snapshotVersion === OVERWORLD_SESSION_SAVE_VERSION &&
-        currentReceipt &&
-        !startProof.dispatchSeal
-      ) {
-        throw new Error(
-          `Overworld session snapshot quest launch "${questId}" lacks its current dispatch seal.`,
-        );
-      }
-      if (startProof.dispatchSeal) {
-        assertQuestDispatchLaunchSeal({
-          seal: startProof.dispatchSeal,
-          expectedWindow,
-          expectedApproachId: option.id,
-          expectedLaunchBoundary: boundary,
-        });
-      } else if (currentReceipt) {
-        const migratedSeal = createQuestDispatchLaunchSeal({
-          window: expectedWindow,
-          approachId: option.id,
-          launchBoundary: boundary,
-        });
-        if (!migratedSeal) {
-          throw new Error(
-            `Overworld session snapshot quest launch "${questId}" cannot migrate its dispatch receipt.`,
-          );
-        }
-        journalEntries[journalIndex] = Object.freeze({
-          ...entry,
-          questStartProof: Object.freeze({ ...startProof, dispatchSeal: migratedSeal }),
-        });
-      }
-    }
-    starts.push({
-      questId,
-      journalIndex,
-      effects: option.effects,
-      returnSummary: option.return_summary,
-    });
-  }
-
-  starts.sort((left, right) => right.journalIndex - left.journalIndex);
-  let characterAfter = cloneCampaignCharacterState(args.character);
-  for (const start of starts) {
-    if (start.effects.length === 0) continue;
-    characterAfter = applyCampaignConsequences({
-      character: characterAfter,
-      effects: start.effects,
-    }).characterAfter;
-  }
-  return Object.freeze({
-    characterAfter,
-    journalEntries: Object.freeze(journalEntries),
-    starts: Object.freeze(starts),
-  });
+  return option.effects;
 }
 
-function deriveCampaignStoryChoiceProofOrdinals(args: {
-  allyProof: OpeningAllyJournalProof;
-  allySceneId: string | null;
-  decisionProofsByOrdinal: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
-  journey: JourneyContractSnapshot;
-  preparationProof: OpeningPreparationJournalProof;
-  preparationSceneId: string | null;
-  reliefAllocationProof: OpeningReliefAllocationJournalProof;
-  reliefAllocationSceneId: string | null;
-  reliefOathProof: OpeningReliefOathJournalProof;
-  reliefOathSceneId: string | null;
-}): ReadonlyMap<string, number> {
-  const proofOrdinalByKey = new Map<string, number>();
-  const selectedRefs = [...journeyCampaignSelectedStoryChoiceRefs(args.journey)];
+function storyChoiceProofOrdinals(
+  boundaryProofs: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>,
+  indexes: OverworldSnapshotManifestIndex,
+  journey: OverworldSessionSnapshot["journey"],
+  reliefOathProof: OpeningReliefOathJournalProof,
+): ReadonlyMap<string, number> {
+  const result = new Map<string, number>();
+  const scenes = [
+    indexes.openingRegistration
+      ? {
+          id: indexes.openingRegistration.id,
+          optionIds: indexes.openingRegistration.profiles.map((option) => option.id),
+        }
+      : null,
+    indexes.openingReliefOath
+      ? {
+          id: indexes.openingReliefOath.id,
+          optionIds: indexes.openingReliefOath.options.map((option) => option.id),
+        }
+      : null,
+    indexes.openingLeadSource
+      ? {
+          id: indexes.openingLeadSource.id,
+          optionIds: indexes.openingLeadSource.options.map((option) => option.id),
+        }
+      : null,
+    indexes.openingPreparation
+      ? {
+          id: indexes.openingPreparation.id,
+          optionIds: indexes.openingPreparation.profiles.map((option) => option.id),
+        }
+      : null,
+    indexes.openingReliefAllocation
+      ? {
+          id: indexes.openingReliefAllocation.id,
+          optionIds: indexes.openingReliefAllocation.options.map((option) => option.id),
+        }
+      : null,
+    indexes.openingAlly
+      ? {
+          id: indexes.openingAlly.id,
+          optionIds: indexes.openingAlly.options.map((option) => option.id),
+        }
+      : null,
+  ].filter((scene): scene is { id: string; optionIds: string[] } => scene !== null);
+  for (const [ordinal, proof] of boundaryProofs) {
+    for (const scene of scenes) {
+      for (const optionId of scene.optionIds) {
+        if (proof.decision?.actionId !== `campaign_story:${scene.id}:${optionId}`) continue;
+        result.set(
+          campaignStoryChoiceRefKey({ story_choice_id: scene.id, choice_id: optionId }),
+          ordinal,
+        );
+      }
+    }
+  }
   if (
-    args.reliefOathProof.option !== null &&
-    args.reliefOathProof.selectionBoundary !== null &&
-    args.reliefOathSceneId !== null
+    indexes.openingReliefOath !== null &&
+    reliefOathProof.option !== null &&
+    reliefOathProof.selectionBoundary !== null
   ) {
-    const boundary = args.reliefOathProof.selectionBoundary;
-    const replayed = args.decisionProofsByOrdinal.get(boundary.acceptedDecisions);
+    const boundary = reliefOathProof.selectionBoundary;
+    const replayed = boundaryProofs.get(boundary.acceptedDecisions);
     if (
       !replayed ||
       replayed.decisionProofHash !== boundary.decisionProofHash ||
@@ -2596,50 +623,731 @@ function deriveCampaignStoryChoiceProofOrdinals(args: {
         "Overworld session snapshot relief-oath selection does not anchor the lead-source campaign replay boundary.",
       );
     }
-    proofOrdinalByKey.set(
+    result.set(
       campaignStoryChoiceRefKey({
-        story_choice_id: args.reliefOathSceneId,
-        choice_id: args.reliefOathProof.option.id,
+        story_choice_id: indexes.openingReliefOath.id,
+        choice_id: reliefOathProof.option.id,
       }),
       boundary.acceptedDecisions,
     );
   }
-  if (args.preparationProof.profile !== null && args.preparationSceneId !== null) {
-    selectedRefs.push({
-      story_choice_id: args.preparationSceneId,
-      choice_id: args.preparationProof.profile.id,
-    });
-  }
-  if (args.allyProof.offered && args.allyProof.option !== null && args.allySceneId !== null) {
-    selectedRefs.push({
-      story_choice_id: args.allySceneId,
-      choice_id: args.allyProof.option.id,
-    });
-  }
-  if (args.reliefAllocationProof.option !== null && args.reliefAllocationSceneId !== null) {
-    selectedRefs.push({
-      story_choice_id: args.reliefAllocationSceneId,
-      choice_id: args.reliefAllocationProof.option.id,
-    });
-  }
-  for (const ref of selectedRefs) {
-    const key = campaignStoryChoiceRefKey(ref);
-    if (proofOrdinalByKey.has(key)) continue;
-    const expectedActionId = `campaign_story:${ref.story_choice_id}:${ref.choice_id}`;
-    const matches = [...args.decisionProofsByOrdinal.entries()].filter(
-      ([, proof]) =>
-        proof.decision?.surface === "overworld" &&
-        proof.decision.reason === "situation_changed" &&
-        proof.decision.actionId === expectedActionId,
+  for (const ref of journeyCampaignSelectedStoryChoiceRefs(journey)) {
+    const actionId = `campaign_story:${ref.story_choice_id}:${ref.choice_id}`;
+    const matches = [...boundaryProofs].filter(
+      ([, proof]) => proof.decision?.actionId === actionId,
     );
     if (matches.length !== 1) {
       throw new Error(
-        `Overworld session snapshot story choice ${key} does not have exactly one canonical journey decision proof.`,
+        `Overworld session snapshot story choice ${campaignStoryChoiceRefKey(ref)} does not have exactly one canonical journey decision proof.`,
       );
     }
-    proofOrdinalByKey.set(key, matches[0]![0]);
+    result.set(campaignStoryChoiceRefKey(ref), matches[0]![0]);
   }
-  return proofOrdinalByKey;
+  return result;
+}
+
+function localJobOptionProofOrdinals(
+  indexes: OverworldSnapshotManifestIndex,
+  journalEntries: readonly OverworldJournalEntry[],
+): ReadonlyMap<string, number> {
+  const result = new Map<string, number>();
+  for (const entry of journalEntries) {
+    if (entry.kind !== "job" || !entry.id.startsWith("job:")) continue;
+    const job = indexes.jobsById.get(entry.id.slice("job:".length));
+    const proof = entry.localSceneProof;
+    if (!job?.authored_scene || !proof?.boundary || proof.sceneId !== job.authored_scene.id) {
+      continue;
+    }
+    resolveLocalJobSceneOption(job.authored_scene, proof.optionId);
+    const key = campaignServiceLocalJobOptionKey({ job_id: job.id, option_id: proof.optionId });
+    if (result.has(key)) {
+      throw new Error(
+        `Overworld session snapshot repeats authored local-job option proof "${job.id}:${proof.optionId}".`,
+      );
+    }
+    result.set(key, proof.boundary.acceptedDecisions);
+  }
+  return result;
+}
+
+function worldFactProofOrdinals(args: {
+  boundaryProofs: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+  journey: JourneyContractSnapshot;
+  questOutcomeIds: ReadonlyMap<string, string>;
+}): ReadonlyMap<string, number | null> {
+  const result = new Map<string, number | null>();
+  const entriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
+  const completionOrdinalByQuestId = new Map<string, number>();
+  for (const goal of [...args.journey.goalHistory, args.journey.goal]) {
+    if (goal.status !== "completed" || goal.completedAtDecision === null) continue;
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (definition) {
+      completionOrdinalByQuestId.set(definition.targetQuestId, goal.completedAtDecision);
+    }
+  }
+  for (const [questId, endingId] of args.questOutcomeIds) {
+    const quest = args.indexes.questsById.get(questId);
+    if (!quest) continue;
+    const campaignExport = questCampaignExportForEnding(quest, endingId);
+    if (!campaignExport) continue;
+    const entry = entriesById.get(`quest_done:${questId}`);
+    const boundary = entry?.questCompletionBoundary;
+    let ordinal: number | null = null;
+    if (entry && boundary) {
+      const expectedCompletionOrdinal = completionOrdinalByQuestId.get(questId);
+      if (
+        expectedCompletionOrdinal !== undefined &&
+        boundary.acceptedDecisions !== expectedCompletionOrdinal
+      ) {
+        throw new Error(
+          `Overworld session snapshot quest completion journal "${entry.id}" does not match its completed journey goal decision.`,
+        );
+      }
+      const replayed = args.boundaryProofs.get(boundary.acceptedDecisions);
+      if (
+        !replayed ||
+        replayed.decision === null ||
+        replayed.decisionProofHash !== boundary.decisionProofHash ||
+        replayed.townId !== boundary.townId ||
+        replayed.areaId !== boundary.areaId ||
+        boundary.minutes !== parseTimeLabel(entry.recordedAt)
+      ) {
+        throw new Error(
+          `Overworld session snapshot quest completion journal "${entry.id}" does not match its replayed decision boundary.`,
+        );
+      }
+      ordinal = boundary.acceptedDecisions;
+    }
+    for (const effect of campaignExport.effects) {
+      if (effect.type !== "set_world_fact") continue;
+      const previous = result.get(effect.fact_id);
+      if (previous === undefined) {
+        result.set(effect.fact_id, ordinal);
+      } else if (previous === null || ordinal === null) {
+        result.set(effect.fact_id, null);
+      } else {
+        result.set(effect.fact_id, Math.min(previous, ordinal));
+      }
+    }
+  }
+  return result;
+}
+
+function assertCurrentLocalJobSceneProofs(args: {
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
+  characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): void {
+  args.journalEntries.forEach((entry, entryIndex) => {
+    if (entry.kind !== "job") return;
+    const jobId = entry.id.startsWith("job:") ? entry.id.slice("job:".length) : "";
+    const job = args.indexes.jobsById.get(jobId);
+    if (!job) return;
+    const scene = job.authored_scene;
+    const proof = entry.localSceneProof;
+    if (!scene) {
+      if (proof) {
+        throw new Error(
+          `Overworld session snapshot generic job "${job.id}" cannot carry local-scene proof.`,
+        );
+      }
+      return;
+    }
+    if (!proof || proof.sceneId !== scene.id) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" is missing its exact local-scene proof.`,
+      );
+    }
+    const selectedOption = resolveLocalJobSceneOption(scene, proof.optionId);
+    if (!proof.boundary) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" is missing its accepted decision boundary.`,
+      );
+    }
+    const boundary = proof.boundary;
+    const replayed = args.campaignBoundaries.byAcceptedDecisions.get(boundary.acceptedDecisions);
+    if (
+      !replayed ||
+      replayed.decision === null ||
+      replayed.decisionProofHash !== boundary.decisionProofHash ||
+      replayed.decision.surface !== "overworld" ||
+      replayed.decision.reason !== "situation_changed" ||
+      replayed.decision.actionId !== `work_job:${job.id}:${proof.optionId}`
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" does not match its accepted decision proof.`,
+      );
+    }
+    if (
+      boundary.townId !== job.home ||
+      boundary.areaId !== job.area ||
+      replayed.townId !== boundary.townId ||
+      replayed.areaId !== boundary.areaId ||
+      boundary.minutes !== parseTimeLabel(entry.recordedAt)
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" does not match its location and clock boundary.`,
+      );
+    }
+
+    const earlierEntries = args.journalEntries.slice(entryIndex + 1);
+    const hasEarlierPoi = earlierEntries.some(
+      (candidate) => candidate.id === `scout:${scene.required_poi_id}`,
+    );
+    const contactPrefix = `talk:${scene.required_contact_id}`;
+    const hasEarlierContact = earlierEntries.some(
+      (candidate) => candidate.id === contactPrefix || candidate.id.startsWith(`${contactPrefix}@`),
+    );
+    if (!hasEarlierPoi || !hasEarlierContact) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" lacks its earlier scene setup.`,
+      );
+    }
+    for (const questId of scene.requires_completed_quests) {
+      if (!earlierEntries.some((candidate) => candidate.id === `quest_done:${questId}`)) {
+        throw new Error(
+          `Overworld session snapshot authored job "${job.id}" lacks earlier quest "${questId}".`,
+        );
+      }
+    }
+    const earlierResolvedEventIds = new Set(
+      earlierEntries.flatMap((candidate) =>
+        candidate.kind === "resolution" && candidate.id.startsWith("resolve:")
+          ? [candidate.id.slice("resolve:".length)]
+          : [],
+      ),
+    );
+    const earlierCompletedQuestIds = new Set(
+      earlierEntries.flatMap((candidate) =>
+        candidate.kind === "quest_done" && candidate.id.startsWith("quest_done:")
+          ? [candidate.id.slice("quest_done:".length)]
+          : [],
+      ),
+    );
+    const conditionState = {
+      completedQuestIds: earlierCompletedQuestIds,
+      resolvedEventIds: earlierResolvedEventIds,
+      worldFactIds: campaignWorldFactsProvenBeforeDecision(
+        args.campaignBoundaries,
+        boundary.acceptedDecisions,
+      ),
+      storyChoiceKeys: campaignStoryChoiceKeysProvenBeforeDecision(
+        args.campaignBoundaries,
+        boundary.acceptedDecisions,
+      ),
+      character: args.characterAt(entry, parseTimeLabel(entry.recordedAt)),
+      eventOptionIdFor: (eventId: string) =>
+        earlierEntries.find((candidate) => candidate.id === `resolve:${eventId}`)?.localSceneProof
+          ?.optionId ?? null,
+    };
+    if (
+      !localJobSceneRequirementsMet(scene, conditionState) ||
+      !localJobSceneOptionRequirementsMet(selectedOption, conditionState)
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored job "${job.id}" violates its earlier event, world-fact, or story-choice requirements.`,
+      );
+    }
+  });
+}
+
+function assertCurrentLocalEventSceneProofs(args: {
+  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
+  indexes: OverworldSnapshotManifestIndex;
+  journalEntries: readonly OverworldJournalEntry[];
+}): void {
+  for (const investigation of args.journalEntries) {
+    if (investigation.kind !== "event" || !investigation.id.startsWith("investigate:")) continue;
+    const eventId = investigation.id.slice("investigate:".length);
+    const event = args.indexes.eventsById.get(eventId);
+    const scene = event?.authored_scene;
+    if (!scene) continue;
+    for (const questId of scene.requires_completed_quests ?? []) {
+      const questCompletion = args.journalEntries.find(
+        (candidate) => candidate.id === `quest_done:${questId}`,
+      );
+      if (
+        !questCompletion ||
+        parseTimeLabel(questCompletion.recordedAt) >= parseTimeLabel(investigation.recordedAt)
+      ) {
+        throw new Error(
+          `Overworld session snapshot authored event "${eventId}" investigation does not strictly follow required quest "${questId}".`,
+        );
+      }
+    }
+  }
+
+  args.journalEntries.forEach((entry, entryIndex) => {
+    if (entry.kind !== "resolution") return;
+    const eventId = entry.id.startsWith("resolve:") ? entry.id.slice("resolve:".length) : "";
+    const event = args.indexes.eventsById.get(eventId);
+    if (!event) return;
+    const scene = event.authored_scene;
+    const proof = entry.localSceneProof;
+    if (!scene) {
+      if (proof) {
+        throw new Error(
+          `Overworld session snapshot generic event "${event.id}" cannot carry local-scene proof.`,
+        );
+      }
+      return;
+    }
+    if (!proof || proof.sceneId !== scene.id) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" is missing its exact local-scene proof.`,
+      );
+    }
+    const option = resolveLocalEventSceneOption(scene, proof.optionId);
+    const earlierEntries = args.journalEntries.slice(entryIndex + 1);
+    const earlierCompletedQuestIds = new Set(
+      earlierEntries.flatMap((candidate) =>
+        candidate.kind === "quest_done" && candidate.id.startsWith("quest_done:")
+          ? [candidate.id.slice("quest_done:".length)]
+          : [],
+      ),
+    );
+    const earlierCompletedJobIds = new Set(
+      earlierEntries.flatMap((candidate) =>
+        candidate.kind === "job" && candidate.id.startsWith("job:")
+          ? [candidate.id.slice("job:".length)]
+          : [],
+      ),
+    );
+    if (
+      !localEventSceneRequirementsMet(scene, {
+        completedQuestIds: earlierCompletedQuestIds,
+        completedJobIds: earlierCompletedJobIds,
+      })
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" violates its required quest or forbidden job chronology.`,
+      );
+    }
+    if (entry.town !== args.indexes.townNameForSource(event.home)) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" is bound to the wrong town.`,
+      );
+    }
+    if (!proof.boundary) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" is missing its accepted decision boundary.`,
+      );
+    }
+    const boundary = proof.boundary;
+    const replayed = args.campaignBoundaries.byAcceptedDecisions.get(boundary.acceptedDecisions);
+    if (
+      !replayed ||
+      replayed.decision === null ||
+      replayed.decisionProofHash !== boundary.decisionProofHash ||
+      replayed.decision.surface !== "overworld" ||
+      replayed.decision.reason !== "situation_changed" ||
+      replayed.decision.actionId !== `resolve_event:${event.id}:${proof.optionId}`
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" does not match its accepted decision proof.`,
+      );
+    }
+    if (
+      boundary.townId !== event.home ||
+      boundary.areaId !== event.area ||
+      replayed.townId !== boundary.townId ||
+      replayed.areaId !== boundary.areaId ||
+      boundary.minutes !== parseTimeLabel(entry.recordedAt)
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" does not match its location and clock boundary.`,
+      );
+    }
+    if (
+      !localEventSceneOptionRequirementsMet(option, {
+        worldFactIds: campaignWorldFactsProvenBeforeDecision(
+          args.campaignBoundaries,
+          boundary.acceptedDecisions,
+        ),
+      })
+    ) {
+      throw new Error(
+        `Overworld session snapshot authored event "${event.id}" violates its earlier world-fact requirements.`,
+      );
+    }
+  });
+}
+
+function proveCurrentCampaignSnapshot(args: {
+  completedQuestIds: ReadonlySet<string>;
+  indexes: OverworldSnapshotManifestIndex;
+  questOutcomeIds: ReadonlyMap<string, string>;
+  snapshot: OverworldSessionSnapshot;
+  startedQuestIds: ReadonlySet<string>;
+  travelEntries: readonly TravelLogEntrySnapshot[];
+}): CurrentCampaignSnapshotProof {
+  const registrationProof: OpeningRegistrationJournalProof = proveOpeningRegistrationJournal({
+    registration: args.indexes.openingRegistration,
+    journalEntries: args.snapshot.journalEntries,
+    expectedTown: args.indexes.openingRegistrationTownName,
+  });
+  assertCurrentOpeningStoryBoundary({
+    label: "registration",
+    offered: registrationProof.offered,
+    offerBoundary: registrationProof.offerBoundary,
+    optionId: registrationProof.profile?.id ?? null,
+    sceneId: args.indexes.openingRegistration?.id ?? null,
+    selectionBoundary: registrationProof.selectionBoundary,
+    snapshot: args.snapshot,
+  });
+  if (
+    (args.startedQuestIds.size > 0 || args.completedQuestIds.size > 0) &&
+    registrationProof.profile === null
+  ) {
+    throw new Error(
+      "Overworld session snapshot has quest progress without selected opening registration.",
+    );
+  }
+
+  const reliefOathProof: OpeningReliefOathJournalProof = proveOpeningReliefOathJournal({
+    scene: args.indexes.openingReliefOath,
+    registrationProof,
+    journalEntries: args.snapshot.journalEntries,
+    expectedTown: args.indexes.openingReliefOathTownName,
+  });
+  assertCurrentOpeningStoryBoundary({
+    label: "relief-oath",
+    offered: reliefOathProof.offered,
+    offerBoundary: reliefOathProof.offerBoundary,
+    optionId: reliefOathProof.option?.id ?? null,
+    sceneId: args.indexes.openingReliefOath?.id ?? null,
+    selectionBoundary: reliefOathProof.selectionBoundary,
+    snapshot: args.snapshot,
+  });
+  if (
+    args.indexes.openingReliefOath !== null &&
+    registrationProof.profile !== null &&
+    !reliefOathProof.offered
+  ) {
+    throw new Error(
+      "Overworld session snapshot selected registration has no required relief-oath offer.",
+    );
+  }
+
+  const leadSourceProof: OpeningLeadSourceJournalProof = proveOpeningLeadSourceJournal({
+    scene: args.indexes.openingLeadSource,
+    registrationProof,
+    reliefOathProof,
+    journalEntries: args.snapshot.journalEntries,
+    expectedTown: args.indexes.openingLeadSourceTownName,
+  });
+  assertCurrentOpeningStoryBoundary({
+    label: "lead-source",
+    offered: leadSourceProof.offered,
+    offerBoundary: leadSourceProof.offerBoundary,
+    optionId: leadSourceProof.option?.id ?? null,
+    sceneId: args.indexes.openingLeadSource?.id ?? null,
+    selectionBoundary: leadSourceProof.selectionBoundary,
+    snapshot: args.snapshot,
+  });
+  if (
+    args.indexes.openingLeadSource !== null &&
+    registrationProof.profile !== null &&
+    !leadSourceProof.offered &&
+    !(reliefOathProof.offered && reliefOathProof.option === null)
+  ) {
+    throw new Error(
+      "Overworld session snapshot selected registration has no required opening lead-source offer.",
+    );
+  }
+  const targetQuestId = args.indexes.openingLeadSource?.target_quest ?? null;
+  if (
+    targetQuestId !== null &&
+    args.snapshot.discoveredQuestIds.includes(targetQuestId) &&
+    leadSourceProof.option === null
+  ) {
+    throw new Error(
+      "Overworld session snapshot discovered the opening lead-source target quest without a certified lead source.",
+    );
+  }
+  if (
+    targetQuestId !== null &&
+    leadSourceProof.option !== null &&
+    !args.snapshot.discoveredQuestIds.includes(targetQuestId)
+  ) {
+    throw new Error(
+      "Overworld session snapshot selected lead source did not reveal its target quest.",
+    );
+  }
+
+  const preparationProof: OpeningPreparationJournalProof = proveOpeningPreparationJournal({
+    scene: args.indexes.openingPreparation,
+    leadSourceProof,
+    journalEntries: args.snapshot.journalEntries,
+    expectedTown: args.indexes.openingPreparationTownName,
+  });
+  assertCurrentOpeningStoryBoundary({
+    label: "preparation",
+    offered: preparationProof.offered,
+    offerBoundary: preparationProof.offerBoundary,
+    optionId: preparationProof.profile?.id ?? null,
+    sceneId: args.indexes.openingPreparation?.id ?? null,
+    selectionBoundary: preparationProof.selectionBoundary,
+    snapshot: args.snapshot,
+  });
+  const reliefAllocationProof: OpeningReliefAllocationJournalProof =
+    proveOpeningReliefAllocationJournal({
+      scene: args.indexes.openingReliefAllocation,
+      preparationProof,
+      leadSourceProof,
+      preparationScene: args.indexes.openingPreparation,
+      journalEntries: args.snapshot.journalEntries,
+      expectedTown: args.indexes.openingReliefAllocationTownName,
+    });
+  assertCurrentOpeningStoryBoundary({
+    label: "relief allocation",
+    offered: reliefAllocationProof.offered,
+    offerBoundary: reliefAllocationProof.offerBoundary,
+    optionId: reliefAllocationProof.option?.id ?? null,
+    sceneId: args.indexes.openingReliefAllocation?.id ?? null,
+    selectionBoundary: reliefAllocationProof.selectionBoundary,
+    snapshot: args.snapshot,
+  });
+  const allyProof: OpeningAllyJournalProof = proveOpeningAllyJournal({
+    scene: args.indexes.openingAlly,
+    preparationProof,
+    reliefAllocationProof,
+    leadSourceProof,
+    preparationScene: args.indexes.openingPreparation,
+    reliefAllocationScene: args.indexes.openingReliefAllocation,
+    journalEntries: args.snapshot.journalEntries,
+    expectedTown: args.indexes.openingAllyTownName,
+  });
+  assertCurrentOpeningStoryBoundary({
+    label: "ally",
+    offered: allyProof.offered,
+    offerBoundary: allyProof.offerBoundary,
+    optionId: allyProof.option?.id ?? null,
+    sceneId: args.indexes.openingAlly?.id ?? null,
+    selectionBoundary: allyProof.selectionBoundary,
+    snapshot: args.snapshot,
+  });
+
+  const openingLeadSourceDecisionTrail = proveOpeningDecisionTrail({
+    leadSourceProof,
+    snapshot: args.snapshot,
+    sourceSceneId: args.indexes.openingLeadSource?.id ?? null,
+  });
+  const boundaryProofs = replayCampaignBoundaries({
+    indexes: args.indexes,
+    leadSourceProof,
+    trail: openingLeadSourceDecisionTrail,
+    travelEntries: args.travelEntries,
+  });
+
+  const openingChoices: OpeningDispatchReplayChoice[] = [
+    ...(preparationProof.profile &&
+    preparationProof.journalIndex !== null &&
+    args.indexes.openingPreparation
+      ? [
+          {
+            kind: "preparation" as const,
+            journalIndex: preparationProof.journalIndex,
+            scene: args.indexes.openingPreparation,
+            optionId: preparationProof.profile.id,
+          },
+        ]
+      : []),
+    ...(reliefAllocationProof.option &&
+    reliefAllocationProof.journalIndex !== null &&
+    args.indexes.openingReliefAllocation
+      ? [
+          {
+            kind: "relief_allocation" as const,
+            journalIndex: reliefAllocationProof.journalIndex,
+            scene: args.indexes.openingReliefAllocation,
+            optionId: reliefAllocationProof.option.id,
+          },
+        ]
+      : []),
+    ...(allyProof.option && allyProof.journalIndex !== null && args.indexes.openingAlly
+      ? [
+          {
+            kind: "ally" as const,
+            journalIndex: allyProof.journalIndex,
+            scene: args.indexes.openingAlly,
+            optionId: allyProof.option.id,
+          },
+        ]
+      : []),
+  ];
+  const characterAfterOpening = replayOpeningDispatchChoices({
+    characterAfterSource: leadSourceProof.characterAfterSource,
+    choices: openingChoices,
+  });
+
+  const journalIndexById = new Map(
+    args.snapshot.journalEntries.map((entry, index) => [entry.id, index] as const),
+  );
+  const mutations: CampaignReplayMutation[] = [];
+  for (const entry of args.snapshot.journalEntries) {
+    if (entry.questStartProof === undefined) continue;
+    const questId = entry.id.startsWith("quest:") ? entry.id.slice("quest:".length) : "";
+    const quest = args.indexes.questsById.get(questId);
+    if (!quest?.launch || !args.startedQuestIds.has(questId)) {
+      throw new Error(
+        `Overworld session snapshot quest-start proof "${entry.id}" has no started authored launch.`,
+      );
+    }
+  }
+  for (const [questId, quest] of args.indexes.questsById) {
+    if (!quest.launch || !args.startedQuestIds.has(questId)) continue;
+    const journalIndex = journalIndexById.get(`quest:${questId}`);
+    const entry =
+      journalIndex === undefined ? undefined : args.snapshot.journalEntries[journalIndex];
+    if (journalIndex === undefined || !entry) {
+      throw new Error(
+        `Overworld session snapshot started quest "${questId}" has no canonical launch journal.`,
+      );
+    }
+    const effects = assertCurrentQuestStartJournal({
+      boundaryProofs,
+      entry,
+      indexes: args.indexes,
+      journey: args.snapshot.journey,
+      quest,
+    });
+    const proof = entry.questStartProof;
+    if (proof?.kind === "approach") {
+      const expectedWindow = deriveQuestDispatchWindow({
+        questId,
+        journalEntries: args.snapshot.journalEntries.slice(journalIndex + 1),
+        openingRegistration: args.indexes.openingRegistration,
+        openingReliefOath: args.indexes.openingReliefOath,
+        openingLeadSource: args.indexes.openingLeadSource,
+        openingPreparation: args.indexes.openingPreparation,
+        openingReliefAllocation: args.indexes.openingReliefAllocation,
+        openingAlly: args.indexes.openingAlly,
+      });
+      if (expectedWindow.status !== "legacy_neutral" && !proof.dispatchSeal) {
+        throw new Error(
+          `Overworld session snapshot quest launch "${questId}" lacks its current dispatch seal.`,
+        );
+      }
+      if (proof.dispatchSeal) {
+        assertQuestDispatchLaunchSeal({
+          seal: proof.dispatchSeal,
+          expectedWindow,
+          expectedApproachId: proof.approachId,
+          expectedLaunchBoundary: proof.boundary,
+        });
+      }
+    }
+    if (effects.length > 0) mutations.push({ kind: "effects", journalIndex, effects });
+  }
+
+  for (const [questId, endingId] of args.questOutcomeIds) {
+    const journalIndex = journalIndexById.get(`quest_done:${questId}`);
+    const quest = args.indexes.questsById.get(questId);
+    if (journalIndex !== undefined && quest && questCampaignExportForEnding(quest, endingId)) {
+      mutations.push({ kind: "quest_completion", journalIndex, quest, endingId });
+    }
+  }
+  args.snapshot.journalEntries.forEach((entry, journalIndex) => {
+    if (entry.kind !== "service" || !entry.serviceRuleId) return;
+    const rule = args.indexes.campaignServiceRulesById.get(entry.serviceRuleId);
+    if (rule?.action !== "care") return;
+    if (!rule.effects) {
+      throw new Error(`Campaign care rule "${rule.id}" has no replayable treatment effect.`);
+    }
+    mutations.push({ kind: "effects", journalIndex, effects: rule.effects });
+  });
+  mutations.sort((left, right) => right.journalIndex - left.journalIndex);
+
+  const openingCharacterBeforeJournalIndex = (journalIndex: number): CampaignCharacterState => {
+    const registrationActive =
+      registrationProof.journalIndex !== null && registrationProof.journalIndex > journalIndex;
+    const reliefOathActive =
+      reliefOathProof.journalIndex !== null && reliefOathProof.journalIndex > journalIndex;
+    const leadSourceActive =
+      leadSourceProof.journalIndex !== null && leadSourceProof.journalIndex > journalIndex;
+    if (!registrationActive) return createInitialCampaignCharacterState();
+    if (!leadSourceActive) {
+      return reliefOathActive
+        ? reliefOathProof.characterAfterOath
+        : registrationProof.characterAtRegistration;
+    }
+    return replayOpeningDispatchChoices({
+      characterAfterSource: leadSourceProof.characterAfterSource,
+      choices: openingChoices,
+      beforeJournalIndex: journalIndex,
+    });
+  };
+  const replayCharacterBeforeJournalIndex = (journalIndex: number): CampaignCharacterState => {
+    let character =
+      journalIndex < 0
+        ? cloneCampaignCharacterState(characterAfterOpening)
+        : cloneCampaignCharacterState(openingCharacterBeforeJournalIndex(journalIndex));
+    for (const mutation of mutations) {
+      if (mutation.journalIndex <= journalIndex) continue;
+      const effects =
+        mutation.kind === "effects"
+          ? mutation.effects
+          : overworldQuestCampaignEffectsForCharacter(
+              questCampaignExportForEnding(mutation.quest, mutation.endingId)!,
+              character,
+            );
+      character = applyCampaignConsequences({ character, effects }).characterAfter;
+    }
+    return character;
+  };
+  const characterAtCache = new Map<string, CampaignCharacterState>();
+  const characterAt = (entry: OverworldJournalEntry): CampaignCharacterState => {
+    const cached = characterAtCache.get(entry.id);
+    if (cached) return cached;
+    const journalIndex = journalIndexById.get(entry.id);
+    if (journalIndex === undefined) {
+      throw new Error(
+        `Overworld session snapshot cannot replay character state for unknown journal entry "${entry.id}".`,
+      );
+    }
+    const replayed = replayCharacterBeforeJournalIndex(journalIndex);
+    characterAtCache.set(entry.id, replayed);
+    return replayed;
+  };
+  const characterAfter = replayCharacterBeforeJournalIndex(-1);
+  if (
+    serializeCampaignCharacterState(args.snapshot.character) !==
+    serializeCampaignCharacterState(characterAfter)
+  ) {
+    throw new Error(
+      "Overworld session snapshot campaign character does not match replayed quest consequences or care services.",
+    );
+  }
+
+  return {
+    campaignBoundaries: {
+      byAcceptedDecisions: boundaryProofs,
+      storyChoiceProofOrdinalByKey: storyChoiceProofOrdinals(
+        boundaryProofs,
+        args.indexes,
+        args.snapshot.journey,
+        reliefOathProof,
+      ),
+      localJobOptionProofOrdinalByKey: localJobOptionProofOrdinals(
+        args.indexes,
+        args.snapshot.journalEntries,
+      ),
+      worldFactProofOrdinalById: worldFactProofOrdinals({
+        boundaryProofs,
+        indexes: args.indexes,
+        journalEntries: args.snapshot.journalEntries,
+        journey: args.snapshot.journey,
+        questOutcomeIds: args.questOutcomeIds,
+      }),
+    },
+    characterAfter,
+    characterAt: (entry) => characterAt(entry),
+    openingLeadSourceDecisionTrail,
+  };
 }
 
 export type OverworldSessionSnapshotRestorePlan = {
@@ -2653,8 +1361,7 @@ export type OverworldSessionSnapshotRestorePlan = {
   questOutcomeIds: ReadonlyMap<string, string>;
   regionRenown: ReadonlyMap<string, number>;
   resolvedEventHomeIds: ReadonlySet<string>;
-  trustedCivicPreparationSourceWorldHashAfter: string | null;
-  trustedLegacyRegistrationReceiptSourceWorldHashAfter: string | null;
+  restoreWarnings: readonly string[];
   travelLog: readonly TravelLogEntry[];
 };
 
@@ -2690,8 +1397,7 @@ export type OverworldAppliedSessionSnapshotRestore = {
   fatigueAfter: number;
   openingLeadSourceDecisionTrailAfter: OverworldOpeningLeadSourceDecisionTrail | null;
   pendingRoadEncounterAfter: OverworldPendingRoadEncounter | null;
-  trustedCivicPreparationSourceWorldHashAfter: string | null;
-  trustedLegacyRegistrationReceiptSourceWorldHashAfter: string | null;
+  restoreWarnings: readonly string[];
   journeyAfter: JourneyContractSnapshot;
 };
 
@@ -2708,6 +1414,18 @@ function replaceNumberMap(target: Map<string, number>, source: ReadonlyMap<strin
 function replaceTravelLog(target: TravelLogEntry[], source: readonly TravelLogEntry[]): void {
   target.length = 0;
   for (const entry of source) target.push(entry);
+}
+
+function resolvedOverworldEventHomeIds(
+  resolvedEventIds: ReadonlySet<string>,
+  indexes: OverworldSnapshotManifestIndex,
+): ReadonlySet<string> {
+  const homeIds = new Set<string>();
+  for (const eventId of resolvedEventIds) {
+    const event = indexes.eventsById.get(eventId);
+    if (event) homeIds.add(event.home);
+  }
+  return homeIds;
 }
 
 export function applyOverworldSessionSnapshotRestore(
@@ -2750,625 +1468,9 @@ export function applyOverworldSessionSnapshotRestore(
       ? cloneOpeningLeadSourceDecisionTrail(plan.openingLeadSourceDecisionTrailAfter)
       : null,
     pendingRoadEncounterAfter: plan.pendingRoadEncounter,
-    trustedCivicPreparationSourceWorldHashAfter: plan.trustedCivicPreparationSourceWorldHashAfter,
-    trustedLegacyRegistrationReceiptSourceWorldHashAfter:
-      plan.trustedLegacyRegistrationReceiptSourceWorldHashAfter,
+    restoreWarnings: plan.restoreWarnings,
     journeyAfter: cloneJourneyContractSnapshot(snapshot.journey),
   };
-}
-
-function migrateAuthoredLocalJobPredecessorJournal(args: {
-  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
-  indexes: OverworldSnapshotManifestIndex;
-  snapshot: OverworldSessionSnapshot;
-}): OverworldJournalEntry[] {
-  let journalEntries = [...args.snapshot.journalEntries];
-  for (const definition of AUTHORED_LOCAL_JOB_LEGACY_DEFINITIONS) {
-    if (
-      definition.acceptedSourceWorldHashes &&
-      !definition.acceptedSourceWorldHashes.has(args.snapshot.worldHash)
-    ) {
-      continue;
-    }
-    const completed = args.snapshot.completedJobIds.includes(definition.jobId);
-    const matchingEntries = journalEntries.filter(
-      (entry) => entry.id === `job:${definition.jobId}`,
-    );
-    if (completed !== (matchingEntries.length === 1)) {
-      throw new Error(
-        `The authored-local-job predecessor has inconsistent completion evidence for "${definition.jobId}".`,
-      );
-    }
-    if (!completed) continue;
-
-    const entry = matchingEntries[0]!;
-    if (entry.localSceneProof !== undefined) {
-      throw new Error(
-        `The generic local-job predecessor "${definition.jobId}" cannot carry an authored-scene proof.`,
-      );
-    }
-    const job = args.indexes.jobsById.get(definition.jobId);
-    if (!job?.authored_scene || job.authored_scene.id !== definition.sceneId) {
-      throw new Error(
-        `The authored-local-job migration target is missing scene "${definition.sceneId}" for job "${definition.jobId}".`,
-      );
-    }
-    const recordedAt = parseTimeLabel(entry.recordedAt);
-    const boundaryMatches = [...args.campaignBoundaries.byAcceptedDecisions.entries()].filter(
-      ([, replayed]) =>
-        replayed.decision?.surface === "overworld" &&
-        replayed.decision.reason === "situation_changed" &&
-        replayed.decision.actionId === `work_job:${definition.jobId}` &&
-        replayed.townId === job.home &&
-        replayed.areaId === job.area,
-    );
-    if (boundaryMatches.length > 1) {
-      throw new Error(
-        `The authored-local-job predecessor completion for "${definition.jobId}" lacks one exact journey decision.`,
-      );
-    }
-    const leadOfferEntry = args.snapshot.journalEntries.find(
-      (candidate) => candidate.kind === "lead_source_offer",
-    );
-    if (
-      boundaryMatches.length === 0 &&
-      leadOfferEntry &&
-      recordedAt >= parseTimeLabel(leadOfferEntry.recordedAt)
-    ) {
-      throw new Error(
-        `The authored-local-job predecessor completion for "${definition.jobId}" is missing from its available campaign trail.`,
-      );
-    }
-    const boundaryMatch = boundaryMatches[0];
-    const boundary = boundaryMatch
-      ? {
-          acceptedDecisions: boundaryMatch[0],
-          decisionProofHash: boundaryMatch[1].decisionProofHash,
-          townId: job.home,
-          areaId: job.area,
-          minutes: recordedAt,
-        }
-      : undefined;
-
-    journalEntries = journalEntries.map((candidate) =>
-      candidate === entry
-        ? migrateAuthoredLocalJobLegacyEntry({
-            area: args.indexes.areasById.get(job.area) ?? null,
-            boundary,
-            currentJob: job,
-            definition,
-            entry,
-            ...(definition.acceptedSourceWorldHashes
-              ? { sourceWorldHash: args.snapshot.worldHash }
-              : {}),
-            townName: args.indexes.townNameForSource(job.home),
-          })
-        : candidate,
-    );
-  }
-  return journalEntries;
-}
-
-export function migrateAuthoredLocalEventPredecessorJournal(args: {
-  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
-  definitions?: readonly AuthoredLocalEventLegacyDefinition[];
-  indexes: OverworldSnapshotManifestIndex;
-  snapshot: OverworldSessionSnapshot;
-}): OverworldJournalEntry[] {
-  let journalEntries = [...args.snapshot.journalEntries];
-  for (const definition of args.definitions ?? AUTHORED_LOCAL_EVENT_LEGACY_DEFINITIONS) {
-    if (
-      definition.sourceWorldHash !== args.snapshot.worldHash &&
-      !definition.acceptedSourceWorldHashes?.has(args.snapshot.worldHash)
-    ) {
-      continue;
-    }
-    const completed = args.snapshot.resolvedEventIds.includes(definition.eventId);
-    const investigationEntries = journalEntries.filter(
-      (entry) => entry.id === `investigate:${definition.eventId}`,
-    );
-    if (investigationEntries.length > 1) {
-      throw new Error(
-        `The authored-local-event predecessor has duplicate investigation evidence for "${definition.eventId}".`,
-      );
-    }
-    const matchingEntries = journalEntries.filter(
-      (entry) => entry.id === `resolve:${definition.eventId}`,
-    );
-    if (completed !== (matchingEntries.length === 1)) {
-      throw new Error(
-        `The authored-local-event predecessor has inconsistent resolution evidence for "${definition.eventId}".`,
-      );
-    }
-    if (!completed && investigationEntries.length === 1) {
-      const event = args.indexes.eventsById.get(definition.eventId);
-      const entry = investigationEntries[0]!;
-      const expected = describeOverworldEventAction(definition.legacyEvent);
-      const townName = event ? args.indexes.townNameForSource(event.home) : "";
-      if (
-        !event?.authored_scene ||
-        event.authored_scene.id !== definition.sceneId ||
-        entry.kind !== "event" ||
-        entry.title !== expected.title ||
-        entry.text !== expected.text ||
-        entry.town !== townName ||
-        entry.localSceneProof !== undefined ||
-        entry.sourceWorldHash !== undefined
-      ) {
-        throw new Error(
-          `Authored local-event predecessor investigation for "${definition.eventId}" does not match its exact trusted copy.`,
-        );
-      }
-      journalEntries = journalEntries.map((candidate) =>
-        candidate === entry
-          ? Object.freeze({ ...entry, sourceWorldHash: args.snapshot.worldHash })
-          : candidate,
-      );
-    }
-    if (!completed) continue;
-    const entry = matchingEntries[0]!;
-    if (entry.localSceneProof !== undefined) {
-      throw new Error(
-        `The generic local-event predecessor "${definition.eventId}" cannot carry an authored-scene proof.`,
-      );
-    }
-    const event = args.indexes.eventsById.get(definition.eventId);
-    const node = event ? args.indexes.nodesById.get(event.home) : undefined;
-    if (!event?.authored_scene || event.authored_scene.id !== definition.sceneId || !node) {
-      throw new Error(
-        `The authored-local-event migration target is missing scene "${definition.sceneId}" for event "${definition.eventId}".`,
-      );
-    }
-    const recordedAt = parseTimeLabel(entry.recordedAt);
-    const boundaryMatches = [...args.campaignBoundaries.byAcceptedDecisions.entries()].filter(
-      ([, replayed]) =>
-        replayed.decision?.surface === "overworld" &&
-        replayed.decision.reason === "situation_changed" &&
-        replayed.decision.actionId === `resolve_event:${event.id}` &&
-        replayed.townId === event.home &&
-        replayed.areaId === event.area,
-    );
-    if (boundaryMatches.length > 1) {
-      throw new Error(
-        `The authored-local-event predecessor resolution for "${event.id}" lacks one exact journey decision.`,
-      );
-    }
-    const leadOfferEntry = args.snapshot.journalEntries.find(
-      (candidate) => candidate.kind === "lead_source_offer",
-    );
-    if (
-      boundaryMatches.length === 0 &&
-      leadOfferEntry &&
-      recordedAt >= parseTimeLabel(leadOfferEntry.recordedAt)
-    ) {
-      throw new Error(
-        `The authored-local-event predecessor resolution for "${event.id}" is missing from its available campaign trail.`,
-      );
-    }
-    const boundaryMatch = boundaryMatches[0];
-    const boundary = boundaryMatch
-      ? {
-          acceptedDecisions: boundaryMatch[0],
-          decisionProofHash: boundaryMatch[1].decisionProofHash,
-          townId: event.home,
-          areaId: event.area,
-          minutes: recordedAt,
-        }
-      : undefined;
-    journalEntries = journalEntries.map((candidate) =>
-      candidate === entry
-        ? migrateAuthoredLocalEventLegacyEntry({
-            boundary,
-            currentEvent: event,
-            definition,
-            entry,
-            region: node.region,
-            sourceWorldHash: args.snapshot.worldHash,
-            townName: args.indexes.townNameForSource(event.home),
-          })
-        : candidate,
-    );
-  }
-  return journalEntries;
-}
-
-function migrateCadeStoryPredicatePredecessorJournal(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  snapshot: OverworldSessionSnapshot;
-}): OverworldJournalEntry[] {
-  if (!AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(args.snapshot.worldHash)) {
-    return [...args.snapshot.journalEntries];
-  }
-  const completed = args.snapshot.completedJobIds.includes(AUTHORED_ALBANY_STATION_JOB_ID);
-  const matchingEntries = args.snapshot.journalEntries.filter(
-    (entry) => entry.id === `job:${AUTHORED_ALBANY_STATION_JOB_ID}`,
-  );
-  if (completed !== (matchingEntries.length === 1)) {
-    throw new Error(
-      "The Cade story-predicate predecessor has inconsistent Station completion evidence.",
-    );
-  }
-  if (!completed) return [...args.snapshot.journalEntries];
-
-  const job = args.indexes.jobsById.get(AUTHORED_ALBANY_STATION_JOB_ID);
-  const entry = matchingEntries[0]!;
-  const proof = entry.localSceneProof;
-  if (!job?.authored_scene || !proof || proof.sceneId !== job.authored_scene.id) {
-    throw new Error(
-      "The Cade story-predicate predecessor lacks its exact authored Station decision proof.",
-    );
-  }
-
-  // A generic Station proof may have crossed one or more later authored
-  // manifests already. Its exact legacy marker and copy remain authoritative;
-  // it must never become one of the three authored packet capabilities.
-  if (authoredLocalJobLegacyCompletion(job.id, proof)) {
-    return [...args.snapshot.journalEntries];
-  }
-
-  if (proof.sourceWorldHash !== undefined || !proof.boundary) {
-    throw new Error(
-      "The Cade story-predicate predecessor lacks its exact authored Station decision proof.",
-    );
-  }
-  const option = resolveLocalJobSceneOption(job.authored_scene, proof.optionId);
-  const isStructural = AUTHORED_ALBANY_STATION_STORY_PREDICATE_OPTION_IDS.has(proof.optionId);
-  const isPasture = proof.optionId === AUTHORED_ALBANY_STATION_PASTURE_OPTION_ID;
-  if (!isStructural && !isPasture) {
-    throw new Error("The Cade story-predicate predecessor names an unsupported Station option.");
-  }
-  const area = args.indexes.areasById.get(job.area) ?? null;
-  const predecessorOption: LocalJobSceneOption = {
-    ...option,
-    requires_all_story_choices: undefined,
-    forbids_any_story_choices: undefined,
-    ...(isPasture
-      ? { consequence: AUTHORED_ALBANY_STATION_PRE_STORY_PREDICATE_PASTURE_CONSEQUENCE }
-      : {}),
-  };
-  const expected = describeOverworldJobAction(job, area, predecessorOption);
-  if (
-    entry.kind !== expected.kind ||
-    entry.title !== expected.title ||
-    entry.text !== expected.text ||
-    entry.town !== args.indexes.townNameForSource(job.home)
-  ) {
-    throw new Error(
-      "The Cade story-predicate predecessor entry does not match its exact trusted copy.",
-    );
-  }
-
-  if (isPasture) {
-    const current = describeOverworldJobAction(job, area, option);
-    return args.snapshot.journalEntries.map((candidate) =>
-      candidate === entry ? { ...candidate, title: current.title, text: current.text } : candidate,
-    );
-  }
-  return args.snapshot.journalEntries.map((candidate) =>
-    candidate === entry
-      ? {
-          ...candidate,
-          localSceneProof: {
-            ...proof,
-            sourceWorldHash: AUTHORED_ALBANY_STATION_STORY_PREDICATE_PREDECESSOR_WORLD_HASH,
-          },
-        }
-      : candidate,
-  );
-}
-
-const REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_BY_BACKGROUND: ReadonlyMap<string, string> = new Map(
-  [
-    ["albany:road_warden", "albany:promise_return_hayden_packet"],
-    ["albany:ledger_advocate", "albany:promise_truthful_relief_account"],
-    ["albany:ironhands_repairer", "albany:promise_return_reese_tools"],
-  ],
-);
-
-/**
- * The exact predecessor had the same selected obligation and Wolf outcome, but
- * left three background promises active. Reconstruct that one historical
- * difference so migration still rejects every unrelated character forgery
- * before returning the current, truthfully closed replay.
- */
-function registrationPromiseClosurePredecessorCharacter(
-  current: CampaignCharacterState,
-  questOutcomeIds: ReadonlyMap<string, string>,
-): CampaignCharacterState {
-  if (!questOutcomeIds.has("wolf_winter") || current.background === null) {
-    return cloneCampaignCharacterState(current);
-  }
-  const promiseId = REGISTRATION_PROMISE_CLOSURE_PREDECESSOR_BY_BACKGROUND.get(current.background);
-  if (!promiseId) return cloneCampaignCharacterState(current);
-  return evolveCampaignCharacterState(current, (draft) => {
-    const promise = draft.promises.find((candidate) => candidate.promiseId === promiseId);
-    if (promise?.status !== "kept") {
-      throw new Error(
-        `Registration-promise migration target does not close selected obligation "${promiseId}".`,
-      );
-    }
-    promise.status = "active";
-  });
-}
-
-const EMERY_EVIDENCE_CUSTODY_EVENT_ID = "albany_city__greenway__event";
-const EMERY_EVIDENCE_CUSTODY_JOB_ID = "albany_city__greenway__job";
-const EMERY_EVIDENCE_CUSTODY_EVENT_SCENE_ID = "albany:greenway-trail-policy";
-const EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID = "albany:greenway-corridor-survey";
-const EMERY_QUIET_CORRIDOR_OPTION_ID = "place_quiet_corridor_markers";
-const EMERY_CUSTODY_EVENT_OPTION_ID = "open_bloodshed_evidence_custody";
-const EMERY_QUIET_JOB_OPTION_IDS: ReadonlyMap<string, string> = new Map([
-  ["reset_steward_markers", "secure_minimum_bloodshed_custody_marks"],
-  [
-    "trace_winter_wildlife_corridor_with_witness_points",
-    "trace_bloodshed_chain_of_custody_with_witness_points",
-  ],
-]);
-const EMERY_CUSTODY_JOB_OPTION_IDS: ReadonlySet<string> = new Set(
-  EMERY_QUIET_JOB_OPTION_IDS.values(),
-);
-const EMERY_BLOODSHED_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
-  "ending_pack_diverted_after_blood",
-  "ending_held",
-  "ending_held_gate_barred",
-  "ending_held_timber_saved",
-]);
-const EMERY_FULL_COMBAT_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
-  "ending_held",
-  "ending_held_gate_barred",
-  "ending_held_timber_saved",
-]);
-const JUNE_HUNT_RELEASE_WOLF_OUTCOME_IDS: ReadonlySet<string> = new Set([
-  "ending_bloodied_byre_evacuated_june_released",
-  "ending_held_gate_barred_june_released",
-  "ending_held_timber_saved_june_released",
-  "ending_held_june_released",
-]);
-const EMERY_FULL_COMBAT_MEMORY_ID = "albany:memory_emery_wolf_full_combat_bloodshed";
-const EMERY_FULL_COMBAT_NPC_ID = "albany:emery_sloane";
-const EMERY_CONTACT_PREFIX = "talk:albany_city__greenway__contact";
-const EMERY_FULL_COMBAT_CONTACT_ID = `${EMERY_CONTACT_PREFIX}@wolf_full_combat_bloodshed`;
-const WOUND_CARE_GREENWAY_DEEP_OPTION_IDS: ReadonlySet<string> = new Set([
-  "map_all_weather_public_loop",
-  "trace_winter_wildlife_corridor_with_witness_points",
-]);
-
-function isWoundCareGreenwayPredecessorWorldHash(sourceWorldHash: string): boolean {
-  return (
-    sourceWorldHash === OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH ||
-    isEmeryEvidenceCustodyPredecessorWorldHash(sourceWorldHash)
-  );
-}
-
-function isWoundCareGreenwayGrandfatherProof(entry: OverworldJournalEntry): boolean {
-  const proof = entry.localSceneProof;
-  return (
-    entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}` &&
-    proof?.sceneId === EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID &&
-    proof.sourceWorldHash !== undefined &&
-    isWoundCareGreenwayPredecessorWorldHash(proof.sourceWorldHash) &&
-    WOUND_CARE_GREENWAY_DEEP_OPTION_IDS.has(proof.optionId)
-  );
-}
-
-/**
- * Preserve an exact deep Greenway action completed before wound treatment
- * became a prerequisite. Provenance is the only migration effect: the player
- * receives no synthetic care, health, or wound-state change.
- */
-function migrateWoundCareGreenwayPredecessorSnapshot(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  snapshot: OverworldSessionSnapshot;
-}): OverworldSessionSnapshot {
-  if (!isWoundCareGreenwayPredecessorWorldHash(args.snapshot.worldHash)) {
-    return args.snapshot;
-  }
-  const job = args.indexes.jobsById.get(EMERY_EVIDENCE_CUSTODY_JOB_ID);
-  const scene = job?.authored_scene;
-  if (!job || scene?.id !== EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID) {
-    throw new Error("Wound-care migration target is missing the Greenway corridor survey.");
-  }
-  return Object.freeze({
-    ...args.snapshot,
-    journalEntries: args.snapshot.journalEntries.map((entry) => {
-      if (entry.id !== `job:${job.id}`) return entry;
-      const proof = entry.localSceneProof;
-      if (
-        !proof ||
-        proof.sceneId !== scene.id ||
-        !WOUND_CARE_GREENWAY_DEEP_OPTION_IDS.has(proof.optionId)
-      ) {
-        return entry;
-      }
-      if (
-        !proof.boundary ||
-        (proof.sourceWorldHash !== undefined &&
-          !(
-            proof.optionId === "trace_winter_wildlife_corridor_with_witness_points" &&
-            isEmeryEvidenceCustodyPredecessorWorldHash(proof.sourceWorldHash)
-          ))
-      ) {
-        throw new Error(
-          "Wound-care predecessor deep Greenway completion lacks its exact option boundary and trusted provenance.",
-        );
-      }
-      const option = resolveLocalJobSceneOption(scene, proof.optionId);
-      const expected = describeOverworldJobAction(
-        job,
-        args.indexes.areasById.get(job.area) ?? null,
-        option,
-      );
-      if (
-        entry.kind !== expected.kind ||
-        entry.title !== expected.title ||
-        entry.text !== expected.text ||
-        entry.town !== args.indexes.townNameForSource(job.home)
-      ) {
-        throw new Error(
-          "Wound-care predecessor deep Greenway completion does not match its exact trusted copy.",
-        );
-      }
-      return {
-        ...entry,
-        localSceneProof: {
-          ...proof,
-          sourceWorldHash: proof.sourceWorldHash ?? args.snapshot.worldHash,
-        },
-      };
-    }),
-  });
-}
-
-function isEmeryEvidenceCustodyGrandfatherProof(entry: OverworldJournalEntry): boolean {
-  const proof = entry.localSceneProof;
-  return (
-    proof?.sourceWorldHash !== undefined &&
-    isEmeryEvidenceCustodyPredecessorWorldHash(proof.sourceWorldHash) &&
-    ((entry.id === `resolve:${EMERY_EVIDENCE_CUSTODY_EVENT_ID}` &&
-      proof.sceneId === EMERY_EVIDENCE_CUSTODY_EVENT_SCENE_ID &&
-      proof.optionId === EMERY_QUIET_CORRIDOR_OPTION_ID) ||
-      (entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}` &&
-        proof.sceneId === EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID &&
-        EMERY_QUIET_JOB_OPTION_IDS.has(proof.optionId)))
-  );
-}
-
-/** Preserve exact predecessor quiet choices without relabeling the player's policy. */
-function migrateEmeryEvidenceCustodyPredecessorSnapshot(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  snapshot: OverworldSessionSnapshot;
-  sourceWorldHash: string;
-  migrateQuietEvidence: boolean;
-}): OverworldSessionSnapshot {
-  const bloodshedOutcome = new Map(args.snapshot.questOutcomes).get("wolf_winter");
-  const isBloodshed =
-    bloodshedOutcome !== undefined && EMERY_BLOODSHED_WOLF_OUTCOME_IDS.has(bloodshedOutcome);
-  const event = args.indexes.eventsById.get(EMERY_EVIDENCE_CUSTODY_EVENT_ID);
-  const job = args.indexes.jobsById.get(EMERY_EVIDENCE_CUSTODY_JOB_ID);
-  const eventScene = event?.authored_scene;
-  const jobScene = job?.authored_scene;
-  if (
-    !event ||
-    !job ||
-    eventScene?.id !== EMERY_EVIDENCE_CUSTODY_EVENT_SCENE_ID ||
-    jobScene?.id !== EMERY_EVIDENCE_CUSTODY_JOB_SCENE_ID
-  ) {
-    throw new Error(
-      "Emery evidence-custody migration target is missing the current Greenway scenes.",
-    );
-  }
-  const wolfCompletion = args.snapshot.journalEntries.find(
-    (entry) => entry.id === "quest_done:wolf_winter",
-  );
-  const wolfCompletionMinutes = wolfCompletion ? parseTimeLabel(wolfCompletion.recordedAt) : null;
-  return Object.freeze({
-    ...args.snapshot,
-    journalEntries: args.snapshot.journalEntries.map((entry) => {
-      const proof = entry.localSceneProof;
-      const isPostWolfEmeryContact =
-        isBloodshed &&
-        wolfCompletionMinutes !== null &&
-        entry.kind === "contact" &&
-        (entry.id === EMERY_CONTACT_PREFIX || entry.id.startsWith(`${EMERY_CONTACT_PREFIX}@`)) &&
-        parseTimeLabel(entry.recordedAt) >= wolfCompletionMinutes;
-      if (isPostWolfEmeryContact) {
-        if (entry.id === EMERY_FULL_COMBAT_CONTACT_ID) {
-          throw new Error(
-            "Emery evidence-custody predecessor snapshot contains a contact presentation introduced by the current manifest.",
-          );
-        }
-        // The current contact precedence may shadow this historical line. Preserve the
-        // player's exact text and action ID; provenance is the only migration marker.
-        return {
-          ...entry,
-          sourceWorldHash: args.sourceWorldHash,
-        };
-      }
-      if (!proof || !args.migrateQuietEvidence) return entry;
-      if (
-        (entry.id === `resolve:${EMERY_EVIDENCE_CUSTODY_EVENT_ID}` &&
-          proof.optionId === EMERY_CUSTODY_EVENT_OPTION_ID) ||
-        (entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}` &&
-          EMERY_CUSTODY_JOB_OPTION_IDS.has(proof.optionId))
-      ) {
-        throw new Error(
-          "Emery evidence-custody predecessor snapshot contains a custody option introduced by the current manifest.",
-        );
-      }
-      if (
-        entry.id === `resolve:${EMERY_EVIDENCE_CUSTODY_EVENT_ID}` &&
-        proof.optionId === EMERY_QUIET_CORRIDOR_OPTION_ID
-      ) {
-        return isBloodshed
-          ? {
-              ...entry,
-              localSceneProof: {
-                ...proof,
-                sourceWorldHash: args.sourceWorldHash,
-              },
-            }
-          : entry;
-      }
-      if (entry.id === `job:${EMERY_EVIDENCE_CUSTODY_JOB_ID}`) {
-        return isBloodshed && EMERY_QUIET_JOB_OPTION_IDS.has(proof.optionId)
-          ? {
-              ...entry,
-              localSceneProof: {
-                ...proof,
-                sourceWorldHash: args.sourceWorldHash,
-              },
-            }
-          : entry;
-      }
-      return entry;
-    }),
-  });
-}
-
-function emeryEvidenceCustodyPredecessorCharacter(args: {
-  characterBeforeQuestOutcomes: CampaignCharacterState;
-  indexes: OverworldSnapshotManifestIndex;
-  questOutcomeIds: ReadonlyMap<string, string>;
-  questOutcomeOrder: readonly string[];
-}): CampaignCharacterState {
-  const outcome = args.questOutcomeIds.get("wolf_winter");
-  if (!outcome || !EMERY_FULL_COMBAT_WOLF_OUTCOME_IDS.has(outcome)) {
-    return replayQuestCampaignConsequences({
-      character: args.characterBeforeQuestOutcomes,
-      questsById: args.indexes.questsById,
-      questOutcomeIds: args.questOutcomeIds,
-      questOutcomeOrder: args.questOutcomeOrder,
-    }).characterAfter;
-  }
-  const wolf = args.indexes.questsById.get("wolf_winter");
-  if (!wolf?.campaign_exports) {
-    throw new Error("Emery evidence-custody migration target has no Wolf-Winter exports.");
-  }
-  const wolfCampaignExports = wolf.campaign_exports;
-  const predecessorWolf = structuredClone(wolf);
-  predecessorWolf.campaign_exports = wolfCampaignExports.map((campaignExport) =>
-    EMERY_FULL_COMBAT_WOLF_OUTCOME_IDS.has(campaignExport.ending_id)
-      ? {
-          ...campaignExport,
-          effects: campaignExport.effects.filter(
-            (effect) =>
-              !(
-                effect.type === "remember_relationship" &&
-                effect.npc_id === EMERY_FULL_COMBAT_NPC_ID &&
-                effect.memory_id === EMERY_FULL_COMBAT_MEMORY_ID
-              ),
-          ),
-        }
-      : campaignExport,
-  );
-  const predecessorQuests = new Map(args.indexes.questsById);
-  predecessorQuests.set(predecessorWolf.id, predecessorWolf);
-  return replayQuestCampaignConsequences({
-    character: args.characterBeforeQuestOutcomes,
-    questsById: predecessorQuests,
-    questOutcomeIds: args.questOutcomeIds,
-    questOutcomeOrder: args.questOutcomeOrder,
-  }).characterAfter;
 }
 
 export function planOverworldSessionSnapshotRestore(args: {
@@ -3378,413 +1480,20 @@ export function planOverworldSessionSnapshotRestore(args: {
   worldHash: string;
   worldId: string;
 }): OverworldSessionSnapshotRestorePlan {
-  const { indexes, snapshot: sourceSnapshot, startTownId, worldHash, worldId } = args;
-  if (sourceSnapshot.worldId !== worldId) {
+  const { indexes, snapshot, startTownId, worldHash, worldId } = args;
+  if (snapshot.worldId !== worldId) {
     throw new Error(
-      `Overworld session snapshot is for world "${sourceSnapshot.worldId}", not "${worldId}".`,
+      `Overworld session snapshot is for world "${snapshot.worldId}", not "${worldId}".`,
     );
   }
-  const migrationTargetsCurrentManifest = worldHash === OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH;
-  const openingPreparationCopyMigrations = migrationTargetsCurrentManifest
-    ? openingPreparationJournalCopyMigrationsForSourceWorldHash(sourceSnapshot.worldHash)
-    : [];
-  const migratesOpeningPreparationCopy = openingPreparationCopyMigrations.length > 0;
-  const migratesAuthoredLocalJob =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    authoredLocalJobLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;
-  const migratesAuthoredLocalEvent =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    authoredLocalEventLegacyDefinitionsForSourceWorldHash(sourceSnapshot.worldHash).length > 0;
-  const migratesJuneReturnCopy =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_WORLD_HASH;
-  const migratesReliefProtocolTriggerCopy =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_RELIEF_PROTOCOL_TRIGGER_COPY_PREDECESSOR_WORLD_HASH;
-  const migratesReliefAllocationTriggerCategory =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash ===
-      OVERWORLD_RELIEF_ALLOCATION_TRIGGER_CATEGORY_PREDECESSOR_WORLD_HASH;
-  const migratesCivicTriggerCategory =
-    migrationTargetsCurrentManifest &&
-    exactSnapshotMigrationAppliesToSource("civic_trigger_category", sourceSnapshot.worldHash);
-  const migratesReliefOathStrategyParity =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_RELIEF_OATH_STRATEGY_PARITY_PREDECESSOR_WORLD_HASH;
-  const migratesAidOnlyCleanCast =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_AID_ONLY_CLEAN_CAST_PREDECESSOR_WORLD_HASH;
-  const normalizesAidOnlyCleanCast =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    exactSnapshotMigrationAppliesToSource("aid_only_clean_cast", sourceSnapshot.worldHash);
-  const normalizesReliefOathStrategyParity =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    exactSnapshotMigrationAppliesToSource("relief_oath_strategy_parity", sourceSnapshot.worldHash);
-  const migratesCadeStoryPredicate =
-    migrationTargetsCurrentManifest &&
-    AUTHORED_ALBANY_STATION_STORY_PREDICATE_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash);
-  const migratesComparisonCardContract =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_COMPARISON_CARD_PREDECESSOR_WORLD_HASH;
-  // Starting Doctrine changes only the newly-presented registration alternatives.
-  // Existing save state needs no journal or campaign normalization.
-  const migratesStartingDoctrine =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_STARTING_DOCTRINE_PREDECESSOR_WORLD_HASH;
-  // This replacement changes only a newly-presented registration alternative.
-  // A selected doctrine already persists its canonical role/oath/source state, so
-  // the exact predecessor needs no journal or campaign-state normalizer.
-  const migratesStartingDoctrineReplacement =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_STARTING_DOCTRINE_REPLACEMENT_PREDECESSOR_WORLD_HASH;
-  const migratesJuneDriveOverrunCopy =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_WORLD_HASH;
-  const migratesJuneFortifyDawnCopy =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH;
-  // This predecessor adds only future quest outcomes and a matching return
-  // presentation. Existing snapshots need no journal or campaign-state rewrite.
-  const migratesJuneHuntRelease =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_JUNE_HUNT_RELEASE_PREDECESSOR_WORLD_HASH;
-  const migratesEmeryEvidenceCustody =
-    migrationTargetsCurrentManifest &&
-    EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES.has(sourceSnapshot.worldHash);
-  const migratesEmeryContactPrecedence =
-    migrationTargetsCurrentManifest &&
-    isEmeryFullCombatMemoryPredecessorWorldHash(sourceSnapshot.worldHash);
-  const migratesWoundCare =
-    migrationTargetsCurrentManifest &&
-    isWoundCareGreenwayPredecessorWorldHash(sourceSnapshot.worldHash);
-  const migratesBloodiedByreEvacuation =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash === OVERWORLD_BLOODIED_BYRE_EVACUATION_PREDECESSOR_WORLD_HASH;
-  const migrationEra: TrustedMigrationEra =
-    !migrationTargetsCurrentManifest || sourceSnapshot.worldHash === worldHash
-      ? null
-      : sourceSnapshot.worldHash === OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_HASH
-        ? "relief_oath"
-        : sourceSnapshot.worldHash === AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH ||
-            sourceSnapshot.worldHash === AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH ||
-            sourceSnapshot.worldHash === OVERWORLD_FROST_JAMB_SIGNPOST_PREDECESSOR_WORLD_HASH
-          ? "field_timed_preparation"
-          : sourceSnapshot.worldHash === OVERWORLD_FIELD_TIMED_PREPARATION_PREDECESSOR_WORLD_HASH
-            ? "field_timed_preparation"
-            : sourceSnapshot.worldHash === OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH
-              ? "relief_allocation"
-              : sourceSnapshot.worldHash === OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_HASH
-                ? "hill_approach"
-                : sourceSnapshot.worldHash === OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_HASH
-                  ? "fortify_outlast"
-                  : sourceSnapshot.worldHash === OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_HASH
-                    ? "crisis_priority"
-                    : sourceSnapshot.worldHash === OVERWORLD_OPENING_ALLY_PREDECESSOR_WORLD_HASH
-                      ? "opening_ally"
-                      : sourceSnapshot.worldHash ===
-                          OVERWORLD_OPENING_PREPARATION_PREDECESSOR_WORLD_HASH
-                        ? "opening_preparation"
-                        : sourceSnapshot.worldHash === OVERWORLD_CAMPAIGN_SERVICE_WORLD_HASH
-                          ? "campaign_service"
-                          : sourceSnapshot.worldHash === OVERWORLD_OPENING_LEAD_SOURCE_WORLD_HASH
-                            ? "opening_lead_source"
-                            : OVERWORLD_OPENING_REGISTRATION_TRUSTED_PREDECESSOR_WORLD_HASHES.has(
-                                  sourceSnapshot.worldHash,
-                                )
-                              ? "pre_registration"
-                              : sourceSnapshot.worldHash ===
-                                  OVERWORLD_OPENING_REGISTRATION_WORLD_HASH
-                                ? "opening_registration"
-                                : null;
-  const usesCurrentCampaignSchema =
-    migrationEra === null || migrationEra === "field_timed_preparation";
-  const needsLegacyCampaignScaffolding =
-    migrationEra !== null && migrationEra !== "field_timed_preparation";
-  const migratesRegistrationPromiseClosure =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    exactSnapshotMigrationAppliesToSource("registration_promise_closure", sourceSnapshot.worldHash);
-  const migratesLegacyLocalJobSemantics =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    (migratesAuthoredLocalJob ||
-      migratesAuthoredLocalEvent ||
-      migratesJuneReturnCopy ||
-      migratesCadeStoryPredicate ||
-      needsLegacyCampaignScaffolding);
-  if (
-    sourceSnapshot.worldHash !== worldHash &&
-    migrationEra === null &&
-    !migratesReliefProtocolTriggerCopy &&
-    !migratesReliefAllocationTriggerCategory &&
-    !migratesCivicTriggerCategory &&
-    !migratesReliefOathStrategyParity &&
-    !migratesAidOnlyCleanCast &&
-    !migratesOpeningPreparationCopy &&
-    !migratesRegistrationPromiseClosure &&
-    !migratesJuneReturnCopy &&
-    !migratesCadeStoryPredicate &&
-    !migratesComparisonCardContract &&
-    !migratesStartingDoctrine &&
-    !migratesStartingDoctrineReplacement &&
-    !migratesJuneDriveOverrunCopy &&
-    !migratesJuneFortifyDawnCopy &&
-    !migratesJuneHuntRelease &&
-    !migratesEmeryEvidenceCustody &&
-    !migratesWoundCare &&
-    !migratesBloodiedByreEvacuation &&
-    !migratesAuthoredLocalJob &&
-    !migratesAuthoredLocalEvent
-  ) {
-    throw new Error("Overworld session snapshot was made against a different world manifest.");
-  }
-  const snapshotWithOpeningPreparationCopy = migratesOpeningPreparationCopy
-    ? Object.freeze({
-        ...sourceSnapshot,
-        journalEntries: normalizeOpeningPreparationJournalCopies({
-          preparation: indexes.openingPreparation,
-          journalEntries: sourceSnapshot.journalEntries,
-          migrations: openingPreparationCopyMigrations,
-        }),
-      })
-    : sourceSnapshot;
-  const snapshotWithReliefOathStrategyParity = normalizesReliefOathStrategyParity
-    ? Object.freeze({
-        ...snapshotWithOpeningPreparationCopy,
-        journalEntries: normalizeReliefOathStrategyParityPredecessorJournal({
-          indexes,
-          journalEntries: snapshotWithOpeningPreparationCopy.journalEntries,
-        }),
-      })
-    : snapshotWithOpeningPreparationCopy;
-  const snapshotWithAidOnlyCleanCast = normalizesAidOnlyCleanCast
-    ? Object.freeze({
-        ...snapshotWithReliefOathStrategyParity,
-        journalEntries: normalizeAidOnlyCleanCastPredecessorJournal({
-          indexes,
-          journalEntries: snapshotWithReliefOathStrategyParity.journalEntries,
-        }),
-      })
-    : snapshotWithReliefOathStrategyParity;
-  const normalizesReliefProtocolTriggerCopy =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    exactSnapshotMigrationAppliesToSource("relief_protocol_trigger", sourceSnapshot.worldHash);
-  const snapshotWithReliefProtocolTriggerCopy = normalizesReliefProtocolTriggerCopy
-    ? Object.freeze({
-        ...snapshotWithAidOnlyCleanCast,
-        journalEntries: normalizeReliefProtocolTriggerCopyPredecessorJournal({
-          indexes,
-          journalEntries: snapshotWithAidOnlyCleanCast.journalEntries,
-        }),
-      })
-    : snapshotWithAidOnlyCleanCast;
-  const normalizesFrostJambCopy =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    exactSnapshotMigrationAppliesToSource("frost_jamb_signpost", sourceSnapshot.worldHash);
-  const snapshotWithFrostJambCopy = normalizesFrostJambCopy
-    ? Object.freeze({
-        ...snapshotWithReliefProtocolTriggerCopy,
-        journalEntries: normalizeFrostJambSignpostPredecessorJournal({
-          indexes,
-          journalEntries: snapshotWithReliefProtocolTriggerCopy.journalEntries,
-        }),
-      })
-    : snapshotWithReliefProtocolTriggerCopy;
-  const normalizesJuneReturnCopy =
-    migrationTargetsCurrentManifest &&
-    sourceSnapshot.worldHash !== worldHash &&
-    exactSnapshotMigrationAppliesToSource("june_return", sourceSnapshot.worldHash);
-  const snapshotWithJuneReturnCopy = normalizesJuneReturnCopy
-    ? (() => {
-        const presentation = indexes.contactPresentationsByJournalId.get(
-          OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.id,
-        );
-        if (!presentation) {
-          throw new Error(
-            `June-return-copy migration target has no contact presentation "${OVERWORLD_JUNE_RETURN_COPY_PREDECESSOR_LEFT_CONTACT.id}".`,
-          );
-        }
-        const currentContact = describeOverworldContactAction(
-          presentation.contact,
-          presentation.presentationId,
-        );
-        return Object.freeze({
-          ...snapshotWithFrostJambCopy,
-          journalEntries: normalizeJuneReturnCopyPredecessorJournal({
-            currentContact,
-            journalEntries: snapshotWithFrostJambCopy.journalEntries,
-          }),
-        });
-      })()
-    : snapshotWithFrostJambCopy;
-  const snapshotWithCampusContact = exactSnapshotMigrationAppliesToSource(
-    "campus_archive_contact",
-    sourceSnapshot.worldHash,
-  )
-    ? (() => {
-        const presentation = indexes.contactPresentationsByJournalId.get(
-          OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id,
-        );
-        if (!presentation) {
-          throw new Error(
-            `Campus-archive migration target has no contact presentation "${OVERWORLD_CAMPUS_ARCHIVE_PREDECESSOR_CONTACT.id}".`,
-          );
-        }
-        return Object.freeze({
-          ...snapshotWithJuneReturnCopy,
-          journalEntries: normalizeCampusArchivePredecessorContactJournal({
-            currentContact: describeOverworldContactAction(
-              presentation.contact,
-              presentation.presentationId,
-            ),
-            journalEntries: snapshotWithJuneReturnCopy.journalEntries,
-          }),
-        });
-      })()
-    : snapshotWithJuneReturnCopy;
-  const snapshotWithCampaignCopy =
-    usesCurrentCampaignSchema ||
-    migrationEra === "relief_oath" ||
-    migrationEra === "relief_allocation" ||
-    migrationEra === "hill_approach"
-      ? snapshotWithCampusContact
-      : Object.freeze({
-          ...snapshotWithCampusContact,
-          journalEntries: normalizePreFortifyDawnWagonServiceJournalCopy({
-            indexes,
-            journalEntries: normalizePreFortifyAlbanyWagonJournalTitle(
-              snapshotWithCampusContact.journalEntries,
-            ),
-          }),
-        });
-  let snapshot =
-    migrationEra === "fortify_outlast" || migrationEra === "crisis_priority"
-      ? (() => {
-          if (indexes.openingAlly === null) {
-            throw new Error("Fortify-outlast migration target has no opening ally scene.");
-          }
-          const currentContacts = new Map(
-            [
-              ...new Set([
-                OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_BASE_CONTACT.id,
-                OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_JOINED_CONTACT.id,
-                OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_JUNE_LEFT_CONTACT.id,
-                OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_BASE_CONTACT.id,
-                OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_JUNE_JOINED_CONTACT.id,
-              ]),
-            ].map((journalId) => {
-              const presentation = indexes.contactPresentationsByJournalId.get(journalId);
-              if (!presentation) {
-                throw new Error(
-                  `Fortify-outlast migration target has no contact presentation "${journalId}".`,
-                );
-              }
-              return [
-                journalId,
-                describeOverworldContactAction(presentation.contact, presentation.presentationId),
-              ] as const;
-            }),
-          );
-          const normalizerArgs = {
-            currentContacts,
-            // Compose the older F04/F10 ally migrations through the exact
-            // pre-Overrun receipts. The June DRIVE step below then advances that
-            // trusted intermediate copy to the current manifest without widening
-            // either historical source's admission gate.
-            currentOffer: OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_ALLY_OFFER,
-            currentJuneSelection: OVERWORLD_JUNE_DRIVE_OVERRUN_PREDECESSOR_JUNE_SELECTION,
-            journalEntries: snapshotWithCampaignCopy.journalEntries,
-          };
-          const journalEntries =
-            migrationEra === "fortify_outlast"
-              ? normalizeFortifyOutlastPredecessorAllyJournalCopy(normalizerArgs)
-              : normalizeCrisisPriorityPredecessorAllyJournalCopy(normalizerArgs);
-          return Object.freeze({ ...snapshotWithCampaignCopy, journalEntries });
-        })()
-      : snapshotWithCampaignCopy;
-  if (
-    sourceSnapshot.worldHash !== worldHash &&
-    !migratesJuneHuntRelease &&
-    !migratesAidOnlyCleanCast
-  ) {
-    if (indexes.openingAlly === null) {
-      throw new Error("June cattle-line copy migration target has no opening ally scene.");
-    }
-    const currentOffer = openingAllyOfferJournalDraft(indexes.openingAlly);
-    const currentJuneSelection = openingAllyJournalDraft({
-      scene: indexes.openingAlly,
-      character: createInitialCampaignCharacterState(),
-      optionId: "albany:ally_june_cattle_first",
-    });
-    snapshot = Object.freeze({
-      ...snapshot,
-      journalEntries:
-        sourceSnapshot.worldHash === OVERWORLD_JUNE_FORTIFY_DAWN_PREDECESSOR_WORLD_HASH
-          ? normalizeJuneFortifyDawnPredecessorAllyJournalCopy({
-              currentOffer,
-              currentJuneSelection,
-              journalEntries: snapshot.journalEntries,
-            })
-          : normalizeJuneDriveOverrunPredecessorAllyJournalCopy({
-              currentOffer,
-              currentJuneSelection,
-              journalEntries: snapshot.journalEntries,
-            }),
-    });
-  }
-  if (migratesEmeryEvidenceCustody || migratesEmeryContactPrecedence) {
-    snapshot = migrateEmeryEvidenceCustodyPredecessorSnapshot({
-      indexes,
-      snapshot,
-      sourceWorldHash: sourceSnapshot.worldHash,
-      migrateQuietEvidence: migratesEmeryEvidenceCustody,
-    });
-  }
-  if (migratesWoundCare) {
-    snapshot = migrateWoundCareGreenwayPredecessorSnapshot({ indexes, snapshot });
-  }
-  const normalizesCivicPreparationEvidence =
-    sourceSnapshot.worldHash !== worldHash &&
-    indexes.openingPreparation !== null &&
-    OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES.has(sourceSnapshot.worldHash) &&
-    snapshot.journalEntries.some(
-      (entry) => entry.kind === "preparation" || entry.kind === "preparation_offer",
-    );
-  if (normalizesCivicPreparationEvidence) {
-    const offerDraft = openingPreparationOfferJournalDraft(indexes.openingPreparation!);
-    snapshot = {
-      ...snapshot,
-      journalEntries: snapshot.journalEntries.map((entry) =>
-        entry.kind === "preparation_offer"
-          ? {
-              ...entry,
-              title: offerDraft.title,
-              text: offerDraft.text,
-              sourceWorldHash: sourceSnapshot.worldHash,
-            }
-          : entry.kind === "preparation"
-            ? { ...entry, sourceWorldHash: sourceSnapshot.worldHash }
-            : entry,
-      ),
-    };
-  }
-  const migratesPreCampaignExportsWorldHash =
-    migrationEra === "pre_registration" &&
-    snapshot.worldHash === OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH;
-  const migratesFromPreRegistrationManifest = migrationEra === "pre_registration";
+  const restoreWarnings =
+    snapshot.worldHash === worldHash ? [] : [OVERWORLD_CONTENT_HASH_MISMATCH_WARNING];
 
   const travelTimeline = snapshotTravelTimelineIndex(
     snapshot,
     indexes.townNameForSource,
     startTownId,
   );
-
   assertSnapshotCurrentLocationManifestBinding(snapshot, indexes);
 
   const discoveredTownIds = assertKnownIds(
@@ -3858,58 +1567,17 @@ export function planOverworldSessionSnapshotRestore(args: {
       throw new Error(`Overworld session snapshot completed quest "${questId}" has no outcome.`);
     }
   }
-  const trustedPredecessorWolfOutcomeIds =
-    migrationEra === "relief_oath"
-      ? OVERWORLD_RELIEF_OATH_PREDECESSOR_WOLF_OUTCOME_IDS
-      : migrationEra === "relief_allocation"
-        ? OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WOLF_OUTCOME_IDS
-        : migrationEra === "hill_approach"
-          ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WOLF_OUTCOME_IDS
-          : migrationEra === "fortify_outlast"
-            ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WOLF_OUTCOME_IDS
-            : migrationEra === "crisis_priority"
-              ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WOLF_OUTCOME_IDS
-              : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-                ? OVERWORLD_OPENING_PREPARATION_WORLD_WOLF_OUTCOME_IDS
-                : OVERWORLD_CAMPAIGN_SERVICE_WORLD_WOLF_OUTCOME_IDS;
-  if (
-    needsLegacyCampaignScaffolding &&
-    [...questOutcomeIds].some(
-      ([questId, endingId]) =>
-        questId === "wolf_winter" && !trustedPredecessorWolfOutcomeIds.has(endingId),
-    )
-  ) {
-    throw new Error(
-      "Trusted predecessor snapshot has a Wolf-Winter quest outcome introduced by a later manifest.",
-    );
-  }
-  if (
-    sourceSnapshot.worldHash !== worldHash &&
-    questOutcomeIds.get("wolf_winter") === "ending_bloodied_byre_evacuated"
-  ) {
-    throw new Error(
-      "Pre-bloodied-byre snapshot has a Wolf-Winter quest outcome introduced by a later manifest.",
-    );
-  }
-  if (
-    sourceSnapshot.worldHash !== worldHash &&
-    JUNE_HUNT_RELEASE_WOLF_OUTCOME_IDS.has(questOutcomeIds.get("wolf_winter") ?? "")
-  ) {
-    throw new Error(
-      "Historical snapshot has a June-release Wolf-Winter outcome introduced by the current manifest.",
-    );
-  }
   assertJourneyCampaignGoalCompletionProof({
     journey: snapshot.journey,
     completedQuestIds,
     startTownId,
   });
+
   const resolvedEventIds = assertKnownIds(
     "resolved event id",
     snapshot.resolvedEventIds,
     indexes.eventIds,
   );
-  const resolvedEventHomeIds = resolvedOverworldEventHomeIds(resolvedEventIds, indexes.eventsById);
   const completedRegionalArcIds = assertKnownIds(
     "completed regional arc id",
     snapshot.completedRegionalArcIds,
@@ -3926,1231 +1594,34 @@ export function planOverworldSessionSnapshotRestore(args: {
   };
   const currentAreaByTown = assertUniqueTupleMap("area-map town", snapshot.currentAreaByTown);
   const regionRenown = assertUniqueTupleMap("renown region", snapshot.regionRenown);
-  let journalTimeline = assertSnapshotTimeline(snapshot, {
+  const journalTimeline = assertSnapshotTimeline(snapshot, {
     ...indexes,
     travelLogArrivals: travelTimeline.arrivals,
     travelLogTownByArrival: travelTimeline.townByArrival,
   });
-  const trustedPredecessorServiceRuleIds =
-    migrationEra === "relief_oath"
-      ? OVERWORLD_RELIEF_OATH_PREDECESSOR_WORLD_RULE_IDS
-      : migrationEra === "relief_allocation"
-        ? OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_RULE_IDS
-        : migrationEra === "hill_approach"
-          ? OVERWORLD_HILL_APPROACH_PREDECESSOR_WORLD_RULE_IDS
-          : migrationEra === "fortify_outlast"
-            ? OVERWORLD_FORTIFY_OUTLAST_PREDECESSOR_WORLD_RULE_IDS
-            : migrationEra === "crisis_priority"
-              ? OVERWORLD_CRISIS_PRIORITY_PREDECESSOR_WORLD_RULE_IDS
-              : migrationEra === "opening_ally" || migrationEra === "opening_preparation"
-                ? OVERWORLD_OPENING_PREPARATION_WORLD_RULE_IDS
-                : migrationEra === "campaign_service"
-                  ? OVERWORLD_CAMPAIGN_SERVICE_WORLD_RULE_IDS
-                  : null;
-  if (
-    trustedPredecessorServiceRuleIds !== null &&
-    snapshot.journalEntries.some(
-      (entry) =>
-        entry.serviceRuleId !== undefined &&
-        !trustedPredecessorServiceRuleIds.has(entry.serviceRuleId),
-    )
-  ) {
-    throw new Error(
-      "Campaign-service predecessor snapshot has service evidence introduced by a later manifest.",
-    );
-  }
-  if (
-    migrationEra !== null &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "relief_allocation" &&
-    migrationEra !== "hill_approach" &&
-    migrationEra !== "fortify_outlast" &&
-    migrationEra !== "crisis_priority" &&
-    migrationEra !== "opening_ally" &&
-    migrationEra !== "opening_preparation" &&
-    migrationEra !== "field_timed_preparation" &&
-    migrationEra !== "campaign_service" &&
-    snapshot.journalEntries.some(
-      (entry) => entry.serviceRuleId !== undefined || entry.serviceAreaId !== undefined,
-    )
-  ) {
-    throw new Error(
-      "Legacy overworld session snapshot has campaign service-rule evidence from a later manifest.",
-    );
-  }
-  if (
-    migrationEra !== null &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "relief_allocation" &&
-    migrationEra !== "hill_approach" &&
-    migrationEra !== "fortify_outlast" &&
-    migrationEra !== "crisis_priority" &&
-    migrationEra !== "opening_ally" &&
-    migrationEra !== "opening_preparation" &&
-    migrationEra !== "field_timed_preparation" &&
-    migrationEra !== "campaign_service" &&
-    snapshot.journalEntries.some(
-      (entry) => entry.serviceBoundary !== undefined || entry.questCompletionBoundary !== undefined,
-    )
-  ) {
-    throw new Error(
-      "Legacy overworld session snapshot has campaign replay-boundary evidence from a later manifest.",
-    );
-  }
-  const registrationProof = proveOpeningRegistrationJournal({
-    registration: indexes.openingRegistration,
-    journalEntries: snapshot.journalEntries,
-    expectedTown: indexes.openingRegistrationTownName,
-  });
-  if (migratesFromPreRegistrationManifest && registrationProof.offered) {
-    throw new Error(
-      "Legacy overworld session snapshot has opening registration evidence from a later manifest.",
-    );
-  }
-  const legacyRegistrationProof = proveOpeningRegistrationLegacyJournal({
+  const campaignReplay = proveCurrentCampaignSnapshot({
     completedQuestIds,
-    discoveredAreaIds,
     indexes,
-    journalEntries: snapshot.journalEntries,
-    migratesFromPreRegistrationManifest,
-    registrationProof,
+    questOutcomeIds,
     snapshot,
     startedQuestIds,
-    visitedTownIds,
-  });
-  if (
-    (startedQuestIds.size > 0 || completedQuestIds.size > 0) &&
-    registrationProof.profile === null &&
-    legacyRegistrationProof === null &&
-    !migratesFromPreRegistrationManifest
-  ) {
-    throw new Error(
-      "Overworld session snapshot has quest progress without selected opening registration or trusted legacy provenance.",
-    );
-  }
-  if (registrationProof.offered) {
-    const offerBoundary = registrationProof.offerBoundary!;
-    const selectionBoundary = registrationProof.selectionBoundary;
-    if (selectionBoundary === null) {
-      if (
-        snapshot.currentId !== offerBoundary.townId ||
-        snapshot.currentAreaId !== offerBoundary.areaId ||
-        snapshot.minutes !== offerBoundary.minutes ||
-        snapshot.startedQuestIds.length > 0 ||
-        snapshot.completedQuestIds.length > 0 ||
-        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
-        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
-      ) {
-        throw new Error(
-          "Overworld session snapshot pending registration no longer matches its offered world and journey boundary.",
-        );
-      }
-    } else {
-      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
-        throw new Error(
-          "Overworld session snapshot registration selection is ahead of its journey decision count.",
-        );
-      }
-      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
-        const expectedLast = {
-          number: selectionBoundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${indexes.openingRegistration!.id}:${registrationProof.profile!.id}`,
-          reason: "situation_changed" as const,
-        };
-        if (
-          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
-          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
-        ) {
-          throw new Error(
-            "Overworld session snapshot registration selection does not match the current journey proof.",
-          );
-        }
-      }
-    }
-  }
-  const hasOpeningReliefOathEvidence = snapshot.journalEntries.some(
-    (entry) =>
-      entry.kind === "relief_oath" ||
-      entry.kind === "relief_oath_legacy" ||
-      entry.kind === "relief_oath_offer",
-  );
-  const openingReliefOathDecisionPrefix = indexes.openingReliefOath
-    ? `campaign_story:${indexes.openingReliefOath.id}:`
-    : null;
-  const hasOpeningReliefOathDecisionEvidence =
-    openingReliefOathDecisionPrefix !== null &&
-    (snapshot.openingLeadSourceDecisionTrail?.decisions.some((decision) =>
-      decision.actionId.startsWith(openingReliefOathDecisionPrefix),
-    ) === true ||
-      snapshot.journey.decisionProof.last?.actionId.startsWith(openingReliefOathDecisionPrefix) ===
-        true ||
-      journeyCampaignSelectedStoryChoiceRefs(snapshot.journey).some(
-        (ref) => ref.story_choice_id === indexes.openingReliefOath?.id,
-      ));
-  if (
-    needsLegacyCampaignScaffolding &&
-    (hasOpeningReliefOathEvidence ||
-      hasOpeningReliefOathDecisionEvidence ||
-      hasOpeningReliefOathCharacterEvidence(snapshot.character))
-  ) {
-    throw new Error(
-      "Trusted predecessor snapshot has relief-oath evidence introduced by the later manifest.",
-    );
-  }
-  const storedReliefOathLegacySourceWorldHash = snapshot.journalEntries
-    .filter((entry) => entry.kind === "relief_oath_legacy")
-    .map((entry) => openingReliefOathLegacySourceWorldHash(entry.id))
-    .find(
-      (sourceWorldHash): sourceWorldHash is string =>
-        sourceWorldHash !== null &&
-        OVERWORLD_RELIEF_OATH_TRUSTED_LEGACY_WORLD_HASHES.has(sourceWorldHash),
-    );
-  const reliefOathProof = proveOpeningReliefOathJournal({
-    scene: indexes.openingReliefOath,
-    registrationProof,
-    journalEntries: snapshot.journalEntries,
-    expectedTown: indexes.openingReliefOathTownName,
-    trustedLegacySourceWorldHash: storedReliefOathLegacySourceWorldHash ?? null,
-  });
-  const reliefOathRequiredByCurrentManifest =
-    indexes.openingReliefOath !== null && usesCurrentCampaignSchema;
-  if (
-    reliefOathRequiredByCurrentManifest &&
-    registrationProof.profile !== null &&
-    !reliefOathProof.offered &&
-    !reliefOathProof.legacy
-  ) {
-    throw new Error(
-      "Overworld session snapshot selected registration has no required relief-oath offer or trusted legacy marker.",
-    );
-  }
-  if (reliefOathProof.offered) {
-    const offerBoundary = reliefOathProof.offerBoundary!;
-    const selectionBoundary = reliefOathProof.selectionBoundary;
-    if (selectionBoundary === null) {
-      if (
-        snapshot.currentId !== offerBoundary.townId ||
-        snapshot.currentAreaId !== offerBoundary.areaId ||
-        snapshot.minutes !== offerBoundary.minutes ||
-        snapshot.startedQuestIds.length > 0 ||
-        snapshot.completedQuestIds.length > 0 ||
-        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
-        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
-      ) {
-        throw new Error(
-          "Overworld session snapshot pending relief oath no longer matches its offered world and journey boundary.",
-        );
-      }
-    } else {
-      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
-        throw new Error(
-          "Overworld session snapshot relief-oath selection is ahead of its journey decision count.",
-        );
-      }
-      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
-        const expectedLast = {
-          number: selectionBoundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${indexes.openingReliefOath!.id}:${reliefOathProof.option!.id}`,
-          reason: "situation_changed" as const,
-        };
-        if (
-          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
-          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
-        ) {
-          throw new Error(
-            "Overworld session snapshot relief-oath selection does not match the current journey proof.",
-          );
-        }
-      }
-    }
-  }
-  const hasOpeningLeadSourceEvidence = snapshot.journalEntries.some(
-    (entry) =>
-      entry.kind === "lead_source" ||
-      entry.kind === "lead_source_legacy" ||
-      entry.kind === "lead_source_offer",
-  );
-  const openingLeadSourceDecisionPrefix = indexes.openingLeadSource
-    ? `campaign_story:${indexes.openingLeadSource.id}:`
-    : null;
-  const hasOpeningLeadSourceDecisionEvidence =
-    openingLeadSourceDecisionPrefix !== null &&
-    snapshot.journey.decisionProof.last?.actionId.startsWith(openingLeadSourceDecisionPrefix) ===
-      true;
-  if (
-    migrationEra !== null &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "relief_allocation" &&
-    migrationEra !== "hill_approach" &&
-    migrationEra !== "fortify_outlast" &&
-    migrationEra !== "crisis_priority" &&
-    migrationEra !== "opening_ally" &&
-    migrationEra !== "opening_preparation" &&
-    migrationEra !== "field_timed_preparation" &&
-    migrationEra !== "opening_lead_source" &&
-    migrationEra !== "campaign_service" &&
-    (hasOpeningLeadSourceEvidence ||
-      hasOpeningLeadSourceDecisionEvidence ||
-      snapshot.openingLeadSourceDecisionTrail !== undefined)
-  ) {
-    throw new Error(
-      "Legacy overworld session snapshot has opening lead-source evidence from a later manifest.",
-    );
-  }
-  if (snapshot.journalEntries.some((entry) => entry.kind === "lead_source_legacy")) {
-    throw new Error(
-      "Overworld session snapshot legacy lead-source provenance cannot be trusted and is unsupported.",
-    );
-  }
-  const leadSourceProof = proveOpeningLeadSourceJournal({
-    scene: indexes.openingLeadSource,
-    registrationProof,
-    reliefOathProof,
-    journalEntries: snapshot.journalEntries,
-    expectedTown: indexes.openingLeadSourceTownName,
-    allowMissingReliefOathForMigration: needsLegacyCampaignScaffolding,
-  });
-  const targetLeadQuestId = indexes.openingLeadSource?.target_quest ?? null;
-  const targetLeadQuestDiscovered =
-    targetLeadQuestId !== null && discoveredQuestIds.has(targetLeadQuestId);
-  const targetLeadQuestProgressed =
-    targetLeadQuestId !== null &&
-    (startedQuestIds.has(targetLeadQuestId) || completedQuestIds.has(targetLeadQuestId));
-  const leadDiscoveryDeferredToPreparation =
-    (migrationEra === "field_timed_preparation" ||
-      migrationEra === "relief_oath" ||
-      migrationEra === "relief_allocation" ||
-      migrationEra === "hill_approach" ||
-      migrationEra === "fortify_outlast" ||
-      migrationEra === "crisis_priority") &&
-    indexes.openingPreparation !== null &&
-    indexes.openingPreparation.after_lead_source === indexes.openingLeadSource?.id &&
-    indexes.openingPreparation.target_quest === targetLeadQuestId;
-  const hasLeadSourceManifestEvidence =
-    usesCurrentCampaignSchema ||
-    migrationEra === "relief_oath" ||
-    migrationEra === "relief_allocation" ||
-    migrationEra === "hill_approach" ||
-    migrationEra === "fortify_outlast" ||
-    migrationEra === "crisis_priority" ||
-    migrationEra === "opening_ally" ||
-    migrationEra === "opening_preparation" ||
-    migrationEra === "campaign_service" ||
-    migrationEra === "opening_lead_source";
-  if (
-    hasLeadSourceManifestEvidence &&
-    legacyRegistrationProof !== null &&
-    (startedQuestIds.size > 0 || completedQuestIds.size > 0) &&
-    !leadSourceProof.offered
-  ) {
-    throw new Error(
-      "Overworld session snapshot has opaque legacy registration progress without a replayable lead-source path.",
-    );
-  }
-  if (
-    hasLeadSourceManifestEvidence &&
-    registrationProof.profile !== null &&
-    !leadSourceProof.offered &&
-    !(reliefOathProof.offered && reliefOathProof.option === null)
-  ) {
-    throw new Error(
-      "Overworld session snapshot selected registration has no required opening lead-source offer or trusted legacy provenance.",
-    );
-  }
-  if (
-    hasLeadSourceManifestEvidence &&
-    targetLeadQuestDiscovered &&
-    leadSourceProof.option === null
-  ) {
-    throw new Error(
-      "Overworld session snapshot discovered the opening lead-source target quest without a certified lead source or trusted legacy provenance.",
-    );
-  }
-  if (
-    hasLeadSourceManifestEvidence &&
-    targetLeadQuestProgressed &&
-    leadSourceProof.option === null
-  ) {
-    throw new Error(
-      "Overworld session snapshot has opening-quest progress without a certified lead source or trusted legacy provenance.",
-    );
-  }
-  if (leadSourceProof.offered) {
-    const offerBoundary = leadSourceProof.offerBoundary!;
-    const selectionBoundary = leadSourceProof.selectionBoundary;
-    if (selectionBoundary === null) {
-      if (
-        snapshot.currentId !== offerBoundary.townId ||
-        snapshot.currentAreaId !== offerBoundary.areaId ||
-        snapshot.minutes !== offerBoundary.minutes ||
-        snapshot.startedQuestIds.length > 0 ||
-        snapshot.completedQuestIds.length > 0 ||
-        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
-        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
-      ) {
-        throw new Error(
-          "Overworld session snapshot pending lead source no longer matches its offered world and journey boundary.",
-        );
-      }
-    } else {
-      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
-        throw new Error(
-          "Overworld session snapshot lead-source selection is ahead of its journey decision count.",
-        );
-      }
-      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
-        const expectedLast = {
-          number: selectionBoundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${indexes.openingLeadSource!.id}:${leadSourceProof.option!.id}`,
-          reason: "situation_changed" as const,
-        };
-        if (
-          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
-          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
-        ) {
-          throw new Error(
-            "Overworld session snapshot lead-source selection does not match the current journey proof.",
-          );
-        }
-      }
-      if (
-        targetLeadQuestId !== null &&
-        !leadDiscoveryDeferredToPreparation &&
-        !discoveredQuestIds.has(targetLeadQuestId)
-      ) {
-        throw new Error(
-          "Overworld session snapshot selected lead source did not reveal its target quest.",
-        );
-      }
-    }
-  }
-  const hasOpeningPreparationEvidence = snapshot.journalEntries.some(
-    (entry) =>
-      entry.kind === "preparation" ||
-      entry.kind === "preparation_legacy" ||
-      entry.kind === "preparation_offer",
-  );
-  const openingPreparationDecisionPrefix = indexes.openingPreparation
-    ? `campaign_story:${indexes.openingPreparation.id}:`
-    : null;
-  const hasOpeningPreparationDecisionEvidence =
-    openingPreparationDecisionPrefix !== null &&
-    (snapshot.openingLeadSourceDecisionTrail?.decisions.some((decision) =>
-      decision.actionId.startsWith(openingPreparationDecisionPrefix),
-    ) === true ||
-      snapshot.journey.decisionProof.last?.actionId.startsWith(openingPreparationDecisionPrefix) ===
-        true);
-  if (
-    migrationEra !== null &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "relief_allocation" &&
-    migrationEra !== "hill_approach" &&
-    migrationEra !== "fortify_outlast" &&
-    migrationEra !== "crisis_priority" &&
-    migrationEra !== "opening_ally" &&
-    migrationEra !== "field_timed_preparation" &&
-    (hasOpeningPreparationEvidence || hasOpeningPreparationDecisionEvidence)
-  ) {
-    throw new Error(
-      "Trusted predecessor snapshot has opening preparation evidence introduced by a later manifest.",
-    );
-  }
-  const storedPreparationLegacySourceWorldHash = snapshot.journalEntries
-    .filter((entry) => entry.kind === "preparation_legacy")
-    .map((entry) => openingPreparationLegacySourceWorldHash(entry.id))
-    .find(
-      (sourceWorldHash): sourceWorldHash is string =>
-        sourceWorldHash !== null &&
-        OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES.has(sourceWorldHash),
-    );
-  const storedCivicPreparationSourceWorldHash = normalizesCivicPreparationEvidence
-    ? sourceSnapshot.worldHash
-    : snapshot.journalEntries
-        .filter((entry) => entry.kind === "preparation" && entry.sourceWorldHash !== undefined)
-        .map((entry) => entry.sourceWorldHash)
-        .find(
-          (sourceWorldHash): sourceWorldHash is string =>
-            sourceWorldHash !== undefined &&
-            OVERWORLD_CIVIC_PREPARATION_TRUSTED_SOURCE_WORLD_HASHES.has(sourceWorldHash) &&
-            snapshot.journalEntries.some(
-              (entry) =>
-                entry.kind === "preparation_offer" && entry.sourceWorldHash === sourceWorldHash,
-            ),
-        );
-  const preparationProof = proveOpeningPreparationJournal({
-    scene: indexes.openingPreparation,
-    leadSourceProof,
-    journalEntries: snapshot.journalEntries,
-    expectedTown: indexes.openingPreparationTownName,
-    trustedLegacySourceWorldHash: storedPreparationLegacySourceWorldHash ?? null,
-    trustedCivicSourceWorldHash: storedCivicPreparationSourceWorldHash ?? null,
-  });
-  const preparationRequiredByMigration =
-    indexes.openingPreparation !== null &&
-    (migrationEra === "relief_oath" ||
-      migrationEra === "relief_allocation" ||
-      migrationEra === "hill_approach" ||
-      migrationEra === "fortify_outlast" ||
-      migrationEra === "crisis_priority");
-  const targetPreparationQuestId = indexes.openingPreparation?.target_quest ?? null;
-  const targetPreparationQuestProgressed =
-    targetPreparationQuestId !== null &&
-    (startedQuestIds.has(targetPreparationQuestId) ||
-      completedQuestIds.has(targetPreparationQuestId));
-  const targetPreparationQuestHasReplayableProgress =
-    targetPreparationQuestProgressed &&
-    targetPreparationQuestId !== null &&
-    leadSourceProof.journalIndex !== null &&
-    snapshot.journalEntries.some(
-      (entry, index) =>
-        index < leadSourceProof.journalIndex! &&
-        ((entry.kind === "quest" && entry.id === `quest:${targetPreparationQuestId}`) ||
-          (entry.kind === "quest_done" && entry.id === `quest_done:${targetPreparationQuestId}`)),
-    );
-  const targetPreparationQuestDiscovered =
-    targetPreparationQuestId !== null && discoveredQuestIds.has(targetPreparationQuestId);
-  if (
-    preparationRequiredByMigration &&
-    leadSourceProof.option !== null &&
-    !preparationProof.offered &&
-    !preparationProof.legacy &&
-    preparationProof.profile === null &&
-    !targetPreparationQuestProgressed &&
-    snapshot.journey.status === "active" &&
-    snapshot.currentId === indexes.openingPreparation!.home &&
-    snapshot.currentAreaId === indexes.openingPreparation!.area
-  ) {
-    throw new Error(
-      "Overworld session snapshot reached the departure area without its required opening preparation offer.",
-    );
-  }
-  // Builds before source-bound mission previewing offered preparation at this
-  // exact boundary but did not yet persist the derived quest discovery. The
-  // offer/source proofs make that single missing id safe to reconstruct; a
-  // resolved preparation with the id removed still fails below.
-  const repairsPendingPreparationQuestDiscovery =
-    preparationRequiredByMigration &&
-    preparationProof.offered &&
-    preparationProof.profile === null &&
-    preparationProof.selectionBoundary === null &&
-    !preparationProof.legacy &&
-    leadSourceProof.option !== null &&
-    targetPreparationQuestId !== null &&
-    targetPreparationQuestId === targetLeadQuestId &&
-    !targetPreparationQuestProgressed &&
-    !targetPreparationQuestDiscovered;
-  if (preparationProof.legacy && !targetPreparationQuestHasReplayableProgress) {
-    throw new Error(
-      "Overworld session snapshot legacy opening preparation has no later replayable Wolf-Winter progress to grandfather.",
-    );
-  }
-  if (
-    preparationRequiredByMigration &&
-    targetPreparationQuestProgressed &&
-    preparationProof.profile === null &&
-    !preparationProof.legacy
-  ) {
-    throw new Error(
-      "Overworld session snapshot has opening-quest progress without a selected preparation profile or trusted legacy marker.",
-    );
-  }
-  if (
-    preparationRequiredByMigration &&
-    (preparationProof.profile !== null || preparationProof.legacy) &&
-    !targetPreparationQuestDiscovered
-  ) {
-    throw new Error(
-      "Overworld session snapshot resolved preparation did not reveal its target quest.",
-    );
-  }
-  if (preparationProof.offered) {
-    const offerBoundary = preparationProof.offerBoundary!;
-    const selectionBoundary = preparationProof.selectionBoundary;
-    if (selectionBoundary === null) {
-      if (
-        snapshot.currentId !== offerBoundary.townId ||
-        snapshot.currentAreaId !== offerBoundary.areaId ||
-        snapshot.minutes !== offerBoundary.minutes ||
-        snapshot.startedQuestIds.length > 0 ||
-        snapshot.completedQuestIds.length > 0 ||
-        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
-        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
-      ) {
-        throw new Error(
-          "Overworld session snapshot pending preparation no longer matches its offered world and journey boundary.",
-        );
-      }
-    } else {
-      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
-        throw new Error(
-          "Overworld session snapshot preparation selection is ahead of its journey decision count.",
-        );
-      }
-      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
-        const expectedLast = {
-          number: selectionBoundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${indexes.openingPreparation!.id}:${preparationProof.profile!.id}`,
-          reason: "situation_changed" as const,
-        };
-        if (
-          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
-          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
-        ) {
-          throw new Error(
-            "Overworld session snapshot preparation selection does not match the current journey proof.",
-          );
-        }
-      }
-    }
-  }
-  const hasOpeningReliefAllocationEvidence = snapshot.journalEntries.some(
-    (entry) =>
-      entry.kind === "relief_allocation" ||
-      entry.kind === "relief_allocation_legacy" ||
-      entry.kind === "relief_allocation_offer",
-  );
-  const openingReliefAllocationDecisionPrefix = indexes.openingReliefAllocation
-    ? `campaign_story:${indexes.openingReliefAllocation.id}:`
-    : null;
-  const hasOpeningReliefAllocationDecisionEvidence =
-    openingReliefAllocationDecisionPrefix !== null &&
-    (snapshot.openingLeadSourceDecisionTrail?.decisions.some((decision) =>
-      decision.actionId.startsWith(openingReliefAllocationDecisionPrefix),
-    ) === true ||
-      snapshot.journey.decisionProof.last?.actionId.startsWith(
-        openingReliefAllocationDecisionPrefix,
-      ) === true);
-  if (
-    migrationEra !== null &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "field_timed_preparation" &&
-    (hasOpeningReliefAllocationEvidence || hasOpeningReliefAllocationDecisionEvidence)
-  ) {
-    throw new Error(
-      "Trusted predecessor snapshot has relief-allocation evidence introduced by the later manifest.",
-    );
-  }
-  const storedReliefAllocationLegacySourceWorldHash = snapshot.journalEntries
-    .filter((entry) => entry.kind === "relief_allocation_legacy")
-    .map((entry) => openingReliefAllocationLegacySourceWorldHash(entry.id))
-    .find(
-      (sourceWorldHash): sourceWorldHash is string =>
-        sourceWorldHash !== null &&
-        (sourceWorldHash === OVERWORLD_RELIEF_ALLOCATION_PREDECESSOR_WORLD_HASH ||
-          OVERWORLD_QUEST_START_TRUSTED_LEGACY_WORLD_HASHES.has(sourceWorldHash)),
-    );
-  const reliefAllocationProof = proveOpeningReliefAllocationJournal({
-    scene: indexes.openingReliefAllocation,
-    preparationProof,
-    leadSourceProof,
-    preparationScene: indexes.openingPreparation,
-    journalEntries: snapshot.journalEntries,
-    expectedTown: indexes.openingReliefAllocationTownName,
-    trustedLegacySourceWorldHash: storedReliefAllocationLegacySourceWorldHash ?? null,
-  });
-  const targetReliefAllocationQuestId = indexes.openingReliefAllocation?.target_quest ?? null;
-  const targetReliefAllocationQuestProgressed =
-    targetReliefAllocationQuestId !== null &&
-    (startedQuestIds.has(targetReliefAllocationQuestId) ||
-      completedQuestIds.has(targetReliefAllocationQuestId));
-  if (
-    migrationEra === "relief_oath" &&
-    targetReliefAllocationQuestProgressed &&
-    reliefAllocationProof.option === null &&
-    !reliefAllocationProof.legacy
-  ) {
-    throw new Error(
-      "Overworld session snapshot has opening-quest progress without a selected relief allocation or trusted legacy marker.",
-    );
-  }
-  if (
-    migrationEra === "relief_oath" &&
-    indexes.openingReliefAllocation !== null &&
-    (preparationProof.profile !== null || preparationProof.legacy) &&
-    !targetReliefAllocationQuestProgressed &&
-    snapshot.currentId === indexes.openingReliefAllocation.home &&
-    snapshot.currentAreaId === indexes.openingReliefAllocation.area &&
-    !reliefAllocationProof.offered &&
-    !reliefAllocationProof.legacy
-  ) {
-    throw new Error(
-      "Overworld session snapshot reached the departure area after preparation without its required relief-allocation offer.",
-    );
-  }
-  if (reliefAllocationProof.offered) {
-    const offerBoundary = reliefAllocationProof.offerBoundary!;
-    const selectionBoundary = reliefAllocationProof.selectionBoundary;
-    if (selectionBoundary === null) {
-      if (
-        snapshot.currentId !== offerBoundary.townId ||
-        snapshot.currentAreaId !== offerBoundary.areaId ||
-        snapshot.minutes !== offerBoundary.minutes ||
-        (targetReliefAllocationQuestId !== null &&
-          (startedQuestIds.has(targetReliefAllocationQuestId) ||
-            completedQuestIds.has(targetReliefAllocationQuestId))) ||
-        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
-        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
-      ) {
-        throw new Error(
-          "Overworld session snapshot pending relief allocation no longer matches its offered departure boundary.",
-        );
-      }
-    } else {
-      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
-        throw new Error(
-          "Overworld session snapshot relief allocation is ahead of its journey decision count.",
-        );
-      }
-      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
-        const expectedLast = {
-          number: selectionBoundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${indexes.openingReliefAllocation!.id}:${reliefAllocationProof.option!.id}`,
-          reason: "situation_changed" as const,
-        };
-        if (
-          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
-          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
-        ) {
-          throw new Error(
-            "Overworld session snapshot relief allocation does not match the current journey proof.",
-          );
-        }
-      }
-    }
-  }
-  const hasOpeningAllyEvidence = snapshot.journalEntries.some(
-    (entry) => entry.kind === "ally" || entry.kind === "ally_legacy" || entry.kind === "ally_offer",
-  );
-  const openingAllyDecisionPrefix = indexes.openingAlly
-    ? `campaign_story:${indexes.openingAlly.id}:`
-    : null;
-  const hasOpeningAllyDecisionEvidence =
-    openingAllyDecisionPrefix !== null &&
-    (snapshot.openingLeadSourceDecisionTrail?.decisions.some((decision) =>
-      decision.actionId.startsWith(openingAllyDecisionPrefix),
-    ) === true ||
-      snapshot.journey.decisionProof.last?.actionId.startsWith(openingAllyDecisionPrefix) === true);
-  const openingAllyContact = indexes.openingAlly?.contact ?? null;
-  if (
-    migrationEra !== null &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "relief_allocation" &&
-    migrationEra !== "hill_approach" &&
-    migrationEra !== "fortify_outlast" &&
-    migrationEra !== "crisis_priority" &&
-    migrationEra !== "field_timed_preparation" &&
-    (hasOpeningAllyEvidence ||
-      hasOpeningAllyDecisionEvidence ||
-      (openingAllyContact !== null &&
-        snapshot.journalEntries.some((entry) => entry.id.startsWith(`talk:${openingAllyContact}`))))
-  ) {
-    throw new Error(
-      "Trusted predecessor snapshot has opening ally evidence introduced by a later manifest.",
-    );
-  }
-  if (snapshot.journalEntries.some((entry) => entry.kind === "ally_legacy")) {
-    throw new Error(
-      "Overworld session snapshot legacy ally provenance is unsupported; earlier departures remain truthful solo runs.",
-    );
-  }
-  const allyProof = proveOpeningAllyJournal({
-    scene: indexes.openingAlly,
-    preparationProof,
-    reliefAllocationProof,
-    leadSourceProof,
-    preparationScene: indexes.openingPreparation,
-    reliefAllocationScene: indexes.openingReliefAllocation,
-    journalEntries: snapshot.journalEntries,
-    expectedTown: indexes.openingAllyTownName,
-  });
-  if (allyProof.offered) {
-    const offerBoundary = allyProof.offerBoundary!;
-    const selectionBoundary = allyProof.selectionBoundary;
-    if (selectionBoundary === null) {
-      if (
-        snapshot.currentId !== offerBoundary.townId ||
-        snapshot.currentAreaId !== offerBoundary.areaId ||
-        snapshot.minutes !== offerBoundary.minutes ||
-        startedQuestIds.size > 0 ||
-        completedQuestIds.size > 0 ||
-        snapshot.journey.acceptedDecisions !== offerBoundary.acceptedDecisions ||
-        snapshot.journey.decisionProof.hash !== offerBoundary.decisionProofHash
-      ) {
-        throw new Error(
-          "Overworld session snapshot pending ally commitment no longer matches its offered departure boundary.",
-        );
-      }
-    } else {
-      if (snapshot.journey.acceptedDecisions < selectionBoundary.acceptedDecisions) {
-        throw new Error(
-          "Overworld session snapshot ally selection is ahead of its journey decision count.",
-        );
-      }
-      if (snapshot.journey.acceptedDecisions === selectionBoundary.acceptedDecisions) {
-        const expectedLast = {
-          number: selectionBoundary.acceptedDecisions,
-          surface: "overworld" as const,
-          actionId: `campaign_story:${indexes.openingAlly!.id}:${allyProof.option!.id}`,
-          reason: "situation_changed" as const,
-        };
-        if (
-          snapshot.journey.decisionProof.hash !== selectionBoundary.decisionProofHash ||
-          JSON.stringify(snapshot.journey.decisionProof.last) !== JSON.stringify(expectedLast)
-        ) {
-          throw new Error(
-            "Overworld session snapshot ally selection does not match the current journey proof.",
-          );
-        }
-      }
-    }
-  }
-  const openingLeadSourceDecisionTrail = proveOpeningLeadSourceDecisionTrail({
-    leadSourceProof,
-    snapshot,
-    sourceSceneId: indexes.openingLeadSource?.id ?? null,
-  });
-  assertOpeningPreparationDecisionTrail({
-    preparationProof,
-    preparationSceneId: indexes.openingPreparation?.id ?? null,
-    trail: openingLeadSourceDecisionTrail,
-  });
-  assertOpeningReliefAllocationDecisionTrail({
-    reliefAllocationProof,
-    reliefAllocationSceneId: indexes.openingReliefAllocation?.id ?? null,
-    trail: openingLeadSourceDecisionTrail,
-  });
-  assertOpeningAllyDecisionTrail({
-    allyProof,
-    allySceneId: indexes.openingAlly?.id ?? null,
-    trail: openingLeadSourceDecisionTrail,
-  });
-  if (
-    migrationEra === "opening_lead_source" &&
-    openingLeadSourceDecisionTrail?.decisions.some(
-      (decision) =>
-        decision.actionId.startsWith("follow_current_goal:") &&
-        !decision.actionId.includes(":via:"),
-    )
-  ) {
-    throw new Error(
-      "Legacy overworld session snapshot has a goal passage whose road suffix cannot anchor later campaign services.",
-    );
-  }
-  const campaignBoundaryReplay = campaignBoundaryReplayIndex({
-    indexes,
-    leadSourceProof,
-    trail: openingLeadSourceDecisionTrail,
     travelEntries: travelTimeline.oldestFirst,
   });
-  assertOpeningPreparationCampaignBoundaryReplay({
-    campaignBoundaryReplay,
-    leadSourceProof,
-    preparationProof,
-    preparationSceneId: indexes.openingPreparation?.id ?? null,
-    supportSceneIds: [
-      indexes.openingPreparation?.id,
-      indexes.openingReliefAllocation?.id,
-      indexes.openingAlly?.id,
-    ].filter((sceneId): sceneId is string => sceneId !== undefined),
-  });
-  assertOpeningAllyCampaignBoundaryReplay({
-    allyProof,
-    allyContactId: indexes.openingAlly?.contact ?? null,
-    campaignBoundaryReplay,
-  });
-  const campaignBoundaries: OverworldCampaignBoundaryReplayIndex = {
-    byAcceptedDecisions: campaignBoundaryReplay.byAcceptedDecisions,
-    worldFactProofOrdinalById: deriveCampaignWorldFactProofOrdinals({
-      decisionProofsByOrdinal: campaignBoundaryReplay.byAcceptedDecisions,
-      indexes,
-      journalEntries: snapshot.journalEntries,
-      journey: snapshot.journey,
-      questOutcomeIds,
-      requireBoundServiceFacts:
-        usesCurrentCampaignSchema ||
-        migrationEra === "relief_oath" ||
-        migrationEra === "relief_allocation" ||
-        migrationEra === "hill_approach" ||
-        migrationEra === "fortify_outlast" ||
-        migrationEra === "crisis_priority" ||
-        migrationEra === "opening_ally" ||
-        migrationEra === "opening_preparation" ||
-        migrationEra === "campaign_service",
-    }),
-    storyChoiceProofOrdinalByKey: deriveCampaignStoryChoiceProofOrdinals({
-      allyProof,
-      allySceneId: indexes.openingAlly?.id ?? null,
-      decisionProofsByOrdinal: campaignBoundaryReplay.byAcceptedDecisions,
-      journey: snapshot.journey,
-      preparationProof,
-      preparationSceneId: indexes.openingPreparation?.id ?? null,
-      reliefAllocationProof,
-      reliefAllocationSceneId: indexes.openingReliefAllocation?.id ?? null,
-      reliefOathProof,
-      reliefOathSceneId: indexes.openingReliefOath?.id ?? null,
-    }),
-    localJobOptionProofOrdinalByKey: new Map(),
-  };
-  if (migratesLegacyLocalJobSemantics) {
-    const eventMigratedSnapshot = Object.freeze({
-      ...snapshot,
-      journalEntries: migrateAuthoredLocalEventPredecessorJournal({
-        campaignBoundaries,
-        indexes,
-        snapshot,
-      }),
-    });
-    const jobMigratedSnapshot = Object.freeze({
-      ...eventMigratedSnapshot,
-      journalEntries: migrateAuthoredLocalJobPredecessorJournal({
-        campaignBoundaries,
-        indexes,
-        snapshot: eventMigratedSnapshot,
-      }),
-    });
-    snapshot = Object.freeze({
-      ...jobMigratedSnapshot,
-      journalEntries: migrateCadeStoryPredicatePredecessorJournal({
-        indexes,
-        snapshot: jobMigratedSnapshot,
-      }),
-    });
-    journalTimeline = assertSnapshotTimeline(snapshot, {
-      ...indexes,
-      travelLogArrivals: travelTimeline.arrivals,
-      travelLogTownByArrival: travelTimeline.townByArrival,
-    });
-  }
-  const serviceCampaignBoundaries: OverworldCampaignBoundaryReplayIndex = {
-    ...campaignBoundaries,
-    localJobOptionProofOrdinalByKey: deriveLocalJobOptionProofOrdinals({
-      indexes,
-      journalEntries: snapshot.journalEntries,
-    }),
-  };
-  assertSnapshotLocalEventSceneProofs({
-    campaignBoundaries,
-    indexes,
-    journalEntries: snapshot.journalEntries,
-  });
-  const neutralCharacter = createInitialCampaignCharacterState();
-  const initialCharacter = registrationProof.characterAtRegistration;
-  const characterAfterOath = reliefOathProof.option
-    ? reliefOathProof.characterAfterOath
-    : initialCharacter;
-  const characterAfterSource = leadSourceProof.characterAfterSource;
-  const openingDispatchReplayChoices: OpeningDispatchReplayChoice[] = [
-    ...(preparationProof.profile &&
-    preparationProof.journalIndex !== null &&
-    indexes.openingPreparation
-      ? [
-          {
-            kind: "preparation" as const,
-            journalIndex: preparationProof.journalIndex,
-            scene: indexes.openingPreparation,
-            optionId: preparationProof.profile.id,
-          },
-        ]
-      : []),
-    ...(reliefAllocationProof.option &&
-    reliefAllocationProof.journalIndex !== null &&
-    indexes.openingReliefAllocation
-      ? [
-          {
-            kind: "relief_allocation" as const,
-            journalIndex: reliefAllocationProof.journalIndex,
-            scene: indexes.openingReliefAllocation,
-            optionId: reliefAllocationProof.option.id,
-          },
-        ]
-      : []),
-    ...(allyProof.option && allyProof.journalIndex !== null && indexes.openingAlly
-      ? [
-          {
-            kind: "ally" as const,
-            journalIndex: allyProof.journalIndex,
-            scene: indexes.openingAlly,
-            optionId: allyProof.option.id,
-          },
-        ]
-      : []),
-  ];
-  const characterAfterOpeningChoices = replayOpeningDispatchChoices({
-    characterAfterSource,
-    choices: openingDispatchReplayChoices,
-  });
-  const questStartReplay = replaySnapshotQuestStarts({
-    campaignBoundaryReplay,
-    character: characterAfterOpeningChoices,
-    indexes,
-    journalEntries: snapshot.journalEntries,
-    migrationEra,
-    snapshotVersion: snapshot.version,
-    snapshotWorldHash: snapshot.worldHash,
-    storedCharacter: snapshot.character,
-    startedQuestIds,
-  });
-  if (reliefAllocationProof.legacy) {
-    const markerIndex = questStartReplay.journalEntries.findIndex(
-      (entry) => entry.kind === "relief_allocation_legacy",
-    );
-    const questEntry = questStartReplay.journalEntries[markerIndex - 1];
-    const quest =
-      questEntry?.kind === "quest"
-        ? indexes.questsById.get(questEntry.id.slice("quest:".length))
-        : undefined;
-    if (!questEntry || !quest || markerIndex < 1) {
-      throw new Error(
-        "Overworld session snapshot legacy relief allocation has no adjacent target-quest start.",
-      );
-    }
-    const expectedBoundary = reliefAllocationLegacyBoundaryBeforeQuest({
-      campaignBoundaryReplay,
-      entry: questEntry,
-      quest,
-    });
-    if (JSON.stringify(reliefAllocationProof.legacyBoundary) !== JSON.stringify(expectedBoundary)) {
-      throw new Error(
-        "Overworld session snapshot legacy relief allocation does not match the exact pre-start decision, route time, or Station boundary.",
-      );
-    }
-  }
-  const questStartReturnSummaryByQuestId = new Map(
-    questStartReplay.starts.flatMap((start) =>
-      start.returnSummary === null ? [] : [[start.questId, start.returnSummary] as const],
-    ),
-  );
-  const journalQuestOutcomeOrder = questStartReplay.journalEntries
-    .filter((entry) => entry.kind === "quest_done")
-    .map((entry) => entry.id.slice("quest_done:".length))
-    .reverse();
-  const journalQuestOutcomeIds = new Set(journalQuestOutcomeOrder);
-  const questOutcomeOrder = [
-    ...journalQuestOutcomeOrder,
-    ...[...questOutcomeIds.keys()].filter((questId) => !journalQuestOutcomeIds.has(questId)).sort(),
-  ];
-  const legacyQuestStartSourceWorldHash = (() => {
-    const proof = questStartReplay.journalEntries.find(
-      (entry) => entry.id === "quest:wolf_winter",
-    )?.questStartProof;
-    return proof?.kind === "legacy" ? proof.sourceWorldHash : null;
-  })();
-  if (
-    reliefOathProof.legacySourceWorldHash !== null &&
-    legacyQuestStartSourceWorldHash !== null &&
-    reliefOathProof.legacySourceWorldHash !== legacyQuestStartSourceWorldHash
-  ) {
-    throw new Error(
-      "Overworld session snapshot registration receipt has mismatched legacy oath and quest-start sources.",
-    );
-  }
-  const durableLegacyRegistrationReceiptSourceWorldHash =
-    reliefOathProof.legacySourceWorldHash ?? legacyQuestStartSourceWorldHash;
-  if (
-    durableLegacyRegistrationReceiptSourceWorldHash !== null &&
-    sourceSnapshot.worldHash !== worldHash &&
-    durableLegacyRegistrationReceiptSourceWorldHash !== sourceSnapshot.worldHash
-  ) {
-    throw new Error(
-      "Overworld session snapshot registration receipt legacy proof does not match its source manifest.",
-    );
-  }
-  const migratingRegistrationReceiptSourceWorldHash =
-    migratesRegistrationPromiseClosure && sourceSnapshot.worldHash !== worldHash
-      ? sourceSnapshot.worldHash
-      : null;
-  const trustedLegacyRegistrationReceiptSourceWorldHash =
-    durableLegacyRegistrationReceiptSourceWorldHash ?? migratingRegistrationReceiptSourceWorldHash;
-  const canonicalQuestCompletionDrafts = assertSnapshotQuestCompletionOutcomeJournalProof({
-    indexes,
-    journalEntries: questStartReplay.journalEntries,
-    questOutcomeIds,
-    questOutcomeOrder,
-    characterBeforeQuestOutcomes: questStartReplay.characterAfter,
-    questStartReturnSummaryByQuestId,
-    allowMissingRegistrationReceipt: migratesRegistrationPromiseClosure,
-    trustedLegacyRegistrationReceiptSourceWorldHash,
-  });
-  const journalIndexById = new Map(
-    questStartReplay.journalEntries.map((entry, index) => [entry.id, index] as const),
-  );
-  type CharacterReplayMutation =
-    | Readonly<{
-        kind: "quest_start";
-        journalIndex: number;
-        effects: readonly CampaignConsequenceEffect[];
-      }>
-    | Readonly<{
-        kind: "quest_completion";
-        journalIndex: number;
-        quest: OverworldQuest;
-        endingId: string;
-      }>
-    | Readonly<{
-        kind: "care";
-        journalIndex: number;
-        ruleId: string;
-        effects: readonly CampaignConsequenceEffect[];
-      }>;
-  const characterReplayMutations: CharacterReplayMutation[] = [];
-  for (const start of questStartReplay.starts) {
-    if (start.effects.length > 0) {
-      characterReplayMutations.push({
-        kind: "quest_start",
-        journalIndex: start.journalIndex,
-        effects: start.effects,
-      });
-    }
-  }
-  for (const [questId, endingId] of questOutcomeIds) {
-    const journalIndex = journalIndexById.get(`quest_done:${questId}`);
-    const quest = indexes.questsById.get(questId);
-    if (!quest) {
-      throw new Error(
-        `Overworld session snapshot cannot replay character state for unknown quest "${questId}".`,
-      );
-    }
-    if (journalIndex !== undefined && questCampaignExportForEnding(quest, endingId) !== null) {
-      characterReplayMutations.push({
-        kind: "quest_completion",
-        journalIndex,
-        quest,
-        endingId,
-      });
-    }
-  }
-  questStartReplay.journalEntries.forEach((entry, journalIndex) => {
-    if (entry.kind !== "service" || !entry.serviceRuleId) return;
-    const rule = indexes.campaignServiceRulesById.get(entry.serviceRuleId);
-    if (rule?.action !== "care") return;
-    if (!rule.effects) {
-      throw new Error(`Campaign care rule "${rule.id}" has no replayable treatment effect.`);
-    }
-    characterReplayMutations.push({
-      kind: "care",
-      journalIndex,
-      ruleId: rule.id,
-      effects: rule.effects,
-    });
-  });
-  // Journal entries are newest-first. Descending index is therefore the exact
-  // oldest-to-newest mutation order, including care between quest boundaries.
-  characterReplayMutations.sort((left, right) => right.journalIndex - left.journalIndex);
-
-  const openingCharacterBeforeJournalIndex = (journalIndex: number): CampaignCharacterState => {
-    const registrationActive =
-      registrationProof.journalIndex !== null && registrationProof.journalIndex > journalIndex;
-    const reliefOathActive =
-      reliefOathProof.journalIndex !== null && reliefOathProof.journalIndex > journalIndex;
-    const leadSourceActive =
-      leadSourceProof.journalIndex !== null && leadSourceProof.journalIndex > journalIndex;
-    return registrationActive
-      ? leadSourceActive
-        ? replayOpeningDispatchChoices({
-            characterAfterSource,
-            choices: openingDispatchReplayChoices,
-            beforeJournalIndex: journalIndex,
-          })
-        : reliefOathActive
-          ? characterAfterOath
-          : initialCharacter
-      : neutralCharacter;
-  };
-
-  const replayCharacterBeforeJournalIndex = (journalIndex: number): CampaignCharacterState => {
-    let character = cloneCampaignCharacterState(openingCharacterBeforeJournalIndex(journalIndex));
-    for (const mutation of characterReplayMutations) {
-      if (mutation.journalIndex <= journalIndex) continue;
-      if (mutation.kind === "quest_completion") {
-        const campaignExport = questCampaignExportForEnding(mutation.quest, mutation.endingId);
-        if (!campaignExport) continue;
-        character = applyCampaignConsequences({
-          character,
-          effects: overworldQuestCampaignEffectsForCharacter(campaignExport, character),
-        }).characterAfter;
-      } else {
-        character = applyCampaignConsequences({
-          character,
-          effects: mutation.effects,
-        }).characterAfter;
-      }
-    }
-    return character;
-  };
-
-  const characterAtCache = new Map<string, CampaignCharacterState>();
-  const characterAt = (
-    entry: OverworldJournalEntry,
-    _recordedAt: number,
-  ): CampaignCharacterState => {
-    const cached = characterAtCache.get(entry.id);
-    if (cached) return cached;
-    const journalIndex = journalIndexById.get(entry.id);
-    if (journalIndex === undefined) {
-      throw new Error(
-        `Overworld session snapshot cannot replay character state for unknown journal entry "${entry.id}".`,
-      );
-    }
-    const replayed = replayCharacterBeforeJournalIndex(journalIndex);
-    characterAtCache.set(entry.id, replayed);
-    return replayed;
-  };
-  const chronologicalCharacterAfter = replayCharacterBeforeJournalIndex(-1);
-  assertSnapshotLocalJobSceneProofs({
-    campaignBoundaries,
-    indexes,
-    journalEntries: snapshot.journalEntries,
-    characterAt,
-  });
-  const storedCharacter = serializeCampaignCharacterState(snapshot.character);
-  const expectedCharacter = serializeCampaignCharacterState(chronologicalCharacterAfter);
-  const sourcePredatesEmeryFullCombatMemory =
-    migrationTargetsCurrentManifest &&
-    isEmeryFullCombatMemoryPredecessorWorldHash(sourceSnapshot.worldHash) &&
-    !snapshot.character.relationships.some(
-      (relationship) =>
-        relationship.npcId === EMERY_FULL_COMBAT_NPC_ID &&
-        relationship.memories.includes(EMERY_FULL_COMBAT_MEMORY_ID),
-    );
-  const sourceEraCharacter = sourcePredatesEmeryFullCombatMemory
-    ? emeryEvidenceCustodyPredecessorCharacter({
-        characterBeforeQuestOutcomes: questStartReplay.characterAfter,
-        indexes,
-        questOutcomeIds,
-        questOutcomeOrder,
-      })
-    : chronologicalCharacterAfter;
-  const sourceEraExpectedCharacter = migratesRegistrationPromiseClosure
-    ? registrationPromiseClosurePredecessorCharacter(sourceEraCharacter, questOutcomeIds)
-    : sourceEraCharacter;
-  if (migratesPreCampaignExportsWorldHash) {
-    if (storedCharacter !== serializeCampaignCharacterState(neutralCharacter)) {
-      throw new Error(
-        "Legacy overworld session snapshot has campaign character state without replayable consequence proof.",
-      );
-    }
-  } else if (sourcePredatesEmeryFullCombatMemory) {
-    if (storedCharacter !== serializeCampaignCharacterState(sourceEraExpectedCharacter)) {
-      throw new Error(
-        migratesRegistrationPromiseClosure
-          ? "Registration-promise predecessor campaign character does not match replayed source-era Wolf-Winter consequences."
-          : "Predecessor campaign character does not match its source-era Wolf-Winter consequences.",
-      );
-    }
-  } else if (storedCharacter !== expectedCharacter) {
-    throw new Error(
-      "Overworld session snapshot campaign character does not match replayed quest consequences or care services.",
-    );
-  }
   assertJourneyCampaignJournalProof({
     journey: snapshot.journey,
     questOutcomeIds,
-    journalEntries: questStartReplay.journalEntries,
+    journalEntries: snapshot.journalEntries,
+  });
+  assertCurrentLocalEventSceneProofs({
+    campaignBoundaries: campaignReplay.campaignBoundaries,
+    indexes,
+    journalEntries: snapshot.journalEntries,
+  });
+  assertCurrentLocalJobSceneProofs({
+    campaignBoundaries: campaignReplay.campaignBoundaries,
+    characterAt: campaignReplay.characterAt,
+    indexes,
+    journalEntries: snapshot.journalEntries,
   });
   const roadJournal = roadJournalResolutionIndex(
     indexes,
@@ -5158,7 +1629,6 @@ export function planOverworldSessionSnapshotRestore(args: {
     travelTimeline,
     snapshot.pendingRoadEncounter,
   );
-  const serviceJournal = journalTimeline.serviceJournal;
 
   assertSnapshotCurrentTownReachability(snapshot.currentId, discoveredTownIds, visitedTownIds);
   const townVisitMinutes = assertSnapshotVisitedTownTravelProof(visitedTownIds, travelTimeline);
@@ -5192,32 +1662,25 @@ export function planOverworldSessionSnapshotRestore(args: {
   assertSnapshotRegionRenown(
     regionRenown,
     progressStateIds,
-    {
-      ...indexes,
-      travelLogByArrival: travelTimeline.byArrival,
-    },
+    { ...indexes, travelLogByArrival: travelTimeline.byArrival },
     roadJournal,
     snapshot.journalEntries,
   );
   assertSnapshotCurrentAreaReachability(snapshot.currentAreaId, discoveredAreaIds);
-  const nonFifoQuestIds = new Set(
-    indexes.openingLeadSource ? [indexes.openingLeadSource.target_quest] : [],
-  );
-  const directQuestAnchorIds = new Set(
-    indexes.openingLeadSource !== null && leadSourceProof.option !== null
-      ? [indexes.openingLeadSource.target_quest]
-      : [],
-  );
+
+  const directQuestAnchorIds = new Set<string>();
+  const nonFifoQuestIds = new Set<string>();
+  if (indexes.openingLeadSource) {
+    const targetQuestId = indexes.openingLeadSource.target_quest;
+    nonFifoQuestIds.add(targetQuestId);
+    if (discoveredQuestIds.has(targetQuestId)) directQuestAnchorIds.add(targetQuestId);
+  }
   const directAnchorAreaIds = new Set(
-    [...directQuestAnchorIds]
-      .filter((questId) => discoveredQuestIds.has(questId))
-      .map((questId) => indexes.questsById.get(questId)?.area)
-      .filter((areaId): areaId is string => areaId !== undefined),
+    [...directQuestAnchorIds].flatMap((questId) => {
+      const areaId = indexes.questsById.get(questId)?.area;
+      return areaId ? [areaId] : [];
+    }),
   );
-  // Older saves can carry a certified direct lead from before anchor routes
-  // were persisted with it. The source proof makes this one derived mapping
-  // safe to upgrade during restore; the updated snapshot then carries the
-  // same actionable anchor as a newly created save.
   for (const areaId of directAnchorAreaIds) discoveredAreaIds.add(areaId);
   const localActionJournalSources = {
     ...indexes,
@@ -5269,12 +1732,19 @@ export function planOverworldSessionSnapshotRestore(args: {
   });
   assertSnapshotLocalActionJournalReachability(localActionJournal, localActionJournalSources);
   assertSnapshotLocalActionDiscoveryChronology(localActionJournal, localActionJournalSources);
-  assertSnapshotContactPresentationProofs(localActionJournalSources, journalTimeline, characterAt);
-  const eventResolutionJournal = journalTimeline.eventResolutionProofs;
-  assertSnapshotEventResolutionProofs(resolvedEventIds, indexes, eventResolutionJournal);
+  assertSnapshotContactPresentationProofs(
+    localActionJournalSources,
+    journalTimeline,
+    campaignReplay.characterAt,
+  );
+  assertSnapshotEventResolutionProofs(
+    resolvedEventIds,
+    indexes,
+    journalTimeline.eventResolutionProofs,
+  );
   assertSnapshotRegionalArcCompletionProofs(
     indexes,
-    eventResolutionJournal,
+    journalTimeline.eventResolutionProofs,
     completedRegionalArcIds,
   );
   assertSnapshotDiscoveredLocalSourceCountReplay(localActionJournalSources, localActionJournal);
@@ -5297,982 +1767,32 @@ export function planOverworldSessionSnapshotRestore(args: {
     roadJournal,
   });
   assertSnapshotResourceReplay(
-    { ...snapshot, journalEntries: [...questStartReplay.journalEntries] },
+    snapshot,
     indexes,
     travelTimeline,
     roadJournal,
-    serviceJournal,
+    journalTimeline.serviceJournal,
     localActionJournal,
-    serviceCampaignBoundaries,
-    characterAt,
+    campaignReplay.campaignBoundaries,
+    campaignReplay.characterAt,
   );
-
-  let migratedJournalEntries: OverworldJournalEntry[] =
-    migrationEra === "opening_lead_source"
-      ? migrateOpeningLeadSourceQuestCompletionBoundaries({
-          boundaryProofsByOrdinal: campaignBoundaryReplay.byAcceptedDecisions,
-          indexes,
-          journalEntries: questStartReplay.journalEntries,
-          journey: snapshot.journey,
-        })
-      : [...questStartReplay.journalEntries];
-  if (migratesRegistrationPromiseClosure) {
-    migratedJournalEntries = migratedJournalEntries.map((entry) => {
-      if (entry.kind !== "quest_done") return entry;
-      const questId = entry.id.slice("quest_done:".length);
-      const canonical = canonicalQuestCompletionDrafts.get(questId);
-      return canonical ? { ...entry, text: canonical.text } : entry;
-    });
-  }
-  if (
-    normalizesCivicPreparationEvidence &&
-    preparationProof.offered &&
-    preparationProof.profile === null
-  ) {
-    migratedJournalEntries = migratedJournalEntries.filter(
-      (entry) => entry.kind !== "preparation_offer",
-    );
-  }
-  let openingLeadSourceDecisionTrailAfter = openingLeadSourceDecisionTrail;
-  const hasQuestProgress = startedQuestIds.size > 0 || completedQuestIds.size > 0;
-  if (migratesFromPreRegistrationManifest && hasQuestProgress) {
-    throw new Error(
-      "Legacy overworld session snapshot has opaque pre-registration quest progress without a replayable registration and lead-source path.",
-    );
-  }
-  const registrationBoundary = registrationProof.selectionBoundary;
-  const registrationMatchesCurrentBoundary =
-    registrationBoundary !== null &&
-    snapshot.currentId === registrationBoundary.townId &&
-    snapshot.currentAreaId === registrationBoundary.areaId &&
-    snapshot.minutes === registrationBoundary.minutes &&
-    snapshot.journey.acceptedDecisions === registrationBoundary.acceptedDecisions &&
-    snapshot.journey.decisionProof.hash === registrationBoundary.decisionProofHash;
-  const canReplaceMigratedPendingLead =
-    needsLegacyCampaignScaffolding &&
-    leadSourceProof.offered &&
-    leadSourceProof.option === null &&
-    leadSourceProof.offerBoundary !== null &&
-    JSON.stringify(leadSourceProof.offerBoundary) === JSON.stringify(registrationBoundary) &&
-    migratedJournalEntries[0]?.kind === "lead_source_offer";
-  const canOfferMigratedReliefOath =
-    needsLegacyCampaignScaffolding &&
-    indexes.openingReliefOath !== null &&
-    registrationProof.profile !== null &&
-    registrationMatchesCurrentBoundary &&
-    (canReplaceMigratedPendingLead ||
-      (!leadSourceProof.offered && registrationProof.journalIndex === 0 && !hasQuestProgress));
-  if (canOfferMigratedReliefOath) {
-    if (canReplaceMigratedPendingLead) {
-      migratedJournalEntries.shift();
-    }
-    const offer = openingReliefOathOfferJournalEntry({
-      scene: indexes.openingReliefOath!,
-      town: indexes.townNameForSource(snapshot.currentId),
-      recordedAt: timeLabel(snapshot.minutes),
-      storyChoiceBoundary: { ...registrationBoundary! },
-    });
-    migratedJournalEntries.unshift(offer);
-    openingLeadSourceDecisionTrailAfter = null;
-  }
-  const canGrandfatherMigratedReliefOath =
-    needsLegacyCampaignScaffolding &&
-    indexes.openingReliefOath !== null &&
-    registrationProof.profile !== null &&
-    registrationBoundary !== null &&
-    leadSourceProof.offered &&
-    leadSourceProof.option !== null;
-  if (canGrandfatherMigratedReliefOath) {
-    const registrationEntryId =
-      registrationProof.journalIndex === null
-        ? null
-        : snapshot.journalEntries[registrationProof.journalIndex]?.id;
-    const registrationIndex =
-      registrationEntryId === null
-        ? -1
-        : migratedJournalEntries.findIndex((entry) => entry.id === registrationEntryId);
-    const registrationEntry = migratedJournalEntries[registrationIndex];
-    const leadOfferEntry = migratedJournalEntries[registrationIndex - 1];
-    if (
-      registrationIndex < 1 ||
-      !registrationEntry ||
-      !leadOfferEntry ||
-      leadOfferEntry.kind !== "lead_source_offer"
-    ) {
-      throw new Error(
-        "Trusted predecessor snapshot cannot locate the registration-adjacent lead offer for relief-oath migration.",
-      );
-    }
-    const marker = openingReliefOathLegacyJournalEntry({
-      sourceWorldHash: snapshot.worldHash,
-      town: registrationEntry.town,
-      recordedAt: registrationEntry.recordedAt,
-      storyChoiceBoundary: { ...registrationBoundary },
-    });
-    migratedJournalEntries.splice(registrationIndex, 0, marker);
-  }
-  if (
-    needsLegacyCampaignScaffolding &&
-    registrationProof.profile !== null &&
-    !canOfferMigratedReliefOath &&
-    !canGrandfatherMigratedReliefOath
-  ) {
-    throw new Error(
-      "Trusted predecessor snapshot selected registration has neither an exact relief-oath offer boundary nor a replayable later lead-source path.",
-    );
-  }
-  const canGrandfatherOpeningPreparation =
-    needsLegacyCampaignScaffolding &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "relief_allocation" &&
-    migrationEra !== "hill_approach" &&
-    migrationEra !== "fortify_outlast" &&
-    migrationEra !== "crisis_priority" &&
-    migrationEra !== "opening_ally" &&
-    indexes.openingPreparation !== null &&
-    leadSourceProof.option !== null &&
-    leadSourceProof.journalIndex !== null &&
-    leadSourceProof.selectionBoundary !== null &&
-    targetPreparationQuestHasReplayableProgress &&
-    OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES.has(snapshot.worldHash);
-  const canOfferMigratedPreparation =
-    needsLegacyCampaignScaffolding &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "relief_allocation" &&
-    migrationEra !== "hill_approach" &&
-    migrationEra !== "fortify_outlast" &&
-    migrationEra !== "crisis_priority" &&
-    migrationEra !== "opening_ally" &&
-    indexes.openingPreparation !== null &&
-    leadSourceProof.option !== null &&
-    leadSourceProof.journalIndex === 0 &&
-    leadSourceProof.selectionBoundary !== null &&
-    !targetPreparationQuestProgressed &&
-    snapshot.journey.status === "active" &&
-    snapshot.currentId === leadSourceProof.selectionBoundary.townId &&
-    snapshot.currentAreaId === leadSourceProof.selectionBoundary.areaId &&
-    snapshot.currentAreaId === indexes.openingPreparation.area &&
-    snapshot.minutes === leadSourceProof.selectionBoundary.minutes &&
-    snapshot.journey.acceptedDecisions === leadSourceProof.selectionBoundary.acceptedDecisions &&
-    snapshot.journey.decisionProof.hash === leadSourceProof.selectionBoundary.decisionProofHash &&
-    OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES.has(snapshot.worldHash);
-  const canDeferMigratedPreparationToDeparture =
-    needsLegacyCampaignScaffolding &&
-    migrationEra === "opening_lead_source" &&
-    indexes.openingPreparation !== null &&
-    leadSourceProof.option !== null &&
-    leadSourceProof.journalIndex === 0 &&
-    leadSourceProof.selectionBoundary !== null &&
-    !targetPreparationQuestProgressed &&
-    snapshot.journey.status === "active" &&
-    snapshot.currentId === leadSourceProof.selectionBoundary.townId &&
-    snapshot.currentAreaId === leadSourceProof.selectionBoundary.areaId &&
-    snapshot.currentAreaId !== indexes.openingPreparation.area &&
-    snapshot.minutes === leadSourceProof.selectionBoundary.minutes &&
-    snapshot.journey.acceptedDecisions === leadSourceProof.selectionBoundary.acceptedDecisions &&
-    snapshot.journey.decisionProof.hash === leadSourceProof.selectionBoundary.decisionProofHash &&
-    OVERWORLD_OPENING_PREPARATION_TRUSTED_LEGACY_WORLD_HASHES.has(snapshot.worldHash);
-  if (canOfferMigratedPreparation) {
-    const offer = openingPreparationOfferJournalEntry({
-      scene: indexes.openingPreparation!,
-      town: indexes.townNameForSource(snapshot.currentId),
-      recordedAt: timeLabel(snapshot.minutes),
-      storyChoiceBoundary: { ...leadSourceProof.selectionBoundary! },
-    });
-    migratedJournalEntries.unshift(offer);
-  }
-  if (canGrandfatherOpeningPreparation) {
-    const leadSelectionEntry = migratedJournalEntries[leadSourceProof.journalIndex!];
-    if (!leadSelectionEntry || leadSelectionEntry.kind !== "lead_source") {
-      throw new Error(
-        "Trusted predecessor snapshot cannot locate the lead selection to anchor its preparation migration.",
-      );
-    }
-    const marker = openingPreparationLegacyJournalEntry({
-      sourceWorldHash: snapshot.worldHash,
-      town: leadSelectionEntry.town,
-      recordedAt: leadSelectionEntry.recordedAt,
-      storyChoiceBoundary: { ...leadSourceProof.selectionBoundary! },
-    });
-    migratedJournalEntries.splice(leadSourceProof.journalIndex!, 0, marker);
-  }
-  if (
-    needsLegacyCampaignScaffolding &&
-    migrationEra !== "relief_oath" &&
-    migrationEra !== "relief_allocation" &&
-    migrationEra !== "hill_approach" &&
-    migrationEra !== "fortify_outlast" &&
-    migrationEra !== "crisis_priority" &&
-    migrationEra !== "opening_ally" &&
-    migrationEra !== "opening_preparation" &&
-    indexes.openingPreparation !== null &&
-    leadSourceProof.option !== null &&
-    !canOfferMigratedPreparation &&
-    !canDeferMigratedPreparationToDeparture &&
-    !canGrandfatherOpeningPreparation
-  ) {
-    throw new Error(
-      "Trusted predecessor snapshot selected a lead source but has neither an exact preparation-offer boundary nor later replayable Wolf-Winter progress.",
-    );
-  }
-  const canGrandfatherOpeningReliefAllocation =
-    needsLegacyCampaignScaffolding &&
-    migrationEra !== "relief_oath" &&
-    indexes.openingReliefAllocation !== null &&
-    targetReliefAllocationQuestProgressed &&
-    (preparationProof.profile !== null ||
-      preparationProof.legacy ||
-      canGrandfatherOpeningPreparation);
-  if (canGrandfatherOpeningReliefAllocation) {
-    const questJournalId = `quest:${indexes.openingReliefAllocation!.target_quest}`;
-    const questIndex = migratedJournalEntries.findIndex(
-      (entry) => entry.kind === "quest" && entry.id === questJournalId,
-    );
-    const questEntry = migratedJournalEntries[questIndex];
-    const quest = indexes.questsById.get(indexes.openingReliefAllocation!.target_quest);
-    if (questIndex < 0 || !questEntry || !quest) {
-      throw new Error(
-        "Trusted predecessor snapshot cannot locate the quest start for relief-allocation migration.",
-      );
-    }
-    const boundary = reliefAllocationLegacyBoundaryBeforeQuest({
-      campaignBoundaryReplay,
-      entry: questEntry,
-      quest,
-    });
-    const marker = openingReliefAllocationLegacyJournalEntry({
-      sourceWorldHash: snapshot.worldHash,
-      town:
-        indexes.openingReliefAllocationTownName ??
-        indexes.townNameForSource(indexes.openingReliefAllocation!.home),
-      recordedAt: timeLabel(boundary.minutes),
-      storyChoiceBoundary: boundary,
-    });
-    migratedJournalEntries.splice(questIndex + 1, 0, marker);
-  }
-  if (
-    needsLegacyCampaignScaffolding &&
-    migrationEra !== "relief_oath" &&
-    indexes.openingReliefAllocation !== null &&
-    targetReliefAllocationQuestProgressed &&
-    !canGrandfatherOpeningReliefAllocation
-  ) {
-    throw new Error(
-      "Trusted predecessor snapshot has Wolf-Winter progress without a replayable preparation boundary for relief-allocation migration.",
-    );
-  }
-  const discoveredQuestIdsAfterSet = new Set(
-    snapshot.discoveredQuestIds.filter(
-      (questId) =>
-        questId !== targetLeadQuestId ||
-        (hasLeadSourceManifestEvidence && !canOfferMigratedPreparation),
-    ),
-  );
-  if (
-    targetPreparationQuestId !== null &&
-    (repairsPendingPreparationQuestDiscovery || canOfferMigratedPreparation)
-  ) {
-    discoveredQuestIdsAfterSet.add(targetPreparationQuestId);
-  }
-  const discoveredQuestIdsAfter = Object.freeze([...discoveredQuestIdsAfterSet].sort());
-  const discoveredAreaIdsAfter = Object.freeze([...discoveredAreaIds].sort());
-  const journalEntriesAfter = Object.freeze(migratedJournalEntries);
 
   return {
-    characterAfter: chronologicalCharacterAfter,
+    characterAfter: campaignReplay.characterAfter,
     currentAreaByTown,
-    discoveredAreaIdsAfter,
-    discoveredQuestIdsAfter,
-    journalEntriesAfter,
-    openingLeadSourceDecisionTrailAfter,
+    discoveredAreaIdsAfter: Object.freeze([...discoveredAreaIds].sort()),
+    discoveredQuestIdsAfter: Object.freeze([...discoveredQuestIds].sort()),
+    journalEntriesAfter: Object.freeze([...snapshot.journalEntries]),
+    openingLeadSourceDecisionTrailAfter: campaignReplay.openingLeadSourceDecisionTrail,
     pendingRoadEncounter,
     questOutcomeIds,
     regionRenown,
-    resolvedEventHomeIds,
-    trustedCivicPreparationSourceWorldHashAfter: storedCivicPreparationSourceWorldHash ?? null,
-    trustedLegacyRegistrationReceiptSourceWorldHashAfter:
-      durableLegacyRegistrationReceiptSourceWorldHash,
+    resolvedEventHomeIds: resolvedOverworldEventHomeIds(resolvedEventIds, indexes),
+    restoreWarnings: Object.freeze(restoreWarnings),
     travelLog: restoreOverworldTravelLogEntries(snapshot.travelLog, {
       edgesById: indexes.edgesById,
       nodesById: indexes.nodesById,
       roadEventsByEdgeId: indexes.roadEventsByEdgeId,
     }),
   };
-}
-
-/**
- * Service predicates use only an exact authored option proof with its own
- * accepted-decision boundary. Generic predecessor completions intentionally
- * produce no option capability; a trusted predicate predecessor retains the
- * exact authored capability it actually completed.
- */
-function deriveLocalJobOptionProofOrdinals(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-}): ReadonlyMap<string, number> {
-  const ordinals = new Map<string, number>();
-  for (const entry of args.journalEntries) {
-    if (entry.kind !== "job" || !entry.id.startsWith("job:")) continue;
-    const job = args.indexes.jobsById.get(entry.id.slice("job:".length));
-    const proof = entry.localSceneProof;
-    if (
-      !job?.authored_scene ||
-      !proof ||
-      proof.sceneId !== job.authored_scene.id ||
-      (proof.sourceWorldHash !== undefined &&
-        !authoredLocalJobPredicatePredecessorCompletion(job.id, proof)) ||
-      !proof.boundary
-    ) {
-      continue;
-    }
-    resolveLocalJobSceneOption(job.authored_scene, proof.optionId);
-    const key = campaignServiceLocalJobOptionKey({
-      job_id: job.id,
-      option_id: proof.optionId,
-    });
-    if (ordinals.has(key)) {
-      throw new Error(
-        `Overworld session snapshot repeats authored local-job option proof "${job.id}:${proof.optionId}".`,
-      );
-    }
-    ordinals.set(key, proof.boundary.acceptedDecisions);
-  }
-  return ordinals;
-}
-
-function assertSnapshotLocalJobSceneProofs(args: {
-  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-  characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState;
-}): void {
-  args.journalEntries.forEach((entry, entryIndex) => {
-    if (entry.kind !== "job") return;
-    const jobId = entry.id.startsWith("job:") ? entry.id.slice("job:".length) : "";
-    const job = args.indexes.jobsById.get(jobId);
-    if (!job) return;
-    const scene = job.authored_scene;
-    const proof = entry.localSceneProof;
-    if (!scene) {
-      if (proof) {
-        throw new Error(
-          `Overworld session snapshot legacy job "${job.id}" cannot carry local-scene proof.`,
-        );
-      }
-      return;
-    }
-    if (!proof || proof.sceneId !== scene.id) {
-      throw new Error(
-        `Overworld session snapshot authored job "${job.id}" is missing its exact local-scene proof.`,
-      );
-    }
-    const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, proof);
-    const predicatePredecessorCompletion = authoredLocalJobPredicatePredecessorCompletion(
-      job.id,
-      proof,
-    );
-    const emeryEvidenceCustodyGrandfather = isEmeryEvidenceCustodyGrandfatherProof(entry);
-    const woundCareGrandfather = isWoundCareGreenwayGrandfatherProof(entry);
-    let selectedOption: LocalJobSceneOption | null = null;
-    if (legacyCompletion) {
-      const expected = describeAuthoredLocalJobLegacyAction(
-        legacyCompletion,
-        args.indexes.areasById.get(job.area) ?? null,
-      );
-      if (
-        entry.title !== expected.title ||
-        entry.text !== expected.text ||
-        entry.town !== args.indexes.townNameForSource(job.home)
-      ) {
-        throw new Error(
-          `Overworld session snapshot legacy-authored job "${job.id}" does not match its trusted predecessor copy.`,
-        );
-      }
-      if (!proof.boundary) return;
-    } else {
-      if (
-        proof.sourceWorldHash !== undefined &&
-        !predicatePredecessorCompletion &&
-        !emeryEvidenceCustodyGrandfather &&
-        !woundCareGrandfather
-      ) {
-        throw new Error(
-          `Overworld session snapshot authored job "${job.id}" names an untrusted legacy source.`,
-        );
-      }
-      selectedOption = resolveLocalJobSceneOption(scene, proof.optionId);
-      if (!proof.boundary) {
-        throw new Error(
-          `Overworld session snapshot authored job "${job.id}" is missing its accepted decision boundary.`,
-        );
-      }
-    }
-    const boundary = proof.boundary;
-    const replayed = args.campaignBoundaries.byAcceptedDecisions.get(boundary.acceptedDecisions);
-    const expectedActionId = legacyCompletion
-      ? `work_job:${job.id}`
-      : `work_job:${job.id}:${proof.optionId}`;
-    if (
-      !replayed ||
-      replayed.decision === null ||
-      replayed.decisionProofHash !== boundary.decisionProofHash ||
-      replayed.decision.surface !== "overworld" ||
-      replayed.decision.reason !== "situation_changed" ||
-      replayed.decision.actionId !== expectedActionId
-    ) {
-      throw new Error(
-        `Overworld session snapshot authored job "${job.id}" does not match its accepted decision proof.`,
-      );
-    }
-    if (
-      boundary.townId !== job.home ||
-      boundary.areaId !== job.area ||
-      replayed.townId !== boundary.townId ||
-      replayed.areaId !== boundary.areaId ||
-      boundary.minutes !== parseTimeLabel(entry.recordedAt)
-    ) {
-      throw new Error(
-        `Overworld session snapshot authored job "${job.id}" does not match its location and clock boundary.`,
-      );
-    }
-    if (legacyCompletion) return;
-    const earlierEntries = args.journalEntries.slice(entryIndex + 1);
-    const hasEarlierPoi = earlierEntries.some(
-      (candidate) => candidate.id === `scout:${scene.required_poi_id}`,
-    );
-    const contactPrefix = `talk:${scene.required_contact_id}`;
-    const hasEarlierContact = earlierEntries.some(
-      (candidate) => candidate.id === contactPrefix || candidate.id.startsWith(`${contactPrefix}@`),
-    );
-    if (!hasEarlierPoi || !hasEarlierContact) {
-      throw new Error(
-        `Overworld session snapshot authored job "${job.id}" lacks its earlier scene setup.`,
-      );
-    }
-    for (const questId of scene.requires_completed_quests) {
-      const hasEarlierQuest = earlierEntries.some(
-        (candidate) => candidate.id === `quest_done:${questId}`,
-      );
-      if (!hasEarlierQuest) {
-        throw new Error(
-          `Overworld session snapshot authored job "${job.id}" lacks earlier quest "${questId}".`,
-        );
-      }
-    }
-    const earlierResolvedEventIds = new Set(
-      earlierEntries.flatMap((candidate) =>
-        candidate.kind === "resolution" && candidate.id.startsWith("resolve:")
-          ? [candidate.id.slice("resolve:".length)]
-          : [],
-      ),
-    );
-    const earlierCompletedQuestIds = new Set(
-      earlierEntries.flatMap((candidate) =>
-        candidate.kind === "quest_done" && candidate.id.startsWith("quest_done:")
-          ? [candidate.id.slice("quest_done:".length)]
-          : [],
-      ),
-    );
-    const conditionState = {
-      completedQuestIds: earlierCompletedQuestIds,
-      resolvedEventIds: earlierResolvedEventIds,
-      worldFactIds: campaignWorldFactsProvenBeforeDecision(
-        args.campaignBoundaries,
-        boundary.acceptedDecisions,
-      ),
-      storyChoiceKeys: campaignStoryChoiceKeysProvenBeforeDecision(
-        args.campaignBoundaries,
-        boundary.acceptedDecisions,
-      ),
-      character: args.characterAt(entry, parseTimeLabel(entry.recordedAt)),
-      eventOptionIdFor: (eventId: string) =>
-        earlierEntries.find((candidate) => candidate.id === `resolve:${eventId}`)?.localSceneProof
-          ?.optionId ?? null,
-    };
-    const conditionOption =
-      predicatePredecessorCompletion && selectedOption
-        ? {
-            ...selectedOption,
-            requires_all_story_choices: undefined,
-            forbids_any_story_choices: undefined,
-          }
-        : woundCareGrandfather && selectedOption
-          ? {
-              ...selectedOption,
-              character_conditions: undefined,
-            }
-          : selectedOption;
-    if (
-      !selectedOption ||
-      !localJobSceneRequirementsMet(scene, conditionState) ||
-      !conditionOption ||
-      !localJobSceneOptionRequirementsMet(conditionOption, conditionState)
-    ) {
-      throw new Error(
-        `Overworld session snapshot authored job "${job.id}" violates its earlier event, world-fact, or story-choice requirements.`,
-      );
-    }
-  });
-}
-
-function assertSnapshotLocalEventSceneProofs(args: {
-  campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-}): void {
-  for (const investigation of args.journalEntries) {
-    if (investigation.kind !== "event" || !investigation.id.startsWith("investigate:")) continue;
-    const eventId = investigation.id.slice("investigate:".length);
-    const event = args.indexes.eventsById.get(eventId);
-    const scene = event?.authored_scene;
-    if (!scene) {
-      if (investigation.sourceWorldHash !== undefined) {
-        throw new Error(
-          `Overworld session snapshot generic event "${eventId}" cannot carry legacy investigation provenance.`,
-        );
-      }
-      continue;
-    }
-    const resolutionProof = args.journalEntries.find(
-      (candidate) => candidate.id === `resolve:${eventId}`,
-    )?.localSceneProof;
-    if (investigation.sourceWorldHash !== undefined) {
-      const definition = authoredLocalEventLegacyDefinitionsForSourceWorldHash(
-        investigation.sourceWorldHash,
-      ).find(
-        (candidate) =>
-          candidate.eventId === eventId && candidate.sceneId === event.authored_scene?.id,
-      );
-      const expected = definition ? describeOverworldEventAction(definition.legacyEvent) : null;
-      if (
-        !definition ||
-        resolutionProof !== undefined ||
-        investigation.title !== expected?.title ||
-        investigation.text !== expected.text ||
-        investigation.town !== args.indexes.townNameForSource(event.home)
-      ) {
-        throw new Error(
-          `Overworld session snapshot authored event "${eventId}" has untrusted legacy investigation evidence.`,
-        );
-      }
-      continue;
-    }
-    if (event && authoredLocalEventLegacyCompletion(eventId, resolutionProof)) continue;
-    for (const questId of scene.requires_completed_quests ?? []) {
-      const questCompletion = args.journalEntries.find(
-        (candidate) => candidate.id === `quest_done:${questId}`,
-      );
-      if (
-        !questCompletion ||
-        parseTimeLabel(questCompletion.recordedAt) >= parseTimeLabel(investigation.recordedAt)
-      ) {
-        throw new Error(
-          `Overworld session snapshot authored event "${eventId}" investigation does not strictly follow required quest "${questId}".`,
-        );
-      }
-    }
-  }
-  args.journalEntries.forEach((entry, entryIndex) => {
-    if (entry.kind !== "resolution") return;
-    const eventId = entry.id.startsWith("resolve:") ? entry.id.slice("resolve:".length) : "";
-    const event = args.indexes.eventsById.get(eventId);
-    if (!event) return;
-    const scene = event.authored_scene;
-    const proof = entry.localSceneProof;
-    if (!scene) {
-      if (proof) {
-        throw new Error(
-          `Overworld session snapshot legacy event "${event.id}" cannot carry local-scene proof.`,
-        );
-      }
-      return;
-    }
-    if (!proof || proof.sceneId !== scene.id) {
-      throw new Error(
-        `Overworld session snapshot authored event "${event.id}" is missing its exact local-scene proof.`,
-      );
-    }
-    const node = args.indexes.nodesById.get(event.home);
-    if (!node) return;
-    const legacy = authoredLocalEventLegacyCompletion(event.id, proof);
-    const emeryEvidenceCustodyGrandfather = isEmeryEvidenceCustodyGrandfatherProof(entry);
-    if (!legacy && proof.sourceWorldHash !== undefined && !emeryEvidenceCustodyGrandfather) {
-      throw new Error(
-        `Overworld session snapshot authored event "${event.id}" names an untrusted legacy source.`,
-      );
-    }
-    const option = legacy ? null : resolveLocalEventSceneOption(scene, proof.optionId);
-    if (!legacy) {
-      const earlierCompletedQuestIds = new Set(
-        args.journalEntries
-          .slice(entryIndex + 1)
-          .flatMap((candidate) =>
-            candidate.kind === "quest_done" && candidate.id.startsWith("quest_done:")
-              ? [candidate.id.slice("quest_done:".length)]
-              : [],
-          ),
-      );
-      const earlierCompletedJobIds = new Set(
-        args.journalEntries
-          .slice(entryIndex + 1)
-          .flatMap((candidate) =>
-            candidate.kind === "job" && candidate.id.startsWith("job:")
-              ? [candidate.id.slice("job:".length)]
-              : [],
-          ),
-      );
-      if (
-        !localEventSceneRequirementsMet(scene, {
-          completedQuestIds: earlierCompletedQuestIds,
-          completedJobIds: earlierCompletedJobIds,
-        })
-      ) {
-        throw new Error(
-          `Overworld session snapshot authored event "${event.id}" violates its required quest or forbidden job chronology.`,
-        );
-      }
-    }
-    const expected = describeOverworldEventResolution(
-      legacy?.definition.legacyEvent ?? event,
-      args.indexes.townNameForSource(event.home),
-      node.region,
-      option,
-    );
-    if (
-      entry.title !== expected.title ||
-      entry.text !== expected.text ||
-      entry.town !== args.indexes.townNameForSource(event.home)
-    ) {
-      throw new Error(
-        `Overworld session snapshot authored event "${event.id}" does not match its canonical option copy.`,
-      );
-    }
-    if (legacy && !proof.boundary) return;
-    if (!proof.boundary) {
-      throw new Error(
-        `Overworld session snapshot authored event "${event.id}" is missing its accepted decision boundary.`,
-      );
-    }
-    const boundary = proof.boundary;
-    const replayed = args.campaignBoundaries.byAcceptedDecisions.get(boundary.acceptedDecisions);
-    const expectedActionId = legacy
-      ? `resolve_event:${event.id}`
-      : `resolve_event:${event.id}:${proof.optionId}`;
-    if (
-      !replayed ||
-      replayed.decision === null ||
-      replayed.decisionProofHash !== boundary.decisionProofHash ||
-      replayed.decision.surface !== "overworld" ||
-      replayed.decision.reason !== "situation_changed" ||
-      replayed.decision.actionId !== expectedActionId
-    ) {
-      throw new Error(
-        `Overworld session snapshot authored event "${event.id}" does not match its accepted decision proof.`,
-      );
-    }
-    if (
-      boundary.townId !== event.home ||
-      boundary.areaId !== event.area ||
-      replayed.townId !== boundary.townId ||
-      replayed.areaId !== boundary.areaId ||
-      boundary.minutes !== parseTimeLabel(entry.recordedAt)
-    ) {
-      throw new Error(
-        `Overworld session snapshot authored event "${event.id}" does not match its location and clock boundary.`,
-      );
-    }
-    if (
-      !legacy &&
-      !emeryEvidenceCustodyGrandfather &&
-      (!option ||
-        !localEventSceneOptionRequirementsMet(option, {
-          worldFactIds: campaignWorldFactsProvenBeforeDecision(
-            args.campaignBoundaries,
-            boundary.acceptedDecisions,
-          ),
-        }))
-    ) {
-      throw new Error(
-        `Overworld session snapshot authored event "${event.id}" violates its earlier world-fact requirements.`,
-      );
-    }
-  });
-}
-
-function assertSnapshotQuestCompletionOutcomeJournalProof(args: {
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-  questOutcomeIds: ReadonlyMap<string, string>;
-  questOutcomeOrder: readonly string[];
-  characterBeforeQuestOutcomes: CampaignCharacterState;
-  questStartReturnSummaryByQuestId: ReadonlyMap<string, string>;
-  allowMissingRegistrationReceipt: boolean;
-  trustedLegacyRegistrationReceiptSourceWorldHash: string | null;
-}): ReadonlyMap<string, Omit<OverworldJournalEntry, "recordedAt">> {
-  const journalEntriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
-  const canonicalDrafts = new Map<string, Omit<OverworldJournalEntry, "recordedAt">>();
-  let characterBefore = cloneCampaignCharacterState(args.characterBeforeQuestOutcomes);
-  for (const questId of args.questOutcomeOrder) {
-    const endingId = args.questOutcomeIds.get(questId);
-    if (endingId === undefined) {
-      throw new Error(`Quest outcome order names unknown quest "${questId}".`);
-    }
-    const quest = args.indexes.questsById.get(questId);
-    if (!quest) continue;
-    const campaignExport = questCampaignExportForEnding(quest, endingId);
-    if (!campaignExport) continue;
-    const effects = overworldQuestCampaignEffectsForCharacter(campaignExport, characterBefore);
-    const consequence = applyCampaignConsequences({
-      character: characterBefore,
-      effects,
-    });
-    const registrationReceipt = deriveRegistrationPromiseFoldbackReceipt({
-      quest,
-      campaignExport,
-      characterBefore,
-      characterAfter: consequence.characterAfter,
-      worldFactIds: consequence.worldFactIds,
-      journalEntries: args.journalEntries,
-      openingRegistration: args.indexes.openingRegistration,
-      openingReliefOath: args.indexes.openingReliefOath,
-      openingLeadSource: args.indexes.openingLeadSource,
-      trustedLegacySourceWorldHash: args.trustedLegacyRegistrationReceiptSourceWorldHash,
-    });
-    const minutes = questCompletionMinutes(quest, args.indexes.areasById);
-    const expected = questCompletionJournalEntryDraft({
-      quest,
-      endingTitle: campaignExport.ending_title,
-      minutes,
-      townName: args.indexes.questTownNames.get(questId) ?? quest.home,
-      ...(args.questStartReturnSummaryByQuestId.has(questId)
-        ? { returnSummary: args.questStartReturnSummaryByQuestId.get(questId)! }
-        : {}),
-      ...(registrationReceipt ? { registrationReceipt } : {}),
-    });
-    const predecessorExpected = questCompletionJournalEntryDraft({
-      quest,
-      endingTitle: campaignExport.ending_title,
-      minutes,
-      townName: args.indexes.questTownNames.get(questId) ?? quest.home,
-      ...(args.questStartReturnSummaryByQuestId.has(questId)
-        ? { returnSummary: args.questStartReturnSummaryByQuestId.get(questId)! }
-        : {}),
-    });
-    const stored = journalEntriesById.get(expected.id);
-    const exactCurrent =
-      stored?.kind === expected.kind &&
-      stored.town === expected.town &&
-      stored.title === expected.title &&
-      stored.text === expected.text;
-    const exactPredecessor =
-      args.allowMissingRegistrationReceipt &&
-      registrationReceipt !== undefined &&
-      stored?.kind === predecessorExpected.kind &&
-      stored.town === predecessorExpected.town &&
-      stored.title === predecessorExpected.title &&
-      stored.text === predecessorExpected.text;
-    if (!stored || (!exactCurrent && !exactPredecessor)) {
-      throw new Error(
-        `Overworld session snapshot quest outcome "${questId}" is not bound to its canonical completion journal.`,
-      );
-    }
-    canonicalDrafts.set(questId, expected);
-    characterBefore = consequence.characterAfter;
-  }
-  return canonicalDrafts;
-}
-
-function questCompletionBoundaryOrdinal(
-  entry: OverworldJournalEntry,
-  decisionProofsByOrdinal: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>,
-  args: {
-    expectedCompletedAtDecision: number | null;
-    questId: string;
-    requireBound: boolean;
-  },
-): number | null {
-  const boundary = entry.questCompletionBoundary;
-  if (!boundary) {
-    if (args.requireBound) {
-      throw new Error(
-        `Overworld session snapshot quest completion "${args.questId}" lacks the decision boundary required by a campaign service fact.`,
-      );
-    }
-    return null;
-  }
-  if (args.expectedCompletedAtDecision === null) {
-    if (args.requireBound) {
-      throw new Error(
-        `Overworld session snapshot quest completion "${args.questId}" has no completed journey goal to anchor its campaign service fact.`,
-      );
-    }
-  } else if (boundary.acceptedDecisions !== args.expectedCompletedAtDecision) {
-    throw new Error(
-      `Overworld session snapshot quest completion journal "${entry.id}" does not match its completed journey goal decision.`,
-    );
-  }
-  const proof = decisionProofsByOrdinal.get(boundary.acceptedDecisions);
-  if (!proof || proof.decision === null || proof.decisionProofHash !== boundary.decisionProofHash) {
-    throw new Error(
-      `Overworld session snapshot quest completion journal "${entry.id}" does not match its accepted decision proof.`,
-    );
-  }
-  if (boundary.minutes !== parseTimeLabel(entry.recordedAt)) {
-    throw new Error(
-      `Overworld session snapshot quest completion journal "${entry.id}" boundary time does not match its timestamp.`,
-    );
-  }
-  if (
-    proof.townId === null ||
-    proof.areaId === null ||
-    boundary.townId !== proof.townId ||
-    boundary.areaId !== proof.areaId
-  ) {
-    throw new Error(
-      `Overworld session snapshot quest completion journal "${entry.id}" boundary does not match its replayed location.`,
-    );
-  }
-  return boundary.acceptedDecisions;
-}
-
-/**
- * The immediately preceding manifest already persisted the source-anchored
- * decision trail, but predates explicit quest-foldback boundaries. A completed
- * campaign goal gives us a narrow migration proof: its completion ordinal must
- * be the exact counted quest-start decision, whose prefix hash and location are
- * replayable from that trail. Materializing the boundary here prevents a
- * migrated save from becoming unloadable after it consumes a new fact-gated
- * campaign service.
- */
-function migrateOpeningLeadSourceQuestCompletionBoundaries(args: {
-  boundaryProofsByOrdinal: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-  journey: JourneyContractSnapshot;
-}): OverworldJournalEntry[] {
-  const campaignGoals = [...args.journey.goalHistory, args.journey.goal];
-
-  return args.journalEntries.map((entry) => {
-    if (entry.kind !== "quest_done" || entry.questCompletionBoundary !== undefined) {
-      return entry;
-    }
-    const questId = entry.id.slice("quest_done:".length);
-    const goal = campaignGoals.find(
-      (candidate) =>
-        candidate.status === "completed" &&
-        journeyCampaignGoalDefinition(candidate)?.targetQuestId === questId,
-    );
-    if (!goal || goal.completedAtDecision === null) return entry;
-
-    const proof = args.boundaryProofsByOrdinal.get(goal.completedAtDecision);
-    if (
-      !proof ||
-      proof.decision === null ||
-      proof.decisionProofHash.length === 0 ||
-      proof.decision.number !== goal.completedAtDecision ||
-      proof.townId === null ||
-      proof.areaId === null ||
-      args.indexes.areaHomes.get(proof.areaId) !== proof.townId ||
-      entry.town !== args.indexes.townNameForSource(proof.townId)
-    ) {
-      throw new Error(
-        `Legacy overworld session snapshot quest completion "${questId}" has no replayable campaign boundary.`,
-      );
-    }
-
-    return {
-      ...entry,
-      questCompletionBoundary: {
-        acceptedDecisions: goal.completedAtDecision,
-        decisionProofHash: proof.decisionProofHash,
-        townId: proof.townId,
-        areaId: proof.areaId,
-        minutes: parseTimeLabel(entry.recordedAt),
-      },
-    };
-  });
-}
-
-function deriveCampaignWorldFactProofOrdinals(args: {
-  decisionProofsByOrdinal: ReadonlyMap<number, OverworldCampaignBoundaryReplayProof>;
-  indexes: OverworldSnapshotManifestIndex;
-  journalEntries: readonly OverworldJournalEntry[];
-  journey: JourneyContractSnapshot;
-  questOutcomeIds: ReadonlyMap<string, string>;
-  requireBoundServiceFacts: boolean;
-}): ReadonlyMap<string, number | null> {
-  const proofOrdinals = new Map<string, number | null>();
-  const entriesById = new Map(args.journalEntries.map((entry) => [entry.id, entry]));
-  const replayBoundFactIds = new Set([
-    ...[...args.indexes.campaignServiceRulesById.values()].flatMap((rule) => [
-      ...(rule.requires_all_world_facts ?? []),
-      ...(rule.forbids_any_world_facts ?? []),
-    ]),
-    ...[...args.indexes.jobsById.values()].flatMap((job) =>
-      job.authored_scene
-        ? [
-            ...(job.authored_scene.requires_all_world_facts ?? []),
-            ...(job.authored_scene.forbids_any_world_facts ?? []),
-            ...job.authored_scene.options.flatMap((option) => [
-              ...(option.requires_all_world_facts ?? []),
-              ...(option.forbids_any_world_facts ?? []),
-            ]),
-          ]
-        : [],
-    ),
-  ]);
-  const completionOrdinalByQuestId = new Map<string, number>();
-  for (const goal of [...args.journey.goalHistory, args.journey.goal]) {
-    if (goal.status !== "completed" || goal.completedAtDecision === null) continue;
-    const definition = journeyCampaignGoalDefinition(goal);
-    if (definition)
-      completionOrdinalByQuestId.set(definition.targetQuestId, goal.completedAtDecision);
-  }
-  for (const [questId, endingId] of args.questOutcomeIds) {
-    const quest = args.indexes.questsById.get(questId);
-    if (!quest) continue;
-    const campaignExport = questCampaignExportForEnding(quest, endingId);
-    if (!campaignExport) continue;
-    const completionEntry = entriesById.get(`quest_done:${questId}`);
-    if (!completionEntry) continue;
-    const exportsReplayBoundFact = campaignExport.effects.some(
-      (effect) => effect.type === "set_world_fact" && replayBoundFactIds.has(effect.fact_id),
-    );
-    const proofOrdinal = questCompletionBoundaryOrdinal(
-      completionEntry,
-      args.decisionProofsByOrdinal,
-      {
-        expectedCompletedAtDecision: completionOrdinalByQuestId.get(questId) ?? null,
-        questId,
-        requireBound: args.requireBoundServiceFacts && exportsReplayBoundFact,
-      },
-    );
-    for (const effect of campaignExport.effects) {
-      if (effect.type !== "set_world_fact") continue;
-      if (!proofOrdinals.has(effect.fact_id)) {
-        proofOrdinals.set(effect.fact_id, proofOrdinal);
-        continue;
-      }
-      const previous = proofOrdinals.get(effect.fact_id) ?? null;
-      if (previous === null || proofOrdinal === null) {
-        proofOrdinals.set(effect.fact_id, null);
-      } else if (proofOrdinal < previous) {
-        proofOrdinals.set(effect.fact_id, proofOrdinal);
-      }
-    }
-  }
-  return proofOrdinals;
-}
-
-function resolvedOverworldEventHomeIds(
-  resolvedEventIds: ReadonlySet<string>,
-  eventsById: ReadonlyMap<string, { home: string }>,
-): ReadonlySet<string> {
-  const homeIds = new Set<string>();
-  for (const eventId of resolvedEventIds) {
-    const event = eventsById.get(eventId);
-    if (!event) throw new Error(`Overworld session snapshot has unknown event "${eventId}".`);
-    homeIds.add(event.home);
-  }
-  return homeIds;
 }

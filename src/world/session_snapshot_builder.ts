@@ -11,6 +11,7 @@ import {
 import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
 import {
   OVERWORLD_SESSION_SAVE_VERSION,
+  OverworldSessionSnapshotSchema,
   cloneOpeningLeadSourceDecisionTrail,
   cloneQuestCharacterDeathBoundary,
   cloneJournalEntries,
@@ -60,7 +61,7 @@ export type OverworldSessionSnapshotBuildState = {
 export function buildOverworldSessionSnapshot(
   state: OverworldSessionSnapshotBuildState,
 ): OverworldSessionSnapshot {
-  return {
+  return OverworldSessionSnapshotSchema.parse({
     version: OVERWORLD_SESSION_SAVE_VERSION,
     worldId: state.worldId,
     worldHash: state.worldHash,
@@ -109,5 +110,5 @@ export function buildOverworldSessionSnapshot(
       ? { inspectedStoryReveals: sortedStringSetMap(state.inspectedStoryReveals) }
       : {}),
     journey: cloneJourneyContractSnapshot(state.journey),
-  };
+  });
 }

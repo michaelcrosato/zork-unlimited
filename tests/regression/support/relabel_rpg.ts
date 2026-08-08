@@ -273,6 +273,19 @@ function relabelNpc(npc: Npc, r: (id: string) => string, rv: (n: string) => stri
     ...(npc.conditions !== undefined
       ? { conditions: npc.conditions.map((c) => relabelCondition(c, r, rv)) }
       : {}),
+    ...(npc.variants !== undefined
+      ? {
+          variants: npc.variants.map((variant) => ({
+            when: variant.when.map((condition) => relabelCondition(condition, r, rv)),
+            ...(variant.name !== undefined ? { name: variant.name } : {}),
+            ...(variant.description !== undefined ? { description: variant.description } : {}),
+            ...(variant.room !== undefined ? { room: r(variant.room) } : {}),
+            ...(variant.dialogue_root !== undefined
+              ? { dialogue_root: r(variant.dialogue_root) }
+              : {}),
+          })),
+        }
+      : {}),
     dialogue: {
       root: r(npc.dialogue.root),
       nodes: npc.dialogue.nodes.map((n) => relabelNode(n, r, rv)),

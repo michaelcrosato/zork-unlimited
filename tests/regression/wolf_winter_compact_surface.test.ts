@@ -33,7 +33,6 @@ import {
   compactRpgObservation,
 } from "../../src/mcp/compact_rpg_observation.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { dialogueTopicPrompt } from "../../src/rpg/dialogue_presentation.js";
 import { rpgActionOptionForInputId } from "../../src/rpg/legal_actions.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
@@ -258,7 +257,7 @@ describe("Wolf-Winter compact authored prose", () => {
     const legalRootChoices = (state: GameState) =>
       root.topics
         .filter((topic) => evalConditions(topic.conditions ?? [], state))
-        .map((topic) => [`ask_${topic.id}`, dialogueTopicPrompt(topic)] as const);
+        .map((topic) => [`ask_${topic.id}`, topic.prompt] as const);
     const dialogueChoices = (state: GameState) =>
       enumerateRpgActions(index, state)
         .filter((option) => option.action.type === "ASK" && option.action.npc === "houndsman")

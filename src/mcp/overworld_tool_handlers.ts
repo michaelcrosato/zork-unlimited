@@ -87,7 +87,6 @@ import {
   compactJourneyStoryChoiceComparison,
   compactJourneyPresentation,
   embeddedJourneyFocus,
-  journeyStoryChoiceOptionById,
   journeyBlocksGameplay,
   storyChoiceSupportsDepartureRecapTerms,
   suppressRpgGameplayActions,
@@ -105,7 +104,6 @@ import type {
   JourneyDecisionClassification,
   JourneyStoryChoicePrompt,
 } from "../world/journey_contract.js";
-import { journeyStoryChoiceOptionsForPresentation } from "../world/journey_contract.js";
 
 type OverworldResponseOptions = OverworldMcpResponseOptions;
 
@@ -322,57 +320,9 @@ export type OverworldToolHandlerDeps = {
 
 export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
   const { sessions, overworldSessions } = deps;
-  // Reveal receipts are ORDINARY SESSION STATE (OverworldSession.rememberStoryReveal /
-  // storyRevealWasInspected), not a WeakMap keyed by the live session object. This gate
-  // hard-throws, so it is legality, and in an engine whose whole contract is
-  // state -> legal actions a gate that a restore silently revokes is a bug: a player who
-  // opened the compass, exported, and restored could no longer take the choice they had
-  // unlocked. The session clears the receipts itself once the story is chosen.
-
-  const storyChoiceForSelection = (
-    session: OverworldSession,
-    choiceId: string,
-    storyChoiceId: string | undefined,
-  ): JourneyStoryChoicePrompt | null => {
-    if (storyChoiceId !== undefined) return session.inspectJourneyStory(storyChoiceId);
-    const presented = session.journey().storyChoice;
-    if (presented) return presented;
-
-    const matchingDepartureStories = session
-      .view()
-      .departureInteractions.map((interaction) => session.inspectJourneyStory(interaction.id))
-      .filter((story) => story.options.some((option) => option.id === choiceId));
-    if (matchingDepartureStories.length > 1) {
-      throw new Error(
-        `Departure story option "${choiceId}" is ambiguous; provide story_choice_id.`,
-      );
-    }
-    return matchingDepartureStories[0] ?? null;
-  };
-
-  const assertStoryChoiceOptionVisible = (
-    session: OverworldSession,
-    story: JourneyStoryChoicePrompt,
-    choiceId: string,
-  ): void => {
-    journeyStoryChoiceOptionById(story, choiceId);
-    const disclosure = story.progressiveDisclosure;
-    if (!disclosure || disclosure.initialOptionIds.includes(choiceId)) return;
-    if (session.storyRevealWasInspected(story.id, disclosure.reveal.id)) return;
-    throw new Error(
-      `Story option "${choiceId}" is hidden. Inspect story "${story.id}" with reveal_id "${disclosure.reveal.id}" in this session before inspecting or choosing it.`,
-    );
-  };
-
-  const assertStoryChoiceVisible = (
-    session: OverworldSession,
-    choiceId: string,
-    storyChoiceId: string | undefined,
-  ): void => {
-    const story = storyChoiceForSelection(session, choiceId, storyChoiceId);
-    if (!story) return;
-    assertStoryChoiceOptionVisible(session, story, choiceId);
-  };
+  // OverworldSession owns both reveal receipts and option legality. Protocol handlers
+  // only select the appropriate session operation, so UI, terminal, MCP, restore, and
+  // direct callers all observe one durable state transition and one hard gate.
 
   return {
     list_overworld<Args extends OverworldListOptions = Record<string, never>>(
@@ -927,11 +877,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         responseOptions,
         args.session_id,
         "result",
-        (session) => {
-          assertStoryChoiceVisible(session, args.choice, args.story_choice_id);
-          const result = session.chooseJourneyStory(args.choice, args.story_choice_id);
-          return result;
-        },
+        (session) => session.chooseJourneyStory(args.choice, args.story_choice_id),
         compactOverworldJourneyStoryChoiceResult,
         OVERWORLD_COMPACT_RESULT_LEGEND_KEYS.journey_story_choice,
       );
@@ -948,38 +894,23 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
     >(args: Args): OverworldJourneyStoryInspectionResponse<Args> {
       const responseOptions = defaultCompactOverworldResponse(args);
       const inspectStory = (session: OverworldSession): JourneyStoryChoicePrompt => {
-        return session.inspectJourneyStory(args.story_choice_id);
-      };
-      const validateInspectionArgs = (
-        session: OverworldSession,
-        story: JourneyStoryChoicePrompt,
-      ): void => {
         if (args.option_id !== undefined && args.reveal_id !== undefined) {
           throw new Error("Story choice inspection accepts option_id or reveal_id, not both.");
         }
         if (args.option_id !== undefined) {
-          assertStoryChoiceOptionVisible(session, story, args.option_id);
+          return session.inspectJourneyStoryOption(args.story_choice_id, args.option_id);
         }
         if (args.reveal_id !== undefined) {
-          journeyStoryChoiceOptionsForPresentation(story, args.reveal_id);
+          return session.revealJourneyStory(args.story_choice_id, args.reveal_id);
         }
+        return session.inspectJourneyStory(args.story_choice_id);
       };
       if (args.compact_result === false) {
         const response = overworldSessions.run(
           responseOptions,
           args.session_id,
           "story",
-          (session) => {
-            const story = inspectStory(session);
-            validateInspectionArgs(session, story);
-            // The reveal receipt is session state. Record it inside the action so
-            // `run` builds the observation and snapshot hash from the post-reveal
-            // state, exactly as the compact response path does below.
-            if (args.reveal_id !== undefined) {
-              session.rememberStoryReveal(args.story_choice_id, args.reveal_id);
-            }
-            return story;
-          },
+          (session) => inspectStory(session),
         );
         return response as unknown as OverworldJourneyStoryInspectionResponse<Args>;
       }
@@ -988,7 +919,6 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         return guarded as unknown as OverworldJourneyStoryInspectionResponse<Args>;
       }
       const story = inspectStory(guarded.session);
-      validateInspectionArgs(guarded.session, story);
       const departureRecap = guarded.session.compactView().departure_recap;
       const fullDepartureRecap = guarded.session.view().departureRecap;
       const departureRecapTerms =
@@ -997,11 +927,6 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
         fullDepartureRecap
           ? compactOpeningDepartureRecapTerms(fullDepartureRecap)
           : null;
-      // Record the reveal BEFORE reading the hash: the receipt is session state now, so
-      // the response must quote the snapshot the caller actually holds afterwards.
-      if (args.reveal_id !== undefined) {
-        guarded.session.rememberStoryReveal(args.story_choice_id, args.reveal_id);
-      }
       const response = {
         ok: true,
         session_id: args.session_id,

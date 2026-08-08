@@ -24,8 +24,9 @@
  * save whose `endingId` names a declared ending — still load byte-identically.
  */
 import { describe, it, expect } from "vitest";
+import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import { SaveIntegrityError } from "../../src/persist/save_load.js";
+import { SAVE_VERSION, SaveIntegrityError } from "../../src/persist/save_load.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
 import { RpgPackSchema } from "../../src/rpg/schema.js";
@@ -39,8 +40,14 @@ function forgeSave(poison: (state: Record<string, unknown>) => void): string {
   const a = api();
   const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
   const saved = a.save_game({ session_id: game.session_id });
-  const bundle = JSON.parse(saved.save) as { state: Record<string, unknown> };
+  const bundle = JSON.parse(saved.save) as {
+    stateHash: string;
+    state: Record<string, unknown>;
+  };
   poison(bundle.state);
+  // Local saves are deliberately editable. Recompute the consistency digest so
+  // these probes reach the pack-aware referential gate they are meant to test.
+  bundle.stateHash = hashState(bundle.state);
   return JSON.stringify(bundle);
 }
 
@@ -146,6 +153,48 @@ function runtimeStateFixtureIndex() {
       ],
       win_conditions: [{ id: "win", conditions: [{ visited: "room" }], ending: "ending_win" }],
       endings: [{ id: "ending_win", title: "Done", text: "Done." }],
+      enemies: [],
+    }),
+  );
+}
+
+function playerStatCeilingFixtureIndex() {
+  return indexRpgPack(
+    RpgPackSchema.parse({
+      meta: {
+        id: "player_stat_ceiling_fixture",
+        title: "Player Stat Ceiling Fixture",
+        start_room: "room",
+        vars_init: { hp: 10, attack: 2, defense: 1 },
+      },
+      rooms: [
+        {
+          id: "room",
+          name: "Room",
+          description: "A room with a training post.",
+          objects: ["training_post"],
+          on_enter: [{ set_var: { name: "hp", value: 50 } }, { inc_var: { name: "hp", by: 3 } }],
+        },
+      ],
+      objects: [
+        {
+          id: "training_post",
+          name: "training post",
+          description: "A post for bounded drills.",
+          interactions: [
+            {
+              verb: "USE",
+              target: "training_post",
+              effects: [
+                { inc_var: { name: "attack", by: 2 } },
+                { dec_var: { name: "defense", by: -3 } },
+              ],
+            },
+          ],
+        },
+      ],
+      win_conditions: [{ id: "win", conditions: [{ visited: "room" }], ending: "ending" }],
+      endings: [{ id: "ending", title: "Done", text: "Done." }],
       enemies: [],
     }),
   );
@@ -263,6 +312,68 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     });
     expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ save: forged })).toThrow(/invalid player stat var/);
+  });
+
+  it.each([
+    ["hp", /invalid player hp var/],
+    ["attack", /invalid player stat var/],
+    ["defense", /invalid player stat var/],
+  ] as const)("RPG: %s above its authored ceiling is a hard SaveIntegrityError", (stat, error) => {
+    const forged = forgeSave((state) => {
+      state.vars = { ...(state.vars as Record<string, number>), [stat]: 9_999 };
+    });
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(error);
+    expect(() => api().load_game({ save: forged })).toThrow(/authored upper bound/);
+  });
+
+  it("RPG: a recomputed v3 save cannot overflow the authored stat ceiling", () => {
+    const forged = forgeSave((state) => {
+      // This is still an exactly represented legal engine counter. The former
+      // Number multiplication overflowed its conservative bound and replaced it
+      // with Infinity, allowing the astronomically larger forged attack through.
+      state.step = 5_000_000_000_000_000;
+      state.vars = { ...(state.vars as Record<string, number>), attack: 1e300 };
+    });
+    const bundle = JSON.parse(forged) as {
+      version: number;
+      stateHash: string;
+      state: { step: number; vars: Record<string, number> };
+    };
+    expect(bundle.version).toBe(SAVE_VERSION);
+    expect(Number.isSafeInteger(bundle.state.step)).toBe(true);
+    expect(bundle.state.vars.attack).toBe(1e300);
+    expect(bundle.stateHash).toBe(hashState(bundle.state));
+
+    expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+    expect(() => api().load_game({ save: forged })).toThrow(/authored upper bound/i);
+  });
+
+  it("RPG: stat ceilings conservatively budget start-room and per-step authored gains", () => {
+    const index = playerStatCeilingFixtureIndex();
+    const initial = initStateForRpgPack(index, 1);
+    expect(initial.vars).toMatchObject({ hp: 53, attack: 2, defense: 1 });
+    expect(() => assertRpgStateReferences(index, initial)).not.toThrow();
+
+    const atStepTwo = {
+      ...initial,
+      step: 2,
+      vars: { hp: 59, attack: 8, defense: 10 },
+    };
+    expect(() => assertRpgStateReferences(index, atStepTwo)).not.toThrow();
+
+    for (const [stat, value] of [
+      ["hp", 60],
+      ["attack", 9],
+      ["defense", 11],
+    ] as const) {
+      expect(() =>
+        assertRpgStateReferences(index, {
+          ...atStepTwo,
+          vars: { ...atStepTwo.vars, [stat]: value },
+        }),
+      ).toThrow(/authored upper bound/);
+    }
   });
 
   it("RPG: score above the declared maximum is a hard SaveIntegrityError", () => {

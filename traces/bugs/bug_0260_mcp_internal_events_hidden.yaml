@@ -20,7 +20,7 @@ evidence:
 failure:
   type: internal_state_leak
   layer: engine_mcp
-  surface: [step_action.events, get_transcript.turns[].events]
+  surface: ["step_action.events", "get_transcript.turns[].events"]
   description: >
     Some engine effects write `__`-prefixed vars that exist only to DRIVE mechanics,
     never to be read by the player: the per-enemy HP tracker `__enemy_hp_<id>`

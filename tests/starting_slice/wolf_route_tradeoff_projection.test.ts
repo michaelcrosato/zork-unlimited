@@ -30,6 +30,7 @@ import {
   WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
   wolfHillRoutePresentation,
 } from "../../src/world/wolf_hill_route_presentation.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const ROOT = process.cwd();
 const WORLD = loadOverworldManifest(ROOT);
@@ -194,6 +195,7 @@ function routeCard(
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(WORLD.opening_registration!.contact);
   session.chooseJourneyStory(choices.registrationId ?? "albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory(oathChoiceId);
   session.chooseJourneyStory(choices.sourceId ?? "albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);

@@ -4,8 +4,10 @@ import {
   save,
   load,
   assertSaveContentHash,
+  assertWellFormedState,
   SaveIntegrityError,
   LEGACY_SAVE_VERSION,
+  PREVIOUS_SAVE_VERSION,
   SAVE_VERSION,
   SAVE_MODE,
   type SaveMetadata,
@@ -65,6 +67,13 @@ function saveMicro(state = microInitState(), metadata: SaveMetadata = MICRO_SAVE
   return save(state, MICRO_CONTENT_HASH, SAVE_MODE, metadata);
 }
 
+function historicalSave(bytes: string, version: 1 | 2): Record<string, unknown> {
+  const bundle = JSON.parse(bytes) as Record<string, unknown>;
+  bundle.version = version;
+  delete bundle.stateHash;
+  return bundle;
+}
+
 function traceOptions(overrides: Partial<RecordOptions> = {}): RecordOptions {
   const source =
     overrides.generatedRpgSeed === undefined && overrides.worldQuestId === undefined
@@ -93,6 +102,8 @@ describe("save / load (§8.7)", () => {
     expect("generatedRpgSeed" in raw).toBe(false);
     expect("embedded_character_continuity" in raw).toBe(false);
     expect(raw["version"]).toBe(SAVE_VERSION);
+    expect(raw["stateHash"]).toBe(hashState(s));
+    expect(loaded.stateHash).toBe(hashState(s));
   });
 
   it("migrates the frozen v1 ObjectRuntime.contents fixture and keeps new saves clean", () => {
@@ -122,7 +133,7 @@ describe("save / load (§8.7)", () => {
     ).toThrow(/malformed or non-finite/i);
 
     const forgedV2 = JSON.parse(LEGACY_V1_RUNTIME_CONTENTS_SAVE) as { version: number };
-    forgedV2.version = SAVE_VERSION;
+    forgedV2.version = PREVIOUS_SAVE_VERSION;
     expect(() => load(JSON.stringify(forgedV2), MICRO_CONTENT_HASH)).toThrow(
       /malformed or non-finite/i,
     );
@@ -141,7 +152,84 @@ describe("save / load (§8.7)", () => {
     });
   });
 
-  it("preserves schema-valid reserved keys in every v2 state record and in constructors", () => {
+  it("honestly migrates digest-free v1/v2 envelopes and emits only digest-bound v3 saves", () => {
+    const currentBytes = saveMicro();
+    const current = JSON.parse(currentBytes) as Record<string, unknown>;
+    expect(current.version).toBe(SAVE_VERSION);
+    expect(current.stateHash).toBe(hashState(current.state));
+
+    for (const version of [LEGACY_SAVE_VERSION, PREVIOUS_SAVE_VERSION] as const) {
+      const historical = historicalSave(currentBytes, version);
+      expect("stateHash" in historical).toBe(false);
+
+      const migrated = load(JSON.stringify(historical), MICRO_CONTENT_HASH);
+      expect(migrated.version).toBe(SAVE_VERSION);
+      expect(migrated.stateHash).toBe(hashState(migrated.state));
+    }
+
+    const rewritten = JSON.parse(
+      save(
+        load(JSON.stringify(historicalSave(currentBytes, PREVIOUS_SAVE_VERSION))).state,
+        MICRO_CONTENT_HASH,
+        SAVE_MODE,
+        MICRO_SAVE_SOURCE,
+      ),
+    ) as Record<string, unknown>;
+    expect(rewritten.version).toBe(SAVE_VERSION);
+    expect(rewritten.stateHash).toBe(hashState(rewritten.state));
+  });
+
+  it("rejects inconsistent current state digests but permits explicit local edits with recomputation", () => {
+    const edited = JSON.parse(saveMicro()) as {
+      stateHash: string;
+      state: GameState;
+    };
+    edited.state.seed += 1;
+
+    expect(() => load(JSON.stringify(edited), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+    expect(() => load(JSON.stringify(edited), MICRO_CONTENT_HASH)).toThrow(/stateHash mismatch/);
+
+    // This is a consistency checksum, not a tamper-proof authenticator. A local
+    // editor can deliberately update both fields and the ordinary schema/load gates
+    // still decide whether the resulting save is valid.
+    edited.stateHash = hashState(edited.state);
+    expect(load(JSON.stringify(edited), MICRO_CONTENT_HASH).state.seed).toBe(
+      microInitState().seed + 1,
+    );
+  });
+
+  it("uses strict versioned top-level schemas and requires v3 stateHash", () => {
+    const currentBytes = saveMicro();
+    for (const version of [LEGACY_SAVE_VERSION, PREVIOUS_SAVE_VERSION, SAVE_VERSION] as const) {
+      const bundle =
+        version === SAVE_VERSION ? JSON.parse(currentBytes) : historicalSave(currentBytes, version);
+      bundle.unrecognized_top_level_key = true;
+      expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
+      expect(() => load(JSON.stringify(bundle), MICRO_CONTENT_HASH)).toThrow(/bundle.*malformed/i);
+    }
+
+    const missingDigest = JSON.parse(currentBytes) as Record<string, unknown>;
+    delete missingDigest.stateHash;
+    expect(() => load(JSON.stringify(missingDigest), MICRO_CONTENT_HASH)).toThrow(/stateHash/);
+
+    const merelyRelabeledV2 = JSON.parse(currentBytes) as Record<string, unknown>;
+    merelyRelabeledV2.version = PREVIOUS_SAVE_VERSION;
+    expect(() => load(JSON.stringify(merelyRelabeledV2), MICRO_CONTENT_HASH)).toThrow(
+      /bundle.*malformed/i,
+    );
+  });
+
+  it("returns GameStateSchema parsed data rather than the caller's original object", () => {
+    const original = microInitState();
+    const parsed = assertWellFormedState(original);
+
+    expect(parsed).toEqual(original);
+    expect(parsed).not.toBe(original);
+    expect(parsed.visited).not.toBe(original.visited);
+    expect(parsed.vars).not.toBe(original.vars);
+  });
+
+  it("preserves schema-valid reserved keys in every current state record and in constructors", () => {
     const state: GameState = {
       ...microInitState(),
       visited: JSON.parse('{"start":true,"__proto__":true}') as Record<string, boolean>,
@@ -185,8 +273,7 @@ describe("save / load (§8.7)", () => {
       ...microInitState(),
       objectState: JSON.parse('{"__proto__":{"open":true}}') as GameState["objectState"],
     };
-    const legacy = JSON.parse(saveMicro(state)) as { version: number };
-    legacy.version = LEGACY_SAVE_VERSION;
+    const legacy = historicalSave(saveMicro(state), LEGACY_SAVE_VERSION);
 
     const loaded = load(JSON.stringify(legacy), MICRO_CONTENT_HASH);
     expect(loaded.version).toBe(SAVE_VERSION);
@@ -195,11 +282,10 @@ describe("save / load (§8.7)", () => {
     expect(hashState(loaded.state)).toBe(hashState(state));
   });
 
-  it("makes the v1 RNG continuation boundary explicit while v2 supports signed/wide seeds", () => {
+  it("makes the v1 RNG continuation boundary explicit while v2+ supports signed/wide seeds", () => {
     for (const seed of [0, 2 ** 32 - 1]) {
       const state = { ...microInitState(), seed };
-      const legacy = JSON.parse(saveMicro(state)) as { version: number };
-      legacy.version = LEGACY_SAVE_VERSION;
+      const legacy = historicalSave(saveMicro(state), LEGACY_SAVE_VERSION);
       const loaded = load(JSON.stringify(legacy), MICRO_CONTENT_HASH);
       expect(loaded.version).toBe(SAVE_VERSION);
       expect(hashState(loaded.state)).toBe(hashState(state));
@@ -209,9 +295,12 @@ describe("save / load (§8.7)", () => {
       const state = { ...microInitState(), seed };
       const current = saveMicro(state);
       expect(load(current, MICRO_CONTENT_HASH).state.seed).toBe(seed);
+      expect(
+        load(JSON.stringify(historicalSave(current, PREVIOUS_SAVE_VERSION)), MICRO_CONTENT_HASH)
+          .state.seed,
+      ).toBe(seed);
 
-      const legacy = JSON.parse(current) as { version: number };
-      legacy.version = LEGACY_SAVE_VERSION;
+      const legacy = historicalSave(current, LEGACY_SAVE_VERSION);
       const resumeLegacy = () => load(JSON.stringify(legacy), MICRO_CONTENT_HASH);
       expect(resumeLegacy).toThrow(SaveIntegrityError);
       expect(resumeLegacy).toThrow(/signed\/wide RNG streams changed in save version 2/);
@@ -519,6 +608,7 @@ describe("save / load (§8.7)", () => {
     const bytes = JSON.stringify({
       version: SAVE_VERSION,
       contentHash: MICRO_CONTENT_HASH,
+      stateHash: hashState(microInitState()),
       mode: SAVE_MODE,
       source_ref: ["pack", MICRO_PACK_ID],
       state: microInitState(),

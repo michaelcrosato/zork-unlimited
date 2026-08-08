@@ -16,9 +16,6 @@ import {
   allOpeningReliefAllocationJournalDrafts,
   openingReliefAllocationJournalEntry,
   openingReliefAllocationJournalId,
-  openingReliefAllocationLegacyJournalDraft,
-  openingReliefAllocationLegacyJournalEntry,
-  openingReliefAllocationLegacySourceWorldHash,
   openingReliefAllocationOfferJournalDraft,
   openingReliefAllocationOfferJournalEntry,
   proveOpeningReliefAllocationJournal,
@@ -30,7 +27,6 @@ import type {
 } from "../../src/world/session_snapshot.js";
 
 const TOWN = "Albany city";
-const LEGACY_HASH = "6".repeat(64);
 const PREPARATION_HASH = "a".repeat(64);
 
 function reliefAllocationScene(): OpeningReliefAllocation {
@@ -175,10 +171,7 @@ function preparationProof(args: {
       args.character ?? characterAfterPreparation(),
     ),
     offered: true,
-    legacy: false,
-    legacySourceWorldHash: null,
     offerBoundary: { ...boundary },
-    legacyBoundary: null,
     profile: PREPARATION_PROFILE,
     selectionBoundary: { ...boundary },
     terms: { minutes: 0, money: 0, sponsored: false, sponsorNote: null },
@@ -252,16 +245,12 @@ function prove(args: {
   scene?: OpeningReliefAllocation | null;
   entries: readonly OverworldJournalEntry[];
   proof: OpeningPreparationJournalProof;
-  trustedLegacySourceWorldHash?: string | null;
 }) {
   return proveOpeningReliefAllocationJournal({
     scene: args.scene === undefined ? reliefAllocationScene() : args.scene,
     preparationProof: args.proof,
     journalEntries: args.entries,
     expectedTown: TOWN,
-    ...(args.trustedLegacySourceWorldHash === undefined
-      ? {}
-      : { trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash }),
   });
 }
 
@@ -297,14 +286,13 @@ describe("opening relief allocation journal proof", () => {
       entries: [preparationEntry()],
       proof: preparationProof({ character, journalIndex: 0 }),
     });
-    expect(noEvidence).toMatchObject({ offered: false, legacy: false, option: null });
+    expect(noEvidence).toMatchObject({ offered: false, option: null });
     expect(noEvidence.characterAfterAllocation).toEqual(character);
     expect(noEvidence.characterAfterAllocation).not.toBe(character);
 
     const pending = pendingFixture();
     expect(prove(pending)).toMatchObject({
       offered: true,
-      legacy: false,
       option: null,
       selectionBoundary: null,
       recordedAt: 100,
@@ -329,18 +317,16 @@ describe("opening relief allocation journal proof", () => {
     });
   });
 
-  it("rejects forged copy, identity, town, adjacency, boundary, and time", () => {
+  it("preserves historical copy while rejecting forged identity, town, adjacency, boundary, and time", () => {
     const fixture = selectedFixture();
 
     const forgedOffer = structuredClone(fixture.entries);
-    forgedOffer[1]!.text += " Forged.";
-    expect(() => prove({ ...fixture, entries: forgedOffer })).toThrow(/authored copy/i);
+    forgedOffer[1]!.text += " Earlier wording.";
+    expect(() => prove({ ...fixture, entries: forgedOffer })).not.toThrow();
 
     const forgedSelection = structuredClone(fixture.entries);
-    forgedSelection[0]!.title = "Allocated relief: Forged";
-    expect(() => prove({ ...fixture, entries: forgedSelection })).toThrow(
-      /authored terms, copy, or town/i,
-    );
+    forgedSelection[0]!.title = "Allocated relief under an earlier title";
+    expect(() => prove({ ...fixture, entries: forgedSelection })).not.toThrow();
 
     const unknown = structuredClone(fixture.entries);
     unknown[0]!.id = openingReliefAllocationJournalId(fixture.scene.id, "albany:relief_missing");
@@ -348,7 +334,7 @@ describe("opening relief allocation journal proof", () => {
 
     const wrongTown = structuredClone(fixture.entries);
     wrongTown[0]!.town = "Queensbury town";
-    expect(() => prove({ ...fixture, entries: wrongTown })).toThrow(/copy, or town/i);
+    expect(() => prove({ ...fixture, entries: wrongTown })).toThrow(/bound to town/i);
 
     const separated = structuredClone(fixture.entries);
     separated.splice(1, 0, {
@@ -384,25 +370,11 @@ describe("opening relief allocation journal proof", () => {
     }
   });
 
-  it("rejects duplicate, mixed, unresolved-preparation, and late pending evidence", () => {
+  it("rejects duplicate, unresolved-preparation, and late pending evidence", () => {
     const fixture = selectedFixture();
     expect(() => prove({ ...fixture, entries: [fixture.entries[0]!, ...fixture.entries] })).toThrow(
       /at most one relief allocation/i,
     );
-
-    const marker = openingReliefAllocationLegacyJournalEntry({
-      sourceWorldHash: LEGACY_HASH,
-      town: TOWN,
-      recordedAt: timeLabel(100),
-      storyChoiceBoundary: offerBoundary(),
-    });
-    expect(() =>
-      prove({
-        ...fixture,
-        entries: [marker, ...fixture.entries],
-        trustedLegacySourceWorldHash: LEGACY_HASH,
-      }),
-    ).toThrow(/cannot combine legacy and current/i);
 
     const unresolved: OpeningPreparationJournalProof = {
       ...fixture.proof,
@@ -460,122 +432,5 @@ describe("opening relief allocation journal proof", () => {
         proof: preparationProof({ journalIndex: 3 }),
       }),
     ).toThrow(/precede the target quest boundary/i);
-  });
-});
-
-describe("trusted legacy relief allocation evidence", () => {
-  function legacyFixture() {
-    const boundary = offerBoundary();
-    const marker = openingReliefAllocationLegacyJournalEntry({
-      sourceWorldHash: LEGACY_HASH,
-      town: TOWN,
-      recordedAt: timeLabel(boundary.minutes),
-      storyChoiceBoundary: boundary,
-    });
-    const quest: OverworldJournalEntry = {
-      id: "quest:wolf_winter",
-      kind: "quest",
-      town: TOWN,
-      title: "Started The Wolf-Winter",
-      text: "The exact quest start is proven by the quest-start replay module.",
-      recordedAt: timeLabel(110),
-    };
-    return {
-      entries: [quest, marker, preparationEntry()],
-      proof: preparationProof({ journalIndex: 2 }),
-      boundary,
-    };
-  }
-
-  it("is exact-hash bound and grants no effects, service, or cost", () => {
-    const fixture = legacyFixture();
-    const character = fixture.proof.characterAfterPreparation;
-    const draft = openingReliefAllocationLegacyJournalDraft(LEGACY_HASH);
-
-    expect(draft.id).toBe(`relief_allocation_legacy:${LEGACY_HASH}`);
-    expect(draft.text).toMatch(
-      /no retroactive relief allocation.*knowledge.*field recovery.*return service.*time cost/i,
-    );
-    expect(openingReliefAllocationLegacySourceWorldHash(draft.id)).toBe(LEGACY_HASH);
-    expect(
-      openingReliefAllocationLegacySourceWorldHash("relief_allocation_legacy:not-a-hash"),
-    ).toBeNull();
-    expect(() => openingReliefAllocationLegacyJournalDraft("A".repeat(64))).toThrow(/invalid/i);
-
-    expect(() => prove(fixture)).toThrow(/trusted predecessor hash/i);
-    expect(() => prove({ ...fixture, trustedLegacySourceWorldHash: "7".repeat(64) })).toThrow(
-      /trusted predecessor hash/i,
-    );
-
-    const accepted = prove({ ...fixture, trustedLegacySourceWorldHash: LEGACY_HASH });
-    expect(accepted).toMatchObject({
-      offered: false,
-      legacy: true,
-      legacySourceWorldHash: LEGACY_HASH,
-      option: null,
-      terms: null,
-      journalIndex: 1,
-      recordedAt: 100,
-    });
-    expect(accepted.legacyBoundary).toEqual(fixture.boundary);
-    expect(accepted.characterAfterAllocation).toEqual(character);
-    expect(accepted.characterAfterAllocation).not.toBe(character);
-    expect(accepted.characterAfterAllocation.knowledge).not.toContain(
-      "albany:knowledge_relief_cade_steading",
-    );
-  });
-
-  it("rejects forged copy, source, town, boundary, time, adjacency, and unstarted markers", () => {
-    const fixture = legacyFixture();
-    for (const mutate of [
-      (entry: OverworldJournalEntry) => {
-        entry.text += " Forged.";
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.town = "Queensbury town";
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.storyChoiceBoundary!.areaId = "albany_city__market";
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.recordedAt = timeLabel(101);
-      },
-    ]) {
-      const forged = structuredClone(fixture.entries);
-      mutate(forged[1]!);
-      expect(() =>
-        prove({
-          ...fixture,
-          entries: forged,
-          trustedLegacySourceWorldHash: LEGACY_HASH,
-        }),
-      ).toThrow();
-    }
-
-    const separated = structuredClone(fixture.entries);
-    separated.splice(1, 0, {
-      id: "area:interposed",
-      kind: "area",
-      town: TOWN,
-      title: "Interposed",
-      text: "This cannot divide departure from its marker.",
-      recordedAt: timeLabel(105),
-    });
-    expect(() =>
-      prove({
-        entries: separated,
-        proof: preparationProof({ journalIndex: 3 }),
-        trustedLegacySourceWorldHash: LEGACY_HASH,
-      }),
-    ).toThrow(/immediately before replayable target-quest departure/i);
-
-    const unstarted = fixture.entries.slice(1);
-    expect(() =>
-      prove({
-        entries: unstarted,
-        proof: preparationProof({ journalIndex: 1 }),
-        trustedLegacySourceWorldHash: LEGACY_HASH,
-      }),
-    ).toThrow(/replayable target-quest departure/i);
   });
 });

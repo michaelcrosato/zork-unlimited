@@ -52,9 +52,11 @@ improvement:
   invariants:
     - The retuned pack validates green under the full RPG validator (no COMBAT_UNWINNABLE).
     - The sentinel carries hp18/atk7/def2.
-    - Real failure state: an under-armed thief (base attack 4) at seed 1 is killed and
+    - >-
+      Real failure state: an under-armed thief (base attack 4) at seed 1 is killed and
       fires the declared death ending ending_fallen (death: true).
-    - Prep decides it: at the SAME seed 1, the ONLY change being the spirit's +2 attack,
+    - >-
+      Prep decides it: at the SAME seed 1, the ONLY change being the spirit's +2 attack,
       the fight flips from death to a full ending_victory 50/50.
     - No prose/flag/score(50)/win/ending/exit/effect change — only the two enemy stats; the
       bug_0070 prose-cue, bug_0048 grate journal, bug_0076 plate beat, and the seed-2

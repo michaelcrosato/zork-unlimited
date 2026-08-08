@@ -19,9 +19,9 @@ improvement loop, and this charter orients the agent driving it.
 
 ## The loop (one cycle)
 
-`loop.sh` runs it; `docs/afk_loop.md` is the full protocol; the three-tier
-testing pyramid (on its always-on Tier 0 dev foundation) is
-`docs/testing_pyramid.md`. Each cycle:
+`loop.sh` is the repository's reference driver for this protocol;
+`docs/afk_loop.md` is the full protocol; the three-tier testing pyramid (on its
+always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
 
 1. **Assess** — `npm run ai:loop` ranks the next-best improvement (compiled hot spots, when present, are a primary input).
 2. **Crawl gate (pre)** — `npm run crawl:smoke` must be green before touching anything.
@@ -40,10 +40,13 @@ testing pyramid (on its always-on Tier 0 dev foundation) is
    instruments and never pure retention evidence. Milestone or feedback-harvest
    cycles (every ~10 cycles, or when the ledger's open questions outgrow single
    reports) run `npm run fleet -- --count 100` instead.
-6. **Compile feedback** — when ≥3 new verified reports exist since the last compile: `npm run feedback:compile`;
-   count actual verified artifacts rather than guessing, then triage from `hotspots.md`.
+6. **Compile feedback (prompted-agent step)** — when ≥3 new verified reports exist
+   since the last compile: `npm run feedback:compile`; count actual verified
+   artifacts rather than guessing, then triage from `hotspots.md`. `loop.sh` does
+   not independently count or invoke this command.
 7. **Outer gates** — `npm run crawl:smoke` again, then `npm run health`, integrity
-   drift against the cycle-start ref, and the playtest-record gate. A new crawl
+   drift against the cycle-start ref, and the playtest gate (schema-valid pure V2
+   report + receipt sidecar bound to the clean provisional HEAD). A new crawl
    finding is YOUR regression; any red gate resets the provisional commit.
 8. **Finalize** — complete only the terse `AI_LOOP_STATE.md` entry and commit that
    ledger update after every gate is green. Optional push happens only afterward.

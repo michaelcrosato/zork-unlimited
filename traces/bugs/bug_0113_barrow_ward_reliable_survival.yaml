@@ -61,12 +61,15 @@ improvement:
     REMOVE the (already-absent) unwinnable risk, never add one. The death endings stay
     reachable (under-armed is still a lethal gamble), so the game's failure states are intact.
   invariants:
-    - The ward is +3: ask_wight raises defense 2 -> 5 once and journals "+3 defense".
+    - >-
+      The ward is +3: ask_wight raises defense 2 -> 5 once and journals "+3 defense".
     - The pack validates green under the full RPG validator (no COMBAT_UNWINNABLE).
-    - Reliable AND decisive over seeds 1-40 on the real routes: prepared wins a strong majority
+    - >-
+      Reliable AND decisive over seeds 1-40 on the real routes: prepared wins a strong majority
       (>=33/40) AND at least twice as often as under-armed (which stays <=20/40) — correct play
       reliably survives while prep stays the decisive lever bug_0102 made it.
-    - The +1 is load-bearing: at seed 6 the warded route (def5) wins ending_victory 50/50, but
+    - >-
+      The +1 is load-bearing: at seed 6 the warded route (def5) wins ending_victory 50/50, but
       the SAME seeded route with defense forced to 4 (the old +2 ward) is killed -> ending_fallen.
     - The wight is UNCHANGED (hp22/atk5/def2); no prose/flag/score(50)/win/ending/exit/effect
       change beyond the single ward value, so the bug_0016 scoring, bug_0027/0069 lever-

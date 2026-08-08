@@ -81,8 +81,10 @@ closes:
   - bug_0024 deferred limitation "the closed condition DSL has no object-open predicate" — the
     predicate now exists; the intermediate stale-"locked" window is closed.
 deferred:
-  - Restore the assessor's cross-category radar (bug_0032 deferred): extend ESLint/Prettier + the
+  - >-
+    Restore the assessor's cross-category radar (bug_0032 deferred): extend ESLint/Prettier + the
     assessor's view to tests/ and ui/, or add a docs/staleness detector. The assessor currently
     surfaces only uniform 0.5 blind-playtest reviews (the repo is genuinely healthy).
-  - alchemists_tower flavor-only notes (not defects): the water-add step is unsignposted until the
+  - >-
+    alchemists_tower flavor-only notes (not defects): the water-add step is unsignposted until the
     herb steeps; "use black phial" self-target verb reads slightly unnatural; scoring is back-loaded.

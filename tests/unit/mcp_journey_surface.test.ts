@@ -37,6 +37,7 @@ import {
 } from "../../src/world/session_departure_interactions.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const api = () => createToolApi({ root: process.cwd() });
 const FULL_OVERWORLD = { compact_context: false, compact_result: false } as const;
@@ -63,6 +64,7 @@ function uiSessionAtPostGallowmereHayden(): OverworldSession {
   session.scoutPoi("albany_city__civic_core__poi");
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveUiSessionToArea(session, "albany_city__transport_hub");
@@ -116,6 +118,7 @@ function uiSessionAtAlbanyGoalPause(): OverworldSession {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
   expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
@@ -1035,6 +1038,7 @@ describe("MCP journey surface", () => {
     source.scoutPoi("albany_city__civic_core__poi");
     source.talkToCharacter("albany_city__civic_core__contact");
     source.chooseJourneyStory("albany:ledger_advocate");
+    revealCurrentJourneyStoryOptions(source, WORLD.opening_relief_oath!.id);
     source.chooseJourneyStory(LIMITED_RELIEF_OATH_ID);
     source.chooseJourneyStory("albany:source_rowan_civic_docket");
     moveUiSessionToArea(source, "albany_city__transport_hub");

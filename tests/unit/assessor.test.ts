@@ -342,7 +342,9 @@ describe("assess()", () => {
     expect(out).toContain("Quest health");
     expect(out).not.toContain("Pack health");
     expect(out).not.toMatch(/\[[?a-z]+\]/);
-    expect(out).toMatch(/Review quest "[a-z0-9_]+" using fresh-overworld blind evidence/);
+    expect(out).toMatch(
+      /Maintenance rotation: review quest "[a-z0-9_]+" using fresh-overworld blind evidence/,
+    );
     expect(out).not.toMatch(/Blind-playtest "[a-z0-9_]+_v\d+"/);
   });
 
@@ -354,6 +356,33 @@ describe("assess()", () => {
     expect(compact).toContain("routine fresh-world review candidate(s) omitted");
     expect(compact).toContain("full list is in assessment.json");
     expect(full).toContain("why: The validator and exhaustive solver prove");
+  });
+
+  it("labels a saturated floor pick as maintenance, never strategic direction", () => {
+    const maintenance: ImprovementCandidate = {
+      id: "playtest-wolf_winter",
+      category: "content_fix",
+      target: "wolf_winter",
+      title:
+        'Maintenance rotation: review quest "wolf_winter" using fresh-overworld blind evidence — structurally clean',
+      rationale: "Only a fresh-overworld blind player can judge experience quality.",
+      evidence: ["rotation due"],
+      impact: 1,
+      effort: "M",
+      score: SATURATION_FLOOR,
+    };
+    const saturated: Assessment = {
+      ...a,
+      allGeneratorsClean: true,
+      candidates: [maintenance],
+      top: maintenance,
+    };
+
+    const out = formatAssessment(saturated);
+    expect(out).toContain("# AFK assessment — maintenance rotation only");
+    expect(out).toContain("Maintenance rotation only — no strategic recommendation");
+    expect(out).not.toContain("next best improvement");
+    expect(out).not.toContain("## ▶ Recommended next:");
   });
 
   it("keeps the next quest rotation visible when hot spots fill the compact rows", () => {
@@ -372,7 +401,8 @@ describe("assess()", () => {
       id: "playtest-wolf_winter",
       category: "content_fix",
       target: "wolf_winter",
-      title: 'Review quest "wolf_winter" using fresh-overworld blind evidence — structurally clean',
+      title:
+        'Maintenance rotation: review quest "wolf_winter" using fresh-overworld blind evidence — structurally clean',
       rationale: "Only a fresh-overworld blind player can judge experience quality.",
       evidence: ["rotation due"],
       impact: 1,
@@ -387,7 +417,7 @@ describe("assess()", () => {
 
     const out = formatAssessment(fixture, { maxCandidates: 3 });
     expect(out).toContain(
-      'Next quest review: Review quest "wolf_winter" using fresh-overworld blind evidence',
+      'Next quest review: Maintenance rotation: review quest "wolf_winter" using fresh-overworld blind evidence',
     );
   });
 });

@@ -113,6 +113,8 @@ export type OverworldMcpRestoreResponse<Args extends OverworldMcpResponseOptions
   ok: true;
   session_id: string;
   snapshot_hash: string;
+  /** Non-fatal compatibility notices produced while loading the save. */
+  warnings: readonly string[];
   /** Definitions for every compact field present in this restored response. */
   legend?: OverworldCompactLegendPatch;
 } & OverworldMcpJourneyField<Args> &
@@ -631,6 +633,7 @@ export class OverworldMcpSessionStore {
       ok: true,
       session_id: restored.session_id,
       snapshot_hash: this.snapshotHash(restored.session),
+      warnings: restored.session.restoreWarnings(),
       journey:
         args.compact_context === true
           ? compactJourneyPresentation(restored.session.journey())

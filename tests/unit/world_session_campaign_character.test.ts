@@ -3,10 +3,6 @@ import { describe, expect, it } from "vitest";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { OVERWORLD_COMPACT_VIEW_VERSION } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../src/world/session.js";
-import {
-  OVERWORLD_SESSION_LEGACY_SAVE_VERSION,
-  OVERWORLD_SESSION_SAVE_VERSION,
-} from "../../src/world/session_snapshot.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -85,25 +81,5 @@ describe("overworld campaign character integration", () => {
     expect(() => OverworldSession.restore(WORLD, tampered)).toThrow(
       /campaign character does not match replayed quest consequences/i,
     );
-  });
-
-  it("migrates strict v8 saves once and requires character state in canonical v9 saves", () => {
-    const fresh = new OverworldSession(WORLD).snapshot();
-    const { character: _character, ...withoutCharacter } = fresh;
-    const legacy = {
-      ...withoutCharacter,
-      version: OVERWORLD_SESSION_LEGACY_SAVE_VERSION,
-    };
-
-    const migrated = OverworldSession.restore(WORLD, legacy).snapshot();
-    expect(migrated.version).toBe(OVERWORLD_SESSION_SAVE_VERSION);
-    expect(migrated.character).toEqual(createInitialCampaignCharacterState());
-    expect(() => OverworldSession.restore(WORLD, withoutCharacter)).toThrow();
-    expect(() =>
-      OverworldSession.restore(WORLD, {
-        ...legacy,
-        character: createInitialCampaignCharacterState(),
-      }),
-    ).toThrow();
   });
 });

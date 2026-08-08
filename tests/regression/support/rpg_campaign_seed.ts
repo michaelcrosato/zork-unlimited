@@ -38,11 +38,7 @@ export const WOLF_JUNE_RELEASE_SEED: RpgCampaignSeedFixture = Object.freeze({
   packId: "wolf_winter_v1",
   seed: 7,
   importedFlags: Object.freeze(["june_pike_present"]),
-  actions: Object.freeze([
-    "go_north",
-    "talk_june_pike_combat_boundary",
-    "ask_release_june_for_hunt",
-  ]),
+  actions: Object.freeze(["go_north", "talk_june_pike", "ask_release_june_for_hunt"]),
 });
 
 /** Full ordinary yard preparation keeps worst-roll tactical follow-throughs alive. */
@@ -59,7 +55,7 @@ export const WOLF_JUNE_PREPARED_RELEASE_SEED: RpgCampaignSeedFixture = Object.fr
     "take_byre_jerkin",
     "use_byre_jerkin",
     "go_east",
-    "talk_june_pike_combat_boundary",
+    "talk_june_pike",
     "ask_release_june_for_hunt",
   ]),
 });

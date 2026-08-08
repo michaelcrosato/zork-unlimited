@@ -939,9 +939,6 @@ function assertKnownGoalCompletion(
 ): void {
   const definition = journeyCampaignGoalDefinition(goal);
   if (!definition) throw new Error(`Unknown journey campaign goal "${goal.id}".`);
-  if (goal.text !== definition.text) {
-    throw new Error(`Journey goal "${goal.id}" does not match its canonical campaign text.`);
-  }
   const completed = completedQuestIds.has(definition.targetQuestId);
   if (goal.status === "completed" && !completed) {
     throw new Error(
@@ -1007,12 +1004,6 @@ export function assertJourneyCampaignJournalProof(args: {
     const entry = entriesById.get(entryId);
     if (!entry) {
       throw new Error(`Overworld session snapshot is missing campaign journal entry "${entryId}".`);
-    }
-    const definition = journeyCampaignGoalDefinition(goal);
-    if (!definition) throw new Error(`Unknown journey campaign goal "${goal.id}".`);
-    const expected = journeyCampaignGoalJournalCopy(definition, args.questOutcomeIds);
-    if (entry.title !== expected.title || entry.text !== expected.text) {
-      throw new Error(`Overworld session snapshot campaign journal entry "${entryId}" is forged.`);
     }
   }
 }

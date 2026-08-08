@@ -1,0 +1,33 @@
+# MUST WARN: SCORE_PEAKS_BEFORE_WIN
+# The player can earn the declared perfect score from the ledger before pulling
+# the separate lever that sets the required win flag. The climactic act pays zero.
+meta: { id: early_perfect_score, title: "Early Perfect Score", start_room: a, max_score: 10, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [ledger, lever]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: ledger
+    name: "scored ledger"
+    aliases: [ledger]
+    description: "A ledger worth the entire score."
+    interactions:
+      - verb: READ
+        target: ledger
+        effects: [{ inc_var: { name: score, by: 10 } }]
+  - id: lever
+    name: "ending lever"
+    aliases: [lever]
+    description: "The separate act that actually wins."
+    interactions:
+      - verb: USE
+        target: lever
+        effects: [{ set_flag: gate_released }]
+win_conditions: [{ id: w, conditions: [{ has_flag: gate_released }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

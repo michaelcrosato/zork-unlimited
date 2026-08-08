@@ -1,0 +1,36 @@
+# MUST WARN: DIALOGUE_ROOT_REGREET_MISSING
+# The root offers a one-time topic whose target sets its retirement flag, but the
+# root has no has_flag variant for later conversations and would replay stale
+# first-contact prose after the topic disappears.
+meta: { id: stale_root_regreet, title: "Stale Root Re-greet", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+npcs:
+  - id: warden
+    name: "Warden"
+    description: "A warden with a one-time report."
+    room: a
+    dialogue:
+      root: greet
+      nodes:
+        - id: greet
+          npc_text: "The warden introduces the report for the first time."
+          topics:
+            - id: report
+              prompt: "Ask for the report."
+              conditions: [{ not_flag: heard_report }]
+              goto: report
+            - { id: leave, prompt: "Leave", end: true }
+        - id: report
+          npc_text: "The warden gives the report."
+          effects: [{ set_flag: heard_report }]
+          topics: [{ id: done, prompt: "Done", end: true }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

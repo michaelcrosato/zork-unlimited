@@ -39,7 +39,8 @@ improvement:
     - The Outer Forge reads the base "lies a stout iron pry-bar" line before the bar
       is taken, and the bare-trough variant after — the static line never contradicts
       an empty trough again.
-    - Content-only: no object/exit/flag/quest/score(50)/win/ending change; taking the
+    - >-
+      Content-only: no object/exit/flag/quest/score(50)/win/ending change; taking the
       bar is inert beyond inventory + the variant swap; the canonical victory route
       still wins ending_victory 50/50; pack validates 0/0.
 locked_by:

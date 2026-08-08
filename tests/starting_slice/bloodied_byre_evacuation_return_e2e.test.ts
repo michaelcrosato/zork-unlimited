@@ -12,6 +12,7 @@ import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
@@ -91,6 +92,7 @@ function wolfBoundaryWithJune(): OverworldSessionSnapshot {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(WORLD.opening_registration!.contact);
   session.chooseJourneyStory("albany:road_warden");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);

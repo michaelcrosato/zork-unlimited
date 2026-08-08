@@ -610,7 +610,7 @@ export function assess(root: string): Assessment {
         id: `playtest-${s.world_quest_id}`,
         category: "content_fix",
         target: s.world_quest_id,
-        title: `Review quest "${s.world_quest_id}" using fresh-overworld blind evidence — structurally clean`,
+        title: `Maintenance rotation: review quest "${s.world_quest_id}" using fresh-overworld blind evidence — structurally clean`,
         rationale:
           "The validator and exhaustive solver prove this quest is winnable and sound; only a fresh-overworld blind LLM run reveals signposting/clarity/pacing issues a static check can't see. Keep the quest as the review target without dropping the player directly into it.",
         evidence: [
@@ -633,7 +633,7 @@ export function assess(root: string): Assessment {
     category: "content_fix",
     target: OVERWORLD_PLAYTEST_TARGET,
     title:
-      "Blind-playtest the CORE GAME opening — the overworld from a fresh start (the default blind run)",
+      "Maintenance rotation: blind-playtest the CORE GAME opening — the overworld from a fresh start (the default blind run)",
     rationale:
       "The overworld opening is the first thing every new player experiences; only a fresh blind LLM playthrough of the core game can judge its orientation, signposting, discovery, and pacing.",
     evidence: [
@@ -897,14 +897,34 @@ function isRoutineQuestReviewCandidate(c: ImprovementCandidate): boolean {
   return isRoutinePlaytestCandidate(c) && c.target !== OVERWORLD_PLAYTEST_TARGET;
 }
 
+/**
+ * Distinguish evidence-backed strategic direction from the low-value review
+ * rotation that remains after every strategic lever has disarmed. Keeping the
+ * floor candidates in `candidates` preserves deterministic attendance rotation,
+ * but calling one the "next best improvement" at saturation overstates what the
+ * assessor knows. Generator drift remains strategic even if a malformed caller
+ * supplies a floor-scored top candidate, matching {@link isSaturated}.
+ */
+export function assessmentRecommendationKind(a: Assessment): "strategic" | "maintenance" | "none" {
+  if (a.top === null) return "none";
+  return isSaturated(a) ? "maintenance" : "strategic";
+}
+
 export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = {}): string {
   const full = opts.full === true;
   const maxCandidates = opts.maxCandidates ?? 8;
+  const recommendationKind = assessmentRecommendationKind(a);
   const playable = a.quests.filter((p) => p.playable).length;
   const warningCount = a.quests.reduce((sum, p) => sum + p.warnings, 0);
   const unhealthy = a.quests.filter((p) => !p.playable || p.warnings > 0);
   const lines: string[] = [];
-  lines.push("# AFK assessment — next best improvement");
+  lines.push(
+    recommendationKind === "strategic"
+      ? "# AFK assessment — next best improvement"
+      : recommendationKind === "maintenance"
+        ? "# AFK assessment — maintenance rotation only"
+        : "# AFK assessment — no strategic recommendation",
+  );
   lines.push("");
   lines.push(`RPG catalog: ${a.rpgQuestCount} quest(s), ${a.worldQuestCount} world quest node(s)`);
   lines.push(
@@ -970,9 +990,11 @@ export function formatAssessment(a: Assessment, opts: AssessmentFormatOptions = 
   }
   lines.push("");
   lines.push(
-    a.top
-      ? `## ▶ Recommended next: ${a.top.title}`
-      : "## No improvement candidates — the game is healthy.",
+    recommendationKind === "strategic"
+      ? `## ▶ Recommended next: ${a.top!.title}`
+      : recommendationKind === "maintenance"
+        ? `## Maintenance rotation only — no strategic recommendation: ${a.top!.title}`
+        : "## No improvement candidates — the game is healthy.",
   );
   return lines.join("\n");
 }

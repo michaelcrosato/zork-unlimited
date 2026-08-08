@@ -668,12 +668,8 @@ describe("overworld snapshot resource replay", () => {
       /area does not match/i,
     );
     expect(makeReplay({ entryOverrides: { town: "Elsewhere" } })).toThrow(/bound to town/i);
-    expect(makeReplay({ entryOverrides: { title: "Relabeled quick service" } })).toThrow(
-      /canonical authored copy/i,
-    );
-    expect(makeReplay({ entryOverrides: { text: "Relabeled service consequence." } })).toThrow(
-      /canonical authored copy/i,
-    );
+    expect(makeReplay({ entryOverrides: { title: "Earlier quick service" } })).not.toThrow();
+    expect(makeReplay({ entryOverrides: { text: "Earlier service consequence." } })).not.toThrow();
     expect(makeReplay({ recordedAt: 650 })).toThrow(/before enough clock time elapsed/i);
     expect(makeReplay({ secondUse: true })).toThrow(/used more than once/i);
   });
