@@ -204,9 +204,9 @@ export const APPROVED_D10_REMOVED_PATHS = [
  * compensating edits, so the exact deletion-set and review requirements remain
  * load-bearing. */
 export const APPROVED_D10_NET_TEST_REDUCTION = Object.freeze({
-  cases: 140,
-  assertions: 775,
-  strong: 721,
+  cases: 139,
+  assertions: 773,
+  strong: 719,
 });
 
 export const APPROVED_D10_DECISION_MARKER = "D10 save-migration ladder deletion";

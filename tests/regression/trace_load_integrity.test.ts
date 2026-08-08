@@ -27,8 +27,8 @@
  * so every WITNESS case below FAILS pre-change (verified by reverting the gate).
  * These are not vacuous greens.
  */
-import { describe, it, expect, beforeAll } from "vitest";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/runner.js";
@@ -55,10 +55,16 @@ let cleanTrace: Trace;
 let midGameTrace: Trace;
 
 const FIXTURE = (name: string) => `traces/bug_0190_${name}.json`;
+const generatedFixtures = new Set<string>();
+
+function writeBytes(path: string, contents: string): void {
+  mkdirSync("traces", { recursive: true });
+  writeFileSync(path, contents);
+  generatedFixtures.add(path);
+}
 
 function write(path: string, trace: Trace) {
-  mkdirSync("traces", { recursive: true });
-  writeFileSync(path, JSON.stringify(trace));
+  writeBytes(path, JSON.stringify(trace));
 }
 
 beforeAll(() => {
@@ -82,6 +88,10 @@ beforeAll(() => {
     { type: "MOVE", direction: "down" },
   ]).finalState;
   midGameTrace = recordTrace(rules, midState, [{ type: "TAKE", item: "iron_bar" }], meta);
+});
+
+afterAll(() => {
+  for (const path of generatedFixtures) rmSync(path, { force: true });
 });
 
 describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 trace twin)", () => {
@@ -111,8 +121,7 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
       (JSON.parse(forged) as { initial_state: { vars: { hp: number } } }).initial_state.vars.hp,
     ).toBe(Number.POSITIVE_INFINITY);
     const path = FIXTURE("infinity");
-    mkdirSync("traces", { recursive: true });
-    writeFileSync(path, forged);
+    writeBytes(path, forged);
     // Genuine witness: with the gate reverted, both calls return WITHOUT throwing.
     expect(() => api().replay_trace({ trace_path: path })).toThrow(SaveIntegrityError);
     expect(() => api().inspect_trace({ trace_path: path })).toThrow(SaveIntegrityError);

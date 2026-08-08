@@ -102,7 +102,7 @@ the final checklist.
 - `npm run verify:integrity -- --against origin/main` — **passed**: the approved
   D10 retirement matched all 39 reviewed deletions with no extra or missing
   deletion. The measured corpus changed from 3,282 cases / 20,427 assertions /
-  19,512 strong assertions to 3,142 / 19,652 / 18,791; the command reported no
+  19,512 strong assertions to 3,143 / 19,654 / 18,793; the command reported no
   errors and the six expected reviewed-change warnings.
 
 ## Final verification checklist — execute before landing

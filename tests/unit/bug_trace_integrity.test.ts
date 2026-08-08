@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -62,6 +63,44 @@ describe("bug trace integrity", () => {
       currentReferences: 2,
       historicalReferences: 1,
       generatedReferences: 1,
+    });
+  });
+
+  it("accepts non-ignored work in progress but rejects an ignored local artifact", () => {
+    const root = fixtureRoot();
+    execFileSync("git", ["init", "--quiet"], { cwd: root });
+    mkdirSync(join(root, "tests"), { recursive: true });
+    writeFileSync(join(root, ".gitignore"), "/traces/*.json\n");
+    writeFileSync(join(root, "tests", "new_regression.test.ts"), "export {};\n");
+    writeFileSync(join(root, "traces", "ignored.json"), "{}\n");
+    writeTrace(
+      root,
+      "bug_0001_clean_checkout.yaml",
+      [
+        "id: bug_0001_clean_checkout",
+        "title: clean checkout parity",
+        "verification:",
+        "  - tests/new_regression.test.ts",
+        "  - traces/ignored.json",
+      ].join("\n"),
+    );
+
+    const report = verifyBugTraces(root);
+
+    expect(report.findings).toEqual([
+      {
+        file: "traces/bugs/bug_0001_clean_checkout.yaml",
+        code: "TRACE_REFERENCE_MISSING",
+        message:
+          "referenced path never existed in the current tree or reachable Git history: traces/ignored.json",
+      },
+    ]);
+    expect(report.stats).toEqual({
+      files: 1,
+      references: 2,
+      currentReferences: 1,
+      historicalReferences: 0,
+      generatedReferences: 0,
     });
   });
 

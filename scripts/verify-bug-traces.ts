@@ -76,7 +76,12 @@ export function repositoryPathCatalog(root: string): {
   currentPaths: ReadonlySet<string>;
   historicalPaths: ReadonlySet<string>;
 } {
-  const currentPaths = new Set(gitLines(root, ["ls-files"]));
+  // Admit tracked/staged files plus intentional, non-ignored work in progress. Do not
+  // let ignored runtime artifacts make a phantom trace reference pass locally while
+  // the same reference fails in CI's clean checkout.
+  const currentPaths = new Set(
+    gitLines(root, ["ls-files", "--cached", "--others", "--exclude-standard"]),
+  );
   const historicalPaths = new Set<string>();
   for (const row of gitLines(root, ["rev-list", "--objects", "--all"])) {
     const separator = row.indexOf(" ");
@@ -109,18 +114,13 @@ function referenceCandidates(path: string): string[] {
 }
 
 function referenceKind(
-  root: string,
   path: string,
   currentPaths: ReadonlySet<string>,
   historicalPaths: ReadonlySet<string>,
 ): "current" | "historical" | "generated" | "missing" {
   if (GENERATED_PATH_REFERENCES.has(path)) return "generated";
   const candidates = referenceCandidates(path);
-  if (
-    candidates.some(
-      (candidate) => currentPaths.has(candidate) || existsSync(resolve(root, candidate)),
-    )
-  ) {
+  if (candidates.some((candidate) => currentPaths.has(candidate))) {
     return "current";
   }
   if (candidates.some((candidate) => historicalPaths.has(candidate))) return "historical";
@@ -266,7 +266,7 @@ export function verifyBugTraces(
 
     for (const path of referencedPaths(source)) {
       references += 1;
-      const kind = referenceKind(root, path, currentPaths, historicalPaths);
+      const kind = referenceKind(path, currentPaths, historicalPaths);
       if (kind === "current") currentReferences += 1;
       else if (kind === "historical") historicalReferences += 1;
       else if (kind === "generated") generatedReferences += 1;

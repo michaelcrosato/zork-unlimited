@@ -174,7 +174,7 @@ describe("approved D10 migration-ladder removal", () => {
         strong: 19_512,
         tautologies: 0,
       }),
-    ).toEqual({ cases: 3_142, assertions: 19_652, strong: 18_791, tautologies: 0 });
+    ).toEqual({ cases: 3_143, assertions: 19_654, strong: 18_793, tautologies: 0 });
   });
 
   it("rejects any unbalanced change around the exact reviewed net tuple", () => {
@@ -235,9 +235,9 @@ describe("approved D10 migration-ladder removal", () => {
     expect(eligible({ extraDeleted: "src/world/unrelated.ts" })).toBe(false);
     expect(eligible({ future: true })).toBe(false);
     expect(APPROVED_D10_NET_TEST_REDUCTION).toEqual({
-      cases: 140,
-      assertions: 775,
-      strong: 721,
+      cases: 139,
+      assertions: 773,
+      strong: 719,
     });
   });
 
