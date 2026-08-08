@@ -56,7 +56,9 @@ describe("CI test groups", () => {
   it("wires both CI jobs to dynamic groups while retaining the required verify gate", () => {
     const workflow = readFileSync(resolve(".github/workflows/ci.yml"), "utf8");
 
-    expect(workflow).toContain("scripts/ci-test-groups.ts --count 2 --group");
+    expect(workflow).toMatch(
+      /^ {2}test-shards:[\s\S]*?^ {10}fetch-depth: 0[\s\S]*?scripts\/ci-test-groups\.ts --count 2 --group/m,
+    );
     expect(workflow).not.toContain("--shard=");
     expect(workflow).toMatch(/^ {2}verify:$/m);
   });

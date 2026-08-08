@@ -87,6 +87,10 @@ jobs:
         group: [1, 2]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Bug-trace tests validate retired paths against reachable history. A
+          # depth-1 checkout makes valid historical evidence look like corruption.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
