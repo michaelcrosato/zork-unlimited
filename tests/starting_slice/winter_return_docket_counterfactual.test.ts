@@ -5,36 +5,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { deriveCampaignWorldFactIds } from "../../src/world/campaign_consequences.js";
 import { availableLocalJobSceneOptions } from "../../src/world/local_job_scene.js";
-import {
-  AUTHORED_ALBANY_CHARTER_LEGACY_EVENT,
-  AUTHORED_ALBANY_CHARTER_LEGACY_OPTION_ID,
-  WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
-  authoredLocalEventLegacyOptionId,
-} from "../../src/world/local_event_scene_legacy.js";
-import { authoredLocalJobLegacyOptionId } from "../../src/world/local_job_scene_legacy.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
-import {
-  OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
-  OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH,
-} from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import {
-  exactAuthoredAlbanyWorksFirstSceneWorld,
-  exactAuthoredAlbanyWorksPredecessor,
-  exactWinterReturnDocketPredecessor,
-} from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
-const PREDECESSOR = exactWinterReturnDocketPredecessor(WORLD);
-const FIRST_WORKS_SCENE_WORLD = exactAuthoredAlbanyWorksFirstSceneWorld(WORLD);
-const PRE_WORKS_WORLD = exactAuthoredAlbanyWorksPredecessor(WORLD);
 const REGION = "Capital / Mohawk";
 const EVENT_ID = "albany_city__civic_core__event";
 const EVENT_SCENE_ID = "albany:winter-return-charter-record";
@@ -94,6 +74,7 @@ function preparedForWolf(
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(world.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
@@ -388,83 +369,6 @@ describe("Winter Return Docket", () => {
     );
   });
 
-  it("migrates exact ff630a1e evidence to a neutral event path without inventing policy", () => {
-    expect(hashState(PREDECESSOR)).toBe(WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH);
-    expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-
-    const legacy = preparedForWolf(null, PREDECESSOR).session;
-    if (legacy.journey().storyChoice?.kind === "relief_allocation") {
-      legacy.chooseJourneyStory("albany:relief_cade_fodder");
-    }
-    moveToArea(legacy, CIVIC_AREA, PREDECESSOR);
-    legacy.investigateEvent(EVENT_ID);
-    legacy.resolveEvent(EVENT_ID);
-    legacy.workLocalJob(JOB_ID);
-    const predecessor = legacy.snapshot();
-    const migrated = OverworldSession.restore(WORLD, predecessor);
-    const migratedSnapshot = migrated.snapshot();
-    expect(migratedSnapshot.worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    expect(
-      migratedSnapshot.journalEntries.find((entry) => entry.id === `resolve:${EVENT_ID}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: EVENT_SCENE_ID,
-      optionId: AUTHORED_ALBANY_CHARTER_LEGACY_OPTION_ID,
-      sourceWorldHash: WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
-    });
-    expect(
-      migratedSnapshot.journalEntries.find((entry) => entry.id === `job:${JOB_ID}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: JOB_SCENE_ID,
-      sourceWorldHash: WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
-    });
-    expect(migrated.view().eventChoices).toEqual([]);
-    expect(migrated.view().jobChoices).toEqual([]);
-    expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(migratedSnapshot);
-  });
-
-  it.each([
-    [
-      "first Works scene",
-      FIRST_WORKS_SCENE_WORLD,
-      OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
-    ],
-    ["pre-Works", PRE_WORKS_WORLD, OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH],
-  ] as const)(
-    "chains the %s generic Civic boundary through the current authored scenes",
-    (_label, legacyWorld, sourceWorldHash) => {
-      expect(hashState(legacyWorld)).toBe(sourceWorldHash);
-      const legacy = preparedForWolf(null, legacyWorld).session;
-      if (legacy.journey().storyChoice?.kind === "relief_allocation") {
-        legacy.chooseJourneyStory("albany:relief_cade_fodder");
-      }
-      moveToArea(legacy, CIVIC_AREA, legacyWorld);
-      legacy.investigateEvent(EVENT_ID);
-      legacy.resolveEvent(EVENT_ID);
-      legacy.workLocalJob(JOB_ID);
-
-      const migrated = OverworldSession.restore(WORLD, legacy.snapshot());
-      const snapshot = migrated.snapshot();
-      expect(
-        snapshot.journalEntries.find((entry) => entry.id === `resolve:${EVENT_ID}`)
-          ?.localSceneProof,
-      ).toMatchObject({
-        sceneId: EVENT_SCENE_ID,
-        optionId: authoredLocalEventLegacyOptionId(sourceWorldHash),
-        sourceWorldHash,
-      });
-      expect(
-        snapshot.journalEntries.find((entry) => entry.id === `job:${JOB_ID}`)?.localSceneProof,
-      ).toMatchObject({
-        sceneId: JOB_SCENE_ID,
-        optionId: authoredLocalJobLegacyOptionId(sourceWorldHash),
-        sourceWorldHash,
-      });
-      expect(OverworldSession.restore(WORLD, snapshot).snapshot()).toEqual(snapshot);
-    },
-  );
-
   it("does not add a mandatory decision to first-goal completion", () => {
     const session = returnedToCivic(null);
     expect(session.snapshot().resolvedEventIds).not.toContain(EVENT_ID);
@@ -578,47 +482,5 @@ describe("Winter Return Docket", () => {
     expect(() => OverworldSession.restore(postWolfWorld, setupBackdated)).toThrow(
       /investigation.*required quest/i,
     );
-
-    const genericPredecessorWorld = structuredClone(postWolfWorld);
-    const genericEvent = genericPredecessorWorld.local_events.find(
-      (candidate) => candidate.id === EVENT_ID,
-    );
-    if (!genericEvent) throw new Error("expected generic predecessor event");
-    genericEvent.authored_scene = undefined;
-    const legacyPrepared = preparedForWolf(null, genericPredecessorWorld);
-    moveToArea(legacyPrepared.session, CIVIC_AREA, genericPredecessorWorld);
-    legacyPrepared.session.investigateEvent(EVENT_ID);
-    legacyPrepared.session.resolveEvent(EVENT_ID);
-    moveToArea(legacyPrepared.session, legacyPrepared.wolf.area, genericPredecessorWorld);
-    legacyPrepared.session.startQuest(
-      legacyPrepared.wolf.id,
-      "albany:wolf_approach_sheltered_stockway",
-    );
-    legacyPrepared.session.completeQuest(legacyPrepared.wolf.id, {
-      endingId: "ending_held",
-      endingTitle: "The Byre Held",
-      death: false,
-    });
-    const grandfathered = legacyPrepared.session.snapshot();
-    grandfathered.worldHash = hashState(postWolfWorld);
-    const legacyResolution = grandfathered.journalEntries.find(
-      (entry) => entry.id === `resolve:${EVENT_ID}`,
-    );
-    if (!legacyResolution) throw new Error("expected grandfathered resolution");
-    expect(legacyResolution.title).toBe(`Resolved ${AUTHORED_ALBANY_CHARTER_LEGACY_EVENT.title}`);
-    legacyResolution.localSceneProof = {
-      sceneId: EVENT_SCENE_ID,
-      optionId: AUTHORED_ALBANY_CHARTER_LEGACY_OPTION_ID,
-      sourceWorldHash: WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
-    };
-    const restoredGrandfathered = OverworldSession.restore(postWolfWorld, grandfathered);
-    expect(
-      restoredGrandfathered
-        .snapshot()
-        .journalEntries.find((entry) => entry.id === `resolve:${EVENT_ID}`)?.localSceneProof,
-    ).toMatchObject({
-      optionId: AUTHORED_ALBANY_CHARTER_LEGACY_OPTION_ID,
-      sourceWorldHash: WINTER_RETURN_DOCKET_PREDECESSOR_WORLD_HASH,
-    });
   });
 });

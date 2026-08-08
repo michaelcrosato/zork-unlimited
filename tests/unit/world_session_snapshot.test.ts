@@ -2,16 +2,17 @@ import { describe, expect, it } from "vitest";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
 import {
-  OVERWORLD_SESSION_LEGACY_SAVE_VERSION,
+  OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION,
   OVERWORLD_SESSION_SAVE_VERSION,
   OverworldSessionSnapshotSchema,
+  OverworldSessionSnapshotV10Schema,
   cloneJournalEntries,
   cloneOverworldSessionSnapshot,
   parseOverworldSessionSnapshot,
   snapshotTravelLogEntry,
   type OverworldJournalEntry,
   type OverworldSessionSnapshot,
-  type OverworldSessionSnapshotV8,
+  type OverworldSessionSnapshotV10,
   type TravelLogEntry,
 } from "../../src/world/session_snapshot.js";
 
@@ -71,9 +72,8 @@ function baseSnapshot(): OverworldSessionSnapshot {
   };
 }
 
-function legacySnapshot(): OverworldSessionSnapshotV8 {
-  const { character: _character, ...snapshot } = baseSnapshot();
-  return { ...snapshot, version: OVERWORLD_SESSION_LEGACY_SAVE_VERSION };
+function previousSnapshot(): OverworldSessionSnapshotV10 {
+  return { ...baseSnapshot(), version: OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION };
 }
 
 describe("overworld session snapshots", () => {
@@ -128,106 +128,177 @@ describe("overworld session snapshots", () => {
     ).toThrow(/only valid on service entries/i);
   });
 
-  it("allows source-world provenance only on migrated preparation, event, or contact evidence", () => {
-    const provenance = "b".repeat(64);
-    const eventInvestigation = {
-      id: "investigate:albany_city__transport_hub__event",
-      kind: "event" as const,
-      town: "Albany City",
-      title: "Investigated Hayden Hale's filing standard",
-      text: "Hayden's generic predecessor filing was investigated.",
-      recordedAt: "Day 2, 10:20",
-      sourceWorldHash: provenance,
-    };
-    expect(() =>
-      OverworldSessionSnapshotSchema.parse({
-        ...baseSnapshot(),
-        journalEntries: [eventInvestigation],
-      }),
-    ).not.toThrow();
-    expect(() =>
-      OverworldSessionSnapshotSchema.parse({
-        ...baseSnapshot(),
-        journalEntries: [
-          {
-            ...eventInvestigation,
-            id: "preparation:trusted-predecessor",
-            kind: "preparation",
-          },
-        ],
-      }),
-    ).not.toThrow();
-    expect(() =>
-      OverworldSessionSnapshotSchema.parse({
-        ...baseSnapshot(),
-        journalEntries: [
-          {
-            ...eventInvestigation,
-            id: "talk:albany_city__greenway__contact@relief_cade_fodder_allocated",
-            kind: "contact",
-            sourceWorldHash: "46734c7efbc34fcd4fa4def812ed30f98dee230090fcf767629b62438331eaf3",
-          },
-        ],
-      }),
-    ).not.toThrow();
-    expect(() =>
-      OverworldSessionSnapshotSchema.parse({
-        ...baseSnapshot(),
-        journalEntries: [
-          {
-            ...eventInvestigation,
-            id: "talk:albany_city__greenway__contact@relief_cade_fodder_allocated",
-            kind: "contact",
-          },
-        ],
-      }),
-    ).toThrow(/exact predecessor contact evidence/i);
-
-    for (const kind of ["area", "job", "resolution"] as const) {
-      expect(() =>
-        OverworldSessionSnapshotSchema.parse({
-          ...baseSnapshot(),
-          journalEntries: [
-            {
-              ...eventInvestigation,
-              id: `${kind}:untrusted-provenance`,
-              kind,
-            },
-          ],
-        }),
-      ).toThrow(
-        /only valid on migrated preparation, event-investigation, or exact predecessor contact evidence/i,
-      );
-    }
+  it("upgrades the immediately previous structural version without rewriting content", () => {
+    const previous = previousSnapshot();
+    expect(parseOverworldSessionSnapshot(previous)).toEqual({
+      ...previous,
+      version: OVERWORLD_SESSION_SAVE_VERSION,
+    });
   });
 
-  it("migrates strict version-8 snapshots to the canonical current default", () => {
-    const migrated = parseOverworldSessionSnapshot(legacySnapshot());
-    const second = parseOverworldSessionSnapshot(legacySnapshot());
+  it("parses the exact v10 journal envelope while stripping non-authoritative provenance", () => {
+    const boundary = {
+      acceptedDecisions: 2,
+      decisionProofHash: "b".repeat(64),
+      townId: "albany_city",
+      areaId: "albany_capitol_hill",
+      minutes: 480,
+    };
+    const previous: OverworldSessionSnapshotV10 = {
+      ...previousSnapshot(),
+      journalEntries: [
+        {
+          id: "investigate:albany_event",
+          kind: "event",
+          town: "Albany",
+          title: "Earlier event title",
+          text: "Earlier event prose.",
+          recordedAt: "Day 1, 08:00",
+          sourceWorldHash: "c".repeat(64),
+        },
+        {
+          id: "job:albany_job",
+          kind: "job",
+          town: "Albany",
+          title: "Earlier job title",
+          text: "Earlier job prose.",
+          recordedAt: "Day 1, 08:00",
+          localSceneProof: {
+            sceneId: "scene:albany_job",
+            optionId: "option:structural",
+            sourceWorldHash: "d".repeat(64),
+            boundary,
+          },
+        },
+      ],
+    };
 
-    expect(migrated).toEqual({
-      ...legacySnapshot(),
-      version: OVERWORLD_SESSION_SAVE_VERSION,
-      character: createInitialCampaignCharacterState(),
+    expect(() => OverworldSessionSnapshotV10Schema.parse(previous)).not.toThrow();
+    const upgraded = parseOverworldSessionSnapshot(previous);
+    expect(upgraded.version).toBe(OVERWORLD_SESSION_SAVE_VERSION);
+    expect(upgraded.journalEntries[0]).not.toHaveProperty("sourceWorldHash");
+    expect(upgraded.journalEntries[1]?.localSceneProof).toEqual({
+      sceneId: "scene:albany_job",
+      optionId: "option:structural",
+      boundary,
     });
-    expect(migrated.character).not.toBe(second.character);
+  });
+
+  it("derives the v11 quest-completion ending receipt from a v10 structural outcome ID", () => {
+    const previous: OverworldSessionSnapshotV10 = {
+      ...previousSnapshot(),
+      questOutcomes: [["wolf_winter", "ending_held"]],
+      journalEntries: [
+        {
+          id: "quest_done:wolf_winter",
+          kind: "quest_done",
+          town: "Albany",
+          title: "Completed Wolf-Winter",
+          text: "Earlier completion prose.",
+          recordedAt: "Day 1, 08:00",
+        },
+      ],
+    };
+
+    expect(parseOverworldSessionSnapshot(previous).journalEntries[0]).toMatchObject({
+      id: "quest_done:wolf_winter",
+      questCompletionEndingId: "ending_held",
+      text: "Earlier completion prose.",
+    });
+  });
+
+  it("recognizes retired v10 proof shapes before rejecting those without current causal authority", () => {
+    const boundary = {
+      acceptedDecisions: 2,
+      decisionProofHash: "b".repeat(64),
+      townId: "albany_city",
+      areaId: "albany_capitol_hill",
+      minutes: 480,
+    };
+    const legacyKinds = [
+      "ally_legacy",
+      "lead_source_legacy",
+      "preparation_legacy",
+      "registration_legacy",
+      "relief_allocation_legacy",
+      "relief_oath_legacy",
+    ] as const;
+    for (const kind of legacyKinds) {
+      const previous: OverworldSessionSnapshotV10 = {
+        ...previousSnapshot(),
+        journalEntries: [
+          {
+            id: `${kind}:${"c".repeat(64)}`,
+            kind,
+            town: "Albany",
+            title: "Retired migration marker",
+            text: "Retired hash-keyed authority.",
+            recordedAt: "Day 1, 08:00",
+          },
+        ],
+      };
+      expect(() => OverworldSessionSnapshotV10Schema.parse(previous)).not.toThrow();
+      expect(() => parseOverworldSessionSnapshot(previous)).toThrow(
+        /cannot be structurally upgraded without retired hash-keyed authority/i,
+      );
+    }
+
+    const legacyQuestStart: OverworldSessionSnapshotV10 = {
+      ...previousSnapshot(),
+      journalEntries: [
+        {
+          id: "quest:wolf_winter",
+          kind: "quest",
+          town: "Albany",
+          title: "Started Wolf-Winter",
+          text: "Earlier quest-start prose.",
+          recordedAt: "Day 1, 08:00",
+          questStartProof: {
+            kind: "legacy",
+            sourceWorldHash: "c".repeat(64),
+            boundary,
+          },
+        },
+      ],
+    };
+    expect(() => OverworldSessionSnapshotV10Schema.parse(legacyQuestStart)).not.toThrow();
+    expect(() => parseOverworldSessionSnapshot(legacyQuestStart)).toThrow(
+      /has no structural approach ID/i,
+    );
+
+    const provenanceOnlyScene: OverworldSessionSnapshotV10 = {
+      ...previousSnapshot(),
+      journalEntries: [
+        {
+          id: "job:albany_job",
+          kind: "job",
+          town: "Albany",
+          title: "Earlier job title",
+          text: "Earlier job prose.",
+          recordedAt: "Day 1, 08:00",
+          localSceneProof: {
+            sceneId: "scene:albany_job",
+            optionId: "option:legacy",
+            sourceWorldHash: "d".repeat(64),
+          },
+        },
+      ],
+    };
+    expect(() => OverworldSessionSnapshotV10Schema.parse(provenanceOnlyScene)).not.toThrow();
+    expect(() => parseOverworldSessionSnapshot(provenanceOnlyScene)).toThrow(
+      /has no causal decision boundary/i,
+    );
   });
 
   it("rejects unsupported, disguised, and malformed snapshot versions", () => {
-    expect(() => parseOverworldSessionSnapshot({ ...legacySnapshot(), version: 7 })).toThrow(
-      /unsupported overworld session snapshot version 7/i,
+    expect(() => parseOverworldSessionSnapshot({ ...previousSnapshot(), version: 9 })).toThrow(
+      /unsupported overworld session snapshot version 9/i,
     );
-    expect(() => parseOverworldSessionSnapshot({ ...baseSnapshot(), version: 11 })).toThrow(
-      /unsupported overworld session snapshot version 11/i,
+    expect(() => parseOverworldSessionSnapshot({ ...baseSnapshot(), version: 12 })).toThrow(
+      /unsupported overworld session snapshot version 12/i,
     );
-    expect(() => parseOverworldSessionSnapshot({ ...legacySnapshot(), version: "8" })).toThrow();
-    expect(() =>
-      parseOverworldSessionSnapshot({
-        ...legacySnapshot(),
-        character: createInitialCampaignCharacterState(),
-      }),
-    ).toThrow();
-    expect(() => parseOverworldSessionSnapshot({ ...legacySnapshot(), supplies: 9 })).toThrow();
+    expect(() => parseOverworldSessionSnapshot({ ...previousSnapshot(), version: "10" })).toThrow();
+    expect(() => parseOverworldSessionSnapshot({ ...previousSnapshot(), supplies: 9 })).toThrow();
     const { character: _character, ...missingCharacter } = baseSnapshot();
     expect(() => parseOverworldSessionSnapshot(missingCharacter)).toThrow();
   });

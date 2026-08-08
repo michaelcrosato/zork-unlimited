@@ -24,8 +24,9 @@ summary: >
 root_cause: >
   Not a defect in canonicalize and NOT a discovered live bug — a verification-DEPTH asymmetry. canonicalize is correct
   today; the gap is that the only thing pinned was its JSON-safe behaviour, never its behaviour on the special values.
-  This is load-bearing on the untrusted-input boundary: traces/bug_0190_infinity.json loads vars.hp = 1e999 (= Infinity)
-  straight off disk into a GameState that gets hashed (the bug_0181/0190 load-integrity arc), and a non-finite numeric
+  This is load-bearing on the untrusted-input boundary: tests/regression/trace_load_integrity.test.ts generates the
+  bug_0190 Infinity fixture with vars.hp = 1e999, which loads straight off disk into a GameState that gets hashed (the
+  bug_0181/0190 load-integrity arc), and a non-finite numeric
   var silently collapses to the same hash as null. A future change to the canonicalizer — a replacer that preserves
   Infinity, BigInt support, a uniform-null serializer — would silently shift the digest of states that hash a special
   value while every existing canonicalize test stayed GREEN, invalidating dependent trace hashes with no attributable

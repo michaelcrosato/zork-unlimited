@@ -38,29 +38,13 @@ import {
   travelFatigueGain,
   travelSupplyCost,
 } from "./travel_mechanics.js";
-import { campaignServiceJournalCopy, campaignServiceJourneyActionId } from "./session_services.js";
+import { campaignServiceJourneyActionId } from "./session_services.js";
 import { campaignStoryChoiceRefKey } from "./campaign_story_choices.js";
 import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import { campaignCharacterMatchesConditions } from "./campaign_consequences.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
 import { resolveLocalEventSceneOption } from "./local_event_scene.js";
-import { authoredLocalJobLegacyCompletion } from "./local_job_scene_legacy.js";
-import { authoredLocalEventLegacyCompletion } from "./local_event_scene_legacy.js";
-import { isEmeryEvidenceCustodyPredecessorWorldHash } from "./emery_evidence_custody_legacy.js";
-
-function isEmeryEvidenceCustodyGrandfatherEventProof(
-  event: OverworldLocalEvent,
-  proof: NonNullable<OverworldJournalEntry["localSceneProof"]>,
-): boolean {
-  return (
-    event.id === "albany_city__greenway__event" &&
-    proof.sceneId === "albany:greenway-trail-policy" &&
-    proof.optionId === "place_quiet_corridor_markers" &&
-    proof.sourceWorldHash !== undefined &&
-    isEmeryEvidenceCustodyPredecessorWorldHash(proof.sourceWorldHash)
-  );
-}
 import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 
 export type OverworldResourceReplaySourceIndex = {
@@ -384,11 +368,8 @@ function replayLocalRegionRenown(
     if (!job) return;
     let amount = job.difficulty;
     if (job.authored_scene && entry.localSceneProof) {
-      const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, entry.localSceneProof);
-      amount = legacyCompletion
-        ? legacyCompletion.definition.legacyJob.difficulty
-        : resolveLocalJobSceneOption(job.authored_scene, entry.localSceneProof.optionId).terms
-            .renown;
+      amount = resolveLocalJobSceneOption(job.authored_scene, entry.localSceneProof.optionId).terms
+        .renown;
     }
     addReplayRegionRenown(state, replayNodeRegion(sources, job.home), amount);
     return;
@@ -403,25 +384,8 @@ function replayLocalRegionRenown(
     if (event) {
       let amount = event.intensity;
       if (event.authored_scene && entry.localSceneProof?.sceneId === event.authored_scene.id) {
-        const legacyCompletion = authoredLocalEventLegacyCompletion(
-          event.id,
-          entry.localSceneProof,
-        );
-        if (legacyCompletion) {
-          amount = legacyCompletion.definition.legacyEvent.intensity;
-        } else if (
-          entry.localSceneProof.sourceWorldHash === undefined ||
-          isEmeryEvidenceCustodyGrandfatherEventProof(event, entry.localSceneProof)
-        ) {
-          amount = resolveLocalEventSceneOption(
-            event.authored_scene,
-            entry.localSceneProof.optionId,
-          ).terms.renown;
-        } else {
-          throw new Error(
-            `Overworld session snapshot authored event "${event.id}" names an untrusted replay source.`,
-          );
-        }
+        amount = resolveLocalEventSceneOption(event.authored_scene, entry.localSceneProof.optionId)
+          .terms.renown;
       }
       addReplayRegionRenown(state, replayNodeRegion(sources, event.home), amount);
     }
@@ -569,12 +533,6 @@ function campaignServiceRuleForReplay(
   if ((rule.action === "care" || hasCharacterConditions) && !character) {
     throw new Error(
       `Overworld session snapshot campaign service rule "${rule.id}" has no character-state replay boundary.`,
-    );
-  }
-  const expectedCopy = campaignServiceJournalCopy(rule, state, character);
-  if (service.entry.title !== expectedCopy.title || service.entry.text !== expectedCopy.text) {
-    throw new Error(
-      `Overworld session snapshot service journal "${service.entry.id}" does not match its canonical authored copy.`,
     );
   }
   if (hasCharacterConditions) {

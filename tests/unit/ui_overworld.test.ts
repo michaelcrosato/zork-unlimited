@@ -25,6 +25,7 @@ import {
   compactOverworldView,
 } from "../../src/world/compact_view.js";
 import { buildOverworldSessionCompactView } from "../../src/world/session_compact_view.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
 import {
   INITIAL_JOURNEY_GOAL_GUIDANCE,
@@ -36,6 +37,7 @@ import {
   OverworldSession,
   OverworldSession as UiOverworldSession,
 } from "../../ui/src/overworld.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const world = loadOverworldManifest(process.cwd());
 
@@ -162,6 +164,7 @@ function settleOpeningRegistration(session: OverworldSession): void {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
   if (session.journey().storyChoice?.kind === "relief_oath") {
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
   }
   if (session.journey().storyChoice?.kind === "lead_source") {
@@ -685,6 +688,8 @@ describe("OverworldSession", () => {
       ["albany_city__market__job", "audit_price_hold_household_chain"],
     ]);
 
+    const persistedSnapshot = uiSession.snapshot();
+    persistedSnapshot.worldHash = "0".repeat(64);
     const savedWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
     Object.defineProperty(globalThis, "window", {
       configurable: true,
@@ -692,7 +697,7 @@ describe("OverworldSession", () => {
         localStorage: {
           getItem: (key: string) =>
             key === "adventureforge:new-york-overworld:v1"
-              ? JSON.stringify(uiSession.snapshot())
+              ? JSON.stringify(persistedSnapshot)
               : null,
           removeItem: () => undefined,
           setItem: () => undefined,
@@ -731,6 +736,7 @@ describe("OverworldSession", () => {
       expect(markup).not.toContain("Audit the open-bid public chain");
       expect(markup).not.toContain("Earn 4 Capital / Mohawk renown");
       expect(markup).not.toContain('disabled=""');
+      expect(markup).toContain(`Warning: ${OVERWORLD_CONTENT_HASH_MISMATCH_WARNING}`);
     } finally {
       await server.close();
       if (savedWindow) Object.defineProperty(globalThis, "window", savedWindow);
@@ -948,6 +954,7 @@ describe("OverworldSession", () => {
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(world.opening_registration!.contact);
     session.chooseJourneyStory(world.opening_registration!.profiles[0]!.id);
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory(world.opening_relief_oath!.options[0]!.id);
     session.chooseJourneyStory(world.opening_lead_source!.options[0]!.id);
     moveToOpeningPreparation(session);
@@ -1075,6 +1082,7 @@ describe("OverworldSession", () => {
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(world.opening_registration!.contact);
     session.chooseJourneyStory(world.opening_registration!.profiles[0]!.id);
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory(world.opening_relief_oath!.options[0]!.id);
     session.chooseJourneyStory(world.opening_lead_source!.options[0]!.id);
     moveToOpeningPreparation(session);
@@ -1161,6 +1169,7 @@ describe("OverworldSession", () => {
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(world.opening_registration!.contact);
     session.chooseJourneyStory(world.opening_registration!.profiles[0]!.id);
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory(world.opening_relief_oath!.options[0]!.id);
     session.chooseJourneyStory(world.opening_lead_source!.options[0]!.id);
     moveToOpeningPreparation(session);
@@ -1505,6 +1514,7 @@ describe("OverworldSession", () => {
     session.scoutPoi(opening.pois[0]!.id);
     session.talkToCharacter(world.opening_registration!.contact);
     session.chooseJourneyStory("albany:ledger_advocate");
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
     moveToOpeningPreparation(session);
@@ -2343,9 +2353,11 @@ describe("OverworldSession", () => {
       ...session.snapshot(),
       worldHash: "0".repeat(64),
     };
-    expect(() => OverworldSession.restore(world, staleWorldSnapshot)).toThrow(
-      /different world manifest/i,
-    );
+    const restoredAcrossContentRevision = OverworldSession.restore(world, staleWorldSnapshot);
+    expect(restoredAcrossContentRevision.snapshot()).toEqual(session.snapshot());
+    expect(restoredAcrossContentRevision.restoreWarnings()).toEqual([
+      OVERWORLD_CONTENT_HASH_MISMATCH_WARNING,
+    ]);
 
     const corruptSnapshot = {
       ...session.snapshot(),
@@ -3301,6 +3313,7 @@ describe("OverworldSession", () => {
     session.scoutPoi(opening.pois[0]!.id);
     session.talkToCharacter(opening.characters[0]!.id);
     session.chooseJourneyStory("albany:ledger_advocate");
+    revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
     session.chooseJourneyStory("albany:oath_limited_aid_only");
     session.chooseJourneyStory("albany:source_rowan_civic_docket");
 

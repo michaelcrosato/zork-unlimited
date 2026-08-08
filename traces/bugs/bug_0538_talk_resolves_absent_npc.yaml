@@ -15,9 +15,9 @@ symptom: >
 root_cause: >
   The TALK path called a resolver that scanned the whole pack and returned the first
   substring match in declaration order, with no room filter, no condition filter and no
-  ambiguity handling. Wolf-Winter models one character in four mutually exclusive states
+  ambiguity handling. Wolf-Winter modeled one character in four mutually exclusive states
   as four NPCs sharing the display name "Road Warden June Pike"; june_pike_combat_boundary
-  is declared first, so every phrasing resolved to her — and on the three strategy branches
+  was declared first, so every phrasing resolved to her — and on the three strategy branches
   she is definitionally absent, so the reducer rejected the resulting action. The correct
   resolver, resolveVisibleNpc, already existed twenty lines below and was used only by the
   qualified-ASK path.
@@ -32,14 +32,16 @@ fix: >
   visible person matches, and reports ambiguity rather than guessing. The now-unused
   first-match resolver and its alias cache are deleted. A second change, AMBIGUOUS_NPC_NAME,
   makes a duplicate display name visible to the validator so this cannot recur silently;
-  it ships as a warning because the four Junes are provably mutually exclusive and erroring
-  would make a healthy pack unplayable.
+  it initially shipped as a warning because the four Junes were provably mutually exclusive.
+  The external-review completion then added state-reactive NPC presentation variants,
+  consolidated those four definitions into one stable june_pike identity whose room,
+  description, and dialogue root vary by state, and promoted duplicate names to an error.
 deterministic_witnesses:
   - state: "byre_mouth, june_pike_present + strategy_drive_committed + drive_flank_turned"
     before: 'talk to june -> TALK june_pike_combat_boundary (absent) -> refused'
-    after: "talk to june -> TALK june_pike_drive, which is the sole legal TALK option"
+    after: "talk to june -> TALK june_pike, which is the sole legal TALK option"
   - state: "byre_yard, june_pike_present"
-    after: "talk to june -> TALK june_pike_combat_boundary (unchanged, she is the visible one)"
+    after: "talk to june -> TALK june_pike (the same stable identity at this boundary)"
   - state: "steading_yard, no NPCs present"
     after: 'talk to june -> ok:false, "There''s no visible person called \"june\" here."'
   - fixture: content/broken-fixtures/foundation_ambiguous_npc_name.yaml

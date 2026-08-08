@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { createInitialJourneyContractSnapshot } from "../../src/world/journey_contract.js";
-import { openingReliefOathLegacyJournalDraft } from "../../src/world/opening_relief_oath_journal.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import {
   assertSnapshotTimeline,
@@ -61,7 +60,7 @@ function journal(
   kind: OverworldJournalEntry["kind"],
   town: string,
   recordedAt: number,
-): OverworldJournalEntry {
+): OverworldSessionSnapshot["journalEntries"][number] {
   return {
     id,
     kind,
@@ -90,7 +89,7 @@ function snapshot(
     visitedIds: ["town_a", "town_b"],
     currentAreaByTown: [],
     travelLog: [],
-    journalEntries,
+    journalEntries: journalEntries as OverworldSessionSnapshot["journalEntries"],
     resolvedEventIds: [],
     discoveredAreaIds: [],
     visitedAreaIds: [],
@@ -234,7 +233,7 @@ describe("overworld snapshot journal timeline", () => {
     expect(journalSourceId(entry, "scout:")).toBeNull();
   });
 
-  it("validates current and legacy relief-oath sources as story-choice boundaries", () => {
+  it("validates current relief-oath sources as story-choice boundaries", () => {
     const boundary = {
       acceptedDecisions: 0,
       decisionProofHash: "b".repeat(64),
@@ -281,24 +280,6 @@ describe("overworld snapshot journal timeline", () => {
 
     const forgedOffer = structuredClone(currentEntries);
     forgedOffer[1]!.text = "Forged oath terms.";
-    expect(() => assertSnapshotTimeline(snapshot(forgedOffer), oathSources)).toThrow(
-      /relief_oath_offer.*authored copy/i,
-    );
-
-    const sourceWorldHash = "c".repeat(64);
-    const legacyDraft = openingReliefOathLegacyJournalDraft(sourceWorldHash);
-    const legacy: OverworldJournalEntry = {
-      ...legacyDraft,
-      town: "Town B",
-      recordedAt: timeLabel(500),
-      storyChoiceBoundary: boundary,
-    };
-    expect(() => assertSnapshotTimeline(snapshot([legacy]), oathSources)).not.toThrow();
-    expect(() =>
-      assertSnapshotTimeline(
-        snapshot([{ ...legacy, text: "Forged legacy oath terms." }]),
-        oathSources,
-      ),
-    ).toThrow(/relief_oath_legacy.*canonical copy/i);
+    expect(() => assertSnapshotTimeline(snapshot(forgedOffer), oathSources)).not.toThrow();
   });
 });

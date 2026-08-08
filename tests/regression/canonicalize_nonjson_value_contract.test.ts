@@ -13,8 +13,9 @@ import { canonicalize, hashState } from "../../src/core/hash.js";
  * undefined, functions, NaN/±Infinity, BigInt — even though those are exactly the
  * values that decide whether two distinct-looking GameStates COLLIDE to one hash or
  * the canonicalizer THROWS. This is load-bearing on the untrusted-input boundary:
- * traces/bug_0190_infinity.json loads `vars.hp: 1e999` (= Infinity) straight off disk
- * into a GameState that gets hashed (the bug_0181/0190 load-integrity arc), and a
+ * tests/regression/trace_load_integrity.test.ts generates a fixture that loads
+ * `vars.hp: 1e999` (= Infinity) straight off disk into a GameState that gets hashed
+ * (the bug_0181/0190 load-integrity arc), and a
  * non-finite var silently collapses to the same hash as `null`. Pinning these is the
  * SoundnessBench absolute-witness discipline (parity with bug_0228's RNG KAT and the
  * bug_0182/0218/0227 negative corpus): the contract is FROZEN, so any future change to
@@ -121,8 +122,8 @@ describe("hashState — the ±0 sign-of-zero collapse witness (bug_0240)", () =>
 
 describe("hashState — the untrusted-Infinity load-integrity witness (bug_0230)", () => {
   it("a non-finite numeric var collapses to the SAME hash as null (the bug_0190 hp:1e999 case)", () => {
-    // traces/bug_0190_infinity.json loads vars.hp = 1e999 (Infinity) off disk. Hashing
-    // it canonicalizes Infinity -> null, so it is hash-indistinguishable from hp:null.
+    // The bug_0190 test-generated fixture loads vars.hp = 1e999 (Infinity) off disk.
+    // Hashing it canonicalizes Infinity -> null, so it is hash-indistinguishable from hp:null.
     // The numeric-range VALIDATORS (the .int() gate, save-integrity) are what reject such
     // states; the hash deliberately does not, and this pins that boundary contract.
     const hNull = hashState({ vars: { hp: null } });

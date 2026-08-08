@@ -9,6 +9,7 @@ import { OVERWORLD_COMPACT_RESULT_LEGEND } from "../../src/mcp/compact_overworld
 import { createToolApi } from "../../src/mcp/tools.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
+import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const FIRST_ROAD = "road_albany_city__saratoga_springs_city";
@@ -34,6 +35,7 @@ function sessionAtQueensburyGoalPassage(): OverworldSession {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
   expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");

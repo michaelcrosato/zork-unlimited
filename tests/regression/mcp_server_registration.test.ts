@@ -147,7 +147,8 @@ describe("MCP server registration", () => {
     expect(registration?.description).toContain("legacy departure_interactions");
     expect(registration?.description).toContain("Compact returns comparison");
     expect(registration?.description).toContain("one visible option detail");
-    expect(registration?.description).toContain("session-local");
+    expect(registration?.description).toContain("durable session receipt");
+    expect(registration?.description).toContain("survives export/restore");
     expect(registration?.description).toContain("without board/world repetition");
     expect(registration?.description).toContain("compact_result:false returns full story");
     expect(registration?.description).toContain("preserves reveals");

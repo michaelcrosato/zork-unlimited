@@ -8,7 +8,7 @@ interface RunNpmScriptOptions {
   timeout?: number;
 }
 
-function npmCliInvocation(): { command: string; args: string[] } {
+export function npmCliInvocation(): { command: string; args: string[] } {
   const npmExecPath = process.env.npm_execpath;
   if (npmExecPath) {
     return { command: process.execPath, args: [npmExecPath] };

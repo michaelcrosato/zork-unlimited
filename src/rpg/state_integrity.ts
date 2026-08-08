@@ -6,6 +6,7 @@ import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR, enemyHpVar } from "./schema
 import { maneuverChildren, maneuverParent, rootManeuvers } from "./maneuver_sequence.js";
 import { campaignImportReceiptTargetIssues } from "./campaign_character_import.js";
 import { wolfWinterDispatchOverlayFlagForPack } from "../core/embedded_launch_overlay_receipt.js";
+import { npcForState } from "./model.js";
 
 /**
  * Collect item ids that can legitimately enter inventory through authored effects.
@@ -96,6 +97,102 @@ function collectVarTargets(node: unknown, acc: Set<string>): Set<string> {
     }
   }
   return acc;
+}
+
+const PLAYER_STAT_VARS = new Set<string>([HP_VAR, ATTACK_VAR, DEFENSE_VAR]);
+
+type AuthoredStatCeiling = {
+  /** Highest value an authored set_var can establish directly. */
+  maxSet: bigint;
+  /** Pack-wide positive delta budget for one engine step. */
+  positiveDeltaPerStep: bigint;
+};
+
+/** Round upward before entering the exact integer comparison domain. */
+function conservativeIntegerCeiling(value: number): bigint {
+  return BigInt(Math.ceil(value));
+}
+
+function maxBigInt(left: bigint, right: bigint): bigint {
+  return left > right ? left : right;
+}
+
+/**
+ * Collect a deliberately loose ceiling from every authored effect occurrence.
+ * One engine action can fire only a subset of the pack, so summing EVERY positive
+ * delta is a safe per-step over-approximation. `dec_var` permits a negative `by`,
+ * which is a gain and must be counted just like a positive `inc_var`.
+ */
+function collectAuthoredStatCeilings(
+  node: unknown,
+  acc: Map<string, AuthoredStatCeiling>,
+): Map<string, AuthoredStatCeiling> {
+  if (Array.isArray(node)) {
+    for (const element of node) collectAuthoredStatCeilings(element, acc);
+    return acc;
+  }
+  if (node === null || typeof node !== "object") return acc;
+
+  for (const [key, value] of Object.entries(node)) {
+    if (
+      (key === "set_var" || key === "inc_var" || key === "dec_var") &&
+      value !== null &&
+      typeof value === "object"
+    ) {
+      const write = value as Record<string, unknown>;
+      const name = write["name"];
+      if (typeof name === "string" && PLAYER_STAT_VARS.has(name)) {
+        const current = acc.get(name) ?? {
+          maxSet: 0n,
+          positiveDeltaPerStep: 0n,
+        };
+        if (key === "set_var" && typeof write["value"] === "number") {
+          current.maxSet = maxBigInt(current.maxSet, conservativeIntegerCeiling(write["value"]));
+        } else if (typeof write["by"] === "number") {
+          const delta = key === "inc_var" ? write["by"] : -write["by"];
+          if (delta > 0) {
+            current.positiveDeltaPerStep += conservativeIntegerCeiling(delta);
+          }
+        }
+        acc.set(name, current);
+      }
+    }
+    collectAuthoredStatCeilings(value, acc);
+  }
+  return acc;
+}
+
+function playerStatUpperBound(
+  index: RpgIndex,
+  state: GameState,
+  stat: string,
+  authored: Map<string, AuthoredStatCeiling>,
+): bigint {
+  const ceiling = authored.get(stat);
+  let base = maxBigInt(
+    conservativeIntegerCeiling(index.pack.meta.vars_init[stat] ?? 0),
+    ceiling?.maxSet ?? 0n,
+  );
+
+  // Campaign imports happen before the starting room's on_enter effects. Their
+  // exact persisted receipt value is therefore another legitimate starting base.
+  for (const effect of state.campaignImportReceipt?.effects ?? []) {
+    if (
+      (effect.type === "health_current_to_var" || effect.type === "skill_rank_to_var") &&
+      effect.target_var === stat
+    ) {
+      base = maxBigInt(base, conservativeIntegerCeiling(effect.value));
+    }
+  }
+
+  // initRuntimeState applies start-room on_enter at step 0, then each accepted
+  // action increments step once. `step + 1` safely budgets that initial effect
+  // application plus every action; multiplying by the sum of ALL authored gains
+  // intentionally over-approximates any real route.
+  // Convert each already-validated integer separately. `step + 1` in Number
+  // space can lose the increment at the safe-integer boundary; BigInt keeps both
+  // the counter and multiplication exact without a fail-open Infinity sentinel.
+  return base + (BigInt(state.step) + 1n) * (ceiling?.positiveDeltaPerStep ?? 0n);
 }
 
 function collectJournalTargets(node: unknown, acc: Set<string>): Set<string> {
@@ -189,6 +286,10 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   const questStages = collectQuestStageTargets(index.pack, new Map<string, Set<string>>());
   const flags = collectFlagTargets(index.pack, new Map<string, Set<boolean>>());
   const vars = collectVarTargets(index.pack, new Set(Object.keys(index.pack.meta.vars_init)));
+  const authoredStatCeilings = collectAuthoredStatCeilings(
+    index.pack,
+    new Map<string, AuthoredStatCeiling>(),
+  );
   const journals = collectJournalTargets(index.pack, new Set<string>());
   const journalWriteCount = countJournalWrites(index.pack);
   const heldItems = new Set<string>();
@@ -197,7 +298,10 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
     closed: new Set<string>(),
     locked: new Map<string, Set<boolean>>(),
   });
-  const dialogueVars = new Map<string, { room: string; maxOrdinal: number }>();
+  const dialogueVars = new Map<
+    string,
+    { npc: RpgIndex["pack"]["npcs"][number]; maxOrdinal: number }
+  >();
   const enemyHpVars = new Map<string, number>();
   if (state.campaignImportReceipt !== undefined) {
     let receiptIssues;
@@ -261,7 +365,7 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   for (const npc of index.pack.npcs) {
     const key = dlgVar(npc.id);
     vars.add(key);
-    dialogueVars.set(key, { room: npc.room, maxOrdinal: npc.dialogue.nodes.length });
+    dialogueVars.set(key, { npc, maxOrdinal: npc.dialogue.nodes.length });
   }
   for (const enemy of index.pack.enemies) {
     if (enemy.defeat_flag !== undefined) addBooleanRuntimeTarget(flags, enemy.defeat_flag, true);
@@ -351,8 +455,20 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
       if (!state.ended && value === 0) {
         throw new SaveIntegrityError(`Save references invalid player hp var "${id}" (${value}).`);
       }
+      const upperBound = playerStatUpperBound(index, state, id, authoredStatCeilings);
+      if (BigInt(value) > upperBound) {
+        throw new SaveIntegrityError(
+          `Save references invalid player hp var "${id}" (${value}); authored upper bound is ${String(upperBound)} at step ${String(state.step)}.`,
+        );
+      }
     } else if (id === ATTACK_VAR || id === DEFENSE_VAR) {
       assertNonnegativeIntegerVar(id, value, "player stat");
+      const upperBound = playerStatUpperBound(index, state, id, authoredStatCeilings);
+      if (BigInt(value) > upperBound) {
+        throw new SaveIntegrityError(
+          `Save references invalid player stat var "${id}" (${value}); authored upper bound is ${String(upperBound)} at step ${String(state.step)}.`,
+        );
+      }
     } else if (id === SCORE_VAR) {
       assertNonnegativeIntegerVar(id, value, "score");
       if (value > index.pack.meta.max_score) {
@@ -366,9 +482,10 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
     ) {
       throw new SaveIntegrityError(`Save references invalid dialogue var "${id}" (${value}).`);
     }
-    if (dialogue !== undefined && value > 0 && state.current !== dialogue.room) {
+    const dialogueRoom = dialogue && npcForState(dialogue.npc, state).room;
+    if (dialogue !== undefined && value > 0 && state.current !== dialogueRoom) {
       throw new SaveIntegrityError(
-        `Save references active dialogue "${id}" outside NPC room "${dialogue.room}".`,
+        `Save references active dialogue "${id}" outside NPC room "${dialogueRoom}".`,
       );
     }
     const enemyMaxHp = enemyHpVars.get(id);

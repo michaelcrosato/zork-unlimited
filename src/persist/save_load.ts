@@ -1,7 +1,8 @@
 /**
  * Save / load (spec §8.7).
  *
- * A save = the full GameState + compact RPG source identity + content hash.
+ * A save = the full GameState + its deterministic state hash + compact RPG
+ * source identity + content hash.
  * Loading MUST verify the content hash against the content it will be played on;
  * a mismatch is a hard error, never a silent re-interpretation (§8.8, §16
  * "integrity at load"). This prevents replaying a save against edited content
@@ -14,8 +15,8 @@ import {
   assertEmbeddedLaunchOverlayWorldQuest,
 } from "../core/embedded_launch_overlay_receipt.js";
 import { MAX_ENGINE_STEP, cloneGameState, isRuntimeSeed, type GameState } from "../core/state.js";
-import { canonicalize } from "../core/hash.js";
-import { generatedRpgSeedValidationMessage, isGeneratedRpgSeed } from "../gen/seed.js";
+import { canonicalize, hashState } from "../core/hash.js";
+import { isGeneratedRpgSeed } from "../gen/seed.js";
 import {
   EMBEDDED_QUEST_CONTINUITY_EXPLANATION,
   EmbeddedQuestCharacterContinuitySchema,
@@ -30,7 +31,8 @@ import {
 } from "../world/source_ref.js";
 
 export const LEGACY_SAVE_VERSION = 1 as const;
-export const SAVE_VERSION = 2 as const;
+export const PREVIOUS_SAVE_VERSION = 2 as const;
+export const SAVE_VERSION = 3 as const;
 export const SAVE_MODE = "rpg" as const;
 export const EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION = 1 as const;
 export type SaveMode = typeof SAVE_MODE;
@@ -135,7 +137,7 @@ const GameStateSchema = z
   })
   .strict();
 
-// ObjectRuntime.contents existed in save version 1. Keep the current v2
+// ObjectRuntime.contents existed in save version 1. Keep the current v3
 // runtime/write schema strict, but recognize exactly that historical field
 // while loading v1 bytes and erase it before the state reaches the engine.
 // The old field was semantically dead; accepting any shape broader than its
@@ -152,7 +154,7 @@ function assertVersion1SeedCompatibility(seed: number): void {
   if (seed >= 0 && seed < UINT32_SEED_RANGE) return;
   throw new SaveIntegrityError(
     `Save version ${String(LEGACY_SAVE_VERSION)} seed ${String(seed)} cannot be resumed because ` +
-      `signed/wide RNG streams changed in save version ${String(SAVE_VERSION)}. ` +
+      `signed/wide RNG streams changed in save version ${String(PREVIOUS_SAVE_VERSION)}. ` +
       "Only version-1 seeds from 0 through 4294967295 are continuation-compatible.",
   );
 }
@@ -186,32 +188,27 @@ function migrateVersion1State(state: unknown): GameState {
   return current.data as GameState;
 }
 
-function parseCurrentState(state: unknown): GameState {
-  const parsed = GameStateSchema.safeParse(state);
-  if (!parsed.success) {
-    throw new SaveIntegrityError(`Save state is malformed or non-finite: ${parsed.error.message}`);
-  }
-  return parsed.data as GameState;
-}
-
 /**
  * Assert a (possibly untrusted) GameState is well-formed + FINITE per §16
  * "integrity at load". REUSED at every untrusted-state-from-disk boundary: the
  * save load() guard below and the trace/CLI load gates. Same
- * safeParse-without-substitution path as load() — a valid state's bytes/hash stay
- * identical. Throws (never coerces).
+ * safeParse path as load(), returning parsed.data so future schema transforms or
+ * defaults cannot be bypassed accidentally. Current validation never coerces, so a
+ * valid state's canonical bytes/hash remain identical. Throws on invalid input.
  */
 export function assertWellFormedState(state: unknown): GameState {
   const parsed = GameStateSchema.safeParse(state);
   if (!parsed.success) {
     throw new SaveIntegrityError(`State is malformed or non-finite: ${parsed.error.message}`);
   }
-  return state as GameState;
+  return parsed.data as GameState;
 }
 
 export type SaveBundle = {
   version: typeof SAVE_VERSION;
   contentHash: string;
+  /** Canonical SHA-256 of `state`; a deterministic consistency check, not authentication. */
+  stateHash: string;
   /** Pack mode. Required so persisted state is bound to the unified RPG engine. */
   mode: SaveMode;
   /** Compact canonical source identity for world quests or generated RPG runs. */
@@ -225,6 +222,8 @@ export type EmbeddedQuestCharacterContinuitySave = {
   version: typeof EMBEDDED_QUEST_CONTINUITY_SAVE_VERSION;
   character_continuity: EmbeddedQuestCharacterContinuity;
 };
+
+export type SaveSourceRef = CompactSourceRef;
 
 const PREVIOUS_EMBEDDED_QUEST_CONTINUITY_EXPLANATION =
   "Scenario-local numbers and issued kit govern this quest. Your persistent record remains intact; only authored campaign import and export effects cross the quest boundary.";
@@ -255,7 +254,65 @@ const EmbeddedQuestCharacterContinuitySaveSchema = z
   })
   .strict();
 
-export type SaveSourceRef = CompactSourceRef;
+const StateHashSchema = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/, "Save stateHash must be a lowercase 64-character SHA-256 digest.");
+
+const SaveSourceRefSchema = z.custom<SaveSourceRef>(
+  (raw) => compactSourceRefValidationError(raw, "Save source_ref") === undefined,
+  {
+    message:
+      'Save source_ref must be ["wq", string] or ["gen", integer within JavaScript\'s safe range].',
+  },
+);
+
+const GeneratedSaveSeedSchema = z.number().refine(isGeneratedRpgSeed, {
+  message: "Save generatedRpgSeed must be an integer within JavaScript's safe range.",
+});
+
+// Historical save writers briefly mirrored source_ref into one of these fields.
+// They remain explicit, typed compatibility fields in every strict envelope schema;
+// normalization checks their consistency and omits them from the returned v3 bundle.
+const PersistedSaveIdentityShape = {
+  contentHash: z.string().min(1),
+  mode: z.literal(SAVE_MODE),
+  source_ref: SaveSourceRefSchema,
+  worldQuestId: z.string().optional(),
+  generatedRpgSeed: GeneratedSaveSeedSchema.optional(),
+  embedded_character_continuity: EmbeddedQuestCharacterContinuitySaveSchema.optional(),
+} as const;
+
+/** Exact historical envelopes. Neither v1 nor v2 claimed to carry a state digest. */
+const Version1SaveBundleSchema = z
+  .object({
+    version: z.literal(LEGACY_SAVE_VERSION),
+    ...PersistedSaveIdentityShape,
+    state: Version1GameStateSchema,
+  })
+  .strict();
+
+const Version2SaveBundleSchema = z
+  .object({
+    version: z.literal(PREVIOUS_SAVE_VERSION),
+    ...PersistedSaveIdentityShape,
+    state: GameStateSchema,
+  })
+  .strict();
+
+/** Current saves bind the strict parsed state to its canonical deterministic hash. */
+const CurrentSaveBundleSchema = z
+  .object({
+    version: z.literal(SAVE_VERSION),
+    ...PersistedSaveIdentityShape,
+    stateHash: StateHashSchema,
+    state: GameStateSchema,
+  })
+  .strict();
+
+type PersistedSaveBundle =
+  | z.infer<typeof Version1SaveBundleSchema>
+  | z.infer<typeof Version2SaveBundleSchema>
+  | z.infer<typeof CurrentSaveBundleSchema>;
 
 export type SaveMetadata = {
   worldQuestId?: string | null;
@@ -342,9 +399,9 @@ export function save(
 ): string {
   assertRpgMode(mode, "Save mode");
   assertNonEmptyString(contentHash, "Save contentHash");
-  assertWellFormedState(state);
+  const parsedState = assertWellFormedState(state);
   const sourceRef = saveSourceRef(metadata);
-  assertSaveLaunchOverlaySource(state, sourceRef);
+  assertSaveLaunchOverlaySource(parsedState, sourceRef);
   const continuity = metadata.embeddedCharacterContinuity ?? undefined;
   if (continuity !== undefined) {
     if (sourceRef[0] !== "wq") {
@@ -358,12 +415,13 @@ export function save(
         `Embedded quest character continuity is malformed: ${parsed.error.message}`,
       );
     }
-    assertEmbeddedContinuityMatchesState(continuity, state);
+    assertEmbeddedContinuityMatchesState(parsed.data, parsedState);
   }
   const bundle: SaveBundle = {
     version: SAVE_VERSION,
     contentHash,
-    state,
+    stateHash: hashState(parsedState),
+    state: parsedState,
     mode,
     source_ref: sourceRef,
     ...(continuity
@@ -414,12 +472,6 @@ function assertOptionalRpgMode(mode: unknown, label: string): asserts mode is Sa
   if (mode !== undefined) assertRpgMode(mode, label);
 }
 
-function assertGeneratedRpgSeed(seed: unknown, label: string): asserts seed is number {
-  if (!isGeneratedRpgSeed(seed)) {
-    throw new SaveIntegrityError(generatedRpgSeedValidationMessage(label, seed));
-  }
-}
-
 function saveSourceRef(metadata: SaveMetadata): SaveSourceRef {
   const sourceRef = compactSourceRefFromMetadata(metadata, SAVE_SOURCE_LABELS);
   if (!sourceRef.ok) throw new SaveIntegrityError(sourceRef.error);
@@ -434,23 +486,13 @@ function assertSaveLaunchOverlaySource(state: GameState, sourceRef: SaveSourceRe
   }
 }
 
-function assertSaveSourceRef(raw: unknown): asserts raw is SaveSourceRef {
-  if (raw === undefined) {
-    throw new SaveIntegrityError("Save source_ref is required.");
-  }
-  const error = compactSourceRefValidationError(raw, "Save source_ref");
-  if (error !== undefined) throw new SaveIntegrityError(error);
-}
-
-function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
-  const sourceRef = (bundle as { source_ref?: unknown }).source_ref;
-  assertSaveSourceRef(sourceRef);
-  const legacyMirror = bundle as SaveBundle & {
+function assertSaveSourceRefConsistency(bundle: PersistedSaveBundle): void {
+  const legacyMirror = bundle as PersistedSaveBundle & {
     worldQuestId?: string;
     generatedRpgSeed?: number;
   };
   const consistency = compactSourceRefLegacyConsistency(
-    sourceRef,
+    bundle.source_ref,
     {
       ...(legacyMirror.worldQuestId !== undefined
         ? { worldQuestId: legacyMirror.worldQuestId }
@@ -464,6 +506,46 @@ function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
   if (!consistency.ok) throw new SaveIntegrityError(consistency.error);
 }
 
+function saveBundleParseError(error: z.ZodError): SaveIntegrityError {
+  const field = error.issues[0]?.path[0];
+  const detail = error.message;
+  if (field === "state") {
+    return new SaveIntegrityError(`Save state is malformed or non-finite: ${detail}`);
+  }
+  if (field === "embedded_character_continuity") {
+    return new SaveIntegrityError(
+      `Embedded quest character continuity save metadata is malformed: ${detail}`,
+    );
+  }
+  const label = typeof field === "string" && field.length > 0 ? `Save ${field}` : "Save bundle";
+  return new SaveIntegrityError(`${label} is malformed: ${detail}`);
+}
+
+function parsePersistedSaveBundle(raw: unknown): PersistedSaveBundle {
+  if (isOwnEntryRecord(raw) && Object.hasOwn(raw, "packId")) {
+    throw new SaveIntegrityError("Save packId is retired; use source_ref plus contentHash.");
+  }
+  const persistedVersion = isOwnEntryRecord(raw) ? raw["version"] : undefined;
+  const schema =
+    persistedVersion === LEGACY_SAVE_VERSION
+      ? Version1SaveBundleSchema
+      : persistedVersion === PREVIOUS_SAVE_VERSION
+        ? Version2SaveBundleSchema
+        : persistedVersion === SAVE_VERSION
+          ? CurrentSaveBundleSchema
+          : undefined;
+  if (schema === undefined) {
+    throw new SaveIntegrityError(
+      `Unsupported save version: ${String(persistedVersion)}; expected ${String(
+        LEGACY_SAVE_VERSION,
+      )}, ${String(PREVIOUS_SAVE_VERSION)}, or ${String(SAVE_VERSION)}.`,
+    );
+  }
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) throw saveBundleParseError(parsed.error);
+  return parsed.data as PersistedSaveBundle;
+}
+
 /**
  * Deserialize a save. If `expectedContentHash` is given, the save's contentHash
  * must match it exactly (§8.7). Saves must carry the RPG mode; missing or
@@ -471,7 +553,9 @@ function assertSaveSourceRefConsistency(bundle: SaveBundle): void {
  * worldQuestId/generatedRpgSeed mirror fields are accepted only to check old
  * artifacts against source_ref, and are dropped from the returned bundle.
  * Version 1 is migrated only when its seed remains on the byte-identical legacy
- * RNG path; every returned bundle uses the current version.
+ * RNG path. Honest v1/v2 envelopes did not carry stateHash; loading computes one
+ * after strict parsing/migration. Current v3 saves must carry a matching digest.
+ * Every returned bundle uses the current version and exact current field set.
  */
 export function load(
   bytes: string,
@@ -484,41 +568,10 @@ export function load(
   } catch (e) {
     throw new SaveIntegrityError(`Save is not valid JSON: ${(e as Error).message}`);
   }
-  const bundle = parsed as SaveBundle;
-  const persistedVersion = (bundle as { version?: unknown }).version;
-  if (persistedVersion !== LEGACY_SAVE_VERSION && persistedVersion !== SAVE_VERSION) {
-    throw new SaveIntegrityError(
-      `Unsupported save version: ${String(persistedVersion)}; expected ${String(
-        LEGACY_SAVE_VERSION,
-      )} or ${String(SAVE_VERSION)}.`,
-    );
-  }
-  if ("packId" in (bundle as Record<string, unknown>)) {
-    throw new SaveIntegrityError("Save packId is retired; use source_ref plus contentHash.");
-  }
-  assertRpgMode((bundle as { mode?: unknown }).mode, "Save mode");
+  const bundle = parsePersistedSaveBundle(parsed);
+  const persistedVersion = bundle.version;
   assertOptionalRpgMode(expectedMode, "Expected mode");
-  assertNonEmptyString((bundle as { contentHash?: unknown }).contentHash, "Save contentHash");
-  if (
-    "worldQuestId" in (bundle as Record<string, unknown>) &&
-    typeof (bundle as { worldQuestId?: unknown }).worldQuestId !== "string"
-  ) {
-    throw new SaveIntegrityError(
-      `Save worldQuestId must be a string when present, got ${JSON.stringify(
-        (bundle as { worldQuestId?: unknown }).worldQuestId,
-      )}.`,
-    );
-  }
-  if ("generatedRpgSeed" in (bundle as Record<string, unknown>)) {
-    assertGeneratedRpgSeed(
-      (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed,
-      "Save generatedRpgSeed",
-    );
-  }
-  if (
-    (bundle as { worldQuestId?: unknown }).worldQuestId !== undefined &&
-    (bundle as { generatedRpgSeed?: unknown }).generatedRpgSeed !== undefined
-  ) {
+  if (bundle.worldQuestId !== undefined && bundle.generatedRpgSeed !== undefined) {
     throw new SaveIntegrityError(
       "Save source cannot carry both worldQuestId and generatedRpgSeed.",
     );
@@ -526,38 +579,39 @@ export function load(
   assertSaveSourceRefConsistency(bundle);
   if (expectedContentHash !== undefined) assertSaveContentHash(bundle, expectedContentHash);
   // §16 integrity at load: v1 recognizes and removes only its deprecated
-  // ObjectRuntime.contents field; v2 uses the current strict shape. Both schemas
-  // validate record values entry-by-entry so reserved own keys survive intact.
+  // ObjectRuntime.contents field. v2/v3 use the current strict shape. Every
+  // envelope and nested state came from schema parsed.data, never the raw object.
   const normalizedState =
     persistedVersion === LEGACY_SAVE_VERSION
-      ? migrateVersion1State((bundle as { state?: unknown }).state)
-      : parseCurrentState((bundle as { state?: unknown }).state);
+      ? migrateVersion1State(bundle.state)
+      : (bundle.state as GameState);
+  const normalizedStateHash = hashState(normalizedState);
+  if (persistedVersion === SAVE_VERSION && bundle.stateHash !== normalizedStateHash) {
+    throw new SaveIntegrityError(
+      `Save stateHash mismatch: save declares ${bundle.stateHash}, but its parsed state hashes to ${normalizedStateHash}. ` +
+        "Local saves are editable, but stateHash must be recomputed after a state edit.",
+    );
+  }
   const normalizedBundle: SaveBundle = {
-    ...bundle,
     version: SAVE_VERSION,
+    contentHash: bundle.contentHash,
+    stateHash: normalizedStateHash,
+    mode: bundle.mode,
+    source_ref: bundle.source_ref,
     state: normalizedState,
   };
   assertSaveLaunchOverlaySource(normalizedBundle.state, normalizedBundle.source_ref);
-  const rawContinuity = (bundle as { embedded_character_continuity?: unknown })
-    .embedded_character_continuity;
-  let normalizedContinuity: EmbeddedQuestCharacterContinuitySave | undefined;
-  if (rawContinuity !== undefined) {
+  const normalizedContinuity = bundle.embedded_character_continuity;
+  if (normalizedContinuity !== undefined) {
     if (bundle.source_ref[0] !== "wq") {
       throw new SaveIntegrityError(
         "Embedded quest character continuity requires a world-quest save source.",
       );
     }
-    const parsedContinuity = EmbeddedQuestCharacterContinuitySaveSchema.safeParse(rawContinuity);
-    if (!parsedContinuity.success) {
-      throw new SaveIntegrityError(
-        `Embedded quest character continuity save metadata is malformed: ${parsedContinuity.error.message}`,
-      );
-    }
     assertEmbeddedContinuityMatchesState(
-      parsedContinuity.data.character_continuity,
+      normalizedContinuity.character_continuity,
       normalizedBundle.state,
     );
-    normalizedContinuity = parsedContinuity.data;
   }
   return immutableLoadedSaveBundle(
     normalizedContinuity === undefined

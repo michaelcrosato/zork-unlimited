@@ -77,11 +77,10 @@ describe("overworld determinism contract (§8.5)", () => {
   it("(c) every reached session restores from its snapshot to an identical hash", () => {
     fc.assert(
       fc.property(picksArb, (picks) => {
-        for (const snapshot of journey(picks).snapshots) {
+        const reached = journey(picks);
+        for (const [index, snapshot] of reached.snapshots.entries()) {
           const restored = OverworldSession.restore(world, snapshot);
-          expect(restored.snapshotHash()).toBe(
-            OverworldSession.restore(world, snapshot).snapshotHash(),
-          );
+          expect(restored.snapshotHash()).toBe(reached.hashes[index]);
           expect(restored.snapshot()).toEqual(snapshot);
         }
       }),

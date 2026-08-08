@@ -150,8 +150,8 @@ it is **not yet milestone-certified**:
   standard does not itself close Cade's packet; the exact proof adds only its
   matching no-service administrative closure while preserving every truthful
   physical-loss dispatch. The filing event expires once any packet method is
-  complete, and an unresolved exact-predecessor investigation retains trusted
-  provenance without inventing either current filing choice. No generic
+  complete, and an unresolved investigation retains its exact journal proof
+  across structural save/restore without inventing either filing choice. No generic
   district job or checklist event remains;
 - Albany authors four permanent registration profiles. Road-Warden and Ledger
   sponsorship now change the actual terms of their matching source packet, and
@@ -198,8 +198,9 @@ it is **not yet milestone-certified**:
   form an order-neutral support hub: all sixteen ordered subsets preserve legal
   launch and exact restore, timing cards fix prior selections while leaving only
   unresolved support optional, and launch persists a proof-bound selected-or-
-  declined seal tied to the actual hill approach. Current v10 saves reject a
-  stripped or altered seal; legitimate v9 launches backfill it once. The
+  declined seal tied to the actual hill approach. Current v11 saves reject a
+  stripped or altered seal; the sole supported structural predecessor, v10,
+  upgrades without authored-copy rewriting. The
   human, CLI, and compact Station surfaces now use the same two-tier briefing:
   direct launch, one compressed selected-plan clock, and the three optional
   spoke names lead; opening a spoke shows human stakes, cost, and give-up, while
@@ -258,17 +259,18 @@ of contemporary New York infrastructure with the steading-scale TTRPG crisis.
 That explanation must be playable context, not a lore dump.
 
 Foundation status: campaign-character v1 now has strict canonical schemas,
-deterministic cloning/serialization, overworld snapshot v10 persistence, v9
-compatibility, explicit v8 migration, full/UI read-only projection, bounded
-compact projection, and
-tamper guards. A generic quest-export catalog applies relationship
+deterministic cloning/serialization, overworld structural snapshot v11
+persistence, a single v10 structural upgrade, full/UI read-only projection,
+bounded compact projection, and tamper guards. Authored-copy changes do not
+create migration branches: a world-content mismatch warns and uses current
+content while identity and causal proofs remain strict. A generic quest-export catalog applies relationship
 memories/floors and derives historical world facts from canonical outcome ids;
 character-conditioned effects additionally resolve promises and add or remove
 companions in canonical completion order.
 Wolf-Winter's sixteen non-death endings create distinct Cade, Emery, and Hayden
 memories plus byre/gate/timber/wolf/cattle/property/relief-stock facts; restore replays the character result,
-rejects forged outcome/journal/state combinations, and fences prior manifests
-to one exact migration target. Generic campaign service rules can now consume
+rejects forged outcome/journal/state combinations, and validates the result
+against the current manifest. Generic campaign service rules can now consume
 those trusted facts or canonical story choices at an authored town and area,
 project an optional same-district named provider, expose bounded one-time terms,
 and bind consumption to replayed journal evidence across save/restore.
@@ -311,19 +313,14 @@ return one immediate authenticated receipt. It binds the selected profile,
 relief term, lead source, quest-start approach, canonical ending, exact world
 facts, and—when Reese's loan is involved—the authored 100/100 repair-roll
 snapshot. Rowan accepts the Courier's returned tag under Emery's witness, while
-lawful authority makes Rowan publicly void it. Historical completions with
-grandfathered dispatch evidence receive a clearly marked legacy receipt bound
-to the exact source hash already persisted by their legacy oath or quest-start
-proof; histories retaining the full current dispatch chain rederive the normal
-current receipt. Both survive an idempotent second restore. The exact
-predecessor is accepted only when its complete character state matches the old
-active-promise semantics, then the proven Wolf outcome upgrades that selected
-promise without accepting adjacent hashes, legacy-proof source swapping, or
-unrelated forgeries. Exhaustive four-background by eleven-ending proof, planner
-fail-closed checks, terminal/MCP bounds, and historical replay coverage live in
+lawful authority makes Rowan publicly void it. Restore rederives that receipt
+from the complete current dispatch chain and rejects missing, swapped, or
+unrelated proof. A content-hash mismatch is reported as provenance and never
+grants a receipt or rewrites the promise; repeated structural restore remains
+idempotent. Exhaustive four-background by eleven-ending proof, planner
+fail-closed checks, terminal/MCP bounds, and replay coverage live in
 [`registration_promise_return_counterfactual.test.ts`](../tests/starting_slice/registration_promise_return_counterfactual.test.ts)
-and
-[`registration_promise_return_snapshot_integrity.test.ts`](../tests/regression/registration_promise_return_snapshot_integrity.test.ts).
+and [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 
 The second authored Albany increment replaces Wolf-Winter's FIFO reveal with a
 blocking, irreversible source certification. Rowan's public docket costs no
@@ -354,14 +351,13 @@ optional field-team follow-up. Source certification reveals the real quest card
 and a compact, authored cost/tradeoff comparison of both hill approaches; full
 tactical route detail remains on the actual launch choice. Neither Station
 interaction gates departure, and leaving without choosing invents no proof or
-effect. Trusted predecessor saves carrying the former mandatory offers remain
-finishable, while a resolved save with the discovery removed remains invalid.
+effect. A structurally supported save carrying a still-valid pending offer
+remains finishable, while a resolved save with the discovery removed remains
+invalid.
 Presentation and state proof live in
 [`opening_dispatch_briefing.test.ts`](../tests/starting_slice/opening_dispatch_briefing.test.ts),
 [`lead_source_counterfactual.test.ts`](../tests/starting_slice/lead_source_counterfactual.test.ts),
 and
-[`opening_preparation_snapshot_integrity.test.ts`](../tests/regression/opening_preparation_snapshot_integrity.test.ts),
-plus
 [`overworld_optional_departure_interactions.test.ts`](../tests/regression/overworld_optional_departure_interactions.test.ts).
 
 The comparison-first follow-up keeps all six irreversible Albany decisions
@@ -380,12 +376,12 @@ from 4,191 to 3,558 `o200k_base` tokens (15.1%). Including the one Drover detail
 inspection observed on that path, the comparable total falls from 4,992 to
 4,308 (13.7%). This is a presentation saving rather than a game simplification:
 legal choices, state transitions, delayed consumers, and decision counts are
-unchanged. The exact presentation-only predecessor world hash restores by
-rebinding the hash after ordinary replay and integrity checks; adjacent hashes
-still fail closed. Contract proof lives in
+unchanged. Presentation-only content revisions do not create a save migration;
+structurally compatible state restores against current content with an explicit
+provenance warning, after ordinary replay and integrity checks. Contract proof lives in
 [`compact_journey_projection.test.ts`](../tests/unit/compact_journey_projection.test.ts),
 [`mcp_journey_surface.test.ts`](../tests/unit/mcp_journey_surface.test.ts), and
-[`comparison_card_manifest_snapshot_integrity.test.ts`](../tests/regression/comparison_card_manifest_snapshot_integrity.test.ts).
+[`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 
 The adjacent-plan-recall follow-up keeps that summary-first boundary while
 removing the remaining cross-screen memory test at Albany Station. Every
@@ -458,18 +454,18 @@ exact-session presentation receipt: the shortcut is authorized immediately,
 but a hidden ordinary duty cannot be inspected or chosen before the exact
 reveal. The developer-only `compact_result:false` read may return the canonical
 prompt for structural QA without authorizing hidden choices. The receipt is
-absent from exports and hashes and resets on restore. The established reveal id,
-canonical option order, terminal `customize` alias, and legacy numeric mappings
-remain stable; legal choices and durable gameplay are unchanged.
+part of the exported snapshot and hash and survives restore, so the same state
+has the same legal options on every transport. The established reveal id,
+canonical option order, terminal `customize` alias, and numeric mappings remain
+stable; legal choices and durable gameplay are unchanged.
 
-Legacy migration is deliberately fail-closed at this causal boundary. An
-untouched registration-era save receives the real source prompt. Every progressed
-post-registration suffix is rejected rather than being falsely certified as
-source-free: mutable saves cannot prove that a zero-effect source decision was
-not deleted before an otherwise plausible later action. Legacy source markers
-are rejected for the same reason. Opaque pre-registration quest progress is also
-rejected because it has no replayable registration-and-source path and would
-otherwise load into an unwinnable starting-slice goal.
+Restore is deliberately fail-closed at this causal boundary. A progressed
+post-registration suffix without its replayable source proof is rejected rather
+than falsely certified as source-free: mutable state cannot prove that a
+zero-effect source decision was not deleted before an otherwise plausible later
+action. Opaque pre-registration quest progress is likewise rejected because it
+has no replayable registration-and-source path and would otherwise load into an
+unwinnable starting-slice goal. A content-hash warning never relaxes those proofs.
 
 The third authored increment makes Wolf-Winter's equal-score timber decision
 matter after the return. Carrying sound guard wood into dawn returns Hayden's
@@ -490,7 +486,7 @@ road-store credit: a 15-minute resupply instead of 45. Sending the wagon and
 wardens north causes Emery Sloane to hold a mutually exclusive Greenway
 watch-shelter claim: a 15-minute rest instead of 180. Both terms are visible
 before commitment; the selected goal remains their trusted source even after it
-moves into goal history. Full, compact, UI, save/restore, migration, and causal
+moves into goal history. Full, compact, UI, structural save/restore, and causal
 replay proofs reject contradictory branches or retroactive service use. The
 paired runs visit all six Albany districts, use the same Wolf-Winter strategy
 and ending, and differ only at the dispatch. Proof lives in
@@ -523,7 +519,7 @@ any redirected/defeated leader state, a committed lure/drive/fortification, or
 any old-grey maneuver withholds the exit. Quest legality, terminal replay,
 campaign facts and memories, June's broken cattle-first agreement when retained
 (or her intact amicable release when released before HUNT), Albany dawn
-dispatch, and save migration are proved by
+dispatch, and save/restore are proved by
 [`wolf_winter_bloodied_byre_evacuation.test.ts`](../tests/regression/wolf_winter_bloodied_byre_evacuation.test.ts)
 and
 [`bloodied_byre_evacuation_return_e2e.test.ts`](../tests/starting_slice/bloodied_byre_evacuation_return_e2e.test.ts).
@@ -599,10 +595,9 @@ identities. Albany then records the cattle-first promise
 testimony, and offers no kept-companion service. Retaining June through the
 crossing keeps the original first-death breakage instead. The release boundary,
 all four HUNT consequences, save/restore, intervention loss, export truth, and
-historical-hash rejection are proven in
+content-revision warning behavior are proven in
 [`june_hunt_release_counterfactual.test.ts`](../tests/starting_slice/june_hunt_release_counterfactual.test.ts)
-and
-[`june_hunt_release_snapshot_integrity.test.ts`](../tests/regression/june_hunt_release_snapshot_integrity.test.ts).
+and [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 The first wolf death removes the action but preserves hybrid/combat completion, then
 resolves the promise broken and June out of the party. Clean cooperation,
 negotiated refusal, explicit solo, and relationship loss produce distinct
@@ -665,7 +660,7 @@ and changing no fatigue. Returned-rig and whole-herd facts independently gate
 the established one-time Station rest and Greenway resupply offers.
 June and Emery retain outcome-specific testimony. Same-boundary proofs vary
 only the ending and preserve those differences through chronological journey
-foldback, current/predecessor snapshot integrity, full/compact MCP, UI, and
+foldback, structural snapshot integrity, full/compact MCP, UI, and
 service consumption. Proof lives in
 [`crisis_priority_counterfactual.test.ts`](../tests/starting_slice/crisis_priority_counterfactual.test.ts)
 and
@@ -697,7 +692,7 @@ public seals and records Cade's refusal. Two endings export those facts into
 distinct Cade, Hayden, and June memories, every Albany dawn dispatch preserves
 the selected cost, and Hayden offers a mutually exclusive Station resupply or
 rest. Best/worst repair, solo/June, RPG save/replay, chronological foldback,
-full/compact/browser parity, current/predecessor migration, and one-use service
+full/compact/browser parity, structural save/restore, and one-use service
 consumption are covered by
 [`cade_trust_counterfactual.test.ts`](../tests/starting_slice/cade_trust_counterfactual.test.ts)
 and
@@ -736,11 +731,11 @@ reaches alarm 4 and scatters two cattle while the stockway reaches alarm 3 and
 keeps the whole herd, proving the sheltered route's advantage. Launch costs,
 proof boundary, relationship memory, import receipt, outcome, and exact return
 summary survive RPG/overworld replay, chronological foldback, full/compact MCP,
-browser and CLI parity, and exact F11 migration. Proof lives in
+browser and CLI parity, and structural v11 save/restore with the v10 upgrade.
+Proof lives in
 [`hill_approach_gameplay.test.ts`](../tests/starting_slice/hill_approach_gameplay.test.ts),
 [`hill_approach_return_e2e.test.ts`](../tests/starting_slice/hill_approach_return_e2e.test.ts),
-and
-[`hill_approach_migration_integrity.test.ts`](../tests/regression/hill_approach_migration_integrity.test.ts).
+and [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 
 The eleventh authored increment turns `SS-F06-relief-allocation` into a finite
 public-capacity decision rather than a decorative reserve meter. At the Station
@@ -775,17 +770,12 @@ exposed-ridge lure line; none gates hunt, lure, drive, or fortify commitment.
 
 Allocation offer, five-minute cost, provider memory, quest import, field
 consumer, return fact, and service eligibility replay across save/restore and
-the overworld-to-quest-to-overworld boundary. Exact F12 predecessor saves have a
-bounded migration path: an unstarted Wolf-Winter save receives the real current
-offer with no retroactive effect. If that save already selected June, the later
-allocation composes after the preserved ally proof and a second restore retains
-both the ally commitment and allocation effects. A started save instead keeps
-its exact approach proof and receives one neutral legacy marker bound to the
-pre-start boundary, without allocation knowledge, memory, time, field aid, or
-service. Paired proof lives in
-[`relief_allocation_counterfactual.test.ts`](../tests/starting_slice/relief_allocation_counterfactual.test.ts),
-and the predecessor boundary lives in
-[`relief_allocation_migration_integrity.test.ts`](../tests/regression/relief_allocation_migration_integrity.test.ts).
+the overworld-to-quest-to-overworld boundary. Structural restore retains a real
+selected allocation and composes it with an already-proven ally choice; it never
+invents allocation knowledge, memory, time, field aid, or service from a content
+hash. A second restore retains the same proofs. Paired proof lives in
+[`relief_allocation_counterfactual.test.ts`](../tests/starting_slice/relief_allocation_counterfactual.test.ts)
+and [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 The nonblocking inspection, skip/select permutations, launch legality, surface
 parity, and trusted mandatory-offer compatibility are proven in
 [`overworld_optional_departure_interactions.test.ts`](../tests/regression/overworld_optional_departure_interactions.test.ts).
@@ -843,10 +833,10 @@ field/return proof at
 [`relief_oath_counterfactual.test.ts`](../tests/starting_slice/relief_oath_counterfactual.test.ts)
 uses identical rolls to isolate all three consumers, proves established
 miss/recovery paths remain intact, resolves kept/released/broken promises, and
-checks positive and negative eligibility for every conditional service. Exact
-predecessor migration, anti-relabel rejection, repeated restore, and the shared
-Independent Carriers standing case live in
-[`relief_oath_migration_integrity.test.ts`](../tests/regression/relief_oath_migration_integrity.test.ts).
+checks positive and negative eligibility for every conditional service.
+Anti-relabel rejection, repeated structural restore, and the shared Independent
+Carriers standing case live in that proof and
+[`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 The causal row is therefore `implemented`, `proven`, and counted.
 
 This proves `SS-F01-character-background`, `SS-F02-relief-oath`, `SS-F03-lead-source`,
@@ -938,7 +928,7 @@ base Works priority. Civic adds the reusable authored-event grammar: equal
 pre-Wolf terms bind a public-or-protected charter policy, and the post-Wolf job
 selects exactly one of four policy/outcome closures with outcome-dependent
 duration and policy-dependent standing. The paired held/evacuated, restore,
-migration, replay, and surface
+structural replay, and surface
 proof is
 [`winter_return_docket_counterfactual.test.ts`](../tests/starting_slice/winter_return_docket_counterfactual.test.ts).
 Campus is the fifth authored Albany event. Blair's post-Wolf return-evidence
@@ -948,8 +938,8 @@ provenance. Each proof keeps Archive Query's two established methods and opens
 only its matching additional method. Each completed method creates the matching
 exclusive Campus service, consolidating an overlapping Drover rest or mobile
 resupply credit rather than duplicating a same-action offer. Exact event and job
-proof, save/restore, full/compact/UI/MCP projection, neutral legacy markers,
-and chronology/tamper/hash failures are covered by
+proof, save/restore, full/compact/UI/MCP projection, current-state causal checks,
+and chronology/tamper failures are covered by
 [`campus_return_evidence_mandate_counterfactual.test.ts`](../tests/starting_slice/campus_return_evidence_mandate_counterfactual.test.ts).
 Station completes the six-event set with Hayden's optional post-Wolf Cade Return
 Filing Standard. After the Station POI, Hayden contact, and explicit
@@ -962,25 +952,25 @@ service claim, or erases the packet's physical evidence; all three existing
 loss-backed dispatches remain available when their facts and dawn choice permit.
 From the lowest 8-standing held return, the quick path ends at 12 and wins by 15
 minutes when rested, while the witnessed path ends at 13 and opens Rowan's
-existing 15-minute Civic recovery cot when fatigued. A neutral generic
-predecessor marker unlocks neither close. Exact proof, save/restore,
-full/compact/UI/MCP projection, opportunity leads, migration exclusion,
-chronology/tamper/hash failure, and the standing/fatigue reversal are covered by
+existing 15-minute Civic recovery cot when fatigued. A content-hash mismatch
+unlocks neither close. Exact proof, save/restore, full/compact/UI/MCP
+projection, opportunity leads, content-revision warning behavior,
+chronology/tamper failure, and the standing/fatigue reversal are covered by
 [`albany_station_return_filing_standard_counterfactual.test.ts`](../tests/starting_slice/albany_station_return_filing_standard_counterfactual.test.ts).
 Cade's Return Packet adds an outcome-authored Station job after Wolf-Winter:
 broken outer paling, an abandoned evacuation line, and scattered cattle expose
 different mutually exclusive repair dispatches, while fortified no-loss
 returns expose none. The chosen dispatch consumes time, changes standing, and
 creates or consolidates an exact one-use Albany service without duplicating a
-legacy returned-rig cache. Migration, replay, action-order, full/compact/UI/MCP,
+pre-existing returned-rig cache. Restore, replay, action-order, full/compact/UI/MCP,
 and all eleven Cade-packet outcome rows across both dawn-dispatch choices are
 proved by
 [`cade_return_packet_counterfactual.test.ts`](../tests/starting_slice/cade_return_packet_counterfactual.test.ts).
 Jamie's Market policy and disputed-crates pair adds a second authored event and
 fifth authored job: household-price protection consistently buys more standing
 for more time than the open-bid board at both fast and thorough settlement depths.
-Its exact policy predicate, Civic-cot counterfactual, neutral generic migration,
-replay, and full/compact/UI/MCP proof live
+Its exact policy predicate, Civic-cot counterfactual, structural restore, replay,
+and full/compact/UI/MCP proof live
 in [`albany_market_scene_counterfactual.test.ts`](../tests/starting_slice/albany_market_scene_counterfactual.test.ts).
 Greenway adds a third authored event and completes the six-job district set
 after Wolf-Winter. Emery Sloane always permits an obvious accessible public
@@ -999,15 +989,12 @@ record instead totals 100 minutes and reaches 14. Wolf strategy therefore
 changes Emery's legal policy and its time/standing frontier, not just her
 dialogue. The policies change legal action, copy, time, standing, and a delayed
 existing service without adding a new rest/resupply coupon or delaying
-first-goal completion. Full/compact/UI/MCP
-projection, current replay, exact predecessor migration, and chronology/tamper
-guards live in the paired proofs below. Exact-predecessor bloodshed saves retain
-their actually selected quiet policy as a provenance-bound grandfathered
-record; migration never relabels that historical choice as custody, while new
-bloodshed decisions cannot select quiet policy.
-[`albany_greenway_scene_counterfactual.test.ts`](../tests/starting_slice/albany_greenway_scene_counterfactual.test.ts)
-and
-[`emery_evidence_custody_snapshot_integrity.test.ts`](../tests/regression/emery_evidence_custody_snapshot_integrity.test.ts).
+first-goal completion. Full/compact/UI/MCP projection, current replay,
+structural restore, content-revision warning behavior, and chronology/tamper
+guards live in the paired proof below. A content-hash mismatch never relabels a
+selected quiet policy as custody, while new bloodshed decisions cannot select
+quiet policy.
+[`albany_greenway_scene_counterfactual.test.ts`](../tests/starting_slice/albany_greenway_scene_counterfactual.test.ts).
 The cattle-first drive wound now adds a character-state consequence to the
 public and quiet survey frontiers without changing their policy proof. While
 Cade's witnessed byre-mouth wound is untreated, each policy keeps its fast
@@ -1015,8 +1002,7 @@ field action legal but withholds only its deep witnessed survey. Taking the
 exact Station care advances the wound, restores health, and reopens that deep
 action. Rest and resupply cannot substitute for treatment. Care consumption,
 chronological character replay, full/compact/UI/MCP parity, forged and duplicate
-evidence rejection, and exact grandfathering of both already-completed deep
-predecessor options are proved by
+evidence rejection, and repeated restore of already-completed deep options are proved by
 [`wolf_wound_care_counterfactual.test.ts`](../tests/starting_slice/wolf_wound_care_counterfactual.test.ts).
 Works adds the fourth authored district event without gating departure or
 lengthening the mandatory path. Reese's witnessed-count and cold-set-bypass
@@ -1031,8 +1017,8 @@ ordinary 180-minute recovery when fatigued. The unresolved charter expires
 after Wolf-Winter and is not projected as a return lead, while an
 already-discovered Works job remains
 eligible for the normal lead. Full/compact-v29/UI/MCP parity, event/job replay,
-exact current-main and cumulative neutral migration, fail-closed divergent
-hashes, and the standing/fatigue reversal live in
+structural save/restore, explicit content-revision warnings, and the
+standing/fatigue reversal live in
 [`albany_works_hazard_charter_counterfactual.test.ts`](../tests/starting_slice/albany_works_hazard_charter_counterfactual.test.ts).
 The journey now also projects optional return opportunities without adding a
 counted fork: unresolved post-quest event roots in visited towns and eligible
@@ -1087,8 +1073,8 @@ Required proof:
 - schema validation, a negative fixture, and a synthetic or second-quest proof
   for every new reusable consequence primitive;
 - save/restore, seed determinism, compact/full MCP parity, UI parity, action
-  legality, journey proofs, and the documented fail-closed legacy snapshot
-  compatibility boundary;
+  legality, journey proofs, and the documented structural v11/v10 snapshot
+  boundary; content-only hash mismatch warns but never relaxes state proof;
 - `npm run crawl:smoke` before and after every increment;
 - one canonical pure fresh-overworld blind playtest and `npm run health` before
   each green commit;

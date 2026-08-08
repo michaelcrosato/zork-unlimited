@@ -131,6 +131,87 @@ export const HASH_PIN_FILES = [
   "traces/rpg/barrow_victory.json",
 ];
 
+/**
+ * Exact content sources that may automatically justify changing each hash-pin.
+ * Entries are encoded as `pin=>source` so the guard can pure-parse and protect
+ * this relationship list alongside HASH_PIN_FILES. A pin with no entry has no
+ * live content source: changing it requires the existing explicit
+ * AI_LOOP_ALLOW_VERIFIER_EDITS acknowledgment (for example, an algorithm or
+ * historical-fixture format change).
+ *
+ * This is intentionally file-exact rather than a `content/` prefix. An unrelated
+ * content edit must never launder a re-pin.
+ */
+export const HASH_PIN_CONTENT_SOURCE_SCOPES = [
+  "tests/unit/rpg_validator.test.ts=>content/rpg/quests/sunken_barrow.yaml",
+  "tests/unit/rpg_validator.test.ts=>content/broken-fixtures/rpg_unwinnable.yaml",
+  "traces/rpg/barrow_victory.json=>content/rpg/quests/sunken_barrow.yaml",
+] as const;
+
+/**
+ * One-time, owner-approved D10 removal of the byte-exact overworld migration
+ * ladder. These are the exact artifacts whose deletion makes the exception
+ * eligible. Requiring every path to exist at the comparison ref and be absent
+ * now makes the exception self-expiring: after the D10 PR lands, no later
+ * baseline can qualify.
+ */
+export const APPROVED_D10_REMOVED_PATHS = [
+  "src/world/drover_route_drive_recovery_legacy.ts",
+  "src/world/drover_route_fail_forward_legacy.ts",
+  "src/world/emery_evidence_custody_legacy.ts",
+  "src/world/frost_jamb_signpost_legacy.ts",
+  "src/world/local_event_scene_legacy.ts",
+  "src/world/local_job_scene_legacy.ts",
+  "src/world/local_scene_legacy_sources.ts",
+  "src/world/opening_preparation_copy_migrations.ts",
+  "src/world/relief_oath_strategy_parity_legacy.ts",
+  "src/world/relief_protocol_trigger_copy_legacy.ts",
+  "tests/regression/fixtures/campaign_service_742_started.json",
+  "tests/regression/fixtures/historical_overworlds.ts",
+  "tests/regression/aid_only_clean_cast_snapshot_integrity.test.ts",
+  "tests/regression/bloodied_byre_evacuation_snapshot_integrity.test.ts",
+  "tests/regression/campaign_service_migration_integrity.test.ts",
+  "tests/regression/campaign_service_snapshot_integrity.test.ts",
+  "tests/regression/civic_trigger_category_snapshot_integrity.test.ts",
+  "tests/regression/comparison_card_manifest_snapshot_integrity.test.ts",
+  "tests/regression/crisis_priority_migration_integrity.test.ts",
+  "tests/regression/drover_route_fail_forward_snapshot_integrity.test.ts",
+  "tests/regression/emery_evidence_custody_snapshot_integrity.test.ts",
+  "tests/regression/fortify_outlast_migration_integrity.test.ts",
+  "tests/regression/frost_jamb_signpost_snapshot_integrity.test.ts",
+  "tests/regression/hill_approach_migration_integrity.test.ts",
+  "tests/regression/june_drive_overrun_snapshot_integrity.test.ts",
+  "tests/regression/june_fortify_dawn_snapshot_integrity.test.ts",
+  "tests/regression/june_hunt_release_snapshot_integrity.test.ts",
+  "tests/regression/june_return_copy_migration_integrity.test.ts",
+  "tests/regression/opening_lead_source_snapshot_integrity.test.ts",
+  "tests/regression/opening_preparation_snapshot_integrity.test.ts",
+  "tests/regression/registration_promise_return_snapshot_integrity.test.ts",
+  "tests/regression/relief_allocation_migration_integrity.test.ts",
+  "tests/regression/relief_allocation_trigger_category_snapshot_integrity.test.ts",
+  "tests/regression/relief_oath_migration_integrity.test.ts",
+  "tests/regression/relief_oath_strategy_parity_snapshot_integrity.test.ts",
+  "tests/regression/relief_protocol_trigger_copy_snapshot_integrity.test.ts",
+  "tests/regression/starting_doctrine_manifest_snapshot_integrity.test.ts",
+  "tests/unit/local_scene_legacy_sources.test.ts",
+  "tests/unit/world_local_event_scene_legacy.test.ts",
+] as const;
+
+/** Exact final whole-corpus reduction for the owner-approved D10 change relative
+ * to its pre-change `origin/main`. This is deliberately the reviewed NET tuple:
+ * equality catches any unbalanced drift around this one change. Like every
+ * aggregate counter, it cannot prove semantic equivalence or distinguish two
+ * compensating edits, so the exact deletion-set and review requirements remain
+ * load-bearing. */
+export const APPROVED_D10_NET_TEST_REDUCTION = Object.freeze({
+  cases: 139,
+  assertions: 773,
+  strong: 719,
+});
+
+export const APPROVED_D10_DECISION_MARKER = "D10 save-migration ladder deletion";
+export const APPROVED_D10_COMPLETION_RECORD = "docs/EXTERNAL_REVIEW_COMPLETION.md";
+
 // The three static floors below are the LAST line of defence, and until 2026-08-05 they
 // sat at roughly 2-4% of the real corpus (120/400/400 against ~3,200/20,300/19,400) with
 // comments claiming counts that were an order of magnitude stale. A PR could delete
@@ -567,7 +648,7 @@ function gitChangedFiles(root: string, ref: string): string[] {
  */
 export function classifyDrift(changed: string[], existsFn: (rel: string) => boolean): Finding[] {
   const findings: Finding[] = [];
-  const contentChanged = changed.some((f) => f.startsWith("content/"));
+  const changedSet = new Set(changed);
   for (const f of changed) {
     if (PROTECTED_FILES.includes(f)) {
       if (!existsFn(f))
@@ -586,18 +667,24 @@ export function classifyDrift(changed: string[], existsFn: (rel: string) => bool
         });
     }
     if (HASH_PIN_FILES.includes(f) && existsFn(f)) {
-      if (contentChanged) {
+      const relatedSources = HASH_PIN_CONTENT_SOURCE_SCOPES.flatMap((entry) => {
+        const separator = entry.indexOf("=>");
+        const source = separator >= 0 ? entry.slice(separator + 2) : "";
+        return entry.slice(0, separator) === f && source.startsWith("content/") ? [source] : [];
+      });
+      const changedRelatedSources = relatedSources.filter((source) => changedSet.has(source));
+      if (changedRelatedSources.length > 0) {
         findings.push({
           severity: "warning",
           code: "HASH_PIN_REPINNED",
-          message: `re-pinned ${f} alongside an intentional content change — the legitimate snapshot-update workflow, recorded for review`,
+          message: `re-pinned ${f} alongside its related content source ${changedRelatedSources.join(", ")} — the legitimate snapshot-update workflow, recorded for review`,
           where: f,
         });
       } else {
         findings.push({
           severity: "error",
           code: "HASH_PIN_UNACCOMPANIED",
-          message: `re-pinned ${f} with NO content change this cycle — a snapshot/hash update with no corresponding edit is the classic launder pattern (override with AI_LOOP_ALLOW_VERIFIER_EDITS=1 for a deliberate algorithm/format change)`,
+          message: `re-pinned ${f} with NO related content source change this cycle — an unrelated content edit cannot justify a snapshot/hash update (override with AI_LOOP_ALLOW_VERIFIER_EDITS=1 for a deliberate algorithm/format change)`,
           where: f,
         });
       }
@@ -612,6 +699,81 @@ export type TestArtifactCounts = {
   strong?: number;
   tautologies?: number;
 };
+
+/** Compute the one approved final tuple. This does not lower the static floors
+ * or disable a detector; matchesApprovedD10NetTestReduction requires equality. */
+export function expectedTestCountsAfterApprovedD10Removal(
+  before: TestArtifactCounts,
+  removal: Readonly<typeof APPROVED_D10_NET_TEST_REDUCTION> = APPROVED_D10_NET_TEST_REDUCTION,
+): TestArtifactCounts {
+  const expected: TestArtifactCounts = {
+    cases: before.cases - removal.cases,
+    assertions: before.assertions - removal.assertions,
+  };
+  if (before.strong !== undefined) expected.strong = before.strong - removal.strong;
+  if (before.tautologies !== undefined) expected.tautologies = before.tautologies;
+  return expected;
+}
+
+/** The D10 exception has no net budget: the whole-corpus reduction must equal
+ * the reviewed tuple exactly. This detects unbalanced additions or removals; it
+ * does not claim that aggregate counts can authenticate individual test bodies. */
+export function matchesApprovedD10NetTestReduction(
+  before: TestArtifactCounts,
+  now: TestArtifactCounts,
+  removal: Readonly<typeof APPROVED_D10_NET_TEST_REDUCTION> = APPROVED_D10_NET_TEST_REDUCTION,
+): boolean {
+  const expected = expectedTestCountsAfterApprovedD10Removal(before, removal);
+  return (
+    now.cases === expected.cases &&
+    now.assertions === expected.assertions &&
+    now.strong === expected.strong
+  );
+}
+
+type ApprovedD10Eligibility = {
+  changedPaths: readonly string[];
+  existedAtRef: (path: string) => boolean;
+  existsNow: (path: string) => boolean;
+  decisionLog: string;
+  completionRecord: string;
+};
+
+/** Pure eligibility check for the one-time D10 allowance. */
+export function qualifiesForApprovedD10Removal(args: ApprovedD10Eligibility): boolean {
+  const changed = new Set(args.changedPaths);
+  if (!changed.has("docs/DECISION_LOG.md") || !changed.has(APPROVED_D10_COMPLETION_RECORD))
+    return false;
+  // The completion record is the one-time sentinel. It did not exist on the
+  // approved base, exists in this tree, and therefore cannot qualify once this
+  // change is part of the comparison baseline.
+  if (
+    args.existedAtRef(APPROVED_D10_COMPLETION_RECORD) ||
+    !args.existsNow(APPROVED_D10_COMPLETION_RECORD)
+  )
+    return false;
+  if (!args.existedAtRef("docs/DECISION_LOG.md") || !args.existsNow("docs/DECISION_LOG.md"))
+    return false;
+  const markerCount = (text: string): number => text.split(APPROVED_D10_DECISION_MARKER).length - 1;
+  if (markerCount(args.decisionLog) !== 1 || markerCount(args.completionRecord) !== 1) return false;
+
+  // Exact deletion eligibility: every deleted world/test artifact in this diff
+  // must be one of the reviewed ladder artifacts, and every reviewed artifact
+  // must actually be deleted. Unrelated deletions elsewhere (for example the N6
+  // RPG presentation module) do not participate in this test-retirement grant.
+  const actual = [...changed]
+    .filter(
+      (path) =>
+        (path.startsWith("src/world/") || path.startsWith("tests/")) &&
+        args.existedAtRef(path) &&
+        !args.existsNow(path),
+    )
+    .sort();
+  const approved = [...APPROVED_D10_REMOVED_PATHS].sort();
+  return (
+    actual.length === approved.length && actual.every((path, index) => path === approved[index])
+  );
+}
 
 /**
  * Pure regression detector: a cycle must not REDUCE the test-case count, the assertion
@@ -691,14 +853,19 @@ export type GuardConstants = {
   forbiddenTrackedFiles: string[];
   forbiddenPathPatterns: string[];
   hashPinFiles: string[];
+  /** Undefined is the legacy pre-scope behavior where any `content/` edit
+   * justified every pin. A present list is the tightened exact relationship set. */
+  hashPinContentSourceScopes?: string[];
 };
 
 /**
- * Pure parser over the TEXT of verify-integrity.ts. Extracts the three MIN_* floors
- * and the two protected/hash-pin array literals by regex/string parsing only (NO eval,
- * no fs/git/network/clock/RNG) so it is deterministic and unit-tests on synthetic input.
- * Returns null if ANY field can't be parsed — a malformed/absent ref is skipped, never a
- * false alarm (mirrors countTestArtifactsAtRef's null-on-failure contract).
+ * Pure parser over the TEXT of verify-integrity.ts. Extracts the three MIN_* floors,
+ * protected/hash-pin lists, and exact hash-pin source relationships by regex/string
+ * parsing only (NO eval, no fs/git/network/clock/RNG) so it is deterministic and
+ * unit-tests on synthetic input.
+ * Returns null if any required legacy field cannot be parsed. The newer source-scope
+ * declaration is optional only so a pre-scope baseline can be represented as the
+ * legacy wildcard and compared as a tightening, rather than becoming unreadable.
  */
 export function parseGuardConstants(text: string): GuardConstants | null {
   const num = (name: string): number | null => {
@@ -709,7 +876,9 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     const m = new RegExp(`export const ${name}\\s*=\\s*\\[([\\s\\S]*?)\\]`).exec(text);
     if (!m) return null;
     const entries = m[1]!.match(/"([^"]*)"|'([^']*)'/g);
-    if (!entries) return null;
+    // An explicitly empty array is a real (and, for pin source scopes,
+    // maximally strict) configuration. Only an absent declaration is null.
+    if (!entries) return [];
     return entries.map((e) =>
       e.startsWith('"') ? (JSON.parse(e) as string) : e.slice(1, -1).replace(/\\\\/g, "\\"),
     );
@@ -723,6 +892,7 @@ export function parseGuardConstants(text: string): GuardConstants | null {
   const forbiddenTrackedFiles = arr("FORBIDDEN_TRACKED_FILES") ?? [];
   const forbiddenPathPatterns = arr("FORBIDDEN_PATH_PATTERNS") ?? [];
   const hashPinFiles = arr("HASH_PIN_FILES");
+  const hashPinContentSourceScopes = arr("HASH_PIN_CONTENT_SOURCE_SCOPES");
   if (
     minTestCases === null ||
     minAssertions === null ||
@@ -742,6 +912,8 @@ export function parseGuardConstants(text: string): GuardConstants | null {
     hashPinFiles,
   };
   if (maxTautologyAssertions !== null) result.maxTautologyAssertions = maxTautologyAssertions;
+  if (hashPinContentSourceScopes !== null)
+    result.hashPinContentSourceScopes = hashPinContentSourceScopes;
   return result;
 }
 
@@ -750,7 +922,8 @@ export function parseGuardConstants(text: string): GuardConstants | null {
  * findings out; no git/fs/network/clock/RNG). Emits a single severity:"error",
  * code:"GUARD_WEAKENED" finding when the guard's defensive surface SHRINKS across a cycle:
  *   - any MIN_* floor is LOWERED (now.minX < before.minX), or
- *   - any entry is REMOVED from protectedFiles or hashPinFiles.
+ *   - any entry is REMOVED from protectedFiles or hashPinFiles, or
+ *   - any automatic hash-pin content scope is ADDED (widening justification).
  * Raising a floor, adding an entry, and identical constants are all OK (no finding). The
  * message names exactly what was weakened and mentions the AI_LOOP_ALLOW_VERIFIER_EDITS=1
  * override (a deliberate, acknowledged loosening is allowed; a silent one is not).
@@ -787,6 +960,18 @@ export function detectGuardWeakening(before: GuardConstants, now: GuardConstants
   removedFrom("FORBIDDEN_TRACKED_FILES", before.forbiddenTrackedFiles, now.forbiddenTrackedFiles);
   removedFrom("FORBIDDEN_PATH_PATTERNS", before.forbiddenPathPatterns, now.forbiddenPathPatterns);
   removedFrom("HASH_PIN_FILES", before.hashPinFiles, now.hashPinFiles);
+  if (before.hashPinContentSourceScopes !== undefined) {
+    if (now.hashPinContentSourceScopes === undefined) {
+      weakened.push(
+        "HASH_PIN_CONTENT_SOURCE_SCOPES removed (restores the legacy any-content wildcard)",
+      );
+    } else {
+      const beforeScopes = new Set(before.hashPinContentSourceScopes);
+      for (const entry of now.hashPinContentSourceScopes)
+        if (!beforeScopes.has(entry))
+          weakened.push(`HASH_PIN_CONTENT_SOURCE_SCOPES entry added: ${entry}`);
+    }
+  }
   if (weakened.length === 0) return [];
   return [
     {
@@ -863,6 +1048,24 @@ function parseGuardConstantsAtRef(root: string, ref: string): GuardConstants | n
       encoding: "utf8",
     });
     return parseGuardConstants(text);
+  } catch {
+    return null;
+  }
+}
+
+function gitPathsAtRef(root: string, ref: string): ReadonlySet<string> | null {
+  try {
+    const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", ref], {
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return new Set(
+      listed
+        .split("\n")
+        .map((path) => path.trim())
+        .filter(Boolean),
+    );
   } catch {
     return null;
   }
@@ -945,7 +1148,48 @@ export function runDrift(
       strong: countStrongAssertions(nowFiles),
       tautologies: countTautologyAssertions(nowFiles),
     };
-    findings.push(...detectCountRegressions(before, now));
+    const decisionLogPath = join(root, "docs/DECISION_LOG.md");
+    const completionRecordPath = join(root, APPROVED_D10_COMPLETION_RECORD);
+    const pathsAtRef = gitPathsAtRef(root, ref);
+    const approvedD10Removal = qualifiesForApprovedD10Removal({
+      changedPaths: changed,
+      existedAtRef: (path) => pathsAtRef?.has(path) ?? false,
+      existsNow: (path) => existsSync(join(root, path)),
+      decisionLog: existsSync(decisionLogPath) ? readFileSync(decisionLogPath, "utf8") : "",
+      completionRecord: existsSync(completionRecordPath)
+        ? readFileSync(completionRecordPath, "utf8")
+        : "",
+    });
+    if (approvedD10Removal) {
+      if (matchesApprovedD10NetTestReduction(before, now)) {
+        findings.push({
+          severity: "warning",
+          code: "APPROVED_D10_TEST_REMOVAL",
+          message: `owner-approved D10 migration-only coverage removal exactly matches the reviewed net reduction of ${APPROVED_D10_NET_TEST_REDUCTION.cases} cases / ${APPROVED_D10_NET_TEST_REDUCTION.assertions} assertions / ${APPROVED_D10_NET_TEST_REDUCTION.strong} strong matchers; the exact world/test deletion set is present and the new completion record makes this allowance self-expire after merge`,
+          where: APPROVED_D10_COMPLETION_RECORD,
+        });
+        // The exact tuple accounts for cases/assertions/strong. Keep the
+        // independent tautology ratchet live across the real baseline.
+        const tautologyBaseline: TestArtifactCounts = {
+          cases: now.cases,
+          assertions: now.assertions,
+          strong: now.strong,
+        };
+        if (before.tautologies !== undefined) tautologyBaseline.tautologies = before.tautologies;
+        findings.push(...detectCountRegressions(tautologyBaseline, now));
+      } else {
+        const expected = expectedTestCountsAfterApprovedD10Removal(before);
+        findings.push({
+          severity: "error",
+          code: "APPROVED_D10_TEST_DELTA_MISMATCH",
+          message: `D10 deletion set qualified, but the whole-corpus tuple is ${before.cases - now.cases} cases / ${before.assertions - now.assertions} assertions / ${(before.strong ?? 0) - (now.strong ?? 0)} strong matchers; expected exactly ${APPROVED_D10_NET_TEST_REDUCTION.cases} / ${APPROVED_D10_NET_TEST_REDUCTION.assertions} / ${APPROVED_D10_NET_TEST_REDUCTION.strong} (expected current totals ${expected.cases} / ${expected.assertions} / ${expected.strong}); the reviewed net tuple has unexpected drift`,
+          where: "tests/",
+        });
+        findings.push(...detectCountRegressions(before, now));
+      }
+    } else {
+      findings.push(...detectCountRegressions(before, now));
+    }
   }
   if (guardBefore === null) {
     // Same reasoning for the guard-weakening half: a ref whose verify-integrity.ts

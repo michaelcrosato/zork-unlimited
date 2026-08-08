@@ -241,6 +241,8 @@ export async function runTerminalStoryChoiceController(args: {
   write: (text: string) => void;
   reject: (message: string) => void;
   choose: (option: JourneyStoryChoiceOption) => void;
+  reveal?: (revealId: string) => void;
+  presentedOptions?: () => readonly JourneyStoryChoiceOption[];
   allowComparisonExit?: boolean;
   onAuxiliary?: (
     line: string,
@@ -257,7 +259,9 @@ export async function runTerminalStoryChoiceController(args: {
   const requiresComparisonFirst = progressiveDisclosure?.initialOptionIds.length === 0;
   const revealCommand = requiresComparisonFirst ? "compare" : "customize";
   const visibleOptions = (): readonly StructuredJourneyStoryChoiceOption[] => {
-    const presented = journeyStoryChoiceOptionsForPresentation(args.prompt, revealedStoryChoiceId);
+    const presented =
+      args.presentedOptions?.() ??
+      journeyStoryChoiceOptionsForPresentation(args.prompt, revealedStoryChoiceId);
     const visibleIds = new Set(presented.map((option) => option.id));
     if (!requiresComparisonFirst) return options.filter((option) => visibleIds.has(option.id));
     return presented.map((option) => options.find((candidate) => candidate.id === option.id)!);
@@ -275,10 +279,18 @@ export async function runTerminalStoryChoiceController(args: {
     const option = matchTerminalStoryChoiceOption(options, selector);
     return option && !visibleOptions().some((visible) => visible.id === option.id) ? option : null;
   };
+  const activeRevealId = (): string | undefined =>
+    progressiveDisclosure &&
+    progressiveDisclosure.reveal.optionIds.some((id) =>
+      visibleOptions().some((option) => option.id === id),
+    )
+      ? progressiveDisclosure.reveal.id
+      : undefined;
+  const initialRevealId = activeRevealId();
   args.write(
     renderTerminalStoryChoiceComparison(args.prompt, {
       allowComparisonExit: args.allowComparisonExit === true,
-      ...(revealedStoryChoiceId === undefined ? {} : { revealId: revealedStoryChoiceId }),
+      ...(initialRevealId === undefined ? {} : { revealId: initialRevealId }),
     }),
   );
 
@@ -305,7 +317,7 @@ export async function runTerminalStoryChoiceController(args: {
       }
       if (args.allowComparisonExit) return { kind: "cancelled" };
       args.write(
-        requiresComparisonFirst && revealedStoryChoiceId === undefined
+        requiresComparisonFirst && activeRevealId() === undefined
           ? "This story choice is mandatory. Open the read-only outcome compass with `compare`; back/cancel cannot dismiss it."
           : "This story choice is mandatory. Inspect an exact option or choose one; back/cancel cannot dismiss it.",
       );
@@ -316,12 +328,13 @@ export async function runTerminalStoryChoiceController(args: {
       (verb === revealCommand || (requiresComparisonFirst && verb === "customize")) &&
       selector.length === 0 &&
       progressiveDisclosure &&
-      revealedStoryChoiceId !== progressiveDisclosure.reveal.id
+      activeRevealId() !== progressiveDisclosure.reveal.id
     ) {
       if (inspected) {
         args.reject("Use `back` before comparing individual duties.");
         continue;
       }
+      args.reveal?.(progressiveDisclosure.reveal.id);
       revealedStoryChoiceId = progressiveDisclosure.reveal.id;
       args.write(
         renderTerminalStoryChoiceComparison(args.prompt, {
@@ -390,7 +403,7 @@ export async function runTerminalStoryChoiceController(args: {
     args.reject(
       inspected
         ? `Use \`choose ${inspected.id}\`, \`back\`, or an available read-only command.`
-        : requiresComparisonFirst && revealedStoryChoiceId === undefined
+        : requiresComparisonFirst && activeRevealId() === undefined
           ? "Open the read-only outcome compass first with `compare`."
           : "Choose the active journey prompt first with an exact `inspect <id>` or `choose <id>` command shown above.",
     );

@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION =
@@ -22,6 +23,7 @@ const LEAD_SOURCE =
   (() => {
     throw new Error("the Albany starting slice requires a lead source");
   })();
+const RELIEF_OATH = WORLD.opening_relief_oath!;
 const PREPARATION =
   WORLD.opening_preparation ??
   (() => {
@@ -155,6 +157,7 @@ function choosePreparation(args: {
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(args.backgroundId);
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory(args.sourceId);
   moveToArea(session, PREPARATION.area);

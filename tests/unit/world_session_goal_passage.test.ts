@@ -7,6 +7,7 @@ import {
 } from "../../src/world/session_goal_passage.js";
 import { OverworldSession, type TravelLogEntry } from "../../src/world/session.js";
 import { resolveOverworldTravelLeg } from "../../src/world/travel_mechanics.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const ALBANY_TO_SARATOGA = "road_albany_city__saratoga_springs_city";
@@ -34,6 +35,7 @@ function sessionAtGallowmereGoal(): OverworldSession {
     session.chooseJourneyStory("albany:ledger_advocate");
   }
   expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");

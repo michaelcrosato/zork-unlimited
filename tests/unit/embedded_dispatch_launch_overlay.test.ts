@@ -10,6 +10,7 @@ import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const wolf = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!wolf.ok) throw new Error("Wolf-Winter must compile.");
@@ -67,6 +68,7 @@ function preparedDispatch(args: {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(args.registrationId);
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
   session.chooseJourneyStory(args.sourceId);
   moveToArea(session, PREPARATION.area);

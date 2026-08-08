@@ -66,7 +66,6 @@ export type OverworldQuestPrepareState = OverworldQuestStartState & {
   openingPreparation?: OpeningPreparation | null;
   openingReliefAllocation?: OpeningReliefAllocation | null;
   openingAlly?: OpeningAlly | null;
-  trustedLegacySourceWorldHash?: string | null;
 };
 
 export type OverworldQuestCompletionState = {
@@ -83,7 +82,6 @@ export type OverworldQuestCompletionState = {
   openingRegistration?: OpeningRegistration | null;
   openingReliefOath?: OpeningReliefOath | null;
   openingLeadSource?: OpeningLeadSource | null;
-  trustedLegacyRegistrationReceiptSourceWorldHash?: string | null;
 };
 
 export type OverworldQuestStartPlan = {
@@ -241,6 +239,7 @@ export function replayQuestCampaignConsequences(args: {
 
 export function questCompletionJournalEntryDraft(args: {
   quest: OverworldQuest;
+  endingId: string;
   endingTitle: string;
   minutes: number;
   townName: string;
@@ -257,6 +256,7 @@ export function questCompletionJournalEntryDraft(args: {
     town: args.townName,
     title: `Completed ${args.quest.title}`,
     text: args.registrationReceipt ? `${returnText} ${args.registrationReceipt}` : returnText,
+    questCompletionEndingId: args.endingId,
   };
 }
 
@@ -347,9 +347,6 @@ function questDispatchWindowForPreparation(
       ? { openingReliefAllocation: state.openingReliefAllocation }
       : {}),
     ...(state.openingAlly !== undefined ? { openingAlly: state.openingAlly } : {}),
-    ...(state.trustedLegacySourceWorldHash !== undefined
-      ? { trustedLegacySourceWorldHash: state.trustedLegacySourceWorldHash }
-      : {}),
   });
 }
 
@@ -496,11 +493,6 @@ export function planOverworldQuestCompletion(
         openingRegistration: state.openingRegistration,
         openingReliefOath: state.openingReliefOath,
         openingLeadSource: state.openingLeadSource,
-        ...(state.trustedLegacyRegistrationReceiptSourceWorldHash !== undefined
-          ? {
-              trustedLegacySourceWorldHash: state.trustedLegacyRegistrationReceiptSourceWorldHash,
-            }
-          : {}),
       })
     : undefined;
   return {
@@ -518,6 +510,7 @@ export function planOverworldQuestCompletion(
     renown: QUEST_COMPLETION_RENOWN,
     entryDraft: questCompletionJournalEntryDraft({
       quest,
+      endingId: state.outcome.endingId,
       endingTitle,
       minutes,
       townName: state.nodesById.get(quest.home)?.name ?? quest.home,

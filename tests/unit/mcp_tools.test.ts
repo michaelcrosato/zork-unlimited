@@ -47,6 +47,7 @@ import { recordTrace } from "../../src/trace/record.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
 import { questCompletionMinutes } from "../../src/world/session_quests.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { hashState } from "../../src/core/hash.js";
 import { generateRpgPack } from "../../src/gen/rpg_generator.js";
 import type { RpgAction } from "../../src/api/types.js";
@@ -2277,12 +2278,19 @@ describe("MCP tools — validate / load (§9.4)", () => {
         .observation.pendingRoadEncounter,
     ).not.toBeNull();
 
+    const contentMismatch = a.restore_overworld_session({
+      ...FULL_OVERWORLD_RESPONSE,
+      snapshot: { ...exported.snapshot, worldHash: "0".repeat(64) },
+    });
+    expect(contentMismatch.warnings).toEqual([OVERWORLD_CONTENT_HASH_MISMATCH_WARNING]);
+    expect(contentMismatch.observation).toEqual(before);
+
     expect(() =>
       a.restore_overworld_session({
         ...FULL_OVERWORLD_RESPONSE,
-        snapshot: { ...exported.snapshot, worldHash: "0".repeat(64) },
+        snapshot: { ...exported.snapshot, version: 999 },
       }),
-    ).toThrow(/different world manifest/i);
+    ).toThrow(/unsupported overworld session snapshot version/i);
   });
 
   it("maps local areas through stateful MCP overworld play", () => {

@@ -8,20 +8,15 @@ import { createToolApi } from "../../src/mcp/tools.js";
 import { buildRpgRules, enumerateRpgActions, indexRpgPack } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
-import { openingRegistrationLegacyJournalEntry } from "../../src/world/opening_registration_journal.js";
 import { applyOpeningPreparationProfile } from "../../src/world/opening_preparation.js";
 import { applyOpeningReliefAllocationOption } from "../../src/world/opening_relief_allocation.js";
 import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oath.js";
-import { planOverworldRoute } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
-import { parseTimeLabel, timeLabel } from "../../src/world/session_journal_codec.js";
-import {
-  OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
-  OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
-  OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
-} from "../../src/world/session_snapshot_restore.js";
+import { parseTimeLabel } from "../../src/world/session_journal_codec.js";
+import { OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION } from "../../src/world/session_snapshot.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { exactF06World } from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const openingRegistration = WORLD.opening_registration;
@@ -104,6 +99,7 @@ function registerSession(profileId: string): OverworldSession {
       ...RELIEF_OATH.options.map((option) => ({ id: option.id })),
     ],
   });
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory(DEFAULT_OATH_ID);
   expect(session.journey().storyChoice).toMatchObject({
     id: LEAD_SOURCE.id,
@@ -118,63 +114,6 @@ function registerSession(profileId: string): OverworldSession {
   expect(session.view().departureInteractions[0]?.kind).toBe("relief_allocation");
   expect(session.view().quests.map((quest) => quest.id)).toContain("wolf_winter");
   return session;
-}
-
-function startedWolfSession(profileId = "albany:unaffiliated_courier"): OverworldSession {
-  const session = registerSession(profileId);
-  const wolf = WORLD.quests.find((quest) => quest.id === "wolf_winter");
-  if (!wolf) throw new Error("expected Wolf-Winter in the starting world");
-  session.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID);
-  moveSessionToArea(session, wolf.area);
-  session.startQuest(wolf.id, "albany:wolf_approach_sheltered_stockway");
-  return session;
-}
-
-function prooflessStartedWolfSnapshot(): {
-  proofless: ReturnType<OverworldSession["snapshot"]>;
-  registered: ReturnType<OverworldSession["snapshot"]>;
-} {
-  const registered = startedWolfSession().snapshot();
-  const proofless = structuredClone(registered);
-  proofless.journalEntries = proofless.journalEntries.filter(
-    (entry) =>
-      entry.kind !== "registration" &&
-      entry.kind !== "registration_offer" &&
-      entry.kind !== "relief_oath" &&
-      entry.kind !== "relief_oath_offer" &&
-      entry.kind !== "lead_source" &&
-      entry.kind !== "lead_source_offer" &&
-      entry.kind !== "preparation" &&
-      entry.kind !== "preparation_offer",
-  );
-  delete proofless.openingLeadSourceDecisionTrail;
-  proofless.character = createInitialCampaignCharacterState();
-  return { proofless, registered };
-}
-
-function preRegistrationUnrelatedQuestSnapshot(): ReturnType<OverworldSession["snapshot"]> {
-  const predecessorWorld = exactF06World(WORLD);
-  delete predecessorWorld.opening_registration;
-  delete predecessorWorld.opening_lead_source;
-  delete predecessorWorld.opening_preparation;
-  delete predecessorWorld.opening_relief_allocation;
-  predecessorWorld.campaign_service_rules = predecessorWorld.campaign_service_rules?.filter(
-    (rule) =>
-      !(rule.requires_all_story_choices ?? []).some(
-        (choice) => choice.story_choice_id === "albany:wolf_preparation",
-      ),
-  );
-  const session = new OverworldSession(predecessorWorld);
-  const route = planOverworldRoute(predecessorWorld, session.view().current.id, "queensbury_town");
-  if (!route) throw new Error("expected a route to Queensbury");
-  for (const step of route.steps) {
-    session.travel(step.edge.id);
-    if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
-  }
-  session.exploreArea("queensbury_town__civic_core");
-  moveSessionToArea(session, "queensbury_town__market");
-  session.startQuest("gallowmere");
-  return session.snapshot();
 }
 
 function moveSessionToArea(session: OverworldSession, targetAreaId: string): void {
@@ -478,6 +417,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(session.journey().storyChoice).toMatchObject({ kind: "relief_oath" });
     expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
     expect(() => session.previewQuestStart(wolf.id)).toThrow(/relief oath|relief terms/i);
+    revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
     session.chooseJourneyStory(DEFAULT_OATH_ID);
     expect(session.journey().storyChoice).toMatchObject({ kind: "lead_source" });
     expect(session.view().quests.map((quest) => quest.id)).not.toContain(wolf.id);
@@ -534,82 +474,6 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     ];
     expect(() => OverworldSession.restore(WORLD, forgedStartedBeforeRegistration)).toThrow(
       /journal decision boundaries must be newest-first/i,
-    );
-  });
-
-  it("rejects opaque pre-registration progress rather than minting incomplete provenance", () => {
-    const { proofless } = prooflessStartedWolfSnapshot();
-    expect(() => OverworldSession.restore(WORLD, proofless)).toThrow(
-      /quest progress without selected opening registration or trusted legacy provenance/i,
-    );
-
-    for (const sourceWorldHash of [
-      OVERWORLD_PRE_CAMPAIGN_EXPORTS_WORLD_HASH,
-      OVERWORLD_CAMPAIGN_EXPORTS_WORLD_HASH,
-      OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
-    ]) {
-      const opaqueWolfPredecessor = structuredClone(proofless);
-      opaqueWolfPredecessor.worldHash = sourceWorldHash;
-      opaqueWolfPredecessor.journalEntries = opaqueWolfPredecessor.journalEntries.filter(
-        (entry) => !entry.kind.startsWith("relief_allocation"),
-      );
-      expect(() => OverworldSession.restore(WORLD, opaqueWolfPredecessor)).toThrow(
-        /opaque pre-registration quest progress without a replayable registration and lead-source path|quest-start proof evidence introduced by a later manifest/i,
-      );
-
-      const predecessor = preRegistrationUnrelatedQuestSnapshot();
-      predecessor.worldHash = sourceWorldHash;
-      expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
-        /opaque pre-registration quest progress without a replayable registration and lead-source path/i,
-      );
-    }
-  });
-
-  it("rejects legacy registration progress that has no replayable lead-source path", () => {
-    const predecessor = preRegistrationUnrelatedQuestSnapshot();
-    predecessor.worldHash = new OverworldSession(WORLD).snapshot().worldHash;
-    if (predecessor.currentAreaId === null) throw new Error("expected a current area");
-    const predecessorTown = WORLD.nodes.find((node) => node.id === predecessor.currentId)?.name;
-    if (!predecessorTown) throw new Error("expected the predecessor town name");
-    predecessor.journalEntries.unshift(
-      openingRegistrationLegacyJournalEntry({
-        sourceWorldHash: OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
-        town: predecessorTown,
-        recordedAt: timeLabel(predecessor.minutes),
-        registrationBoundary: {
-          acceptedDecisions: predecessor.journey.acceptedDecisions,
-          decisionProofHash: predecessor.journey.decisionProof.hash,
-          townId: predecessor.currentId,
-          areaId: predecessor.currentAreaId,
-          minutes: predecessor.minutes,
-        },
-      }),
-    );
-    expect(() => OverworldSession.restore(WORLD, predecessor)).toThrow(
-      /opaque legacy registration progress without a replayable lead-source path/i,
-    );
-
-    const freshSession = new OverworldSession(WORLD);
-    const fresh = freshSession.snapshot();
-    if (fresh.currentAreaId === null) throw new Error("expected Albany's initial area");
-    const freshTown = WORLD.nodes.find((node) => node.id === fresh.currentId)?.name;
-    if (!freshTown) throw new Error("expected Albany's town name");
-    fresh.journalEntries.unshift(
-      openingRegistrationLegacyJournalEntry({
-        sourceWorldHash: OVERWORLD_CAMPAIGN_IMPORTS_WORLD_HASH,
-        town: freshTown,
-        recordedAt: timeLabel(fresh.minutes),
-        registrationBoundary: {
-          acceptedDecisions: fresh.journey.acceptedDecisions,
-          decisionProofHash: fresh.journey.decisionProof.hash,
-          townId: fresh.currentId,
-          areaId: fresh.currentAreaId,
-          minutes: fresh.minutes,
-        },
-      }),
-    );
-    expect(() => OverworldSession.restore(WORLD, fresh)).toThrow(
-      /no earlier quest progress to grandfather/i,
     );
   });
 
@@ -803,10 +667,34 @@ describe("SS-F01 — Albany character background counterfactual", () => {
       /campaign character does not match replayed quest consequences/i,
     );
 
-    const forgedCopy = structuredClone(snapshot);
-    forgedCopy.journalEntries.find((entry) => entry.kind === "registration")!.text +=
-      " Forged authority.";
-    expect(() => OverworldSession.restore(WORLD, forgedCopy)).toThrow(/authored copy/i);
+    const historicalCopy = structuredClone(snapshot);
+    historicalCopy.journalEntries.find((entry) => entry.kind === "registration")!.text +=
+      " Earlier authority wording.";
+    expect(() => OverworldSession.restore(WORLD, historicalCopy)).not.toThrow();
+
+    const revisedWorld = structuredClone(WORLD);
+    const revisedProfile = revisedWorld.opening_registration?.profiles.find(
+      (profile) => profile.id === "albany:road_warden",
+    );
+    if (!revisedProfile) throw new Error("Expected the road-warden registration profile.");
+    revisedProfile.title = "Road Warden, revised";
+    revisedProfile.summary = "Revised registration summary without structural changes.";
+    revisedProfile.preview = "Revised registration preview.";
+    revisedProfile.tradeoff = "Revised registration tradeoff.";
+    revisedProfile.consequence = "Revised registration consequence.";
+    const v10Snapshot = {
+      ...structuredClone(snapshot),
+      version: OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION,
+    };
+    const restoredAcrossRegistrationCopy = OverworldSession.restore(revisedWorld, v10Snapshot);
+    expect(restoredAcrossRegistrationCopy.restoreWarnings()).toEqual([
+      OVERWORLD_CONTENT_HASH_MISMATCH_WARNING,
+    ]);
+    expect(
+      restoredAcrossRegistrationCopy
+        .snapshot()
+        .journalEntries.find((entry) => entry.kind === "registration")?.text,
+    ).toBe(snapshot.journalEntries.find((entry) => entry.kind === "registration")?.text);
 
     const missingOffer = structuredClone(snapshot);
     missingOffer.journalEntries = missingOffer.journalEntries.filter(
@@ -831,6 +719,7 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     );
 
     const movedAfterSelection = pending;
+    revealCurrentJourneyStoryOptions(movedAfterSelection, RELIEF_OATH.id);
     movedAfterSelection.chooseJourneyStory(DEFAULT_OATH_ID);
     movedAfterSelection.chooseJourneyStory(DEFAULT_SOURCE_ID);
     moveSessionToArea(movedAfterSelection, WORLD.opening_preparation!.area);

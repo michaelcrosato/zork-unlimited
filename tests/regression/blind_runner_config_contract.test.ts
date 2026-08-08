@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -9,6 +10,7 @@ import {
   realpathSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,6 +19,8 @@ import { describe, expect, it } from "vitest";
 
 // @ts-expect-error — plain .mjs module without type declarations
 import { fillPrompt } from "../../blind-tester/fill-prompt.mjs";
+// @ts-expect-error — plain .mjs module without type declarations
+import { publishRegularArtifact } from "../../blind-tester/publish-artifact.mjs";
 import { useCleanTrackedGitCheckout } from "./support/clean_git_checkout.js";
 
 const CODEX_LOGIN_FILENAME = ["auth", ".json"].join("");
@@ -1721,19 +1725,15 @@ exit 93
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
     expect(runner).toContain('DURABLE_RUN_EVIDENCE="$OUT.evidence.jsonl"');
     expect(runner).toContain('PRIVATE_RUN_SIDECAR="$WORK/verified-run-sidecar.json"');
-    expect(runner).toContain("fs.constants.COPYFILE_EXCL");
+    expect(runner).toContain('PUBLISH_ARTIFACT_SCRIPT="$(node_path_arg');
     expect(runner).toContain("assert_launch_provenance_unchanged");
     expect(runner).not.toContain('--write-run-sidecar "$RUN_SIDECAR_ARG"');
     expect(runner.match(/--write-run-sidecar "\$PRIVATE_RUN_SIDECAR_ARG"/g)).toHaveLength(2);
 
     const privateVerification = runner.indexOf('--write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG"');
-    const evidencePublication = runner.indexOf(
-      "published evidence bytes differ from private evidence",
-    );
+    const evidencePublication = runner.indexOf('--destination "$DURABLE_RUN_EVIDENCE_ARG"');
     const finalProvenanceGate = runner.lastIndexOf("if ! assert_launch_provenance_unchanged");
-    const canonicalSidecarPublication = runner.indexOf(
-      '"$PRIVATE_RUN_SIDECAR_ARG" "$RUN_SIDECAR_ARG"',
-    );
+    const canonicalSidecarPublication = runner.indexOf('--destination "$RUN_SIDECAR_ARG"');
     const publicationComplete = runner.indexOf("PURE_PUBLICATION_COMPLETE=1");
     const testScriptPublicationGuard = runner.indexOf(
       "Codex test-script client reached a synthetic success",
@@ -1765,6 +1765,38 @@ exit 93
     expect(
       runner.match(/record_blind_telemetry "\$OUT\.json" playthrough "\$outcome"/g),
     ).toHaveLength(1);
+  });
+
+  it("publishes stale private bytes as an ordered atomic regular artifact", () => {
+    const dir = mkdtempSync(join(tmpdir(), "af-blind-publication-"));
+    const report = join(dir, "playtest.md");
+    const privateEvidence = join(dir, "private-evidence.jsonl");
+    const publishedEvidence = join(dir, "playtest.evidence.jsonl");
+    try {
+      writeFileSync(report, "report\n", "utf8");
+      writeFileSync(privateEvidence, '{"type":"run_receipt"}\n', "utf8");
+      const stale = new Date("2020-01-01T00:00:00.000Z");
+      const reportTime = new Date("2025-01-01T00:00:00.000Z");
+      utimesSync(privateEvidence, stale, stale);
+      utimesSync(report, reportTime, reportTime);
+
+      publishRegularArtifact(privateEvidence, publishedEvidence, { after: report });
+
+      const published = lstatSync(publishedEvidence);
+      expect(published.isFile()).toBe(true);
+      expect(published.isSymbolicLink()).toBe(false);
+      expect(published.mtimeMs).toBeGreaterThanOrEqual(lstatSync(report).mtimeMs);
+      expect(readFileSync(publishedEvidence)).toEqual(readFileSync(privateEvidence));
+      expect(lstatSync(privateEvidence).mtimeMs).toBeLessThan(lstatSync(report).mtimeMs);
+      expect(readdirSync(dir).filter((name) => name.includes(".publish-"))).toEqual([]);
+
+      expect(() =>
+        publishRegularArtifact(privateEvidence, publishedEvidence, { after: report }),
+      ).toThrow();
+      expect(readFileSync(publishedEvidence, "utf8")).toBe('{"type":"run_receipt"}\n');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("smokes BOTH start surfaces — the default overworld and the quest drop-in", () => {

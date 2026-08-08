@@ -16,9 +16,6 @@ import {
   allOpeningReliefOathJournalDrafts,
   openingReliefOathJournalEntry,
   openingReliefOathJournalId,
-  openingReliefOathLegacyJournalDraft,
-  openingReliefOathLegacyJournalEntry,
-  openingReliefOathLegacySourceWorldHash,
   openingReliefOathOfferJournalDraft,
   openingReliefOathOfferJournalEntry,
   proveOpeningReliefOathJournal,
@@ -30,7 +27,6 @@ import type {
 } from "../../src/world/session_snapshot.js";
 
 const TOWN = "Albany city";
-const LEGACY_HASH = "7".repeat(64);
 const REGISTRATION_HASH = "a".repeat(64);
 const REGISTRATION_PROFILE_ID = "albany:registered_relief_worker";
 
@@ -351,7 +347,6 @@ describe("opening relief-oath journal proof", () => {
     });
     expect(noEvidence).toMatchObject({
       offered: false,
-      legacy: false,
       option: null,
       terms: null,
     });
@@ -361,7 +356,6 @@ describe("opening relief-oath journal proof", () => {
     const pendingResult = prove(pending);
     expect(pendingResult).toMatchObject({
       offered: true,
-      legacy: false,
       option: null,
       selectionBoundary: null,
       journalIndex: null,
@@ -404,18 +398,16 @@ describe("opening relief-oath journal proof", () => {
     });
   });
 
-  it("binds authored copy, ids, town, adjacency, and selected registration", () => {
+  it("preserves historical copy while binding ids, town, adjacency, and selected registration", () => {
     const fixture = selectedFixture();
 
     const forgedOffer = structuredClone(fixture.entries);
-    forgedOffer[1]!.text += " Forged.";
-    expect(() => prove({ ...fixture, entries: forgedOffer })).toThrow(/authored copy/i);
+    forgedOffer[1]!.text += " Earlier wording.";
+    expect(() => prove({ ...fixture, entries: forgedOffer })).not.toThrow();
 
     const forgedSelection = structuredClone(fixture.entries);
-    forgedSelection[0]!.text = forgedSelection[0]!.text.replace("Access:", "Hidden access:");
-    expect(() => prove({ ...fixture, entries: forgedSelection })).toThrow(
-      /authored terms and copy/i,
-    );
+    forgedSelection[0]!.text = forgedSelection[0]!.text.replace("Access:", "Earlier access:");
+    expect(() => prove({ ...fixture, entries: forgedSelection })).not.toThrow();
 
     const unknownOption = structuredClone(fixture.entries);
     unknownOption[0]!.id = openingReliefOathJournalId(fixture.scene.id, "albany:oath_missing");
@@ -512,20 +504,6 @@ describe("opening relief-oath journal proof", () => {
       /at most one opening relief-oath offer/i,
     );
 
-    const marker = openingReliefOathLegacyJournalEntry({
-      sourceWorldHash: LEGACY_HASH,
-      town: TOWN,
-      recordedAt: timeLabel(fixture.boundary.minutes),
-      storyChoiceBoundary: fixture.boundary,
-    });
-    expect(() =>
-      prove({
-        ...fixture,
-        entries: [marker, ...fixture.entries],
-        trustedLegacySourceWorldHash: LEGACY_HASH,
-      }),
-    ).toThrow(/cannot combine legacy and current/i);
-
     const pending = pendingFixture();
     const later = {
       id: "area:later",
@@ -558,127 +536,5 @@ describe("opening relief-oath journal proof", () => {
     expect(() => prove({ ...pending, entries: [...pending.entries, quest] })).toThrow(
       /cannot follow a started or completed quest/i,
     );
-  });
-});
-
-describe("trusted legacy opening relief-oath evidence", () => {
-  it("is exact-hash-bound, registration-adjacent, and character-neutral", () => {
-    const scene = oathScene();
-    const boundary = registrationBoundary();
-    const character = registeredCharacter();
-    const marker = openingReliefOathLegacyJournalEntry({
-      sourceWorldHash: LEGACY_HASH,
-      town: TOWN,
-      recordedAt: timeLabel(boundary.minutes),
-      storyChoiceBoundary: boundary,
-    });
-    const entries = [marker, registrationEntry(boundary)];
-    const proof = registrationProof({ character, boundary, journalIndex: 1 });
-
-    const draft = openingReliefOathLegacyJournalDraft(LEGACY_HASH);
-    expect(draft.id).toBe(`relief_oath_legacy:${LEGACY_HASH}`);
-    expect(draft.text).toMatch(/no retroactive oath, access, duty.*effect.*time cost/i);
-    expect(openingReliefOathLegacySourceWorldHash(draft.id)).toBe(LEGACY_HASH);
-    expect(openingReliefOathLegacySourceWorldHash("relief_oath_legacy:not-a-hash")).toBeNull();
-    expect(() => openingReliefOathLegacyJournalDraft("A".repeat(64))).toThrow(/invalid/i);
-    expect(() => openingReliefOathLegacyJournalDraft("7".repeat(63))).toThrow(/invalid/i);
-
-    expect(() => prove({ scene, entries, proof })).toThrow(/trusted predecessor hash/i);
-    expect(() =>
-      prove({
-        scene,
-        entries,
-        proof,
-        trustedLegacySourceWorldHash: "8".repeat(64),
-      }),
-    ).toThrow(/trusted predecessor hash/i);
-
-    const accepted = prove({
-      scene,
-      entries,
-      proof,
-      trustedLegacySourceWorldHash: LEGACY_HASH,
-    });
-    expect(accepted).toMatchObject({
-      offered: false,
-      legacy: true,
-      legacySourceWorldHash: LEGACY_HASH,
-      offerBoundary: null,
-      option: null,
-      selectionBoundary: null,
-      terms: null,
-      journalIndex: 0,
-      recordedAt: 60,
-    });
-    expect(accepted.characterAfterOath).toEqual(character);
-    expect(accepted.characterAfterOath).not.toBe(character);
-    expect(accepted.characterAfterOath.knowledge).toEqual([]);
-    expect(accepted.characterAfterOath.promises).toEqual([]);
-    expect(accepted.characterAfterOath.factionStanding).toEqual([
-      { factionId: "albany:relief_board", standing: -10 },
-    ]);
-  });
-
-  it("rejects forged copy, boundary, time, town, duplicate, and registration separation", () => {
-    const boundary = registrationBoundary();
-    const character = registeredCharacter();
-    const marker = openingReliefOathLegacyJournalEntry({
-      sourceWorldHash: LEGACY_HASH,
-      town: TOWN,
-      recordedAt: timeLabel(boundary.minutes),
-      storyChoiceBoundary: boundary,
-    });
-    const base = [marker, registrationEntry(boundary)];
-    const proof = registrationProof({ character, boundary, journalIndex: 1 });
-
-    for (const mutate of [
-      (entry: OverworldJournalEntry) => {
-        entry.text += " Forged.";
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.storyChoiceBoundary!.decisionProofHash = "0".repeat(64);
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.recordedAt = timeLabel(61);
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.town = "Queensbury town";
-      },
-    ]) {
-      const forged = structuredClone(base);
-      mutate(forged[0]!);
-      expect(() =>
-        prove({
-          entries: forged,
-          proof,
-          trustedLegacySourceWorldHash: LEGACY_HASH,
-        }),
-      ).toThrow();
-    }
-
-    expect(() =>
-      prove({
-        entries: [marker, ...base],
-        proof: registrationProof({ character, boundary, journalIndex: 2 }),
-        trustedLegacySourceWorldHash: LEGACY_HASH,
-      }),
-    ).toThrow(/at most one legacy opening relief oath/i);
-
-    const separated = structuredClone(base);
-    separated.splice(1, 0, {
-      id: "area:interposed",
-      kind: "area",
-      town: TOWN,
-      title: "Interposed",
-      text: "This cannot separate migration evidence from registration.",
-      recordedAt: timeLabel(boundary.minutes),
-    });
-    expect(() =>
-      prove({
-        entries: separated,
-        proof: registrationProof({ character, boundary, journalIndex: 2 }),
-        trustedLegacySourceWorldHash: LEGACY_HASH,
-      }),
-    ).toThrow(/immediately newer than registration/i);
   });
 });

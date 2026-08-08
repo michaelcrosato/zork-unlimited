@@ -12,6 +12,7 @@ import {
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const STATION = "albany_city__transport_hub";
@@ -123,6 +124,7 @@ function preparedForWolf(): { session: OverworldSession; wolfId: string } {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(WORLD.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, WORLD.opening_preparation!.area);

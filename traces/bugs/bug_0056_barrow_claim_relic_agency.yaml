@@ -42,8 +42,9 @@ improvement:
         an end_game. So a win can fire on a TAKE/USE with no move. Skipped once ended, so an onEnter or
         effect-level end_game never double-fires. Runners whose wins only fire on entry omit checkWin
         (CYOA) and are byte-identical.
-    - src/core/engine.ts (Rules type): added the optional `checkWin?(state): Effect[]` member, documented
-        as complementary to onEnter (reach-the-room wins) vs checkWin (act-in-the-room wins).
+    - >-
+      src/core/engine.ts (Rules type): added the optional `checkWin?(state): Effect[]` member, documented
+      as complementary to onEnter (reach-the-room wins) vs checkWin (act-in-the-room wins).
     - src/parser/runner.ts: implemented checkWin via the existing winningEnding predicate; header note
         updated (the "out of scope for v1" limitation is resolved).
     - src/rpg/runner.ts: implemented checkWin identically (the RPG runner has its own buildRpgRules).

@@ -15,6 +15,7 @@
 #   AI_CODEX_SANDBOX=...             codex sandbox [workspace-write]
 #   AI_AGENT_TIMEOUT_SECONDS=N       hang-kill budget per agent turn [2400]
 #   AI_LOOP_MAX_CONSECUTIVE_FAILURES / AI_LOOP_MAX_TOTAL_FAILURES   breakers [5 / 15]
+#   AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES=N   retained durable failure records [100]
 #   AI_LOOP_ALLOW_DIRTY=1            allow risky dirty commit-mode start; never waives clean evidence [0]
 #   AI_LOOP_ALLOW_VERIFIER_EDITS=1   acknowledge a deliberate verifier change [0]
 #   AI_LOOP_COMMIT_MESSAGE="..."     final ledger commit message override
@@ -55,9 +56,64 @@ fi
 # worker pid. scripts/loop-status.sh and scripts/loop-stop.sh act ONLY on these pids.
 LOOP_PID_FILE="ai-runs/loop.pid"
 AGENT_PID_FILE="ai-runs/agent.pid"
+AFK_PROC_ROOT="/proc"
+
+# A pid alone is not an identity: after a crash leaves a stale file, the kernel may
+# reuse that number for an unrelated process. Linux exposes a process's immutable
+# start tick in /proc/<pid>/stat field 22. Record both values and require both before
+# status/stop trusts the record. Systems without a compatible /proc fail closed: the
+# unattended loop refuses to start rather than creating a record that cannot be
+# authenticated later.
+process_start_time() {
+  local pid="$1" stat tail start
+  [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 1
+  [[ -r "$AFK_PROC_ROOT/$pid/stat" ]] || return 1
+  stat="$(<"$AFK_PROC_ROOT/$pid/stat")" || return 1
+  [[ "$stat" == *") "* ]] || return 1
+  # The comm field is parenthesized and may contain spaces. Strip through its LAST
+  # closing ") "; the remaining token 20 is original field 22 (starttime).
+  tail="${stat##*) }"
+  set -- $tail
+  [[ "$#" -ge 20 ]] || return 1
+  start="${20:-}"
+  [[ "$start" =~ ^[0-9]+$ ]] || return 1
+  printf '%s\n' "$start"
+}
+
+write_process_record() {
+  local path="$1" pid="$2" start
+  start="$(process_start_time "$pid")" || return 1
+  printf '%s %s\n' "$pid" "$start" > "$path"
+}
+
+cleanup_pid_records() {
+  rm -f "$LOOP_PID_FILE" "$AGENT_PID_FILE" 2>/dev/null || true
+}
+
+on_loop_signal() {
+  local status="$1"
+  cleanup_pid_records
+  trap - EXIT INT TERM
+  exit "$status"
+}
+
 mkdir -p ai-runs
-echo "$$" > "$LOOP_PID_FILE"
-trap 'rm -f "$LOOP_PID_FILE" "$AGENT_PID_FILE" 2>/dev/null || true' EXIT
+if ! write_process_record "$LOOP_PID_FILE" "$$"; then
+  rm -f "$LOOP_PID_FILE" 2>/dev/null || true
+  echo "Refusing to start: cannot authenticate this process through /proc/<pid>/stat."
+  echo "The AFK loop requires PID + process start-time identity so a stale pid file"
+  echo "can never target an unrelated reused process."
+  exit 1
+fi
+trap cleanup_pid_records EXIT
+trap 'on_loop_signal 130' INT
+trap 'on_loop_signal 143' TERM
+
+# The worker-recording shell below inherits these helpers before it execs the real
+# agent. exec preserves its pid and start time, so the record stays valid for the
+# lifetime of the worker it names.
+export AFK_PROC_ROOT
+export -f process_start_time write_process_record
 
 if [[ ! -d node_modules ]]; then
   npm install
@@ -157,19 +213,23 @@ run_agent() {
   # Bound the agent turn. The loop has NO other recovery for an agent that never
   # returns (a hung headless agent once wedged the loop for ~9h: the circuit breaker
   # only counts COMPLETED no-progress cycles, so it can't catch a stuck turn). On
-  # timeout, SIGTERM then SIGKILL after a 30s grace; swallow the error so the cycle
-  # proceeds to the verify gates, which decide whether anything is committable (a
-  # timed-out turn that left nothing simply becomes a no-progress cycle).
+  # timeout, SIGTERM then SIGKILL after a 30s grace. A nonzero agent result fails
+  # the cycle: partial output is not evidence that the requested work completed.
   local rc=0
-  # Record the ACTUAL worker pid: the bash -c writes its own $$ then `exec`s the agent,
-  # so the recorded pid IS the Codex or explicitly selected agent process (exec preserves the pid). This lets
-  # loop-stop.sh kill the exact worker by pid — project-scoped — even if it orphans.
-  timeout --kill-after=30 "$budget" bash -c 'echo $$ > "'"$AGENT_PID_FILE"'"; exec '"$cmd" < "$prompt" || rc=$?
+  # Record the ACTUAL worker identity: the bash -c writes its pid + immutable start
+  # tick, then `exec`s the agent (exec preserves both). loop-stop therefore cannot
+  # mistake a later process that reused the pid for this worker.
+  AFK_AGENT_PID_FILE="$AGENT_PID_FILE" timeout --kill-after=30 "$budget" bash -c \
+    'write_process_record "$AFK_AGENT_PID_FILE" "$$" || { echo "Cannot authenticate worker process identity." >&2; exit 125; }; exec '"$cmd" < "$prompt" || rc=$?
   rm -f "$AGENT_PID_FILE" 2>/dev/null || true
   if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
-    echo "⏱ Agent exceeded ${budget}s and was terminated — continuing to verify."
+    echo "⏱ Agent exceeded ${budget}s and was terminated — failing this cycle."
+  elif [[ "$rc" -eq 125 ]]; then
+    echo "Worker launch refused: PID + start-time identity was unavailable."
+  elif [[ "$rc" -ne 0 ]]; then
+    echo "Agent exited nonzero (status $rc) — failing this cycle."
   fi
-  return 0
+  return "$rc"
 }
 
 require_provisional_commit() {
@@ -222,35 +282,58 @@ safe_commit_if_enabled() {
 }
 
 require_playtest_record() {
-  # MANDATORY LLM PLAYTEST (every cycle): the agent must produce a blind-playtest
-  # report at the path ai-loop.ts recorded in ai-runs/latest-cycle.json. Refuse to
-  # commit a cycle that skipped it — quality feedback is non-negotiable. Only
-  # enforced when actually committing (evidence-only runs don't commit).
+  # MANDATORY LLM PLAYTEST (every commit-enabled cycle): require the canonical
+  # sidecar-last publication, schema-valid V2 pure report, exact journey receipt,
+  # clean-build attestation, and exact provisional HEAD. A merely nonempty markdown
+  # file or a valid report from an older revision cannot satisfy this gate.
   [[ "${AI_LOOP_COMMIT:-0}" == "1" ]] || return 0
-  local meta="ai-runs/latest-cycle.json" rec
+  local meta="ai-runs/latest-cycle.json" current_ref
   if [[ ! -f "$meta" ]]; then
     echo "No cycle metadata ($meta); cannot verify the mandatory playtest. Refusing to commit."
     return 1
   fi
-  rec="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync("ai-runs/latest-cycle.json","utf8")).playtestRecord||"")')"
-  if [[ -z "$rec" || ! -s "$rec" ]]; then
-    echo "Mandatory LLM playtest record missing or empty ($rec). Every cycle must run a blind LLM playtest. Refusing to commit."
-    return 1
-  fi
-  echo "✓ mandatory playtest record present: $rec"
+  current_ref="$(git rev-parse HEAD)" || return 1
+  npm run --silent loop:verify-playtest -- --meta "$meta" --expected-commit "$current_ref"
+}
+
+cycle_failure_stage="unclassified"
+cycle_failure_reason="cycle returned without a classified gate failure"
+cycle_failure_start_ref=""
+cycle_failure_run_id=""
+
+mark_cycle_failure() {
+  cycle_failure_stage="$1"
+  cycle_failure_reason="$2"
+  return 1
 }
 
 run_cycle() {
   # Each gate fails the cycle EXPLICITLY (|| return 1) rather than relying on
   # `set -e`, so a bad cycle skips its commit and the outer loop continues to the
   # next one (resilient unattended operation) instead of the whole script dying.
-  require_clean_evidence_cycle_start || return 1
+  cycle_failure_stage="unclassified"
+  cycle_failure_reason="cycle returned without a classified gate failure"
+  cycle_failure_start_ref=""
+  cycle_failure_run_id=""
+  require_clean_evidence_cycle_start || {
+    mark_cycle_failure "clean-start" "evidence-only cycle started with a dirty worktree"
+    return 1
+  }
   local start_ref untracked_snapshot
-  start_ref="$(git rev-parse HEAD)"
-  untracked_snapshot="$(mktemp)" || { echo "Could not create cycle-start snapshot."; return 1; }
+  start_ref="$(git rev-parse HEAD)" || {
+    mark_cycle_failure "snapshot" "could not resolve the cycle-start revision"
+    return 1
+  }
+  cycle_failure_start_ref="$start_ref"
+  untracked_snapshot="$(mktemp)" || {
+    echo "Could not create cycle-start snapshot."
+    mark_cycle_failure "snapshot" "could not create the untracked-path snapshot"
+    return 1
+  }
   git ls-files --others --exclude-standard -z > "$untracked_snapshot" || {
     rm -f -- "$untracked_snapshot"
     echo "Could not snapshot cycle-start untracked paths."
+    mark_cycle_failure "snapshot" "could not capture cycle-start untracked paths"
     return 1
   }
   # Self-recovery: revert a FAILED cycle's provisional commit and scratch back to the
@@ -268,28 +351,72 @@ run_cycle() {
       echo "Warning: failed to remove all cycle-created untracked paths."
     rm -f -- "$untracked_snapshot"
   }
-  npm run ai:loop || { echo "ai:loop failed"; _revert_failed_cycle; return 1; }
-  npm run crawl:smoke || { echo "crawl:smoke red before work — world is already broken; halting cycle"; _revert_failed_cycle; return 1; }
+  _reject_cycle() {
+    local stage="$1" reason="$2"
+    _revert_failed_cycle
+    mark_cycle_failure "$stage" "$reason"
+  }
+  npm run ai:loop || {
+    echo "ai:loop failed"
+    _reject_cycle "assess" "ai:loop could not assess or initialize the cycle"
+    return 1
+  }
+  cycle_failure_run_id="$(node -e 'try{const c=JSON.parse(require("node:fs").readFileSync("ai-runs/latest-cycle.json","utf8"));if(typeof c.runId==="string")process.stdout.write(c.runId)}catch{}' 2>/dev/null || true)"
+  npm run crawl:smoke || {
+    echo "crawl:smoke red before work — world is already broken; halting cycle"
+    _reject_cycle "crawl-pre" "pre-change crawl:smoke failed"
+    return 1
+  }
   # Commit-enabled prompt contract: one change → focused checks → LOCAL provisional
   # commit (never push) → exact-clean pure play → ledger-only edit. Evidence-only
   # prompts instead capture the clean baseline before making uncommitted changes.
-  run_agent || echo "(agent step reported an error — continuing to verify)"
-  require_provisional_commit "$start_ref" || { _revert_failed_cycle; return 1; }
-  npm run crawl:smoke || { echo "crawl:smoke red after work — reverting"; _revert_failed_cycle; return 1; }
+  local agent_rc=0
+  run_agent || agent_rc=$?
+  if [[ "$agent_rc" -ne 0 ]]; then
+    _reject_cycle "agent" "headless agent exited with status $agent_rc"
+    return 1
+  fi
+  require_provisional_commit "$start_ref" || {
+    _reject_cycle "provisional-commit" "required provisional implementation commit is absent or invalid"
+    return 1
+  }
+  npm run crawl:smoke || {
+    echo "crawl:smoke red after work — reverting"
+    _reject_cycle "crawl-post" "post-change crawl:smoke failed"
+    return 1
+  }
   # Trust, but verify: health is a BLOCKING gate (runs the static verifier-integrity
   # check too). A red check ⇒ no commit this cycle.
-  npm run health || { echo "health failed — reverting cycle scratch, skipping commit"; _revert_failed_cycle; return 1; }
+  npm run health || {
+    echo "health failed — reverting cycle scratch, skipping commit"
+    _reject_cycle "health" "npm run health failed"
+    return 1
+  }
   # Don't route around the verifier. A content cycle that re-pins a hash ALONGSIDE a
   # real content change is the legitimate snapshot-update workflow → surfaced, allowed.
   # This blocks only actual weakening: deleted/disabled tests, a dropped test count,
   # a deleted protected asset, or a re-pin with NO content change (the launder pattern).
   # AI_LOOP_ALLOW_VERIFIER_EDITS=1 overrides only the unaccompanied-re-pin and
   # acknowledged guard-loosening cases; real test weakening is never downgradable.
-  npm run verify:integrity -- --against "$start_ref" || { echo "verifier weakened/laundered — reverting, skipping commit"; _revert_failed_cycle; return 1; }
-  # Quality feedback is mandatory: no blind-playtest record ⇒ no commit.
-  require_playtest_record || { _revert_failed_cycle; return 1; }
-  require_final_ledger_only || { _revert_failed_cycle; return 1; }
-  safe_commit_if_enabled || { echo "final ledger commit failed — reverting"; _revert_failed_cycle; return 1; }
+  npm run verify:integrity -- --against "$start_ref" || {
+    echo "verifier weakened/laundered — reverting, skipping commit"
+    _reject_cycle "integrity" "verifier-integrity drift check failed"
+    return 1
+  }
+  # Quality feedback is mandatory: only a build-bound verified publication counts.
+  require_playtest_record || {
+    _reject_cycle "playtest" "mandatory current-revision pure playtest verification failed"
+    return 1
+  }
+  require_final_ledger_only || {
+    _reject_cycle "ledger-only" "post-play changes were not limited to AI_LOOP_STATE.md"
+    return 1
+  }
+  safe_commit_if_enabled || {
+    echo "final ledger commit failed — reverting"
+    _reject_cycle "final-commit" "final ledger-only commit failed"
+    return 1
+  }
   rm -f -- "$untracked_snapshot"
   if [[ "${AI_LOOP_PUSH:-0}" == "1" ]]; then
     # A push failure must not fail the cycle: the verified commit is real progress
@@ -302,6 +429,23 @@ run_cycle() {
       "needs a green 'verify' run on the commit first) — not counted as a failure."
   fi
   return 0
+}
+
+record_cycle_failure() {
+  local cycle_number="$1" consecutive="$2" total="$3"
+  local run_id="${cycle_failure_run_id:-none}"
+  local start_ref="${cycle_failure_start_ref:-none}"
+  local max_entries="${AI_LOOP_FAILURE_LEDGER_MAX_ENTRIES:-100}"
+  npm run --silent loop:failures -- append \
+    --cycle "$cycle_number" \
+    --stage "$cycle_failure_stage" \
+    --reason "$cycle_failure_reason" \
+    --consecutive "$consecutive" \
+    --total "$total" \
+    --run-id "$run_id" \
+    --start-ref "$start_ref" \
+    --max "$max_entries" || \
+    echo "Warning: could not persist this failure to ai-runs/failure-ledger.json."
 }
 
 count=0
@@ -326,6 +470,7 @@ while true; do
   else
     fails=$((fails + 1))
     fails_total=$((fails_total + 1))
+    record_cycle_failure "$((count + 1))" "$fails" "$fails_total"
     echo "✗ cycle $((count + 1)) made no committed progress ($fails/$max_fails consecutive, $fails_total/$max_fails_total total)."
     if [[ "$fails" -ge "$max_fails" ]]; then
       echo "Circuit breaker: $max_fails consecutive cycles without progress — stopping. Check ai-runs/ and AI_LOOP_STATE.md."

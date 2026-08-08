@@ -208,11 +208,11 @@ function reachCrisis(
 
   if (withJune) {
     const beforeJune = actionIds(state);
-    expect(beforeJune).toContain("talk_june_pike_drive");
+    expect(beforeJune).toContain("talk_june_pike");
     expect(beforeJune).not.toContain("use_cattle_crisis_priority");
     expect(beforeJune).not.toContain("use_person_crisis_priority");
     expect(beforeJune).not.toContain("use_reserve_crisis_priority");
-    state = act(state, "talk_june_pike_drive");
+    state = act(state, "talk_june_pike");
     expect(state.flags.june_drive_cattle_line_taken).toBe(true);
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
     expect(state.vars).toMatchObject({ hp: 30, pack_drive: 2 });
@@ -460,7 +460,7 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     june = act(june, "go_north");
 
     expect(june.vars).toMatchObject({ pack_drive: 3, hp: 30 });
-    expect(actionIds(june)).toContain("talk_june_pike_drive");
+    expect(actionIds(june)).toContain("talk_june_pike");
     expect(actionIds(june)).not.toContain("use_drive_overrun_recovery");
     const bytes = save(june, loaded.compiled.contentHash, "rpg", {
       worldQuestId: "wolf_winter",
@@ -471,12 +471,12 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
 
     const broken = structuredClone(restored);
     broken.flags.june_blood_condition_broken = true;
-    expect(actionIds(broken)).not.toContain("talk_june_pike_drive");
+    expect(actionIds(broken)).not.toContain("talk_june_pike");
     expect(actionIds(broken)).toContain("use_drive_overrun_recovery");
     const braced = act(broken, "use_drive_overrun_recovery");
     expect(braced.vars).toMatchObject({ pack_drive: 2, hp: 28 });
 
-    let helped = act(restored, "talk_june_pike_drive");
+    let helped = act(restored, "talk_june_pike");
     expect(helped.vars).toMatchObject({ pack_drive: 2, hp: 30 });
     helped = act(helped, "ask_acknowledge");
     expect(actionIds(helped)).toEqual(

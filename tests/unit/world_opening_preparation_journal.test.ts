@@ -16,9 +16,6 @@ import {
   allOpeningPreparationJournalDrafts,
   openingPreparationJournalEntry,
   openingPreparationJournalId,
-  openingPreparationLegacyJournalDraft,
-  openingPreparationLegacyJournalEntry,
-  openingPreparationLegacySourceWorldHash,
   openingPreparationOfferJournalDraft,
   openingPreparationOfferJournalEntry,
   proveOpeningPreparationJournal,
@@ -30,7 +27,6 @@ import type {
 } from "../../src/world/session_snapshot.js";
 
 const TOWN = "Albany city";
-const LEGACY_HASH = "7".repeat(64);
 const LEAD_HASH = "a".repeat(64);
 const SPONSOR_MEMORY = "albany:memory_civic_sponsorship";
 
@@ -299,14 +295,13 @@ describe("opening preparation journal proof", () => {
         journalIndex: 0,
       }),
     });
-    expect(noEvidence).toMatchObject({ offered: false, legacy: false, profile: null });
+    expect(noEvidence).toMatchObject({ offered: false, profile: null });
     expect(noEvidence.characterAfterPreparation).toEqual(noEvidenceCharacter);
     expect(noEvidence.characterAfterPreparation).not.toBe(noEvidenceCharacter);
 
     const pendingResult = prove(pending);
     expect(pendingResult).toMatchObject({
       offered: true,
-      legacy: false,
       profile: null,
       selectionBoundary: null,
       recordedAt: 100,
@@ -337,18 +332,16 @@ describe("opening preparation journal proof", () => {
     });
   });
 
-  it("binds authored copies, ids, town, adjacency, and the selected lead", () => {
+  it("binds ids, town, adjacency, and the selected lead while preserving historical copy", () => {
     const fixture = selectedFixture();
 
     const forgedOffer = structuredClone(fixture.entries);
-    forgedOffer[1]!.text += " Forged.";
-    expect(() => prove({ ...fixture, entries: forgedOffer })).toThrow(/authored copy/i);
+    forgedOffer[1]!.text += " Earlier wording.";
+    expect(() => prove({ ...fixture, entries: forgedOffer })).not.toThrow();
 
     const forgedSelection = structuredClone(fixture.entries);
-    forgedSelection[0]!.title = "Prepared: forged";
-    expect(() => prove({ ...fixture, entries: forgedSelection })).toThrow(
-      /authored terms and copy/i,
-    );
+    forgedSelection[0]!.title = "Prepared under an earlier title";
+    expect(() => prove({ ...fixture, entries: forgedSelection })).not.toThrow();
 
     const unknownProfile = structuredClone(fixture.entries);
     unknownProfile[0]!.id = openingPreparationJournalId(fixture.scene.id, "albany:prepare_missing");
@@ -425,20 +418,6 @@ describe("opening preparation journal proof", () => {
       /at most one opening preparation offer/i,
     );
 
-    const marker = openingPreparationLegacyJournalEntry({
-      sourceWorldHash: LEGACY_HASH,
-      town: TOWN,
-      recordedAt: timeLabel(fixture.boundary.minutes),
-      storyChoiceBoundary: fixture.boundary,
-    });
-    expect(() =>
-      prove({
-        ...fixture,
-        entries: [marker, ...fixture.entries],
-        trustedLegacySourceWorldHash: LEGACY_HASH,
-      }),
-    ).toThrow(/cannot combine legacy and current/i);
-
     const pending = pendingFixture();
     const later = {
       id: "area:later",
@@ -474,115 +453,5 @@ describe("opening preparation journal proof", () => {
         entries: [...pending.entries, quest],
       }),
     ).toThrow(/cannot follow a started or completed quest/i);
-  });
-});
-
-describe("trusted legacy opening preparation evidence", () => {
-  it("is hash-bound, shares the lead boundary, and never grants effects or costs", () => {
-    const scene = preparationScene();
-    const boundary = leadBoundary();
-    const character = sourceCharacter(false);
-    const marker = openingPreparationLegacyJournalEntry({
-      sourceWorldHash: LEGACY_HASH,
-      town: TOWN,
-      recordedAt: timeLabel(boundary.minutes),
-      storyChoiceBoundary: boundary,
-    });
-    const entries = [marker, leadEntry(boundary)];
-    const proof = leadProof({ character, boundary, journalIndex: 1 });
-
-    const draft = openingPreparationLegacyJournalDraft(LEGACY_HASH);
-    expect(draft.id).toBe(`preparation_legacy:${LEGACY_HASH}`);
-    expect(draft.text).toMatch(/no retroactive preparation profile.*time cost.*money cost/i);
-    expect(openingPreparationLegacySourceWorldHash(draft.id)).toBe(LEGACY_HASH);
-    expect(openingPreparationLegacySourceWorldHash("preparation_legacy:not-a-hash")).toBeNull();
-    expect(() => openingPreparationLegacyJournalDraft("A".repeat(64))).toThrow(/invalid/i);
-
-    expect(() => prove({ scene, entries, proof })).toThrow(/trusted predecessor hash/i);
-    expect(() =>
-      prove({
-        scene,
-        entries,
-        proof,
-        trustedLegacySourceWorldHash: "8".repeat(64),
-      }),
-    ).toThrow(/trusted predecessor hash/i);
-
-    const accepted = prove({
-      scene,
-      entries,
-      proof,
-      trustedLegacySourceWorldHash: LEGACY_HASH,
-    });
-    expect(accepted).toMatchObject({
-      offered: false,
-      legacy: true,
-      legacySourceWorldHash: LEGACY_HASH,
-      profile: null,
-      selectionBoundary: null,
-      terms: null,
-      journalIndex: 0,
-      recordedAt: 100,
-    });
-    expect(accepted.legacyBoundary).toEqual(boundary);
-    expect(accepted.characterAfterPreparation).toEqual(character);
-    expect(accepted.characterAfterPreparation).not.toBe(character);
-    expect(accepted.characterAfterPreparation.money).toBe(10);
-    expect(accepted.characterAfterPreparation.knowledge).toEqual([]);
-  });
-
-  it("rejects forged copy, boundary, time, town, and lead adjacency", () => {
-    const boundary = leadBoundary();
-    const character = sourceCharacter(false);
-    const marker = openingPreparationLegacyJournalEntry({
-      sourceWorldHash: LEGACY_HASH,
-      town: TOWN,
-      recordedAt: timeLabel(boundary.minutes),
-      storyChoiceBoundary: boundary,
-    });
-    const base = [marker, leadEntry(boundary)];
-    const proof = leadProof({ character, boundary, journalIndex: 1 });
-
-    for (const mutate of [
-      (entry: OverworldJournalEntry) => {
-        entry.text += " Forged.";
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.storyChoiceBoundary!.decisionProofHash = "0".repeat(64);
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.recordedAt = timeLabel(101);
-      },
-      (entry: OverworldJournalEntry) => {
-        entry.town = "Queensbury town";
-      },
-    ]) {
-      const forged = structuredClone(base);
-      mutate(forged[0]!);
-      expect(() =>
-        prove({
-          entries: forged,
-          proof,
-          trustedLegacySourceWorldHash: LEGACY_HASH,
-        }),
-      ).toThrow();
-    }
-
-    const separated = structuredClone(base);
-    separated.splice(1, 0, {
-      id: "area:interposed",
-      kind: "area",
-      town: TOWN,
-      title: "Interposed",
-      text: "This cannot separate the migration marker from its lead.",
-      recordedAt: timeLabel(boundary.minutes),
-    });
-    expect(() =>
-      prove({
-        entries: separated,
-        proof: leadProof({ character, boundary, journalIndex: 2 }),
-        trustedLegacySourceWorldHash: LEGACY_HASH,
-      }),
-    ).toThrow(/immediately follow and share the exact lead-selection boundary/i);
   });
 });

@@ -1,41 +1,16 @@
 import type { OverworldCharacter, OverworldLocalEvent, OverworldPoi } from "./overworld.js";
-import {
-  openingAllyLegacyJournalDraft,
-  openingAllyLegacySourceWorldHash,
-  type OpeningAllyJournalDraft,
-} from "./opening_ally_journal.js";
+import type { OpeningAllyJournalDraft } from "./opening_ally_journal.js";
 import type { OverworldContactPresentation } from "./session_contact_presentation.js";
-import {
-  openingLeadSourceLegacyJournalDraft,
-  openingLeadSourceLegacySourceWorldHash,
-  type OpeningLeadSourceJournalDraft,
-} from "./opening_lead_source_journal.js";
-import {
-  openingPreparationLegacyJournalDraft,
-  openingPreparationLegacySourceWorldHash,
-  type OpeningPreparationJournalDraft,
-} from "./opening_preparation_journal.js";
-import {
-  openingReliefAllocationLegacyJournalDraft,
-  openingReliefAllocationLegacySourceWorldHash,
-  type OpeningReliefAllocationJournalDraft,
-} from "./opening_relief_allocation_journal.js";
-import {
-  openingReliefOathLegacyJournalDraft,
-  openingReliefOathLegacySourceWorldHash,
-  type OpeningReliefOathJournalDraft,
-} from "./opening_relief_oath_journal.js";
-import {
-  openingRegistrationLegacyJournalDraft,
-  openingRegistrationLegacySourceWorldHash,
-  type OpeningRegistrationJournalDraft,
-} from "./opening_registration_journal.js";
+import type { OpeningLeadSourceJournalDraft } from "./opening_lead_source_journal.js";
+import type { OpeningPreparationJournalDraft } from "./opening_preparation_journal.js";
+import type { OpeningReliefAllocationJournalDraft } from "./opening_relief_allocation_journal.js";
+import type { OpeningReliefOathJournalDraft } from "./opening_relief_oath_journal.js";
+import type { OpeningRegistrationJournalDraft } from "./opening_registration_journal.js";
 import {
   parseRoadJournalId,
   parseServiceJournalId,
   parseTimeLabel,
 } from "./session_journal_codec.js";
-import { describeOverworldContactAction } from "./local_actions.js";
 import {
   emptyProgressJournalSourceIndex,
   recordProgressJournalSource,
@@ -182,18 +157,6 @@ function assertKnownContactPresentation(
       `Overworld session snapshot journal contact entry references unknown contact presentation "${entry.id}".`,
     );
   }
-  const expected = describeOverworldContactAction(
-    presentation.contact,
-    presentation.presentationId,
-  );
-  if (
-    entry.id !== expected.id &&
-    (entry.title !== expected.title || entry.text !== expected.text)
-  ) {
-    throw new Error(
-      `Overworld session snapshot journal contact entry "${entry.id}" does not match its authored copy.`,
-    );
-  }
   const expectedTown = sources.characterTownNames.get(presentation.character.id);
   if (expectedTown && entry.town !== expectedTown) {
     throw new Error(
@@ -248,11 +211,6 @@ function assertOpeningRegistrationJournalSource(
       `Overworld session snapshot journal ${entry.kind} entry references unknown opening registration evidence "${entry.id}".`,
     );
   }
-  if (entry.title !== draft.title || entry.text !== draft.text) {
-    throw new Error(
-      `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" does not match its authored copy.`,
-    );
-  }
   if (
     sources.openingRegistrationTownName !== null &&
     entry.town !== sources.openingRegistrationTownName
@@ -263,35 +221,15 @@ function assertOpeningRegistrationJournalSource(
   }
 }
 
-function assertOpeningRegistrationLegacyJournalSource(entry: OverworldJournalEntry): void {
-  const sourceWorldHash = openingRegistrationLegacySourceWorldHash(entry.id);
-  if (!sourceWorldHash) {
-    throw new Error(
-      `Overworld session snapshot journal registration_legacy entry id "${entry.id}" must contain a source world hash.`,
-    );
-  }
-  const draft = openingRegistrationLegacyJournalDraft(sourceWorldHash);
-  if (entry.title !== draft.title || entry.text !== draft.text) {
-    throw new Error(
-      `Overworld session snapshot journal registration_legacy entry "${entry.id}" does not match its canonical copy.`,
-    );
-  }
-}
-
 function assertOpeningLeadSourceJournalSource(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
 ): void {
   if (entry.kind === "lead_source_offer") {
     const draft = sources.openingLeadSourceOfferDraft;
-    if (
-      !draft ||
-      entry.id !== draft.id ||
-      entry.title !== draft.title ||
-      entry.text !== draft.text
-    ) {
+    if (!draft || entry.id !== draft.id) {
       throw new Error(
-        `Overworld session snapshot journal lead_source_offer entry "${entry.id}" does not match its authored copy.`,
+        `Overworld session snapshot journal lead_source_offer entry "${entry.id}" references unknown evidence.`,
       );
     }
   } else if (!sources.openingLeadSourceJournalIds?.has(entry.id)) {
@@ -309,35 +247,15 @@ function assertOpeningLeadSourceJournalSource(
   }
 }
 
-function assertOpeningLeadSourceLegacyJournalSource(entry: OverworldJournalEntry): void {
-  const sourceWorldHash = openingLeadSourceLegacySourceWorldHash(entry.id);
-  if (!sourceWorldHash) {
-    throw new Error(
-      `Overworld session snapshot journal lead_source_legacy entry id "${entry.id}" must contain a source world hash.`,
-    );
-  }
-  const draft = openingLeadSourceLegacyJournalDraft(sourceWorldHash);
-  if (entry.title !== draft.title || entry.text !== draft.text) {
-    throw new Error(
-      `Overworld session snapshot journal lead_source_legacy entry "${entry.id}" does not match its canonical copy.`,
-    );
-  }
-}
-
 function assertOpeningPreparationJournalSource(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
 ): void {
   if (entry.kind === "preparation_offer") {
     const draft = sources.openingPreparationOfferDraft;
-    if (
-      !draft ||
-      entry.id !== draft.id ||
-      entry.title !== draft.title ||
-      entry.text !== draft.text
-    ) {
+    if (!draft || entry.id !== draft.id) {
       throw new Error(
-        `Overworld session snapshot journal preparation_offer entry "${entry.id}" does not match its authored copy.`,
+        `Overworld session snapshot journal preparation_offer entry "${entry.id}" references unknown evidence.`,
       );
     }
   } else if (!sources.openingPreparationJournalIds?.has(entry.id)) {
@@ -355,35 +273,15 @@ function assertOpeningPreparationJournalSource(
   }
 }
 
-function assertOpeningPreparationLegacyJournalSource(entry: OverworldJournalEntry): void {
-  const sourceWorldHash = openingPreparationLegacySourceWorldHash(entry.id);
-  if (!sourceWorldHash) {
-    throw new Error(
-      `Overworld session snapshot journal preparation_legacy entry id "${entry.id}" must contain a source world hash.`,
-    );
-  }
-  const draft = openingPreparationLegacyJournalDraft(sourceWorldHash);
-  if (entry.title !== draft.title || entry.text !== draft.text) {
-    throw new Error(
-      `Overworld session snapshot journal preparation_legacy entry "${entry.id}" does not match its canonical copy.`,
-    );
-  }
-}
-
 function assertOpeningReliefAllocationJournalSource(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
 ): void {
   if (entry.kind === "relief_allocation_offer") {
     const draft = sources.openingReliefAllocationOfferDraft;
-    if (
-      !draft ||
-      entry.id !== draft.id ||
-      entry.title !== draft.title ||
-      entry.text !== draft.text
-    ) {
+    if (!draft || entry.id !== draft.id) {
       throw new Error(
-        `Overworld session snapshot journal relief_allocation_offer entry "${entry.id}" does not match its authored copy.`,
+        `Overworld session snapshot journal relief_allocation_offer entry "${entry.id}" references unknown evidence.`,
       );
     }
   } else if (!sources.openingReliefAllocationJournalIds?.has(entry.id)) {
@@ -401,35 +299,15 @@ function assertOpeningReliefAllocationJournalSource(
   }
 }
 
-function assertOpeningReliefAllocationLegacyJournalSource(entry: OverworldJournalEntry): void {
-  const sourceWorldHash = openingReliefAllocationLegacySourceWorldHash(entry.id);
-  if (!sourceWorldHash) {
-    throw new Error(
-      `Overworld session snapshot journal relief_allocation_legacy entry id "${entry.id}" must contain a source world hash.`,
-    );
-  }
-  const draft = openingReliefAllocationLegacyJournalDraft(sourceWorldHash);
-  if (entry.title !== draft.title || entry.text !== draft.text) {
-    throw new Error(
-      `Overworld session snapshot journal relief_allocation_legacy entry "${entry.id}" does not match its canonical copy.`,
-    );
-  }
-}
-
 function assertOpeningReliefOathJournalSource(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
 ): void {
   if (entry.kind === "relief_oath_offer") {
     const draft = sources.openingReliefOathOfferDraft;
-    if (
-      !draft ||
-      entry.id !== draft.id ||
-      entry.title !== draft.title ||
-      entry.text !== draft.text
-    ) {
+    if (!draft || entry.id !== draft.id) {
       throw new Error(
-        `Overworld session snapshot journal relief_oath_offer entry "${entry.id}" does not match its authored copy.`,
+        `Overworld session snapshot journal relief_oath_offer entry "${entry.id}" references unknown evidence.`,
       );
     }
   } else if (!sources.openingReliefOathJournalIds?.has(entry.id)) {
@@ -447,35 +325,15 @@ function assertOpeningReliefOathJournalSource(
   }
 }
 
-function assertOpeningReliefOathLegacyJournalSource(entry: OverworldJournalEntry): void {
-  const sourceWorldHash = openingReliefOathLegacySourceWorldHash(entry.id);
-  if (!sourceWorldHash) {
-    throw new Error(
-      `Overworld session snapshot journal relief_oath_legacy entry id "${entry.id}" must contain a source world hash.`,
-    );
-  }
-  const draft = openingReliefOathLegacyJournalDraft(sourceWorldHash);
-  if (entry.title !== draft.title || entry.text !== draft.text) {
-    throw new Error(
-      `Overworld session snapshot journal relief_oath_legacy entry "${entry.id}" does not match its canonical copy.`,
-    );
-  }
-}
-
 function assertOpeningAllyJournalSource(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
 ): void {
   if (entry.kind === "ally_offer") {
     const draft = sources.openingAllyOfferDraft;
-    if (
-      !draft ||
-      entry.id !== draft.id ||
-      entry.title !== draft.title ||
-      entry.text !== draft.text
-    ) {
+    if (!draft || entry.id !== draft.id) {
       throw new Error(
-        `Overworld session snapshot journal ally_offer entry "${entry.id}" does not match its authored copy.`,
+        `Overworld session snapshot journal ally_offer entry "${entry.id}" references unknown evidence.`,
       );
     }
   } else if (!sources.openingAllyJournalIds?.has(entry.id)) {
@@ -486,21 +344,6 @@ function assertOpeningAllyJournalSource(
   if (sources.openingAllyTownName != null && entry.town !== sources.openingAllyTownName) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry "${entry.id}" is bound to town "${entry.town}", expected "${sources.openingAllyTownName}".`,
-    );
-  }
-}
-
-function assertOpeningAllyLegacyJournalSource(entry: OverworldJournalEntry): void {
-  const sourceWorldHash = openingAllyLegacySourceWorldHash(entry.id);
-  if (!sourceWorldHash) {
-    throw new Error(
-      `Overworld session snapshot journal ally_legacy entry id "${entry.id}" must contain a source world hash.`,
-    );
-  }
-  const draft = openingAllyLegacyJournalDraft(sourceWorldHash);
-  if (entry.title !== draft.title || entry.text !== draft.text) {
-    throw new Error(
-      `Overworld session snapshot journal ally_legacy entry "${entry.id}" does not match its canonical copy.`,
     );
   }
 }
@@ -518,9 +361,7 @@ function assertSnapshotJournalSource(
     );
   }
   const isRegistrationEvidence =
-    entry.kind === "registration" ||
-    entry.kind === "registration_legacy" ||
-    entry.kind === "registration_offer";
+    entry.kind === "registration" || entry.kind === "registration_offer";
   if (isRegistrationEvidence !== (entry.registrationBoundary !== undefined)) {
     throw new Error(
       `Overworld session snapshot journal ${entry.kind} entry has an invalid registration boundary.`,
@@ -528,19 +369,14 @@ function assertSnapshotJournalSource(
   }
   const isStoryChoiceEvidence =
     entry.kind === "ally" ||
-    entry.kind === "ally_legacy" ||
     entry.kind === "ally_offer" ||
     entry.kind === "lead_source" ||
-    entry.kind === "lead_source_legacy" ||
     entry.kind === "lead_source_offer" ||
     entry.kind === "preparation" ||
-    entry.kind === "preparation_legacy" ||
     entry.kind === "preparation_offer" ||
     entry.kind === "relief_allocation" ||
-    entry.kind === "relief_allocation_legacy" ||
     entry.kind === "relief_allocation_offer" ||
     entry.kind === "relief_oath" ||
-    entry.kind === "relief_oath_legacy" ||
     entry.kind === "relief_oath_offer";
   if (isStoryChoiceEvidence !== (entry.storyChoiceBoundary !== undefined)) {
     throw new Error(
@@ -596,9 +432,6 @@ function assertSnapshotJournalSource(
     case "ally_offer":
       assertOpeningAllyJournalSource(entry, sources);
       return;
-    case "ally_legacy":
-      assertOpeningAllyLegacyJournalSource(entry);
-      return;
     case "area":
       assertKnownJournalSource(entry, "area:", sources.areaIds, "area", sources.areaTownNames);
       return;
@@ -628,9 +461,6 @@ function assertSnapshotJournalSource(
     case "lead_source_offer":
       assertOpeningLeadSourceJournalSource(entry, sources);
       return;
-    case "lead_source_legacy":
-      assertOpeningLeadSourceLegacyJournalSource(entry);
-      return;
     case "poi":
       assertKnownJournalSource(
         entry,
@@ -644,22 +474,13 @@ function assertSnapshotJournalSource(
     case "preparation_offer":
       assertOpeningPreparationJournalSource(entry, sources);
       return;
-    case "preparation_legacy":
-      assertOpeningPreparationLegacyJournalSource(entry);
-      return;
     case "relief_allocation":
     case "relief_allocation_offer":
       assertOpeningReliefAllocationJournalSource(entry, sources);
       return;
-    case "relief_allocation_legacy":
-      assertOpeningReliefAllocationLegacyJournalSource(entry);
-      return;
     case "relief_oath":
     case "relief_oath_offer":
       assertOpeningReliefOathJournalSource(entry, sources);
-      return;
-    case "relief_oath_legacy":
-      assertOpeningReliefOathLegacyJournalSource(entry);
       return;
     case "quest":
       assertKnownJournalSource(entry, "quest:", sources.questIds, "quest", sources.questTownNames);
@@ -676,9 +497,6 @@ function assertSnapshotJournalSource(
     case "registration":
     case "registration_offer":
       assertOpeningRegistrationJournalSource(entry, sources);
-      return;
-    case "registration_legacy":
-      assertOpeningRegistrationLegacyJournalSource(entry);
       return;
     case "regional_arc":
       assertKnownJournalSource(

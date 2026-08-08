@@ -21,13 +21,7 @@ import type {
 } from "./session_snapshot.js";
 
 export const OPENING_LEAD_SOURCE_JOURNAL_PREFIX = "lead_source:" as const;
-export const OPENING_LEAD_SOURCE_LEGACY_JOURNAL_PREFIX = "lead_source_legacy:" as const;
 export const OPENING_LEAD_SOURCE_OFFER_JOURNAL_PREFIX = "lead_source_offer:" as const;
-
-const OPENING_LEAD_SOURCE_LEGACY_JOURNAL_TITLE =
-  "Legacy journey: Albany source packet grandfathered";
-const OPENING_LEAD_SOURCE_LEGACY_JOURNAL_TEXT =
-  "This journey received its Wolf-Winter lead before Albany required one certified source packet. The earlier docket remains valid; new journeys must choose which account Rowan attaches.";
 
 export type OpeningLeadSourceJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">
@@ -50,12 +44,6 @@ export function openingLeadSourceOfferJournalId(sceneId: string): string {
 
 export function openingLeadSourceJournalId(sceneId: string, optionId: string): string {
   return `${OPENING_LEAD_SOURCE_JOURNAL_PREFIX}${sceneId}:${optionId}`;
-}
-
-export function openingLeadSourceLegacySourceWorldHash(entryId: string): string | null {
-  if (!entryId.startsWith(OPENING_LEAD_SOURCE_LEGACY_JOURNAL_PREFIX)) return null;
-  const sourceWorldHash = entryId.slice(OPENING_LEAD_SOURCE_LEGACY_JOURNAL_PREFIX.length);
-  return /^[0-9a-f]{64}$/.test(sourceWorldHash) ? sourceWorldHash : null;
 }
 
 export function openingLeadSourceOfferJournalDraft(
@@ -87,20 +75,6 @@ export function openingLeadSourceJournalDraft(args: {
     kind: "lead_source" as const,
     title: `Certified source: ${applied.option.title}`,
     text: `${applied.option.summary} ${applied.option.preview} Actual cost: ${formatOpeningLeadSourceCost(applied.terms)}.${sponsorship} ${applied.option.consequence}`,
-  });
-}
-
-export function openingLeadSourceLegacyJournalDraft(
-  sourceWorldHash: string,
-): OpeningLeadSourceJournalDraft {
-  if (!/^[0-9a-f]{64}$/.test(sourceWorldHash)) {
-    throw new Error(`Invalid legacy opening lead-source hash "${sourceWorldHash}".`);
-  }
-  return Object.freeze({
-    id: `${OPENING_LEAD_SOURCE_LEGACY_JOURNAL_PREFIX}${sourceWorldHash}`,
-    kind: "lead_source_legacy" as const,
-    title: OPENING_LEAD_SOURCE_LEGACY_JOURNAL_TITLE,
-    text: OPENING_LEAD_SOURCE_LEGACY_JOURNAL_TEXT,
   });
 }
 
@@ -140,20 +114,6 @@ export function openingLeadSourceJournalEntry(args: {
   });
 }
 
-export function openingLeadSourceLegacyJournalEntry(args: {
-  sourceWorldHash: string;
-  town: string;
-  recordedAt: string;
-  storyChoiceBoundary: OverworldJournalDecisionBoundary;
-}): OverworldJournalEntry {
-  return Object.freeze({
-    ...openingLeadSourceLegacyJournalDraft(args.sourceWorldHash),
-    town: args.town,
-    recordedAt: args.recordedAt,
-    storyChoiceBoundary: freezeBoundary(args.storyChoiceBoundary),
-  });
-}
-
 function boundariesEqual(
   left: OverworldJournalDecisionBoundary,
   right: OverworldJournalDecisionBoundary,
@@ -174,7 +134,6 @@ export function proveOpeningLeadSourceJournal(args: {
   reliefOathProof?: OpeningReliefOathJournalProof;
   journalEntries: readonly OverworldJournalEntry[];
   expectedTown: string | null;
-  allowMissingReliefOathForMigration?: boolean;
 }): OpeningLeadSourceJournalProof {
   const selections = args.journalEntries
     .map((entry, index) => ({ entry, index }))
@@ -224,28 +183,14 @@ export function proveOpeningLeadSourceJournal(args: {
   if (reliefOathProof !== undefined) {
     const selectedOath =
       reliefOathProof.offered &&
-      !reliefOathProof.legacy &&
-      reliefOathProof.legacySourceWorldHash === null &&
       reliefOathProof.offerBoundary !== null &&
       reliefOathProof.option !== null &&
       reliefOathProof.selectionBoundary !== null &&
       reliefOathProof.terms !== null &&
       reliefOathProof.journalIndex !== null &&
       reliefOathProof.recordedAt !== null;
-    const legacyOath =
-      !reliefOathProof.offered &&
-      reliefOathProof.legacy &&
-      reliefOathProof.legacySourceWorldHash !== null &&
-      reliefOathProof.offerBoundary === null &&
-      reliefOathProof.option === null &&
-      reliefOathProof.selectionBoundary === null &&
-      reliefOathProof.terms === null &&
-      reliefOathProof.journalIndex !== null &&
-      reliefOathProof.recordedAt !== null;
     const emptyOath =
       !reliefOathProof.offered &&
-      !reliefOathProof.legacy &&
-      reliefOathProof.legacySourceWorldHash === null &&
       reliefOathProof.offerBoundary === null &&
       reliefOathProof.option === null &&
       reliefOathProof.selectionBoundary === null &&
@@ -271,32 +216,13 @@ export function proveOpeningLeadSourceJournal(args: {
       predecessorBoundary = reliefOathProof.selectionBoundary;
       predecessorJournalIndex = reliefOathProof.journalIndex;
       predecessorLabel = "the selected relief oath";
-    } else if (legacyOath) {
-      const oathEntry = args.journalEntries[reliefOathProof.journalIndex!];
-      if (
-        !oathEntry ||
-        oathEntry.kind !== "relief_oath_legacy" ||
-        !oathEntry.storyChoiceBoundary ||
-        reliefOathProof.recordedAt !== oathEntry.storyChoiceBoundary.minutes ||
-        oathEntry.storyChoiceBoundary.minutes !== parseTimeLabel(oathEntry.recordedAt)
-      ) {
-        throw new Error(
-          "Overworld session snapshot opening lead source cannot locate its trusted legacy relief-oath boundary.",
-        );
-      }
-      characterBeforeSource = reliefOathProof.characterAfterOath;
-      predecessorBoundary = oathEntry.storyChoiceBoundary;
-      predecessorJournalIndex = reliefOathProof.journalIndex;
-      predecessorLabel = "the trusted legacy relief-oath marker";
-    } else if (emptyOath && args.allowMissingReliefOathForMigration === true) {
-      predecessorLabel = "registration under the authorized relief-oath migration gap";
     } else if (emptyOath) {
       throw new Error(
-        "Overworld session snapshot opening lead source is missing its required relief-oath predecessor; only trusted migration may retain registration adjacency.",
+        "Overworld session snapshot opening lead source is missing its required relief-oath predecessor.",
       );
     } else {
       throw new Error(
-        "Overworld session snapshot opening lead source requires a selected or trusted legacy relief-oath predecessor.",
+        "Overworld session snapshot opening lead source requires a selected relief-oath predecessor.",
       );
     }
   }
@@ -317,13 +243,9 @@ export function proveOpeningLeadSourceJournal(args: {
     throw new Error("Overworld session snapshot lead-source selection has no replayable offer.");
   }
   const expectedOffer = openingLeadSourceOfferJournalDraft(scene);
-  if (
-    offered.entry.id !== expectedOffer.id ||
-    offered.entry.title !== expectedOffer.title ||
-    offered.entry.text !== expectedOffer.text
-  ) {
+  if (offered.entry.id !== expectedOffer.id) {
     throw new Error(
-      `Overworld session snapshot lead-source offer "${offered.entry.id}" does not match its authored copy.`,
+      `Overworld session snapshot lead-source offer "${offered.entry.id}" references unknown evidence.`,
     );
   }
   if (args.expectedTown !== null && offered.entry.town !== args.expectedTown) {
@@ -390,19 +312,6 @@ export function proveOpeningLeadSourceJournal(args: {
     character: characterBeforeSource,
     optionId: option.id,
   });
-  const expectedSelection = openingLeadSourceJournalDraft({
-    scene,
-    character: characterBeforeSource,
-    optionId: option.id,
-  });
-  if (
-    selected.entry.title !== expectedSelection.title ||
-    selected.entry.text !== expectedSelection.text
-  ) {
-    throw new Error(
-      `Overworld session snapshot lead-source entry "${selected.entry.id}" does not match its authored terms and copy.`,
-    );
-  }
   if (args.expectedTown !== null && selected.entry.town !== args.expectedTown) {
     throw new Error(
       `Overworld session snapshot lead-source entry "${selected.entry.id}" is bound to town "${selected.entry.town}", expected "${args.expectedTown}".`,

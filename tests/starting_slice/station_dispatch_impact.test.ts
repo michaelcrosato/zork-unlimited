@@ -14,9 +14,11 @@ import {
 } from "../../src/world/quest_dispatch_window.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
+const RELIEF_OATH = WORLD.opening_relief_oath!;
 const PREPARATION = WORLD.opening_preparation!;
 const ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
@@ -27,6 +29,7 @@ function stationHubSession(): OverworldSession {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory("albany:road_warden");
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_jamie_market_testimony");
   const route = session

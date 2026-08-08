@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 736 -->
+<!-- historical_cycle_count: 737 -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -14,6 +14,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - external_review_completion
+
+- Scope/effect: completed the independent-review matrix across N1–N7 and D1–D10, including validator soundness, visible NPC resolution, direct-road costs, render/quest constants, authored dialogue, durable reveal receipts, save integrity, crawl/loop hardening, the bounded v10→v11 snapshot ladder, and current contract/evidence docs.
+- Correctness: independent audits closed post-TALK identity, overflow ceilings, structural replay anchors, assessor wording, D10 accounting, coverage/Windows launch limits, exact raw playtest publication, clean-checkout trace cataloging, and full-history trace tests without restoring prose/hash authority.
+- Pure evidence: exact-clean Terra seed 7 on `06d846fa` chose Road-Warden/Aid-Only, completed The Wolf-Winter by all-wolves-alive/full-herd LURE at decision 26, continued through checkpoint 40, won The Gallowmere, and ended naturally at 51; clarity/enjoyment 4/4, replay-yes, no bug or stuck state.
+- Failed evidence: stale-copy artifacts, two invalid Spark runs, and otherwise valid reports tied to revisions later superseded by clean-CI fixes were rejected or retired and never counted as final-build evidence.
+- Self-critique/follow-through: the verified player still found the role shortcut's duty/evidence scope quiet and second-quest continuity thinner; the cross-family experiment remains external because an owner must authorize a non-Codex provider before ≥10 fresh comparable journeys can run.
+- Guard: post-crawl `20260808T135738Z` covers 6,000 steps, all 247 nodes/344 edges/12 quests; exact health passes 442 files/3,775 tests, both typechecks and all 12 packs, with drift at zero errors/six reviewed warnings and the pure evidence gate green.
 
 ### Cycle result - repository_closeout
 
@@ -154,13 +163,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 682600 read the card, chose its deliberately cattle-first/Aid-Only/fodder/Drover-supported LURE, diverted all wolves alive, continued twice, won The Gallowmere at decision 54, rated clarity/enjoyment 4/4 and replay-yes, and reported no rejection, loop, soft-lock, stuck state, or functional bug.
 - Economy/admission: the first attempt used 4.884M raw / 155,625 uncached input + 10,597 output at 96.81% cache reuse (166,222 useful); Spark admission verified 0/4—three strict wrapper rejections plus one post-gate client probe failure—so no retry or scale ran and unrecoverable usage is not guessed.
 - Self-critique/guard: one observed card plus another LURE does not prove diversity, and Albany planning density remains S1; an independent mechanics audit, focused cross-surface/boundary checks, crawls `20260802T141640Z` / `20260802T143946Z`, exact 456-file/3,786-test health, UI typecheck, and all 12 pack validations are green.
-
-### Cycle result - albany_quick_setup_review
-
-- Evidence choice: PR review caught a duty-only reveal labeled as duty + evidence, residual `Standard packet` copy, and condensed role support that could outlive an edited manifest trigger.
-- Surface/effect: Albany now consistently names `Quick setup`, compares duties before the separate evidence step, and keeps the neutral four-plan risk compass without claiming that setup commits a field plan.
-- Counterfactual/integrity: condensed support requires both the known doctrine id and its exact authoritative trigger text; changed manifests fall back to their live text, while choices, mechanics, RNG, state, saves, hashes, and outcomes remain unchanged.
-- Pure evidence: exact-clean Terra seed 682002 chose Road-Warden/Aid-Only/Hayden/June, completed The Wolf-Winter through whole-herd/all-wolves-alive LURE, continued twice, won The Gallowmere at decision 53, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, loop, soft-lock, or stuck state.
-- Economy: the accepted first attempt used 4.604M raw / 157,475 uncached input + 11,073 output at 96.58% input-cache reuse (168,548 useful, about 3,180/decision); an earlier fresh seed failed closed before gameplay on a noncanonical wrapper pragma and published no report.
-- Self-critique/follow-through: the canary proves truthful copy and clean-build safety, not strategy diversity; it again chose LURE and named Station density S1, so the next decisive evidence remains a fresh landed-build 10-player Terra pilot.
-- Guard: review regressions pin raw presenter, MCP, terminal, UI, receipt, and manifest-drift behavior; pre/post crawls `20260802T091005Z` / `20260802T105904Z` have zero findings, and exact health passes 456 files/3,786 tests plus all 12 packs with liveness isolated but otherwise unchanged.

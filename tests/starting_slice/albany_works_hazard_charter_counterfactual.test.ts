@@ -6,27 +6,14 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import {
-  AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-  AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
-  AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
-  authoredLocalEventLegacyOptionId,
-} from "../../src/world/local_event_scene_legacy.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
-import { OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import {
-  exactAlbanyGreenwayDepthPredecessor,
-  exactAlbanyMarketDepthPredecessor,
-  exactAlbanyWorksHazardPredecessor,
-} from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
-const PREDECESSOR = exactAlbanyWorksHazardPredecessor(WORLD);
 const REGION = "Capital / Mohawk";
 const STATION = "albany_city__transport_hub";
 const STATION_POI = "albany_city__transport_hub__poi";
@@ -91,6 +78,7 @@ function atInvestigatedWorks(
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(world.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
@@ -370,91 +358,4 @@ describe("Albany Works hazard-shift charter", () => {
       /earlier event|requirements|newest-first/i,
     );
   });
-
-  it("migrates the exact current-main predecessor neutrally and rejects divergent hashes", () => {
-    expect(hashState(PREDECESSOR)).toBe(AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH);
-    expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-
-    const unresolvedSource = atInvestigatedWorks(PREDECESSOR, false);
-    const unresolved = OverworldSession.restore(WORLD, unresolvedSource.session.snapshot());
-    expect(unresolved.snapshot().worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    unresolved.investigateEvent(EVENT);
-    expect(unresolved.view().eventChoices).toEqual([
-      [EVENT, WITNESS_CHARTER],
-      [EVENT, BYPASS_CHARTER],
-    ]);
-
-    const genericAfterWolf = completeWolf(atInvestigatedWorks(PREDECESSOR), PREDECESSOR);
-    genericAfterWolf.resolveEvent(EVENT);
-    const genericSnapshot = genericAfterWolf.snapshot();
-    const migrated = OverworldSession.restore(WORLD, genericSnapshot);
-    expect(
-      migrated.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: EVENT_SCENE,
-      optionId: authoredLocalEventLegacyOptionId(
-        AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
-      ),
-      sourceWorldHash: AUTHORED_ALBANY_WORKS_HAZARD_PREDECESSOR_WORLD_HASH,
-    });
-    expect(migrated.view().jobChoices).toEqual(expectedJobChoices());
-    expect(JSON.stringify(migrated.snapshot())).not.toContain(WITNESS_RELEASE);
-    expect(JSON.stringify(migrated.snapshot())).not.toContain(BYPASS_RELEASE);
-    expect(OverworldSession.restore(WORLD, migrated.snapshot()).snapshot()).toEqual(
-      migrated.snapshot(),
-    );
-
-    const nativeJob = completeWolf(atInvestigatedWorks(PREDECESSOR), PREDECESSOR);
-    nativeJob.workLocalJob(JOB, PROTECT);
-    const nativeProof = nativeJob
-      .snapshot()
-      .journalEntries.find((entry) => entry.id === `job:${JOB}`)?.localSceneProof;
-    const restoredNative = OverworldSession.restore(WORLD, nativeJob.snapshot());
-    expect(
-      restoredNative.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
-        ?.localSceneProof,
-    ).toEqual(nativeProof);
-
-    const divergentWorld = structuredClone(PREDECESSOR);
-    const divergentEvent = divergentWorld.local_events.find((candidate) => candidate.id === EVENT);
-    if (!divergentEvent) throw new Error("Expected predecessor Works event.");
-    divergentEvent.summary = `${divergentEvent.summary} Divergent copy.`;
-    const divergent = structuredClone(genericSnapshot);
-    divergent.worldHash = hashState(divergentWorld);
-    expect(() => OverworldSession.restore(WORLD, divergent)).toThrow(/different world manifest/i);
-  });
-
-  it.each([
-    [
-      "pre-Greenway",
-      exactAlbanyGreenwayDepthPredecessor(WORLD),
-      AUTHORED_ALBANY_GREENWAY_PREDECESSOR_WORLD_HASH,
-    ],
-    [
-      "pre-Market",
-      exactAlbanyMarketDepthPredecessor(WORLD),
-      AUTHORED_ALBANY_MARKET_PREDECESSOR_WORLD_HASH,
-    ],
-  ] as const)(
-    "stacks a neutral Works marker through the %s migration epoch",
-    (_label, source, hash) => {
-      expect(hashState(source)).toBe(hash);
-      const genericAfterWolf = completeWolf(atInvestigatedWorks(source), source);
-      genericAfterWolf.resolveEvent(EVENT);
-
-      const restored = OverworldSession.restore(WORLD, genericAfterWolf.snapshot());
-      expect(
-        restored.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
-          ?.localSceneProof,
-      ).toMatchObject({
-        sceneId: EVENT_SCENE,
-        optionId: authoredLocalEventLegacyOptionId(hash),
-        sourceWorldHash: hash,
-      });
-      expect(restored.view().jobChoices).toEqual(expectedJobChoices());
-      expect(JSON.stringify(restored.snapshot())).not.toContain(WITNESS_RELEASE);
-      expect(JSON.stringify(restored.snapshot())).not.toContain(BYPASS_RELEASE);
-    },
-  );
 });

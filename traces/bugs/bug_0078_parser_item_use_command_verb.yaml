@@ -110,11 +110,13 @@ test_updates:
       trips undefined, the full drink-phial behaviour, win route 35/35) are unchanged — no assertion
       weakened, only the deliberately-widened one updated.
 closes:
-  - bug_0077 deferred note: "the rope/TIE (Old Well) and the analogous barrow iron_bar/LEVER,
+  - >-
+    bug_0077 deferred note: "the rope/TIE (Old Well) and the analogous barrow iron_bar/LEVER,
     cold_forge pry_bar/PRY — these are item-on-target USEs whose prose primes a natural verb;
     generalizing bug_0074's command_verb to item-on-target is its own feature" — now implemented.
 deferred:
-  - sunken_barrow's narrative findings from this playtest are design-scope, not parser defects: the
+  - >-
+    sunken_barrow's narrative findings from this playtest are design-scope, not parser defects: the
     shade's "don't wake the Lord" warning promises a fork the relic chamber never offers, and the
     +2 defense buff / warned strength-drain appear inert in seed-7 combat (an RPG combat-formula /
     content question, larger than this cycle).

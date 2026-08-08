@@ -37,7 +37,6 @@ export type OpeningDepartureRecapSlot =
 export type OpeningDepartureRecapStatus =
   | "selected"
   | "solo_default"
-  | "legacy"
   | "open_optional"
   | "available_after_preparation";
 
@@ -100,8 +99,6 @@ export type OpeningCompactDepartureRecapTerms = readonly [
 export type OpeningDepartureRecapInputs = Readonly<{
   world: OverworldManifest;
   journalEntries: readonly OverworldJournalEntry[];
-  trustedLegacySourceWorldHash?: string | null;
-  trustedCivicSourceWorldHash?: string | null;
 }>;
 
 function recapEntry(
@@ -180,7 +177,6 @@ export function deriveOpeningDepartureRecap(
 ): OpeningDepartureRecap | null {
   const chain = resolveOpeningDispatchManifestChain(args.world);
   if (!chain?.ally) return null;
-  const trustedLegacySourceWorldHash = args.trustedLegacySourceWorldHash ?? null;
 
   try {
     const registrationProof = proveOpeningRegistrationJournal({
@@ -195,9 +191,8 @@ export function deriveOpeningDepartureRecap(
       registrationProof,
       journalEntries: args.journalEntries,
       expectedTown: null,
-      trustedLegacySourceWorldHash,
     });
-    if (!reliefOathProof.option && !reliefOathProof.legacy) return null;
+    if (!reliefOathProof.option) return null;
 
     const leadSourceProof = proveOpeningLeadSourceJournal({
       scene: chain.leadSource,
@@ -213,8 +208,6 @@ export function deriveOpeningDepartureRecap(
       leadSourceProof,
       journalEntries: args.journalEntries,
       expectedTown: null,
-      trustedLegacySourceWorldHash,
-      trustedCivicSourceWorldHash: args.trustedCivicSourceWorldHash ?? null,
     });
     const reliefAllocationProof = proveOpeningReliefAllocationJournal({
       scene: chain.reliefAllocation,
@@ -223,7 +216,6 @@ export function deriveOpeningDepartureRecap(
       preparationScene: chain.preparation,
       journalEntries: args.journalEntries,
       expectedTown: null,
-      trustedLegacySourceWorldHash,
     });
     const allyProof = proveOpeningAllyJournal({
       scene: chain.ally,
@@ -234,7 +226,6 @@ export function deriveOpeningDepartureRecap(
       reliefAllocationScene: chain.reliefAllocation,
       journalEntries: args.journalEntries,
       expectedTown: null,
-      trustedLegacySourceWorldHash,
     });
     const dispatchWindow = deriveQuestDispatchPresentationWindow({
       questId: chain.quest.id,
@@ -245,7 +236,6 @@ export function deriveOpeningDepartureRecap(
       openingPreparation: chain.preparation,
       openingReliefAllocation: chain.reliefAllocation,
       openingAlly: chain.ally,
-      trustedLegacySourceWorldHash,
     });
     const dispatch = deriveDispatchRecap(dispatchWindow);
     const selectedSupport: OpeningDispatchReplayChoice[] = [
@@ -297,18 +287,16 @@ export function deriveOpeningDepartureRecap(
           registrationProof.profile.id,
         ),
       ),
-      reliefOathProof.option
-        ? recapEntry(
-            "duty",
-            "Duty",
-            "selected",
-            reliefOathProof.option.title,
-            selectedFieldTerm(
-              presentOpeningReliefOath(chain.reliefOath, registrationProof.profile.character),
-              reliefOathProof.option.id,
-            ),
-          )
-        : recapEntry("duty", "Duty", "legacy", "Legacy duty preserved"),
+      recapEntry(
+        "duty",
+        "Duty",
+        "selected",
+        reliefOathProof.option.title,
+        selectedFieldTerm(
+          presentOpeningReliefOath(chain.reliefOath, registrationProof.profile.character),
+          reliefOathProof.option.id,
+        ),
+      ),
       recapEntry(
         "evidence",
         "Evidence",
@@ -333,9 +321,7 @@ export function deriveOpeningDepartureRecap(
               preparationProof.profile.id,
             ),
           )
-        : preparationProof.legacy
-          ? recapEntry("preparation", "Preparation", "legacy", "Legacy preparation preserved")
-          : recapEntry("preparation", "Preparation", "open_optional", null),
+        : recapEntry("preparation", "Preparation", "open_optional", null),
       reliefAllocationProof.option
         ? recapEntry(
             "relief_allocation",
@@ -350,14 +336,7 @@ export function deriveOpeningDepartureRecap(
               reliefAllocationProof.option.id,
             ),
           )
-        : reliefAllocationProof.legacy
-          ? recapEntry(
-              "relief_allocation",
-              "Relief allocation",
-              "legacy",
-              "Legacy relief allocation preserved",
-            )
-          : recapEntry("relief_allocation", "Relief allocation", "open_optional", null),
+        : recapEntry("relief_allocation", "Relief allocation", "open_optional", null),
       allyProof.option
         ? recapEntry(
             "field_team",
@@ -369,9 +348,7 @@ export function deriveOpeningDepartureRecap(
               allyProof.option.id,
             ),
           )
-        : allyProof.legacy
-          ? recapEntry("field_team", "Field team", "legacy", "Legacy solo team preserved")
-          : recapEntry("field_team", "Field team", "open_optional", null),
+        : recapEntry("field_team", "Field team", "open_optional", null),
     ]);
 
     return Object.freeze({

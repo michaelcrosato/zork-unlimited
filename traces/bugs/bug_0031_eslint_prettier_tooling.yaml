@@ -57,13 +57,18 @@ improvement:
         Format check (Prettier) steps. (The final Health step already runs all of them.)
     - docs (AGENTS.md, README.md): updated the lint-is-typecheck descriptions to the new trio.
   code_fixes:   # 8 genuine, behavior-PRESERVING findings ESLint surfaced (tests prove no behavior change)
-    - bin/inspect.ts + src/validate/parser_validator.ts (x3): the terse `(a, b)` comma-sequence
+    - >-
+      bin/inspect.ts + src/validate/parser_validator.ts (x3): the terse `(a, b)` comma-sequence
       statement idiom (no-unused-expressions) rewritten to explicit block statements.
-    - bin/play.ts: `let scripted` -> `const scripted` (prefer-const; never reassigned).
-    - src/afk/assessor.ts: dropped the useless `= null` initializer on `pt` (no-useless-assignment;
+    - >-
+      bin/play.ts: `let scripted` -> `const scripted` (prefer-const; never reassigned).
+    - >-
+      src/afk/assessor.ts: dropped the useless `= null` initializer on `pt` (no-useless-assignment;
       both try and catch assign it).
-    - src/parser/legal_actions.ts: removed the unused `locateObject` import.
-    - src/validate/parser_validator.ts: removed the unused `npcIds` local.
+    - >-
+      src/parser/legal_actions.ts: removed the unused `locateObject` import.
+    - >-
+      src/validate/parser_validator.ts: removed the unused `npcIds` local.
   reformat: >
     `prettier --write src bin scripts agents` reformatted 43 files (formatting only: line
     wrapping at printWidth 100, etc.). The full test suite + tsc prove behavior is byte-for-byte

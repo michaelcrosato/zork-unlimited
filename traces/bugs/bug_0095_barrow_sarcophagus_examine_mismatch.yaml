@@ -41,10 +41,12 @@ improvement:
     - The sarcophagus examine no longer promises the slab's repeatable might-check — it
       contains neither "the same as the slab" nor "a stubborn back", and signals a
       single irrevocable act; it still names the iron bar and repeats the warning.
-    - The prise interaction is UNCHANGED and still has no skill_check: prising the
+    - >-
+      The prise interaction is UNCHANGED and still has no skill_check: prising the
       sarcophagus with the iron bar fires ending_woken instantly on the first use
       (text now matches that one-wrench reality).
-    - Examine-only: no object/interaction/flag/quest/score(50)/win/ending change; the
+    - >-
+      Examine-only: no object/interaction/flag/quest/score(50)/win/ending change; the
       peaceful canonical route still wins ending_victory 50/50; pack validates 0/0.
 locked_by:
   - tests/regression/rpg_barrow_sarcophagus_examine_mismatch.test.ts

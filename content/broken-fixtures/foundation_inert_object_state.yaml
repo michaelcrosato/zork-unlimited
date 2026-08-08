@@ -1,0 +1,30 @@
+# MUST WARN: INERT_OBJECT_STATE
+# An authored effect opens a declared object, but no condition ever reads whether
+# that object is open. The write is dead bookkeeping rather than working progress.
+meta: { id: inert_object_state, title: "Inert Object State", start_room: a, vars_init: { hp: 10, attack: 2, defense: 1 } }
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    objects: [lever, chest]
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+objects:
+  - id: lever
+    name: "iron lever"
+    aliases: [lever]
+    description: "A lever wired to the chest."
+    interactions:
+      - verb: USE
+        target: lever
+        effects: [{ open_object: chest }]
+  - id: chest
+    name: "plain chest"
+    aliases: [chest]
+    description: "A chest whose open state changes nothing."
+    openable: true
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]

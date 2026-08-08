@@ -40,7 +40,6 @@ export type OverworldSessionQuestStartPlanState = {
   openingPreparation?: OpeningPreparation | null;
   openingReliefAllocation?: OpeningReliefAllocation | null;
   openingAlly?: OpeningAlly | null;
-  trustedLegacySourceWorldHash?: string | null;
   questsById: ReadonlyMap<string, OverworldQuest>;
   areasById: ReadonlyMap<string, OverworldArea>;
   currentTownId: string;
@@ -64,7 +63,6 @@ export type OverworldSessionQuestCompletionPlanState = {
   openingRegistration?: OpeningRegistration | null;
   openingReliefOath?: OpeningReliefOath | null;
   openingLeadSource?: OpeningLeadSource | null;
-  trustedLegacyRegistrationReceiptSourceWorldHash?: string | null;
 };
 
 export type MutableOverworldSessionQuestStartState = OverworldActionJournalState & {

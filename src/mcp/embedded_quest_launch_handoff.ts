@@ -9,9 +9,7 @@ export type EmbeddedQuestLaunchHandoff = Readonly<{
   transition: "Albany Station -> The Wolf-Winter";
   route: readonly [id: string, title: string];
   preparation: Readonly<
-    | { status: "imported"; title: string }
-    | { status: "legacy_import"; title: string }
-    | { status: "declined_at_launch"; title: null }
+    { status: "imported"; title: string } | { status: "declined_at_launch"; title: null }
   >;
   childState: "actionable";
 }>;
@@ -40,9 +38,7 @@ export function embeddedQuestLaunchHandoff(args: {
   const preparationHandoff =
     preparation.status === "selected" && preparation.title
       ? Object.freeze({ status: "imported" as const, title: preparation.title })
-      : preparation.status === "legacy" && preparation.title
-        ? Object.freeze({ status: "legacy_import" as const, title: preparation.title })
-        : Object.freeze({ status: "declined_at_launch" as const, title: null });
+      : Object.freeze({ status: "declined_at_launch" as const, title: null });
   return Object.freeze({
     version: EMBEDDED_QUEST_LAUNCH_HANDOFF_VERSION,
     transition: "Albany Station -> The Wolf-Winter",

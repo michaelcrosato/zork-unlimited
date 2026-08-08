@@ -8,6 +8,7 @@ import {
   buildLatestCycleMetadata,
   buildPrompt,
   buildUltraplanPrompt,
+  formatRecommendationConsoleLine,
   formatLoopStateAppend,
   playtestTargetSummary,
   playtestTarget,
@@ -17,6 +18,7 @@ import {
 } from "../../src/ai-loop.js";
 import {
   OVERWORLD_PLAYTEST_TARGET,
+  SATURATION_FLOOR,
   type Assessment,
   type ImprovementCandidate,
 } from "../../src/afk/assessor.js";
@@ -49,6 +51,15 @@ function assessment(top: ImprovementCandidate | null): Assessment {
     allGeneratorsClean: true,
     candidates: top ? [top] : [],
     top,
+  };
+}
+
+function saturatedAssessment(top: ImprovementCandidate | null): Assessment {
+  return {
+    ...assessment(top),
+    candidates: top ? [top] : [],
+    top,
+    allGeneratorsClean: true,
   };
 }
 
@@ -195,7 +206,7 @@ describe("buildPrompt blind-playtest contract", () => {
     );
     expect(prompt).toContain("Start as a new player and use only the game surface");
     expect(prompt).toContain("the CORE GAME — the open-world overworld from a FRESH start");
-    expect(prompt).toContain("`npm run blind`");
+    expect(prompt).toContain("`npm run blind -- --out");
     expect(prompt).toContain("`play_mode: pure`");
     expect(prompt).toContain("`start_surface: fresh_overworld`");
     expect(prompt).toContain(
@@ -207,8 +218,9 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(prompt).not.toContain("world_quest_id=");
     expect(prompt).not.toContain("QUEST_ID");
     expect(prompt).not.toContain("playtest by world_quest_id");
-    expect(prompt).toContain(`to: ${playtestRecord}`);
-    expect(prompt).toContain("loop.sh checks for this report before the final commit");
+    expect(prompt).toContain(`npm run blind -- --out ${playtestRecord.replace(/\.md$/, "")}`);
+    expect(prompt).toContain(`${playtestRecord.replace(/\.md$/, ".run.json")}`);
+    expect(prompt).toContain("the exact provisional commit before the final commit");
     expect(prompt).not.toContain("player-experience harness");
     expect(prompt).not.toContain("packaged DEFAULT harness");
     expect(prompt).not.toContain("WRITE/COPY the verified");
@@ -252,6 +264,31 @@ describe("buildPrompt blind-playtest contract", () => {
     expect(prompt).toContain('Recommended: Fix quest "cold_forge"');
     expect(prompt).not.toContain("Playtest launch this cycle: cold_forge");
     expectFreshOverworldContract(prompt);
+  });
+
+  it("keeps a saturated floor pick executable without presenting strategic direction", () => {
+    const top = {
+      ...candidate("content_fix", "wolf_winter"),
+      title: 'Maintenance rotation: review quest "wolf_winter"',
+      score: SATURATION_FLOOR,
+    };
+    const a = saturatedAssessment(top);
+    const prompt = buildPrompt({ a, top, playtestRecord });
+    const ultraplan = buildUltraplanPrompt({ a, playtestRecord, currentPlanRecord });
+
+    expect(formatRecommendationConsoleLine(a)).toContain("maintenance rotation only");
+    expect(formatRecommendationConsoleLine(a)).toContain("no strategic recommendation");
+    expect(formatRecommendationConsoleLine(a)).not.toContain("next best improvement");
+
+    expect(prompt).toContain("maintenance rotation (deterministic; not strategic direction)");
+    expect(prompt).toContain("floor candidate remains executable routine maintenance");
+    expect(prompt).not.toContain("▶ Recommended:");
+    expect(prompt).not.toContain("ranked next-best improvements");
+
+    expect(ultraplan).toContain("maintenance floor, not strategic direction");
+    expect(ultraplan).toContain("Do not carry this floor ordering into the ultraplan");
+    expect(ultraplan).toContain("independently selects and justifies the structural re-aim");
+    expect(ultraplan).not.toContain("▶ Recommended:");
   });
 
   it("the rotation's core-game opening review gets the same overworld playtest step", () => {
@@ -306,13 +343,14 @@ describe("buildPrompt blind-playtest contract", () => {
 describe("buildUltraplanPrompt blind-playtest contract", () => {
   it("uses an ignored sole handoff and freezes it before fresh-overworld play", () => {
     const prompt = buildUltraplanPrompt({
+      a: saturatedAssessment(null),
       playtestRecord,
       currentPlanRecord,
       commitEnabled: true,
     });
 
     expect(prompt).toContain("overworld from a FRESH start");
-    expect(prompt).toMatch(/default\s+`npm run blind`/);
+    expect(prompt).toContain("`npm run blind -- --out");
     expect(prompt).toContain("one focused AdventureForge maintenance improvement");
     expect(prompt).not.toContain("FULL authority");
     expect(prompt).toContain(
@@ -332,7 +370,11 @@ describe("buildUltraplanPrompt blind-playtest contract", () => {
   });
 
   it("plays a clean baseline first when ultraplan commits are disabled", () => {
-    const prompt = buildUltraplanPrompt({ playtestRecord, currentPlanRecord });
+    const prompt = buildUltraplanPrompt({
+      a: saturatedAssessment(null),
+      playtestRecord,
+      currentPlanRecord,
+    });
 
     expect(prompt.indexOf("STEP -1")).toBeLessThan(prompt.indexOf("STEP 0"));
     expect(prompt).toContain("STOP without playing or editing");

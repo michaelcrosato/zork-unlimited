@@ -8,26 +8,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
-import { hashState } from "../../src/core/hash.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
-import {
-  AUTHORED_ALBANY_GREENWAY_LEGACY_JOB,
-  AUTHORED_ALBANY_WORKS_LEGACY_OPTION_ID,
-  authoredLocalJobLegacyOptionId,
-} from "../../src/world/local_job_scene_legacy.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
-import {
-  OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
-  OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH,
-  OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH,
-} from "../../src/world/session_snapshot_restore.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import {
-  exactAuthoredAlbanyWorksPredecessor,
-  exactAuthoredAlbanyWorksFirstSceneWorld,
-  exactF06World,
-} from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const JOB_ID = "albany_city__industrial__job";
@@ -37,9 +23,6 @@ const WORKS_CONTACT_ID = "albany_city__industrial__contact";
 const PROTECT_SHIFT = "protect_trapped_public_shift";
 const INVENTORY_STOCK = "inventory_outbound_cold_set_stock";
 const FULL = { compact_context: false, compact_result: false } as const;
-const PREDECESSOR_WORLD = exactAuthoredAlbanyWorksPredecessor(WORLD);
-const FIRST_SCENE_WORLD = exactAuthoredAlbanyWorksFirstSceneWorld(WORLD);
-const EARLIER_TRUSTED_WORLD = exactF06World(WORLD);
 
 function moveToArea(
   session: OverworldSession,
@@ -86,6 +69,7 @@ function preparedForWolf(
   session.scoutPoi(opening.pois[0]!.id);
   session.talkToCharacter(world.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
@@ -196,14 +180,13 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
   it("keeps a real full-session authored choice legal beyond the compact twelve-job window", () => {
     const denseWorld = structuredClone(WORLD);
     const worksIndex = denseWorld.local_jobs.findIndex((job) => job.id === JOB_ID);
-    const generic = AUTHORED_ALBANY_GREENWAY_LEGACY_JOB;
+    const generic = denseWorld.local_jobs.find((job) => job.authored_scene === undefined);
     const worksPoi = denseWorld.points_of_interest.find((poi) => poi.id === WORKS_POI_ID);
-    if (worksIndex < 0 || generic.authored_scene !== undefined || !worksPoi) {
+    if (worksIndex < 0 || !generic || !worksPoi) {
       throw new Error("Expected Works and generic Albany fixtures.");
     }
-    // Market and Greenway are now post-Wolf authored scenes hidden until their
-    // policy events resolve. Use the exact registered legacy Greenway copy to
-    // retain twelve visible generic predecessors ahead of Works.
+    // Retain twelve visible generic jobs ahead of Works without coupling this
+    // presentation-window check to historical authored content.
     const denseJobs = Array.from({ length: 13 }, (_, index) => ({
       ...structuredClone(generic),
       id: `albany_city__industrial__dense_job_${index}`,
@@ -317,122 +300,28 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
     const proofless = structuredClone(snapshot);
     const prooflessEntry = proofless.journalEntries.find((entry) => entry.id === `job:${JOB_ID}`);
     if (!prooflessEntry?.localSceneProof) throw new Error("Expected local-scene proof.");
-    delete prooflessEntry.localSceneProof.boundary;
+    delete (prooflessEntry.localSceneProof as { boundary?: unknown }).boundary;
     expect(() => OverworldSession.restore(WORLD, proofless)).toThrow(
-      /serialized local-scene proof requires its accepted-decision boundary/i,
+      /localSceneProof[^]*boundary[^]*Required/i,
     );
-  });
 
-  it("migrates unaffected and completed predecessor saves without inventing a new priority", () => {
-    expect(hashState(PREDECESSOR_WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH);
-    expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-
-    const unaffected = returnedToWorks(PREDECESSOR_WORLD).snapshot();
-    expect(unaffected.worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH);
-    const migrated = OverworldSession.restore(WORLD, unaffected);
-    expect(migrated.snapshot().worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    expect(migrated.view().jobChoices).toEqual([
-      [JOB_ID, PROTECT_SHIFT],
-      [JOB_ID, INVENTORY_STOCK],
+    const revisedWorld = structuredClone(WORLD);
+    const revisedOption = revisedWorld.local_jobs
+      .find((job) => job.id === JOB_ID)
+      ?.authored_scene?.options.find((option) => option.id === PROTECT_SHIFT);
+    if (!revisedOption) throw new Error("Expected the selected Works scene option.");
+    revisedOption.title = "Protect the public shift, revised";
+    revisedOption.preview = "Revised Works preview without structural changes.";
+    revisedOption.consequence = "Revised Works consequence without structural changes.";
+    const restoredAcrossSceneCopy = OverworldSession.restore(revisedWorld, snapshot);
+    expect(restoredAcrossSceneCopy.restoreWarnings()).toEqual([
+      OVERWORLD_CONTENT_HASH_MISMATCH_WARNING,
     ]);
-    expect(OverworldSession.restore(WORLD, migrated.snapshot()).snapshot()).toEqual(
-      migrated.snapshot(),
-    );
-
-    const opaqueLegacyChoice = returnedToWorks(PREDECESSOR_WORLD);
-    opaqueLegacyChoice.workLocalJob(JOB_ID);
-    const legacySnapshot = opaqueLegacyChoice.snapshot();
-    const restoredLegacy = OverworldSession.restore(WORLD, legacySnapshot);
-    const migratedLegacySnapshot = restoredLegacy.snapshot();
-    expect(migratedLegacySnapshot.minutes).toBe(legacySnapshot.minutes);
-    expect(migratedLegacySnapshot.regionRenown).toEqual(legacySnapshot.regionRenown);
-    expect(migratedLegacySnapshot.completedJobIds).toContain(JOB_ID);
     expect(
-      migratedLegacySnapshot.journalEntries.find((entry) => entry.id === `job:${JOB_ID}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: "albany:works-yard-winter-shift",
-      optionId: AUTHORED_ALBANY_WORKS_LEGACY_OPTION_ID,
-    });
-    expect(restoredLegacy.view().jobChoices).toEqual([]);
-    expect(() => restoredLegacy.workLocalJob(JOB_ID, PROTECT_SHIFT)).toThrow(
-      /completed with a different authored option/i,
-    );
-    expect(OverworldSession.restore(WORLD, migratedLegacySnapshot).snapshot()).toEqual(
-      migratedLegacySnapshot,
-    );
-
-    const relabeledSource = structuredClone(migratedLegacySnapshot);
-    const relabeledProof = relabeledSource.journalEntries.find(
-      (entry) => entry.id === `job:${JOB_ID}`,
-    )?.localSceneProof;
-    if (!relabeledProof) throw new Error("Expected the canonical Works migration proof.");
-    const earlierSourceWorldHash = hashState(EARLIER_TRUSTED_WORLD);
-    relabeledProof.sourceWorldHash = earlierSourceWorldHash;
-    relabeledProof.optionId = authoredLocalJobLegacyOptionId(earlierSourceWorldHash);
-    expect(() => OverworldSession.restore(WORLD, relabeledSource)).toThrow(
-      /untrusted legacy source/i,
-    );
-  });
-
-  it("accepts the first authored-Works manifest as a stacked no-op predecessor", () => {
-    expect(hashState(FIRST_SCENE_WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_FIRST_SCENE_WORLD_HASH);
-    const firstSceneSession = returnedToWorks(FIRST_SCENE_WORLD);
-    firstSceneSession.workLocalJob(JOB_ID, PROTECT_SHIFT);
-    const firstSceneSnapshot = firstSceneSession.snapshot();
-
-    const restored = OverworldSession.restore(WORLD, firstSceneSnapshot);
-    const restoredSnapshot = restored.snapshot();
-    expect(restoredSnapshot.worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    expect(
-      restoredSnapshot.journalEntries.find((entry) => entry.id === `job:${JOB_ID}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: "albany:works-yard-winter-shift",
-      optionId: PROTECT_SHIFT,
-    });
-    expect(restoredSnapshot.minutes).toBe(firstSceneSnapshot.minutes);
-    expect(restoredSnapshot.regionRenown).toEqual(firstSceneSnapshot.regionRenown);
-    expect(OverworldSession.restore(WORLD, restoredSnapshot).snapshot()).toEqual(restoredSnapshot);
-  });
-
-  it("preserves a generic Works completion made before registration existed in the journey trail", () => {
-    for (const legacyWorld of [PREDECESSOR_WORLD, EARLIER_TRUSTED_WORLD]) {
-      const legacy = new OverworldSession(legacyWorld);
-      legacy.scoutPoi(legacy.view().pois[0]!.id);
-      moveToArea(legacy, "albany_city__market", legacyWorld);
-      legacy.scoutPoi(legacy.view().pois[0]!.id);
-      legacy.talkToCharacter(legacy.view().characters[0]!.id);
-      moveToArea(legacy, WORKS_AREA_ID, legacyWorld);
-      legacy.scoutPoi(WORKS_POI_ID);
-      legacy.talkToCharacter(WORKS_CONTACT_ID);
-      legacy.workLocalJob(JOB_ID);
-
-      const legacyHiddenJobCount = legacy.view().hiddenJobCount;
-      const predecessorSnapshot = legacy.snapshot();
-      expect(predecessorSnapshot.openingLeadSourceDecisionTrail).toBeUndefined();
-      const migrated = OverworldSession.restore(WORLD, predecessorSnapshot);
-      const migratedSnapshot = migrated.snapshot();
-      const proof = migratedSnapshot.journalEntries.find(
-        (entry) => entry.id === `job:${JOB_ID}`,
-      )?.localSceneProof;
-      expect(proof).toMatchObject({
-        sceneId: "albany:works-yard-winter-shift",
-        optionId: AUTHORED_ALBANY_WORKS_LEGACY_OPTION_ID,
-        sourceWorldHash: OVERWORLD_AUTHORED_LOCAL_JOB_PREDECESSOR_WORLD_HASH,
-      });
-      expect(proof).not.toHaveProperty("boundary");
-      expect(migratedSnapshot.minutes).toBe(predecessorSnapshot.minutes);
-      expect(migratedSnapshot.regionRenown).toEqual(predecessorSnapshot.regionRenown);
-      // The current world also contains the unavailable Winter Return Docket,
-      // Campus Archive Query, Cade Return Packet, Market crates scene, and
-      // Greenway Corridor Survey. Their truthful hidden
-      // count is independent of preserving this Works completion.
-      expect(migrated.view().hiddenJobCount).toBe(legacyHiddenJobCount + 5);
-      expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(
-        migratedSnapshot,
-      );
-    }
+      restoredAcrossSceneCopy
+        .snapshot()
+        .journalEntries.find((entry) => entry.id === `job:${JOB_ID}`)?.text,
+    ).toBe(snapshot.journalEntries.find((entry) => entry.id === `job:${JOB_ID}`)?.text);
   });
 
   it("exposes the exact option through MCP and wires the human UI to the same action", () => {

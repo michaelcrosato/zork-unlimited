@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { hashState } from "../../src/core/hash.js";
 import { OverworldSession } from "../../src/world/session.js";
-import {
-  OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION,
-  OVERWORLD_SESSION_SAVE_VERSION,
-} from "../../src/world/session_snapshot.js";
+import { OVERWORLD_SESSION_SAVE_VERSION } from "../../src/world/session_snapshot.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const QUEST_ID = "wolf_winter";
@@ -40,6 +39,7 @@ function sessionAtWolf(): OverworldSession {
   session.talkToCharacter("albany_city__civic_core__contact");
   session.chooseJourneyStory("albany:ledger_advocate");
   expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
@@ -117,6 +117,27 @@ describe("quest-launch resource replay", () => {
         started.character.relationships.flatMap((relationship) => relationship.memories),
       ).toContain(spec.memory);
       expect(OverworldSession.restore(WORLD, started).snapshot()).toEqual(started);
+
+      const revisedWorld = structuredClone(WORLD);
+      const revisedQuest = revisedWorld.quests.find((quest) => quest.id === QUEST_ID);
+      const revisedApproach = revisedQuest?.launch?.options.find(
+        (candidate) => candidate.id === spec.id,
+      );
+      if (!revisedQuest || !revisedApproach) throw new Error("Expected Wolf-Winter approach copy.");
+      revisedQuest.title = "Wolf-Winter, revised";
+      revisedQuest.discovery = "Revised Wolf-Winter discovery copy.";
+      revisedApproach.title = "Revised approach title";
+      revisedApproach.preview = "Revised approach preview.";
+      revisedApproach.consequence = "Revised approach consequence.";
+      const restoredAcrossQuestCopy = OverworldSession.restore(revisedWorld, started);
+      expect(restoredAcrossQuestCopy.restoreWarnings()).toEqual([
+        OVERWORLD_CONTENT_HASH_MISMATCH_WARNING,
+      ]);
+      expect(
+        restoredAcrossQuestCopy
+          .snapshot()
+          .journalEntries.find((entry) => entry.id === `quest:${QUEST_ID}`)?.text,
+      ).toBe(start.text);
 
       session.completeQuest(QUEST_ID, {
         endingId: "ending_held_timber_saved",
@@ -270,23 +291,5 @@ describe("quest-launch resource replay", () => {
     expect(() => OverworldSession.restore(WORLD, stripped)).toThrow(
       /lacks its current dispatch seal/i,
     );
-  });
-
-  it("canonically backfills an unsealed v9 launch once and emits a stable v10 save", () => {
-    const session = sessionAtWolf();
-    session.startQuest(QUEST_ID, "albany:wolf_approach_exposed_ridge");
-    const previous = structuredClone(session.snapshot());
-    previous.version = OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION;
-    const proof = questStartEntry(previous).questStartProof;
-    if (proof?.kind !== "approach") throw new Error("expected approach proof");
-    delete proof.dispatchSeal;
-
-    const migrated = OverworldSession.restore(WORLD, previous).snapshot();
-    expect(migrated.version).toBe(OVERWORLD_SESSION_SAVE_VERSION);
-    const migratedProof = questStartEntry(migrated).questStartProof;
-    expect(migratedProof?.kind).toBe("approach");
-    if (migratedProof?.kind !== "approach") throw new Error("expected migrated proof");
-    expect(migratedProof.dispatchSeal?.proofHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(OverworldSession.restore(WORLD, migrated).snapshot()).toEqual(migrated);
   });
 });

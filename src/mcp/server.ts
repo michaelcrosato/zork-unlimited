@@ -1558,7 +1558,7 @@ tool(
 );
 tool(
   "inspect_overworld_session_story",
-  "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions; read-only. Compact returns comparison + unchanged receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands. Reveal authority is session-local; restore resets it. Detail may include selected terms. compact_result:false returns full story and preserves reveals.",
+  "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.",
   z
     .object({
       ...OVERWORLD_SESSION,

@@ -9,9 +9,10 @@ reference for what each tier does, when it runs, and its exact shapes.
 ## 1. The pyramid
 
 - **Tier 0 — dev tests** (always, inside `npm run health`): the vitest
-  unit/property/regression suite, the two validators, and the exhaustive
-  solver. Proves _structure_: every ending reachable, no soft-locks, sound
-  scoring, no test/schema regressions.
+  unit/property/regression suite, the two validators, exhaustive shipped-pack
+  proofs, bug-trace integrity, and the opening-density budget. Proves
+  _structure_: tested endings reachable, progress-action liveness, sound
+  scoring, valid evidence references, and no test/schema/density regressions.
 - **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure
   engine in-process across every shipped quest plus a full overworld sweep,
   checking nine invariant oracles every step. `crawl:smoke` runs every loop
@@ -26,6 +27,8 @@ reference for what each tier does, when it runs, and its exact shapes.
   interviews only after a confirmed exit and cross-checks the schema-V2 report
   receipt against server evidence. Evidence-sidecar v2 binds seed, clean tracked
   commit, canonical world id/hash, and quest outcomes. One per normal cycle; the
+  loop's commit gate requires that V2 sidecar, verifies its exact receipt, and
+  rejects evidence whose build commit is not the current provisional HEAD. The
   milestone/feedback-harvest `fleet` runs 100 seed/model variants of that same
   neutral pure contract. Direct quest, persona-coverage, crawler, smoke, and
   mock paths are explicit structural QA and never pure retention evidence.
@@ -54,17 +57,20 @@ reference for what each tier does, when it runs, and its exact shapes.
 
 ## 2. When each runs + budgets
 
-| Lane                          | Trigger                                                                                                     | Budget                                                                                                                                                                                       | Cost                      |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `crawl:smoke`                 | every loop cycle (pre- and post-work gate)                                                                  | fixed two-seed, 250-step-per-quest single-worker sweep; runtime is machine-dependent                                                                                                         | free                      |
-| `crawl:deep`                  | nightly / manual                                                                                            | 64 seeds, 2,000 steps per quest, 20,000-state solver budget, and eight workers with 900s soft cutoffs; runtime is machine-dependent, and any cutoff is loud via `truncated` / `skippedItems` | free                      |
-| `blind` (single)              | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                   | $ (one LLM playtest)      |
-| `fleet -- --admission-canary` | before expanding Spark spend or a Spark transport change                                                    | three planned serial fresh Spark pure runs; first failure suppresses unlaunched slots; isolated transport go/no-go, never certification                                                      | up to $ × 3               |
-| `fleet -- --count 100`        | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                           | $ × 100 (real LLM tokens) |
-| `starting-slice:pilot`        | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-member homogeneous-provider/model no-retry cohort as a go/no-go pilot; never certification                                                                       | free                      |
-| `starting-slice:certify`      | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                          | free                      |
-| `fleet:mock`                  | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                 | zero tokens               |
-| `feedback:compile`            | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                           | free                      |
+| Lane                          | Trigger                                                                                                     | Budget                                                                                                                                                                                                               | Cost                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `crawl:smoke`                 | every loop cycle (pre- and post-work gate)                                                                  | fixed two-seed, 250-step-per-quest single-worker sweep; runtime is machine-dependent                                                                                                                                 | free                      |
+| `crawl:deep`                  | nightly (`deep-audit.yml`) / manual dispatch                                                                | 64 seeds, 2,000 steps per quest, 20,000-state solver budget, and eight workers with 900s soft cutoffs; runtime is machine-dependent, and any cutoff is loud via `truncated` / `skippedItems`                         | free                      |
+| `verify:bug-traces`           | every health/CI run; repeated nightly                                                                       | parse all `traces/bugs/*.yaml`; validate mapping/ID/narrative essentials and current-or-historical concrete path references                                                                                          | free                      |
+| `verify:opening-density`      | every health/CI run                                                                                         | canonical compact start: at most 732 word tokens and 12 immediately actionable options before the first player action; reductions do not require a re-pin                                                            | free                      |
+| `test:coverage`               | nightly / manual non-player audit                                                                           | V8 statement/branch/function/line report for root `src`, `bin`, `scripts`, and `agents` exercised by Vitest's standard project; coverage-only 300 s per-test ceiling; JSON summary + browsable HTML retained 30 days | free, long-running        |
+| `blind` (single)              | every normal cycle                                                                                          | one pure journey; game-native goal/checkpoints govern exit                                                                                                                                                           | $ (one LLM playtest)      |
+| `fleet -- --admission-canary` | before expanding Spark spend or a Spark transport change                                                    | three planned serial fresh Spark pure runs; first failure suppresses unlaunched slots; isolated transport go/no-go, never certification                                                                              | up to $ × 3               |
+| `fleet -- --count 100`        | milestone / feedback-harvest cycles (~every 10, or when the ledger's open questions outgrow single reports) | 100 pure fresh-overworld runs at `--concurrency C`                                                                                                                                                                   | $ × 100 (real LLM tokens) |
+| `starting-slice:pilot`        | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-member homogeneous-provider/model no-retry cohort as a go/no-go pilot; never certification                                                                                               | free                      |
+| `starting-slice:certify`      | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                                                  | free                      |
+| `fleet:mock`                  | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                         | zero tokens               |
+| `feedback:compile`            | whenever ≥3 new verified reports exist since the last compile                                               | seconds (deterministic clustering)                                                                                                                                                                                   | free                      |
 
 ## 3. Exact commands
 
@@ -73,6 +79,12 @@ reference for what each tier does, when it runs, and its exact shapes.
 npm run crawl:smoke                                # loop gate: all quests + overworld sweep, exit 1 on any non-ORPHAN finding
 npm run crawl:deep                                 # nightly/manual soak (multi-worker)
 npm run crawl -- --workers 4 --seeds 7             # custom invocation (flags in bin/crawl.ts)
+
+# Non-player integrity and measurement
+npm run verify:bug-traces                          # strict YAML/identity/current-or-historical path gate
+npm run verify:opening-density                     # real compact opening against 732-token / 12-option ceilings
+npm run test:coverage                              # standard-project V8 report in coverage/
+npm run audit:non-player                           # all three checks above
 
 # Tier 2 — blind playtests
 npm run blind                                      # canonical pure player, fresh overworld
@@ -95,8 +107,9 @@ npm run assess                                     # preview the ranked next-bes
 npm run ai:loop                                    # one cycle: assess + emit prompt/artifacts
 ```
 
-`crawl:deep` and a live (non-mock) `fleet` run spend real time/tokens — run them
-nightly or manually, never inside an automated smoke check. Before launching a
+`crawl:deep` and a live (non-mock) `fleet` run spend real time/tokens. The
+zero-token deep crawl runs nightly or by manual workflow dispatch, never inside
+the PR smoke gate; live fleets remain deliberate operator launches. Before launching a
 live member, fleet preflight freezes the full clean tracked Git commit,
 canonical world id/hash, contiguous seeds, and run/model plan. Dirty state or a
 Git/provenance error fails before token spend; untracked notes do not dirty the
@@ -110,6 +123,28 @@ The runner never performs PID-based stale-lock recovery; after confirming no
 runner remains, an operator may remove only the active lease manually. See the
 fleet section of `docs/blind_playtest_protocol.md` for the record and recovery
 limits.
+
+The opening-density budget measures the actual default `start_overworld`
+payload before the player's first action. Its word total includes tutorial,
+goal/guidance, the compact legend, and compact context; its option total includes
+immediately available roads, areas, points of interest, contacts, events, and
+available services. The 2026-08-05 baseline is 732 word tokens and 12 actionable
+options. Either number may fall without changing the ceiling; exceeding either
+fails health and CI. This counter-metric prevents a wording or schema change from
+silently paying for clarity by adding still more opening material.
+
+Bug artifacts are historical evidence, so their concrete file references may
+resolve in the current tree or in reachable Git history. CI checks out full
+history for this reason. Ignored ad-hoc recorder output is generated evidence,
+not a source-file reference.
+The scheduled coverage report is deliberately separate from `npm run health`:
+it makes standard-suite reach measurable without running the already long suite
+twice on every pull request or turning an uncalibrated percentage into a gate.
+V8 instrumentation plus full-suite worker contention pushes the largest standard
+restore properties and counterfactual matrices past the ordinary 60-second
+fail-fast ceiling, so `test:coverage` alone allows 300 seconds per test. The
+normal standard suite keeps its 60-second ceiling, and the coverage audit keeps
+its separate 4,200-second soft budget.
 
 Live fleets enforce `play_mode: pure`, `start_surface: fresh_overworld`, and the
 neutral default persona. The live fleet defaults to Codex

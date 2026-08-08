@@ -15,12 +15,7 @@ import { parseTimeLabel } from "./session_journal_codec.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 
 export const OPENING_REGISTRATION_JOURNAL_PREFIX = "registration:" as const;
-export const OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX = "registration_legacy:" as const;
 export const OPENING_REGISTRATION_OFFER_JOURNAL_PREFIX = "registration_offer:" as const;
-
-const OPENING_REGISTRATION_LEGACY_JOURNAL_TITLE = "Legacy journey: registration grandfathered";
-const OPENING_REGISTRATION_LEGACY_JOURNAL_TEXT =
-  "This journey began before Albany required Relief Compact background registration. Its neutral campaign record is grandfathered; new journeys must register with Rowan Quill.";
 
 export type OpeningRegistrationJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">
@@ -42,26 +37,6 @@ export function openingRegistrationOfferJournalId(registrationId: string): strin
 
 export function openingRegistrationJournalId(registrationId: string, profileId: string): string {
   return `${OPENING_REGISTRATION_JOURNAL_PREFIX}${registrationId}:${profileId}`;
-}
-
-export function openingRegistrationLegacySourceWorldHash(entryId: string): string | null {
-  if (!entryId.startsWith(OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX)) return null;
-  const sourceWorldHash = entryId.slice(OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX.length);
-  return /^[0-9a-f]{64}$/.test(sourceWorldHash) ? sourceWorldHash : null;
-}
-
-export function openingRegistrationLegacyJournalDraft(
-  sourceWorldHash: string,
-): OpeningRegistrationJournalDraft {
-  if (!/^[0-9a-f]{64}$/.test(sourceWorldHash)) {
-    throw new Error(`Invalid legacy opening registration source hash "${sourceWorldHash}".`);
-  }
-  return Object.freeze({
-    id: `${OPENING_REGISTRATION_LEGACY_JOURNAL_PREFIX}${sourceWorldHash}`,
-    kind: "registration_legacy" as const,
-    title: OPENING_REGISTRATION_LEGACY_JOURNAL_TITLE,
-    text: OPENING_REGISTRATION_LEGACY_JOURNAL_TEXT,
-  });
 }
 
 export function openingRegistrationJournalDraft(
@@ -134,21 +109,6 @@ export function openingRegistrationOfferJournalEntry(args: {
   });
 }
 
-export function openingRegistrationLegacyJournalEntry(args: {
-  sourceWorldHash: string;
-  town: string;
-  recordedAt: string;
-  registrationBoundary: NonNullable<OverworldJournalEntry["registrationBoundary"]>;
-}): OverworldJournalEntry {
-  const registrationBoundary = Object.freeze({ ...args.registrationBoundary });
-  return Object.freeze({
-    ...openingRegistrationLegacyJournalDraft(args.sourceWorldHash),
-    town: args.town,
-    recordedAt: args.recordedAt,
-    registrationBoundary,
-  });
-}
-
 /**
  * Recover the only legal character baseline from journal evidence. Registration
  * is a zero-minute choice made immediately after the authored contact line and
@@ -196,13 +156,9 @@ export function proveOpeningRegistrationJournal(args: {
     throw new Error("Overworld session snapshot registration has no replayable opening offer.");
   }
   const expectedOffer = openingRegistrationOfferJournalDraft(registration);
-  if (
-    offered.entry.id !== expectedOffer.id ||
-    offered.entry.title !== expectedOffer.title ||
-    offered.entry.text !== expectedOffer.text
-  ) {
+  if (offered.entry.id !== expectedOffer.id) {
     throw new Error(
-      `Overworld session snapshot registration offer "${offered.entry.id}" does not match its authored copy.`,
+      `Overworld session snapshot registration offer "${offered.entry.id}" references unknown evidence.`,
     );
   }
   if (args.expectedTown !== null && offered.entry.town !== args.expectedTown) {
@@ -285,12 +241,6 @@ export function proveOpeningRegistrationJournal(args: {
   if (!profile) {
     throw new Error(
       `Overworld session snapshot registration entry references an unknown profile in "${entry.id}".`,
-    );
-  }
-  const expected = openingRegistrationJournalDraft(registration, profile.id);
-  if (entry.title !== expected.title || entry.text !== expected.text) {
-    throw new Error(
-      `Overworld session snapshot registration entry "${entry.id}" does not match its authored copy.`,
     );
   }
   if (args.expectedTown !== null && entry.town !== args.expectedTown) {

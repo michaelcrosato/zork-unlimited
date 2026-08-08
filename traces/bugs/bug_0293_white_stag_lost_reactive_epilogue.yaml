@@ -1,4 +1,4 @@
-id: bug_0293
+id: bug_0293_white_stag_lost_reactive_epilogue
 title: "white_stag ending_lost missing knows_truth reactive epilogue"
 severity: content
 class: reactive-ending-blindness
@@ -26,7 +26,8 @@ fix: >
   ending_lost; the variant is cosmetic prose only — no flag/score/route/ending
   change.
 
-regression: tests/regression/white_stag_branching.test.ts (new describe block
+regression: >-
+  tests/regression/white_stag_branching.test.ts (new describe block
   "white_stag — knows_truth fires reactive epilogue on ending_lost (bug_0293)",
   4 cases: informed → "you knew" / "wood keeps its keeper"; base → "the foolish"
   / no "you knew"; both reach ending_lost; informed route verifies knows_truth set)

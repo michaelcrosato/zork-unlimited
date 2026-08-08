@@ -27,8 +27,6 @@ function departureRecapEntryValue(entry: DepartureRecapEntry): string {
       return "Available after choosing preparation";
     case "solo_default":
       return "Solo departure";
-    case "legacy":
-      return "Legacy choice preserved";
     case "selected":
       return "Selected";
   }

@@ -5,7 +5,11 @@ persistent world, and a feedback flywheel — dev agent → verification bar →
 blind playtest → structured exit interview — that compounds quality every
 cycle. The why lives in [`docs/VISION.md`](./docs/VISION.md); what's next in
 [`docs/ROADMAP.md`](./docs/ROADMAP.md); the standing architecture contract is
-[`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md).
+[`ADVENTUREFORGE_BUILD_SPEC.md`](./ADVENTUREFORGE_BUILD_SPEC.md). Process choices
+made while closing the external review are recorded in
+[`docs/EXTERNAL_REVIEW_PROCESS_DECISIONS.md`](./docs/EXTERNAL_REVIEW_PROCESS_DECISIONS.md),
+with the finding-by-finding evidence map in
+[`docs/EXTERNAL_REVIEW_COMPLETION.md`](./docs/EXTERNAL_REVIEW_COMPLETION.md).
 
 > **Trust, but verify.** The coding agent has free rein over all game code — no
 > human-approval gate, no §14 engine-extension ceremony; it decides _what_ to
@@ -29,27 +33,32 @@ persistent world (the 2026-07-06 consolidation — see
 - **RPG foundation layer** (`src/rpg/`) — rooms, objects, containers, locked
   doors, NPC dialogue, USE puzzles, scoring, character stats, seeded turn-based
   combat, and d20 skill checks, behind a legal-action menu runner and structured
-  observations. Two validators (`src/validate/rpg_validator.ts`,
-  `src/validate/rpg_foundation_validator.ts` — dozens of finding codes) plus an
-  exhaustive solver prove every declared ending reachable, no path soft-locked,
-  and the score economy sound.
+  observations. Two static validators (`src/validate/rpg_validator.ts`,
+  `src/validate/rpg_foundation_validator.ts` — dozens of finding codes)
+  conservatively reject structural and configuration defects. Separate dynamic
+  proofs enumerate shipped-pack state spaces to witness every declared ending,
+  progress-action liveness, and score-economy soundness; those claims apply to the
+  tested shipped packs, not to arbitrary authored numeric gates.
 - **The New York overworld** (`content/world/new_york_overworld.json`,
-  `src/world/`) — the single seamless world (like Skyrim or Cyberpunk 2077):
-  a 247-node, 9-region open world for travel, discovery, road encounters, jobs,
-  local events, and renown, AND the sole registry for the **12 shipped quests**
-  under `content/rpg/quests/` (`advocates_case`, `breaking_weir`, `cold_forge`,
+  `src/world/`) — a 247-node, 9-region procedurally populated travel and discovery
+  substrate around one deeply authored Albany opening/campaign chapter. It supports
+  roads, encounters, jobs, local events, and renown, and is the sole registry for the
+  **12 shipped quests** under `content/rpg/quests/` (`advocates_case`,
+  `breaking_weir`, `cold_forge`,
   `dawn_beacon`, `factors_mark`, `falconers_ransom`, `gallowmere`,
   `printers_night`, `sunken_barrow`, `tanners_fever`, `tide_mill`,
-  `wolf_winter`). Each quest
-  is anchored to a town and discovered from its local notice board, then handed
-  off into a playable RPG quest session — everything is reached in-world.
+  `wolf_winter`). The current authored campaign scenes and service overrides are
+  concentrated in Albany; the rest of the node count should not be read as 247
+  equally authored locations.
 - **Web UI** (`ui/`) — a React + Vite view over the same headless engine; it
   renders observations and never decides legality. See
   [`ui/README.md`](./ui/README.md).
 - **Procedural eval packs** (`src/gen/rpg_generator.ts`) — pure, deterministic
-  seed→pack minting held to the identical validator bar, so the verification
-  suite's distribution evolves instead of becoming a memorized target.
-  Generated packs are deliberately not committed under `content/`.
+  seed→pack minting held to the identical validator bar. Seeds select among five
+  themes and vary difficulty and awards over one fixed, validated two-fight
+  gauntlet skeleton; this is a moving proof input, not a generator of wholly new
+  quest structures. Generated packs are deliberately not committed under
+  `content/`.
 - **Debugger + fixer agents** (`agents/debugger.ts`, `agents/fixer.ts`) —
   replay a trace, classify the failure, and propose a closed, whitelisted
   content patch that deterministic code applies and re-validates; a model never
@@ -80,9 +89,15 @@ npm run play -- sunken_barrow                    # play a shipped world quest
 npm run overworld                                # play the full game: overworld map -> quests
 npm run inspect -- sunken_barrow                 # summarize a world quest
 npm run replay                                   # replay the committed RPG smoke trace
-npm run author -- "your one-line premise here"   # author a quest from prose
+npm run author -- "your one-line premise here"   # exercise the deterministic mock author/validator loop
+npm run test:coverage                            # report standard-suite V8 coverage
 npm run ui:dev                                   # web UI (after: npm --prefix ui install)
 ```
+
+`npm run author` is an offline pipeline fixture: its mock provider always drafts
+the fixed **The Lighthouse** story, then exercises adapter rejection/revision until
+the RPG pack validates. The supplied premise does not currently drive generated
+story content; no live authoring model is bundled.
 
 Non-interactive play (scriptable / CI): add
 `--commands "go north; take rope; attack wight; ..."`. Use
@@ -93,9 +108,12 @@ quest id** — raw pack paths are internal source metadata.
 
 `npm run health` is the bar the loop and CI must leave green: the integrity
 guard (`scripts/verify-integrity.ts`, which also forbids retired-runtime assets
-from reappearing), typecheck, ESLint, Prettier, the vitest suite, the UI
+from reappearing), bug-trace parsing/identity/reference integrity, the compact
+opening's density ceilings, typecheck, ESLint, Prettier, the vitest suite, the UI
 typecheck (`npm run ui:typecheck`), and validation of every shipped quest. CI
-runs the same sequence and builds the UI.
+runs the same sequence and builds the UI. A separate scheduled/manual
+[`Deep audit`](./.github/workflows/deep-audit.yml) runs the long crawl plus a
+standard-suite V8 coverage report without lengthening the PR critical path.
 
 ## MCP server — how an agent plays
 
@@ -170,8 +188,9 @@ harness supplies neither route nor recommendation.
 Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
 
 - **Tier 0 — dev tests** (full knowledge, specific assertions): the vitest
-  unit/property/regression suite, the validators, and the exhaustive solver —
-  all inside `npm run health`. Rejection-direction witnesses live in the
+  unit/property/regression suite, the validators, exhaustive shipped-pack proofs,
+  bug-trace integrity, and the opening-density budget — all inside
+  `npm run health`. Rejection-direction witnesses live in the
   negative-fixture corpus (`content/broken-fixtures/`, mostly `foundation_*.yaml`),
   a data-driven test proving each validator finding code actually fires.
 - **Tier 1 — mechanical crawler** (`src/crawl/`, zero LLM): drives the pure
@@ -180,7 +199,8 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   legality, softlock, render defects, world coverage) every step, emitting
   deduped, zod-validated findings with minimized replayable repros.
   `npm run crawl:smoke` is the loop's gate (every cycle, ~10s, deterministic);
-  `npm run crawl:deep` is a longer soak (nightly/manual).
+  `npm run crawl:deep` is a longer soak run nightly and on manual dispatch by
+  `.github/workflows/deep-audit.yml`.
 - **Tier 2 — pure blind LLM playtest**: a fresh agent with NO repo access plays
   through an enforced player-only MCP surface (harness in `blind-tester/`,
   protocol in
@@ -234,20 +254,30 @@ NOT part of CI or the health bar (a structural mock fleet run is — see
 [`docs/testing_pyramid.md`](./docs/testing_pyramid.md)). Separately, the
 authoring/repair agents (`bin/author.ts`, the debugger/fixer) run against a
 deterministic, keyless `MockAuthorProvider` behind the small `Provider`
-interface (`agents/llm/`), so their vitest coverage runs in CI with no live
-LLM calls and no API keys. (This is a public, no-runtime-LLM repo — there are
-no third-party LLM API keys or key-based provider backends anywhere in it.)
+interface (`agents/llm/`). The author fixture returns the same Lighthouse draft
+for every premise; what CI exercises is the real adapter → validator → revision
+loop, not open-ended prose generation. This is a public, no-runtime-LLM repo:
+there are no third-party LLM API keys or key-based provider backends in it.
 
 ## The flywheel — AFK loop
 
-`loop.sh` drives the autonomous improvement cycle
+`loop.sh` is the repository's reference unattended driver for the autonomous
+improvement cycle
 ([`docs/afk_loop.md`](./docs/afk_loop.md)): **assess** (`npm run ai:loop` —
-`src/afk/assessor.ts` deterministically ranks improvement candidates, fed by
-the latest exit interviews), **work** (one focused change plus a mandatory
+`src/afk/assessor.ts` consumes compiled hotspots when available and otherwise
+offers maintenance candidates; it is an advisory preview, not independent
+evidence), **work** (one focused change plus a mandatory
 blind playtest), **verify** (the health bar, plus an integrity check against
-the pre-cycle ref so the verifier itself can't be weakened, plus
-no-playtest-record ⇒ no commit). `npm run loop:status` / `npm run loop:stop`
-manage a running loop; `npm run assess` previews the ranking.
+the pre-cycle ref so the verifier itself can't be weakened, plus a schema-valid
+pure report and runner sidecar bound to the exact clean provisional commit).
+Agent errors fail the cycle; a bounded durable failure ledger is shown by
+`npm run loop:status`. `npm run loop:status` / `npm run loop:stop` manage a
+running loop; `npm run assess` previews the ranking.
+
+That shell driver defines and exercises the protocol; it is not a claim about
+the dominant execution path. Recent repository work may instead be orchestrated
+directly on short-lived PR branches, applying the same crawl, health, integrity,
+and evidence rules without launching `loop.sh`.
 
 ## How we got here
 

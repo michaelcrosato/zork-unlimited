@@ -69,7 +69,8 @@ verified_live: >
   antidote to master") AND the bare "use ... on ..." forms to the same USE actions.
 regression_test: tests/regression/alchemists_use_command_verbs.test.ts   # 5 cases: each interaction's displayed natural command + verb-agnostic id (never "use ... on ..."); natural and bare-use phrasings parse to the right USE; the full win route still reaches ending_cured at 35/35.
 closes:
-  - bug_0078 was the last pack edit of the item-on-target command_verb arc but left alchemists_tower
+  - >-
+    bug_0078 was the last pack edit of the item-on-target command_verb arc but left alchemists_tower
     unconverted; project-memory note "(1) adopt command_verb on other USEs where prose primes a
     non-USE verb (audit first)" — audited: alchemists_tower was the only holdout, now done.
 deferred:

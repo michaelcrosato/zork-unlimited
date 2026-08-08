@@ -11,12 +11,14 @@ import {
   hasLiveOverworldEventChoice,
   OverworldSession as UiOverworldSession,
 } from "../../ui/src/overworld.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const EVENT_ID = "albany_city__civic_core__event";
 
 function settleAlbanyOpening(session: OverworldSession): void {
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
 }

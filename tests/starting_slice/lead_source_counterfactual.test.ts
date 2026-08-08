@@ -12,6 +12,7 @@ import { openingLeadSourceJournalDraft } from "../../src/world/opening_lead_sour
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const LEAD_SOURCE =
@@ -84,14 +85,12 @@ function reachMcpLeadSource(
   });
   expect(questIds(registered.observation)).not.toContain(WOLF_ID);
   expect(registered.journey.storyChoice).toMatchObject({ kind: "relief_oath" });
-  if (profileId !== LEDGER_ADVOCATE) {
-    api.inspect_overworld_session_story({
-      ...FULL_OVERWORLD,
-      session_id: sessionId,
-      story_choice_id: "albany:wolf_relief_oath",
-      reveal_id: "customize_duty_and_evidence",
-    });
-  }
+  api.inspect_overworld_session_story({
+    ...FULL_OVERWORLD,
+    session_id: sessionId,
+    story_choice_id: "albany:wolf_relief_oath",
+    reveal_id: "customize_duty_and_evidence",
+  });
   const oathBound = api.choose_overworld_session_story({
     ...FULL_OVERWORLD,
     session_id: sessionId,
@@ -185,6 +184,7 @@ function reachDirectLeadSource(profileId: string): OverworldSession {
   session.talkToCharacter(ROWAN_ID);
   session.chooseJourneyStory(profileId);
   expect(session.journey().storyChoice?.kind).toBe("relief_oath");
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory(DEFAULT_OATH);
   expect(session.journey().storyChoice?.kind).toBe("lead_source");
   return session;
@@ -361,6 +361,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     const beforeSource = new OverworldSession(WORLD);
     beforeSource.talkToCharacter(ROWAN_ID);
     beforeSource.chooseJourneyStory(COURIER);
+    revealCurrentJourneyStoryOptions(beforeSource, WORLD.opening_relief_oath!.id);
     beforeSource.chooseJourneyStory(DEFAULT_OATH);
     expect(beforeSource.view().quests.map((quest) => quest.id)).not.toContain(WOLF_ID);
     expect(beforeSource.view().areaExits.some((route) => route.destination.id === wolfArea)).toBe(

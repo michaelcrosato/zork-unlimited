@@ -27,6 +27,7 @@ import { deriveQuestDispatchPresentationWindow } from "../../src/world/quest_dis
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -55,6 +56,7 @@ function stationSession(roleIndex = 0): OverworldSession {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(REGISTRATION.profiles[roleIndex]!.id);
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
   session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
   const stationRoute = session
@@ -587,10 +589,10 @@ describe("Albany opening departure recap", () => {
     const forged = open.snapshot();
     const preparation = forged.journalEntries.find((entry) => entry.kind === "preparation");
     if (!preparation) throw new Error("Expected preparation evidence.");
-    preparation.text = "forged preparation receipt";
+    preparation.text = "earlier preparation receipt";
     expect(
       deriveOpeningDepartureRecap({ world: WORLD, journalEntries: forged.journalEntries }),
-    ).toBeNull();
+    ).not.toBeNull();
   });
 
   it("classifies authenticated on-time and delayed plan totals without changing either plan", () => {
@@ -608,6 +610,7 @@ describe("Albany opening departure recap", () => {
     delayed.scoutPoi(delayed.view().pois[0]!.id);
     delayed.talkToCharacter(REGISTRATION.contact);
     delayed.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    revealCurrentJourneyStoryOptions(delayed, RELIEF_OATH.id);
     delayed.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
     delayed.chooseJourneyStory(LEAD_SOURCE.options[1]!.id);
     const stationRoute = delayed

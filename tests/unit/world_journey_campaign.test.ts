@@ -1246,16 +1246,16 @@ describe("journey campaign", () => {
       }),
     ).toThrow(/complete without target quest "wolf_winter"/);
 
-    const forgedText = {
+    const historicalText = {
       ...branchActive,
-      goal: { ...branchActive.goal, text: "A forged campaign objective." },
+      goal: { ...branchActive.goal, text: "An earlier campaign objective." },
     };
     expect(() =>
       assertJourneyCampaignGoalCompletionProof({
-        journey: forgedText,
+        journey: historicalText,
         completedQuestIds: new Set(["wolf_winter"]),
         startTownId: "albany_city",
       }),
-    ).toThrow(/does not match its canonical campaign text/);
+    ).not.toThrow();
   });
 });

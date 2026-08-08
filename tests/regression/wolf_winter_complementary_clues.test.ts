@@ -110,19 +110,34 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     ].join("\n");
 
     expect(root?.npc_text).toMatch(
-      /Albany sent you[^]*save\/cost[^]*hunt[^]*herd\+stores[^]*wolves risk death[^]*lure[^]*herd\+pack[^]*feed\+paling[^]*cattle risk[^]*drive[^]*people\+pack[^]*outer line[^]*crisis=wound\/2 cattle\/rig[^]*fortify[^]*herd\+pack\+byre[^]*property vs seals\+help[^]*name HUNT[^]*cross uncommitted[^]*crossing north commits it[^]*closes the other plans/i,
+      /Albany sent you[^]*choose what must stand at dawn[^]*every plan can finish Wolf-Winter[^]*none saves everything[^]*name no best answer/i,
+    );
+    expect(root?.npc_text).toMatch(
+      /HUNT[^]*outcome[^]*hold Cade's ground[^]*herd[^]*relief stores[^]*prepared combat[^]*cost[^]*wolves may die[^]*failure can lose cattle or the line[^]*Albany[^]*bloodshed changes Greenway work[^]*damage remains/i,
+    );
+    expect(root?.npc_text).toMatch(
+      /LURE[^]*outcome[^]*relocate the pack beyond the breach[^]*keep the herd[^]*cost[^]*last feed[^]*broken paling[^]*two cattle risked[^]*first-cast foul[^]*Albany[^]*broken boundary or scattered cattle[^]*Station response/i,
+    );
+    expect(root?.npc_text).toMatch(
+      /DRIVE[^]*outcome[^]*evacuate people and herd[^]*force the pack clear[^]*cost[^]*abandon the outer steading[^]*crisis takes a wound, two cattle, or rig[^]*Albany[^]*line and chosen loss remain/i,
+    );
+    expect(root?.npc_text).toMatch(
+      /FORTIFY[^]*outcome[^]*keep household, herd, and pack apart until dawn[^]*cost[^]*no retreat[^]*expose property for Cade's aid[^]*spend public seals without it[^]*Albany[^]*terms remain[^]*no-loss hold opens no Cade repair dispatch/i,
+    );
+    expect(root?.npc_text).toMatch(
+      /questions teach[^]*do not commit[^]*HUNT commits on uncommitted north crossing[^]*other plans commit in branches[^]*commitment closes the other three/i,
     );
     expect(rootPrompt("wolves")).toMatch(
-      /hunt[^]*hold breach[^]*cattle\/reserves safe[^]*wolves may die[^]*learn \+2 attack\/\+5 tally[^]*leave[^]*north = hunt[^]*close lure\/drive\/fortify/i,
+      /hunt[^]*hold ground\/stores[^]*prepared combat[^]*risk[^]*wolf deaths[^]*failure risks cattle\/line[^]*\+2 attack\/\+5 tally[^]*north commits/i,
     );
     expect(rootPrompt("lure")).toMatch(
-      /lure[^]*draw the pack out[^]*protects cattle and wolves[^]*spends finite feed[^]*paling broken[^]*foul risks cattle/i,
+      /lure[^]*relocate pack beyond the breach[^]*keep the herd[^]*cost[^]*last feed[^]*broken paling[^]*two cattle risked on a foul[^]*inspect/i,
     );
     expect(rootPrompt("drive")).toMatch(
-      /drive[^]*move herd and pack[^]*protects people and wolves[^]*abandons the outer line[^]*crisis costs wound, cattle, or rig/i,
+      /drive[^]*evacuate people\/herd[^]*force pack clear[^]*cost[^]*abandon outer steading[^]*crisis takes wound, two cattle, or rig[^]*inspect/i,
     );
     expect(rootPrompt("fortify")).toMatch(
-      /fortify[^]*seal until dawn[^]*protects byre, cattle, and wolves[^]*outer property[^]*public seals[^]*Cade's aid/i,
+      /fortify[^]*keep household\/herd\/pack apart to dawn[^]*cost[^]*no retreat[^]*expose property\/Cade aid[^]*spend seals\/no aid[^]*inspect/i,
     );
     expect(rootPrompt("byre")).toMatch(
       /hunt support[^]*guarded\/patient[^]*same stakes[^]*safer combat opening/i,
@@ -146,7 +161,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(guarded).not.toMatch(/\bset\b[^]*\bdrive\b|\bwheel\b[^]*\bturn\b/i);
 
     expect(fortify).toMatch(
-      /fortify saves lives\/herd\/byre[^]*no retreat\/switch[^]*household terms[^]*property risk[^]*seals saved[^]*Cade aid[^]*Albany[^]*property safe[^]*seals spent[^]*no Cade aid[^]*Works eases first DC[^]*mobile stabilizes a recovered miss[^]*dawn/i,
+      /fortify keeps household\/herd\/pack apart through dawn[^]*no retreat\/switch[^]*household terms[^]*property risk[^]*seals saved[^]*Cade aid[^]*Albany[^]*property safe[^]*seals spent[^]*no Cade aid[^]*Works eases first DC[^]*mobile stabilizes a recovered miss[^]*dawn/i,
     );
     expect(fortify).not.toMatch(/Albany Repair[^]*2 easier/i);
     expect(fullDutyFortify).toMatch(/first Albany Repair 2 easier/i);

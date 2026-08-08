@@ -83,6 +83,7 @@ import { presentOverworldContact } from "../../src/world/session_contact_present
 import { describeOverworldEventResolution } from "../../src/world/session_event_resolution.js";
 import { presentOverworldQuestLaunch } from "../../src/world/quest_launch.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";
 
 const TRUNCATION_CHROME = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const RPG_SERIALIZED_RESPONSE_CEILING = 9_000;
@@ -563,6 +564,7 @@ describe("shipped compact prose fidelity", () => {
     session.scoutPoi(opening.pois[0]!.id);
     session.talkToCharacter(registration.contact);
     choose(registration, registration.profiles, currentStoryChoice(session), false);
+    revealCurrentJourneyStoryOptions(session, oath.id);
     choose(oath, oath.options, currentStoryChoice(session), false);
     choose(lead, lead.options, currentStoryChoice(session), false);
 

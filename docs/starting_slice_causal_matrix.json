@@ -42,7 +42,7 @@
         "The registration screen names each contact, skill rank, value rank, kit, obligation, persistence consequence, and the current Wolf import limitation before confirmation.",
         "The persistent-character panel shows the exact canonical package after confirmation; the registration journal records the authored concept, previewed resources, and permanent consequence.",
         "Rowan and Hayden identify the remembered registration in authored later contact copy; Wolf-Winter's visible starting DEF and rail-check outcome expose the mechanical consumer.",
-        "At truthful foldback, full, compact, and UI character views change only the selected registration obligation from active to kept; the ordinary terminal completion and bounded compact MCP result immediately show one authenticated profile-specific receipt naming the correct recipient, Courier witness, or exact 100/100 repair roll. Replay preserves current receipts; historical completions with grandfathered dispatch evidence upgrade to a clearly legacy-qualified receipt bound to the exact source hash already persisted by their oath or quest-start proof, and both paths remain idempotent on a second restore."
+        "At truthful foldback, full, compact, and UI character views change only the selected registration obligation from active to kept; the ordinary terminal completion and bounded compact MCP result immediately show one authenticated profile-specific receipt naming the correct recipient, Courier witness, or exact 100/100 repair roll. Replay and restore rederive that receipt from the complete current dispatch proof, reject missing or swapped evidence, treat a content-hash mismatch only as provenance, and remain idempotent on a second restore."
       ],
       "systems": [
         "identity",
@@ -62,7 +62,7 @@
         "tests/unit/world_opening_registration_helpers.test.ts",
         "tests/unit/world_session_contact_presentation.test.ts",
         "tests/starting_slice/character_background_counterfactual.test.ts",
-        "tests/regression/registration_promise_return_snapshot_integrity.test.ts"
+        "tests/unit/world_session_snapshot.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/registration_promise_return_counterfactual.test.ts"
     },
@@ -171,7 +171,7 @@
       "contract_tags": ["delayed", "cross_system", "cross_phase"],
       "baseline_evidence": [
         "tests/unit/world_opening_lead_source.test.ts",
-        "tests/regression/opening_lead_source_snapshot_integrity.test.ts",
+        "tests/unit/world_opening_lead_source.test.ts",
         "tests/regression/rpg_variant_liveness.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/lead_source_counterfactual.test.ts"
@@ -237,7 +237,7 @@
         "tests/unit/world_campaign_service_rules.test.ts",
         "tests/starting_slice/ally_content_gameplay.test.ts",
         "tests/starting_slice/ally_commitment_counterfactual.test.ts",
-        "tests/regression/june_hunt_release_snapshot_integrity.test.ts",
+        "tests/unit/world_session_snapshot.test.ts",
         "tests/starting_slice/wolf_strategy_counterfactual.test.ts",
         "tests/starting_slice/preparation_profile_gameplay.test.ts",
         "traces/bugs/bug_0523_wolf_winter_ally_commitment.yaml",
@@ -301,7 +301,7 @@
       "baseline_evidence": [
         "tests/unit/world_opening_preparation.test.ts",
         "tests/unit/world_opening_preparation_journal.test.ts",
-        "tests/regression/opening_preparation_snapshot_integrity.test.ts",
+        "tests/starting_slice/opening_dispatch_briefing.test.ts",
         "tests/regression/overworld_optional_departure_interactions.test.ts",
         "tests/starting_slice/preparation_profile_gameplay.test.ts",
         "tests/starting_slice/preparation_dispatch_forecast.test.ts",
@@ -329,7 +329,7 @@
         "Exactly one allocation knowledge imports as exactly one Wolf-Winter flag. On a successful first lure cast from the exposed ridge, Cade's pre-feed suppresses the ordinary alarm increase; seed 26 reaches alarm 3 and the whole-herd living-pack ending, while the same route under resident shelter reaches alarm 4 and scatters two cattle. A failed cast and the sheltered route keep their full consequences, and no feed item or retry is created.",
         "The mobile crew is legal only after the first fortification seat failed and the chosen Cade-help or Albany-authority recovery already joined the seam. It acts once, lowers Winter Siege pressure by 1, preserves the failed-check and stance-cost flags, and selects the truthful failed-then-mobile-stabilized dawn branch under either stance.",
         "Resident shelter adds no Wolf field action. Its exact story-choice proof plus the trusted byre-held return fact unlocks one 15-minute Market rest instead of the ordinary 240-minute service. Mobile reserve uses the same completion gate to unlock one 15-minute Campus resupply instead of the ordinary 45-minute service. The offers are mutually exclusive and each is consumed through the generic campaign-service journal.",
-        "The offer, equal five-minute cost, selected provider memory, quest import, field result, return fact, and service eligibility survive chronological foldback and save/restore. The current hub proves allocation before or after preparation and June, with permutation-equivalent material state for the same selected subset. Exact F12 unstarted saves receive the real current offer with no retroactive effects, including saves that already selected June: a later allocation composes after the preserved ally proof and re-restores with both sets of effects. Exact started saves retain their approach proof and receive one neutral legacy marker bound to the pre-start boundary without allocation knowledge, memory, cost, field aid, or service."
+        "The offer, equal five-minute cost, selected provider memory, quest import, field result, return fact, and service eligibility survive chronological foldback and save/restore. The current hub proves allocation before or after preparation and June, with permutation-equivalent material state for the same selected subset. Structural restore preserves a real allocation after the ally proof and re-restores with both sets of effects; a content hash never invents allocation knowledge, memory, cost, field aid, or service."
       ],
       "visible_feedback": [
         "Full, compact, browser, CLI, and MCP surfaces show the optional single-wagon interaction, equal five-minute cost, named provider, protected need, two exposed needs, exact inspect/choose arguments, and legal departure before commitment. The default tier omits repeated timing-proof objects; exact read-only expansion restores the authenticated dispatch impact and consequence, while the journal and persistent character state retain an accepted allocation afterward.",
@@ -360,7 +360,7 @@
         "tests/unit/world_opening_relief_allocation_journal.test.ts",
         "tests/regression/overworld_optional_departure_interactions.test.ts",
         "tests/regression/new_york_overworld.test.ts",
-        "tests/regression/relief_allocation_migration_integrity.test.ts",
+        "tests/unit/world_session_snapshot.test.ts",
         "tests/starting_slice/wolf_route_tradeoff_projection.test.ts",
         "traces/bugs/bug_0527_wolf_winter_relief_allocation.yaml"
       ],
@@ -426,7 +426,7 @@
         "tests/starting_slice/hill_approach_gameplay.test.ts",
         "tests/unit/world_quest_launch.test.ts",
         "tests/unit/world_quest_launch_resource_replay.test.ts",
-        "tests/regression/hill_approach_migration_integrity.test.ts",
+        "tests/unit/world_session_snapshot.test.ts",
         "tests/starting_slice/wolf_route_tradeoff_projection.test.ts",
         "tests/unit/world_quest_launch_resource_replay.test.ts",
         "traces/bugs/bug_0526_wolf_winter_hill_approach.yaml"
@@ -471,7 +471,7 @@
       "baseline_evidence": [
         "tests/regression/wolf_winter_dialogue_surface.test.ts",
         "tests/starting_slice/fortify_outlast_return_e2e.test.ts",
-        "tests/regression/fortify_outlast_migration_integrity.test.ts",
+        "tests/unit/world_session_snapshot.test.ts",
         "traces/bugs/bug_0525_wolf_winter_fortify_outlast.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/cade_trust_counterfactual.test.ts"
@@ -601,7 +601,7 @@
         "tests/unit/world_campaign_consequences.test.ts",
         "tests/unit/world_journey_campaign.test.ts",
         "tests/regression/new_york_overworld.test.ts",
-        "tests/regression/crisis_priority_migration_integrity.test.ts",
+        "tests/unit/world_session_snapshot.test.ts",
         "traces/bugs/bug_0524_wolf_winter_crisis_priority.yaml"
       ],
       "counterfactual_test": "tests/starting_slice/crisis_priority_counterfactual.test.ts"
@@ -673,8 +673,8 @@
       "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/regression/wolf_winter_post_hunt_consequence.test.ts",
-        "tests/regression/campaign_service_migration_integrity.test.ts",
-        "tests/regression/campaign_service_snapshot_integrity.test.ts",
+        "tests/unit/world_session_snapshot.test.ts",
+        "tests/unit/world_session_snapshot_restore.test.ts",
         "tests/unit/world_journey_campaign.test.ts",
         "tests/unit/world_campaign_service_rules.test.ts",
         "tests/unit/world_session_resource_replay.test.ts",
@@ -700,7 +700,7 @@
       "delayed_consumers": [
         "The resolved Market event option is the sole predicate for two later disputed-crate settlements; the opposite policy's options are never legal.",
         "From the reachable held-byre return at 8 standing, either policy adds 2 standing. The household fast release then reaches 13 and exposes Albany's existing Civic recovery cot in 30 minutes; the open-bid fast release ends at 11 but saves 10 minutes. The household audit reaches 15 in 75 minutes, while the open-bid audit reaches 14 in 60 minutes, preserving the same time-versus-standing frontier at the thorough depth.",
-        "Exact event and job proof, option-local predicates, journal/resource/renown replay, full/compact/UI/MCP projection, and the hash-fenced generic predecessor all survive save/restore; a legacy generic completion becomes a neutral marker and unlocks neither policy."
+        "Exact event and job proof, option-local predicates, journal/resource/renown replay, and full/compact/UI/MCP projection survive structural save/restore; a content-hash mismatch is only a warning and cannot create either policy proof."
       ],
       "visible_feedback": [
         "Jamie names the irreversible price policy, the protected kitchens or visible buyer board, and its later crate consequence before confirmation.",
@@ -712,7 +712,7 @@
       "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/unit/world_local_job_scene_conditions.test.ts",
-        "tests/unit/world_local_event_scene_legacy.test.ts",
+        "tests/unit/world_local_event_scene.test.ts",
         "tests/unit/world_campaign_service_region_renown.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_market_scene_counterfactual.test.ts"
@@ -732,8 +732,8 @@
         "journal.local_scene_proof"
       ],
       "delayed_consumers": [
-        "Emery's later corridor-survey board reads the exact event-option proof and exposes only the two follow-ups lawful under the public, quiet, or custody line. A neutral generic predecessor completion satisfies none of the branches.",
-        "An exact-predecessor bloodshed save that had legally recorded the former quiet policy retains that selected policy and its matching follow-up under exact source-world provenance; migration does not invent a custody choice. New bloodshed decisions cannot select quiet policy, while bloodless quiet and universal public records remain unchanged."
+        "Emery's later corridor-survey board reads the exact event-option proof and exposes only the two follow-ups lawful under the public, quiet, or custody line. State without that exact proof satisfies none of the branches.",
+        "Structural restore retains the policy the player actually selected and its matching follow-up. A content-hash mismatch never invents or relabels a custody choice. New bloodshed decisions cannot select quiet policy, while bloodless quiet and universal public records remain unchanged."
       ],
       "visible_feedback": [
         "The investigated event presents only the two outcome-lawful policies with exact immediate terms and names their distinct later public-access, corridor-preservation, or evidence-custody work before commitment.",
@@ -751,9 +751,8 @@
       "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/unit/world_local_event_scene.test.ts",
-        "tests/unit/world_local_event_scene_legacy.test.ts",
         "tests/unit/world_local_job_scene_conditions.test.ts",
-        "tests/regression/emery_evidence_custody_snapshot_integrity.test.ts"
+        "tests/unit/world_session_snapshot_restore.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_greenway_scene_counterfactual.test.ts"
     },
@@ -787,7 +786,7 @@
         "tests/unit/world_local_job_scene_conditions.test.ts",
         "tests/unit/world_session_local_actions.test.ts",
         "tests/unit/world_session_region_renown.test.ts",
-        "tests/regression/emery_evidence_custody_snapshot_integrity.test.ts"
+        "tests/unit/world_session_snapshot_restore.test.ts"
       ],
       "counterfactual_test": "tests/starting_slice/albany_greenway_scene_counterfactual.test.ts"
     },
@@ -806,20 +805,19 @@
         "journal.local_scene_proof"
       ],
       "delayed_consumers": [
-        "Reese's existing post-Wolf Works job retains its ordinary 80-minute/+5 public-shift protection and 35-minute/+2 reserve inventory. Exact event-option proof appends only the matching return method: a 45-minute/+3 witnessed release or a 60-minute/+4 cold-set bypass. A neutral generic predecessor event completion unlocks neither.",
+        "Reese's existing post-Wolf Works job retains its ordinary 80-minute/+5 public-shift protection and 35-minute/+2 reserve inventory. Exact event-option proof appends only the matching return method: a 45-minute/+3 witnessed release or a 60-minute/+4 cold-set bypass. State without that proof unlocks neither.",
         "From the lowest 8-standing held return, either charter first raises standing to 9. The witnessed release ends at 12 and is 15 minutes faster than the bypass when already rested; the bypass ends at 13 and opens Rowan's existing 15-minute Civic recovery cot, beating the witness route plus ordinary 180-minute rest when fatigued."
       ],
       "visible_feedback": [
         "Both charter cards state their equal immediate terms, exact later method, return duration and standing, and the 13-standing Civic threshold consequence before commitment.",
         "The post-Wolf full, compact, browser, and MCP job board preserves both base priorities, shows only the charter-matching third method, and withholds the opposite authorization. The unresolved pre-Wolf event expires and never appears as a return opportunity, while its already-discovered Works job remains eligible for the normal return lead.",
-        "Save/restore and decision replay retain the exact event and job proofs; current-main and earlier exact generic-event epochs migrate to source-hashed neutral markers without inventing either charter capability, and divergent manifest hashes fail closed."
+        "Save/restore and decision replay retain the exact event and job proofs. A content revision produces an explicit provenance warning without inventing either charter capability, while altered causal evidence fails closed."
       ],
       "systems": ["events", "time", "regional_standing", "jobs", "services"],
       "persistence_boundaries": ["overworld_save_restore", "albany_wolf_return"],
       "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/unit/world_local_event_scene.test.ts",
-        "tests/unit/world_local_event_scene_legacy.test.ts",
         "tests/unit/world_local_job_scene_conditions.test.ts",
         "tests/starting_slice/albany_return_opportunity_leads.test.ts"
       ],
@@ -842,7 +840,7 @@
       "delayed_consumers": [
         "The selected event proof keeps both established Campus Archive Query methods and adds only its matching optional method: clinic exposure thresholds authorize the clinic-threshold card, while route provenance authorizes the traceable-route digest.",
         "Completing a matching optional method grants its exact one-use Campus service. Existing Drover rest and mobile-reserve resupply credits consolidate into that service, so a player never receives duplicate same-action offers.",
-        "A neutral legacy event marker proves no specific mandate and unlocks neither optional method nor either new service."
+        "State without an exact mandate proof unlocks neither optional method nor either new service."
       ],
       "visible_feedback": [
         "Before Wolf-Winter the Campus event is absent. After return it remains inaccessible until the player has scouted the POI, talked with Blair, and investigated it; the full and compact surfaces expose the same two authored choices.",
@@ -854,7 +852,6 @@
       "contract_tags": ["delayed", "cross_system", "cross_phase", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/unit/world_local_event_scene.test.ts",
-        "tests/unit/world_local_event_scene_legacy.test.ts",
         "tests/unit/world_local_job_scene_conditions.test.ts",
         "tests/unit/world_campaign_service_rules.test.ts"
       ],
@@ -875,7 +872,7 @@
         "world.region_renown"
       ],
       "delayed_consumers": [
-        "The operational route abstract adds only `close_packet_under_route_abstract`, a 30-minute/+3-standing packet close. The witnessed return adds only `close_packet_under_witnessed_record`, a 45-minute/+4-standing close. A neutral generic predecessor marker unlocks neither method.",
+        "The operational route abstract adds only `close_packet_under_route_abstract`, a 30-minute/+3-standing packet close. The witnessed return adds only `close_packet_under_witnessed_record`, a 45-minute/+4-standing close. State without the exact filing proof unlocks neither method.",
         "Both administrative closes preserve the existing broken-paling, abandoned-line, and missing-cattle dispatches whenever their Wolf-Winter facts and dawn-dispatch predicates permit. Choosing a close completes the administrative record but records no physical work, creates no rest or resupply claim, and leaves every certified physical loss honestly deferred.",
         "From the lowest 8-standing held return, either filing choice first reaches 9. The operational close ends at 12 and is 15 minutes faster when already rested; the witnessed close ends at 13 and opens Rowan's existing 15-minute Civic recovery cot, beating the quick line plus ordinary 180-minute recovery when fatigued.",
         "Because the event requires completed Wolf-Winter and every action is optional, the filing standard adds no decision to the first-goal path."
@@ -883,14 +880,13 @@
       "visible_feedback": [
         "Before Wolf-Winter the Station filing event is absent. After return it remains inaccessible until the player has scouted the Station POI, talked with Hayden, and investigated it; full, compact, UI, and MCP surfaces expose the same two exact choices and terms.",
         "The Cade Return Packet board retains every currently lawful physical dispatch and appends only the close matching the resolved filing proof. Its copy states that administrative closure dispatches no crew, grants no recovery claim, and leaves physical losses deferred.",
-        "The unresolved event and eligible Cade job remain truthful optional opportunity leads until one packet method is complete. Event/job journals and save/restore retain exact proofs; an unresolved exact-predecessor investigation gains trusted source-world provenance without inventing a filing choice, a completed generic predecessor becomes a neutral source-hashed marker, current-copy migrations are excluded, and relabelled, reversed, or divergent evidence fails closed."
+        "The unresolved event and eligible Cade job remain truthful optional opportunity leads until one packet method is complete. Event/job journals and structural save/restore retain exact proofs; a content-hash mismatch warns without inventing a filing choice, while relabelled, reversed, or divergent causal evidence fails closed."
       ],
       "systems": ["events", "jobs", "journal", "region_renown", "services", "save_restore"],
       "persistence_boundaries": ["overworld_save_restore", "quest_to_overworld"],
       "contract_tags": ["delayed", "cross_system", "irreversible_tradeoff"],
       "baseline_evidence": [
         "tests/unit/world_local_event_scene.test.ts",
-        "tests/unit/world_local_event_scene_legacy.test.ts",
         "tests/unit/world_local_job_scene_conditions.test.ts",
         "tests/unit/world_session_snapshot.test.ts",
         "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
@@ -916,7 +912,7 @@
         "While the exact gate wound is untreated, the public-detour and quiet-corridor Greenway policies each retain their fast survey action but withhold only their deep witnessed field record. The bloodshed evidence-custody frontier is unchanged.",
         "After exact Station care, only the selected policy's deep action reopens. Ordinary rest and resupply do not mutate wound treatment, health, or this legal-action frontier.",
         "Care is one-shot and replayed chronologically from its exact service journal and accepted-decision boundary. Stored character state is never trusted; missing, duplicated, altered, backdated, or wrong-rule evidence fails closed.",
-        "The immediate predecessor's already-completed public or quiet deep survey is grandfathered only under the exact trusted source manifest and exact option proof. Migration adds no synthetic care, healing, or treatment."
+        "Structural restore retains an already-completed public or quiet deep survey only with its exact option proof. A content-hash mismatch adds no synthetic care, healing, or treatment."
       ],
       "visible_feedback": [
         "The full, compact, UI, MCP, CLI, crawler, and pure-player tool surfaces expose care only when its exact campaign offer is active. The receipt names the 45-minute cost, untreated-to-treated advance, and 24→30 health change.",

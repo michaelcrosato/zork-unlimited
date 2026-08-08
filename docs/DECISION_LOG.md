@@ -1001,3 +1001,104 @@ seeds fail explicitly instead of resuming on different rolls. Strict legacy
 loading strips the retired `ObjectRuntime.contents` field, and own-entry
 validation preserves and type-checks every schema-valid state-record key before
 current-schema validation. Frozen regressions cover each boundary.
+
+### RPG save v3 consistency boundary — 2026-08-06
+
+RPG save v3 adds `stateHash`, the canonical SHA-256 produced by
+`hashState(parsedState)`. It detects a state whose bytes and recorded digest disagree;
+it is deliberately not an authenticator. Local saves remain user-editable, and an
+intentional edit can be resumed after recomputing the public deterministic hash. The
+load boundary now uses strict, version-specific top-level schemas and returns only
+schema-parsed data. Unknown envelope keys fail instead of being retained.
+
+Historical compatibility is explicit: genuine v1 and v2 envelopes have no
+`stateHash`; v1 first receives its existing object-runtime/RNG migration, v2 uses the
+current state shape, and both are normalized in memory to v3 with a computed digest.
+A v3 envelope missing or disagreeing with its digest is invalid.
+
+Pack-aware load validation also gives player `hp`, `attack`, and `defense` conservative
+authored ceilings. The ceiling starts at the greatest initialized, authored `set_var`,
+or recorded campaign-import value, then budgets the sum of every positive authored
+delta for the initial room effects and every accepted step. This intentionally loose
+over-approximation admits impossible-but-bounded combinations rather than rejecting a
+reachable save, while still rejecting arbitrary stat inflation.
+
+### External-review architecture supersession — 2026-08-07
+
+This entry supersedes the 2026-08-05 remediation entry's “NOT done” ruling for
+Phase 0, items 15–17, and Phase 4. The owner directed the review to be completed,
+including the structural work and deletion. The requirement/evidence index is
+`docs/EXTERNAL_REVIEW_COMPLETION.md`; this log records the design choices that
+future changes must preserve.
+
+**NPC/dialogue variants and content ownership.** NPCs and dialogue nodes now
+have authored `variants[]` selected by closed-DSL `when` conditions. Wolf-Winter
+uses one stable `june_pike` identity whose room and dialogue root react to state,
+and the engine-side Wolf-Winter prose overlay is deleted. Player prose lives in
+the pack and is covered by its content hash. `AMBIGUOUS_NPC_NAME` is now an error:
+mutual exclusion should be expressed through one identity's variants, not through
+several indistinguishable people.
+
+**Reveal authority is durable session state.** `inspectedStoryReveals` belongs to
+`OverworldSession`, is cloned into the snapshot, is authenticated against the
+currently inspectable authored reveal during restore, and is cleared when the
+choice is consumed. MCP, terminal, and UI presentation call the same session
+accessors. A restored session therefore has exactly the same hidden-option
+legality as the exported state; transport-local receipts are prohibited.
+
+**D10 save-migration ladder deletion.** The exact-content migration ladder is
+retired under explicit owner authority. Overworld compatibility is governed by
+`OVERWORLD_WORLD_SCHEMA_VERSION = 11`; version 10 is the sole supported structural
+predecessor and upgrades without rewriting authored content. `worldHash` remains
+provenance. A mismatch produces `OVERWORLD_CONTENT_HASH_MISMATCH_WARNING` —
+“This save was created from different authored world content; its prior journal
+is preserved, and current authored content governs future play.” — and restores
+against current content, while world id, current-manifest references, journey
+causality, resources, journal chronology, campaign effects, and local scene
+proofs remain strict.
+
+This is the copy-independent schema contract: a prose edit never earns a hash-keyed
+normalizer, frozen copy blob, legacy shim, or predecessor fixture. A genuinely
+incompatible state-shape change must bump the structural version and provide one
+explicit upgrade or reject the old shape. The obsolete content-hash branches,
+legacy modules, and migration-only tests are removed together. The integrity
+ratchet recognizes that retirement only through a one-time sentinel, the exact
+reviewed deletion set, and the measured count delta; the exception cannot be reused
+after this record exists in the comparison base. Aggregate counts are supporting
+evidence for the reviewed retirement, not proof that every unrelated assertion or
+source change is absent.
+
+**Assessor truthfulness.** Compiled verified hotspots remain the assessor's
+evidence-backed strategic input. When all real levers disarm and only 0.5 rotation
+rows remain, output says “Maintenance rotation only — no strategic
+recommendation.” Alphabetical tie order is deterministic scheduling, not evidence
+that the first quest is the next-best improvement. If compiled-hotspot input fails
+to remain live across two milestone compiles, the remaining ranker should be
+deleted rather than cosmetically resuscitated.
+
+**Non-player evidence and density cost.** The player lane remains authority for
+experience. A separate nightly/manual zero-token lane runs deep crawl, bug-trace
+integrity, opening-density measurement, ending proof, and standard-suite coverage.
+The canonical compact opening is capped at 732 measured word tokens and 12
+immediately actionable options. Reductions need no re-pin; an increase is an owner
+decision. A clean player report cannot overrule a red structural audit.
+
+**Capture-profile boundary.** Existing exact Codex capture profiles are frozen as
+historical readers. No point release automatically earns another byte-for-byte
+private rollout profile. Structural validation may replace that ladder only after
+an authenticated future rollout supplies a stable envelope and the new validator
+preserves tool allowlist, model/CLI authority, cwd/filesystem binding, terminal
+lifecycle, and artifact hashes. Without that evidence, broadening the accepted
+shape is a security regression, so no speculative implementation ships here.
+
+**External dependency retained honestly.** The cross-family experiment is approved
+but not repository-complete: the public repo has no non-Codex provider or
+credentials. Before claiming model-family-independent clarity, the owner must select
+and authorize a provider, implement an equally fail-closed receipt adapter, and run
+at least ten fresh pure journeys on the same clean revision under the neutral player
+contract. That cohort remains separate from retention authority until provenance is
+equivalent.
+
+This entry records architecture, not a green landing claim. Crawl, health,
+integrity drift, exact-revision blind evidence, PR `verify`, and merge status are
+filled from fresh output in the completion record's final checklist.

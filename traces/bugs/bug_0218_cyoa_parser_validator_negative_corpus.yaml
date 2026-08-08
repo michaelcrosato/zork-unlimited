@@ -31,7 +31,7 @@ root_cause: >
   could silently disarm it while leaving every existing test GREEN — the present-but-untested-checker
   surface named by SoundnessBench (arXiv:2412.03154) and the single-checker / ASL present-but-incomplete
   blind spot (arXiv:2510.14253, [[verifier-assertion-guard]]). The error codes left UN-pinned here already
-  carry a rejection-direction witness in tests/unit/cyoa_validator.ts / tests/unit/parser_validator.ts or a
+  carry a rejection-direction witness in tests/unit/cyoa_validator.test.ts / tests/unit/parser_validator.test.ts or a
   regression test (CYOA: DUPLICATE_ID, REF_UNRESOLVED, NO_REACHABLE_ENDING, ENDING_UNREACHABLE, SOFTLOCK,
   IMPOSSIBLE_GATE, CONTRADICTORY_CONDITION, the DEADLINE_* family; parser: DUPLICATE_ID, EXIT_TARGET_MISSING,
   KEY_MISSING, AMBIGUOUS_ALIAS, IMPOSSIBLE_GATE, ITEM_REQUIRED_UNOBTAINABLE, SOFTLOCK, SOFTLOCK_QUEST_ITEM,

@@ -23,14 +23,7 @@ import type {
 } from "./session_snapshot.js";
 
 export const OPENING_RELIEF_ALLOCATION_JOURNAL_PREFIX = "relief_allocation:" as const;
-export const OPENING_RELIEF_ALLOCATION_LEGACY_JOURNAL_PREFIX = "relief_allocation_legacy:" as const;
 export const OPENING_RELIEF_ALLOCATION_OFFER_JOURNAL_PREFIX = "relief_allocation_offer:" as const;
-
-const WORLD_HASH_PATTERN = /^[0-9a-f]{64}$/;
-const OPENING_RELIEF_ALLOCATION_LEGACY_JOURNAL_TITLE =
-  "Legacy journey: Albany relief allocation grandfathered";
-const OPENING_RELIEF_ALLOCATION_LEGACY_JOURNAL_TEXT =
-  "This journey departed for Wolf-Winter under a trusted earlier Albany docket. It receives no retroactive relief allocation, knowledge, relationship effect, field recovery, return service, or time cost.";
 
 export type OpeningReliefAllocationJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">
@@ -39,10 +32,7 @@ export type OpeningReliefAllocationJournalDraft = Readonly<
 export type OpeningReliefAllocationJournalProof = Readonly<{
   characterAfterAllocation: CampaignCharacterState;
   offered: boolean;
-  legacy: boolean;
-  legacySourceWorldHash: string | null;
   offerBoundary: OverworldJournalDecisionBoundary | null;
-  legacyBoundary: OverworldJournalDecisionBoundary | null;
   option: OpeningReliefAllocationOption | null;
   selectionBoundary: OverworldJournalDecisionBoundary | null;
   terms: OpeningReliefAllocationTerms | null;
@@ -56,12 +46,6 @@ export function openingReliefAllocationOfferJournalId(sceneId: string): string {
 
 export function openingReliefAllocationJournalId(sceneId: string, optionId: string): string {
   return `${OPENING_RELIEF_ALLOCATION_JOURNAL_PREFIX}${sceneId}:${optionId}`;
-}
-
-export function openingReliefAllocationLegacySourceWorldHash(entryId: string): string | null {
-  if (!entryId.startsWith(OPENING_RELIEF_ALLOCATION_LEGACY_JOURNAL_PREFIX)) return null;
-  const sourceWorldHash = entryId.slice(OPENING_RELIEF_ALLOCATION_LEGACY_JOURNAL_PREFIX.length);
-  return WORLD_HASH_PATTERN.test(sourceWorldHash) ? sourceWorldHash : null;
 }
 
 export function openingReliefAllocationOfferJournalDraft(
@@ -110,20 +94,6 @@ export function allOpeningReliefAllocationJournalDrafts(
   );
 }
 
-export function openingReliefAllocationLegacyJournalDraft(
-  sourceWorldHash: string,
-): OpeningReliefAllocationJournalDraft {
-  if (!WORLD_HASH_PATTERN.test(sourceWorldHash)) {
-    throw new Error(`Invalid legacy opening relief allocation hash "${sourceWorldHash}".`);
-  }
-  return Object.freeze({
-    id: `${OPENING_RELIEF_ALLOCATION_LEGACY_JOURNAL_PREFIX}${sourceWorldHash}`,
-    kind: "relief_allocation_legacy" as const,
-    title: OPENING_RELIEF_ALLOCATION_LEGACY_JOURNAL_TITLE,
-    text: OPENING_RELIEF_ALLOCATION_LEGACY_JOURNAL_TEXT,
-  });
-}
-
 function freezeBoundary(
   boundary: OverworldJournalDecisionBoundary,
 ): OverworldJournalDecisionBoundary {
@@ -160,31 +130,13 @@ export function openingReliefAllocationJournalEntry(args: {
   });
 }
 
-/** Migration-only evidence; ordinary current sessions cannot mint its authority. */
-export function openingReliefAllocationLegacyJournalEntry(args: {
-  sourceWorldHash: string;
-  town: string;
-  recordedAt: string;
-  storyChoiceBoundary: OverworldJournalDecisionBoundary;
-}): OverworldJournalEntry {
-  return Object.freeze({
-    ...openingReliefAllocationLegacyJournalDraft(args.sourceWorldHash),
-    town: args.town,
-    recordedAt: args.recordedAt,
-    storyChoiceBoundary: freezeBoundary(args.storyChoiceBoundary),
-  });
-}
-
 function emptyAllocationProof(
   character: CampaignCharacterState,
 ): OpeningReliefAllocationJournalProof {
   return Object.freeze({
     characterAfterAllocation: cloneCampaignCharacterState(character),
     offered: false,
-    legacy: false,
-    legacySourceWorldHash: null,
     offerBoundary: null,
-    legacyBoundary: null,
     option: null,
     selectionBoundary: null,
     terms: null,
@@ -193,7 +145,7 @@ function emptyAllocationProof(
   });
 }
 
-/** Replay one current allocation or one exact predecessor marker without trusting character state. */
+/** Replay one current allocation without trusting saved character state. */
 export function proveOpeningReliefAllocationJournal(args: {
   scene: OpeningReliefAllocation | null | undefined;
   preparationProof: OpeningPreparationJournalProof;
@@ -201,13 +153,11 @@ export function proveOpeningReliefAllocationJournal(args: {
   preparationScene?: OpeningPreparation | null;
   journalEntries: readonly OverworldJournalEntry[];
   expectedTown: string | null;
-  trustedLegacySourceWorldHash?: string | null;
 }): OpeningReliefAllocationJournalProof {
   const indexed = args.journalEntries.map((entry, index) => ({ entry, index }));
   const selections = indexed.filter(({ entry }) => entry.kind === "relief_allocation");
   const offers = indexed.filter(({ entry }) => entry.kind === "relief_allocation_offer");
-  const legacies = indexed.filter(({ entry }) => entry.kind === "relief_allocation_legacy");
-  const evidenceIndex = selections[0]?.index ?? offers[0]?.index ?? legacies[0]?.index;
+  const evidenceIndex = selections[0]?.index ?? offers[0]?.index;
   const sourceSelected =
     args.leadSourceProof?.option !== null &&
     args.leadSourceProof?.option !== undefined &&
@@ -231,17 +181,12 @@ export function proveOpeningReliefAllocationJournal(args: {
           ...(evidenceIndex === undefined ? {} : { beforeJournalIndex: evidenceIndex }),
         })
       : args.preparationProof.characterAfterPreparation;
-  if (selections.length > 1 || offers.length > 1 || legacies.length > 1) {
+  if (selections.length > 1 || offers.length > 1) {
     throw new Error(
-      "Overworld session snapshot must contain at most one relief allocation offer, choice, and legacy marker.",
+      "Overworld session snapshot must contain at most one relief allocation offer and choice.",
     );
   }
-  if (legacies.length > 0 && (selections.length > 0 || offers.length > 0)) {
-    throw new Error(
-      "Overworld session snapshot cannot combine legacy and current relief allocation evidence.",
-    );
-  }
-  if (selections.length === 0 && offers.length === 0 && legacies.length === 0) {
+  if (selections.length === 0 && offers.length === 0) {
     return emptyAllocationProof(characterBeforeAllocation);
   }
   if (!args.scene) {
@@ -261,77 +206,15 @@ export function proveOpeningReliefAllocationJournal(args: {
   }
   const scene = parseOpeningReliefAllocation(args.scene);
 
-  const legacy = legacies[0];
-  if (legacy) {
-    if (
-      (!args.preparationProof.profile && !args.preparationProof.legacy) ||
-      args.preparationProof.journalIndex === null
-    ) {
-      throw new Error(
-        "Overworld session snapshot legacy relief allocation has no resolved opening preparation.",
-      );
-    }
-    const sourceWorldHash = openingReliefAllocationLegacySourceWorldHash(legacy.entry.id);
-    if (
-      !sourceWorldHash ||
-      args.trustedLegacySourceWorldHash === undefined ||
-      args.trustedLegacySourceWorldHash === null ||
-      sourceWorldHash !== args.trustedLegacySourceWorldHash
-    ) {
-      throw new Error(
-        "Overworld session snapshot legacy relief allocation has no matching trusted predecessor hash.",
-      );
-    }
-    const expected = openingReliefAllocationLegacyJournalDraft(sourceWorldHash);
-    if (legacy.entry.title !== expected.title || legacy.entry.text !== expected.text) {
-      throw new Error(
-        `Overworld session snapshot legacy relief allocation entry "${legacy.entry.id}" does not match its canonical copy.`,
-      );
-    }
-    if (args.expectedTown !== null && legacy.entry.town !== args.expectedTown) {
-      throw new Error(
-        `Overworld session snapshot legacy relief allocation entry "${legacy.entry.id}" is bound to town "${legacy.entry.town}", expected "${args.expectedTown}".`,
-      );
-    }
-    const legacyBoundary = legacy.entry.storyChoiceBoundary;
-    const questEntry = args.journalEntries[legacy.index - 1];
-    if (
-      !legacyBoundary ||
-      !questEntry ||
-      questEntry.kind !== "quest" ||
-      questEntry.id !== `quest:${scene.target_quest}` ||
-      legacy.index >= args.preparationProof.journalIndex ||
-      legacyBoundary.townId !== scene.home ||
-      legacyBoundary.areaId !== scene.area ||
-      legacyBoundary.minutes !== parseTimeLabel(legacy.entry.recordedAt)
-    ) {
-      throw new Error(
-        "Overworld session snapshot legacy relief allocation must sit immediately before replayable target-quest departure at its exact Station boundary.",
-      );
-    }
-    return Object.freeze({
-      ...emptyAllocationProof(args.preparationProof.characterAfterPreparation),
-      legacy: true,
-      legacySourceWorldHash: sourceWorldHash,
-      legacyBoundary: { ...legacyBoundary },
-      journalIndex: legacy.index,
-      recordedAt: parseTimeLabel(legacy.entry.recordedAt),
-    });
-  }
-
   const offered = offers[0];
   const selected = selections[0];
   if (!offered) {
     throw new Error("Overworld session snapshot relief allocation choice has no durable offer.");
   }
   const expectedOffer = openingReliefAllocationOfferJournalDraft(scene);
-  if (
-    offered.entry.id !== expectedOffer.id ||
-    offered.entry.title !== expectedOffer.title ||
-    offered.entry.text !== expectedOffer.text
-  ) {
+  if (offered.entry.id !== expectedOffer.id) {
     throw new Error(
-      `Overworld session snapshot relief allocation offer "${offered.entry.id}" does not match its authored copy.`,
+      `Overworld session snapshot relief allocation offer "${offered.entry.id}" references unknown evidence.`,
     );
   }
   if (args.expectedTown !== null && offered.entry.town !== args.expectedTown) {
@@ -382,18 +265,9 @@ export function proveOpeningReliefAllocationJournal(args: {
     character: characterBeforeAllocation,
     optionId: option.id,
   });
-  const expectedSelection = openingReliefAllocationJournalDraft({
-    scene,
-    character: characterBeforeAllocation,
-    optionId: option.id,
-  });
-  if (
-    selected.entry.title !== expectedSelection.title ||
-    selected.entry.text !== expectedSelection.text ||
-    (args.expectedTown !== null && selected.entry.town !== args.expectedTown)
-  ) {
+  if (args.expectedTown !== null && selected.entry.town !== args.expectedTown) {
     throw new Error(
-      `Overworld session snapshot relief allocation entry "${selected.entry.id}" does not match its authored terms, copy, or town.`,
+      `Overworld session snapshot relief allocation entry "${selected.entry.id}" is bound to town "${selected.entry.town}", expected "${args.expectedTown}".`,
     );
   }
   const selectionBoundary = selected.entry.storyChoiceBoundary;
@@ -440,10 +314,7 @@ export function proveOpeningReliefAllocationJournal(args: {
   return Object.freeze({
     characterAfterAllocation: cloneCampaignCharacterState(application.characterAfter),
     offered: true,
-    legacy: false,
-    legacySourceWorldHash: null,
     offerBoundary: { ...offerBoundary },
-    legacyBoundary: null,
     option,
     selectionBoundary: { ...selectionBoundary },
     terms: { ...application.terms },

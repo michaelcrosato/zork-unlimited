@@ -1,20 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { campaignServiceLocalJobOptionKey } from "../../src/world/campaign_service_rules.js";
-import { authoredLocalJobLegacyOptionId } from "../../src/world/local_job_scene_legacy.js";
 import { assertOverworldIntegrity, type OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import { cloneOverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
-import { OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import {
-  exactCampusArchiveQueryPredecessor,
-  exactWinterReturnDocketPredecessor,
-} from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const JOB = "albany_city__campus__job";
@@ -106,6 +100,7 @@ function returnedToCampus(
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(world.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
@@ -341,79 +336,6 @@ describe("Albany Campus Archive Query", () => {
     expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(ARCHIVE_SERVICE);
     expect(restored.resupplyAtTown()).toMatchObject({ changed: false, minutes: 0 });
     expect(UiOverworldSession.restore(WORLD, consumed).snapshot()).toEqual(consumed);
-  });
-
-  it("migrates the exact generic predecessor without inventing a Campus option or service", () => {
-    const predecessor = exactCampusArchiveQueryPredecessor(WORLD);
-    expect(hashState(predecessor)).toBe(
-      "db23dea42bb2cd62beb8ac5871e4b5c74ee127c05b36941b4e170247ab8a5858",
-    );
-    expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    const legacy = returnedToCampus(predecessor);
-    legacy.workLocalJob(JOB);
-    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
-    expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(WARNING_SERVICE);
-    expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(ARCHIVE_SERVICE);
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: "albany:campus-wolf-archive-query",
-      sourceWorldHash: hashState(predecessor),
-    });
-    expect(
-      restored
-        .snapshot()
-        .journalEntries.find((entry) => entry.id.startsWith("talk:albany_city__campus__contact"))
-        ?.text,
-    ).toContain("one honest operational record");
-  });
-
-  it("updates Blair's contact copy for an older trusted predecessor that never took Campus work", () => {
-    const older = exactWinterReturnDocketPredecessor(WORLD);
-    expect(hashState(older)).toBe(
-      "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636",
-    );
-    const legacy = returnedToCampus(older);
-    expect(legacy.snapshot().completedJobIds).not.toContain(JOB);
-
-    const migrated = OverworldSession.restore(WORLD, legacy.snapshot());
-    const migratedSnapshot = migrated.snapshot();
-    expect(migratedSnapshot.worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    expect(migratedSnapshot.completedJobIds).not.toContain(JOB);
-    expect(
-      migratedSnapshot.journalEntries.find((entry) =>
-        entry.id.startsWith("talk:albany_city__campus__contact"),
-      )?.text,
-    ).toContain("one honest operational record");
-    expect(migrated.view().serviceOffers.map((offer) => offer.id)).not.toContain(WARNING_SERVICE);
-    expect(migrated.view().serviceOffers.map((offer) => offer.id)).not.toContain(ARCHIVE_SERVICE);
-    expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(migratedSnapshot);
-  });
-
-  it("migrates an older generic Campus completion as a neutral exact-source proof", () => {
-    const older = exactWinterReturnDocketPredecessor(WORLD);
-    const sourceWorldHash = hashState(older);
-    expect(sourceWorldHash).toBe(
-      "815a138cbeeafbc9595c04e37260ccaba9d2d52d6a3341b3c38afe9eade62636",
-    );
-    const legacy = returnedToCampus(older);
-    legacy.workLocalJob(JOB);
-    const restored = OverworldSession.restore(WORLD, legacy.snapshot());
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: "albany:campus-wolf-archive-query",
-      optionId: authoredLocalJobLegacyOptionId(sourceWorldHash),
-      sourceWorldHash,
-    });
-    expect(restored.view().jobChoices).toEqual([]);
-    expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(WARNING_SERVICE);
-    expect(restored.view().serviceOffers.map((offer) => offer.id)).not.toContain(ARCHIVE_SERVICE);
-    expect(OverworldSession.restore(WORLD, restored.snapshot()).snapshot()).toEqual(
-      restored.snapshot(),
-    );
   });
 
   it("rejects service rules that name generic jobs or an unknown authored option", () => {

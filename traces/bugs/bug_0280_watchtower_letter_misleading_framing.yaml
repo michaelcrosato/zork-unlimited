@@ -38,7 +38,8 @@ content_hash_new: 89a0c84a3570d58e708ff1bbc7710ef97be42c58503de7eca533ab97b75164
 repinned: tests/unit/rpg_validator.test.ts line 134 — deliberate surfaced re-pin
          (HASH_PIN_REPINNED, accompanied by this content change)
 
-regression_test: tests/regression/watchtower_letter_framing.test.ts
+regression_test:
+  path: tests/regression/watchtower_letter_framing.test.ts
   cases:
     - journal entry no longer contains "demand to see"
     - journal entry distinguishes letter from a travel permit ("traveler")

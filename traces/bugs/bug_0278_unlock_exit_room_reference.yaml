@@ -1,4 +1,4 @@
-bug_id: bug_0278
+bug_id: bug_0278_unlock_exit_room_reference
 component: verification   # a missing reference-integrity check in the validator, not a content/pack defect
 # Surfaced by ultraplan re-aim cycle #14: collectRoomRefs (added by bug_0277) correctly
 # collected room IDs from condition sites (visited/not_visited/in_room) and two effect

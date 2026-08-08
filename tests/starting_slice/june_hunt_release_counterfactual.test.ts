@@ -17,6 +17,7 @@ import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
@@ -141,12 +142,12 @@ function atJuneBoundary(prepared = false): GameState {
 }
 
 function releaseJune(state = atJuneBoundary(true)): GameState {
-  state = act(state, "talk_june_pike_combat_boundary");
+  state = act(state, "talk_june_pike");
   return act(state, "ask_release_june_for_hunt");
 }
 
 function retainJune(state = atJuneBoundary(true)): GameState {
-  state = act(state, "talk_june_pike_combat_boundary");
+  state = act(state, "talk_june_pike");
   return act(state, "ask_commit_hunt_and_hold");
 }
 
@@ -190,7 +191,7 @@ function reachBloodiedEvacuation(release: boolean): GameState {
   for (const id of ["go_north", "talk_houndsman", "ask_wolves", "ask_leave"]) {
     state = act(state, id);
   }
-  state = act(state, "talk_june_pike_combat_boundary");
+  state = act(state, "talk_june_pike");
   state = act(state, release ? "ask_release_june_for_hunt" : "ask_commit_hunt_and_hold");
   state = act(state, "go_north");
   state = actWorst(state, "maneuver_yearling_wolf_set_spear");
@@ -259,6 +260,7 @@ function juneCampaign(): OverworldSession {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
   session.chooseJourneyStory(registration.profiles[0]!.id);
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory(DEFAULT_OATH);
   session.chooseJourneyStory(lead.options[0]!.id);
   moveToArea(session, WORLD, preparation.area);
@@ -294,7 +296,7 @@ describe("June's pre-HUNT release counterfactual", () => {
   it("makes release visible, irreversible, save-safe, and explicit about forfeiting every benefit", () => {
     let boundary = atJuneBoundary();
     expect(actionIds(boundary)).not.toContain("go_north");
-    boundary = act(boundary, "talk_june_pike_combat_boundary");
+    boundary = act(boundary, "talk_june_pike");
     const release = enumerateRpgActions(index, boundary).find(
       (option) => option.id === "ask_release_june_for_hunt",
     );
@@ -336,7 +338,7 @@ describe("June's pre-HUNT release counterfactual", () => {
       inventory: released.inventory,
     }).toEqual(beforeStats);
     expect(actionIds(released)).toContain("go_north");
-    expect(actionIds(released)).not.toContain("talk_june_pike_combat_boundary");
+    expect(actionIds(released)).not.toContain("talk_june_pike");
     const preRestoreFull = buildRpgObservation(index, released);
     const preRestoreActions = actionIds(released);
     const postChoiceSave = save(released, loaded.compiled.contentHash, SAVE_MODE, {
@@ -404,7 +406,7 @@ describe("June's pre-HUNT release counterfactual", () => {
     released = act(released, "go_south");
     released = act(released, "go_north");
     expect(released.flags.june_hunt_released).toBe(true);
-    expect(actionIds(released)).not.toContain("talk_june_pike_combat_boundary");
+    expect(actionIds(released)).not.toContain("talk_june_pike");
   });
 
   it("removes all three later June intervention surfaces and leaves HUNT stats and RNG unchanged", () => {
@@ -427,11 +429,11 @@ describe("June's pre-HUNT release counterfactual", () => {
         },
       },
       {
-        action: "talk_june_pike_drive",
+        action: "talk_june_pike",
         flags: { strategy_drive_committed: true, drive_flank_turned: true },
       },
       {
-        action: "talk_june_pike_fortify",
+        action: "talk_june_pike",
         flags: { strategy_fortify_committed: true, fortify_threshold_sealed: true },
       },
     ] as const;

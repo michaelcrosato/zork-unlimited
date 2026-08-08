@@ -447,7 +447,7 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
     "go_north",
     "use_drive_signal_rope_kit_on_drive_threshold_line",
     "go_north",
-    "talk_june_pike_drive",
+    "talk_june_pike",
     "ask_acknowledge",
   ];
   const driveOverrun = run(
@@ -516,7 +516,7 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
       "go_north",
       "use_cade_household_shutters_on_fortify_threshold_seal",
       "go_north",
-      "talk_june_pike_fortify",
+      "talk_june_pike",
       "ask_acknowledge",
       "use_fortify_dawn_watch",
     ],
@@ -540,7 +540,7 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
       "go_north",
       "use_albany_relief_seals_on_fortify_threshold_seal",
       "go_north",
-      "talk_june_pike_fortify",
+      "talk_june_pike",
       "ask_acknowledge",
       "use_fortify_dawn_watch",
     ],

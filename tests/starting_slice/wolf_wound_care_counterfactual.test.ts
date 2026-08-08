@@ -6,29 +6,13 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
-import { hashState } from "../../src/core/hash.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
-import { EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES } from "../../src/world/emery_evidence_custody_legacy.js";
 import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
+import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
-import { OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import {
-  exactAlbanyCampusEventPredecessor,
-  exactAlbanyStationEventPredecessor,
-  exactAlbanyWorksHazardPredecessor,
-  exactCadeStoryPredicatePredecessor,
-  exactDroverRouteFailForwardPredecessor,
-  exactEmeryEvidenceCustodyPredecessor,
-  exactFrostJambSignpostPredecessor,
-  exactRegistrationPromiseClosurePredecessor,
-  exactReliefAllocationTriggerCategoryPredecessor,
-  exactReliefProtocolTriggerCopyPredecessor,
-  exactWoundCarePredecessor,
-  withoutJourneyComparisonCards,
-  withRuntimeJourneyComparisonCards,
-} from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const CARE = "albany:cade_witnessed_gate_wound_station_care";
@@ -44,43 +28,6 @@ const PUBLIC_DEEP = "map_all_weather_public_loop";
 const QUIET_POLICY = "place_quiet_corridor_markers";
 const QUIET_FAST = "reset_steward_markers";
 const QUIET_DEEP = "trace_winter_wildlife_corridor_with_witness_points";
-const EMERY_EVIDENCE_CUSTODY_PREDECESSOR = exactEmeryEvidenceCustodyPredecessor(WORLD);
-const WOUND_CARE_PREDECESSOR_MANIFESTS = [
-  { era: "Works-hazard predecessor", world: exactAlbanyWorksHazardPredecessor(WORLD) },
-  { era: "Cade-story predecessor", world: exactCadeStoryPredicatePredecessor(WORLD) },
-  { era: "Campus-event predecessor", world: exactAlbanyCampusEventPredecessor(WORLD) },
-  { era: "Station-event predecessor", world: exactAlbanyStationEventPredecessor(WORLD) },
-  { era: "frost-jamb predecessor", world: exactFrostJambSignpostPredecessor(WORLD) },
-  {
-    era: "Relief Protocol predecessor",
-    world: exactReliefProtocolTriggerCopyPredecessor(WORLD),
-  },
-  {
-    era: "Relief Allocation predecessor",
-    world: exactReliefAllocationTriggerCategoryPredecessor(WORLD),
-  },
-  {
-    era: "registration-promise predecessor",
-    world: exactRegistrationPromiseClosurePredecessor(WORLD),
-  },
-  { era: "Drover Route predecessor", world: exactDroverRouteFailForwardPredecessor(WORLD) },
-  {
-    era: "comparison-card predecessor",
-    world: withRuntimeJourneyComparisonCards(
-      withoutJourneyComparisonCards(EMERY_EVIDENCE_CUSTODY_PREDECESSOR),
-      WORLD,
-    ),
-  },
-  { era: "Emery evidence-custody predecessor", world: EMERY_EVIDENCE_CUSTODY_PREDECESSOR },
-  { era: "immediate wound-care predecessor", world: exactWoundCarePredecessor(WORLD) },
-] as const;
-const WOUND_CARE_PREDECESSOR_CASES = WOUND_CARE_PREDECESSOR_MANIFESTS.flatMap(
-  (predecessor) =>
-    [
-      { ...predecessor, policy: PUBLIC_POLICY, deep: PUBLIC_DEEP },
-      { ...predecessor, policy: QUIET_POLICY, deep: QUIET_DEEP },
-    ] as const,
-);
 
 function moveToArea(
   session: OverworldSession,
@@ -133,6 +80,7 @@ function woundedReturnBoundary(world: OverworldManifest = WORLD): OverworldSessi
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(world.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory("albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
@@ -313,11 +261,25 @@ describe("SS-F19 — Wolf-Winter wound care is persistent campaign gameplay", ()
       /unknown campaign service rule|campaign character does not match/i,
     );
 
-    const forgedCopy = structuredClone(treated);
-    forgedCopy.journalEntries.find((entry) => entry.serviceRuleId === CARE)!.text += " forged";
-    expect(() => OverworldSession.restore(WORLD, forgedCopy)).toThrow(
-      /does not match its canonical authored copy/i,
-    );
+    const historicalCopy = structuredClone(treated);
+    historicalCopy.journalEntries.find((entry) => entry.serviceRuleId === CARE)!.text +=
+      " earlier wording";
+    expect(() => OverworldSession.restore(WORLD, historicalCopy)).not.toThrow();
+
+    const revisedWorld = structuredClone(WORLD);
+    const revisedCare = revisedWorld.campaign_service_rules?.find((rule) => rule.id === CARE);
+    if (!revisedCare) throw new Error("Expected the Station wound-care rule.");
+    revisedCare.title = "Treat the witnessed wound, revised";
+    revisedCare.summary = "Revised wound-care copy without structural changes.";
+    const restoredAcrossServiceCopy = OverworldSession.restore(revisedWorld, treated);
+    expect(restoredAcrossServiceCopy.restoreWarnings()).toEqual([
+      OVERWORLD_CONTENT_HASH_MISMATCH_WARNING,
+    ]);
+    expect(
+      restoredAcrossServiceCopy
+        .snapshot()
+        .journalEntries.find((entry) => entry.serviceRuleId === CARE)?.text,
+    ).toBe(treated.journalEntries.find((entry) => entry.serviceRuleId === CARE)?.text);
 
     const forgedBoundary = structuredClone(treated);
     const boundaryEntry = forgedBoundary.journalEntries.find(
@@ -327,103 +289,5 @@ describe("SS-F19 — Wolf-Winter wound care is persistent campaign gameplay", ()
     expect(() => OverworldSession.restore(WORLD, forgedBoundary)).toThrow(
       /does not match its accepted campaign service decision proof|journey/i,
     );
-  });
-
-  it("covers every supported manifest that shipped deep Greenway work before wound care", () => {
-    expect(new Set(WOUND_CARE_PREDECESSOR_MANIFESTS.map(({ world }) => hashState(world)))).toEqual(
-      new Set([
-        ...EMERY_EVIDENCE_CUSTODY_PREDECESSOR_WORLD_HASHES,
-        OVERWORLD_WOUND_CARE_PREDECESSOR_WORLD_HASH,
-      ]),
-    );
-  });
-
-  it.each(WOUND_CARE_PREDECESSOR_CASES)(
-    "grandfathers $era $policy deep proof without inventing treatment",
-    ({ world: predecessor, policy, deep }) => {
-      const sourceWorldHash = hashState(predecessor);
-      const oldSession = OverworldSession.restore(predecessor, woundedReturnBoundary(predecessor));
-      prepareGreenwayPolicy(oldSession, policy);
-      oldSession.workLocalJob("albany_city__greenway__job", deep);
-      const oldSnapshot = oldSession.snapshot();
-      expect(oldSnapshot.worldHash).toBe(sourceWorldHash);
-      expect(oldSnapshot.character.health.current).toBe(24);
-      expect(oldSnapshot.character.wounds[0]?.treatment).toBe("untreated");
-
-      const migratedSnapshot = OverworldSession.restore(WORLD, oldSnapshot).snapshot();
-      const proof = migratedSnapshot.journalEntries.find(
-        (entry) => entry.id === "job:albany_city__greenway__job",
-      )!.localSceneProof;
-      expect(proof).toMatchObject({
-        sceneId: "albany:greenway-corridor-survey",
-        optionId: deep,
-        sourceWorldHash,
-      });
-      expect(migratedSnapshot.character.health.current).toBe(24);
-      expect(migratedSnapshot.character.wounds[0]?.treatment).toBe("untreated");
-      expect(migratedSnapshot.journalEntries.some((entry) => entry.serviceRuleId === CARE)).toBe(
-        false,
-      );
-      expect(OverworldSession.restore(WORLD, migratedSnapshot).snapshot()).toEqual(
-        migratedSnapshot,
-      );
-    },
-  );
-
-  it.each([
-    [PUBLIC_POLICY, PUBLIC_DEEP],
-    [QUIET_POLICY, QUIET_DEEP],
-  ] as const)("rejects forged immediate-predecessor %s deep proof", (policy, deep) => {
-    const predecessor = exactWoundCarePredecessor(WORLD);
-    const oldSession = OverworldSession.restore(predecessor, woundedReturnBoundary(predecessor));
-    prepareGreenwayPolicy(oldSession, policy);
-    oldSession.workLocalJob("albany_city__greenway__job", deep);
-    const oldSnapshot = oldSession.snapshot();
-    const migratedSnapshot = OverworldSession.restore(WORLD, oldSnapshot).snapshot();
-
-    const currentDeepWithoutCare = structuredClone(migratedSnapshot);
-    delete currentDeepWithoutCare.journalEntries.find(
-      (entry) => entry.id === "job:albany_city__greenway__job",
-    )!.localSceneProof!.sourceWorldHash;
-    expect(() => OverworldSession.restore(WORLD, currentDeepWithoutCare)).toThrow(
-      /exact trusted copy|campaign character conditions|not available|violates its earlier.*requirements/i,
-    );
-
-    const forgedHash = structuredClone(oldSnapshot);
-    forgedHash.worldHash = "f".repeat(64);
-    expect(() => OverworldSession.restore(WORLD, forgedHash)).toThrow(/different world manifest/i);
-
-    const forgedCopy = structuredClone(oldSnapshot);
-    forgedCopy.journalEntries.find(
-      (entry) => entry.id === "job:albany_city__greenway__job",
-    )!.text += " forged";
-    expect(() => OverworldSession.restore(WORLD, forgedCopy)).toThrow(/exact trusted copy/i);
-
-    const forgedBoundary = structuredClone(oldSnapshot);
-    delete forgedBoundary.journalEntries.find(
-      (entry) => entry.id === "job:albany_city__greenway__job",
-    )!.localSceneProof!.boundary;
-    expect(() => OverworldSession.restore(WORLD, forgedBoundary)).toThrow(
-      /accepted-decision boundary|exact option boundary/i,
-    );
-  });
-
-  it("preserves earlier trusted provenance while stacking wound-care grandfathering", () => {
-    const predecessor = exactWoundCarePredecessor(WORLD);
-    const oldSession = OverworldSession.restore(predecessor, woundedReturnBoundary(predecessor));
-    prepareGreenwayPolicy(oldSession, QUIET_POLICY);
-    oldSession.workLocalJob("albany_city__greenway__job", QUIET_DEEP);
-    const oldSnapshot = oldSession.snapshot();
-    const earlierSourceWorldHash = hashState(EMERY_EVIDENCE_CUSTODY_PREDECESSOR);
-    oldSnapshot.journalEntries.find(
-      (entry) => entry.id === "job:albany_city__greenway__job",
-    )!.localSceneProof!.sourceWorldHash = earlierSourceWorldHash;
-
-    const migratedSnapshot = OverworldSession.restore(WORLD, oldSnapshot).snapshot();
-    expect(
-      migratedSnapshot.journalEntries.find(
-        (entry) => entry.id === "job:albany_city__greenway__job",
-      )!.localSceneProof?.sourceWorldHash,
-    ).toBe(earlierSourceWorldHash);
   });
 });

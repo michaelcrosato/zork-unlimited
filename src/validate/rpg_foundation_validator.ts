@@ -301,6 +301,16 @@ export function validateRpgFoundation(
           [`npc:${npc.id}`],
         ),
       );
+    for (const [index, variant] of (npc.variants ?? []).entries()) {
+      if (variant.room !== undefined && !roomIds.has(variant.room))
+        findings.push(
+          err(
+            "NPC_ROOM_MISSING",
+            `npc "${npc.id}" variant #${index + 1} stands in room "${variant.room}" that does not exist.`,
+            [`npc:${npc.id}`, `variant:${index}`],
+          ),
+        );
+    }
   }
   // A room id named by a `visited`/`not_visited`/`in_room` condition or a
   // `goto`/`place_object.room` effect that is absent from pack.rooms is a dangling
@@ -382,28 +392,24 @@ export function validateRpgFoundation(
   // action menu does not identify one of them, and a text resolver has nothing
   // better than the name to work with. Free-text TALK now resolves against
   // visible, condition-passing NPCs, so a duplicate is only actually unplayable
-  // when the two can be co-present — but it is always an authoring smell, and
-  // Wolf-Winter's four same-named Junes are a hand-rolled variant table standing
-  // in for an NPC-level `variants[]` the schema does not yet offer.
-  //
-  // WARNING severity, deliberately: those four Junes ship today and are provably
-  // mutually exclusive, so erroring would make a healthy pack unplayable
-  // (makeReport derives ok from errors alone). Promote this to `err` once NPCs
-  // gain a variant affordance and the duplicates are gone — at which point the
-  // check also proves that restructure complete.
+  // when the two can be co-present — but authors now have NPC presentation variants
+  // for one identity that moves or changes dialogue. A second identity with the same
+  // visible name is therefore a hard ambiguity instead of a tolerated workaround.
   const npcNameOwner = new Map<string, string>();
   for (const n of pack.npcs) {
-    const key = n.name.toLowerCase();
-    const prev = npcNameOwner.get(key);
-    if (prev !== undefined && prev !== n.id)
-      findings.push(
-        warn(
-          "AMBIGUOUS_NPC_NAME",
-          `display name "${n.name}" is shared by npcs "${prev}" and "${n.id}"; a player typing that name cannot say which they mean.`,
-          [`npc:${n.id}`, `npc:${prev}`],
-        ),
-      );
-    else npcNameOwner.set(key, n.id);
+    for (const name of new Set([n.name, ...(n.variants ?? []).flatMap((v) => v.name ?? [])])) {
+      const key = name.toLowerCase();
+      const prev = npcNameOwner.get(key);
+      if (prev !== undefined && prev !== n.id)
+        findings.push(
+          err(
+            "AMBIGUOUS_NPC_NAME",
+            `display name "${name}" is shared by npcs "${prev}" and "${n.id}"; a player typing that name cannot say which they mean.`,
+            [`npc:${n.id}`, `npc:${prev}`],
+          ),
+        );
+      else npcNameOwner.set(key, n.id);
+    }
   }
 
   // Bail before graph analysis if references are broken (would crash traversal).
@@ -709,6 +715,8 @@ export function validateRpgFoundation(
   }
   for (const npc of pack.npcs) {
     checkConds(npc.conditions ?? [], [`npc:${npc.id}`]);
+    for (const [index, variant] of (npc.variants ?? []).entries())
+      checkConds(variant.when, [`npc:${npc.id}`, `variant:${index}`]);
     for (const node of npc.dialogue.nodes) {
       for (const t of node.topics) {
         checkConds(t.conditions ?? [], [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
@@ -794,6 +802,8 @@ export function validateRpgFoundation(
   }
   for (const npc of pack.npcs) {
     for (const id of itemReqs(npc.conditions ?? [])) noteHeld(id, false);
+    for (const variant of npc.variants ?? [])
+      for (const id of itemReqs(variant.when)) noteHeld(id, false);
     for (const node of npc.dialogue.nodes)
       for (const t of node.topics)
         for (const id of itemReqs(t.conditions ?? [])) noteHeld(id, false);
@@ -841,6 +851,24 @@ export function validateRpgFoundation(
     const nodeIds = new Set(npc.dialogue.nodes.map((n) => n.id));
     const nodeById = new Map(npc.dialogue.nodes.map((n) => [n.id, n]));
     checkUnsatisfiable(npc.conditions, [`npc:${npc.id}`], `npc "${npc.id}" presence`, findings);
+    checkVariantShadowing(npc.variants, `npc:${npc.id}`, findings);
+    for (let index = 0; index < (npc.variants?.length ?? 0); index++) {
+      const variant = npc.variants?.[index];
+      checkUnsatisfiable(
+        variant?.when,
+        [`npc:${npc.id}`, `variant:${index}`],
+        `npc "${npc.id}" presentation variant #${index + 1}`,
+        findings,
+      );
+      if (variant?.dialogue_root !== undefined && !nodeIds.has(variant.dialogue_root))
+        findings.push(
+          err(
+            "DIALOGUE_ROOT_MISSING",
+            `npc "${npc.id}" variant #${index + 1} root node "${variant.dialogue_root}" does not exist.`,
+            [`npc:${npc.id}`, `variant:${index}`],
+          ),
+        );
+    }
     if (!nodeIds.has(npc.dialogue.root))
       findings.push(
         err(
@@ -891,8 +919,14 @@ export function validateRpgFoundation(
       }
       gotoEdges.set(node.id, outs);
     }
-    const root = nodeById.get(npc.dialogue.root);
-    if (root) checkDialogueRootRegreet(npc.id, root, nodeById, findings);
+    const roots = new Set([
+      npc.dialogue.root,
+      ...(npc.variants ?? []).flatMap((variant) => variant.dialogue_root ?? []),
+    ]);
+    for (const rootId of roots) {
+      const root = nodeById.get(rootId);
+      if (root) checkDialogueRootRegreet(npc.id, root, nodeById, findings);
+    }
     // Every node must reach (via unconditional edges) a node offering an
     // unconditional `end` topic — only then is an exit guaranteed in every state.
     const endNodes = new Set(
@@ -2084,6 +2118,7 @@ function collectFlagReads(pack: RpgPack): Set<string> {
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when); // reactive epilogue guards
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);
+    for (const variant of npc.variants ?? []) walkAll(variant.when);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when); // reactive NPC-line guards (bug_0246)
       for (const t of node.topics) walkAll(t.conditions);
@@ -2155,6 +2190,8 @@ function collectVarReads(pack: RpgPack): Map<string, string[]> {
       walkAll(v.when, [`ending:${e.id}`, `variant:${index}`]);
   for (const npc of pack.npcs) {
     walkAll(npc.conditions, [`npc:${npc.id}`]);
+    for (const [index, variant] of (npc.variants ?? []).entries())
+      walkAll(variant.when, [`npc:${npc.id}`, `variant:${index}`]);
     for (const node of npc.dialogue.nodes) {
       for (const [index, v] of (node.variants ?? []).entries())
         walkAll(v.when, [`npc:${npc.id}`, `node:${node.id}`, `variant:${index}`]);
@@ -2208,6 +2245,7 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);
+    for (const variant of npc.variants ?? []) walkAll(variant.when);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
@@ -2261,6 +2299,7 @@ function collectRoomRefs(pack: RpgPack, extraEffects: readonly Effect[] = []): S
   for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);
+    for (const variant of npc.variants ?? []) walkAll(variant.when);
     for (const node of npc.dialogue.nodes) {
       for (const v of node.variants ?? []) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);

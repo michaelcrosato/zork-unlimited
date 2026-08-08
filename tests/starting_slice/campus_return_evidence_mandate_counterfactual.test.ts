@@ -4,19 +4,13 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { hashState } from "../../src/core/hash.js";
 import { createToolApi } from "../../src/mcp/tools.js";
-import {
-  AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
-  authoredLocalEventLegacyOptionId,
-} from "../../src/world/local_event_scene_legacy.js";
 import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { planOverworldEventResolution } from "../../src/world/session_event_resolution.js";
-import { OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
-import { exactAlbanyCampusEventPredecessor } from "../regression/fixtures/historical_overworlds.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGION = "Capital / Mohawk";
@@ -87,6 +81,7 @@ function openedAlbany(
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(world.opening_registration!.contact);
   session.chooseJourneyStory("albany:ledger_advocate");
+  revealCurrentJourneyStoryOptions(session, world.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_full_compact_duty");
   session.chooseJourneyStory(options.sourceId ?? "albany:source_rowan_civic_docket");
   moveToArea(session, world.opening_preparation!.area, world);
@@ -360,90 +355,7 @@ describe("Albany Campus return-evidence mandate", () => {
     },
   );
 
-  it("keeps a neutral legacy event marker neutral while allowing neither optional method", () => {
-    const predecessor = exactAlbanyCampusEventPredecessor(WORLD);
-    expect(hashState(predecessor)).toBe(AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH);
-    expect(hashState(WORLD)).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-    const legacyWorld = returnedToCampus({ inspect: false }, predecessor);
-    legacyWorld.scoutPoi(CAMPUS_POI);
-    legacyWorld.talkToCharacter(CAMPUS_CONTACT);
-    legacyWorld.investigateEvent(EVENT);
-    legacyWorld.resolveEvent(EVENT);
-    const restored = OverworldSession.restore(WORLD, legacyWorld.snapshot());
-    expect(restored.view().jobChoices).toEqual(expectedJobChoices());
-    expect(JSON.stringify(restored.snapshot())).not.toContain(THRESHOLD_CARD);
-    expect(JSON.stringify(restored.snapshot())).not.toContain(ROUTE_DIGEST);
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
-        ?.localSceneProof,
-    ).toMatchObject({
-      sceneId: EVENT_SCENE,
-      optionId: authoredLocalEventLegacyOptionId(
-        AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
-      ),
-      sourceWorldHash: AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
-    });
-  });
-
-  it("preserves a native base Archive Query completion through the Campus predecessor migration", () => {
-    const predecessor = exactAlbanyCampusEventPredecessor(WORLD);
-    const legacyWorld = returnedToCampus({ inspect: false }, predecessor);
-    legacyWorld.scoutPoi(CAMPUS_POI);
-    legacyWorld.talkToCharacter(CAMPUS_CONTACT);
-    legacyWorld.investigateEvent(EVENT);
-    legacyWorld.resolveEvent(EVENT);
-    legacyWorld.workLocalJob(JOB, WARNING);
-
-    const restored = OverworldSession.restore(WORLD, legacyWorld.snapshot());
-    expect(
-      restored.snapshot().journalEntries.find((entry) => entry.id === `job:${JOB}`)
-        ?.localSceneProof,
-    ).toMatchObject({ optionId: WARNING });
-    expect(restored.view().serviceOffers.map((offer) => offer.id)).toContain(
-      "albany:campus_calibrated_warning_rest",
-    );
-    expect(JSON.stringify(restored.snapshot())).not.toContain(THRESHOLD_CARD);
-    expect(JSON.stringify(restored.snapshot())).not.toContain(ROUTE_DIGEST);
-  });
-
-  it.each([
-    [
-      "current Relief Protocol preparation copy",
-      {
-        preparationId: "albany:prep_relief_protocol",
-      },
-    ],
-    [
-      "current Frost-jamb source and Works preparation copy",
-      {
-        sourceId: "albany:source_hayden_frost_report",
-        preparationId: "albany:prep_works_fortification",
-      },
-    ],
-  ] as const)(
-    "does not replay an older exact-copy normalizer over the Campus predecessor's %s",
-    (_label, setup) => {
-      const predecessor = exactAlbanyCampusEventPredecessor(WORLD);
-      const legacyWorld = returnedToCampus({ ...setup, inspect: false }, predecessor);
-      legacyWorld.scoutPoi(CAMPUS_POI);
-      legacyWorld.talkToCharacter(CAMPUS_CONTACT);
-      legacyWorld.investigateEvent(EVENT);
-      legacyWorld.resolveEvent(EVENT);
-
-      const restored = OverworldSession.restore(WORLD, legacyWorld.snapshot());
-      expect(restored.snapshot().worldHash).toBe(OVERWORLD_AUTHORED_LOCAL_JOB_WORLD_HASH);
-      expect(
-        restored.snapshot().journalEntries.find((entry) => entry.id === `resolve:${EVENT}`)
-          ?.localSceneProof,
-      ).toMatchObject({
-        optionId: authoredLocalEventLegacyOptionId(
-          AUTHORED_ALBANY_CAMPUS_EVENT_PREDECESSOR_WORLD_HASH,
-        ),
-      });
-    },
-  );
-
-  it("rejects altered event/job proof, reversed event chronology, and an untrusted manifest hash", () => {
+  it("rejects altered current event/job proofs and reversed event chronology", () => {
     const session = selectMandate(CLINIC);
     session.workLocalJob(JOB, THRESHOLD_CARD);
     const snapshot = session.snapshot();
@@ -478,9 +390,5 @@ describe("Albany Campus return-evidence mandate", () => {
     expect(() => OverworldSession.restore(WORLD, reversed)).toThrow(
       /earlier event|newest-first|requirements/i,
     );
-
-    const untrusted = structuredClone(snapshot);
-    untrusted.worldHash = "f".repeat(64);
-    expect(() => OverworldSession.restore(WORLD, untrusted)).toThrow(/different world manifest/i);
   });
 });

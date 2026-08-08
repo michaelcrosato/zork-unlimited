@@ -127,3 +127,36 @@ describe("exhaustive solver — MAX_STATES backstop fires (bug_0243)", () => {
     expect(r.states).toBeLessThanOrEqual(SMALL_CAP + 2);
   });
 });
+
+describe("exhaustive solver — legal-action enumeration is memoized per immutable state", () => {
+  type BranchAction = { type: "CHOOSE"; choiceId: "left" | "right" | "finish" };
+  const LEFT: BranchAction = { type: "CHOOSE", choiceId: "left" };
+  const RIGHT: BranchAction = { type: "CHOOSE", choiceId: "right" };
+  const BRANCH_FINISH: BranchAction = { type: "CHOOSE", choiceId: "finish" };
+
+  it("enumerates each nonterminal state once even when step rechecks several actions", () => {
+    let legalActionCalls = 0;
+    const rules: Rules<BranchAction> = {
+      legalActions(state) {
+        legalActionCalls += 1;
+        return (state.vars.n ?? 0) >= 2 ? [BRANCH_FINISH] : [LEFT, RIGHT];
+      },
+      resolve(_state, action) {
+        return action.choiceId === "finish"
+          ? { conditions: [], effects: [{ end_game: "branch_end" }] }
+          : { conditions: [], effects: [{ inc_var: { name: "n", by: 1 } }] };
+      },
+    };
+
+    const result = exhaustiveEndings(rules, freshStart(), 100);
+
+    expect(result.cappedOut).toBe(false);
+    expect(result.states).toBe(4); // n=0, n=1, n=2, then the ended state
+    expect([...result.reached]).toEqual(["branch_end"]);
+    // At n=0 and n=1 the BFS enumerates TWO actions, and makeStep defensively checks
+    // each one against legalActions again. Without the solver's per-search WeakMap
+    // this counter is 8 (outer + per-action); with memoization it is exactly the
+    // three nonterminal state identities. This pins the performance fix directly.
+    expect(legalActionCalls).toBe(3);
+  });
+});

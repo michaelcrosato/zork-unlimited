@@ -67,9 +67,11 @@ improvement:
   invariants:
     - The retuned pack validates green under the full RPG validator (no COMBAT_UNWINNABLE).
     - The wight carries hp22/atk5/def2.
-    - Real failure state: an under-armed thief (base defense 2, skips the shade) at seed 2 is
+    - >-
+      Real failure state: an under-armed thief (base defense 2, skips the shade) at seed 2 is
       killed and fires the declared death ending ending_fallen (death: true).
-    - Prep decides it: at the SAME seed 2, the ONLY change being the shade's +2-defense ward,
+    - >-
+      Prep decides it: at the SAME seed 2, the ONLY change being the shade's +2-defense ward,
       the fight flips from death to a full ending_victory 50/50.
     - No prose/flag/score(50)/win/ending/exit/effect change — only the three enemy stats; the
       bug_0016 scoring, bug_0027/0069 lever-legibility, bug_0056 claim-relic-agency, bug_0075

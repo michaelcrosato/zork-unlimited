@@ -315,7 +315,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(boundary.description).toMatch(
       /June holds the north gate[^]*spear funnel[^]*not a living turn[^]*committed first feed cast fouls[^]*brace[^]*pen the yearling alive[^]*any wolf death ends/i,
     );
-    expect(actionIds(withJune)).toContain("talk_june_pike_combat_boundary");
+    expect(actionIds(withJune)).toContain("talk_june_pike");
     expect(actionIds(withJune)).not.toContain("go_north");
     expect(boundary.blocked_exits).toContainEqual({
       direction: "north",
@@ -324,7 +324,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(NORTH_PENDING_GUIDANCE).not.toMatch(/June/i);
     expect(NORTH_PENDING_GUIDANCE).toMatch(/hunt-and-hold warning/i);
 
-    withJune = act(withJune, "talk_june_pike_combat_boundary");
+    withJune = act(withJune, "talk_june_pike");
     expect(actionIds(withJune)).toEqual(
       expect.arrayContaining(["ask_commit_hunt_and_hold", "ask_keep_cattle_terms"]),
     );
@@ -342,7 +342,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       {
         type: "state_change",
         effect: "set_var",
-        name: "__dlg_june_pike_combat_boundary",
+        name: "__dlg_june_pike",
         value: 3,
       },
       {
@@ -354,10 +354,10 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(keepTerms).toEqual({
       ...withJune,
       step: withJune.step + 1,
-      vars: { ...withJune.vars, __dlg_june_pike_combat_boundary: 3 },
+      vars: { ...withJune.vars, __dlg_june_pike: 3 },
     });
     expect(buildRpgObservation(index, keepTerms).dialogue).toEqual({
-      npc: "june_pike_combat_boundary",
+      npc: "june_pike",
       npc_text:
         "Your cattle-first terms already stand; nothing here commits a plan. Cade waits beside the day-book: settle LURE relocation, DRIVE evacuation, or FORTIFY until dawn with him. Until one is committed, north remains closed.",
     });
@@ -371,7 +371,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(backWithCade).toEqual({
       ...withJune,
       step: withJune.step + 2,
-      vars: { ...withJune.vars, __dlg_june_pike_combat_boundary: 0 },
+      vars: { ...withJune.vars, __dlg_june_pike: 0 },
     });
     expect(actionIds(backWithCade)).not.toContain("go_north");
     expect(actionIds(backWithCade)).toContain("talk_houndsman");
@@ -413,7 +413,7 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       expect(start.flags.june_pike_present, route).not.toBe(true);
       const solo = act(start, "go_north");
       expect(actionIds(solo), route).toContain("go_north");
-      expect(actionIds(solo), route).not.toContain("talk_june_pike_combat_boundary");
+      expect(actionIds(solo), route).not.toContain("talk_june_pike");
       expect(buildRpgObservation(index, solo).description, route).not.toMatch(/June Pike/i);
       expect(
         buildRpgObservation(index, solo).blocked_exits.some((exit) => exit.direction === "north"),

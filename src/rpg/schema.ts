@@ -280,6 +280,24 @@ export const DialogueNodeSchema = z
   })
   .strict();
 
+export const NpcVariantSchema = z
+  .object({
+    when: z.array(ConditionSchema).min(1),
+    name: z.string().min(1).optional(),
+    description: z.string().min(1).optional(),
+    room: z.string().min(1).optional(),
+    dialogue_root: z.string().min(1).optional(),
+  })
+  .strict()
+  .refine(
+    (variant) =>
+      variant.name !== undefined ||
+      variant.description !== undefined ||
+      variant.room !== undefined ||
+      variant.dialogue_root !== undefined,
+    { message: "NPC variant must override name, description, room, or dialogue_root." },
+  );
+
 export const NpcSchema = z
   .object({
     id: z.string().min(1),
@@ -287,6 +305,7 @@ export const NpcSchema = z
     description: z.string().min(1),
     room: z.string().min(1),
     conditions: z.array(ConditionSchema).optional(),
+    variants: z.array(NpcVariantSchema).optional(),
     dialogue: z
       .object({
         root: z.string().min(1),
@@ -500,6 +519,7 @@ export type GameObject = z.infer<typeof ObjectSchema>;
 export type DialogueTopic = z.infer<typeof DialogueTopicSchema>;
 export type DialogueNodeVariant = z.infer<typeof DialogueNodeVariantSchema>;
 export type DialogueNode = z.infer<typeof DialogueNodeSchema>;
+export type NpcVariant = z.infer<typeof NpcVariantSchema>;
 export type Npc = z.infer<typeof NpcSchema>;
 export type WinConditionEndingOverride = z.infer<typeof WinConditionEndingOverrideSchema>;
 export type WinCondition = z.infer<typeof WinConditionSchema>;

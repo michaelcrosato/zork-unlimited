@@ -12,23 +12,7 @@ import { QUEST_COMPLETION_RENOWN } from "./session_quests.js";
 import type { OverworldJournalEntry, TravelLogEntrySnapshot } from "./session_snapshot.js";
 import { roadEncounterOptionFor } from "./travel_mechanics.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
-import { authoredLocalJobLegacyCompletion } from "./local_job_scene_legacy.js";
 import { resolveLocalEventSceneOption } from "./local_event_scene.js";
-import { authoredLocalEventLegacyCompletion } from "./local_event_scene_legacy.js";
-import { isEmeryEvidenceCustodyPredecessorWorldHash } from "./emery_evidence_custody_legacy.js";
-
-function isEmeryEvidenceCustodyGrandfatherEventProof(
-  event: OverworldLocalEvent,
-  proof: NonNullable<OverworldJournalEntry["localSceneProof"]>,
-): boolean {
-  return (
-    event.id === "albany_city__greenway__event" &&
-    proof.sceneId === "albany:greenway-trail-policy" &&
-    proof.optionId === "place_quiet_corridor_markers" &&
-    proof.sourceWorldHash !== undefined &&
-    isEmeryEvidenceCustodyPredecessorWorldHash(proof.sourceWorldHash)
-  );
-}
 
 export type OverworldRegionRenownSourceIndex = {
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
@@ -87,10 +71,7 @@ export function expectedSnapshotRegionRenown(
           `Overworld session snapshot authored job "${job.id}" is missing its renown proof.`,
         );
       }
-      const legacyCompletion = authoredLocalJobLegacyCompletion(job.id, proof);
-      renown = legacyCompletion
-        ? legacyCompletion.definition.legacyJob.difficulty
-        : resolveLocalJobSceneOption(job.authored_scene, proof.optionId).terms.renown;
+      renown = resolveLocalJobSceneOption(job.authored_scene, proof.optionId).terms.renown;
     }
     addRegionRenown(
       expected,
@@ -113,19 +94,7 @@ export function expectedSnapshotRegionRenown(
           `Overworld session snapshot authored event "${event.id}" is missing its renown proof.`,
         );
       }
-      const legacyCompletion = authoredLocalEventLegacyCompletion(event.id, proof);
-      if (legacyCompletion) {
-        renown = legacyCompletion.definition.legacyEvent.intensity;
-      } else if (
-        proof.sourceWorldHash === undefined ||
-        isEmeryEvidenceCustodyGrandfatherEventProof(event, proof)
-      ) {
-        renown = resolveLocalEventSceneOption(event.authored_scene, proof.optionId).terms.renown;
-      } else {
-        throw new Error(
-          `Overworld session snapshot authored event "${event.id}" names an untrusted renown source.`,
-        );
-      }
+      renown = resolveLocalEventSceneOption(event.authored_scene, proof.optionId).terms.renown;
     }
     addRegionRenown(
       expected,

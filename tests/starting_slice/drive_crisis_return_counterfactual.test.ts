@@ -11,6 +11,7 @@ import { OverworldSession } from "../../src/world/session.js";
 import type { OverworldSessionSnapshot } from "../../src/world/session_snapshot.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -129,6 +130,7 @@ function wolfBoundary(allyOptionId: typeof ACCEPT | typeof SOLO): OverworldSessi
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+  revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
   session.chooseJourneyStory("albany:oath_limited_aid_only");
   session.chooseJourneyStory(LEAD.options[0]!.id);
   moveToArea(session, PREPARATION.area);

@@ -14,11 +14,12 @@ import type { WorldBinding } from "../world/schema.js";
 import {
   activeDialogue,
   endingText as resolveEndingText,
+  nodeText,
+  npcsInRoom,
   objectName,
   roomDescription,
   visibleObjectIds,
 } from "./model.js";
-import { dialogueNodeText } from "./dialogue_presentation.js";
 import { enemyHp } from "./combat.js";
 import { publicFlags, publicInventory, publicJournal, publicVars } from "./observation_state.js";
 import { ATTACK_VAR, DEFENSE_VAR, HP_VAR, SCORE_VAR } from "./schema.js";
@@ -101,10 +102,8 @@ export function buildRpgObservation(
   }
 
   const npcs: RpgObservation["npcs_present"] = [];
-  for (const npc of index.npcByRoom.get(state.current) ?? []) {
-    if (evalConditions(npc.conditions ?? [], state)) {
-      npcs.push({ id: npc.id, name: npc.name });
-    }
+  for (const npc of npcsInRoom(index, state, state.current)) {
+    npcs.push({ id: npc.id, name: npc.name });
   }
 
   const exits: RpgObservation["exits"] = [];
@@ -182,7 +181,7 @@ export function buildRpgObservation(
     dialogue: active
       ? {
           npc: active.npc.id,
-          npc_text: dialogueNodeText(state, active.node),
+          npc_text: nodeText(active.node, state),
         }
       : null,
     enemies_present: enemies,

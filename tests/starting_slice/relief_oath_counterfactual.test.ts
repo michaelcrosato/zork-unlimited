@@ -21,6 +21,7 @@ import {
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION =
@@ -193,6 +194,7 @@ function reachOathOffer(profileId = LEDGER_PROFILE): OverworldSession {
 
 function selectOath(oathId: OathId, profileId = LEDGER_PROFILE): OverworldSession {
   const session = reachOathOffer(profileId);
+  revealCurrentJourneyStoryOptions(session, OATH.id);
   session.chooseJourneyStory(oathId);
   expect(session.journey().storyChoice).toMatchObject({ id: LEAD.id, kind: "lead_source" });
   return session;
@@ -481,6 +483,7 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
     for (const oathId of OATH_IDS) {
       const expected = OATH_CASES[oathId];
       const branch = OverworldSession.restore(WORLD, pendingSnapshot);
+      revealCurrentJourneyStoryOptions(branch, OATH.id);
       const before = branch.snapshot();
       branch.chooseJourneyStory(oathId);
       const after = branch.snapshot();

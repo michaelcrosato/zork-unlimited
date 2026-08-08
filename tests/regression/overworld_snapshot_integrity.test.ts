@@ -596,9 +596,9 @@ describe("overworld snapshot restore integrity", () => {
 
     expect(() =>
       a.restore_overworld_session({
-        snapshot: replaceEntry({ ...entry, text: "Hayden repeats a forged future dispatch." }),
+        snapshot: replaceEntry({ ...entry, text: "Hayden's earlier dispatch wording." }),
       }),
-    ).toThrow(/does not match its authored copy/);
+    ).not.toThrow();
   });
 
   it.each([

@@ -1,6 +1,6 @@
 id: bug_0304
 pack: sealed_crypt_v1
-title: "grip iron key" skill-check action persists after a failed attempt
+title: '"grip iron key" skill-check action persists after a failed attempt'
 class: orphaned-action-post-attempt
 severity: moderate
 found_by: blind_playtest (seed 7, 2026-06-08T09-03-51-333Z)

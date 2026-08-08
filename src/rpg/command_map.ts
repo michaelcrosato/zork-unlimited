@@ -9,11 +9,9 @@
  * illegal command yields a friendly message, never a state change.
  */
 import type { RpgAction } from "../api/types.js";
-import { evalConditions } from "../core/conditions.js";
 import type { GameState } from "../core/state.js";
 import { normalizeRpgTopicCommand, parseQualifiedRpgAskCommand } from "./command_normalization.js";
-import { dialogueTopicPrompt } from "./dialogue_presentation.js";
-import { type RpgModelIndex, activeDialogue } from "./model.js";
+import { type RpgModelIndex, activeDialogue, npcsInRoom } from "./model.js";
 import { enumerateRpgBaseActions, useInteraction } from "./legal_actions.js";
 
 export type ParseResult = { ok: true; action: RpgAction } | { ok: false; reason: string };
@@ -136,9 +134,7 @@ function resolveVisibleNpc(
 ): VisibleNpcResolution {
   const norm = stripArticle(phrase).toLowerCase().trim();
   if (!norm) return { kind: "unmatched" };
-  const visible = (index.npcByRoom.get(state.current) ?? []).filter((npc) =>
-    evalConditions(npc.conditions ?? [], state),
-  );
+  const visible = npcsInRoom(index, state, state.current);
   const exact = visible.filter(
     (npc) => npc.id.toLowerCase() === norm || npc.name.toLowerCase() === norm,
   );
@@ -220,7 +216,7 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
       active.node.topics.find(
         (candidate) =>
           normalizedArg.length > 0 &&
-          normalizeRpgTopicCommand(dialogueTopicPrompt(candidate)).includes(normalizedArg),
+          normalizeRpgTopicCommand(candidate.prompt).includes(normalizedArg),
       );
     if (!topic)
       return {

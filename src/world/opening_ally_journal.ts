@@ -25,13 +25,7 @@ import type {
 } from "./session_snapshot.js";
 
 export const OPENING_ALLY_JOURNAL_PREFIX = "ally:" as const;
-export const OPENING_ALLY_LEGACY_JOURNAL_PREFIX = "ally_legacy:" as const;
 export const OPENING_ALLY_OFFER_JOURNAL_PREFIX = "ally_offer:" as const;
-
-const WORLD_HASH_PATTERN = /^[0-9a-f]{64}$/;
-const OPENING_ALLY_LEGACY_JOURNAL_TITLE = "Legacy journey: Albany field team grandfathered";
-const OPENING_ALLY_LEGACY_JOURNAL_TEXT =
-  "This journey departed for Wolf-Winter under a trusted earlier Albany docket. It remains a solo run: no ally, promise, relationship effect, return claim, or retroactive field capability is invented.";
 
 export type OpeningAllyJournalDraft = Readonly<
   Pick<OverworldJournalEntry, "id" | "kind" | "title" | "text">
@@ -40,8 +34,6 @@ export type OpeningAllyJournalDraft = Readonly<
 export type OpeningAllyJournalProof = Readonly<{
   characterAfterAlly: CampaignCharacterState;
   offered: boolean;
-  legacy: boolean;
-  legacySourceWorldHash: string | null;
   offerBoundary: OverworldJournalDecisionBoundary | null;
   option: OpeningAllyOption | null;
   selectionBoundary: OverworldJournalDecisionBoundary | null;
@@ -56,12 +48,6 @@ export function openingAllyOfferJournalId(sceneId: string): string {
 
 export function openingAllyJournalId(sceneId: string, optionId: string): string {
   return `${OPENING_ALLY_JOURNAL_PREFIX}${sceneId}:${optionId}`;
-}
-
-export function openingAllyLegacySourceWorldHash(entryId: string): string | null {
-  if (!entryId.startsWith(OPENING_ALLY_LEGACY_JOURNAL_PREFIX)) return null;
-  const sourceWorldHash = entryId.slice(OPENING_ALLY_LEGACY_JOURNAL_PREFIX.length);
-  return WORLD_HASH_PATTERN.test(sourceWorldHash) ? sourceWorldHash : null;
 }
 
 export function openingAllyOfferJournalDraft(scene: OpeningAlly): OpeningAllyJournalDraft {
@@ -101,18 +87,6 @@ export function allOpeningAllyJournalDrafts(
   );
 }
 
-export function openingAllyLegacyJournalDraft(sourceWorldHash: string): OpeningAllyJournalDraft {
-  if (!WORLD_HASH_PATTERN.test(sourceWorldHash)) {
-    throw new Error(`Invalid legacy opening ally hash "${sourceWorldHash}".`);
-  }
-  return Object.freeze({
-    id: `${OPENING_ALLY_LEGACY_JOURNAL_PREFIX}${sourceWorldHash}`,
-    kind: "ally_legacy" as const,
-    title: OPENING_ALLY_LEGACY_JOURNAL_TITLE,
-    text: OPENING_ALLY_LEGACY_JOURNAL_TEXT,
-  });
-}
-
 function freezeBoundary(
   boundary: OverworldJournalDecisionBoundary,
 ): OverworldJournalDecisionBoundary {
@@ -149,25 +123,10 @@ export function openingAllyJournalEntry(args: {
   });
 }
 
-/** Migration-only marker; proof accepts it only with the matching trusted predecessor hash. */
-export function openingAllyLegacyJournalEntry(args: {
-  sourceWorldHash: string;
-  town: string;
-  recordedAt: string;
-}): OverworldJournalEntry {
-  return Object.freeze({
-    ...openingAllyLegacyJournalDraft(args.sourceWorldHash),
-    town: args.town,
-    recordedAt: args.recordedAt,
-  });
-}
-
 function emptyAllyProof(character: CampaignCharacterState): OpeningAllyJournalProof {
   return Object.freeze({
     characterAfterAlly: cloneCampaignCharacterState(character),
     offered: false,
-    legacy: false,
-    legacySourceWorldHash: null,
     offerBoundary: null,
     option: null,
     selectionBoundary: null,
@@ -177,7 +136,7 @@ function emptyAllyProof(character: CampaignCharacterState): OpeningAllyJournalPr
   });
 }
 
-/** Replay the departure offer, selected field-team contract, or one trusted solo marker. */
+/** Replay the departure offer and selected field-team contract. */
 export function proveOpeningAllyJournal(args: {
   scene: OpeningAlly | null | undefined;
   preparationProof: OpeningPreparationJournalProof;
@@ -187,16 +146,14 @@ export function proveOpeningAllyJournal(args: {
   reliefAllocationScene?: OpeningReliefAllocation | null;
   journalEntries: readonly OverworldJournalEntry[];
   expectedTown: string | null;
-  trustedLegacySourceWorldHash?: string | null;
 }): OpeningAllyJournalProof {
   const indexed = args.journalEntries.map((entry, index) => ({ entry, index }));
   const selections = indexed.filter(({ entry }) => entry.kind === "ally");
   const offers = indexed.filter(({ entry }) => entry.kind === "ally_offer");
-  const legacies = indexed.filter(({ entry }) => entry.kind === "ally_legacy");
   const allocationSelected =
     args.reliefAllocationProof?.option !== null && args.reliefAllocationProof?.option !== undefined;
   const allocationJournalIndex = args.reliefAllocationProof?.journalIndex ?? null;
-  const allyEvidenceIndex = selections[0]?.index ?? offers[0]?.index ?? legacies[0]?.index ?? null;
+  const allyEvidenceIndex = selections[0]?.index ?? offers[0]?.index ?? null;
   const sourceSelected =
     args.leadSourceProof?.option !== null &&
     args.leadSourceProof?.option !== undefined &&
@@ -248,17 +205,10 @@ export function proveOpeningAllyJournal(args: {
         allocationJournalIndex > allyEvidenceIndex
       ? allocationJournalIndex
       : args.preparationProof.journalIndex;
-  if (selections.length > 1 || offers.length > 1 || legacies.length > 1) {
-    throw new Error(
-      "Overworld session snapshot must contain at most one ally offer, choice, and legacy marker.",
-    );
+  if (selections.length > 1 || offers.length > 1) {
+    throw new Error("Overworld session snapshot must contain at most one ally offer and choice.");
   }
-  if (legacies.length > 0 && (selections.length > 0 || offers.length > 0)) {
-    throw new Error(
-      "Overworld session snapshot cannot combine legacy and current opening ally evidence.",
-    );
-  }
-  if (selections.length === 0 && offers.length === 0 && legacies.length === 0) {
+  if (selections.length === 0 && offers.length === 0) {
     return emptyAllyProof(characterBeforeAlly);
   }
   if (!args.scene) {
@@ -276,57 +226,6 @@ export function proveOpeningAllyJournal(args: {
   }
   const scene = parseOpeningAlly(args.scene);
 
-  const legacy = legacies[0];
-  if (legacy) {
-    if (
-      (!args.preparationProof.profile && !args.preparationProof.legacy) ||
-      args.preparationProof.journalIndex === null
-    ) {
-      throw new Error("Overworld session snapshot legacy ally has no resolved preparation.");
-    }
-    const sourceWorldHash = openingAllyLegacySourceWorldHash(legacy.entry.id);
-    if (
-      !sourceWorldHash ||
-      args.trustedLegacySourceWorldHash === undefined ||
-      args.trustedLegacySourceWorldHash === null ||
-      sourceWorldHash !== args.trustedLegacySourceWorldHash
-    ) {
-      throw new Error(
-        "Overworld session snapshot legacy opening ally has no matching trusted predecessor hash.",
-      );
-    }
-    const expected = openingAllyLegacyJournalDraft(sourceWorldHash);
-    if (legacy.entry.title !== expected.title || legacy.entry.text !== expected.text) {
-      throw new Error(
-        `Overworld session snapshot legacy opening ally entry "${legacy.entry.id}" does not match its canonical copy.`,
-      );
-    }
-    if (args.expectedTown !== null && legacy.entry.town !== args.expectedTown) {
-      throw new Error(
-        `Overworld session snapshot legacy opening ally entry "${legacy.entry.id}" is bound to town "${legacy.entry.town}", expected "${args.expectedTown}".`,
-      );
-    }
-    const questEntry = args.journalEntries[legacy.index - 1];
-    if (
-      !questEntry ||
-      questEntry.kind !== "quest" ||
-      questEntry.id !== `quest:${scene.target_quest}` ||
-      questEntry.recordedAt !== legacy.entry.recordedAt ||
-      legacy.index >= args.preparationProof.journalIndex
-    ) {
-      throw new Error(
-        "Overworld session snapshot legacy opening ally marker must sit immediately before replayable target-quest departure and after preparation.",
-      );
-    }
-    return Object.freeze({
-      ...emptyAllyProof(characterBeforeAlly),
-      legacy: true,
-      legacySourceWorldHash: sourceWorldHash,
-      journalIndex: legacy.index,
-      recordedAt: parseTimeLabel(legacy.entry.recordedAt),
-    });
-  }
-
   const offered = offers[0];
   const selected = selections[0];
   if (!offered) {
@@ -335,13 +234,9 @@ export function proveOpeningAllyJournal(args: {
     );
   }
   const expectedOffer = openingAllyOfferJournalDraft(scene);
-  if (
-    offered.entry.id !== expectedOffer.id ||
-    offered.entry.title !== expectedOffer.title ||
-    offered.entry.text !== expectedOffer.text
-  ) {
+  if (offered.entry.id !== expectedOffer.id) {
     throw new Error(
-      `Overworld session snapshot ally offer "${offered.entry.id}" does not match its authored copy.`,
+      `Overworld session snapshot ally offer "${offered.entry.id}" references unknown evidence.`,
     );
   }
   if (args.expectedTown !== null && offered.entry.town !== args.expectedTown) {
@@ -402,18 +297,9 @@ export function proveOpeningAllyJournal(args: {
     character: characterBeforeAlly,
     optionId: option.id,
   });
-  const expectedSelection = openingAllyJournalDraft({
-    scene,
-    character: characterBeforeAlly,
-    optionId: option.id,
-  });
-  if (
-    selectedAfterOffer.entry.title !== expectedSelection.title ||
-    selectedAfterOffer.entry.text !== expectedSelection.text ||
-    (args.expectedTown !== null && selectedAfterOffer.entry.town !== args.expectedTown)
-  ) {
+  if (args.expectedTown !== null && selectedAfterOffer.entry.town !== args.expectedTown) {
     throw new Error(
-      `Overworld session snapshot ally entry "${selectedAfterOffer.entry.id}" does not match its authored terms, copy, or town.`,
+      `Overworld session snapshot ally entry "${selectedAfterOffer.entry.id}" is bound to town "${selectedAfterOffer.entry.town}", expected "${args.expectedTown}".`,
     );
   }
   const selectionBoundary = selectedAfterOffer.entry.storyChoiceBoundary;
@@ -457,8 +343,6 @@ export function proveOpeningAllyJournal(args: {
   return Object.freeze({
     characterAfterAlly: cloneCampaignCharacterState(application.characterAfter),
     offered: true,
-    legacy: false,
-    legacySourceWorldHash: null,
     offerBoundary: { ...offerBoundary },
     option,
     selectionBoundary: { ...selectionBoundary },

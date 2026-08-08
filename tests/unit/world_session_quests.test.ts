@@ -214,6 +214,7 @@ describe("overworld quest lifecycle planning", () => {
         town: "Alden",
         title: `Completed ${lead.title}`,
         text: `The quest closed at Victory after ${minutes} minutes of local work.`,
+        questCompletionEndingId: "ending_victory",
       },
     });
     expect([...startedQuestIds]).toEqual([lead.id]);

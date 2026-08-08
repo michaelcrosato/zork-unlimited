@@ -1,5 +1,9 @@
 bug_id: bug_0292
 component: content   # reactive-description-blindness in clockwork_heist gallery scene
+summary: >-
+  The gallery's ticks>=2 prose attributed guard-schedule knowledge to players who had
+  not read the steward's ledger. The content fix split that reactive description on
+  read_ledger while preserving choices, flags, timing, routes, endings, and scoring.
 # Surfaced by blind MCP playtester (seed 7): the `landing` (gallery) scene's ticks>=2
 # variant said "you sense this long gallery will be no place to be caught standing when
 # it chimes" on a path that never read the steward's ledger. "Caught standing" implies

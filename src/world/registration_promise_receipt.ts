@@ -65,8 +65,7 @@ function sameStringSet(left: readonly string[], right: readonly string[]): boole
 function authenticateQuestStart(
   quest: OverworldQuest,
   journalEntries: readonly OverworldJournalEntry[],
-  trustedLegacySourceWorldHash: string | null,
-): "current" | "legacy" {
+): void {
   const starts = journalEntries.filter((entry) => entry.id === `quest:${quest.id}`);
   if (starts.length !== 1 || starts[0]!.kind !== "quest") {
     throw new Error(
@@ -74,18 +73,7 @@ function authenticateQuestStart(
     );
   }
   const proof = starts[0]!.questStartProof;
-  if (proof?.kind === "legacy") {
-    if (
-      trustedLegacySourceWorldHash === null ||
-      proof.sourceWorldHash !== trustedLegacySourceWorldHash
-    ) {
-      throw new Error(
-        `Registration receipt quest start names untrusted legacy source "${proof.sourceWorldHash}".`,
-      );
-    }
-    return "legacy";
-  }
-  if (proof?.kind !== "approach") {
+  if (!proof) {
     throw new Error(`Registration receipt requires an authenticated start for "${quest.id}".`);
   }
   if (!quest.launch?.options.some((option) => option.id === proof.approachId)) {
@@ -93,7 +81,6 @@ function authenticateQuestStart(
       `Registration receipt quest start names unknown approach "${proof.approachId}".`,
     );
   }
-  return "current";
 }
 
 function assertSelectedRegistrationPromise(args: {
@@ -164,7 +151,6 @@ export function deriveRegistrationPromiseFoldbackReceipt(args: {
   openingRegistration: OpeningRegistration | null | undefined;
   openingReliefOath: OpeningReliefOath | null | undefined;
   openingLeadSource: OpeningLeadSource | null | undefined;
-  trustedLegacySourceWorldHash?: string | null;
 }): string | undefined {
   if (args.quest.id !== WOLF_WINTER_QUEST_ID) return undefined;
   const effects = overworldQuestCampaignEffectsForCharacter(
@@ -198,18 +184,7 @@ export function deriveRegistrationPromiseFoldbackReceipt(args: {
     throw new Error("Registration receipt requires a canonical Wolf-Winter outcome.");
   }
 
-  const trustedLegacySourceWorldHash = args.trustedLegacySourceWorldHash ?? null;
-  if (
-    trustedLegacySourceWorldHash !== null &&
-    !/^[0-9a-f]{64}$/.test(trustedLegacySourceWorldHash)
-  ) {
-    throw new Error("Registration receipt legacy source hash is malformed.");
-  }
-  const questStartKind = authenticateQuestStart(
-    args.quest,
-    args.journalEntries,
-    trustedLegacySourceWorldHash,
-  );
+  authenticateQuestStart(args.quest, args.journalEntries);
   const registrationProof = proveOpeningRegistrationJournal({
     registration: args.openingRegistration,
     journalEntries: args.journalEntries,
@@ -223,27 +198,19 @@ export function deriveRegistrationPromiseFoldbackReceipt(args: {
     registrationProof,
     journalEntries: args.journalEntries,
     expectedTown: null,
-    trustedLegacySourceWorldHash,
   });
-  const leadSourceProof = reliefOathProof.option
-    ? proveOpeningLeadSourceJournal({
-        scene: args.openingLeadSource,
-        registrationProof,
-        reliefOathProof,
-        journalEntries: args.journalEntries,
-        expectedTown: null,
-      })
-    : null;
-  const currentDispatchProof =
-    questStartKind === "current" &&
-    !reliefOathProof.legacy &&
-    reliefOathProof.option !== null &&
-    leadSourceProof?.option !== null &&
-    leadSourceProof?.option !== undefined;
-  if (!currentDispatchProof && trustedLegacySourceWorldHash === null) {
-    throw new Error(
-      "Registration receipt requires current dispatch terms or an authenticated legacy source.",
-    );
+  if (!reliefOathProof.option) {
+    throw new Error("Registration receipt requires current relief-oath terms.");
+  }
+  const leadSourceProof = proveOpeningLeadSourceJournal({
+    scene: args.openingLeadSource,
+    registrationProof,
+    reliefOathProof,
+    journalEntries: args.journalEntries,
+    expectedTown: null,
+  });
+  if (!leadSourceProof.option) {
+    throw new Error("Registration receipt requires current source terms.");
   }
   const expectedApplication = applyCampaignConsequences({
     character: args.characterBefore,
@@ -274,35 +241,26 @@ export function deriveRegistrationPromiseFoldbackReceipt(args: {
   }
 
   const fieldReturn = `${args.campaignExport.ending_title}: ${outcome.albanyReturnContext}`;
-  const receiptPrefix = currentDispatchProof
-    ? "Registration receipt"
-    : "Legacy registration receipt";
-  const legacyQualification = currentDispatchProof
-    ? ""
-    : ` under trusted predecessor Albany docket ${trustedLegacySourceWorldHash!}`;
-
   switch (registrationProof.profile.id) {
     case "albany:road_warden":
       return (
-        `${receiptPrefix} — Hayden Hale accepts the returned field account${legacyQualification}. ${fieldReturn} ` +
+        `Registration receipt — Hayden Hale accepts the returned field account. ${fieldReturn} ` +
         "Hayden's winter-packet promise changed active → kept."
       );
     case "albany:ledger_advocate":
-      return currentDispatchProof
-        ? `Registration receipt — Rowan Quill reconciles ${leadSourceProof!.option!.title} under ${reliefOathProof.option!.title}. Exact return: ${fieldReturn} The truthful-account promise changed active → kept.`
-        : `Legacy registration receipt — Rowan Quill reconciles the exact Wolf-Winter return${legacyQualification}. Exact return: ${fieldReturn} The truthful-account promise changed active → kept.`;
+      return `Registration receipt — Rowan Quill reconciles ${leadSourceProof.option.title} under ${reliefOathProof.option.title}. Exact return: ${fieldReturn} The truthful-account promise changed active → kept.`;
     case "albany:ironhands_repairer": {
       const condition = assertIronhandsEquipment(args.characterBefore, args.openingRegistration);
       return (
-        `${receiptPrefix} — Reese Pryce records the insulated repair roll returned at ` +
-        `condition ${String(condition)}/100 and releases the tool loan${legacyQualification}. Field return: ${fieldReturn} ` +
+        "Registration receipt — Reese Pryce records the insulated repair roll returned at " +
+        `condition ${String(condition)}/100 and releases the tool loan. Field return: ${fieldReturn} ` +
         "The tool-return promise changed active → kept."
       );
     }
     case "albany:unaffiliated_courier":
       return args.worldFactIds.includes(AUTHORITY_INVOKED_FACT_ID)
-        ? `${receiptPrefix} — Rowan Quill publicly voids the emergency tag after lawful Albany authority was invoked${legacyQualification}. Exact return: ${fieldReturn} The tag-closure promise changed active → kept.`
-        : `${receiptPrefix} — Rowan Quill records the emergency tag returned under Emery Sloane's witness${legacyQualification}. Exact return: ${fieldReturn} The tag-closure promise changed active → kept.`;
+        ? `Registration receipt — Rowan Quill publicly voids the emergency tag after lawful Albany authority was invoked. Exact return: ${fieldReturn} The tag-closure promise changed active → kept.`
+        : `Registration receipt — Rowan Quill records the emergency tag returned under Emery Sloane's witness. Exact return: ${fieldReturn} The tag-closure promise changed active → kept.`;
     default:
       throw new Error(
         `Registration receipt does not support profile "${registrationProof.profile.id}".`,

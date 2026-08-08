@@ -67,7 +67,6 @@ import {
   type CampaignServiceOffer,
   type CampaignServiceLocalJobOption,
 } from "./campaign_service_rules.js";
-import { authoredLocalJobPredicatePredecessorCompletion } from "./local_job_scene_legacy.js";
 import {
   applyOverworldSessionQuestStart,
   applyOverworldSessionQuestCompletion,
@@ -250,6 +249,7 @@ import {
   INITIAL_JOURNEY_GOAL,
   journeyExitReceipt,
   journeyPresentation,
+  journeyStoryChoiceOptionsForPresentation,
   recordJourneyCharacterDied,
   recordJourneyDecision,
   recordJourneyGoalCompleted,
@@ -513,8 +513,7 @@ export class OverworldSession {
    * Persisting it makes an exported session fully resumable and keeps legality derivable.
    */
   private inspectedStoryReveals = new Map<string, Set<string>>();
-  private trustedCivicPreparationSourceWorldHash: string | null = null;
-  private trustedLegacyRegistrationReceiptSourceWorldHash: string | null = null;
+  private restoreWarningList: readonly string[] = Object.freeze([]);
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
   private readonly caches: OverworldSessionCaches = {};
@@ -613,6 +612,11 @@ export class OverworldSession {
     return cloneOverworldSessionSnapshot(this.cachedSnapshot().snapshot);
   }
 
+  /** Non-fatal compatibility notices emitted while restoring this session. */
+  restoreWarnings(): readonly string[] {
+    return [...this.restoreWarningList];
+  }
+
   /**
    * Trusted quest-launch input. The clone keeps the persistent character owned
    * by this session; an embedded RPG can project it without gaining a mutable
@@ -648,8 +652,6 @@ export class OverworldSession {
         !job?.authored_scene ||
         !proof ||
         proof.sceneId !== job.authored_scene.id ||
-        (proof.sourceWorldHash !== undefined &&
-          !authoredLocalJobPredicatePredecessorCompletion(jobId, proof)) ||
         !job.authored_scene.options.some((option) => option.id === proof.optionId)
       ) {
         return [];
@@ -899,27 +901,19 @@ export class OverworldSession {
   }
 
   private openingLeadSourceResolved(): boolean {
-    return this.journalEntries.some(
-      (entry) => entry.kind === "lead_source" || entry.kind === "lead_source_legacy",
-    );
+    return this.journalEntries.some((entry) => entry.kind === "lead_source");
   }
 
   private openingReliefOathResolved(): boolean {
-    return this.journalEntries.some(
-      (entry) => entry.kind === "relief_oath" || entry.kind === "relief_oath_legacy",
-    );
+    return this.journalEntries.some((entry) => entry.kind === "relief_oath");
   }
 
   private openingPreparationResolved(): boolean {
-    return this.journalEntries.some(
-      (entry) => entry.kind === "preparation" || entry.kind === "preparation_legacy",
-    );
+    return this.journalEntries.some((entry) => entry.kind === "preparation");
   }
 
   private openingReliefAllocationResolved(): boolean {
-    return this.journalEntries.some(
-      (entry) => entry.kind === "relief_allocation" || entry.kind === "relief_allocation_legacy",
-    );
+    return this.journalEntries.some((entry) => entry.kind === "relief_allocation");
   }
 
   /**
@@ -938,9 +932,7 @@ export class OverworldSession {
   }
 
   private openingAllyResolved(): boolean {
-    return this.journalEntries.some(
-      (entry) => entry.kind === "ally" || entry.kind === "ally_legacy",
-    );
+    return this.journalEntries.some((entry) => entry.kind === "ally");
   }
 
   private openingDispatchHubAvailable(): ReturnType<typeof resolveOpeningDispatchManifestChain> {
@@ -1163,8 +1155,6 @@ export class OverworldSession {
     return deriveOpeningDepartureRecap({
       world: this.world,
       journalEntries: this.journalEntries,
-      trustedLegacySourceWorldHash: this.trustedLegacyRegistrationReceiptSourceWorldHash,
-      trustedCivicSourceWorldHash: this.trustedCivicPreparationSourceWorldHash,
     });
   }
 
@@ -1184,7 +1174,6 @@ export class OverworldSession {
         currentMinutes: this.minutes,
         targetQuestStarted: this.startedQuestIds.has(preparation.target_quest),
         targetQuestCompleted: this.completedQuestIds.has(preparation.target_quest),
-        trustedLegacySourceWorldHash: this.trustedLegacyRegistrationReceiptSourceWorldHash,
       },
     });
   }
@@ -1303,7 +1292,7 @@ export class OverworldSession {
    * The single accessor pair the MCP gate reads and writes, so reveal legality is
    * derived from session state rather than from where the call happened to arrive.
    */
-  rememberStoryReveal(storyChoiceId: string, revealId: string): void {
+  private rememberStoryReveal(storyChoiceId: string, revealId: string): void {
     let reveals = this.inspectedStoryReveals.get(storyChoiceId);
     if (!reveals) {
       reveals = new Set<string>();
@@ -1314,8 +1303,50 @@ export class OverworldSession {
     this.clearSessionCaches();
   }
 
-  storyRevealWasInspected(storyChoiceId: string, revealId: string): boolean {
+  private storyRevealWasInspected(storyChoiceId: string, revealId: string): boolean {
     return this.inspectedStoryReveals.get(storyChoiceId)?.has(revealId) === true;
+  }
+
+  /**
+   * Reveal receipts are authority for hidden story options, so restoring them
+   * requires more than schema-valid strings. Every tuple must name a story that
+   * is inspectable at this exact boundary and must contain exactly that story's
+   * one authored progressive-disclosure id.
+   */
+  private assertSnapshotStoryRevealReceipts(snapshot: OverworldSessionSnapshot): void {
+    const seenStoryChoiceIds = new Set<string>();
+    for (const [storyChoiceId, revealIds] of snapshot.inspectedStoryReveals ?? []) {
+      if (seenStoryChoiceIds.has(storyChoiceId)) {
+        throw new Error(
+          `Overworld session snapshot repeats story reveal receipt "${storyChoiceId}".`,
+        );
+      }
+      seenStoryChoiceIds.add(storyChoiceId);
+      if (new Set(revealIds).size !== revealIds.length) {
+        throw new Error(
+          `Overworld session snapshot repeats a reveal id for story "${storyChoiceId}".`,
+        );
+      }
+
+      let story: JourneyStoryChoicePrompt;
+      try {
+        story = this.inspectJourneyStory(storyChoiceId);
+      } catch {
+        throw new Error(
+          `Overworld session snapshot story reveal receipt "${storyChoiceId}" is not currently inspectable.`,
+        );
+      }
+      const authoredRevealId = story.progressiveDisclosure?.reveal.id;
+      if (
+        authoredRevealId === undefined ||
+        revealIds.length !== 1 ||
+        revealIds[0] !== authoredRevealId
+      ) {
+        throw new Error(
+          `Overworld session snapshot story reveal receipt "${storyChoiceId}" must contain exactly its authored progressive-disclosure id.`,
+        );
+      }
+    }
   }
 
   /** Drop every reveal receipt — the story is decided, so the gate has no more work. */
@@ -1356,6 +1387,51 @@ export class OverworldSession {
     }
     throw new Error(
       `Departure story choice "${storyChoiceId}" is not available at the current location and journey boundary.`,
+    );
+  }
+
+  /**
+   * Open a progressive-disclosure branch and persist that receipt with the session.
+   * Every transport calls this method; no UI or protocol adapter owns legality.
+   */
+  revealJourneyStory(storyChoiceId: string, revealId: string): JourneyStoryChoicePrompt {
+    const story = this.inspectJourneyStory(storyChoiceId);
+    journeyStoryChoiceOptionsForPresentation(story, revealId);
+    this.rememberStoryReveal(storyChoiceId, revealId);
+    return story;
+  }
+
+  /** Validate an option-detail request against the session's durable reveal receipt. */
+  inspectJourneyStoryOption(storyChoiceId: string, optionId: string): JourneyStoryChoicePrompt {
+    const story = this.inspectJourneyStory(storyChoiceId);
+    this.assertJourneyStoryOptionVisible(story, optionId);
+    return story;
+  }
+
+  /** The only presentation projection for options unlocked in this session. */
+  journeyStoryOptionsForPresentation(storyChoiceId: string): readonly JourneyStoryChoiceOption[] {
+    const story = this.inspectJourneyStory(storyChoiceId);
+    const disclosure = story.progressiveDisclosure;
+    const revealId =
+      disclosure && this.storyRevealWasInspected(story.id, disclosure.reveal.id)
+        ? disclosure.reveal.id
+        : undefined;
+    return journeyStoryChoiceOptionsForPresentation(story, revealId);
+  }
+
+  private assertJourneyStoryOptionVisible(
+    story: JourneyStoryChoicePrompt,
+    optionId: string,
+  ): JourneyStoryChoiceOption {
+    const option = story.options.find((candidate) => candidate.id === optionId);
+    if (!option) {
+      throw new Error(`Story choice "${story.id}" does not offer option "${optionId}".`);
+    }
+    const disclosure = story.progressiveDisclosure;
+    if (!disclosure || disclosure.initialOptionIds.includes(optionId)) return option;
+    if (this.storyRevealWasInspected(story.id, disclosure.reveal.id)) return option;
+    throw new Error(
+      `Story option "${optionId}" is hidden. Inspect story "${story.id}" with reveal_id "${disclosure.reveal.id}" in this session before inspecting or choosing it.`,
     );
   }
 
@@ -1891,7 +1967,7 @@ export class OverworldSession {
   }
 
   chooseJourneyStory(choiceId: string, storyChoiceId?: string): OverworldJourneyStoryChoiceResult {
-    const result = this.chooseJourneyStoryInternal(choiceId, storyChoiceId, true);
+    const result = this.chooseJourneyStoryInternal(choiceId, storyChoiceId, true, "player");
     // The story is decided, so the reveal gate has nothing left to guard. Clearing here
     // also keeps a revealed branch and an unrevealed one converging on the same snapshot
     // hash once both have chosen, which several parity proofs depend on.
@@ -1903,6 +1979,7 @@ export class OverworldSession {
     choiceId: string,
     storyChoiceId: string | undefined,
     checkpointSafeBoundary: boolean,
+    selectionAuthority: "player" | "derived",
   ): OverworldJourneyStoryChoiceResult {
     assertJourneyContractAcceptingDecision(this.journeyState);
     const presentedStoryChoice = this.journey().storyChoice;
@@ -1927,8 +2004,13 @@ export class OverworldSession {
             })()
           : this.inspectJourneyStory(storyChoiceId);
     if (!storyChoice) throw new Error("There is no story consequence to choose right now.");
-    const option = storyChoice.options.find((candidate) => candidate.id === choiceId);
-    if (!option) throw new Error(`Unknown story choice "${String(choiceId)}".`);
+    const option =
+      selectionAuthority === "player"
+        ? this.assertJourneyStoryOptionVisible(storyChoice, choiceId)
+        : storyChoice.options.find((candidate) => candidate.id === choiceId);
+    if (!option) {
+      throw new Error(`Story choice "${storyChoice.id}" does not offer option "${choiceId}".`);
+    }
     if (pullBased && storyChoice.kind === "preparation") {
       this.offerOpeningPreparationAtDeparture();
     } else if (pullBased && storyChoice.kind === "relief_allocation") {
@@ -1993,11 +2075,17 @@ export class OverworldSession {
         ? this.preflightOpeningReliefOathStandardPacket(registration, scene, choiceId)
         : null;
       if (standardPacket) {
-        this.chooseJourneyStoryInternal(standardPacket.reliefOathOption.id, storyChoice.id, false);
+        this.chooseJourneyStoryInternal(
+          standardPacket.reliefOathOption.id,
+          storyChoice.id,
+          false,
+          "derived",
+        );
         const leadSourceSelection = this.chooseJourneyStoryInternal(
           standardPacket.leadSourceOption.id,
           undefined,
           true,
+          "derived",
         );
         const consequence = this.openingStandardPacketReceipt({
           doctrine: standardPacket.doctrine,
@@ -2354,20 +2442,19 @@ export class OverworldSession {
     this.questCharacterDeathBoundary = snapshot.questCharacterDeathBoundary
       ? cloneQuestCharacterDeathBoundary(snapshot.questCharacterDeathBoundary)
       : null;
+    this.openingLeadSourceDecisionTrail = applied.openingLeadSourceDecisionTrailAfter
+      ? cloneOpeningLeadSourceDecisionTrail(applied.openingLeadSourceDecisionTrailAfter)
+      : null;
+    this.assertQuestCharacterDeathBoundary();
+    this.clearSessionCaches();
+    this.assertSnapshotStoryRevealReceipts(snapshot);
     this.inspectedStoryReveals = new Map(
       (snapshot.inspectedStoryReveals ?? []).map(([storyChoiceId, revealIds]) => [
         storyChoiceId,
         new Set(revealIds),
       ]),
     );
-    this.assertQuestCharacterDeathBoundary();
-    this.openingLeadSourceDecisionTrail = applied.openingLeadSourceDecisionTrailAfter
-      ? cloneOpeningLeadSourceDecisionTrail(applied.openingLeadSourceDecisionTrailAfter)
-      : null;
-    this.trustedCivicPreparationSourceWorldHash =
-      applied.trustedCivicPreparationSourceWorldHashAfter;
-    this.trustedLegacyRegistrationReceiptSourceWorldHash =
-      applied.trustedLegacyRegistrationReceiptSourceWorldHashAfter;
+    this.restoreWarningList = applied.restoreWarnings;
     this.clearSessionCaches();
   }
 
@@ -2684,7 +2771,6 @@ export class OverworldSession {
               openingPreparation: this.world.opening_preparation ?? null,
               openingReliefAllocation: this.world.opening_relief_allocation ?? null,
               openingAlly: this.world.opening_ally ?? null,
-              trustedLegacySourceWorldHash: this.trustedLegacyRegistrationReceiptSourceWorldHash,
             }),
           ] as const,
       ),
@@ -2928,7 +3014,6 @@ export class OverworldSession {
       openingPreparation: this.world.opening_preparation ?? null,
       openingReliefAllocation: this.world.opening_relief_allocation ?? null,
       openingAlly: this.world.opening_ally ?? null,
-      trustedLegacySourceWorldHash: this.trustedLegacyRegistrationReceiptSourceWorldHash,
       questsById: this.questsById,
       areasById: this.areasById,
       currentTownId: this.currentId,
@@ -3056,8 +3141,6 @@ export class OverworldSession {
       openingRegistration: this.world.opening_registration ?? null,
       openingReliefOath: this.world.opening_relief_oath ?? null,
       openingLeadSource: this.world.opening_lead_source ?? null,
-      trustedLegacyRegistrationReceiptSourceWorldHash:
-        this.trustedLegacyRegistrationReceiptSourceWorldHash,
     };
     const completionPlan = planOverworldSessionQuestCompletion(completionState);
     if (this.questsById.get(questId)?.campaign_exports === undefined) {

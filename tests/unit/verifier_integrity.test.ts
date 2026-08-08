@@ -24,6 +24,9 @@ import {
   detectForbiddenTrackedFiles,
   detectForbiddenLegacyImports,
   detectCountRegressions,
+  expectedTestCountsAfterApprovedD10Removal,
+  matchesApprovedD10NetTestReduction,
+  qualifiesForApprovedD10Removal,
   parseGuardConstants,
   detectGuardWeakening,
   runStatic,
@@ -34,11 +37,16 @@ import {
   FORBIDDEN_TRACKED_FILES,
   FORBIDDEN_PATH_PATTERNS,
   HASH_PIN_FILES,
+  HASH_PIN_CONTENT_SOURCE_SCOPES,
   MIN_TEST_CASES,
   MIN_ASSERTIONS,
   MIN_STRONG_ASSERTIONS,
   MAX_TAUTOLOGY_ASSERTIONS,
   MAX_LIVE_LOOP_STATE_ENTRIES,
+  APPROVED_D10_DECISION_MARKER,
+  APPROVED_D10_COMPLETION_RECORD,
+  APPROVED_D10_REMOVED_PATHS,
+  APPROVED_D10_NET_TEST_REDUCTION,
   type GuardConstants,
 } from "../../scripts/verify-integrity.js";
 import { LOOP_ARCHIVE_FILE } from "../../src/afk/loop_state.js";
@@ -157,6 +165,108 @@ describe("detectCountRegressions — counts cannot drop and tautologies cannot r
   });
 });
 
+describe("approved D10 migration-ladder removal", () => {
+  it("computes the exact reviewed net tuple and preserves the tautology baseline", () => {
+    expect(
+      expectedTestCountsAfterApprovedD10Removal({
+        cases: 3_282,
+        assertions: 20_427,
+        strong: 19_512,
+        tautologies: 0,
+      }),
+    ).toEqual({ cases: 3_143, assertions: 19_654, strong: 18_793, tautologies: 0 });
+  });
+
+  it("rejects any unbalanced change around the exact reviewed net tuple", () => {
+    const before = {
+      cases: 3_282,
+      assertions: 20_427,
+      strong: 19_512,
+    };
+    const exact = expectedTestCountsAfterApprovedD10Removal(before);
+
+    expect(matchesApprovedD10NetTestReduction(before, exact)).toBe(true);
+    expect(
+      matchesApprovedD10NetTestReduction(before, {
+        cases: exact.cases - 1,
+        assertions: exact.assertions,
+        strong: exact.strong!,
+      }),
+    ).toBe(false);
+    expect(
+      matchesApprovedD10NetTestReduction(before, {
+        cases: exact.cases + 1,
+        assertions: exact.assertions + 1,
+        strong: exact.strong! + 1,
+      }),
+    ).toBe(false);
+  });
+
+  it("qualifies only for the exact deleted world/test set and a new one-time completion record", () => {
+    const changedPaths = [
+      ...APPROVED_D10_REMOVED_PATHS,
+      "docs/DECISION_LOG.md",
+      APPROVED_D10_COMPLETION_RECORD,
+      // An unrelated reviewed deletion outside world/tests does not spend the
+      // test-retirement grant.
+      "src/rpg/dialogue_presentation.ts",
+    ];
+    const currentPaths = new Set(["docs/DECISION_LOG.md", APPROVED_D10_COMPLETION_RECORD]);
+    const eligible = (
+      options: { missing?: string; extraDeleted?: string; future?: boolean } = {},
+    ): boolean =>
+      qualifiesForApprovedD10Removal({
+        changedPaths: [
+          ...changedPaths.filter((path) => path !== options.missing),
+          ...(options.extraDeleted ? [options.extraDeleted] : []),
+        ],
+        existedAtRef: (path) =>
+          options.future && path === APPROVED_D10_COMPLETION_RECORD
+            ? true
+            : path !== APPROVED_D10_COMPLETION_RECORD,
+        existsNow: (path) => currentPaths.has(path),
+        decisionLog: `### ${APPROVED_D10_DECISION_MARKER}`,
+        completionRecord: `# ${APPROVED_D10_DECISION_MARKER}`,
+      });
+
+    expect(eligible()).toBe(true);
+    expect(eligible({ missing: APPROVED_D10_REMOVED_PATHS[0] })).toBe(false);
+    expect(eligible({ extraDeleted: "tests/unit/unrelated.test.ts" })).toBe(false);
+    expect(eligible({ extraDeleted: "src/world/unrelated.ts" })).toBe(false);
+    expect(eligible({ future: true })).toBe(false);
+    expect(APPROVED_D10_NET_TEST_REDUCTION).toEqual({
+      cases: 139,
+      assertions: 773,
+      strong: 719,
+    });
+  });
+
+  it("rejects missing, duplicated, or stale decision markers", () => {
+    const currentPaths = new Set(["docs/DECISION_LOG.md", APPROVED_D10_COMPLETION_RECORD]);
+    const eligible = (decisionLog: string, completionRecord: string): boolean =>
+      qualifiesForApprovedD10Removal({
+        changedPaths: [
+          ...APPROVED_D10_REMOVED_PATHS,
+          "docs/DECISION_LOG.md",
+          APPROVED_D10_COMPLETION_RECORD,
+        ],
+        existedAtRef: (path) => path !== APPROVED_D10_COMPLETION_RECORD,
+        existsNow: (path) => currentPaths.has(path),
+        decisionLog,
+        completionRecord,
+      });
+
+    expect(eligible("unrelated decision", APPROVED_D10_DECISION_MARKER)).toBe(false);
+    expect(eligible(APPROVED_D10_DECISION_MARKER, "unrelated completion")).toBe(false);
+    expect(
+      eligible(
+        APPROVED_D10_DECISION_MARKER,
+        `${APPROVED_D10_DECISION_MARKER}\n${APPROVED_D10_DECISION_MARKER}`,
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("detectLoopStateOverflow — live handoff stays token-small", () => {
   const log = (n: number): string =>
     Array.from({ length: n }, (_, i) => `### Cycle result - compact_${i}\n\n- done.\n`).join("\n");
@@ -263,8 +373,7 @@ describe("detectForbiddenLegacyImports — live source stays RPG-only", () => {
 describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-aligned)", () => {
   const errs = (fs: { severity: string }[]) => fs.filter((f) => f.severity === "error");
 
-  it("ALLOWS (warns) a hash re-pin ACCOMPANIED by a content change — the user's loop case", () => {
-    // The exact thing that was wrongly blocking the loop: improve a pack, re-pin its hash.
+  it("ALLOWS (warns) a hash re-pin accompanied by its exact related content source", () => {
     const fs = classifyDrift(
       ["content/rpg/quests/sunken_barrow.yaml", "tests/unit/rpg_validator.test.ts"],
       () => true,
@@ -273,11 +382,56 @@ describe("classifyDrift — legitimate re-pin vs launder vs weakening (research-
     expect(fs.some((f) => f.code === "HASH_PIN_REPINNED" && f.severity === "warning")).toBe(true);
   });
 
-  it("BLOCKS a re-pin with NO content change (the launder / regenerate-to-green pattern)", () => {
+  it("BLOCKS an unrelated content byte from laundering a re-pin", () => {
+    const fs = classifyDrift(
+      ["content/rpg/quests/wolf_winter.yaml", "tests/unit/rpg_validator.test.ts"],
+      () => true,
+    );
+    expect(fs.some((f) => f.code === "HASH_PIN_UNACCOMPANIED" && f.severity === "error")).toBe(
+      true,
+    );
+    expect(fs.some((f) => f.code === "HASH_PIN_REPINNED")).toBe(false);
+  });
+
+  it("scopes the barrow trace pin to sunken_barrow only", () => {
+    const related = classifyDrift(
+      ["content/rpg/quests/sunken_barrow.yaml", "traces/rpg/barrow_victory.json"],
+      () => true,
+    );
+    const unrelated = classifyDrift(
+      ["content/rpg/quests/wolf_winter.yaml", "traces/rpg/barrow_victory.json"],
+      () => true,
+    );
+
+    expect(related.map((finding) => finding.code)).toEqual(["HASH_PIN_REPINNED"]);
+    expect(unrelated.map((finding) => finding.code)).toEqual(["HASH_PIN_UNACCOMPANIED"]);
+  });
+
+  it("BLOCKS a re-pin with no related content change", () => {
     const fs = classifyDrift(["tests/unit/rpg_validator.test.ts"], () => true);
     expect(fs.some((f) => f.code === "HASH_PIN_UNACCOMPANIED" && f.severity === "error")).toBe(
       true,
     );
+  });
+
+  it("keeps algorithm and retired-source pin changes behind explicit acknowledgment", () => {
+    const algorithm = classifyDrift(
+      ["src/core/sha256.ts", "tests/unit/sha256.test.ts"],
+      () => true,
+    );
+    const retired = classifyDrift(
+      [
+        "content/rpg/quests/sunken_barrow.yaml",
+        "traces/bugs/bug_0002_watchtower_blind_polish.yaml",
+      ],
+      () => true,
+    );
+
+    expect(algorithm.map((finding) => finding.code)).toContain("HASH_PIN_UNACCOMPANIED");
+    expect(
+      algorithm.find((finding) => finding.code === "HASH_PIN_UNACCOMPANIED")!.message,
+    ).toContain("AI_LOOP_ALLOW_VERIFIER_EDITS=1");
+    expect(retired.map((finding) => finding.code)).toEqual(["HASH_PIN_UNACCOMPANIED"]);
   });
 
   it("SURFACES (warns) a modified protected file — free rein over code, weakening caught elsewhere", () => {
@@ -305,6 +459,17 @@ describe("parseGuardConstants — pure parse of the guard's own defensive surfac
     expect(parsed!.forbiddenTrackedFiles).toEqual(FORBIDDEN_TRACKED_FILES);
     expect(parsed!.forbiddenPathPatterns).toEqual(FORBIDDEN_PATH_PATTERNS);
     expect(parsed!.hashPinFiles).toEqual(HASH_PIN_FILES);
+    expect(parsed!.hashPinContentSourceScopes).toEqual(HASH_PIN_CONTENT_SOURCE_SCOPES);
+    expect(HASH_PIN_CONTENT_SOURCE_SCOPES).toEqual([
+      "tests/unit/rpg_validator.test.ts=>content/rpg/quests/sunken_barrow.yaml",
+      "tests/unit/rpg_validator.test.ts=>content/broken-fixtures/rpg_unwinnable.yaml",
+      "traces/rpg/barrow_victory.json=>content/rpg/quests/sunken_barrow.yaml",
+    ]);
+    const noAutomaticScopes = text.replace(
+      /export const HASH_PIN_CONTENT_SOURCE_SCOPES = \[[\s\S]*?\] as const;/,
+      "export const HASH_PIN_CONTENT_SOURCE_SCOPES = [] as const;",
+    );
+    expect(parseGuardConstants(noAutomaticScopes)!.hashPinContentSourceScopes).toEqual([]);
   });
 
   it("returns null on malformed text (a missing field is skipped, never a false alarm)", () => {
@@ -329,6 +494,7 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
     forbiddenTrackedFiles: ["archive.md"],
     forbiddenPathPatterns: ["^legacy/.*$"],
     hashPinFiles: ["pin.ts"],
+    hashPinContentSourceScopes: ["pin.ts=>content/related.yaml"],
   };
   const codes = (fs: { code: string }[]) => fs.map((f) => f.code);
 
@@ -346,6 +512,8 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
       forbiddenTrackedFiles: ["archive.md", "local-heavy.md"],
       forbiddenPathPatterns: ["^legacy/.*$", "^retired/.*$"],
       hashPinFiles: ["pin.ts", "pin2.ts"],
+      // Removing an automatic justification scope is tightening, not weakening.
+      hashPinContentSourceScopes: [],
     };
     expect(detectGuardWeakening(base, stronger)).toEqual([]);
   });
@@ -391,6 +559,26 @@ describe("detectGuardWeakening — lowering a floor or dropping a protected entr
     const fs = detectGuardWeakening(base, { ...base, hashPinFiles: [] });
     expect(codes(fs)).toEqual(["GUARD_WEAKENED"]);
     expect(fs[0]!.message).toContain("pin.ts");
+  });
+
+  it("adding a hash-pin source scope or restoring the legacy wildcard is weakening", () => {
+    const widened = detectGuardWeakening(base, {
+      ...base,
+      hashPinContentSourceScopes: [
+        ...base.hashPinContentSourceScopes!,
+        "pin.ts=>content/unrelated.yaml",
+      ],
+    });
+    const { hashPinContentSourceScopes: _scopes, ...wildcardGuard } = base;
+    const wildcard = detectGuardWeakening(base, wildcardGuard);
+
+    expect(widened[0]!.message).toContain("content/unrelated.yaml");
+    expect(wildcard[0]!.message).toContain("legacy any-content wildcard");
+  });
+
+  it("migrating from the legacy any-content wildcard to exact scopes is tightening", () => {
+    const { hashPinContentSourceScopes: _scopes, ...legacy } = base;
+    expect(detectGuardWeakening(legacy, base)).toEqual([]);
   });
 
   it("removing a FORBIDDEN_FILES entry → GUARD_WEAKENED error", () => {

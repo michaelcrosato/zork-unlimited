@@ -247,16 +247,16 @@ function finishFortify(args: { stance: Stance; roll: Roll; withJune?: boolean })
   let state = reachFortifyDawn(args);
 
   if (args.withJune) {
-    expect(actionIds(state)).toContain("talk_june_pike_fortify");
+    expect(actionIds(state)).toContain("talk_june_pike");
     expect(actionIds(state)).not.toContain("use_fortify_dawn_watch");
     const before = state.vars.fortification_pressure;
-    state = act(state, "talk_june_pike_fortify");
+    state = act(state, "talk_june_pike");
     expect(state.flags.june_fortify_cattle_line_taken).toBe(true);
     expect(state.flags.june_blood_condition_broken).not.toBe(true);
     expect(state.vars.fortification_pressure).toBe(before);
     state = act(state, "ask_acknowledge");
   } else {
-    expect(actionIds(state)).not.toContain("talk_june_pike_fortify");
+    expect(actionIds(state)).not.toContain("talk_june_pike");
   }
 
   state = act(state, "use_fortify_dawn_watch");
@@ -409,7 +409,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
     expect(objectDescription(index.objects.get("fortify_dawn_watch")!, withJune)).toMatch(
       /unstabilized failed first seat[^]*Strained pressure 3 or higher[^]*solo rider or broken June[^]*persistent 2 HP[^]*intact June[^]*mobile-stabilized line costs no HP[^]*pressure 3[^]*no June injury benefit[^]*pressure 2 likewise costs no HP[^]*same stance ending/i,
     );
-    expect(actionIds(withJune)).toContain("talk_june_pike_fortify");
+    expect(actionIds(withJune)).toContain("talk_june_pike");
     expect(actionIds(withJune)).not.toContain("use_fortify_dawn_watch");
     expect(juneObservation.blocked_actions).toContainEqual(
       expect.objectContaining({
@@ -421,7 +421,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
     );
     expect(actionIds(solo)).toContain("use_fortify_dawn_watch");
 
-    withJune = act(withJune, "talk_june_pike_fortify");
+    withJune = act(withJune, "talk_june_pike");
     expect(buildRpgObservation(index, withJune).dialogue?.npc_text).toMatch(
       /Albany's public seals are Strained[^]*unstabilized failed first seat[^]*Cade's property stays covered[^]*public stock pays[^]*refusal stands[^]*avoid the persistent 2 HP dawn strain[^]*without lowering pressure[^]*Albany's ending/i,
     );
@@ -453,7 +453,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
     (stance) => {
       for (const roll of ["best", "worst"] as const) {
         let state = reachFortifyDawn({ stance, roll, withJune: true });
-        state = act(state, "talk_june_pike_fortify");
+        state = act(state, "talk_june_pike");
         const text = buildRpgObservation(index, state).dialogue?.npc_text ?? "";
         if (stance === "cade") {
           expect(text).toMatch(
@@ -492,7 +492,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
 
     const broken = structuredClone(restored);
     broken.flags.june_blood_condition_broken = true;
-    expect(actionIds(broken)).not.toContain("talk_june_pike_fortify");
+    expect(actionIds(broken)).not.toContain("talk_june_pike");
     expect(actionIds(broken)).toContain("use_fortify_dawn_watch");
     const strained = act(broken, "use_fortify_dawn_watch");
     expect(strained).toMatchObject({
@@ -501,7 +501,7 @@ describe("SS-F08 — Cade terms versus Albany authority under fortification", ()
       vars: { fortification_pressure: 6, hp: 28 },
     });
 
-    let helped = act(restored, "talk_june_pike_fortify");
+    let helped = act(restored, "talk_june_pike");
     helped = act(helped, "ask_acknowledge");
     helped = act(helped, "use_fortify_dawn_watch");
     expect(helped).toMatchObject({

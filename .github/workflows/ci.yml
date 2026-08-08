@@ -40,6 +40,10 @@ jobs:
       - run: npm ci
       - name: Verifier integrity (don't route around the verifier)
         run: npm run verify:integrity
+      - name: Bug-trace integrity (parse, identity, and path references)
+        run: npm run verify:bug-traces
+      - name: Opening density budget (before the first player action)
+        run: npm run verify:opening-density
       # Static mode alone cannot see a deletion that stays above the floors. Drift
       # mode compares this branch against the base it will merge into, which is the
       # same comparison loop.sh makes per cycle. On a push (no PR context) there is
@@ -83,6 +87,10 @@ jobs:
         group: [1, 2]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Bug-trace tests validate retired paths against reachable history. A
+          # depth-1 checkout makes valid historical evidence look like corruption.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22

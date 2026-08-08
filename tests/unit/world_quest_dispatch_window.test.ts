@@ -8,6 +8,7 @@ import {
   deriveQuestDispatchWindow,
 } from "../../src/world/quest_dispatch_window.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -64,6 +65,7 @@ function preparedDispatch(
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(args.registrationId ?? REGISTRATION.profiles[0]!.id);
+  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory(args.oathId ?? RELIEF_OATH.options[0]!.id);
   session.chooseJourneyStory(args.sourceId ?? LEAD_SOURCE.options[0]!.id);
   moveToArea(session, PREPARATION.area);
@@ -279,6 +281,7 @@ describe("Wolf-Winter quest dispatch window", () => {
     session.scoutPoi(session.view().pois[0]!.id);
     session.talkToCharacter(REGISTRATION.contact);
     session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
     session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
     session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
     moveToArea(session, PREPARATION.area);

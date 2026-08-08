@@ -47,7 +47,6 @@ export type OpeningPreparationDispatchForecastInputs = Readonly<{
   currentMinutes: number;
   targetQuestStarted: boolean;
   targetQuestCompleted: boolean;
-  trustedLegacySourceWorldHash?: string | null;
 }>;
 
 function freezeBoundary(boundary: OverworldJournalDecisionBoundary): ForecastBoundary {
@@ -126,10 +125,8 @@ export function deriveOpeningPreparationDispatchForecasts(
       registrationProof,
       journalEntries: args.journalEntries,
       expectedTown: null,
-      trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
     });
     if (
-      reliefOathProof.legacy ||
       !reliefOathProof.option ||
       !reliefOathProof.terms ||
       !reliefOathProof.selectionBoundary ||
@@ -159,9 +156,8 @@ export function deriveOpeningPreparationDispatchForecasts(
       leadSourceProof,
       journalEntries: args.journalEntries,
       expectedTown: null,
-      trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
     });
-    if (preparationProof.legacy || preparationProof.profile || preparationProof.terms) {
+    if (preparationProof.profile || preparationProof.terms) {
       return null;
     }
     const reliefAllocationProof = proveOpeningReliefAllocationJournal({
@@ -171,12 +167,8 @@ export function deriveOpeningPreparationDispatchForecasts(
       preparationScene: chain.preparation,
       journalEntries: args.journalEntries,
       expectedTown: null,
-      trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
     });
-    if (
-      reliefAllocationProof.legacy ||
-      (reliefAllocationProof.offered && !reliefAllocationProof.option)
-    ) {
+    if (reliefAllocationProof.offered && !reliefAllocationProof.option) {
       return null;
     }
     const allyProof = proveOpeningAllyJournal({
@@ -188,9 +180,8 @@ export function deriveOpeningPreparationDispatchForecasts(
       reliefAllocationScene: chain.reliefAllocation,
       journalEntries: args.journalEntries,
       expectedTown: null,
-      trustedLegacySourceWorldHash: args.trustedLegacySourceWorldHash ?? null,
     });
-    if (allyProof.legacy || (allyProof.offered && !allyProof.option)) return null;
+    if (allyProof.offered && !allyProof.option) return null;
 
     const characterBeforePreparation = replayOpeningDispatchChoices({
       characterAfterSource: leadSourceProof.characterAfterSource,

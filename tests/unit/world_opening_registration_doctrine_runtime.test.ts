@@ -8,6 +8,7 @@ import { presentOpeningReliefOath } from "../../src/world/opening_relief_oath_pr
 import { assertOverworldIntegrity, type OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -160,6 +161,7 @@ describe("Albany role-first standard packet runtime", () => {
 
       const manualSession = atRegistration();
       manualSession.chooseJourneyStory(doctrine.profile_id);
+      revealCurrentJourneyStoryOptions(manualSession, RELIEF_OATH.id);
       manualSession.chooseJourneyStory(doctrine.relief_oath_option_id);
       manualSession.chooseJourneyStory(doctrine.lead_source_option_id);
 
@@ -212,6 +214,7 @@ describe("Albany role-first standard packet runtime", () => {
       const session = atRegistration();
       session.chooseJourneyStory(profileId);
       const acceptedBeforeOath = session.journey().acceptedDecisions;
+      revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
       session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
 
       expect(session.journey().acceptedDecisions).toBe(acceptedBeforeOath + 1);
@@ -306,7 +309,9 @@ describe("Albany role-first standard packet runtime", () => {
     wrongRole.chooseJourneyStory(ironhandsPacket.profile_id);
     const beforeWrongPacket = wrongRole.snapshot();
 
-    expect(() => wrongRole.chooseJourneyStory(roadPacket.id)).toThrow(/unknown story choice/i);
+    expect(() => wrongRole.chooseJourneyStory(roadPacket.id)).toThrow(
+      /unknown story choice|does not offer option/i,
+    );
     expect(wrongRole.snapshot()).toEqual(beforeWrongPacket);
 
     const invalidWorld = structuredClone(WORLD);

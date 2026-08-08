@@ -1,4 +1,4 @@
-bug_id: bug_0104
+bug_id: bug_0104_cyoa_inert_flag_check
 pack_id: n/a   # validator capability (cross-pack), not a single-pack content bug
 seed: 23
 evidence:

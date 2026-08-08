@@ -21,6 +21,7 @@ import {
   load,
   SaveIntegrityError,
   LEGACY_SAVE_VERSION,
+  PREVIOUS_SAVE_VERSION,
   SAVE_VERSION,
 } from "../../src/persist/save_load.js";
 import { hashState } from "../../src/core/hash.js";
@@ -185,7 +186,7 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
     ["objectState", '{"__proto__":{"open":"yes"}}'],
     ["questStage", '{"__proto__":7}'],
   ] as const)(
-    "wrong-typed own __proto__ in %s is rejected in both persisted versions",
+    "wrong-typed own __proto__ in %s is rejected in every persisted version",
     (field, recordJson) => {
       const bundle = JSON.parse(cleanBytes()) as {
         version: number;
@@ -193,9 +194,10 @@ describe("save/load integrity gate — forged-save REJECTION (§16, SoundnessBen
       };
       bundle.state[field] = JSON.parse(recordJson) as unknown;
 
-      for (const version of [LEGACY_SAVE_VERSION, SAVE_VERSION]) {
-        bundle.version = version;
-        const forged = JSON.stringify(bundle);
+      for (const version of [LEGACY_SAVE_VERSION, PREVIOUS_SAVE_VERSION, SAVE_VERSION] as const) {
+        const candidate = { ...bundle, version } as typeof bundle & { stateHash?: string };
+        if (version !== SAVE_VERSION) delete candidate.stateHash;
+        const forged = JSON.stringify(candidate);
         expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(SaveIntegrityError);
         expect(() => load(forged, MICRO_CONTENT_HASH)).toThrow(/malformed or non-finite/);
       }

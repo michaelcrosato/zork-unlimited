@@ -5,6 +5,7 @@ import { compactOverworldView, OVERWORLD_COMPACT_LEGEND } from "../../src/world/
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { compactStationDispatchBoardSupport } from "../../src/world/station_dispatch_board.js";
+import { revealCurrentJourneyStoryOptions } from "./support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const REGISTRATION = WORLD.opening_registration!;
@@ -31,6 +32,7 @@ function sessionAtStation(world = WORLD): OverworldSession {
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
   session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+  revealCurrentJourneyStoryOptions(session, OATH.id);
   session.chooseJourneyStory(OATH.options[0]!.id);
   session.chooseJourneyStory(LEAD.options[0]!.id);
   moveToStation(session);

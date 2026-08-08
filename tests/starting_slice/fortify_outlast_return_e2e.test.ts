@@ -272,7 +272,7 @@ function routeFor(stance: Stance): readonly string[] {
     "go_north",
     contract.threshold,
     "go_north",
-    "talk_june_pike_fortify",
+    "talk_june_pike",
     "ask_acknowledge",
     "use_fortify_dawn_watch",
   ];
@@ -607,9 +607,7 @@ describe("SS-F08 — fortify conduct survives the full Albany return", () => {
           band: expect.objectContaining({ label: "Strained" }),
         }),
       );
-      expect(boundary.available_actions.map((action) => action.id)).toContain(
-        "talk_june_pike_fortify",
-      );
+      expect(boundary.available_actions.map((action) => action.id)).toContain("talk_june_pike");
       expect(boundary.available_actions.map((action) => action.id)).not.toContain(
         "use_fortify_dawn_watch",
       );
@@ -622,7 +620,7 @@ describe("SS-F08 — fortify conduct survives the full Albany return", () => {
         }),
       );
 
-      const june = step("talk_june_pike_fortify");
+      const june = step("talk_june_pike");
       expect(june.observation.dialogue?.npc_text).toMatch(
         stance === "cade"
           ? /Cade's household terms[^]*outer property[^]*preserve Albany's seals[^]*mobile crew[^]*costs you no HP[^]*delay leaves pressure at 3[^]*no injury benefit[^]*Cade's ending/i
