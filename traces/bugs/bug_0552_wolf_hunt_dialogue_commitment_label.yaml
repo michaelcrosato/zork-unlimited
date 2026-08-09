@@ -1,0 +1,65 @@
+id: bug_0552
+title: "Cade's HUNT dialogue exit falsely claimed that its ASK committed the plan"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: 2026-08-09T13-03-08-410Z and 2026-08-09T16-57-57-205Z pending pure fresh-overworld playtests
+severity: S1
+evidence:
+  source_report_ca4: ai-runs/2026-08-09T13-03-08-410Z/playtest.md
+  raw_sequence_ca4: "item_13 talk_houndsman -> item_14 ask_commit_hunt_and_hold -> item_15 go_north"
+  source_report_e060: ai-runs/2026-08-09T16-57-57-205Z/playtest.md
+  raw_sequence_e060: "item_9 talk_houndsman -> item_10 ask_commit_hunt_and_hold -> item_11 go_north"
+  false_label: "Commit HUNT north — Hold ground in prepared combat. Risk: wolf deaths; failure risks cattle/line. Closes LURE/DRIVE/FORTIFY."
+  ca4_player_friction: "Action naming in the quest can be a little opaque until you’ve seen the room/state change (e.g., commitment is tied to movement/action, not every descriptive “ask_*” choice)."
+  e060_player_friction: "The option labeled 'ask_commit_hunt_and_hold' described a commitment, but it only closed dialogue before actual tactic lock happened later through room flow."
+symptom: >
+  Two exact-build pure players independently selected Cade's visible "Commit HUNT
+  north" ASK and received only "(You end the conversation.)" In ca4 raw item_14,
+  accepted decisions stayed at 9 and the overworld snapshot stayed
+  40dd3abb7eee9b6245d0018b; item_15's north movement then counted decision 10.
+  In e060 item_10, accepted decisions stayed at 8 and the overworld snapshot stayed
+  729844f37f54b1cb17e5342c; item_11's north movement then counted decision 9. The
+  label therefore named an immediate commitment that neither ASK performed.
+root_cause: >
+  Cade's commit_hunt_and_hold topic is an end-only dialogue exit with no authored
+  effects. Ordinary HUNT is fixed by crossing north while no LURE, DRIVE, or
+  FORTIFY strategy is committed; visiting the paling then permanently retires
+  those alternatives. The stable legacy topic/action id also says commit, but
+  renaming that protocol identifier would break existing inputs; the bounded
+  player-facing defect is its visible prompt. Closing dialogue legitimately
+  advances the RPG step and clears its dialogue variable, so its RPG state hash
+  changes, but it creates no player-consequence mutation or counted journey
+  decision.
+fix: >
+  Change exactly Cade's one visible topic prompt to "End talk; HUNT stays
+  uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross
+  north to commit and close LURE/DRIVE/FORTIFY." Keep its id, aliases, conditions,
+  end-only behavior, action count, and legacy ask_commit_hunt_and_hold input. The
+  authored prompt is 145 characters and compact choices expose it without
+  truncation. The full `ask: ` command is 150 characters. Both fit the
+  160-character MCP action-label budget.
+deterministic_witnesses:
+  - "ca4 raw items 13-15 and e060 raw items 9-11 expose the same false old label, uncounted dialogue closure, and subsequent counted north movement"
+  - "Cade's ASK player-visible projection emits only the existing dialogue-close narration; the engine also emits internal __dlg_houndsman state-change bookkeeping, so the RPG step/dialogue variable and state hash advance while player-consequence state and journey decisions remain unchanged"
+  - "after Cade's ASK, reopening him still offers LURE, DRIVE, and FORTIFY; after the uncommitted north crossing and return, those alternatives are closed"
+  - "a player may skip Cade's HUNT exit ASK and cross north directly into the same hunt-and-hold route"
+  - "June's release choice remains a real immediate HUNT commitment, while keeping June still says north commits; neither June label is replaced by Cade's exit copy"
+  - "LURE's ask_commit_lure, DRIVE's ask_commit_drive, and FORTIFY's authority or Cade-terms ASK choices still set their authored commitment flags immediately"
+  - "full observation exposes the exact 150-character ask command; compact and pure MCP choices expose the exact 145-character authored prompt; both retain the legacy action id and neither truncates"
+  - "the exact Wolf-Winter compiled source hash advances from ec51d609f3acebe9cf22830256e44bdd0a8bdfa828b69aaa5d14a3d23b3e7dbb to 1bdbd697d7a3c287b1a3bb2e22dd5aa8f793442a7eba39d4af11fffa1e157610"
+nonclaims:
+  - "This does not make the ASK itself commit HUNT, add a HUNT flag, or reduce the ASK-then-cross sequence used by either report."
+  - "This does not claim ASK actions are generally noncommittal; June release and the authored LURE, DRIVE, and FORTIFY commitment ASKs remain counterexamples."
+  - "This does not preserve the old compiled content hash or the dialogue-close RPG state hash; authored copy changes the former, and ordinary dialogue bookkeeping changes the latter."
+  - "This does not change legal actions, movement gates, strategy effects, checkpoints, accepted-decision accounting, combat, RNG, stats, score, endings, save schema/serialization, or other schemas. Prior ec51 content-hash-bound in-progress Wolf saves intentionally reject against the new 1bdb source, matching the existing hash-integrity policy."
+tests:
+  - tests/regression/wolf_winter_dialogue_surface.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/wolf_winter_paling_stage_actions.test.ts
+  - tests/regression/wolf_winter_cli_command_projection.test.ts
+  - tests/regression/wolf_winter_uncommitted_living_boundary.test.ts
+  - tests/regression/wolf_winter_authority_commitment_boundary.test.ts
+  - tests/starting_slice/june_hunt_release_counterfactual.test.ts
+verification:
+  - npx vitest run tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_compact_surface.test.ts tests/regression/mcp_pure_play_mode.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/wolf_winter_cli_command_projection.test.ts tests/regression/wolf_winter_uncommitted_living_boundary.test.ts tests/regression/wolf_winter_authority_commitment_boundary.test.ts tests/starting_slice/june_hunt_release_counterfactual.test.ts
+  - npm run verify:bug-traces

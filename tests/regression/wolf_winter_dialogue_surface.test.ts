@@ -5,10 +5,12 @@
  * but its visible topic ids are now authored while old direct routes remain aliases.
  */
 import { describe, expect, it } from "vitest";
+import { DIALOGUE_VAR_PREFIX, dlgVar } from "../../src/core/dialogue_state.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameEvent } from "../../src/core/events.js";
 import type { GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
+import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
@@ -20,6 +22,7 @@ import {
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
+import { classifyRpgJourneyDecision } from "../../src/world/journey_decision.js";
 import { relabelRpgPack } from "./support/relabel_rpg.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
@@ -70,6 +73,16 @@ function legalActionIds(state: GameState): string[] {
 
 function dialogueActionIds(ids: readonly string[]): string[] {
   return ids.filter((id) => id.startsWith("ask_"));
+}
+
+function playerConsequenceState(state: GameState): Omit<GameState, "step"> {
+  const { step: _step, vars, ...rest } = state;
+  return {
+    ...rest,
+    vars: Object.fromEntries(
+      Object.entries(vars).filter(([name]) => !name.startsWith(DIALOGUE_VAR_PREFIX)),
+    ),
+  };
 }
 
 describe("Wolf-Winter dialogue surface", () => {
@@ -307,7 +320,7 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(ids).not.toContain("ask_wolves_back");
   });
 
-  it("keeps Cade's quick lesson beside an explicit HUNT commitment", () => {
+  it("keeps Cade's HUNT exit uncommitted until the north crossing", () => {
     let state = startCadeDialogue();
     const root = buildRpgObservation(index, state);
     expect(root.available_actions.find((action) => action.id === "ask_wolves")?.command).toBe(
@@ -317,40 +330,56 @@ describe("Wolf-Winter dialogue surface", () => {
     const commitment = root.available_actions.find(
       (action) => action.id === "ask_commit_hunt_and_hold",
     );
+    if (!commitment) throw new Error("expected Cade's HUNT exit");
+    const huntExitPrompt =
+      "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
     expect(commitment).toMatchObject({
-      command: expect.stringMatching(/^ask: Commit HUNT north — Hold ground/i),
+      command: `ask: ${huntExitPrompt}`,
       action: { type: "ASK", npc: "houndsman", topic: "commit_hunt_and_hold" },
     });
+    expect(huntExitPrompt).toHaveLength(145);
+    expect(commitment.command).toHaveLength(150);
+    expect(commitment.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
+    const compactRoot = compactRpgObservation(root, root.available_actions, {
+      includeActions: true,
+    });
+    expect(compactRoot.actions).toContain("ask_commit_hunt_and_hold");
+    expect(compactRoot.choices).toContainEqual(["ask_commit_hunt_and_hold", huntExitPrompt]);
+
+    const closed = step(state, commitment.action);
+    expect(closed.ok).toBe(true);
+    if (!closed.ok) throw new Error("expected Cade's HUNT exit to close dialogue");
+    expect(closed.events).toContainEqual({
+      type: "narration",
+      text: "(You end the conversation.)",
+    });
     expect(
-      compactRpgObservation(
-        root,
-        root.available_actions.map((action) => action.id),
-        { includeActions: true },
-      ).actions,
-    ).toContain("ask_commit_hunt_and_hold");
-    state = act(state, { type: "ASK", npc: "houndsman", topic: "commit_hunt_and_hold" });
-    expect(state.flags).toEqual(beforeCommit.flags);
-    expect(state.current).toBe(beforeCommit.current);
+      classifyRpgJourneyDecision({
+        action: commitment.action,
+        before: state,
+        after: closed.state,
+        events: closed.events,
+        accepted: true,
+      }),
+    ).toEqual({ countsTowardJourney: false, reason: "dialogue_closure" });
+    expect(playerConsequenceState(closed.state)).toEqual(playerConsequenceState(beforeCommit));
+    expect(closed.state.step).toBe(beforeCommit.step + 1);
+    expect(beforeCommit.vars[dlgVar("houndsman")]).toBeGreaterThan(0);
+    expect(closed.state.vars[dlgVar("houndsman")]).toBe(0);
+    state = closed.state;
+
     state = act(state, { type: "TALK", npc: "houndsman" });
     expect(legalActionIds(state)).toEqual(
       expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
     );
-    expect(legalActionIds(state)).toContain("ask_lure");
-
-    state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
-    expect(state.vars).toMatchObject({ attack: 7, score: 5 });
-    expect(
-      buildRpgObservation(index, state).available_actions.find(
-        (action) => action.id === "ask_leave",
-      )?.command,
-    ).toBe("ask: Leave Cade.");
-
     state = act(state, { type: "ASK", npc: "houndsman", topic: "leave" });
     state = act(state, { type: "MOVE", direction: "north" });
     expect(state.current).toBe("paling_gap");
-    expect(legalActionIds(state)).not.toEqual(
-      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
-    );
+    state = act(state, { type: "MOVE", direction: "south" });
+    state = act(state, { type: "TALK", npc: "houndsman" });
+    const postCrossingIds = legalActionIds(state);
+    for (const retired of ["ask_lure", "ask_drive", "ask_fortify"])
+      expect(postCrossingIds).not.toContain(retired);
   });
 
   it("uses June's explicit HUNT commitment to disclose the wolf-death consequence", () => {

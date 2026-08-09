@@ -147,3 +147,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the verified first Terra attempt used 1.706M raw / 79,677 uncached input + 7,192 output (86,869 useful) at 95.33% cache reuse; Spark seeds 80423000/1 consumed 244,241 observed useful tokens but failed closed on unescaped JSON strings and a provider top-level error, with no retry and no published evidence.
 - Self-critique/follow-through: the canary proves clean-build safety, not an observed terminal-variant recovery or clarity uplift; it repeated layered Station/setup density, while the two Spark failures make prompt/transport reliability a separate prerequisite before another fanout rather than grounds to weaken JSON validation.
 - Guard: independent review is clean; crawls `20260805T035649Z` / `20260805T051322Z`, 119 focused tests, and exact-tree health (459 files/3,913 tests plus UI/all 12 packs) are green after the full matrix caught and closed zero-marker recovery compatibility.
+## AFK Cycle 2026-08-09T18-49-03-763Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T18-49-03-763Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
