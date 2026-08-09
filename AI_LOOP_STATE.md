@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 740 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T005606Z/hotspots.json","hotspots_sha256":"e82c52551ff8ce60ccaae50251630a883c626f601b59cd5a7656c1836a28d0b5","manifest_path":"ai-runs/feedback/20260809T005606Z/report-manifest.json","manifest_sha256":"8a02f7c3958cf7e0c0afc53c55912edb6071786e9f2cf16e1bf5dc5cd6bf855f"},"pending_cycle_reports":[{"evidence_sha256":"ce12e0d76095d3f7bef67c090e662cb3f6a23ef4ff27de3ebd2c9d0d2ce9f40a","report_id":"pure:1c4c4e46948239689b5399fb0e7a766a87d0cbd3e7173f4417c1906c19a34577","report_sha256":"d49b9b9beca07a4e2a62e9bd0335363fbf153ced0576cf2d108cffad2486800a","run_id":"2026-08-08T22-44-01-053Z","sidecar_sha256":"fa6fcad48afbe72d943124cfa28097ea2380ad8502121cd53f4c5fd11b8e02e1","tested_commit":"31f7f5a89f10793776dc2c85b5bceab88e550c7a"}],"schema_version":1} -->
+<!-- historical_cycle_count: 741 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T005606Z/hotspots.json","hotspots_sha256":"e82c52551ff8ce60ccaae50251630a883c626f601b59cd5a7656c1836a28d0b5","manifest_path":"ai-runs/feedback/20260809T005606Z/report-manifest.json","manifest_sha256":"8a02f7c3958cf7e0c0afc53c55912edb6071786e9f2cf16e1bf5dc5cd6bf855f"},"pending_cycle_reports":[{"evidence_sha256":"ce12e0d76095d3f7bef67c090e662cb3f6a23ef4ff27de3ebd2c9d0d2ce9f40a","report_id":"pure:1c4c4e46948239689b5399fb0e7a766a87d0cbd3e7173f4417c1906c19a34577","report_sha256":"d49b9b9beca07a4e2a62e9bd0335363fbf153ced0576cf2d108cffad2486800a","run_id":"2026-08-08T22-44-01-053Z","sidecar_sha256":"fa6fcad48afbe72d943124cfa28097ea2380ad8502121cd53f4c5fd11b8e02e1","tested_commit":"31f7f5a89f10793776dc2c85b5bceab88e550c7a"},{"evidence_sha256":"026b954689fe0f385cf8570761bf48798ada42c81d0cdaaa31026e7c74c701b3","report_id":"pure:e320e3b25101e1b3dd7d2783b7a33e583803d457a57fa01cb70c271d6755be59","report_sha256":"b2f984c4bcb45a56dac9cc1815dbf9c68a3360b2a3c13bedba460f5536ee2fe7","run_id":"2026-08-09T02-55-42-784Z","sidecar_sha256":"082c648732dd9af45dded4aadf089bd34723c8d91e08d6a6c50eccab2f299125","tested_commit":"288699d681e712aecbfbcabc305e2d18d22b748e"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -17,6 +17,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - station_support_skip_stakes
+- Evidence choice: the assessor was saturated and offered only a clean Advocates' Case rotation; the accepted current-build player instead cited uncertainty about skipping collapsed Station support, so this off-list cycle closed that narrower causal gap.
+- Surface/effect: launch-first guidance now names one field kit, Albany's last relief wagon, and June as a cattle-first second rider, says departing is fastest and every Wolf-Winter strategy stays legal, while purposes/actions remain explicitly deferred.
+- Pure evidence: exact-clean Terra seed 8 on `288699d6` chose Road-Warden/Aid-Only/Hayden, skipped support, took the fast Exposed Ridge, diverted all three wolves alive by LURE with the cattle safe, and ended at the first goal on decision 28; clarity/enjoyment 4/4, replay yes, no bug, rejection, loop, or stuck state, and Station uncertainty did not recur.
+- Feedback queue: the prior accepted run plus this sealed run make two fresh actionable reports, still below the three-report compile threshold; no provisional feedback artifact was created.
+- Self-critique/next: dense registration/duty/evidence setup and alarm-threshold interpretation remain the repeated current friction; measure and narrow that opening burden next rather than widening this copy-only increment.
+- Guard: two independent audits, 78 focused presentation/MCP tests, pre/post 6,000-step crawls, exact health (448 files/3,828 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure gates are green.
 
 ### Cycle result - accepted_feedback_cohorts
 - Evidence choice: the assessor replayed a July debug-display hotspot that had already landed; this off-list tooling increment made only fresh, accepted feedback cohorts actionable.
@@ -151,20 +159,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 682742 completed The Wolf-Winter by all-wolves-alive/full-herd LURE at decision 30, ended naturally, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, bug, loop, soft-lock, or stuck state.
 - Self-critique/follow-through: broader early terminology and required Wolf navigation remain S1; only one new verified report exists since compile, so no premature recompile or fleet ran and the next change must wait for accumulated causal evidence.
 - Guard: independent review caught and closed two copy-truth edges; pre/post crawls `20260803T130751Z` / `20260803T133303Z` cover all 247 nodes/344 edges/12 quests, and exact health passes 459 files/3,797 tests, UI typecheck, and all 12 packs.
-
-### Cycle result - station_dispatch_board
-
-- Evidence choice: 17/30 recent reports cited Station density; the exact-build Terra-10 cohort averaged clarity/enjoyment 4.0 and skewed strategy choice, so this change organizes departure information without changing a field decision.
-- Surface/effect: the Station now presents a read-only three-row board—preparation, relief allocation, field-team terms—followed by the existing recap and unchanged launch choices; no mechanics, state, journal, decisions, RNG, saves, hashes, or action ids change.
-- Compact economy: the board projects only its new guidance and support-slot purposes into compact state, cutting payload 1,094→495 bytes (-599) while the cumulative legend remains within its 7,200-byte cap.
-- Pure evidence: exact-clean Terra seed 682735 completed The Wolf-Winter at decisions 29/54, continued then ended, rated clarity/enjoyment 4/4 and replay-yes, with no bug, rejection, loop, soft-lock, or stuck state; post-crawl `20260803T080928Z` covered 6,000 steps, all 247 nodes/344 edges/12 quests.
-- Spark admission: zero-retry five-seat canary verified only 1/5 because four strict-stream wrappers exited 43; valid seed 682740 ended at goal turn 18, rated 4/4, replay-no, and reported no bug, so no Spark scale or guessed rejected-attempt usage.
-- Self-critique/follow-through: both current-build players still cited early terminology/setup density; only two new verified reports exist, below compile threshold, so collect one more clean report before compilation and next target lighter/symmetric briefing rather than reducing depth.
-- Guard: focused cross-surface, malformed-pairing, compact-budget, terminal/UI, MCP pure, and clean-checkout checks pass; exact health is 459 files/3,797 tests plus UI typecheck and all 12 packs.
-## AFK Cycle 2026-08-09T02-55-42-784Z — ULTRAPLAN (saturation re-aim)
-<!-- feedback_cycle_selection: {"run_id":"2026-08-09T02-55-42-784Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-advocates_case (content_fix/M; score=0.5).
-- Mode: ultraplan re-aim; handoff ai-runs/2026-08-09T02-55-42-784Z/current-plan.md.
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
