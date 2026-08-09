@@ -156,3 +156,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: rejected public/direct streams retain only an allowlisted failure, hashed row commitment, and numeric token lower bound; verified totals count it as observed but incomplete, with zero automatic retry.
 - Report contract: exactly one closed terminal interview and literal `bugs: []` remove the measured format-only rejection class; synthetic clean-checkout verification now retains newly added tracked files.
 - Self-critique/guard: long post-goal journeys may still fail closed at compaction, but the audited run completed Wolf at decision 29 and compacted only after 46; pre/post crawls `20260804T084131Z` / `20260804T090511Z`, 440 integrated tests, 155 all-model purity tests, typecheck, and formatting are green.
+## AFK Cycle 2026-08-09T08-52-30-579Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T08-52-30-579Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
