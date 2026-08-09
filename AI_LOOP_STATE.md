@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 741 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T005606Z/hotspots.json","hotspots_sha256":"e82c52551ff8ce60ccaae50251630a883c626f601b59cd5a7656c1836a28d0b5","manifest_path":"ai-runs/feedback/20260809T005606Z/report-manifest.json","manifest_sha256":"8a02f7c3958cf7e0c0afc53c55912edb6071786e9f2cf16e1bf5dc5cd6bf855f"},"pending_cycle_reports":[{"evidence_sha256":"ce12e0d76095d3f7bef67c090e662cb3f6a23ef4ff27de3ebd2c9d0d2ce9f40a","report_id":"pure:1c4c4e46948239689b5399fb0e7a766a87d0cbd3e7173f4417c1906c19a34577","report_sha256":"d49b9b9beca07a4e2a62e9bd0335363fbf153ced0576cf2d108cffad2486800a","run_id":"2026-08-08T22-44-01-053Z","sidecar_sha256":"fa6fcad48afbe72d943124cfa28097ea2380ad8502121cd53f4c5fd11b8e02e1","tested_commit":"31f7f5a89f10793776dc2c85b5bceab88e550c7a"},{"evidence_sha256":"026b954689fe0f385cf8570761bf48798ada42c81d0cdaaa31026e7c74c701b3","report_id":"pure:e320e3b25101e1b3dd7d2783b7a33e583803d457a57fa01cb70c271d6755be59","report_sha256":"b2f984c4bcb45a56dac9cc1815dbf9c68a3360b2a3c13bedba460f5536ee2fe7","run_id":"2026-08-09T02-55-42-784Z","sidecar_sha256":"082c648732dd9af45dded4aadf089bd34723c8d91e08d6a6c50eccab2f299125","tested_commit":"288699d681e712aecbfbcabc305e2d18d22b748e"}],"schema_version":1} -->
+<!-- historical_cycle_count: 742 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T005606Z/hotspots.json","hotspots_sha256":"e82c52551ff8ce60ccaae50251630a883c626f601b59cd5a7656c1836a28d0b5","manifest_path":"ai-runs/feedback/20260809T005606Z/report-manifest.json","manifest_sha256":"8a02f7c3958cf7e0c0afc53c55912edb6071786e9f2cf16e1bf5dc5cd6bf855f"},"pending_cycle_reports":[{"evidence_sha256":"ce12e0d76095d3f7bef67c090e662cb3f6a23ef4ff27de3ebd2c9d0d2ce9f40a","report_id":"pure:1c4c4e46948239689b5399fb0e7a766a87d0cbd3e7173f4417c1906c19a34577","report_sha256":"d49b9b9beca07a4e2a62e9bd0335363fbf153ced0576cf2d108cffad2486800a","run_id":"2026-08-08T22-44-01-053Z","sidecar_sha256":"fa6fcad48afbe72d943124cfa28097ea2380ad8502121cd53f4c5fd11b8e02e1","tested_commit":"31f7f5a89f10793776dc2c85b5bceab88e550c7a"},{"evidence_sha256":"026b954689fe0f385cf8570761bf48798ada42c81d0cdaaa31026e7c74c701b3","report_id":"pure:e320e3b25101e1b3dd7d2783b7a33e583803d457a57fa01cb70c271d6755be59","report_sha256":"b2f984c4bcb45a56dac9cc1815dbf9c68a3360b2a3c13bedba460f5536ee2fe7","run_id":"2026-08-09T02-55-42-784Z","sidecar_sha256":"082c648732dd9af45dded4aadf089bd34723c8d91e08d6a6c50eccab2f299125","tested_commit":"288699d681e712aecbfbcabc305e2d18d22b748e"},{"evidence_sha256":"023fee2fefdefcdff11a1003ae1a1587bd0170d2e68410ad65dced3c860b3ef0","report_id":"pure:c37a668c20597724ce6f80307b20546673819db6e3cb25aa9422c6e23896c82f","report_sha256":"fbe36b1c9f2b84ee7940083738e6549755952e1fc35348135b37ab662dab1073","run_id":"2026-08-09T04-51-28-385Z","sidecar_sha256":"0cdb511db62e131244ae7521bfd480c0600aee7e154125d6c4a879d676f6688e","tested_commit":"0fac1d36590568fa0eaa088916aaa47194a896d7"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -17,6 +17,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - civic_quick_setup_framing
+- Evidence choice: the assessor offered only a clean Advocates' Case rotation; two accepted matched-path players independently reported layered role/duty/evidence setup, so this off-list cycle corrected the shared Civic briefing.
+- Surface/effect: the role screen now previews only the crisis and a truthful optional matched finish; the matched screen combines duty + evidence, while Ledger keeps its real 2/3 then 3/3 path, with no option, mechanic, state, receipt, or decision change.
+- Measured effect: the two default messages fell from 162 to 132 words and 1,054 to 855 characters; stale fixed-order fractions and premature June/support detail are absent, while exact shortcut inspection remains available.
+- Pure evidence: exact-clean Terra seed 9 on `0fac1d36` used Road-Warden/Aid-Only/June, saved Cade's whole herd and every wolf by LURE, continued to repair the outer line, won The Gallowmere, and ended naturally at decision 52; clarity/enjoyment 4/4, replay yes, no bug, rejection, loop, or stuck state, and the Civic density complaint did not recur.
+- Feedback/next: sealing this run makes three fresh actionable reports, ready for next cycle's compile; compact legends/tuples and the optional Station detail layer remain current friction, so this increment does not widen into either.
+- Guard: three independent audits, 65 focused tests, both 6,000-step crawls, exact health (448 files/3,830 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure gates are green.
 
 ### Cycle result - station_support_skip_stakes
 - Evidence choice: the assessor was saturated and offered only a clean Advocates' Case rotation; the accepted current-build player instead cited uncertainty about skipping collapsed Station support, so this off-list cycle closed that narrower causal gap.
@@ -149,19 +157,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 682747 on `e0550be5` diverted every wolf with the full herd after two failure-forward recoveries, continued at decisions 30/41, won The Gallowmere, ended naturally at 55, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, loop, soft-lock, or stuck state.
 - Self-critique/follow-through: Station nested tradeoffs, campaign-versus-quest state boundaries, and one Gallowmere recovery label remain S1; one new verified report is below the recompile threshold, so no fleet or premature compile ran.
 - Guard: pre/post crawls `20260803T173108Z` / `20260803T182348Z` cover all 247 nodes/344 edges/12 quests; exact health passes 459 files/3,797 tests, UI typecheck, and all 12 packs.
-
-### Cycle result - station_crisis_briefing
-
-- Evidence choice: three exact merged-board players still described Station setup density, so this increment replaces administrative framing with the immediate Wolf-Winter crisis and optional-support boundaries instead of removing any causal choice.
-- Surface/effect: the field briefing now names Cade's threatened byre, conditionally says when departure is legal, and presents one field kit, Albany's last relief wagon, and June as second rider with plain compare actions across compact MCP, terminal, and UI.
-- Truthfulness: June remains available before a kit on the current path, the legacy gated path stays explicit, and a no-road projection no longer promises departure; choices, terms, mechanics, state, saves, world hash, action ids, and decision count are unchanged.
-- Economy: compact briefing stays ≤520 bytes, while stale `CURRENT_PLAN.md` became a 23-line router to the authoritative contract, causal matrix, loop state, and newest verified feedback.
-- Pure evidence: exact-clean Terra seed 682742 completed The Wolf-Winter by all-wolves-alive/full-herd LURE at decision 30, ended naturally, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, bug, loop, soft-lock, or stuck state.
-- Self-critique/follow-through: broader early terminology and required Wolf navigation remain S1; only one new verified report exists since compile, so no premature recompile or fleet ran and the next change must wait for accumulated causal evidence.
-- Guard: independent review caught and closed two copy-truth edges; pre/post crawls `20260803T130751Z` / `20260803T133303Z` cover all 247 nodes/344 edges/12 quests, and exact health passes 459 files/3,797 tests, UI typecheck, and all 12 packs.
-## AFK Cycle 2026-08-09T04-51-28-385Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-09T04-51-28-385Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-advocates_case (content_fix/M; score=0.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
