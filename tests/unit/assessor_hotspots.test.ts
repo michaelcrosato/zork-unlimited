@@ -100,13 +100,13 @@ function fixtureOverworldWithOpeningContactVariants(
 /** Same minimal quest fixture assessor.test.ts uses to get a working overworld
  *  + one bound, validating world quest without depending on real shipped
  *  content — just enough for `assess()` to run to completion. */
-function writeFixtureQuestRoot(root: string): void {
+function writeFixtureQuestRoot(root: string, questId = "hotspot_fixture"): void {
   mkdirSync(join(root, "content", "rpg", "quests"), { recursive: true });
   mkdirSync(join(root, "content", "world"), { recursive: true });
   writeFileSync(
     join(root, "content", "world", "new_york_overworld.json"),
     JSON.stringify({
-      ...fixtureOverworldWithOpeningContactVariants(new Set(["hotspot_fixture"])),
+      ...fixtureOverworldWithOpeningContactVariants(new Set([questId])),
       opening_ally: undefined,
       opening_lead_source: undefined,
       opening_preparation: undefined,
@@ -114,9 +114,9 @@ function writeFixtureQuestRoot(root: string): void {
       opening_relief_oath: undefined,
       quests: [
         {
-          id: "hotspot_fixture",
+          id: questId,
           title: "Hotspot Fixture",
-          source: "content/rpg/quests/hotspot_fixture.yaml",
+          source: `content/rpg/quests/${questId}.yaml`,
           home: "albany_city",
           area: "albany_city__transport_hub",
           discovery: "Ask around Albany city for the Hotspot Fixture lead.",
@@ -126,10 +126,10 @@ function writeFixtureQuestRoot(root: string): void {
     }),
   );
   writeFileSync(
-    join(root, "content", "rpg", "quests", "hotspot_fixture.yaml"),
+    join(root, "content", "rpg", "quests", `${questId}.yaml`),
     [
       "meta:",
-      "  id: hotspot_fixture_v1",
+      `  id: ${questId}_v1`,
       "  title: Hotspot Fixture",
       "  start_room: start",
       "  vars_init: { hp: 10, attack: 2, defense: 1 }",
@@ -231,6 +231,37 @@ function validHotspotsFile(hotspotId: string): unknown {
       rationale: "6 issue mentions, max severity S4, sources: fleet (score 96)",
     },
   };
+}
+
+function targetMetric(target: string, reports = 1): Record<string, unknown> {
+  return {
+    target,
+    reports,
+    clarity: { mean: 4, stddev: 0, histogram: [0, 0, 0, 1, 0] },
+    enjoyment: { mean: 4, stddev: 0, histogram: [0, 0, 0, 1, 0] },
+    got_stuck_rate: 0,
+    would_replay_rate: 1,
+    by_persona: {},
+  };
+}
+
+type MutableHotspotsFile = {
+  inputs: Record<string, unknown>;
+  metrics: Array<Record<string, unknown>>;
+  hotspots: Array<Record<string, unknown>>;
+};
+
+function makeFirstHotspotUnmapped(file: unknown): MutableHotspotsFile {
+  const mutable = file as MutableHotspotsFile;
+  mutable.hotspots[0]!.location = {
+    kind: "unmapped",
+    questId: null,
+    region: null,
+    node: null,
+    sceneId: null,
+    raw: ["alarm thresholds took attention"],
+  };
+  return mutable;
 }
 
 /** Default field values shared by every synthetic hot spot below, so each
@@ -379,10 +410,14 @@ function commitFixtureAuthority(root: string): void {
   execFileSync("git", ["commit", "--quiet", "-m", "fixture authority"], { cwd: root });
 }
 
-function withFixtureRoot(setup: (root: string) => void, run: (root: string) => void): void {
+function withFixtureRoot(
+  setup: (root: string) => void,
+  run: (root: string) => void,
+  questId = "hotspot_fixture",
+): void {
   const root = mkdtempSync(join(tmpdir(), "af-assessor-hotspots-"));
   try {
-    writeFixtureQuestRoot(root);
+    writeFixtureQuestRoot(root, questId);
     setup(root);
     if (!existsSync(join(root, "AI_LOOP_STATE.md"))) {
       writeFileSync(join(root, "AI_LOOP_STATE.md"), "# AI Loop State\n");
@@ -507,23 +542,185 @@ describe("assess() consuming compiled hotspots.json (Task 17)", () => {
     );
   });
 
-  it("skips a hot spot whose location cannot be mapped to a fixable target", () => {
+  it("uses a sole overworld cohort target when fleet confusion prose has no mappable location", () => {
     withFixtureRoot(
       (root) => {
-        const file = validHotspotsFile("cafef00d") as { hotspots: Array<Record<string, unknown>> };
-        file.hotspots[0]!.location = {
-          kind: "unmapped",
-          questId: null,
-          region: null,
-          node: null,
-          sceneId: null,
-          raw: ["somewhere unclear"],
-        };
+        const file = makeFirstHotspotUnmapped(validHotspotsFile("cohort-overworld"));
+        file.metrics = [targetMetric("overworld")];
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+      },
+      (root) => {
+        const candidate = assess(root).candidates.find(
+          ({ id }) => id === "hotspot-cohort-overworld",
+        );
+        expect(candidate?.target).toBe("overworld");
+        expect(candidate?.score).toBeGreaterThan(0.5);
+        expect(candidate?.evidence).toContain(
+          "unmapped hot spot; target inferred from the sole accepted cohort metric",
+        );
+      },
+    );
+  });
+
+  it("uses a sole shipped quest cohort target when fleet confusion prose is unmapped", () => {
+    withFixtureRoot(
+      (root) => {
+        const file = makeFirstHotspotUnmapped(validHotspotsFile("cohort-quest"));
+        file.metrics = [targetMetric("quest:hotspot_fixture")];
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+      },
+      (root) => {
+        const candidate = assess(root).candidates.find(({ id }) => id === "hotspot-cohort-quest");
+        expect(candidate?.target).toBe("hotspot_fixture");
+      },
+    );
+  });
+
+  it("accepts an exact shipped quest id without inventing a narrower slug grammar", () => {
+    withFixtureRoot(
+      (root) => {
+        const file = makeFirstHotspotUnmapped(validHotspotsFile("hyphenated-quest"));
+        file.metrics = [targetMetric("quest:hotspot-fixture")];
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+      },
+      (root) => {
+        const candidate = assess(root).candidates.find(
+          ({ id }) => id === "hotspot-hyphenated-quest",
+        );
+        expect(candidate?.target).toBe("hotspot-fixture");
+      },
+      "hotspot-fixture",
+    );
+  });
+
+  it("skips an unmapped fleet hot spot when its accepted cohort spans multiple targets", () => {
+    withFixtureRoot(
+      (root) => {
+        const file = makeFirstHotspotUnmapped(validHotspotsFile("ambiguous-cohort"));
+        file.metrics = [targetMetric("overworld"), targetMetric("quest:hotspot_fixture")];
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+      },
+      (root) => {
+        expect(assess(root).candidates.some(({ id }) => id === "hotspot-ambiguous-cohort")).toBe(
+          false,
+        );
+      },
+    );
+  });
+
+  it("skips an unmapped fleet hot spot when cohort counts or crawler provenance disagree", () => {
+    for (const [hotspotId, metricReports, crawlFindings] of [
+      ["metric-zero", 0, 0],
+      ["metric-count-mismatch", 2, 0],
+      ["crawler-mixed-cohort", 1, 1],
+    ] as const) {
+      withFixtureRoot(
+        (root) => {
+          const file = makeFirstHotspotUnmapped(validHotspotsFile(hotspotId));
+          file.metrics = [targetMetric("overworld", metricReports)];
+          file.inputs.crawl_findings = crawlFindings;
+          writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+        },
+        (root) => {
+          expect(assess(root).candidates.some(({ id }) => id === `hotspot-${hotspotId}`)).toBe(
+            false,
+          );
+        },
+      );
+    }
+  });
+
+  it("skips an unmapped hot spot without one trusted fleet cohort target", () => {
+    withFixtureRoot(
+      (root) => {
+        const file = makeFirstHotspotUnmapped(validHotspotsFile("cafef00d"));
         writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
       },
       (root) => {
         const a = assess(root);
         expect(a.candidates.some((c) => c.id.startsWith("hotspot-"))).toBe(false);
+      },
+    );
+  });
+
+  it("skips duplicate metric rows even when they repeat the same cohort target", () => {
+    withFixtureRoot(
+      (root) => {
+        const file = makeFirstHotspotUnmapped(validHotspotsFile("duplicate-metric"));
+        file.metrics = [targetMetric("overworld"), targetMetric("overworld")];
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+      },
+      (root) => {
+        expect(assess(root).candidates.some(({ id }) => id === "hotspot-duplicate-metric")).toBe(
+          false,
+        );
+      },
+    );
+  });
+
+  it("does not use a sole cohort target for crawler-only or unshipped quest evidence", () => {
+    for (const [hotspotId, sources, target] of [
+      ["crawler-unmapped", ["crawler"], "overworld"],
+      ["mixed-unmapped", ["crawler", "fleet"], "overworld"],
+      ["unshipped-target", ["fleet"], "quest:not_shipped"],
+    ] as const) {
+      withFixtureRoot(
+        (root) => {
+          const file = makeFirstHotspotUnmapped(validHotspotsFile(hotspotId));
+          file.hotspots[0]!.sources = sources;
+          file.hotspots[0]!.evidence = [
+            {
+              source: sources[0],
+              ref: "fixture-evidence",
+              excerpt: "alarm thresholds took attention",
+            },
+          ];
+          file.metrics = [targetMetric(target)];
+          writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+        },
+        (root) => {
+          expect(assess(root).candidates.some(({ id }) => id === `hotspot-${hotspotId}`)).toBe(
+            false,
+          );
+        },
+      );
+    }
+  });
+
+  it.each([
+    "",
+    " overworld",
+    "Overworld",
+    "quest:",
+    "quest:Hotspot_Fixture",
+    "quest:hotspot-fixture",
+    "repo:hotspot_fixture",
+  ])("rejects nonexact or unknown sole cohort target %j", (target) => {
+    withFixtureRoot(
+      (root) => {
+        const file = makeFirstHotspotUnmapped(validHotspotsFile("bad-target"));
+        file.metrics = [targetMetric(target)];
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+      },
+      (root) => {
+        expect(assess(root).candidates.some(({ id }) => id === "hotspot-bad-target")).toBe(false);
+      },
+    );
+  });
+
+  it("keeps a canonical mapped location authoritative over conflicting cohort metrics", () => {
+    withFixtureRoot(
+      (root) => {
+        const file = validHotspotsFile("mapped-wins") as MutableHotspotsFile;
+        file.metrics = [targetMetric("overworld")];
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+      },
+      (root) => {
+        const candidate = assess(root).candidates.find(({ id }) => id === "hotspot-mapped-wins");
+        expect(candidate?.target).toBe("hotspot_fixture");
+        expect(candidate?.evidence).not.toContain(
+          "unmapped hot spot; target inferred from the sole accepted cohort metric",
+        );
       },
     );
   });

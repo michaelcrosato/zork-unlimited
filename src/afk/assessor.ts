@@ -23,7 +23,7 @@ import { createToolApi } from "../mcp/tools.js";
 import { RpgSourceRuntime } from "../mcp/rpg_source_runtime.js";
 import { verifyBlindReportText } from "../blind/report_verifier.js";
 import { readLatestHotspots } from "../feedback/compile.js";
-import type { Hotspot } from "../feedback/schema.js";
+import type { Hotspot, HotspotsFile } from "../feedback/schema.js";
 import { auditStaleReactiveRoomItems } from "./stale_reactive_audit.js";
 import { score, type Category, type ImprovementCandidate } from "./assessment_model.js";
 import {
@@ -461,18 +461,40 @@ function impactForHotspot(h: Hotspot, maxHotspotScore: number): number {
 /**
  * The fixable target for a hot spot's location: its world quest id when the
  * compiler resolved one AND the location kind is actually `"quest"`, else the
- * shared overworld target when the location is an overworld surface, else
- * `null` (an `unmapped` location doesn't nominate a candidate — there is
- * nothing concrete to point the fix at). The explicit `kind === "quest"` gate
- * (rather than a bare `questId` truthiness check) matches the schema's intent
- * precisely: `questId` is only ever populated alongside `kind: "quest"` (see
- * feedback/normalize.ts), but the zod schema itself doesn't enforce that
- * pairing, so checking `kind` first documents and hardens the real invariant
- * instead of relying on a field that happens to be null everywhere else.
+ * shared overworld target when the location is an overworld surface. Pure
+ * interview confusions do not have a separate location field, however, so the
+ * compiler conservatively leaves prose such as "alarm thresholds took
+ * attention" unmapped. When every actionable fleet report in the accepted
+ * cohort has one unambiguous metric target, that authenticated cohort scope is
+ * a safe fallback: `overworld` stays the shared target and `quest:<id>` is
+ * admitted only for a currently shipped world quest. Zero, multiple, malformed,
+ * crawler-only, or mixed-source targets remain unnominated rather than guessed.
+ *
+ * The explicit `kind === "quest"` gate (rather than a bare `questId`
+ * truthiness check) matches the schema's intent precisely: `questId` is only
+ * ever populated alongside `kind: "quest"` (see feedback/normalize.ts), but
+ * the zod schema itself doesn't enforce that pairing, so checking `kind` first
+ * documents and hardens the real invariant instead of relying on a field that
+ * happens to be null everywhere else.
  */
-function hotspotTarget(h: Hotspot): string | null {
+function hotspotTarget(
+  h: Hotspot,
+  file: HotspotsFile,
+  shippedWorldQuestIds: ReadonlySet<string>,
+): string | null {
   if (h.location.kind === "quest" && h.location.questId) return h.location.questId;
-  return h.location.kind === "overworld" ? OVERWORLD_PLAYTEST_TARGET : null;
+  if (h.location.kind === "overworld") return OVERWORLD_PLAYTEST_TARGET;
+  if (h.location.kind !== "unmapped" || h.sources.length !== 1 || h.sources[0] !== "fleet") {
+    return null;
+  }
+  if (file.inputs.crawl_findings !== 0 || file.metrics.length !== 1) return null;
+  const metric = file.metrics[0]!;
+  if (metric.reports <= 0 || metric.reports !== file.inputs.actionable_reports) return null;
+  const cohortTarget = metric.target;
+  if (cohortTarget === OVERWORLD_PLAYTEST_TARGET) return OVERWORLD_PLAYTEST_TARGET;
+  if (!cohortTarget.startsWith("quest:")) return null;
+  const questId = cohortTarget.slice("quest:".length);
+  return shippedWorldQuestIds.has(questId) ? questId : null;
 }
 
 /** Disk wrapper for attendance evidence; empty map when both evidence sources are absent. */
@@ -820,10 +842,16 @@ export function assess(root: string): Assessment {
   // functions above) ────────────────────────────────────────────────────────
   const hotspotsFile = readLatestHotspots(root);
   if (hotspotsFile) {
+    const shippedWorldQuestIds = new Set(
+      quests
+        .map(({ world_quest_id }) => world_quest_id)
+        .filter((questId): questId is string => questId !== null),
+    );
     const maxHotspotScore = hotspotsFile.hotspots.reduce((max, h) => Math.max(max, h.score), 0);
-    hotspotsFile.hotspots.slice(0, 3).forEach((h, i) => {
-      const target = hotspotTarget(h);
-      if (!target) return; // unmapped hot spots don't nominate a fixable target
+    hotspotsFile.hotspots.slice(0, 3).forEach((h, index) => {
+      const target = hotspotTarget(h, hotspotsFile, shippedWorldQuestIds);
+      if (!target) return;
+      const usedCohortFallback = h.location.kind === "unmapped";
       const category = categoryForHotspot(h);
       const effort = effortForHotspot(h);
       const impact = impactForHotspot(h, maxHotspotScore);
@@ -833,11 +861,14 @@ export function assess(root: string): Assessment {
         target,
         title: `Fix compiled feedback hot spot: ${h.title}`,
         rationale:
-          `hot spot #${i + 1}: ${h.title} (count ${h.count}, ${h.max_severity}, ` +
+          `hot spot #${index + 1}: ${h.title} (count ${h.count}, ${h.max_severity}, ` +
           `sources ${h.sources.join("+")})`,
         evidence: [
           `compiled hot spot score ${h.score}, fix_layer ${h.fix_layer}, ` +
             `${h.evidence.length} evidence excerpt(s)`,
+          ...(usedCohortFallback
+            ? ["unmapped hot spot; target inferred from the sole accepted cohort metric"]
+            : []),
         ],
         impact,
         effort,

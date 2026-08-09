@@ -1,0 +1,39 @@
+id: bug_0547
+title: "Accepted unmapped feedback could not nominate or consume its recommendation"
+pack: n/a (AFK feedback assessor)
+reported_by: 2026-08-09 commit-enabled Cycle 7 assessment
+severity: S2
+symptom: >
+  The outer-gate-accepted feedback compile loaded successfully and named hotspot
+  3ab74e32 as its unconsumed recommended next fix, but the next deterministic
+  assessment offered no hotspot candidate and fell through to routine maintenance.
+  All six accepted issues were fleet confusions whose prose could not be resolved as
+  a canonical place, even though the compile's single experience-metric row proved
+  that all three actionable reports exercised the fresh overworld target.
+root_cause: >
+  The compiler retains each verified report's target on its internal IssueRecord, but
+  the hotspot schema keeps only the separately normalized location. Exit-interview
+  confusions have no dedicated location field, so their complete prose is passed to
+  location normalization and commonly remains unmapped. The compiler may still choose
+  such a row as recommended_next_fix, while the assessor discarded every unmapped row
+  before candidate construction. The accepted recommendation therefore had no path to
+  become the exact selected hotspot id that the feedback seal can consume.
+fix: >
+  Keep canonical quest and overworld locations authoritative. For an unmapped hotspot,
+  infer only the broad accepted cohort scope when the hotspot is fleet-only, the compile
+  contains zero crawler findings, exactly one metric row accounts for every actionable
+  report, and that row names exact overworld or a canonical quest:<id> present in the
+  current shipped world catalog. Do not rewrite or pretend to refine the hotspot's
+  location; mark candidate evidence when this coarse fallback was used. Zero, duplicate,
+  multiple, count-mismatched, crawler/mixed, malformed, or unknown targets remain inert.
+deterministic_witnesses:
+  - "a fleet-only unmapped hotspot with one full-count overworld metric becomes an overworld candidate above routine rotation"
+  - "a sole canonical quest target resolves only when that quest id exists in the current shipped catalog"
+  - "canonical mapped locations win even when cohort metrics point somewhere else"
+  - "zero, mismatched, duplicate, multiple, malformed, case-varied, unknown, crawler-only, and mixed-source fallbacks remain rejected"
+tests:
+  - tests/unit/assessor_hotspots.test.ts
+verification:
+  - npx vitest run tests/unit/assessor_hotspots.test.ts
+  - npm run typecheck
+  - npm run verify:bug-traces
