@@ -1,0 +1,51 @@
+id: bug_0551
+title: "Blocked event leads prescribed gameplay actions while the journey was paused"
+pack: n/a (overworld compact event presentation)
+reported_by: 2026-08-09T14-36-21-213Z pending pure fresh-overworld playtest
+severity: S1
+evidence:
+  source_report: ai-runs/2026-08-09T14-36-21-213Z/playtest.md
+  raw_transcript: ai-runs/2026-08-09T14-36-21-213Z/playtest.codex.jsonl
+  exact_raw_items: "item_2, item_3, and item_4"
+  false_prerequisite: "Required first: investigate this event."
+  player_friction: "Some local-event lead text stayed as an advisory requirement while the Relief Compact/quest track was the active progression lane, so it read like stale guidance but was non-blocking."
+symptom: >
+  After the pure player talked to Rowan, raw items item_2, item_3, and
+  item_4 each kept Albany's charter-backlog event lead visible with "Required
+  first: investigate this event." At those exact surfaces service_actions was
+  absent and the only legal lane was, in order, character registration, relief
+  oath, and Albany lead source. Investigation was therefore impossible until
+  the story choice cleared, so the compact prerequisite looked authoritative
+  while describing an action the player could not take.
+root_cause: >
+  The blocked-event lead projector derived scout, talk, and investigate guidance
+  only from journal progress. It did not consult the existing service_actions
+  absence sentinel that compact projection already uses for a gameplay pause.
+  The canonical live event choices and action guards remained correct, but the
+  advisory event-lead row could disagree with them during opening story choices,
+  checkpoint choices, and a terminal journey.
+fix: >
+  Feed the existing gameplay-pause sentinel into blocked-event prerequisite
+  projection for both compact paths. While gameplay actions are paused, show the
+  existing "No authored choice is currently available in this journey state."
+  row. Once play resumes, restore the journal-appropriate scout, talk, or
+  investigate prerequisite and reveal the authored event choices only after
+  investigation. This is presentation-only: it adds no legal action, changes no
+  checkpoint, decision, state or snapshot hash, and adds no schema field or
+  compact-version change.
+deterministic_witnesses:
+  - "the raw pure transcript's item_2 registration, item_3 relief-oath, and item_4 lead-source surfaces omit service_actions but repeat the false investigate prerequisite"
+  - "a fresh Albany event still names scouting first, then names talking to Rowan after the scout action"
+  - "registration, relief-oath, and lead-source pauses expose the existing no-authored-choice row with service_actions absent in both compact projection paths"
+  - "attempting investigation at each opening pause is rejected by the existing story-action guard without changing snapshot bytes or snapshot hash"
+  - "choosing the lead source resumes gameplay, restores the investigate prerequisite and service_actions, and leaves the two authored event choices gated behind the existing investigate action"
+  - "an uninvestigated checkpoint exposes the no-authored-choice row; Continue restores investigate, while terminal End keeps gameplay unavailable"
+  - "the fast session compact projection and full-view compact projection remain structurally equal across the witnessed states"
+production:
+  - src/world/compact_view.ts
+  - src/world/session_compact_view.ts
+tests:
+  - tests/starting_slice/progressive_event_disclosure.test.ts
+verification:
+  - npx vitest run tests/starting_slice/progressive_event_disclosure.test.ts
+  - npm run verify:bug-traces

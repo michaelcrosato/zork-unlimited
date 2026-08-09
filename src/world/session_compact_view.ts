@@ -187,14 +187,15 @@ export function buildOverworldSessionCompactView(
   const eventScenes = compactOverworldEventScenes(
     visibleEvents.filter((event) => eventSceneIds.has(event.id)),
   );
+  const serviceActions = compactOverworldServiceActions(state.serviceActions);
   const eventLeads = compactOverworldBlockedEventLeads(visibleEvents, {
     eventChoices,
+    gameplayActionsPaused: serviceActions.length === 0,
     journalEntryIds: new Set(state.journalEntries.map((entry) => entry.id)),
     poiTitlesById: new Map(state.poi.map((poi) => [poi.id, poi.title])),
     contactNamesById: new Map(state.contacts.map((contact) => [contact.id, contact.name])),
   });
   const serviceOffers = compactCampaignServiceOffers(state.serviceOffers);
-  const serviceActions = compactOverworldServiceActions(state.serviceActions);
   const departureInteractions = compactOverworldDepartureInteractions(
     state.departureInteractions ?? [],
   );

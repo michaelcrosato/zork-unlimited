@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createToolApi } from "../../src/mcp/tools.js";
 import {
   compactOverworldEventScenes,
+  compactOverworldView,
   OVERWORLD_COMPACT_VIEW_VERSION,
 } from "../../src/world/compact_view.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -15,6 +16,34 @@ import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_
 
 const WORLD = loadOverworldManifest(process.cwd());
 const EVENT_ID = "albany_city__civic_core__event";
+const EVENT_PAUSED_MESSAGE = "No authored choice is currently available in this journey state.";
+const EVENT_INVESTIGATE_MESSAGE = "Required first: investigate this event.";
+const STORY_ACTION_BLOCKED_MESSAGE =
+  "Choose the presented story consequence, character registration, relief oath, Albany lead source, preparation, relief allocation, or field-team commitment before taking another action.";
+
+function expectEventLeadParity(session: OverworldSession, message: string): void {
+  const compact = session.compactView();
+  expect(compact).toEqual(compactOverworldView(session.view()));
+  expect(compact.event_leads?.[0]?.[2]).toBe(message);
+}
+
+function expectInvestigationRejectedWithoutMutation(
+  session: OverworldSession,
+  message: string,
+): void {
+  const beforeBytes = JSON.stringify(session.snapshot());
+  const beforeHash = session.snapshotHash();
+  let rejection: unknown;
+  try {
+    session.investigateEvent(EVENT_ID);
+  } catch (error) {
+    rejection = error;
+  }
+  expect(rejection).toBeInstanceOf(Error);
+  expect((rejection as Error).message).toBe(message);
+  expect(JSON.stringify(session.snapshot())).toBe(beforeBytes);
+  expect(session.snapshotHash()).toBe(beforeHash);
+}
 
 function settleAlbanyOpening(session: OverworldSession): void {
   session.chooseJourneyStory("albany:ledger_advocate");
@@ -88,6 +117,80 @@ describe("progressive authored-event disclosure", () => {
     expect(compact.event_scenes).toEqual(compactOverworldEventScenes([event]));
     expect(compact.event_choices).toEqual(expectedChoices);
     expect(compact.event_scenes?.[0]?.[2]).toBe(event.authored_scene.prompt);
+  });
+
+  it("advertises only executable event prerequisites through every Albany opening choice", () => {
+    const session = new OverworldSession(WORLD);
+    expectEventLeadParity(session, "Required first: scout Albany Civic Center Notice Hall.");
+
+    const beforeScout = session.snapshotHash();
+    session.scoutPoi("albany_city__civic_core__poi");
+    expect(session.snapshotHash()).not.toBe(beforeScout);
+    expect(session.journey().storyChoice).toBeNull();
+    expectEventLeadParity(session, "Required first: talk to Rowan Quill.");
+
+    const beforeTalk = session.snapshotHash();
+    session.talkToCharacter("albany_city__civic_core__contact");
+    expect(session.snapshotHash()).not.toBe(beforeTalk);
+    expect(session.journey().storyChoice?.id).toBe(WORLD.opening_registration!.id);
+    expectEventLeadParity(session, EVENT_PAUSED_MESSAGE);
+    expect(session.compactView().service_actions).toBeUndefined();
+    expectInvestigationRejectedWithoutMutation(session, STORY_ACTION_BLOCKED_MESSAGE);
+
+    session.chooseJourneyStory("albany:ledger_advocate");
+    revealCurrentJourneyStoryOptions(session, WORLD.opening_relief_oath!.id);
+    expect(session.journey().storyChoice?.id).toBe(WORLD.opening_relief_oath!.id);
+    expectEventLeadParity(session, EVENT_PAUSED_MESSAGE);
+    expect(session.compactView().service_actions).toBeUndefined();
+    expectInvestigationRejectedWithoutMutation(session, STORY_ACTION_BLOCKED_MESSAGE);
+
+    session.chooseJourneyStory("albany:oath_limited_aid_only");
+    expect(session.journey().storyChoice?.id).toBe(WORLD.opening_lead_source!.id);
+    expectEventLeadParity(session, EVENT_PAUSED_MESSAGE);
+    expect(session.compactView().service_actions).toBeUndefined();
+    expectInvestigationRejectedWithoutMutation(session, STORY_ACTION_BLOCKED_MESSAGE);
+
+    session.chooseJourneyStory("albany:source_rowan_civic_docket");
+    expect(session.journey().storyChoice).toBeNull();
+    expectEventLeadParity(session, EVENT_INVESTIGATE_MESSAGE);
+    expect(session.compactView().service_actions).toBeDefined();
+
+    session.investigateEvent(EVENT_ID);
+    expect(session.compactView().event_choices).toEqual([
+      [EVENT_ID, "open_public_relief_record"],
+      [EVENT_ID, "protect_household_relief_details"],
+    ]);
+  });
+
+  it("keeps an uninvestigated event truthful across Continue and terminal End", () => {
+    const checkpoint = new OverworldSession(WORLD);
+    prepareAlbanyEvent(checkpoint);
+    checkpoint.exploreArea("albany_city__civic_core");
+    pauseAtAlbanyCheckpoint(checkpoint);
+
+    expectEventLeadParity(checkpoint, EVENT_PAUSED_MESSAGE);
+    expect(checkpoint.compactView().service_actions).toBeUndefined();
+    expectInvestigationRejectedWithoutMutation(
+      checkpoint,
+      "Choose whether to continue or end this journey before taking another gameplay action.",
+    );
+
+    const boundary = checkpoint.snapshot();
+    const continued = OverworldSession.restore(WORLD, boundary);
+    continued.chooseJourney("continue");
+    expectEventLeadParity(continued, EVENT_INVESTIGATE_MESSAGE);
+    expect(continued.compactView().service_actions).toBeDefined();
+    continued.investigateEvent(EVENT_ID);
+    expect(continued.compactView().event_choices).toEqual([
+      [EVENT_ID, "open_public_relief_record"],
+      [EVENT_ID, "protect_household_relief_details"],
+    ]);
+
+    const ended = OverworldSession.restore(WORLD, boundary);
+    ended.chooseJourney("end");
+    expectEventLeadParity(ended, EVENT_PAUSED_MESSAGE);
+    expect(ended.compactView().service_actions).toBeUndefined();
+    expectInvestigationRejectedWithoutMutation(ended, "This journey has ended.");
   });
 
   it("suppresses an investigated scene at a journey checkpoint, then restores it on Continue", () => {

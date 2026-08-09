@@ -149,3 +149,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Parallel Spark evidence: exact-main admission passed 3/3, then the requested no-retry Spark-10 verified 4/10; all four completed Wolf-Winter with HUNT/LURE/FORTIFY represented, but 59.8% of observed useful tokens landed in six invalid attempts, so this fingerprint was not scaled.
 - Self-critique/follow-through: the canary proves a smooth two-quest handoff and clean build, not a measured clarity uplift; it showed no concrete scope confusion, while the background cohort leaves optional Station support undiscovered and motivates a narrow evidence-bound interview/transport reliability cycle before more Spark fanout.
 - Guard: independent save and presentation audits are clean; crawls `20260805T012948Z` / `20260805T015013Z`, exact-tree health (459 files/3,907 tests plus UI/all 12 packs), and the 16-report feedback compile are green.
+## AFK Cycle 2026-08-09T16-57-57-205Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T16-57-57-205Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
