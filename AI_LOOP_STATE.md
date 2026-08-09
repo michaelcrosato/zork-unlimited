@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 742 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T005606Z/hotspots.json","hotspots_sha256":"e82c52551ff8ce60ccaae50251630a883c626f601b59cd5a7656c1836a28d0b5","manifest_path":"ai-runs/feedback/20260809T005606Z/report-manifest.json","manifest_sha256":"8a02f7c3958cf7e0c0afc53c55912edb6071786e9f2cf16e1bf5dc5cd6bf855f"},"pending_cycle_reports":[{"evidence_sha256":"ce12e0d76095d3f7bef67c090e662cb3f6a23ef4ff27de3ebd2c9d0d2ce9f40a","report_id":"pure:1c4c4e46948239689b5399fb0e7a766a87d0cbd3e7173f4417c1906c19a34577","report_sha256":"d49b9b9beca07a4e2a62e9bd0335363fbf153ced0576cf2d108cffad2486800a","run_id":"2026-08-08T22-44-01-053Z","sidecar_sha256":"fa6fcad48afbe72d943124cfa28097ea2380ad8502121cd53f4c5fd11b8e02e1","tested_commit":"31f7f5a89f10793776dc2c85b5bceab88e550c7a"},{"evidence_sha256":"026b954689fe0f385cf8570761bf48798ada42c81d0cdaaa31026e7c74c701b3","report_id":"pure:e320e3b25101e1b3dd7d2783b7a33e583803d457a57fa01cb70c271d6755be59","report_sha256":"b2f984c4bcb45a56dac9cc1815dbf9c68a3360b2a3c13bedba460f5536ee2fe7","run_id":"2026-08-09T02-55-42-784Z","sidecar_sha256":"082c648732dd9af45dded4aadf089bd34723c8d91e08d6a6c50eccab2f299125","tested_commit":"288699d681e712aecbfbcabc305e2d18d22b748e"},{"evidence_sha256":"023fee2fefdefcdff11a1003ae1a1587bd0170d2e68410ad65dced3c860b3ef0","report_id":"pure:c37a668c20597724ce6f80307b20546673819db6e3cb25aa9422c6e23896c82f","report_sha256":"fbe36b1c9f2b84ee7940083738e6549755952e1fc35348135b37ab662dab1073","run_id":"2026-08-09T04-51-28-385Z","sidecar_sha256":"0cdb511db62e131244ae7521bfd480c0600aee7e154125d6c4a879d676f6688e","tested_commit":"0fac1d36590568fa0eaa088916aaa47194a896d7"}],"schema_version":1} -->
+<!-- historical_cycle_count: 743 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T073458Z/hotspots.json","hotspots_sha256":"867a381715754308a237515ef819fdb6224bfafd4d1c0615521f72630d70c2e3","manifest_path":"ai-runs/feedback/20260809T073458Z/report-manifest.json","manifest_sha256":"b09ead701eda60778a21c1fe9891677fc4f8f6d985f1d1c1562431e387a73deb"},"pending_cycle_reports":[{"evidence_sha256":"f8e288048b41cb67a7667c6faf90d8d91e90845c9fd8937d25854917d41429b7","report_id":"pure:faa09646a93e589ba0f89bab5bea34debb7d5578ac8334e71c87bd81157ae4a0","report_sha256":"30372ff66aabea97d9426b43276eca7d631b8535910e3bb13b2ce504d9643375","run_id":"2026-08-09T07-05-04-305Z","sidecar_sha256":"987dde0db6c890e95d3e7135485e6303a7b70eeda9d84b6036e6685606123303","tested_commit":"35ef9df59ff17a9d35c1bcc32ead2a1cce585bd3"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -17,6 +17,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+
+### Cycle result - loop_selection_rotation
+- Evidence choice: the assessor offered only a clean Advocates' Case rotation; the live 15-entry boundary instead reproduced a deterministic finalization failure where trimming the 16th result archived the frozen feedback selection and made the seal reject.
+- Surface/effect: a repo-local post-agent rotation now runs in both loop modes before post-change gates, relocates every parser-counted selection line into the live preamble, archives the remaining tail, and classifies any rotation failure for full cycle reset.
+- Counterfactual: valid authority survives LF, CRLF, lone-CR, and Unicode separators unchanged; malformed, duplicate, indented, or prose-like reserved-token lines also stay live so the real seal rejects rather than laundering them through the ignored archive.
+- Pure evidence: exact-clean Terra seed 10 on `35ef9df5` used Road-Warden/Aid-Only, June, and the dawn wagon, saved Cade's whole herd and every wolf by LURE, continued through checkpoint 41, won The Gallowmere, and ended naturally at decision 56; clarity/enjoyment 4/4, replay yes, no bug or stuck state.
+- Feedback/next: the accepted three-report delta compiled 3 actionable/0 mocks and six tied S1 hot spots over an 816-report corpus; alarm-threshold consequences rank first, while this build's player still found Station support fragmented and the in-quest checkpoint abrupt, all reserved for the promoted next cycle.
+- Guard: three independent hostile audits, 46 focused driver/rotation/real-seal tests, Bash syntax, typecheck, lint, formatting, trace/static integrity, and the exact-build pure gate are green; the standard post-crawl and full health bar remain mandatory for landing.
 
 ### Cycle result - civic_quick_setup_framing
 - Evidence choice: the assessor offered only a clean Advocates' Case rotation; two accepted matched-path players independently reported layered role/duty/evidence setup, so this off-list cycle corrected the shared Civic briefing.
@@ -147,19 +156,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: rejected public/direct streams retain only an allowlisted failure, hashed row commitment, and numeric token lower bound; verified totals count it as observed but incomplete, with zero automatic retry.
 - Report contract: exactly one closed terminal interview and literal `bugs: []` remove the measured format-only rejection class; synthetic clean-checkout verification now retains newly added tracked files.
 - Self-critique/guard: long post-goal journeys may still fail closed at compaction, but the audited run completed Wolf at decision 29 and compacted only after 46; pre/post crawls `20260804T084131Z` / `20260804T090511Z`, 440 integrated tests, 155 all-model purity tests, typecheck, and formatting are green.
-
-### Cycle result - launch_first_station_dispatch
-
-- Evidence choice: the 20-report compile and two exact-clean Terra canaries independently named Station planning density, so this increment changes information hierarchy without deleting a causal choice.
-- Surface/effect: terminal and browser clients put both legal Wolf-Winter roads before optional support; board v2 indexes all six plan rows and exact inspect/talk handles, while malformed or unmapped sources fail closed to the established recap/interaction/contact surfaces.
-- Economy: compact v42 replaces four overlapping Station structures with `[2, questId, guidance, dispatch|null, rows]`, reducing the exact Station slice 2,470→2,107 bytes (14.7%); the one-shot final Terra run used 4.477M input / 4.328M cache-read + 11,172 output tokens.
-- Counterfactual: focused full/compact, UI/CLI, clone, malformed-source, save/hash, and action-parity proofs keep terms, state, RNG, outcomes, legal launch/support actions, and accepted-decision counts unchanged.
-- Pure evidence: exact-clean Terra seed 682747 on `e0550be5` diverted every wolf with the full herd after two failure-forward recoveries, continued at decisions 30/41, won The Gallowmere, ended naturally at 55, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, loop, soft-lock, or stuck state.
-- Self-critique/follow-through: Station nested tradeoffs, campaign-versus-quest state boundaries, and one Gallowmere recovery label remain S1; one new verified report is below the recompile threshold, so no fleet or premature compile ran.
-- Guard: pre/post crawls `20260803T173108Z` / `20260803T182348Z` cover all 247 nodes/344 edges/12 quests; exact health passes 459 files/3,797 tests, UI typecheck, and all 12 packs.
-## AFK Cycle 2026-08-09T07-05-04-305Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-09T07-05-04-305Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-advocates_case (content_fix/M; score=0.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
