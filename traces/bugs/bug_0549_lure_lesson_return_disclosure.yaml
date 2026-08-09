@@ -1,0 +1,48 @@
+id: bug_0549
+title: "The optional LURE lesson did not disclose its return to the plan menu"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: 2026-08-09T10-36-13-614Z accepted pure fresh-overworld playtest
+severity: S1
+evidence:
+  source_report: ai-runs/2026-08-09T10-36-13-614Z/playtest.md
+  exact_same_plan_sequence: "ask_lure -> ask_quick_lesson -> ask_lure -> ask_commit_lure"
+  player_friction: "The menu/action list changing across dialogue and commitment states required careful attention but stayed understandable."
+  hunt_counterfactual: "after the same optional lesson returns to Cade's root, ask_commit_hunt_and_hold and an uncommitted north crossing remain legal"
+symptom: >
+  The accepted player inspected LURE, took Cade's quick lesson, then had to select
+  LURE again before its commit action returned. The pre-lesson prose named the +2
+  attack and +5 tally rewards and warned that committing first would close them, but
+  did not disclose that the lesson returns to the full plan menu. The next compact
+  surface therefore replaced ask_commit_lure with the root choices, matching the
+  player's report that changing action menus required careful attention.
+root_cause: >
+  Cade's existing cade_wolves lesson is a shared one-shot answer. Its mirrored
+  unconditional return deliberately auto-resumes cade_root so the player can still
+  reconsider HUNT, LURE, DRIVE, or FORTIFY. The LURE-specific pre-lesson copy
+  described reward and forfeiture but not that navigation boundary or the required
+  LURE reselect. No new dialogue branch or second effect source was needed.
+fix: >
+  Change only the two pre-lesson LURE variants and the quick-lesson prompt. Call the
+  lesson optional and state that it returns to the plan menu, where LURE must be
+  selected again to commit. Preserve the player's existing two-step post-lesson
+  sequence: this does not add a direct continuation and does not reduce the action
+  count. Direct no-lesson LURE commitment stays available, while the returned root
+  keeps the HUNT pivot and every other uncommitted plan.
+deterministic_witnesses:
+  - "normal and aid-only full/compact pre-lesson LURE prose names OPTIONAL QUICK LESSON, both rewards, the root-menu return, and LURE reselect"
+  - "the compact quick-lesson choice repeats the return-and-reselect disclosure without truncation"
+  - "after the lesson, compact choices expose the root menu including ask_commit_hunt_and_hold and ask_lure, but not ask_commit_lure or another lesson"
+  - "selecting LURE again exposes ask_commit_lure; committing then keeps attack 7, score 5, and the existing strategy_lure_committed effect"
+  - "committing LURE before the optional lesson remains legal and grants neither heard_counsel nor its +2 attack/+5 tally rewards"
+  - "choosing HUNT after the lesson and crossing north reaches the paling with no LURE commitment"
+  - "cade_wolves remains the sole authored NPC lesson source of inc_var attack +2"
+  - "the combat guarantee still emits COMBAT_GAUNTLET_NOT_GUARANTEED at HP 28 and clears it at HP 29"
+  - "the exact Wolf-Winter compiled source hash advances from 03a87c97d09d5a30eefa5314d4d2d07dbcf51db2754796e705ecfa1df3262019 to ec51d609f3acebe9cf22830256e44bdd0a8bdfa828b69aaa5d14a3d23b3e7dbb"
+tests:
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/wolf_winter_dialogue_surface.test.ts
+  - tests/regression/wolf_winter_three_fight_gauntlet.test.ts
+  - tests/regression/wolf_winter_paling_stage_actions.test.ts
+verification:
+  - npx vitest run tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_three_fight_gauntlet.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts
+  - npm run verify:bug-traces

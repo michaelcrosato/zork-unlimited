@@ -4163,9 +4163,10 @@ npcs:
                 the final ordinary +1 alarm; a fouled opening keeps it. FEED LURE relocates pack
                 beyond the breach while holding the herd at Cade's yard; spends last feed, leaves
                 paling broken. Three casts; first foul risks two cattle;
-                no retry, rail recovery. Fieldcraft/fodder help. Choose QUICK LESSON first: +2
-                attack, +5 final tally; commitment closes it. Cross uncommitted chooses HUNT;
-                other plans close.
+                no retry, rail recovery. Fieldcraft/fodder help. OPTIONAL QUICK LESSON: +2
+                attack, +5 final tally; committing first closes it. The lesson returns to the
+                plan menu; choose LURE again to commit. Cross uncommitted chooses HUNT; other
+                plans close.
             - when:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
@@ -4173,8 +4174,9 @@ npcs:
                 FEED LURE relocates pack beyond the breach while holding the herd at Cade's yard;
                 spends last feed, leaves paling broken. Three casts;
                 first foul risks two cattle; no retry, rail recovery. Supports: Fieldcraft,
-                fodder, aid-only. Choose QUICK LESSON first: +2 attack, +5 final tally;
-                commitment closes it. Cross uncommitted chooses HUNT, closing lure/drive/fortify.
+                fodder, aid-only. OPTIONAL QUICK LESSON: +2 attack, +5 final tally; committing
+                first closes it. The lesson returns to the plan menu; choose LURE again to
+                commit. Cross uncommitted chooses HUNT, closing lure/drive/fortify.
             - when:
                 - { has_flag: relief_oath_limited_duty }
                 - { not_flag: strategy_lure_committed }
@@ -4188,7 +4190,7 @@ npcs:
           topics:
             - id: quick_lesson
               aliases: [wolves, ask_wolves]
-              prompt: "Ask for Cade's quick lesson first (+2 attack; +5 final tally)."
+              prompt: "Take Cade's optional quick lesson (+2 attack; +5 final tally). It returns to the plan menu; choose LURE again to commit."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
