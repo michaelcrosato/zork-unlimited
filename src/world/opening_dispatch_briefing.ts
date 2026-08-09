@@ -10,11 +10,21 @@ const PREPARATION_COMPARISON_HEADER = `Compare field priority, exact cost, and t
 const RELIEF_ALLOCATION_COMPARISON_HEADER = `Compare who is protected, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
 const ALLY_COMPARISON_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 
+const OPENING_DISPATCH_SUPPORT_DISCOVERY_MARKER = " The live dispatch has ";
+
+/** Split the authored crisis from Station support; ambiguous/missing boundaries fail closed. */
+export function openingDispatchCrisisPreview(discovery: string): string | null {
+  const parts = discovery.split(OPENING_DISPATCH_SUPPORT_DISCOVERY_MARKER);
+  if (parts.length !== 2) return null;
+  const preview = parts[0]!.trim();
+  const deferredSupport = parts[1]!.trim();
+  return preview.length > 0 && deferredSupport.length > 0 ? preview : null;
+}
+
 const OPENING_DISPATCH_PURPOSE: Readonly<
   Record<NonNullable<JourneyStoryChoicePrompt["kind"]>, string>
 > = Object.freeze({
-  registration:
-    "Purpose: choose your permanent background and promise; duty and evidence come next.",
+  registration: "Purpose: choose your permanent background and promise.",
   relief_oath:
     "Purpose: compare what must survive Wolf-Winter, then choose duty; evidence comes next, and field plan stays open.",
   lead_source: "Purpose: choose the evidence Albany carries; the field plan stays open.",
@@ -43,7 +53,7 @@ export type OpeningDispatchManifestChain = Readonly<{
 
 type OpeningDispatchPlan = Readonly<{
   questTitle: string;
-  questDiscovery: string;
+  questCrisisPreview: string;
   allyContactName: string | null;
   civicStages: readonly OpeningDispatchStage[];
   departureChoices: readonly OpeningDispatchStage[];
@@ -100,20 +110,22 @@ export function resolveOpeningDispatchManifestChain(
 
 /**
  * Resolve the authored five-card Albany dispatch without adding a second
- * content source. The briefing deliberately reuses the quest's discovery copy
- * so the player learns the actual crisis before making a permanent choice.
+ * content source. The briefing deliberately reuses only the crisis sentence
+ * from quest discovery, leaving Station support for the departure board.
  */
 function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | null {
   const chain = resolveOpeningDispatchManifestChain(world);
   if (!chain) return null;
   const { quest, registration, reliefOath, leadSource, preparation, reliefAllocation, ally } =
     chain;
+  const questCrisisPreview = openingDispatchCrisisPreview(quest.discovery);
+  if (!questCrisisPreview) return null;
   const allyContact = ally
     ? world.characters.find((candidate) => candidate.id === ally.contact)
     : null;
   return {
     questTitle: quest.title,
-    questDiscovery: quest.discovery,
+    questCrisisPreview,
     allyContactName: ally && allyContact ? allyContact.name : null,
     civicStages: Object.freeze([
       Object.freeze({
@@ -209,7 +221,7 @@ export function withOpeningDispatchBriefing(
                 ? `${ally.title}. ${ALLY_COMPARISON_HEADER}`
                 : prompt.message;
   const purpose = offersStandardPacket
-    ? "Purpose: take your role's matched duty/evidence shortcut or customize; every field plan stays open."
+    ? "Purpose: finish matched duty and evidence, or customize; every field plan stays open."
     : OPENING_DISPATCH_PURPOSE[prompt.kind];
   if (civicStageIndex >= 0) {
     const stage = plan.civicStages[civicStageIndex]!;
@@ -219,12 +231,17 @@ export function withOpeningDispatchBriefing(
     const remaining = plan.civicStages
       .slice(civicStageIndex + 1)
       .map((candidate) => candidate.label);
-    const progress = `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
+    const progress =
+      civicStageIndex === 0
+        ? `${plan.questTitle} Civic docket · role.`
+        : offersStandardPacket
+          ? `${plan.questTitle} Civic docket · matched duty + evidence.`
+          : `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
     const planningContext =
       civicStageIndex === 0
-        ? `Mission preview — ${plan.questDiscovery} Civic order: role → duty → evidence.`
+        ? `Mission preview — ${plan.questCrisisPreview} In one next choice, a matched role may finish duty and evidence, or customize.`
         : civicStageIndex === 1 && offersStandardPacket
-          ? "Role chosen. Take its matched duty/evidence shortcut now, or customize the full comparison."
+          ? "A custom duty leaves one evidence choice next."
           : civicStageIndex === 2
             ? "Role and duty chosen. Next stop: Hayden's Station launch board."
             : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;

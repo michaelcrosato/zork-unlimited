@@ -1,0 +1,37 @@
+id: bug_0545
+title: "Civic briefing described a two-choice matched setup as three fixed stages"
+pack: overworld (Albany Wolf-Winter opening)
+reported_by: two accepted 2026-08-08/09 pure overworld playtests
+severity: S1
+symptom: >
+  Two independent players used a role-matched duty-and-evidence shortcut, yet the
+  opening still announced 1/3 role, 2/3 duty, and a fixed role-to-duty-to-evidence
+  order. Both later reported that registration, duty, and evidence felt layered or
+  information-dense before the quest began.
+root_cause: >
+  The shared briefing derived numeric progress solely from the authored three-card
+  Civic chain. It did not account for the matched doctrine added later, which lets one
+  visible choice certify both duty and evidence. The role preview also repeated the
+  quest discovery sentence about June's optional field seat before Station, where that
+  support decision actually belongs.
+fix: >
+  Present the first screen as the role step without a fixed denominator, reuse only the
+  authored crisis sentence, and explain that a matched role may finish duty and evidence
+  in one next choice or customize. On the matched screen, label the combined finish and
+  state that a custom duty leaves evidence next. Preserve the genuine Ledger/custom
+  2/3 then 3/3 route, every option, inspection receipt, state transition, accepted
+  decision, route, mechanic, and world-content byte.
+deterministic_witnesses:
+  - "the default role and matched screens contain no stale 1/3, 2/3, or fixed Civic order"
+  - "the two default messages stay within a combined 135-word budget"
+  - "June and cattle-first Station terms stay out of the Civic preview"
+  - "the sole matched shortcut remains inspectable and completes the setup"
+  - "the Ledger/custom route still presents duty 2/3 and evidence 3/3"
+tests:
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+verification:
+  - npx vitest run tests/starting_slice/opening_dispatch_briefing.test.ts tests/regression/overworld_cli.test.ts tests/regression/mcp_pure_play_mode.test.ts
+  - npm run crawl:smoke
+  - npm run health
