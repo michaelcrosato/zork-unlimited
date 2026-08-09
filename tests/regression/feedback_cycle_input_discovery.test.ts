@@ -4,11 +4,16 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { hashState } from "../../src/core/hash.js";
 import {
+  EMPTY_FEEDBACK_ACCEPTANCE_STATE,
+  type FeedbackAcceptanceState,
+} from "../../src/feedback/acceptance.js";
+import {
   canonicalCycleReportRef,
   discoverCanonicalCycleReports,
   isCycleStamp,
   resolveFeedbackInputs,
 } from "../../src/feedback/inputs.js";
+import { sha256File } from "../../src/feedback/report_manifest.js";
 
 function pureSidecarV2(sessionId = "o-cycle-1"): Record<string, unknown> {
   const decisionProofHash = "a".repeat(64);
@@ -124,21 +129,39 @@ describe("feedback cycle input discovery regression", () => {
     ).toBe(null);
   });
 
-  it("keeps explicit inputs isolated and orders no-flags defaults deterministically", () => {
+  it("keeps explicit inputs isolated and admits only hash-bound pending cycle defaults", () => {
     const root = mkdtempSync(join(tmpdir(), "feedback-defaults-"));
-    writeCandidate(root, "2026-08-08T20-00-00-001Z");
+    const runId = "2026-08-08T20-00-00-001Z";
+    const cycleDir = writeCandidate(root, runId);
+    writeFileSync(join(cycleDir, "playtest.evidence.jsonl"), "evidence\n");
     for (const stamp of ["20260808T190000Z", "20260808T200000Z"]) {
       const crawl = join(root, "ai-runs", "crawl", stamp);
       mkdirSync(crawl, { recursive: true });
       writeFileSync(join(crawl, "findings.jsonl"), "\n");
     }
 
-    expect(resolveFeedbackInputs(root, [])).toEqual([
+    expect(resolveFeedbackInputs(root, [], EMPTY_FEEDBACK_ACCEPTANCE_STATE)).toEqual([
       "blind-tester/reports",
-      "ai-runs/2026-08-08T20-00-00-001Z/playtest.md",
-      "ai-runs/crawl/20260808T200000Z/findings.jsonl",
     ]);
-    expect(resolveFeedbackInputs(root, ["only-this.md"])).toEqual(["only-this.md"]);
+    const accepted: FeedbackAcceptanceState = {
+      schema_version: 1,
+      accepted_compile: null,
+      pending_cycle_reports: [
+        {
+          run_id: runId,
+          tested_commit: "b".repeat(40),
+          report_id: `pure:${"a".repeat(64)}`,
+          report_sha256: sha256File(join(cycleDir, "playtest.md")),
+          evidence_sha256: sha256File(join(cycleDir, "playtest.evidence.jsonl")),
+          sidecar_sha256: sha256File(join(cycleDir, "playtest.run.json")),
+        },
+      ],
+    };
+    expect(resolveFeedbackInputs(root, [], accepted)).toEqual([
+      "blind-tester/reports",
+      `ai-runs/${runId}/playtest.md`,
+    ]);
+    expect(resolveFeedbackInputs(root, ["only-this.md"], accepted)).toEqual(["only-this.md"]);
   });
 
   it("does not follow a symlinked or junction-backed ai-runs root", () => {

@@ -14,7 +14,8 @@
  *   compile -> compute the single recommended-next-fix -> compute metrics +
  *   sycophancy telemetry -> assemble + self-validate the HotspotsFile ->
  *   write hotspots.json (canonical bytes) + retention.json (mode-separated
- *   retention evidence) + hotspots.md (human report).
+ *   retention evidence) + hotspots.md (human report) + report-manifest.json
+ *   (the exact accepted-corpus/delta identity contract).
  */
 import { execSync } from "node:child_process";
 import {
@@ -38,7 +39,11 @@ import { validateAdjacentPureProviderAuthority } from "../blind/pure_artifact_ga
 import { CrawlFindingSchema, type CrawlFinding } from "../crawl/findings.js";
 import { canonicalize, hashState, shortHash } from "../core/hash.js";
 import { clusterIssues, type IssueCluster, type IssueRecord } from "./cluster.js";
-import { summarizeFeedbackEvidence, type FeedbackEvidenceSummary } from "./evidence_summary.js";
+import {
+  mergeFeedbackEvidenceSummaries,
+  summarizeFeedbackEvidence,
+  type FeedbackEvidenceSummary,
+} from "./evidence_summary.js";
 import { canonicalCycleReportRef } from "./inputs.js";
 import {
   sycophancyTelemetry,
@@ -49,6 +54,16 @@ import {
 import { buildLocationIndex, canonicalizeLocation, type LocationIndex } from "./normalize.js";
 import { recommendNextFix, scoreCluster, suggestFixLayer, SEVERITY_WEIGHT } from "./rank.js";
 import { HOTSPOTS_VERSION, HotspotsFileSchema, type Hotspot, type HotspotsFile } from "./schema.js";
+import { readAcceptedHotspots } from "./acceptance.js";
+import {
+  ReportManifestSchema,
+  serializeReportManifest,
+  sha256File,
+  sha256Text,
+  type ReportCorpus,
+  type ReportCohort,
+  type ReportManifest,
+} from "./report_manifest.js";
 import { applyTrends, loadHotspotsFromDir, loadPreviousHotspots } from "./trends.js";
 
 // --- CompileOptions ---------------------------------------------------------
@@ -65,30 +80,55 @@ import { applyTrends, loadHotspotsFromDir, loadPreviousHotspots } from "./trends
  */
 export type CompileOptions = {
   root: string;
+  /** Alternate shipped-world root for isolated authority tests. */
+  worldRoot?: string;
   inputs: string[];
   outDir: string;
   topK: number;
   llmLabels: boolean;
   prevDir: string | null;
+  /** Omitted for explicit/ad-hoc callers, which retain standalone full-corpus behavior. */
+  cohortPolicy?: FeedbackCohortPolicy;
+  /** Exact replay controls used only by the post-gate acceptance seal. */
+  generatedAt?: string;
+  commit?: string;
 };
+
+export const MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS = 3;
+
+export type FeedbackCohortPolicy =
+  | { kind: "standalone" }
+  | { kind: "bootstrap" }
+  | { kind: "initial" }
+  | {
+      kind: "delta";
+      previousManifest: ReportManifest;
+      previousManifestSha256: string;
+      previousHotspots: HotspotsFile;
+      previousEvidence: FeedbackEvidenceSummary;
+    };
+
+export class FeedbackCohortThresholdError extends Error {
+  constructor(
+    readonly actionableReports: number,
+    readonly requiredReports: number = MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS,
+  ) {
+    super(
+      `feedback cohort has ${actionableReports} new actionable report${actionableReports === 1 ? "" : "s"}; ${requiredReports} required`,
+    );
+    this.name = "FeedbackCohortThresholdError";
+  }
+}
 
 // --- readLatestHotspots ------------------------------------------------------
 
 /**
- * The assessor's (Task 17) read side of this module: the most recently
- * compiled `hotspots.json` under `<root>/ai-runs/feedback/`, schema-validated,
- * or `null` when there is no feedback directory yet, or every compile found
- * there is missing/unreadable/malformed. This is exactly `loadPreviousHotspots`
- * (trends.ts) called with no "before" cutoff — that function already scans
- * `ai-runs/feedback/*`, picks the lexicographically-newest directory that
- * holds a valid `HotspotsFileSchema` file, and resolves to `null` on a
- * missing dir or an all-invalid scan — so this is a thin, purpose-named
- * wrapper rather than a second implementation of the same disk walk. Kept in
- * `src/feedback` (re-exported by the assessor) so the hotspots schema/file
- * layout stays known in exactly one place.
+ * Assessor read boundary: return only the exact unconsumed compile whose
+ * manifest/output digests are authorized by committed loop state. Merely newer,
+ * dirty-marker, missing, or tampered ignored artifacts are inert.
  */
 export function readLatestHotspots(root: string): HotspotsFile | null {
-  return loadPreviousHotspots(root, null);
+  return readAcceptedHotspots(root);
 }
 
 // --- collectInputs -----------------------------------------------------------
@@ -161,6 +201,8 @@ function buildManifestIndex(root: string): Map<string, ManifestRow> {
 export type CollectedInterview = {
   /** Stable evidence `ref` every IssueRecord from this report cites. */
   ref: string;
+  /** Stable cohort identity; pure sidecar copies and equivalent verified interviews share ids. */
+  reportId: string;
   persona: string | null;
   target: string; // "overworld" | "quest:<id>"
   interview: ExitInterview;
@@ -249,9 +291,16 @@ function resolveReport(
   // A manifest row named playtest.md must never relabel a cycle report.
   const manifestRow = ledger ? manifestIndex.get(manifestKey(fileName)) : undefined;
   const pureRunKey = verification.run?.play_mode === "pure" ? hashState(verification.run) : null;
+  // Legacy/structural reports have no authenticated run receipt. Their verified
+  // interview is the strongest stable identity available: path, prose framing,
+  // line endings, and renamed copies must not manufacture threshold progress.
+  const reportId = pureRunKey
+    ? `pure:${pureRunKey}`
+    : `report:${hashState({ interview: verification.interview })}`;
   if (manifestRow) {
     return {
       ref,
+      reportId,
       persona: manifestRow.persona,
       target: manifestRow.target,
       interview: verification.interview,
@@ -260,6 +309,7 @@ function resolveReport(
   }
   return {
     ref,
+    reportId,
     persona: null,
     target: ledger ? targetFromSlug(ledger.slug) : "overworld",
     interview: verification.interview,
@@ -318,7 +368,7 @@ export function collectInputs(root: string, inputs: string[]): CollectInputsResu
   const reportDirs: string[] = [];
   const crawlFiles: string[] = [];
   const seenReportPaths = new Set<string>();
-  const seenPureRuns = new Set<string>();
+  const seenReportIds = new Set<string>();
 
   const addReport = (filePath: string, fileName: string): void => {
     const resolvedPath = reportPathKey(filePath);
@@ -340,8 +390,8 @@ export function collectInputs(root: string, inputs: string[]): CollectInputsResu
       rejected++;
       return;
     }
-    if (outcome.pureRunKey && seenPureRuns.has(outcome.pureRunKey)) return;
-    if (outcome.pureRunKey) seenPureRuns.add(outcome.pureRunKey);
+    if (seenReportIds.has(outcome.reportId)) return;
+    seenReportIds.add(outcome.reportId);
 
     const { pureRunKey: _pureRunKey, ...interview } = outcome;
     verified++;
@@ -390,6 +440,107 @@ export function collectInputs(root: string, inputs: string[]): CollectInputsResu
     rejected,
     reportDirs,
     crawlFiles,
+  };
+}
+
+export type FeedbackCohortInspection = {
+  collected: CollectInputsResult;
+  evidence: FeedbackEvidenceSummary;
+  corpus: ReportCorpus;
+  cohort: ReportCohort;
+  cohortInterviews: CollectedInterview[];
+  actionableInterviews: CollectedInterview[];
+  excludedMockReports: number;
+  policy: FeedbackCohortPolicy;
+};
+
+function sortedUnique(values: Iterable<string>): string[] {
+  return [...new Set(values)].sort();
+}
+
+/**
+ * Verify the whole available corpus, then select only report identities not
+ * present in the last outer-gate-accepted manifest. Retention remains a
+ * cumulative view of `collected`; product ranking uses the returned cohort.
+ */
+export function inspectFeedbackCohort(
+  root: string,
+  inputs: string[],
+  requestedPolicy?: FeedbackCohortPolicy,
+): FeedbackCohortInspection {
+  const policy = requestedPolicy ?? { kind: "standalone" };
+  const collected = collectInputs(root, inputs);
+  const corpusVerified = sortedUnique(collected.interviews.map(({ reportId }) => reportId));
+  if (corpusVerified.length !== collected.interviews.length) {
+    throw new Error("feedback compiler retained duplicate report identities after verification");
+  }
+  const corpusActionable = sortedUnique(
+    collected.interviews
+      .filter(({ interview }) => contributesToActionableFeedback(interview))
+      .map(({ reportId }) => reportId),
+  );
+  const actionableSet = new Set(corpusActionable);
+  const corpusExcluded = corpusVerified.filter((id) => !actionableSet.has(id));
+
+  let priorSeen = new Set<string>();
+  if (policy.kind === "delta") {
+    const previous = ReportManifestSchema.parse(policy.previousManifest);
+    if (sha256Text(serializeReportManifest(previous)) !== policy.previousManifestSha256) {
+      throw new Error("accepted previous feedback manifest digest does not match its contents");
+    }
+    priorSeen = new Set(previous.corpus.seen_report_ids);
+  }
+
+  const cohortVerified =
+    policy.kind === "bootstrap"
+      ? []
+      : policy.kind === "delta"
+        ? corpusVerified.filter((id) => !priorSeen.has(id))
+        : corpusVerified;
+  const cohortSet = new Set(cohortVerified);
+  const cohortActionable = corpusActionable.filter((id) => cohortSet.has(id));
+  const cohortActionableSet = new Set(cohortActionable);
+  const cohortExcluded = cohortVerified.filter((id) => !cohortActionableSet.has(id));
+  const corpus: ReportCorpus = {
+    verified_report_ids: corpusVerified,
+    actionable_report_ids: corpusActionable,
+    excluded_mock_report_ids: corpusExcluded,
+    seen_report_ids: sortedUnique([...priorSeen, ...corpusVerified]),
+  };
+  const cohort: ReportCohort = {
+    verified_report_ids: cohortVerified,
+    actionable_report_ids: cohortActionable,
+    excluded_mock_report_ids: cohortExcluded,
+  };
+  const cohortInterviews = collected.interviews.filter(({ reportId }) => cohortSet.has(reportId));
+  const actionableInterviews = cohortInterviews.filter(({ reportId }) =>
+    cohortActionableSet.has(reportId),
+  );
+  const evidence =
+    policy.kind === "delta"
+      ? mergeFeedbackEvidenceSummaries(
+          policy.previousEvidence,
+          summarizeFeedbackEvidence(cohortInterviews),
+        )
+      : summarizeFeedbackEvidence(collected.interviews);
+  const cumulativeEvidenceReports =
+    evidence.report_modes.pure +
+    evidence.report_modes.structural +
+    evidence.report_modes.legacy_guided;
+  if (cumulativeEvidenceReports !== corpus.seen_report_ids.length) {
+    throw new Error(
+      `feedback evidence accounts for ${cumulativeEvidenceReports} reports but manifest lineage has ${corpus.seen_report_ids.length} seen identities`,
+    );
+  }
+  return {
+    collected,
+    evidence,
+    corpus,
+    cohort,
+    cohortInterviews,
+    actionableInterviews,
+    excludedMockReports: cohortExcluded.length,
+    policy,
   };
 }
 
@@ -552,11 +703,11 @@ function applyLlmLabels(hotspots: Hotspot[], _enabled: boolean): Hotspot[] {
   return hotspots;
 }
 
-/** `git rev-parse --short HEAD`, trimmed; "unknown" on any failure (never
+/** Full `git rev-parse HEAD`, trimmed; "unknown" on any failure (never
  *  throws) — content identity for the compile, not a timestamp. */
 function resolveCommit(): string {
   try {
-    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+    return execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
   } catch {
     return "unknown";
   }
@@ -611,23 +762,23 @@ function renderHotspotsMarkdown(
   lines.push("## Inputs");
   lines.push(`- Report dirs: ${file.inputs.report_dirs.join(", ") || "(none)"}`);
   lines.push(`- Crawl files: ${file.inputs.crawl_files.join(", ") || "(none)"}`);
-  lines.push(`- Verified reports: ${file.inputs.verified_reports}`);
-  lines.push(`- Actionable product reports: ${file.inputs.actionable_reports}`);
-  lines.push(`- Rejected reports: ${file.inputs.rejected_reports}`);
+  lines.push(`- Verified reports in this compile cohort: ${file.inputs.verified_reports}`);
+  lines.push(`- Actionable product reports in this cohort: ${file.inputs.actionable_reports}`);
+  lines.push(`- Rejected reports in the cumulative input scan: ${file.inputs.rejected_reports}`);
   lines.push(`- Crawl findings: ${file.inputs.crawl_findings}`);
   lines.push(
-    `- Verified report modes: pure ${evidence.report_modes.pure}, structural ${evidence.report_modes.structural}, legacy-guided ${evidence.report_modes.legacy_guided}`,
+    `- Verified report modes (cumulative corpus): pure ${evidence.report_modes.pure}, structural ${evidence.report_modes.structural}, legacy-guided ${evidence.report_modes.legacy_guided}`,
   );
   lines.push(
-    "- Experience metrics and hot spots include pure, legacy-guided, and structural smoke reports; deterministic structural mocks remain verified QA artifacts but are excluded from product evidence.",
+    "- Experience metrics and hot spots use this compile's fresh pure, legacy-guided, and structural smoke cohort plus any explicitly supplied crawler findings; deterministic structural mocks remain cumulative QA artifacts but are excluded from product evidence.",
   );
   lines.push(
-    `- Deterministic structural mocks excluded from product evidence: ${excludedMockReports}`,
+    `- Deterministic structural mocks excluded from this product cohort: ${excludedMockReports}`,
   );
   lines.push("");
 
   const retention = evidence.pure_retention;
-  lines.push("## Pure retention");
+  lines.push("## Cumulative pure retention");
   lines.push("");
   lines.push(`- Evidence-eligible pure exits: ${retention.eligible_reports}`);
   lines.push(
@@ -755,14 +906,21 @@ export function compileFeedback(opts: CompileOptions): {
   jsonPath: string;
   mdPath: string;
   retentionPath: string;
+  manifest: ReportManifest;
+  manifestPath: string;
+  manifestSha256: string;
 } {
-  const idx = buildLocationIndex(opts.root);
-  const collected = collectInputs(opts.root, opts.inputs);
-  const evidence = summarizeFeedbackEvidence(collected.interviews);
-  const actionableInterviews = collected.interviews.filter(({ interview }) =>
-    contributesToActionableFeedback(interview),
-  );
-  const excludedMockReports = collected.interviews.length - actionableInterviews.length;
+  const idx = buildLocationIndex(opts.worldRoot ?? opts.root);
+  const inspection = inspectFeedbackCohort(opts.root, opts.inputs, opts.cohortPolicy);
+  const { collected, evidence, corpus, cohort, actionableInterviews, policy } = inspection;
+  const excludedMockReports = inspection.excludedMockReports;
+
+  if (
+    (policy.kind === "delta" || policy.kind === "initial") &&
+    actionableInterviews.length < MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS
+  ) {
+    throw new FeedbackCohortThresholdError(actionableInterviews.length);
+  }
 
   const issues = [
     ...fleetIssueRecords(actionableInterviews, idx),
@@ -774,9 +932,14 @@ export function compileFeedback(opts: CompileOptions): {
 
   const rawHotspots = top.map(buildHotspotFromCluster);
 
-  const previous = opts.prevDir
-    ? loadHotspotsFromDir(opts.prevDir, /* isExplicit */ true)
-    : loadPreviousHotspots(opts.root, basename(opts.outDir));
+  const previous =
+    policy.kind === "delta"
+      ? policy.previousHotspots
+      : policy.kind === "standalone"
+        ? opts.prevDir
+          ? loadHotspotsFromDir(opts.prevDir, /* isExplicit */ true)
+          : loadPreviousHotspots(opts.root, basename(opts.outDir))
+        : null;
   const trended = applyTrends(rawHotspots, previous);
   const hotspots = applyLlmLabels(trended, opts.llmLabels);
 
@@ -795,14 +958,16 @@ export function compileFeedback(opts: CompileOptions): {
     interview: r.interview,
   }));
 
+  const generatedAt = opts.generatedAt ?? new Date().toISOString();
+  const commit = opts.commit ?? resolveCommit();
   const file: HotspotsFile = {
     version: HOTSPOTS_VERSION,
-    generated_at: new Date().toISOString(),
-    commit: resolveCommit(),
+    generated_at: generatedAt,
+    commit,
     inputs: {
       report_dirs: collected.reportDirs,
       crawl_files: collected.crawlFiles,
-      verified_reports: collected.verified,
+      verified_reports: cohort.verified_report_ids.length,
       actionable_reports: actionableInterviews.length,
       excluded_mock_reports: excludedMockReports,
       rejected_reports: collected.rejected,
@@ -835,5 +1000,33 @@ export function compileFeedback(opts: CompileOptions): {
     "utf8",
   );
 
-  return { file: validated, evidence, excludedMockReports, jsonPath, mdPath, retentionPath };
+  const manifest: ReportManifest = ReportManifestSchema.parse({
+    schema_version: 1,
+    kind: policy.kind,
+    generated_at: generatedAt,
+    commit,
+    previous_manifest_sha256: policy.kind === "delta" ? policy.previousManifestSha256 : null,
+    corpus,
+    cohort,
+    outputs: {
+      hotspots_sha256: sha256File(jsonPath),
+      retention_sha256: sha256File(retentionPath),
+      markdown_sha256: sha256File(mdPath),
+    },
+  });
+  const manifestPath = join(opts.outDir, "report-manifest.json");
+  writeFileSync(manifestPath, serializeReportManifest(manifest), "utf8");
+  const manifestSha256 = sha256File(manifestPath);
+
+  return {
+    file: validated,
+    evidence,
+    excludedMockReports,
+    jsonPath,
+    mdPath,
+    retentionPath,
+    manifest,
+    manifestPath,
+    manifestSha256,
+  };
 }

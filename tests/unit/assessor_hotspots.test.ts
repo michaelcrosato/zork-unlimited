@@ -4,11 +4,21 @@
  * fixture-root pattern (a minimal-but-real overworld + one quest, so
  * `assess()` runs to completion) and adds a compiled-hotspots fixture on top.
  */
-import { describe, it, expect } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { assess } from "../../src/afk/assessor.js";
+import {
+  upsertFeedbackAcceptanceStateText,
+  type FeedbackAcceptanceState,
+} from "../../src/feedback/acceptance.js";
+import {
+  serializeReportManifest,
+  sha256File,
+  type ReportManifest,
+} from "../../src/feedback/report_manifest.js";
 
 type FixtureContactVariant = {
   after_quests?: string[];
@@ -293,9 +303,80 @@ function writeHotspotsFile(
   stamp: string,
   hotspots: Array<Record<string, unknown>>,
 ): void {
+  writeAcceptedHotspotsFile(root, stamp, hotspotsFileWith(hotspots));
+}
+
+function writeAcceptedHotspotsFile(
+  root: string,
+  stamp: string,
+  hotspotsFile: unknown,
+  consumedByRunId: string | null = null,
+): void {
   const dir = join(root, "ai-runs", "feedback", stamp);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "hotspots.json"), JSON.stringify(hotspotsFileWith(hotspots)));
+  const hotspotsPath = join(dir, "hotspots.json");
+  const retentionPath = join(dir, "retention.json");
+  const markdownPath = join(dir, "hotspots.md");
+  writeFileSync(hotspotsPath, `${JSON.stringify(hotspotsFile)}\n`);
+  writeFileSync(
+    retentionPath,
+    `${JSON.stringify({
+      schema_version: 2,
+      report_modes: { pure: 0, structural: 0, legacy_guided: 1 },
+      pure_retention: { eligible_reports: 0, contract_versions: [] },
+    })}\n`,
+  );
+  writeFileSync(markdownPath, "# Accepted feedback fixture\n");
+
+  const reportId = `report:${"a".repeat(64)}`;
+  const manifest: ReportManifest = {
+    schema_version: 1,
+    kind: "initial",
+    generated_at: "2026-07-09T00:00:00.000Z",
+    commit: "abc1234",
+    previous_manifest_sha256: null,
+    corpus: {
+      verified_report_ids: [reportId],
+      actionable_report_ids: [reportId],
+      excluded_mock_report_ids: [],
+      seen_report_ids: [reportId],
+    },
+    cohort: {
+      verified_report_ids: [reportId],
+      actionable_report_ids: [reportId],
+      excluded_mock_report_ids: [],
+    },
+    outputs: {
+      hotspots_sha256: sha256File(hotspotsPath),
+      retention_sha256: sha256File(retentionPath),
+      markdown_sha256: sha256File(markdownPath),
+    },
+  };
+  const manifestPath = join(dir, "report-manifest.json");
+  writeFileSync(manifestPath, serializeReportManifest(manifest));
+
+  const state: FeedbackAcceptanceState = {
+    schema_version: 1,
+    accepted_compile: {
+      manifest_path: `ai-runs/feedback/${stamp}/report-manifest.json`,
+      manifest_sha256: sha256File(manifestPath),
+      hotspots_path: `ai-runs/feedback/${stamp}/hotspots.json`,
+      hotspots_sha256: sha256File(hotspotsPath),
+      consumed_by_run_id: consumedByRunId,
+    },
+    pending_cycle_reports: [],
+  };
+  const statePath = join(root, "AI_LOOP_STATE.md");
+  const current = existsSync(statePath) ? readFileSync(statePath, "utf8") : "# AI Loop State\n";
+  writeFileSync(statePath, upsertFeedbackAcceptanceStateText(current, state));
+}
+
+function commitFixtureAuthority(root: string): void {
+  execFileSync("git", ["init", "--quiet"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "assessor-fixture@example.invalid"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "Assessor Fixture"], { cwd: root });
+  execFileSync("git", ["add", "--", "AI_LOOP_STATE.md"], { cwd: root });
+  execFileSync("git", ["commit", "--quiet", "-m", "fixture authority"], { cwd: root });
 }
 
 function withFixtureRoot(setup: (root: string) => void, run: (root: string) => void): void {
@@ -303,6 +384,10 @@ function withFixtureRoot(setup: (root: string) => void, run: (root: string) => v
   try {
     writeFixtureQuestRoot(root);
     setup(root);
+    if (!existsSync(join(root, "AI_LOOP_STATE.md"))) {
+      writeFileSync(join(root, "AI_LOOP_STATE.md"), "# AI Loop State\n");
+    }
+    commitFixtureAuthority(root);
     run(root);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -313,9 +398,7 @@ describe("assess() consuming compiled hotspots.json (Task 17)", () => {
   it("raises a hotspot- candidate that outranks the default playtest-rotation stubs", () => {
     withFixtureRoot(
       (root) => {
-        const dir = join(root, "ai-runs", "feedback", "20260709T000000Z");
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(join(dir, "hotspots.json"), JSON.stringify(validHotspotsFile("deadbeef")));
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", validHotspotsFile("deadbeef"));
       },
       (root) => {
         const a = assess(root);
@@ -373,11 +456,60 @@ describe("assess() consuming compiled hotspots.json (Task 17)", () => {
     );
   });
 
+  it("ignores a newer unmarked compile and keeps using the exact committed acceptance", () => {
+    withFixtureRoot(
+      (root) => {
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", validHotspotsFile("accepted-old"));
+        const newer = join(root, "ai-runs", "feedback", "20260710T000000Z");
+        mkdirSync(newer, { recursive: true });
+        writeFileSync(
+          join(newer, "hotspots.json"),
+          `${JSON.stringify(validHotspotsFile("unmarked-new"))}\n`,
+        );
+      },
+      (root) => {
+        const candidateIds = assess(root).candidates.map((candidate) => candidate.id);
+        expect(candidateIds).toContain("hotspot-accepted-old");
+        expect(candidateIds).not.toContain("hotspot-unmarked-new");
+      },
+    );
+  });
+
+  it("reads acceptance from committed HEAD and ignores a dirty worktree marker", () => {
+    withFixtureRoot(
+      (root) => {
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", validHotspotsFile("committed-choice"));
+      },
+      (root) => {
+        writeAcceptedHotspotsFile(root, "20260710T000000Z", validHotspotsFile("dirty-choice"));
+        const candidateIds = assess(root).candidates.map((candidate) => candidate.id);
+        expect(candidateIds).toContain("hotspot-committed-choice");
+        expect(candidateIds).not.toContain("hotspot-dirty-choice");
+      },
+    );
+  });
+
+  it("does not offer a recommendation after its accepted compile is marked consumed", () => {
+    withFixtureRoot(
+      (root) => {
+        writeAcceptedHotspotsFile(
+          root,
+          "20260709T000000Z",
+          validHotspotsFile("already-consumed"),
+          "2026-08-08T22-00-00-001Z",
+        );
+      },
+      (root) => {
+        expect(
+          assess(root).candidates.some((candidate) => candidate.id === "hotspot-already-consumed"),
+        ).toBe(false);
+      },
+    );
+  });
+
   it("skips a hot spot whose location cannot be mapped to a fixable target", () => {
     withFixtureRoot(
       (root) => {
-        const dir = join(root, "ai-runs", "feedback", "20260709T000000Z");
-        mkdirSync(dir, { recursive: true });
         const file = validHotspotsFile("cafef00d") as { hotspots: Array<Record<string, unknown>> };
         file.hotspots[0]!.location = {
           kind: "unmapped",
@@ -387,7 +519,7 @@ describe("assess() consuming compiled hotspots.json (Task 17)", () => {
           sceneId: null,
           raw: ["somewhere unclear"],
         };
-        writeFileSync(join(dir, "hotspots.json"), JSON.stringify(file));
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
       },
       (root) => {
         const a = assess(root);

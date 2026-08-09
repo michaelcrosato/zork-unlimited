@@ -5,16 +5,18 @@
  * compile.ts), never by title/position, so a cluster that shifts rank or
  * gains a slightly reworded title is still recognized as "the same hotspot".
  *
- * Two ways a caller finds the "previous" compile:
+ * Standalone/forensic callers can find a "previous" compile in two ways:
  *   - `loadHotspotsFromDir` reads one specific directory's `hotspots.json`
  *     directly — what `bin/feedback.ts --prev <dir>` uses, so tests (and
  *     anyone comparing two ad-hoc compiles) can pin the comparison exactly
  *     instead of depending on wall-clock directory scanning.
- *   - `loadPreviousHotspots` is the default, no-flags-needed path: scan
+ *   - `loadPreviousHotspots` scans
  *     `<root>/ai-runs/feedback/*` (each subdirectory is a UTC-stamp-named
  *     compile output) and pick the newest one whose name sorts before
  *     `beforeDir` — again by directory NAME, never by mtime, so it is stable
  *     under filesystem copies/clones that don't preserve timestamps.
+ * Accepted loop compiles do not use this scan: their exact predecessor is
+ * supplied by the digest-bound acceptance manifest.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";

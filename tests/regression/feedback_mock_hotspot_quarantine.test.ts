@@ -106,7 +106,7 @@ describe("bug_0541 — mock feedback provenance quarantine", () => {
     expect(file.metrics[0]!.reports).toBe(1);
     expect(file.sycophancy.reports).toBe(1);
     expect(readFileSync(mdPath, "utf8")).toContain(
-      "Deterministic structural mocks excluded from product evidence: 1",
+      "Deterministic structural mocks excluded from this product cohort: 1",
     );
   });
 });

@@ -290,3 +290,98 @@ export function summarizeFeedbackEvidence(
     },
   });
 }
+
+function mergeChoiceCounts(left: ChoiceCounts, right: ChoiceCounts): ChoiceCounts {
+  return { continue: left.continue + right.continue, end: left.end + right.end };
+}
+
+function mergeContractRetention(
+  left: ContractRetention,
+  right: ContractRetention,
+): ContractRetention {
+  const eligibleReports = left.eligible_reports + right.eligible_reports;
+  const checkpoints = new Map<number, ChoiceCounts>();
+  for (const row of [...left.checkpoints, ...right.checkpoints]) {
+    checkpoints.set(
+      row.decision,
+      mergeChoiceCounts(checkpoints.get(row.decision) ?? emptyChoiceCounts(), row),
+    );
+  }
+  const exitReasons = new Map<string, number>();
+  for (const row of [...left.exit_reasons, ...right.exit_reasons]) {
+    exitReasons.set(row.reason, (exitReasons.get(row.reason) ?? 0) + row.count);
+  }
+  return {
+    contract_version: left.contract_version,
+    eligible_reports: eligibleReports,
+    continued_reports: left.continued_reports + right.continued_reports,
+    ended_at_first_choice_reports:
+      left.ended_at_first_choice_reports + right.ended_at_first_choice_reports,
+    forced_character_death_reports:
+      left.forced_character_death_reports + right.forced_character_death_reports,
+    accepted_decisions: {
+      minimum: Math.min(left.accepted_decisions.minimum, right.accepted_decisions.minimum),
+      maximum: Math.max(left.accepted_decisions.maximum, right.accepted_decisions.maximum),
+      mean:
+        (left.accepted_decisions.mean * left.eligible_reports +
+          right.accepted_decisions.mean * right.eligible_reports) /
+        eligibleReports,
+    },
+    choices: mergeChoiceCounts(left.choices, right.choices),
+    choice_triggers: {
+      checkpoint: mergeChoiceCounts(
+        left.choice_triggers.checkpoint,
+        right.choice_triggers.checkpoint,
+      ),
+      goal_completed: mergeChoiceCounts(
+        left.choice_triggers.goal_completed,
+        right.choice_triggers.goal_completed,
+      ),
+      checkpoint_and_goal_completed: mergeChoiceCounts(
+        left.choice_triggers.checkpoint_and_goal_completed,
+        right.choice_triggers.checkpoint_and_goal_completed,
+      ),
+    },
+    checkpoints: [...checkpoints.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([decision, counts]) => ({ decision, ...counts })),
+    exit_reasons: [...exitReasons.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([reason, count]) => ({ reason, count })),
+  };
+}
+
+/** Add a fresh identity cohort to a prior digest-verified cumulative summary. */
+export function mergeFeedbackEvidenceSummaries(
+  previous: FeedbackEvidenceSummary,
+  fresh: FeedbackEvidenceSummary,
+): FeedbackEvidenceSummary {
+  const left = FeedbackEvidenceSummarySchema.parse(previous);
+  const right = FeedbackEvidenceSummarySchema.parse(fresh);
+  const versions = new Map<number, ContractRetention>();
+  for (const cohort of left.pure_retention.contract_versions) {
+    versions.set(cohort.contract_version, structuredClone(cohort));
+  }
+  for (const cohort of right.pure_retention.contract_versions) {
+    const prior = versions.get(cohort.contract_version);
+    versions.set(
+      cohort.contract_version,
+      prior ? mergeContractRetention(prior, cohort) : structuredClone(cohort),
+    );
+  }
+  return FeedbackEvidenceSummarySchema.parse({
+    schema_version: 2,
+    report_modes: {
+      pure: left.report_modes.pure + right.report_modes.pure,
+      structural: left.report_modes.structural + right.report_modes.structural,
+      legacy_guided: left.report_modes.legacy_guided + right.report_modes.legacy_guided,
+    },
+    pure_retention: {
+      eligible_reports:
+        left.pure_retention.eligible_reports + right.pure_retention.eligible_reports,
+      contract_versions: [...versions.values()].sort(
+        (a, b) => a.contract_version - b.contract_version,
+      ),
+    },
+  });
+}

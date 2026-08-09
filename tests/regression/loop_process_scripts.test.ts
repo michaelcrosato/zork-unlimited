@@ -13,6 +13,11 @@ import { spawnSync } from "node:child_process";
 const statusScript = readFileSync("scripts/loop-status.sh", "utf8");
 const stopScript = readFileSync("scripts/loop-stop.sh", "utf8");
 const loopScript = readFileSync("loop.sh", "utf8");
+const packageScripts = (
+  JSON.parse(readFileSync("package.json", "utf8")) as {
+    scripts: Record<string, string>;
+  }
+).scripts;
 
 /** Independent test-side writer for the shipped `pid start_ticks` record format. */
 const RECORD_PROCESS_IDENTITY = [
@@ -289,7 +294,9 @@ describe("loop status/stop process helpers", () => {
     expect(loopScript).toContain("agent_rc=$?");
     expect(loopScript).not.toContain("agent step reported an error — continuing to verify");
     expect(loopScript).toContain("loop:verify-playtest");
+    expect(loopScript).toContain("loop:seal-feedback");
     expect(loopScript).toContain('--expected-commit "$current_ref"');
+    expect(packageScripts["loop:seal-feedback"]).toBe("tsx scripts/seal-feedback-acceptance.ts");
   });
 
   it("persists classified failures and exposes them through loop status", () => {

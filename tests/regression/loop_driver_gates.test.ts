@@ -320,8 +320,13 @@ describe("loop.sh verification gates", () => {
     );
 
     expect(safeCommit.indexOf('[[ "${AI_LOOP_COMMIT:-0}" != "1" ]]')).toBeLessThan(
+      safeCommit.indexOf("loop:seal-feedback"),
+    );
+    expect(safeCommit.indexOf("loop:seal-feedback")).toBeLessThan(
       safeCommit.indexOf("git add -- AI_LOOP_STATE.md"),
     );
+    expect(safeCommit).toContain('--expected-commit "$current_ref"');
+    expect(safeCommit).toContain('--start-ref "$cycle_failure_start_ref"');
     expect(safeCommit.indexOf("git add -- AI_LOOP_STATE.md")).toBeLessThan(
       safeCommit.indexOf("git commit"),
     );

@@ -224,7 +224,7 @@ describe("fleet:mock end to end (zero tokens)", () => {
     expect(hs.metrics).toEqual([]);
     expect(hs.sycophancy.reports).toBe(0);
     expect(readFileSync(join(out2, "hotspots.md"), "utf8")).toContain(
-      "Deterministic structural mocks excluded from product evidence: 4",
+      "Deterministic structural mocks excluded from this product cohort: 4",
     );
 
     // A second compile with the same mock-only inputs stays empty and valid;

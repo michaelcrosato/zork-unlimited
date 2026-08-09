@@ -386,15 +386,11 @@ export function mergeAttendanceOffsets(
 // ── hotspot-driven candidates (Task 17): compiled feedback as a PRIMARY
 // ranking input ──────────────────────────────────────────────────────────────
 // This is the loop-closing wire: `readLatestHotspots` (src/feedback/compile.ts)
-// reads the newest ai-runs/feedback/<stamp>/hotspots.json (schema-validated;
-// null when absent/invalid), and its top hot spots become real candidates
-// below — the same shape (category/impact/effort/score) every other block
-// produces, so compiled feedback competes on ranking merit instead of being
-// bolted on separately. This machinery only reads that one file and pushes
-// candidates: it never touches quest-pack validation, so a root with no
-// ai-runs/feedback directory (today's default, and every fixture root that
-// predates this feature) sees IDENTICAL assess() output to before this
-// feature existed (baseline preservation — the Task 17 hard requirement).
+// reads only the unconsumed manifest/output digest named by committed loop
+// state (null when absent, consumed, missing, or invalid), and its top hot
+// spots become real candidates below. Merely newer ignored compiles cannot
+// steer the loop. The candidates use the same category/impact/effort/score
+// shape every other block produces, so feedback competes on ranking merit.
 
 /** fix_layer values that name code/tooling work rather than quest content. */
 const ENGINE_FIX_LAYERS: ReadonlySet<Hotspot["fix_layer"]> = new Set([
@@ -449,12 +445,10 @@ function effortForHotspot(_h: Hotspot): ImprovementCandidate["effort"] {
  * that cycle on a target that isn't moving on its own. Knock its impact down
  * by 1 (floored at 1, never 0 — a hot spot still real enough to ship in the
  * top 3 never drops off the radar entirely) so it still competes but no
- * longer leads purely on a severity that's already easing. Staleness caveat:
- * `hotspots.json` is a snapshot that only refreshes on an explicit
- * `feedback:compile` run, so between compiles a hot spot that improved
- * further (or regressed again) still shows its last-compiled trend — the
- * loop's compile step (AGENTS.md, Task 18) is the mitigation, not this
- * function.
+ * longer leads purely on a severity that's already easing. The accepted file
+ * remains eligible until a cycle selects and seals its recommendation or a newer
+ * accepted evidence cohort supersedes it. Unrelated cycles do not falsely mark it
+ * consumed merely because the assessor offered it.
  */
 function impactForHotspot(h: Hotspot, maxHotspotScore: number): number {
   const base =
@@ -822,7 +816,7 @@ export function assess(root: string): Assessment {
   if (rpgGenDrift) candidates.push(rpgGenDrift);
   const allGeneratorsClean = allGeneratedChecksClean(rpgGenChecks);
 
-  // ── hotspot-driven candidates: latest compiled feedback (see helper
+  // ── hotspot-driven candidates: accepted, unconsumed feedback (see helper
   // functions above) ────────────────────────────────────────────────────────
   const hotspotsFile = readLatestHotspots(root);
   if (hotspotsFile) {

@@ -1,6 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 739 -->
+<!-- historical_cycle_count: 740 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T005606Z/hotspots.json","hotspots_sha256":"e82c52551ff8ce60ccaae50251630a883c626f601b59cd5a7656c1836a28d0b5","manifest_path":"ai-runs/feedback/20260809T005606Z/report-manifest.json","manifest_sha256":"8a02f7c3958cf7e0c0afc53c55912edb6071786e9f2cf16e1bf5dc5cd6bf855f"},"pending_cycle_reports":[{"evidence_sha256":"ce12e0d76095d3f7bef67c090e662cb3f6a23ef4ff27de3ebd2c9d0d2ce9f40a","report_id":"pure:1c4c4e46948239689b5399fb0e7a766a87d0cbd3e7173f4417c1906c19a34577","report_sha256":"d49b9b9beca07a4e2a62e9bd0335363fbf153ced0576cf2d108cffad2486800a","run_id":"2026-08-08T22-44-01-053Z","sidecar_sha256":"fa6fcad48afbe72d943124cfa28097ea2380ad8502121cd53f4c5fd11b8e02e1","tested_commit":"31f7f5a89f10793776dc2c85b5bceab88e550c7a"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -13,7 +14,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Keep the exact heading form "### Cycle result - slug" (rotation and cycle counting match it at line start).
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
+- The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
+- The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - accepted_feedback_cohorts
+- Evidence choice: the assessor replayed a July debug-display hotspot that had already landed; this off-list tooling increment made only fresh, accepted feedback cohorts actionable.
+- Surface/effect: stable pure/interview identities, mock quarantine, cumulative retention, canonical manifests, exact accepted digests, actual-selection consumption, seal-time deterministic rebuilds, start-ref authority checks, and explicit clean-clone rebootstrap now close the feedback lifecycle.
+- Pure evidence: exact-clean Terra seed 7 on `31f7f5a8` diverted every Wolf-Winter wolf alive with Cade's herd intact, won The Gallowmere, continued at goals 26/49 and checkpoint 40, then ended naturally at decision 49; clarity/enjoyment 4/4, replay yes, no bug, rejection, or stuck state.
+- Feedback baseline: bootstrap recorded 813 verified reports (62 pure, 302 structural, 449 legacy-guided; 220 rejected) with an empty ranked cohort, so historical volume cannot steer the next fix.
+- Self-critique/next: Spark failed closed before gameplay and the first Terra build was discarded after health caught one prompt-contract mismatch; the replacement player again found dense opening setup and terse optional Station support, now the strongest current follow-up.
+- Guard: three independent final audits, post-crawl 6,000-step sweep, exact health (448 files/3,828 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure report gates are green.
 
 ### Cycle result - cycle_feedback_discovery
 
@@ -150,13 +161,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Spark admission: zero-retry five-seat canary verified only 1/5 because four strict-stream wrappers exited 43; valid seed 682740 ended at goal turn 18, rated 4/4, replay-no, and reported no bug, so no Spark scale or guessed rejected-attempt usage.
 - Self-critique/follow-through: both current-build players still cited early terminology/setup density; only two new verified reports exist, below compile threshold, so collect one more clean report before compilation and next target lighter/symmetric briefing rather than reducing depth.
 - Guard: focused cross-surface, malformed-pairing, compact-budget, terminal/UI, MCP pure, and clean-checkout checks pass; exact health is 459 files/3,797 tests plus UI typecheck and all 12 packs.
-
-### Cycle result - albany_outcome_compass
-
-- Evidence choice: repeated landed pilots remained LURE-heavy while Albany put a role shortcut before field-duty alternatives; the oath now requires one read-only `What must stand at dawn?` comparison that gives HUNT, LURE, DRIVE, and FORTIFY equal preservation-and-cost framing before any duty or shortcut is legal.
-- Surface/effect: compact MCP, terminal, and UI reveal duties first and the shortcut last; canonical ids/order, numeric aliases, and `customize` stay stable, while an exact-session ephemeral MCP receipt prevents guessed hidden choices without changing snapshots, hashes, clock, journal, RNG, or decision count.
-- Counterfactual: 16 fresh-overworld fixed-roll witnesses prove Road-Warden, Ironhands, Courier, and Ledger concepts each own one stateful strategy advantage and lose the other three; the existing Road-Warden HUNT rail/DEF witness remains intact, so no concept dominates the reachable matrix.
-- Pure evidence: exact-clean Terra seed 682719 chose Road-Warden/Aid-Only/Hayden/June, won The Wolf-Winter by whole-herd/all-wolves-alive LURE, continued, won The Gallowmere by HUNT at decision 53, rated clarity 4/enjoyment 5, replay-yes, and reported no rejection, loop, soft-lock, or stuck state.
-- Economy: the accepted first attempt used 4.470M raw / 174,804 uncached input + 10,757 output at 96.09% input-cache reuse (185,561 useful, about 3,501/decision); no retry, fallback, cohort, or fanout ran.
-- Self-critique/follow-through: one more organic LURE does not prove diversity; Station technical sequencing repeated as S1 and dense compact state reached S2 once, so compile them with the next landed-build cohort rather than widening this increment from one report.
-- Guard: two independent final audits are clean, 120 changed tests and crawl `20260803T031540Z` pass, exact health is 458 files/3,794 tests plus all 12 packs, and the unchanged 800k liveness proof passed in 713s with only its wall-clock guard raised to measured 15-minute headroom.

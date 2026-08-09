@@ -27,8 +27,11 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
 2. **Crawl gate (pre)** — `npm run crawl:smoke` must be green before touching anything.
 3. **One change** — make a single focused improvement (engine, content, or tooling).
 4. **Freeze the revision** — run focused checks, then make a local provisional
-   commit. Never push it. Pure evidence starts only when `git status --porcelain`
-   is exactly empty; a later red gate resets this provisional commit.
+   commit. Before committing, set the scaffold's machine-owned
+   `feedback_cycle_selection` to the exact candidate id actually implemented (or
+   null only for off-list work); this is what can consume an accepted feedback
+   recommendation. Never push the provisional commit. Pure evidence starts only
+   when `git status --porcelain` is exactly empty; a later red gate resets it.
 5. **Blind playtest** — one fresh blind reasoning agent per normal cycle uses the
    canonical `pure` mode (protocol: docs/blind_playtest_protocol.md). It starts a
    brand-new overworld game and receives only the tutorial, goal, state, legal
@@ -40,20 +43,24 @@ always-on Tier 0 dev foundation) is `docs/testing_pyramid.md`. Each cycle:
    instruments and never pure retention evidence. Milestone or feedback-harvest
    cycles (every ~10 cycles, or when the ledger's open questions outgrow single
    reports) run `npm run fleet -- --count 100` instead.
-6. **Compile feedback (prompted-agent step)** — when ≥3 new actionable reports
-   exist since the last compile: `npm run feedback:compile`; count actual verified
-   pure, legacy-guided, or structural-smoke artifacts rather than guessing.
-   Deterministic structural mocks never satisfy this product-feedback threshold.
-   With no `--in`, the compiler discovers the local report ledger, build-bound
-   pure V2 `ai-runs/<cycle>/playtest.*` publications, and newest crawl findings.
-   Then triage from `hotspots.md`; `loop.sh` does not independently count or invoke
-   this command.
+6. **Compile feedback (prompted-agent step)** — run `npm run feedback:status`.
+   It verifies the local report ledger plus hash-bound pending cycle reports against
+   the last accepted report manifest. Run `npm run feedback:compile` only when status
+   says the one-time bootstrap or a ≥3-actionable-report delta is ready. Pure,
+   legacy-guided, and structural-smoke reports count; deterministic structural mocks
+   remain recorded but never satisfy the threshold or steer product findings. The
+   current cycle's pure report becomes pending only after its outer gates, so it is
+   intentionally eligible for a later compile. `loop.sh` does not invoke the compiler.
+   Crawler findings require explicit `--in` until crawler artifacts gain an equivalent
+   tracked acceptance receipt; the mandatory pre/post crawl gates remain unchanged.
 7. **Outer gates** — `npm run crawl:smoke` again, then `npm run health`, integrity
    drift against the cycle-start ref, and the playtest gate (schema-valid pure V2
    report + receipt sidecar bound to the clean provisional HEAD). A new crawl
    finding is YOUR regression; any red gate resets the provisional commit.
-8. **Finalize** — complete only the terse `AI_LOOP_STATE.md` entry and commit that
-   ledger update after every gate is green. Optional push happens only afterward.
+8. **Finalize** — after every gate is green, the driver seals the exact pure report
+   and any provisional feedback manifest into the machine-owned acceptance marker in
+   `AI_LOOP_STATE.md`, then commits that ledger-only update. Optional push happens only
+   afterward. Missing or digest-mismatched ignored feedback artifacts fail closed.
 
 With `AI_LOOP_COMMIT=0`, no provisional commit is allowed. The safe evidence-only
 ordering is instead clean-baseline pure play first, then uncommitted work and focused

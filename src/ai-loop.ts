@@ -35,6 +35,7 @@ import {
   type ImprovementCandidate,
 } from "./afk/assessor.js";
 import { rotateLoopState } from "./afk/loop_state.js";
+import { formatFeedbackCycleSelectionMarker } from "./feedback/acceptance.js";
 
 // ── Saturation-triggered ultraplan (docs/afk_loop.md) ──────────────────────────
 // When the deterministic assessor runs dry (isSaturated), a cycle re-aims the
@@ -357,11 +358,11 @@ export function buildPrompt(ctx: {
     "  the exact provisional commit before the final commit in commit-enabled cycles.",
   ];
   const feedbackInstructions = [
-    "- Count new actionable reports since the newest successful feedback compile from",
-    "  actual verified artifacts. Pure, legacy-guided, and structural-smoke reports count;",
-    "  deterministic structural mocks do not. If and only if that count is at least 3, run",
-    "  `npm run feedback:compile`; otherwise record that compilation was skipped.",
-    "  Never guess or fabricate a report count.",
+    "- Run `npm run feedback:status`; it verifies unseen ledger reports plus exact pending",
+    "  cycle evidence from committed loop state. Run `npm run feedback:compile` only when status says ready",
+    "  (including a one-time bootstrap); otherwise record the reported skip count.",
+    "  Deterministic structural mocks never satisfy the three-actionable-report threshold.",
+    "  This cycle's pure report becomes eligible only after outer-gate finalization.",
   ];
   const workflow = commitEnabled
     ? [
@@ -377,6 +378,9 @@ export function buildPrompt(ctx: {
         "  post-crawl, full health, integrity-drift, and report gates after you return.",
         "- Commit every tracked implementation change locally as a PROVISIONAL commit.",
         "  Never push. The outer loop will hard-reset this commit if any later gate fails.",
+        "- Before that commit, set `selected_recommendation_id` in this cycle's",
+        "  `feedback_cycle_selection` marker to the exact candidate id you implemented;",
+        "  leave it null only for an off-list choice. Never change it after the freeze.",
         "- Do not finalize the current AI_LOOP_STATE.md scaffold yet. Include it in the",
         "  provisional commit, then complete that same entry only after the blind run.",
         "- Immediately before pure play, `git status --porcelain` must be exactly empty.",
@@ -393,6 +397,8 @@ export function buildPrompt(ctx: {
         ...feedbackInstructions,
         "- Complete AI_LOOP_STATE.md TERSELY (≤8 lines): what you playtested + clarity/",
         "  enjoyment, what changed + why, self-critique, evidence, and next focus.",
+        "- Keep the frozen `feedback_cycle_selection` marker unchanged; the post-gate seal",
+        "  removes it after using the committed actual-selection attestation.",
         "- AI_LOOP_STATE.md must be the only tracked change after the provisional commit.",
         "  Do not commit it. loop.sh now runs the outer gates and makes the final ledger-only",
         "  commit; only after that may its separately enabled push step run.",
@@ -456,6 +462,7 @@ export function formatLoopStateAppend(
   const text = [
     "",
     `## AFK Cycle ${stamp}${ultraplan ? " — ULTRAPLAN (saturation re-aim)" : ""}`,
+    formatFeedbackCycleSelectionMarker(stamp, null),
     "",
     `- Assess: rpg=${a.rpgQuestCount}; world=${a.worldQuestCount}; candidates=${a.candidates.length}.`,
     `- Rec: ${top ? `${top.id} (${top.category}/${top.effort}; score=${top.score})` : "none"}.`,
@@ -533,6 +540,9 @@ export function buildUltraplanPrompt(ctx: {
         "  runs post-crawl, full health, integrity drift, and report gates after you return.",
         "- Commit every tracked implementation/decision-log change locally as a PROVISIONAL",
         "  commit. Include the unfinished AI_LOOP_STATE.md scaffold. Never push.",
+        "- Before that commit, set `selected_recommendation_id` in this cycle's",
+        "  `feedback_cycle_selection` marker to the exact candidate id you implemented;",
+        "  leave it null only for the ultraplan's off-list choice. Freeze it with the revision.",
         "- Immediately before pure play, `git status --porcelain` must be exactly empty.",
         "",
         "## STEP 5 — Play the exact provisional revision",
@@ -540,21 +550,21 @@ export function buildUltraplanPrompt(ctx: {
         "- Do not edit source after play; record new findings only as next focus.",
         "",
         "## STEP 6 — Compile only at the real threshold, then finish the ledger",
-        "- Count new actionable reports since the newest successful feedback compile from",
-        "  actual verified artifacts. Pure, legacy-guided, and structural-smoke reports count;",
-        "  deterministic structural mocks do not. If and only if the count is at least 3, run",
-        "  `npm run feedback:compile`; otherwise record a skip. Never fabricate the count.",
+        "- Run `npm run feedback:status`; compile only when it reports ready (including a",
+        "  one-time bootstrap). The current pure report enters a later accepted cohort only",
+        "  after outer-gate finalization; deterministic structural mocks never meet the threshold.",
         "- Complete AI_LOOP_STATE.md TERSELY (≤8 lines): ultraplan choice, play evidence,",
         "  self-critique, and next focus. It must be the ONLY tracked post-provisional change.",
+        "- Keep the frozen `feedback_cycle_selection` marker unchanged; the post-gate seal",
+        "  removes it after checking the committed selection.",
         "- Do not commit the ledger edit. loop.sh runs the outer gates and makes the final",
         "  ledger-only commit; its optional push runs only after that commit succeeds.",
       ]
     : [
         "## STEP 4 — Self-critique, focused checks, and evidence-only ledger",
-        "- Run the focused tests/validation for the change. Count actionable reports since",
-        "  the newest successful compile from actual verified artifacts; pure, legacy-guided,",
-        "  and structural-smoke reports count, while deterministic structural mocks do not.",
-        "  Run `npm run feedback:compile` iff at least 3 are new; never fabricate the count.",
+        "- Run the focused tests/validation, then `npm run feedback:status`. Compile only",
+        "  when status reports ready. Evidence-only runs cannot make the provisional compile",
+        "  authoritative because they do not execute the final tracked-state seal.",
         "- Append a TERSE AI_LOOP_STATE.md entry (≤8 lines): baseline play, ultraplan choice,",
         "  self-critique, evidence, and next focus.",
         "- Do not commit or push. loop.sh still runs post-crawl, health, and integrity drift",
