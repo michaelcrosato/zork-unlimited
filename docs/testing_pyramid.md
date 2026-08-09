@@ -32,13 +32,14 @@ reference for what each tier does, when it runs, and its exact shapes.
   milestone/feedback-harvest `fleet` runs 100 seed/model variants of that same
   neutral pure contract. Direct quest, persona-coverage, crawler, smoke, and
   mock paths are explicit structural QA and never pure retention evidence.
-- **Tier 3 — feedback compiler** (`src/feedback/`): reads verified Tier-2
-  reports plus Tier-1 findings, clusters them, ranks by severity and source
-  agreement, and emits `hotspots.{json,md}` plus mode-separated
-  `retention.json`. Structural smoke and legacy reports remain useful
-  QA/experience inputs; deterministic structural mocks verify the pipeline but
-  cannot create product hot spots or experience metrics. Only sidecar-verified
-  pure exits enter retention.
+- **Tier 3 — feedback compiler** (`src/feedback/`): verifies stable Tier-2 report
+  identities, diffs them against the accepted manifest, and ranks the fresh
+  actionable report cohort by severity and source agreement. Explicit standalone
+  runs may also combine supplied Tier-1 findings. It emits `hotspots.{json,md}`, cumulative mode-separated
+  `retention.json`, and a digest-bound `report-manifest.json`. Structural smoke
+  and legacy reports remain useful QA/experience inputs; deterministic structural
+  mocks remain visible in accounting but cannot create product hot spots, metrics,
+  or threshold progress. Only sidecar-verified pure exits enter retention.
 
 ```
    Tier 0 (always)              Tier 1: crawl:smoke/deep        Tier 2: pure blind / fleet
@@ -48,7 +49,9 @@ reference for what each tier does, when it runs, and its exact shapes.
                                   Tier 3: feedback:compile  ◄────────────┘
                                         │
                                         ▼
-                 ai-runs/feedback/<ts>/{hotspots.json,hotspots.md,retention.json}
+          ai-runs/feedback/<ts>/{hotspots.json,hotspots.md,retention.json,report-manifest.json}
+                                        │
+                              outer-gate acceptance marker
                                         │
                                         ▼
                           npm run assess / ai:loop (assessor)
@@ -72,7 +75,7 @@ reference for what each tier does, when it runs, and its exact shapes.
 | `starting-slice:pilot`        | after authority/model tooling changes and before an authoritative spend                                     | reverify one exact fresh 10-member homogeneous-provider/model no-retry cohort as a go/no-go pilot; never certification                                                                                               | free                      |
 | `starting-slice:certify`      | after an authoritative starting-slice fleet closes                                                          | reverify the exact 100-report authenticated bundle and evaluate the milestone gates                                                                                                                                  | free                      |
 | `fleet:mock`                  | every CI run (rides `npm test`)                                                                             | explicit structural acceptance e2e; never retention evidence                                                                                                                                                         | zero tokens               |
-| `feedback:compile`            | whenever ≥3 new actionable reports exist since the last compile (structural mocks excluded)                 | seconds (deterministic clustering)                                                                                                                                                                                   | free                      |
+| `feedback:status` / `compile` | status reports a bootstrap or ≥3 new accepted actionable reports (structural mocks excluded)                | seconds (deterministic verification, identity diff, and clustering)                                                                                                                                                  | free                      |
 
 ## 3. Exact commands
 
@@ -101,7 +104,8 @@ npm run fleet:mock -- --count 2                    # structural, zero-token, CI-
 npm run starting-slice:certify -- --fleet ai-runs/fleet/<label>
 
 # Tier 3 — feedback compiler
-npm run feedback:compile                           # defaults: report ledger + pure V2 cycle reports + newest crawl
+npm run feedback:status                            # verify/count identities since the accepted manifest
+npm run feedback:compile                           # only when status says ready; accepted report inputs
 npm run feedback:compile -- --in <dir|jsonl> --out <dir> --top 10 --prev <dir> --llm-labels
 
 # Consuming the pyramid
@@ -306,12 +310,16 @@ validator | test`.
   reproducing action sequence, written as a `traces/bugs/` artifact plus a
   regression test that fails if the defect returns. First real catch:
   `bug_0496` (`traces/bugs/bug_0496_overworld_renown_restore.yaml`).
-- **Fleet → fix**: exit interviews accumulate in `blind-tester/reports/` and
-  verified cycle-style `ai-runs/<cycle>/playtest.*` bundles; `feedback:compile`
-  discovers, deduplicates, clusters, and ranks them into hot spots; the assessor
-  (`npm run assess` / `ai:loop`) takes the top few as candidates — never
-  outranking an unplayable-quest fix — and the loop makes ONE fix per cycle.
-- **Comparison signal**: the next `feedback:compile` diffs against the
-  previous run (`--prev`) and tags each hotspot `improved | regressed | new |
-flat`. These cumulative-corpus trends show score movement, not causal proof
-  that a fix worked; current-cohort freshness remains a separate policy layer.
+- **Fleet → fix**: authenticated fleet reports accumulate in the local
+  `blind-tester/reports/` ledger. Exact pure cycle bundles become default inputs
+  only after the outer-gate seal records their hashes in committed loop state.
+  `feedback:status` verifies and identity-diffs those inputs; a ready
+  `feedback:compile` clusters only its fresh actionable cohort. The assessor reads
+  only the exact digest-bound compile promoted by a later outer-gate seal — never a
+  merely newer ignored directory — and the loop makes ONE fix per cycle. A feedback
+  recommendation is consumed only by the actual candidate id frozen in the provisional
+  loop-state scaffold, not merely because the assessor offered it.
+- **Comparison signal**: an accepted delta compile compares with its exact accepted
+  predecessor and tags each hotspot `improved | regressed | new | flat`. This is
+  cohort-to-cohort movement, not causal proof that a fix worked. Explicit `--prev`
+  remains available only for standalone forensic comparisons.

@@ -1,0 +1,53 @@
+id: bug_0543
+title: "Cumulative feedback could replay stale findings as current loop priorities"
+pack: n/a (feedback compiler and AFK-loop authority)
+reported_by: 2026-08-08 AFK stale-hotspot audit
+severity: S3
+symptom: >
+  A newly generated feedback artifact still ranked old July reports about a debug-journal
+  display that later commits had already fixed. Adding current cycle reports increased the
+  cumulative corpus without retiring those old mentions, so the assessor repeatedly treated
+  historical issue volume as a fresh player signal. Any valid ignored compile directory with
+  the newest timestamp could also become assessor input before the cycle's outer gates.
+root_cause: >
+  The compiler had no durable stable-report identity set or accepted cohort boundary. Every
+  run ranked all verified interviews, default cycle discovery admitted complete ignored
+  bundles without an outer-gate acceptance receipt, and the assessor selected the lexically newest
+  schema-valid hotspots file rather than a tracked digest-bound artifact. Git ancestry could
+  not safely repair the gap because normal pull-request squash merges replace provisional
+  cycle commit ids.
+fix: >
+  Assign each verified report a stable identity, persist a canonical report-manifest.json
+  that separates cumulative corpus from the fresh actionable delta, and require three fresh
+  actionable identities before a normal compile. Record mocks as seen/excluded without
+  letting them trigger or steer product evidence. Admit cycle reports only through exact
+  report/evidence/sidecar hashes in committed AI_LOOP_STATE.md. After all outer gates, seal
+  deterministically rebuild the candidate compile, then seal the provisional manifest digest
+  and current pure report atomically into that tracked state;
+  squash-sensitive commit ancestry is never used as evidence identity. The assessor reads
+  only the unconsumed, digest-matched accepted artifact, so newer unmarked, missing, or
+  tampered ignored outputs fail closed. A one-time bootstrap marks the historical corpus seen
+  with an empty ranked delta instead of replaying it.
+deterministic_witnesses:
+  - "bootstrap records the cumulative verified corpus while emitting no stale report hotspot"
+  - "two fresh actionable reports create no output; a third compiles exactly once"
+  - "fresh mocks are recorded as seen/excluded but do not satisfy the threshold"
+  - "unmarked cycle bundles and newer unmarked feedback artifacts remain inert"
+  - "dirty marker edits, consumed recommendations, and digest tampering are ignored"
+  - "the seal rebuilds outputs from verified inputs and rejects invented report identities"
+  - "the final seal runs only after exact pure V2 verification and before the ledger commit"
+  - "pending pure-run identity survives later pull-request squash without ancestry checks"
+tests:
+  - tests/unit/feedback_compile.test.ts
+  - tests/unit/feedback_report_manifest.test.ts
+  - tests/unit/feedback_acceptance.test.ts
+  - tests/unit/assessor_hotspots.test.ts
+  - tests/unit/seal_feedback_acceptance.test.ts
+  - tests/regression/feedback_cycle_input_discovery.test.ts
+  - tests/regression/loop_driver_gates.test.ts
+  - tests/regression/loop_process_scripts.test.ts
+verification:
+  - npx vitest run tests/unit/feedback_compile.test.ts tests/unit/feedback_report_manifest.test.ts tests/unit/feedback_acceptance.test.ts tests/unit/assessor_hotspots.test.ts tests/unit/seal_feedback_acceptance.test.ts tests/regression/feedback_cycle_input_discovery.test.ts tests/regression/loop_driver_gates.test.ts tests/regression/loop_process_scripts.test.ts
+  - npm run feedback:status
+  - npm run crawl:smoke
+  - npm run health

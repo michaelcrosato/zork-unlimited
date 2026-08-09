@@ -272,10 +272,15 @@ require_final_ledger_only() {
 safe_commit_if_enabled() {
   # The implementation is already frozen in the provisional commit. Only after
   # post-crawl, health, integrity drift, and report checks pass do we land the
-  # completed ledger as a second local commit. Optional push happens later.
+  # completed ledger as a second local commit. Seal the exact report and any
+  # hash-bound feedback compile into its tracked authority marker before staging.
+  # Optional push happens later.
   if [[ "${AI_LOOP_COMMIT:-0}" != "1" ]]; then
     return 0
   fi
+  local meta="ai-runs/latest-cycle.json" current_ref
+  current_ref="$(git rev-parse HEAD)" || return 1
+  npm run --silent loop:seal-feedback -- --meta "$meta" --expected-commit "$current_ref" --start-ref "$cycle_failure_start_ref" || return 1
   git add -- AI_LOOP_STATE.md
   git diff --cached --quiet && { echo "No final ledger change to commit."; return 1; }
   git commit -m "${AI_LOOP_COMMIT_MESSAGE:-Autonomous AFK cycle: record verified playtest}"

@@ -1,6 +1,7 @@
 # AI Loop State
 
 <!-- historical_cycle_count: 739 -->
+<!-- feedback_acceptance: {"accepted_compile":null,"pending_cycle_reports":[],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -13,6 +14,8 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Keep the exact heading form "### Cycle result - slug" (rotation and cycle counting match it at line start).
 - Name the world quest(s) blind-played in the entry body — the blind-pass rotation derives attendance from those names.
 - The historical_cycle_count marker above is maintained by the rotation and feeds the generated-eval seed window; never hand-edit or remove it.
+- The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
+- The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
 ### Cycle result - cycle_feedback_discovery
@@ -160,3 +163,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the accepted first attempt used 4.470M raw / 174,804 uncached input + 10,757 output at 96.09% input-cache reuse (185,561 useful, about 3,501/decision); no retry, fallback, cohort, or fanout ran.
 - Self-critique/follow-through: one more organic LURE does not prove diversity; Station technical sequencing repeated as S1 and dense compact state reached S2 once, so compile them with the next landed-build cohort rather than widening this increment from one report.
 - Guard: two independent final audits are clean, 120 changed tests and crawl `20260803T031540Z` pass, exact health is 458 files/3,794 tests plus all 12 packs, and the unchanged 800k liveness proof passed in 713s with only its wall-clock guard raised to measured 15-minute headroom.
+## AFK Cycle 2026-08-08T22-44-01-053Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-08T22-44-01-053Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-4a89fb42 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

@@ -33,7 +33,10 @@ loop.sh  (outer driver — orchestration + the bar)
 │          verified). Bugs get a traces/bugs/ artifact + a tests/regression/ test.
 │       b. FOCUSED CHECKS + LOCAL PROVISIONAL COMMIT — freezes every tracked
 │          implementation change without pushing, then requires an exactly clean
-│          `git status --porcelain`. This is the revision the player will exercise.
+│          `git status --porcelain`. Before freezing, the agent records the actual
+│          chosen candidate id (or null for off-list work) in the scaffold's
+│          machine-owned `feedback_cycle_selection` marker. This is the revision
+│          the player will exercise.
 │       c. MANDATORY PURE LLM PLAYTEST — spawns a fresh, no-context player in a
 │          brand-new CORE GAME overworld session, with only the human tutorial,
 │          goal, state, legal choices, decision/checkpoint status, and consequences
@@ -46,13 +49,12 @@ loop.sh  (outer driver — orchestration + the bar)
 │          smoke/mock modes are structural QA, never pure retention evidence.
 │          Milestone/harvest cycles run `npm run fleet -- --count 100` instead of
 │          a single pure player (docs/testing_pyramid.md).
-│       d. FEEDBACK + LEDGER — count actual actionable reports since the newest
-│          successful compile. Verified pure, legacy-guided, and structural-smoke
-│          artifacts count; deterministic structural mocks do not. Run
-│          `npm run feedback:compile` iff there are ≥3; never invent a count. This
-│          is a prompted-agent action, not a loop.sh helper or gate. Complete
-│          AI_LOOP_STATE.md after play; it must be the only tracked change left
-│          outside the provisional commit.
+│       d. FEEDBACK + LEDGER — run `npm run feedback:status`, which verifies the
+│          unseen ledger plus accepted pending-cycle cohort. Run `npm run
+│          feedback:compile` only when it reports a one-time bootstrap or ≥3 new
+│          actionable reports. Mocks remain accounted for but cannot trigger or
+│          steer a compile. Complete AI_LOOP_STATE.md after play; it must be the
+│          only tracked change left outside the provisional commit.
 │
 ├─ 4. CRAWL GATE (post)  npm run crawl:smoke again — a new finding here is a
 │     regression the cycle itself just introduced; the cycle halts and reverts.
@@ -71,10 +73,13 @@ loop.sh  (outer driver — orchestration + the bar)
 │                                    must reproduce one another and bind the current
 │                                    world/build to exact provisional HEAD)
 │       require_final_ledger_only  (only AI_LOOP_STATE.md may differ after play)
+│       loop:seal-feedback         (reverify the exact pure run; atomically promote
+│                                    any compile manifest and queue this report)
 │
-└─ 6. FINALIZE/PUSH   commit only the completed AI_LOOP_STATE.md entry after the
-       outer bar passes. AI_LOOP_COMMIT=1 enables both the provisional implementation
-       commit and this final ledger commit; AI_LOOP_PUSH=1 may push only afterward.
+└─ 6. FINALIZE/PUSH   commit only the completed, machine-sealed AI_LOOP_STATE.md
+       after the outer bar passes. AI_LOOP_COMMIT=1 enables both the provisional
+       implementation commit and this final ledger commit; AI_LOOP_PUSH=1 may push
+       only afterward.
        Note: a bare push of fresh commits to protected
        main is always rejected (the required 'verify' check can't have run yet) —
        land loop commits via a scratch branch/PR and leave AI_LOOP_PUSH=0.
@@ -95,18 +100,36 @@ which `npm run loop:status` displays even when no wrapper log was captured. The
 outer loop continues until its circuit breakers stop it (5 consecutive / 15 total
 failures by default).
 
-**Feedback-compile ownership.** The cycle prompt tells the operating agent to
-count actionable verified artifacts (never deterministic structural mocks) and
-invoke `npm run feedback:compile` at the threshold.
-The no-flags compiler discovers both the local `blind-tester/reports` ledger
-and pure V2 `ai-runs/<cycle>/playtest.*` publication candidates, plus the newest
-crawl findings; existing report/receipt/provider gates still decide admission,
-and copied pure runs are counted once after full verification. Discovery does
-not imply current-HEAD freshness or define a new feedback cohort.
-`loop.sh` itself does not perform that count or call the compiler; it enforces the
-subsequent crawl, health, integrity, playtest, and ledger-only gates. This makes
-the current implementation boundary explicit rather than presenting the protocol
-step as a shell-driver guarantee.
+**Feedback-compile ownership.** The prompted agent runs `npm run feedback:status`;
+the command, not prose bookkeeping, verifies and counts stable report identities
+against the last accepted manifest. With no flags, inputs are the local
+`blind-tester/reports` ledger and cycle reports named in the committed acceptance marker
+whose exact report/evidence/sidecar hashes still match. Crawler files remain explicit
+`--in` evidence until they have an equivalent accepted-artifact receipt.
+Existing report/receipt/provider gates still decide admission, and copied pure runs
+count once. A no-flags compile ranks only the fresh actionable report delta;
+explicit standalone inputs can also add crawler findings, while `retention.json`
+remains a cumulative verified-corpus view. Deterministic structural mocks enter the seen/excluded partition so they cannot
+retrigger, but never enter product hot spots or experience metrics.
+
+Each compile writes a canonical, digest-bound `report-manifest.json`. That ignored
+artifact is provisional: the assessor ignores it, as well as any newer or tampered
+compile, until `loop:seal-feedback` promotes its exact digest into the tracked
+`AI_LOOP_STATE.md` marker after every outer gate. The same seal consumes a feedback
+recommendation only when the provisional commit's actual-selection attestation names
+it (the assessor's offered recommendation is not authority) and queues the just-tested
+pure report for a later cohort. This one-cycle lag prevents that canonical cycle
+bundle from entering after a failed, reset, or uncommitted build and does not depend
+on Git ancestry, so squash merges preserve identity. Fully verified fleet/legacy/smoke
+ledger reports retain their existing local-ledger admission path. Ordinary explicit
+compiler flags remain standalone forensic paths and never write an acceptance pointer;
+the recovery-only `--rebootstrap` is the sole exception. If a tracked manifest
+points to missing/corrupt ignored local artifacts, feedback reads fail closed; restore
+the bundle or run `npm run feedback:rebootstrap`. That recovery command is refused
+unless committed state already names an accepted compile whose exact ignored bundle
+is unavailable or invalid; it cannot replace a healthy accepted compile or create the
+initial baseline.
+`loop.sh` does not count or invoke the compiler; it only performs the post-gate seal.
 
 **Evidence-only mode.** With `AI_LOOP_COMMIT=0`, `npm run ai:loop` does not rotate or
 append to the tracked loop ledger before the agent starts. The prompt requires an
@@ -208,7 +231,9 @@ npm run crawl:smoke               # the crawl gate itself, run standalone (docs/
 npm run blind                     # canonical pure player, fresh overworld
 npm run fleet -- --count 100      # milestone/harvest pure fleet (real tokens)
 npm run fleet:mock -- --count 2   # explicit structural, zero-token dry run
-npm run feedback:compile          # compile ledger + cycle evidence + crawl hot spots/retention
+npm run feedback:status           # verify/count the accepted uncompiled cohort
+npm run feedback:compile          # when status says ready; writes delta + manifest
+npm run feedback:rebootstrap      # recovery only: replace a missing/corrupt accepted bundle
 ```
 
 `loop.sh` installs missing root and UI dependencies before starting cycles because

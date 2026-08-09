@@ -1,6 +1,12 @@
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { parseBlindRunSidecar } from "../blind/run_evidence.js";
+import {
+  pendingAcceptedCycleReportPaths,
+  readCommittedFeedbackAcceptanceState,
+  type FeedbackAcceptanceState,
+} from "./acceptance.js";
+import { sha256File } from "./report_manifest.js";
 
 const CYCLE_STAMP_RE = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/u;
 
@@ -119,7 +125,7 @@ export function discoverCanonicalCycleReports(root: string): string[] {
     .sort();
 }
 
-/** Newest crawl findings path used by the no-flags compiler path. */
+/** Newest crawl findings helper for explicit tooling/inspection callers. */
 export function findNewestCrawlFindings(root: string): string | null {
   const crawlRoot = join(resolve(root), "ai-runs", "crawl");
   if (!existsSync(crawlRoot)) return null;
@@ -135,12 +141,27 @@ export function findNewestCrawlFindings(root: string): string | null {
 /**
  * Explicit --in arguments replace discovery completely. With no explicit
  * inputs, keep the local report ledger first so it wins dedupe precedence,
- * then cycle-style pure publication candidates, then newest crawl findings.
+ * then outer-gate-accepted pending cycle reports from committed loop state.
+ * Merely complete ignored cycle bundles and unaccepted crawler outputs are not
+ * default authority; either remains available through explicit `--in`.
  */
-export function resolveFeedbackInputs(root: string, explicitInputs: readonly string[]): string[] {
+export function resolveFeedbackInputs(
+  root: string,
+  explicitInputs: readonly string[],
+  acceptedState?: FeedbackAcceptanceState,
+): string[] {
   if (explicitInputs.length > 0) return [...explicitInputs];
-  const inputs = ["blind-tester/reports", ...discoverCanonicalCycleReports(root)];
-  const crawlFindings = findNewestCrawlFindings(root);
-  if (crawlFindings) inputs.push(crawlFindings);
+  let state = acceptedState;
+  if (!state) {
+    const acceptance = readCommittedFeedbackAcceptanceState(root);
+    if (!acceptance.ok) {
+      throw new Error(`feedback input acceptance unavailable: ${acceptance.reason}`);
+    }
+    state = acceptance.state;
+  }
+  const inputs = [
+    "blind-tester/reports",
+    ...pendingAcceptedCycleReportPaths(root, state, sha256File),
+  ];
   return inputs;
 }

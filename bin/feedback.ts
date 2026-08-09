@@ -5,6 +5,8 @@
  * `hotspots.json` / `hotspots.md` plus the mode-separated `retention.json`.
  *
  * Usage:
+ *   npm run feedback:status
+ *   npm run feedback:rebootstrap                     # recovery only
  *   npm run feedback:compile -- [--in <path>]... [--out <dir>] [--top K]
  *                                [--prev <dir>] [--llm-labels]
  *
@@ -12,8 +14,22 @@
  * actual logic lives in src/feedback/compile.ts, unit-tested there) -> print
  * a short summary + the artifact paths.
  */
-import { join } from "node:path";
-import { compileFeedback, type CompileOptions } from "../src/feedback/compile.js";
+import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { canonicalize } from "../src/core/hash.js";
+import {
+  acceptedCycleReportRef,
+  loadAcceptedFeedbackBundle,
+  readCommittedFeedbackAcceptanceState,
+} from "../src/feedback/acceptance.js";
+import {
+  compileFeedback,
+  inspectFeedbackCohort,
+  MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS,
+  type CompileOptions,
+  type FeedbackCohortPolicy,
+} from "../src/feedback/compile.js";
 import { resolveFeedbackInputs } from "../src/feedback/inputs.js";
 
 class FeedbackUsageError extends Error {}
@@ -24,6 +40,8 @@ type ParsedArgs = {
   topK: number;
   llmLabels: boolean;
   prevDir: string | null;
+  status: boolean;
+  rebootstrap: boolean;
 };
 
 function requireValue(flag: string, raw: string | undefined): string {
@@ -31,12 +49,14 @@ function requireValue(flag: string, raw: string | undefined): string {
   return raw;
 }
 
-function parseFeedbackArgs(argv: string[]): ParsedArgs {
+export function parseFeedbackArgs(argv: string[]): ParsedArgs {
   const inputs: string[] = [];
   let outDir: string | null = null;
   let topK = 10;
   let llmLabels = false;
   let prevDir: string | null = null;
+  let status = false;
+  let rebootstrap = false;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
@@ -62,11 +82,22 @@ function parseFeedbackArgs(argv: string[]): ParsedArgs {
       case "--llm-labels":
         llmLabels = true;
         break;
+      case "--status":
+        status = true;
+        break;
+      case "--rebootstrap":
+        rebootstrap = true;
+        break;
       default:
         throw new FeedbackUsageError(`unrecognized flag "${a}"`);
     }
   }
-  return { inputs, outDir, topK, llmLabels, prevDir };
+  if ((status || rebootstrap) && argv.length !== 1) {
+    throw new FeedbackUsageError(
+      `${status ? "--status" : "--rebootstrap"} cannot be combined with other options`,
+    );
+  }
+  return { inputs, outDir, topK, llmLabels, prevDir, status, rebootstrap };
 }
 
 /** yyyymmddThhmmssZ — matches loadPreviousHotspots' lexicographic-sort assumption. */
@@ -82,6 +113,96 @@ function defaultOutDir(): string {
   return join("ai-runs", "feedback", utcStamp());
 }
 
+type CommittedAcceptance = ReturnType<typeof readCommittedFeedbackAcceptanceState>;
+
+export function authoritativePolicy(
+  root: string,
+  rebootstrap = false,
+  committed: CommittedAcceptance = readCommittedFeedbackAcceptanceState(root),
+): FeedbackCohortPolicy {
+  const parsed = committed;
+  if (!parsed.ok) throw new Error(`feedback acceptance unavailable: ${parsed.reason}`);
+  if (rebootstrap) {
+    if (!parsed.state.accepted_compile) {
+      throw new Error(
+        "feedback rebootstrap refused: committed acceptance state has no accepted compile to recover",
+      );
+    }
+    if (loadAcceptedFeedbackBundle(root, parsed.state)) {
+      throw new Error(
+        "feedback rebootstrap refused: the committed accepted feedback bundle is still valid",
+      );
+    }
+    return { kind: "bootstrap" };
+  }
+  if (!parsed.state.accepted_compile) {
+    // A committed empty marker is the explicit migration instruction: take a
+    // zero-delta baseline. Marker-less installations may compile their first
+    // eligible cohort normally.
+    return parsed.found ? { kind: "bootstrap" } : { kind: "initial" };
+  }
+  const previous = loadAcceptedFeedbackBundle(root, parsed.state);
+  if (!previous) {
+    throw new Error(
+      "accepted feedback compile is missing or corrupt; restore its ignored artifacts or run npm run feedback:rebootstrap",
+    );
+  }
+  return {
+    kind: "delta",
+    previousManifest: previous.manifest,
+    previousManifestSha256: parsed.state.accepted_compile.manifest_sha256,
+    previousHotspots: previous.hotspots,
+    previousEvidence: previous.evidence,
+  };
+}
+
+function rootRelativeRef(root: string, path: string): string {
+  const ref = relative(resolve(root), resolve(root, path)).replaceAll("\\", "/");
+  if (ref.length === 0 || ref === ".." || ref.startsWith("../") || isAbsolute(ref)) {
+    throw new Error(`feedback artifact is outside the repository: ${path}`);
+  }
+  return ref;
+}
+
+function currentCycleRunId(root: string): string {
+  const metadataPath = join(root, "ai-runs", "latest-cycle.json");
+  if (!existsSync(metadataPath)) throw new Error("ai-runs/latest-cycle.json is missing");
+  const stat = lstatSync(metadataPath);
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    throw new Error("ai-runs/latest-cycle.json must be a regular non-symlink file");
+  }
+  let metadata: unknown;
+  try {
+    metadata = JSON.parse(readFileSync(metadataPath, "utf8"));
+  } catch (error) {
+    throw new Error(`ai-runs/latest-cycle.json is invalid: ${String(error)}`, { cause: error });
+  }
+  if (typeof metadata !== "object" || metadata === null) {
+    throw new Error("ai-runs/latest-cycle.json must contain an object");
+  }
+  const runId = (metadata as Record<string, unknown>).runId;
+  if (typeof runId !== "string") throw new Error("latest cycle metadata has no runId");
+  // Reuse the tracked-state validator for the exact canonical run-id shape.
+  acceptedCycleReportRef(runId);
+  return runId;
+}
+
+function writeCompilePointer(root: string, manifestPath: string, manifestSha256: string): string {
+  const runId = currentCycleRunId(root);
+  const manifestRef = rootRelativeRef(root, manifestPath);
+  if (!/^ai-runs\/feedback\/\d{8}T\d{6}Z\/report-manifest\.json$/u.test(manifestRef)) {
+    throw new Error(`authoritative feedback manifest has a noncanonical path: ${manifestRef}`);
+  }
+  const pointerPath = join(root, "ai-runs", runId, "feedback-compile.json");
+  mkdirSync(join(root, "ai-runs", runId), { recursive: true });
+  writeFileSync(
+    pointerPath,
+    `${canonicalize({ schema_version: 1, run_id: runId, manifest_path: manifestRef, manifest_sha256: manifestSha256 })}\n`,
+    "utf8",
+  );
+  return rootRelativeRef(root, pointerPath);
+}
+
 function main(): void {
   let parsed: ParsedArgs;
   try {
@@ -94,8 +215,32 @@ function main(): void {
     throw err;
   }
 
-  const root = process.cwd();
-  const inputs = resolveFeedbackInputs(root, parsed.inputs);
+  const root = resolve(process.cwd());
+  const authoritative = process.argv.slice(2).length === 0 || parsed.status || parsed.rebootstrap;
+  const committed = authoritative ? readCommittedFeedbackAcceptanceState(root) : undefined;
+  const policy = authoritative
+    ? authoritativePolicy(root, parsed.rebootstrap, committed!)
+    : ({ kind: "standalone" } as const);
+  const inputs = resolveFeedbackInputs(
+    root,
+    parsed.inputs,
+    committed?.ok ? committed.state : undefined,
+  );
+
+  if (parsed.status) {
+    const inspection = inspectFeedbackCohort(root, inputs, policy);
+    const actionable = inspection.cohort.actionable_report_ids.length;
+    const ready =
+      policy.kind === "bootstrap" ||
+      (policy.kind !== "standalone" && actionable >= MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS);
+    console.log(
+      `feedback:status — ${policy.kind}; ${inspection.cohort.verified_report_ids.length} new verified reports, ` +
+        `${actionable} actionable, ${inspection.cohort.excluded_mock_report_ids.length} excluded mocks; ` +
+        `${ready ? "compile ready" : `${MIN_FEEDBACK_COHORT_ACTIONABLE_REPORTS} actionable reports required`}.`,
+    );
+    return;
+  }
+
   const outDir = parsed.outDir ?? defaultOutDir();
 
   if (parsed.llmLabels) {
@@ -109,18 +254,33 @@ function main(): void {
     topK: parsed.topK,
     llmLabels: parsed.llmLabels,
     prevDir: parsed.prevDir,
+    cohortPolicy: policy,
   };
 
-  const { file, evidence, excludedMockReports, jsonPath, mdPath, retentionPath } =
-    compileFeedback(opts);
+  const {
+    file,
+    evidence,
+    excludedMockReports,
+    jsonPath,
+    mdPath,
+    retentionPath,
+    manifest,
+    manifestPath,
+    manifestSha256,
+  } = compileFeedback(opts);
 
   console.log(
-    `feedback:compile — ${file.inputs.verified_reports} verified reports ` +
-      `(${file.inputs.rejected_reports} rejected), ${file.inputs.crawl_findings} crawl findings, ` +
-      `${file.hotspots.length} hot spots.`,
+    `feedback:compile — ${manifest.kind} cohort: ${file.inputs.verified_reports} verified reports, ` +
+      `${file.inputs.crawl_findings} crawl findings, ${file.hotspots.length} hot spots.`,
   );
+  const cumulativeReports =
+    evidence.report_modes.pure +
+    evidence.report_modes.structural +
+    evidence.report_modes.legacy_guided;
   console.log(
-    `Retention evidence: ${evidence.pure_retention.eligible_reports} pure exits, ` +
+    `Cumulative corpus: ${cumulativeReports} verified reports ` +
+      `(${file.inputs.rejected_reports} rejected); ` +
+      `${evidence.pure_retention.eligible_reports} pure retention exits, ` +
       `${
         evidence.pure_retention.contract_versions.length === 0
           ? "no contract-specific curves"
@@ -131,11 +291,11 @@ function main(): void {
               )
               .join("; ")
       }; ` +
-      `other verified modes: ${evidence.report_modes.structural} structural, ` +
+      `other modes: ${evidence.report_modes.structural} structural, ` +
       `${evidence.report_modes.legacy_guided} legacy-guided.`,
   );
   console.log(
-    `Product evidence: ${file.inputs.actionable_reports} actionable reports; ` +
+    `Product evidence (${manifest.kind} cohort): ${file.inputs.actionable_reports} actionable reports; ` +
       `${excludedMockReports} deterministic structural mocks excluded.`,
   );
   if (file.recommended_next_fix) {
@@ -144,11 +304,19 @@ function main(): void {
   console.log(`Wrote ${jsonPath}`);
   console.log(`Wrote ${mdPath}`);
   console.log(`Wrote ${retentionPath}`);
+  console.log(`Wrote ${manifestPath}`);
+  if (authoritative && manifest.kind !== "standalone") {
+    console.log(
+      `Staged feedback acceptance pointer ${writeCompilePointer(root, manifestPath, manifestSha256)}`,
+    );
+  }
 }
 
-try {
-  main();
-} catch (err) {
-  console.error(err instanceof Error ? err.message : String(err));
-  process.exit(1);
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    main();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
 }

@@ -82,6 +82,20 @@ describe("AI_LOOP_STATE rotation (token efficiency)", () => {
     expect(rotateLoopState(root)).toBe(0);
     expect(totalCycleCount(root)).toBe(ROTATE_KEEP + 10);
   });
+
+  it("preserves the machine-owned feedback acceptance marker in the live intro", () => {
+    const marker =
+      '<!-- feedback_acceptance: {"accepted_compile":null,"pending_cycle_reports":[],"schema_version":1} -->';
+    const text = makeLog(ROTATE_KEEP + 2).replace(
+      "# AI Loop State\n\n",
+      `# AI Loop State\n\n${marker}\n\n`,
+    );
+    writeFileSync(join(root, LOOP_STATE_FILE), text);
+
+    expect(rotateLoopState(root)).toBe(2);
+    expect(readFileSync(join(root, LOOP_STATE_FILE), "utf8")).toContain(marker);
+    expect(readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8")).not.toContain(marker);
+  });
 });
 
 describe("completedCycleCount", () => {

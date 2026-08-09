@@ -3,6 +3,7 @@ import { describe, expect, it, beforeAll } from "vitest";
 import {
   mkdirSync,
   mkdtempSync,
+  existsSync,
   readFileSync,
   symlinkSync,
   utimesSync,
@@ -10,7 +11,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { collectInputs, compileFeedback } from "../../src/feedback/compile.js";
+import {
+  collectInputs,
+  compileFeedback,
+  FeedbackCohortThresholdError,
+} from "../../src/feedback/compile.js";
 import {
   FeedbackEvidenceSummarySchema,
   summarizeFeedbackEvidence,
@@ -21,6 +26,8 @@ import { resolveFeedbackInputs } from "../../src/feedback/inputs.js";
 import { CrawlFindingSchema, type CrawlFinding } from "../../src/crawl/findings.js";
 import { hashState } from "../../src/core/hash.js";
 import { pureFleetRunArtifactPaths } from "../../src/starting_slice/fleet_run_artifacts.js";
+import { loadReportManifest, sha256File } from "../../src/feedback/report_manifest.js";
+import type { FeedbackAcceptanceState } from "../../src/feedback/acceptance.js";
 
 // Three hand-written, verifier-passing report skeletons (a real "Playthrough
 // log"/"Verdict"/clarity+enjoyment rating section plus a fenced exit-interview
@@ -771,7 +778,7 @@ describe("collectInputs", () => {
     ]);
   });
 
-  it("admits discovered default cycle evidence only through the full authority gate", () => {
+  it("admits a hash-bound pending cycle report only through the full authority gate", () => {
     const root = mkdtempSync(join(tmpdir(), "feedback-cycle-default-admission-"));
     mkdirSync(join(root, "blind-tester", "reports"), { recursive: true });
     const cycleDir = join(root, "ai-runs", "2026-08-08T20-00-00-010Z");
@@ -783,7 +790,22 @@ describe("collectInputs", () => {
       session: "619f7250-1ed0-7102-be6c-4f1d5513d91e",
     });
 
-    const inputs = resolveFeedbackInputs(root, []);
+    const runId = "2026-08-08T20-00-00-010Z";
+    const accepted: FeedbackAcceptanceState = {
+      schema_version: 1,
+      accepted_compile: null,
+      pending_cycle_reports: [
+        {
+          run_id: runId,
+          tested_commit: "b".repeat(40),
+          report_id: `pure:${"a".repeat(64)}`,
+          report_sha256: sha256File(`${base}.md`),
+          evidence_sha256: sha256File(`${base}.evidence.jsonl`),
+          sidecar_sha256: sha256File(`${base}.run.json`),
+        },
+      ],
+    };
+    const inputs = resolveFeedbackInputs(root, [], accepted);
     expect(inputs).toEqual([
       "blind-tester/reports",
       "ai-runs/2026-08-08T20-00-00-010Z/playtest.md",
@@ -819,6 +841,23 @@ describe("collectInputs", () => {
     expect(result).toMatchObject({ verified: 1, rejected: 0 });
     expect(result.interviews).toHaveLength(1);
     expect(result.interviews[0]!.ref).toBe("20260808T200000Z_overworld_seed7.md");
+  });
+
+  it("deduplicates renamed non-pure copies by canonical verified interview", () => {
+    const dir = mkdtempSync(join(tmpdir(), "feedback-legacy-copy-dedupe-"));
+    writeFileSync(join(dir, "20260808T200010Z_overworld_seed10.md"), REPORT_A);
+    writeFileSync(
+      join(dir, "20260808T200011Z_overworld_seed11.md"),
+      REPORT_A.replaceAll("\n", "\r\n"),
+    );
+    writeFileSync(join(dir, "20260808T200012Z_overworld_seed12.md"), REPORT_A);
+
+    const result = collectInputs(process.cwd(), [dir]);
+    expect(result).toMatchObject({ verified: 1, rejected: 0 });
+    expect(result.interviews).toHaveLength(1);
+    expect(result.interviews[0]!.ref).toMatch(
+      /^external\/[0-9a-f]{8}\/20260808T200010Z_overworld_seed10\.md$/u,
+    );
   });
 
   it("does not let an invalid first copy suppress a later verified pure run", () => {
@@ -993,6 +1032,185 @@ describe("collectInputs", () => {
 });
 
 describe("compileFeedback", () => {
+  it("bootstraps the cumulative corpus, then compiles each three-report actionable delta once", () => {
+    const root = mkdtempSync(join(tmpdir(), "feedback-cohort-root-"));
+    const reports = join(root, "reports");
+    mkdirSync(reports, { recursive: true });
+    writeFileSync(join(reports, "20260808T210000Z_overworld_seed1.md"), REPORT_A);
+
+    const bootstrapOut = join(root, "bootstrap");
+    const bootstrap = compileFeedback({
+      root: process.cwd(),
+      inputs: [reports],
+      outDir: bootstrapOut,
+      topK: 5,
+      llmLabels: false,
+      prevDir: null,
+      cohortPolicy: { kind: "bootstrap" },
+    });
+    expect(bootstrap.file.inputs).toMatchObject({
+      verified_reports: 0,
+      actionable_reports: 0,
+      excluded_mock_reports: 0,
+    });
+    expect(bootstrap.file.hotspots).toEqual([]);
+    expect(bootstrap.file.metrics).toEqual([]);
+    expect(bootstrap.file.sycophancy.reports).toBe(0);
+    expect(bootstrap.evidence.report_modes).toEqual({
+      pure: 0,
+      structural: 0,
+      legacy_guided: 1,
+    });
+    expect(bootstrap.manifest).toMatchObject({
+      kind: "bootstrap",
+      previous_manifest_sha256: null,
+      cohort: {
+        verified_report_ids: [],
+        actionable_report_ids: [],
+        excluded_mock_report_ids: [],
+      },
+    });
+    expect(bootstrap.manifest.corpus.verified_report_ids).toHaveLength(1);
+    expect(loadReportManifest(bootstrap.manifestPath, bootstrap.manifestSha256)?.manifest).toEqual(
+      bootstrap.manifest,
+    );
+
+    writeFileSync(
+      join(reports, "20260808T210001Z_overworld_seed2.md"),
+      REPORT_A.replaceAll(
+        "notice board confusing about quest start",
+        "notice board hides the quest departure prompt",
+      ),
+    );
+    writeFileSync(join(reports, "20260808T210002Z_overworld_seed3.md"), REPORT_B);
+    const belowThresholdOut = join(root, "below-threshold");
+    expect(() =>
+      compileFeedback({
+        root: process.cwd(),
+        inputs: [reports],
+        outDir: belowThresholdOut,
+        topK: 5,
+        llmLabels: false,
+        prevDir: null,
+        cohortPolicy: {
+          kind: "delta",
+          previousManifest: bootstrap.manifest,
+          previousManifestSha256: bootstrap.manifestSha256,
+          previousHotspots: bootstrap.file,
+          previousEvidence: bootstrap.evidence,
+        },
+      }),
+    ).toThrow(FeedbackCohortThresholdError);
+    expect(existsSync(belowThresholdOut)).toBe(false);
+
+    writeFileSync(
+      join(reports, "20260808T210003Z_overworld_seed4.md"),
+      REPORT_A.replaceAll(
+        "notice board confusing about quest start",
+        "notice board repeats the wrong destination label",
+      ),
+    );
+    writeFileSync(join(reports, "20260808T210004Z_overworld_seed5.md"), structuralReport());
+    const delta = compileFeedback({
+      root: process.cwd(),
+      inputs: [reports],
+      outDir: join(root, "delta"),
+      topK: 5,
+      llmLabels: false,
+      prevDir: null,
+      cohortPolicy: {
+        kind: "delta",
+        previousManifest: bootstrap.manifest,
+        previousManifestSha256: bootstrap.manifestSha256,
+        previousHotspots: bootstrap.file,
+        previousEvidence: bootstrap.evidence,
+      },
+    });
+    expect(delta.file.inputs).toMatchObject({
+      verified_reports: 4,
+      actionable_reports: 3,
+      excluded_mock_reports: 1,
+    });
+    expect(delta.file.sycophancy.reports).toBe(3);
+    expect(delta.evidence.report_modes).toEqual({
+      pure: 0,
+      structural: 1,
+      legacy_guided: 4,
+    });
+    expect(delta.manifest).toMatchObject({
+      kind: "delta",
+      previous_manifest_sha256: bootstrap.manifestSha256,
+    });
+    expect(delta.manifest.corpus.verified_report_ids).toHaveLength(5);
+    expect(delta.manifest.cohort.verified_report_ids).toHaveLength(4);
+    expect(delta.manifest.cohort.actionable_report_ids).toHaveLength(3);
+    expect(delta.manifest.cohort.excluded_mock_report_ids).toHaveLength(1);
+
+    const replayOut = join(root, "same-corpus-again");
+    expect(() =>
+      compileFeedback({
+        root: process.cwd(),
+        inputs: [reports],
+        outDir: replayOut,
+        topK: 5,
+        llmLabels: false,
+        prevDir: null,
+        cohortPolicy: {
+          kind: "delta",
+          previousManifest: delta.manifest,
+          previousManifestSha256: delta.manifestSha256,
+          previousHotspots: delta.file,
+          previousEvidence: delta.evidence,
+        },
+      }),
+    ).toThrow(/0 new actionable reports/u);
+    expect(existsSync(replayOut)).toBe(false);
+
+    // Consumed cycle files need not stay in the next default input set. The
+    // accepted evidence summary carries cumulative retention forward while
+    // the next manifest admits only genuinely new identities.
+    const nextReports = join(root, "next-reports");
+    mkdirSync(nextReports);
+    for (const [index, note] of [
+      "station sign omits the platform number",
+      "station sign reverses the route direction",
+      "station sign repeats a completed objective",
+    ].entries()) {
+      writeFileSync(
+        join(nextReports, `20260808T22000${index}Z_overworld_seed${index + 6}.md`),
+        REPORT_A.replaceAll("notice board confusing about quest start", note),
+      );
+    }
+    const secondDelta = compileFeedback({
+      root: process.cwd(),
+      inputs: [nextReports],
+      outDir: join(root, "second-delta"),
+      topK: 5,
+      llmLabels: false,
+      prevDir: null,
+      cohortPolicy: {
+        kind: "delta",
+        previousManifest: delta.manifest,
+        previousManifestSha256: delta.manifestSha256,
+        previousHotspots: delta.file,
+        previousEvidence: delta.evidence,
+      },
+    });
+    expect(secondDelta.file.inputs).toMatchObject({
+      verified_reports: 3,
+      actionable_reports: 3,
+      excluded_mock_reports: 0,
+    });
+    expect(secondDelta.evidence.report_modes).toEqual({
+      pure: 0,
+      structural: 1,
+      legacy_guided: 7,
+    });
+    expect(secondDelta.manifest.corpus.seen_report_ids).toHaveLength(8);
+    expect(secondDelta.manifest.corpus.verified_report_ids).toHaveLength(3);
+    expect(secondDelta.manifest.cohort.actionable_report_ids).toHaveLength(3);
+  });
+
   it("merges the crawler+fleet overlap into one cluster with the BOTH_SOURCES_BONUS applied", () => {
     const outDir = mkdtempSync(join(tmpdir(), "feedback-out-"));
     const { file, jsonPath, mdPath } = compileFeedback({
@@ -1117,7 +1335,9 @@ describe("compileFeedback", () => {
     const persisted = JSON.parse(readFileSync(retentionPath, "utf8"));
     expect(FeedbackEvidenceSummarySchema.parse(persisted)).toEqual(evidence);
     const markdown = readFileSync(mdPath, "utf8");
-    expect(markdown).toContain("Verified report modes: pure 3, structural 1, legacy-guided 1");
+    expect(markdown).toContain(
+      "Verified report modes (cumulative corpus): pure 3, structural 1, legacy-guided 1",
+    );
     expect(markdown).toContain("### Journey contract v1");
     expect(markdown).toContain("Actual voluntary game choices: 1 continue, 3 end");
     expect(markdown).toContain(

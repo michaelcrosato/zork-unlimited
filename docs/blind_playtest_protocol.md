@@ -465,9 +465,13 @@ separate from report schema V2 and journey contract v3. Generic readers keep
 historical evidence-sidecar schema v1 readable for old feedback, but v1 lacks
 the provenance needed for an authenticated current fleet.
 
-`npm run feedback:compile` writes `retention.json` beside the ranked hot spots.
-It separates pure, structural, and legacy-guided report counts and aggregates
-only sidecar-verified pure continue/end choices as retention evidence. Pure
+`npm run feedback:status` verifies stable report identities against the last
+outer-gate-accepted manifest. When its actionable threshold is ready,
+`npm run feedback:compile` writes cumulative `retention.json` beside the ranked
+fresh-cohort hot spots and digest-bound `report-manifest.json`; the manifest is
+not authoritative until a later outer-gate seal records its exact digest in
+committed loop state. Retention separates pure, structural, and legacy-guided
+report counts and aggregates only sidecar-verified pure continue/end choices. Pure
 decision counts, checkpoint choices, and continuation curves are grouped by
 the receipt's journey-contract version; historical v1 and v2 evidence remains
 valid but is never pooled with current v3 evidence.

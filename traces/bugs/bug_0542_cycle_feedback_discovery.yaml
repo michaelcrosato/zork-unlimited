@@ -15,16 +15,19 @@ root_cause: >
   verified-run deduplication boundary. It could neither discover the canonical cycle path
   nor safely distinguish it from copied or manifest-colliding reports.
 fix: >
-  Discover only immediate ISO-stamped playtest.md publications with regular adjacent pure
-  V2 sidecars, then pass them through the unchanged report/receipt/provider authority gates.
+  Discover only immediate ISO-stamped playtest.md publication candidates with regular
+  adjacent pure V2 sidecars, then pass admitted inputs through the unchanged
+  report/receipt/provider authority gates. Default admission now additionally requires the
+  cycle bundle's exact byte hashes in committed feedback-acceptance state (bug_0543).
   Give non-ledger evidence stable repository-relative in-root refs or opaque external refs,
   restrict basename manifest joins to canonical fleet ledger names, and deduplicate pure
   copies by the canonical parsed sidecar only after successful verification. Explicit --in
   arguments still replace defaults.
   This closes discovery and identity only; current-revision cohort freshness remains separate.
 deterministic_witnesses:
-  - "default discovery includes sorted report + parseable pure-V2 sidecar candidates and newest crawl"
+  - "candidate discovery returns sorted report + parseable pure-V2 sidecar publications"
   - "legacy V1, structural, malformed, partial, nested, and alternate-name bundles stay out"
+  - "unmarked cycle candidates remain outside no-flags compiler inputs"
   - "two cycle sessions retain distinct ai-runs/<cycle>/playtest.md evidence refs"
   - "a fleet manifest row named playtest.md cannot relabel cycle evidence"
   - "reformatted copies of one verified pure sidecar count once; distinct sessions count twice"
