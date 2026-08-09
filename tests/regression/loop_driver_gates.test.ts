@@ -296,6 +296,7 @@ describe("loop.sh verification gates", () => {
       "npm run ai:loop",
       "run_agent",
       'require_provisional_commit "$start_ref"',
+      "npm run --silent loop:rotate-state",
       "npm run crawl:smoke",
       "npm run health",
       'npm run verify:integrity -- --against "$start_ref"',
@@ -311,6 +312,30 @@ describe("loop.sh verification gates", () => {
       expect(index, `run_cycle is missing ${needle}`).toBeGreaterThan(previous);
       previous = index;
     }
+  });
+
+  it("rotates completed loop state in both modes before post-change verification", () => {
+    const runCycle = sectionBetween("run_cycle() {", "\n}\n\ncount=0");
+    const provisional = runCycle.indexOf('require_provisional_commit "$start_ref"');
+    const rotation = runCycle.indexOf("npm run --silent loop:rotate-state", provisional);
+    const postCrawl = runCycle.indexOf("npm run crawl:smoke", rotation);
+    const health = runCycle.indexOf("npm run health", rotation);
+    const rotationBlock = runCycle.slice(rotation, postCrawl);
+    const scripts = (
+      JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")) as {
+        scripts: Record<string, string>;
+      }
+    ).scripts;
+
+    expect(rotation).toBeGreaterThan(provisional);
+    expect(postCrawl).toBeGreaterThan(rotation);
+    expect(health).toBeGreaterThan(postCrawl);
+    expect(runCycle.match(/npm run --silent loop:rotate-state/gu)).toHaveLength(1);
+    expect(rotationBlock).toContain(
+      '_reject_cycle "loop-state-rotation" "deterministic final loop-state rotation failed"',
+    );
+    expect(runCycle.slice(provisional, rotation)).not.toContain("AI_LOOP_COMMIT");
+    expect(scripts["loop:rotate-state"]).toBe("tsx scripts/rotate-loop-state.ts");
   });
 
   it("safe_commit_if_enabled is inert unless AI_LOOP_COMMIT=1", () => {

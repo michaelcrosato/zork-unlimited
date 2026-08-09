@@ -4,6 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  countCycleEntries,
+  historicalCycleCount,
+  LOOP_ARCHIVE_FILE,
+  rotateLoopState,
+} from "../../src/afk/loop_state.js";
+import {
   FeedbackCompilePointerSchema,
   sealFeedbackAcceptance,
 } from "../../scripts/seal-feedback-acceptance.js";
@@ -383,6 +389,79 @@ function initCycle(
   return { root, startRef, head, evidence };
 }
 
+function initRotatingCycle(): {
+  root: string;
+  statePath: string;
+  startRef: string;
+  head: string;
+  evidence: ReturnType<typeof cycleEvidence>;
+  selection: string;
+  committed: string;
+  provisional: string;
+} {
+  const root = tempRoot("feedback-seal-rotation-");
+  mkdirSync(join(root, "blind-tester", "reports"), { recursive: true });
+  const selection = formatFeedbackCycleSelectionMarker(RUN_ID, null);
+  const preface = upsertFeedbackAcceptanceStateText(
+    "# AI Loop State\n\n<!-- historical_cycle_count: 700 -->\n\nEntry contract.\n",
+    EMPTY_STATE,
+  );
+  const priorEntries = Array.from(
+    { length: 15 },
+    (_, index) => `### Cycle result - prior_${String(index).padStart(2, "0")}\n- Guard: green.`,
+  ).join("\n\n");
+  const initialText = `${preface.trimEnd()}\n\n${priorEntries}\n`;
+  const statePath = join(root, "AI_LOOP_STATE.md");
+  writeFileSync(statePath, initialText);
+  runGit(root, ["init", "-q"]);
+  runGit(root, ["config", "user.email", "seal@example.invalid"]);
+  runGit(root, ["config", "user.name", "feedback-seal-test"]);
+  runGit(root, ["add", "AI_LOOP_STATE.md"]);
+  runGit(root, ["commit", "-qm", "cycle start"]);
+  const startRef = runGit(root, ["rev-parse", "HEAD"]);
+
+  writeFileSync(
+    statePath,
+    `${initialText.trimEnd()}\n\n## AFK Cycle ${RUN_ID}\n${selection}\n- Guard: blind report before finalization.\n`,
+  );
+  runGit(root, ["add", "AI_LOOP_STATE.md"]);
+  runGit(root, ["commit", "-qm", "provisional"]);
+  const head = runGit(root, ["rev-parse", "HEAD"]);
+  const committed = runGit(root, ["show", "HEAD:AI_LOOP_STATE.md"]);
+
+  const evidence = cycleEvidence(head, "o-feedback-seal-rotation", 23);
+  const runDir = join(root, "ai-runs", RUN_ID);
+  mkdirSync(runDir, { recursive: true });
+  writeFileSync(join(runDir, "playtest.md"), evidence.report);
+  writeFileSync(join(runDir, "playtest.evidence.jsonl"), evidence.evidence);
+  writeFileSync(join(runDir, "playtest.run.json"), evidence.sidecar);
+  writeFileSync(
+    join(root, "ai-runs", "latest-cycle.json"),
+    JSON.stringify({
+      runId: RUN_ID,
+      playtestRecord: `ai-runs/${RUN_ID}/playtest.md`,
+      recommendationId: null,
+    }),
+  );
+  return {
+    root,
+    statePath,
+    startRef,
+    head,
+    evidence,
+    selection,
+    committed,
+    provisional: readFileSync(statePath, "utf8"),
+  };
+}
+
+function prependFinalCycleResult(provisional: string, slug: string): string {
+  const firstPriorEntry = provisional.indexOf("### Cycle result");
+  if (firstPriorEntry < 0) throw new Error("Expected a prior rich cycle result.");
+  const finalEntry = `### Cycle result - ${slug}\n- Guard: green.\n\n`;
+  return `${provisional.slice(0, firstPriorEntry)}${finalEntry}${provisional.slice(firstPriorEntry)}`;
+}
+
 function parseState(root: string) {
   const parsed = parseFeedbackAcceptanceStateText(
     readFileSync(join(root, "AI_LOOP_STATE.md"), "utf8"),
@@ -424,6 +503,99 @@ describe("feedback acceptance cycle seal", () => {
     expect(readFileSync(join(root, "AI_LOOP_STATE.md"), "utf8")).not.toContain(
       "feedback_cycle_selection",
     );
+  });
+
+  it("keeps the frozen selection sealable when a full live ledger prepends and rotates", () => {
+    const { root, statePath, startRef, head, evidence, selection, committed, provisional } =
+      initRotatingCycle();
+    expect(committed.match(/feedback_cycle_selection:/gu)).toHaveLength(1);
+    expect(committed).toContain(selection);
+
+    const frozenSelection = provisional.split(/\r?\n/u).find((line) => line === selection);
+    expect(frozenSelection).toBe(selection);
+    writeFileSync(statePath, prependFinalCycleResult(provisional, "rotated_selection"));
+    const beforeRotation = readFileSync(statePath, "utf8");
+    expect(countCycleEntries(beforeRotation)).toBe(16);
+    expect(beforeRotation.match(/feedback_cycle_selection:/gu)).toHaveLength(1);
+    expect(beforeRotation.indexOf(frozenSelection!)).toBeGreaterThan(
+      beforeRotation.lastIndexOf("### Cycle result"),
+    );
+
+    expect(rotateLoopState(root)).toBe(1);
+    const rotated = readFileSync(statePath, "utf8");
+    const archive = readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8");
+    expect(countCycleEntries(rotated)).toBe(15);
+    expect(historicalCycleCount(rotated)).toBe(701);
+    expect(rotated.match(/feedback_cycle_selection:/gu)).toHaveLength(1);
+    expect(rotated).toContain(selection);
+    expect(rotated.indexOf(selection)).toBeLessThan(rotated.indexOf("### Cycle result"));
+    expect(rotated).not.toContain("### Cycle result - prior_14");
+    expect(rotated).not.toContain(`## AFK Cycle ${RUN_ID}`);
+    expect(archive).toContain("### Cycle result - prior_14");
+    expect(archive).toContain(`## AFK Cycle ${RUN_ID}`);
+    expect(archive).not.toContain("feedback_cycle_selection");
+
+    const result = sealFeedbackAcceptance({
+      root,
+      worldRoot: REPO_ROOT,
+      expectedCommit: head,
+      startRef,
+    });
+    expect(result).toMatchObject({
+      runId: RUN_ID,
+      reportId: evidence.reportId,
+      pendingReports: 1,
+    });
+    const sealed = readFileSync(statePath, "utf8");
+    expect(sealed).toContain("### Cycle result - rotated_selection");
+    expect(sealed).not.toContain("feedback_cycle_selection");
+    expect(countCycleEntries(sealed)).toBe(15);
+    expect(historicalCycleCount(sealed)).toBe(701);
+  });
+
+  it("keeps noncanonical tail selection material live so the real seal rejects it", () => {
+    const { root, statePath, startRef, head, selection, committed, provisional } =
+      initRotatingCycle();
+    const noncanonicalSelection = `  ${selection}`;
+    expect(committed.match(/feedback_cycle_selection:/gu)).toHaveLength(1);
+    expect(committed).not.toContain(noncanonicalSelection);
+
+    const dirtyProvisional = provisional.replace(
+      `${selection}\n`,
+      `${selection}\n${noncanonicalSelection}\n`,
+    );
+    writeFileSync(
+      statePath,
+      prependFinalCycleResult(dirtyProvisional, "rotated_selection_malformed"),
+    );
+    const beforeRotation = readFileSync(statePath, "utf8");
+    expect(countCycleEntries(beforeRotation)).toBe(16);
+    expect(
+      beforeRotation.split(/\r?\n/u).filter((line) => line.includes("feedback_cycle_selection:")),
+    ).toEqual([selection, noncanonicalSelection]);
+
+    expect(rotateLoopState(root)).toBe(1);
+    const rotated = readFileSync(statePath, "utf8");
+    const archive = readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8");
+    const liveSelectionLines = rotated
+      .split(/\r?\n/u)
+      .filter((line) => line.includes("feedback_cycle_selection:"));
+    expect(liveSelectionLines).toEqual([selection, noncanonicalSelection]);
+    for (const line of liveSelectionLines) {
+      expect(rotated.indexOf(line)).toBeLessThan(rotated.indexOf("### Cycle result"));
+    }
+    expect(archive).not.toContain("feedback_cycle_selection:");
+
+    const beforeSeal = readFileSync(statePath, "utf8");
+    expect(() =>
+      sealFeedbackAcceptance({
+        root,
+        worldRoot: REPO_ROOT,
+        expectedCommit: head,
+        startRef,
+      }),
+    ).toThrow(/malformed feedback cycle selection/u);
+    expect(readFileSync(statePath, "utf8")).toBe(beforeSeal);
   });
 
   it("consumes an accepted recommendation only for the exact assessed hotspot", () => {

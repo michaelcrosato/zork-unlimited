@@ -157,3 +157,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 682747 on `e0550be5` diverted every wolf with the full herd after two failure-forward recoveries, continued at decisions 30/41, won The Gallowmere, ended naturally at 55, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, loop, soft-lock, or stuck state.
 - Self-critique/follow-through: Station nested tradeoffs, campaign-versus-quest state boundaries, and one Gallowmere recovery label remain S1; one new verified report is below the recompile threshold, so no fleet or premature compile ran.
 - Guard: pre/post crawls `20260803T173108Z` / `20260803T182348Z` cover all 247 nodes/344 edges/12 quests; exact health passes 459 files/3,797 tests, UI typecheck, and all 12 packs.
+## AFK Cycle 2026-08-09T07-05-04-305Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T07-05-04-305Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

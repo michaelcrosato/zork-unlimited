@@ -385,6 +385,14 @@ run_cycle() {
     _reject_cycle "provisional-commit" "required provisional implementation commit is absent or invalid"
     return 1
   }
+  # The agent has now completed the current ledger entry. Rotate at this boundary,
+  # after evidence-only baseline play and before integrity runs, so both modes keep
+  # exactly the configured live history without mutating an evidence-only baseline.
+  npm run --silent loop:rotate-state || {
+    echo "loop-state rotation failed — reverting"
+    _reject_cycle "loop-state-rotation" "deterministic final loop-state rotation failed"
+    return 1
+  }
   npm run crawl:smoke || {
     echo "crawl:smoke red after work — reverting"
     _reject_cycle "crawl-post" "post-change crawl:smoke failed"
