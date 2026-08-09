@@ -249,6 +249,7 @@ type MutableHotspotsFile = {
   inputs: Record<string, unknown>;
   metrics: Array<Record<string, unknown>>;
   hotspots: Array<Record<string, unknown>>;
+  recommended_next_fix: { hotspot_id: string; rationale: string } | null;
 };
 
 function makeFirstHotspotUnmapped(file: unknown): MutableHotspotsFile {
@@ -538,6 +539,85 @@ describe("assess() consuming compiled hotspots.json (Task 17)", () => {
         expect(
           assess(root).candidates.some((candidate) => candidate.id === "hotspot-already-consumed"),
         ).toBe(false);
+      },
+    );
+  });
+
+  it("preserves compiler order for equal-score accepted hotspots before hashed-id order", () => {
+    const compilerOrder = ["a919cded", "8d5e8929", "6268a10e", "00000000"];
+    const offeredCompilerOrder = compilerOrder.slice(0, 3);
+    let recommendedCandidateId: string | null = null;
+    withFixtureRoot(
+      (root) => {
+        const file = hotspotsFileWith(
+          compilerOrder.map((id) => baseHotspot({ id, score: 2 })),
+        ) as MutableHotspotsFile;
+        recommendedCandidateId = `hotspot-${file.recommended_next_fix!.hotspot_id}`;
+        for (const hotspot of file.hotspots) {
+          hotspot.location = {
+            kind: "unmapped",
+            questId: null,
+            region: null,
+            node: null,
+            sceneId: null,
+            raw: ["accepted overworld feedback with no canonical place"],
+          };
+        }
+        file.metrics = [targetMetric("overworld")];
+        writeAcceptedHotspotsFile(root, "20260709T000000Z", file);
+      },
+      (root) => {
+        const candidates = assess(root).candidates;
+        const acceptedIds = new Set(compilerOrder.map((id) => `hotspot-${id}`));
+        const rankedHotspots = candidates
+          .filter((candidate) => acceptedIds.has(candidate.id))
+          .map((candidate) => candidate.id);
+
+        expect(rankedHotspots).toEqual(offeredCompilerOrder.map((id) => `hotspot-${id}`));
+        expect(rankedHotspots[0]).toBe(recommendedCandidateId);
+        expect(rankedHotspots).not.toContain("hotspot-00000000");
+        const fixUnplayableRank = candidates.findIndex(
+          (candidate) => candidate.id === "fix-unplayable-hotspot_fixture",
+        );
+        const recommendedHotspotRank = candidates.findIndex(
+          (candidate) => candidate.id === "hotspot-a919cded",
+        );
+        expect(fixUnplayableRank).toBeGreaterThanOrEqual(0);
+        expect(recommendedHotspotRank).toBeGreaterThanOrEqual(0);
+        expect(fixUnplayableRank).toBeLessThan(recommendedHotspotRank);
+        for (const id of rankedHotspots) {
+          expect(candidates.find((candidate) => candidate.id === id)).toMatchObject({
+            score: 2.5,
+            target: "overworld",
+          });
+        }
+      },
+    );
+  });
+
+  it("keeps assessor score ahead of accepted compiler ordinal", () => {
+    withFixtureRoot(
+      (root) => {
+        writeHotspotsFile(root, "20260709T000000Z", [
+          baseHotspot({
+            id: "ordinal-first",
+            score: 96,
+            trend: "improved",
+            prev_score: 192,
+          }),
+          baseHotspot({ id: "higher-assessor-score", score: 96, trend: "new" }),
+        ]);
+      },
+      (root) => {
+        const rankedHotspots = assess(root).candidates.filter((candidate) =>
+          ["hotspot-ordinal-first", "hotspot-higher-assessor-score"].includes(candidate.id),
+        );
+
+        expect(rankedHotspots.map((candidate) => candidate.id)).toEqual([
+          "hotspot-higher-assessor-score",
+          "hotspot-ordinal-first",
+        ]);
+        expect(rankedHotspots.map((candidate) => candidate.score)).toEqual([2.5, 2]);
       },
     );
   });
