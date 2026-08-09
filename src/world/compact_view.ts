@@ -702,6 +702,7 @@ export function compactOverworldEventScenes(
 
 export type CompactOverworldBlockedEventLeadContext = {
   eventChoices: readonly OverworldCompactEventChoice[];
+  gameplayActionsPaused: boolean;
   journalEntryIds: ReadonlySet<string>;
   poiTitlesById: ReadonlyMap<string, string>;
   contactNamesById: ReadonlyMap<string, string>;
@@ -730,13 +731,15 @@ export function compactOverworldBlockedEventLeads(
       (entryId) => entryId === contactPrefix || entryId.startsWith(`${contactPrefix}@`),
     );
     const investigated = context.journalEntryIds.has(`investigate:${event.id}`);
-    const nextPrerequisite = !scoutedPoi
-      ? `Required first: scout ${context.poiTitlesById.get(scene.required_poi_id) ?? scene.required_poi_id}.`
-      : !talkedContact
-        ? `Required first: talk to ${context.contactNamesById.get(scene.required_contact_id) ?? scene.required_contact_id}.`
-        : !investigated
-          ? "Required first: investigate this event."
-          : "No authored choice is currently available in this journey state.";
+    const nextPrerequisite = context.gameplayActionsPaused
+      ? "No authored choice is currently available in this journey state."
+      : !scoutedPoi
+        ? `Required first: scout ${context.poiTitlesById.get(scene.required_poi_id) ?? scene.required_poi_id}.`
+        : !talkedContact
+          ? `Required first: talk to ${context.contactNamesById.get(scene.required_contact_id) ?? scene.required_contact_id}.`
+          : !investigated
+            ? "Required first: investigate this event."
+            : "No authored choice is currently available in this journey state.";
     leads.push([
       event.id,
       compactText(event.summary, OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT),
@@ -1555,8 +1558,10 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
   const eventScenes = compactOverworldEventScenes(
     visibleEvents.filter((event) => eventSceneIds.has(event.id)),
   );
+  const serviceActions = compactOverworldServiceActions(view.serviceActions);
   const eventLeads = compactOverworldBlockedEventLeads(visibleEvents, {
     eventChoices,
+    gameplayActionsPaused: serviceActions.length === 0,
     journalEntryIds: new Set(view.journal.map((entry) => entry.id)),
     poiTitlesById: new Map(view.pois.map((poi) => [poi.id, poi.title])),
     contactNamesById: new Map(view.characters.map((character) => [character.id, character.name])),
@@ -1585,7 +1590,6 @@ export function compactOverworldView(view: OverworldView): OverworldCompactView 
     new Map(view.areas.map((area) => [area.id, area.name])),
   );
   const serviceOffers = compactCampaignServiceOffers(view.serviceOffers);
-  const serviceActions = compactOverworldServiceActions(view.serviceActions);
   const departureInteractions = compactOverworldDepartureInteractions(view.departureInteractions);
   const departureContactLeads = compactOverworldDepartureContactLeads(view.departureContactLeads);
   const departureRecap = view.departureRecap
