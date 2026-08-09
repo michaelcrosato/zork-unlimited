@@ -144,3 +144,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Failed evidence: the default Spark seed-7 attempt completed three goals and ended at decision 71 but exhausted provider context before its interview; strict-stream rejection published no evidence and was not counted.
 - Self-critique/follow-through: the verified player still found layered Station setup and compact technical phrasing denser than the quests; one new verified report is below the three-report compile threshold, so no premature compile or fleet ran.
 - Guard: post-crawl `20260806T040320Z` covers all 247 nodes/344 edges/12 quests; exact health passes 463 files/4,002 tests, both typechecks, all 12 packs, and authority-verified pure evidence, with root/UI audits clean.
+## AFK Cycle 2026-08-09T22-07-00-576Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T22-07-00-576Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-6268a10e (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

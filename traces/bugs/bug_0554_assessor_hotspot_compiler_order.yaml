@@ -1,0 +1,62 @@
+id: bug_0554
+title: "Assessor hash ordering displaced the accepted compiler recommendation"
+pack: n/a (accepted feedback assessor authority ordering)
+reported_by: 2026-08-09T22-07-00-576Z commit-enabled Cycle 14 assessment
+severity: S1
+evidence:
+  accepted_manifest: ai-runs/feedback/20260809T185746Z/report-manifest.json
+  accepted_manifest_sha256: 00fc73b6945516d8d5a04f08447e2df1c99531e46d00ba5799952b4007d757e2
+  accepted_hotspots: ai-runs/feedback/20260809T185746Z/hotspots.json
+  accepted_hotspots_sha256: 54c2bba9f3de346e84ed9616499a8e2474c51c590d27835b525d97e8e6129e32
+  accepted_build: eff02eb8e7147264a92b4159eb6ea4a7a08c2528
+  accepted_compiler_order: "a919cded, 8d5e8929, 6268a10e, 26c7d740; every row has raw score 2"
+  accepted_recommendation: hotspot-a919cded
+  cycle14_assessment: ai-runs/2026-08-09T22-07-00-576Z/assessment.json
+  cycle14_ranked_order: "hotspot-6268a10e, hotspot-8d5e8929, hotspot-a919cded; every candidate has assessor score 2.5"
+  cycle14_latest_cycle: ai-runs/latest-cycle.json
+  cycle14_false_top: hotspot-6268a10e
+  cycle14_selection: null
+symptom: >
+  The accepted feedback compiler ranked a919cded first and named it as
+  recommended_next_fix, but the next assessment displayed 6268a10e first. All
+  three accepted candidates tied at assessor score 2.5, so the displayed order
+  did not represent a new score judgment. Selecting the assessor's first row
+  would not equal the exact accepted recommendation id required by the seal and
+  would therefore leave the accepted recommendation unconsumed and eligible to
+  steer another cycle.
+root_cause: >
+  The compiler deterministically orders equal raw-score clusters by its full
+  canonical cluster key, then derives each short hotspot id and records the
+  first row as recommended_next_fix. The assessor retained only the candidates,
+  discarded their accepted array ordinals, and resolved every equal-score tie by
+  the derived short id. Short-id lexicographic order has no authority relationship
+  to the compiler's full-key order, so 6268a10e moved ahead of a919cded.
+fix: >
+  Record each candidate's ordinal in the already accepted top-three hotspot
+  array. After assessor score and playtest-recency comparison, use that ordinal
+  only when both tied candidates are accepted hotspots; otherwise retain the
+  existing id fallback. Keep score ahead of compiler ordinal, keep quest-health
+  fix ids ahead of equal-score hotspots, and keep the existing top-three slice
+  before target resolution. Do not change compiler artifacts or seal matching.
+deterministic_witnesses:
+  - "the exact 20260809T185746Z bundle recommends a919cded first, while the recorded Cycle 14 assessment put equal-score 6268a10e first solely because its short id sorts earlier"
+  - "an adversarial four-hotspot fixture puts the compiler recommendation lexicographically last and a rank-four hotspot lexicographically first; assessment preserves the compiler's first three in order and excludes rank four"
+  - "the first offered hotspot in that fixture is exactly hotspot-${recommended_next_fix.hotspot_id}"
+  - "a higher assessor score still outranks an earlier accepted compiler ordinal"
+  - "an equal-score fix-unplayable candidate still precedes accepted hotspots because compiler ordinal is never compared across candidate classes"
+  - "the existing seal regression consumes only the exact accepted recommended hotspot and leaves a different or null selection unconsumed"
+  - "a919cded's Wolf-Winter action-label evidence was already corrected in the accepted eff02 build by bug_0552, so this off-list authority fix retains Cycle 14's null selection rather than falsely consuming stale product evidence"
+nonclaims:
+  - "This does not reorder, rewrite, regenerate, or reinterpret the accepted compiler manifest, hotspots, scores, cluster keys, recommendation, or digests."
+  - "This does not promote rank-four or otherwise filtered hotspots, move filtering before the accepted top-three slice, or backfill an unmappable top-three row from a lower rank."
+  - "This does not let compiler ordinal override assessor score or playtest recency, and it does not change candidate impact, effort, category, target, or evidence."
+  - "This does not weaken the seal to consume any offered hotspot; only exact hotspot-a919cded selection could consume this accepted recommendation."
+  - "This does not select hotspot-a919cded for Cycle 14, automatically consume or retire stale feedback, or claim that its already-fixed content defect needs another product change."
+production:
+  - src/afk/assessor.ts
+tests:
+  - tests/unit/assessor_hotspots.test.ts
+  - tests/unit/seal_feedback_acceptance.test.ts
+verification:
+  - npx vitest run tests/unit/assessor_hotspots.test.ts tests/unit/seal_feedback_acceptance.test.ts
+  - npm run verify:bug-traces

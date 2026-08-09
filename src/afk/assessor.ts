@@ -414,10 +414,11 @@ function categoryForHotspot(h: Hotspot): Category {
  * ranked #1 over everything). With the floor at "M", a hotspot candidate's
  * best-case score is exactly 2.5 — at most a TIE with, never a win over, an
  * unplayable/unbound-quest fix. CHOSEN TIE-BREAK MECHANISM: the final sort's
- * id-ascending tiebreak (below) already resolves that tie correctly without
- * any impact cap — `fix-unplayable-*`/`fix-unbound-*`/`fix-<id>` ids all sort
- * before `hotspot-<id>` ids ('f' < 'h' lexicographically), so the quest fix
- * always wins an exact-score tie. (An impact-4 cap was considered and
+ * cross-class id-ascending tiebreak (below) already resolves that tie correctly
+ * without any impact cap. Accepted-hotspot ordinals are compared only when BOTH
+ * tied candidates are hot spots, so `fix-unplayable-*`/`fix-unbound-*`/`fix-<id>`
+ * ids still sort before `hotspot-<id>` ids ('f' < 'h' lexicographically), and the
+ * quest fix always wins an exact-score tie. (An impact-4 cap was considered and
  * rejected: it would needlessly discount hotspots that never actually collide
  * with a quest-health candidate, e.g. every `engine`-category hotspot, which
  * tops out at `score(5, "M", "engine")` = 2.0 regardless.)
@@ -840,6 +841,7 @@ export function assess(root: string): Assessment {
 
   // ── hotspot-driven candidates: accepted, unconsumed feedback (see helper
   // functions above) ────────────────────────────────────────────────────────
+  const acceptedHotspotOrdinalByCandidateId = new Map<string, number>();
   const hotspotsFile = readLatestHotspots(root);
   if (hotspotsFile) {
     const shippedWorldQuestIds = new Set(
@@ -855,8 +857,10 @@ export function assess(root: string): Assessment {
       const category = categoryForHotspot(h);
       const effort = effortForHotspot(h);
       const impact = impactForHotspot(h, maxHotspotScore);
+      const candidateId = `hotspot-${h.id}`;
+      acceptedHotspotOrdinalByCandidateId.set(candidateId, index);
       candidates.push({
-        id: `hotspot-${h.id}`,
+        id: candidateId,
         category,
         target,
         title: `Fix compiled feedback hot spot: ${h.title}`,
@@ -879,28 +883,39 @@ export function assess(root: string): Assessment {
 
   // Deterministic ordering: score desc, then — among equal scores — rotate the
   // blind-playtest pass onto the LEAST-recently-attended pack (never-attended first,
-  // then the oldest most-recent attendance first), then id asc as the final stable
-  // tiebreak. The recency term only separates equal-scored `playtest-*` stubs (all at
-  // 0.5); every other candidate gets a sentinel (MAX_SAFE_INTEGER) so its relative
-  // order is unchanged. attendance offsets come from the NEWEST-FIRST log, so a
-  // SMALLER offset is MORE recent — we negate it so a less-recent (larger-offset) pack
-  // sorts EARLIER, and a never-attended pack (MIN_SAFE_INTEGER) sorts earliest of all.
+  // then the oldest most-recent attendance first). When BOTH tied candidates are
+  // accepted hot spots, retain their compiler ordinal (raw score desc, then compiler
+  // key tie-break); every other tie falls through to id asc. The recency term only
+  // separates equal-scored `playtest-*` stubs (all at 0.5); every other candidate gets
+  // a sentinel (MAX_SAFE_INTEGER), so accepted-hotspot ordinals can decide their own
+  // equal-score ties. Attendance offsets come from the NEWEST-FIRST log, so a SMALLER
+  // offset is MORE recent — we negate it so a less-recent (larger-offset) pack sorts
+  // EARLIER, and a never-attended pack (MIN_SAFE_INTEGER) sorts earliest of all.
   // c.target is a world quest id for shipped content; legacy/path fallbacks still
   // normalize through packStem so old loop-state attendance remains usable.
   // Reading the tracked AI_LOOP_STATE.md keeps this a pure function of repo state
   // (same repo ⇒ same ranking), curing the cold_forge lock-in (bug_0128).
-  // This id-asc tiebreak is also the mechanism (see effortForHotspot above) that
-  // guarantees a hotspot candidate never OUTRANKS an unplayable/unbound-quest fix
-  // even on an exact score tie: `fix-unplayable-*`/`fix-unbound-*`/`fix-<id>` all
-  // sort before `hotspot-<id>` ('f' < 'h'), so the quest fix wins any tie.
+  // The hot-spot ordinal applies only hot-spot-to-hot-spot. Cross-class ties still use
+  // id asc, which guarantees a hot spot never OUTRANKS an unplayable/unbound-quest fix:
+  // `fix-unplayable-*`/`fix-unbound-*`/`fix-<id>` all sort before `hotspot-<id>`
+  // ('f' < 'h'), so the quest fix wins any exact-score tie.
   const attendance = lastAttendanceOffsets(root);
   const recencyOf = (c: ImprovementCandidate): number => {
     if (!c.id.startsWith("playtest-")) return Number.MAX_SAFE_INTEGER;
     const off = attendance.get(packStem(c.target));
     return off === undefined ? Number.MIN_SAFE_INTEGER : -off;
   };
+  const acceptedHotspotOrdinalTie = (a: ImprovementCandidate, b: ImprovementCandidate): number => {
+    const aOrdinal = acceptedHotspotOrdinalByCandidateId.get(a.id);
+    const bOrdinal = acceptedHotspotOrdinalByCandidateId.get(b.id);
+    return aOrdinal !== undefined && bOrdinal !== undefined ? aOrdinal - bOrdinal : 0;
+  };
   candidates.sort(
-    (a, b) => b.score - a.score || recencyOf(a) - recencyOf(b) || a.id.localeCompare(b.id),
+    (a, b) =>
+      b.score - a.score ||
+      recencyOf(a) - recencyOf(b) ||
+      acceptedHotspotOrdinalTie(a, b) ||
+      a.id.localeCompare(b.id),
   );
   return {
     rpgQuestCount,
