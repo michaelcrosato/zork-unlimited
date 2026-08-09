@@ -146,3 +146,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the verified first attempt used 3.176M raw / 130,904 uncached input + 9,924 output (140,828 useful) at 95.88% cache reuse in 303 seconds, with no retry, fallback, failed attempt, or fanout.
 - Self-critique/follow-through: the three-report compile is 3/3 at clarity/enjoyment 4/4, 0 stuck, 100% replay, and 2/3 continuing past the first goal; one remaining separate-surface density mention is not enough for another trim, so the next increment returns to a systemic consequence candidate.
 - Guard: independent review is clean; crawls `20260805T062211Z` / `20260805T064140Z`, 49 focused tests plus the 16-test pure regression, and exact-tree health (459 files/3,913 tests plus UI/all 12 packs) are green.
+## AFK Cycle 2026-08-09T20-17-10-580Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T20-17-10-580Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-6268a10e (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

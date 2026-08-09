@@ -239,6 +239,9 @@ function classifyPublicStreamRejection(reason) {
 }
 
 function classifyPrivateDirectRejection(reason) {
+  if (/direct MCP call \d+ used a forbidden direct function/u.test(reason)) {
+    return "direct_forbidden_function";
+  }
   if (/direct MCP call \d+ has an invalid or duplicate start/u.test(reason)) {
     return "direct_invalid_start";
   }

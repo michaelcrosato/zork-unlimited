@@ -218,6 +218,11 @@ describe("fleet usage accounting", () => {
   it("retains an allowlisted strict-stream token lower bound without calling it complete", () => {
     const lowerBound = usageRecordFromStrictStreamDiagnostic(strictStreamDiagnostic());
     expect(lowerBound).toEqual({ source: "strict_stream_lower_bound", ...TERMINAL_USAGE });
+    expect(
+      usageRecordFromStrictStreamDiagnostic(
+        strictStreamDiagnostic({ rejection: { failure: "direct_forbidden_function" } }),
+      ),
+    ).toEqual({ source: "strict_stream_lower_bound", ...TERMINAL_USAGE });
     expect(summarizeFleetUsage([lowerBound])).toEqual({
       attempt_count: 1,
       launched_attempt_count: 1,
