@@ -55,6 +55,7 @@
     "ui:build": "npm --prefix ui run build",
     "mcp": "tsx src/mcp/server.ts",
     "ai:loop": "tsx src/ai-loop.ts",
+    "loop:rotate-state": "tsx scripts/rotate-loop-state.ts",
     "loop:verify-playtest": "tsx scripts/verify-cycle-playtest.ts",
     "loop:seal-feedback": "tsx scripts/seal-feedback-acceptance.ts",
     "loop:failures": "tsx scripts/loop-failure-ledger.ts",

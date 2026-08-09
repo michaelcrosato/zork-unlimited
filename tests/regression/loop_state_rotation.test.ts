@@ -12,6 +12,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseFeedbackCycleSelection } from "../../src/feedback/acceptance.js";
 import {
   rotateLoopState,
   totalCycleCount,
@@ -23,6 +24,10 @@ import {
   LOOP_ARCHIVE_FILE,
 } from "../../src/afk/loop_state.js";
 
+const RUN_ID = "2026-01-02T03-04-05-006Z";
+const SELECTION_MARKER = `<!-- feedback_cycle_selection: {"run_id":"${RUN_ID}","selected_recommendation_id":null} -->`;
+const SELECTION_NEAR_MISS = "- feedback_cycle_selection is described here, not asserted.";
+
 /** A newest-first log of `n` rich entries (entry n-1 at the top), with a terse driver tail. */
 function makeLog(n: number): string {
   const entries: string[] = [];
@@ -32,6 +37,13 @@ function makeLog(n: number): string {
     );
   }
   return `# AI Loop State\n\n${entries.join("\n")}\n## AFK Cycle old-driver-entry\n- terse.\n`;
+}
+
+function makeLogWithCycleScaffold(n: number, selectionLines: readonly string[]): string {
+  return makeLog(n).replace(
+    "## AFK Cycle old-driver-entry\n- terse.\n",
+    `## AFK Cycle ${RUN_ID}\n${selectionLines.join("\n")}\n${SELECTION_NEAR_MISS}\n- pending.\n`,
+  );
 }
 
 describe("AI_LOOP_STATE rotation (token efficiency)", () => {
@@ -95,6 +107,84 @@ describe("AI_LOOP_STATE rotation (token efficiency)", () => {
     expect(rotateLoopState(root)).toBe(2);
     expect(readFileSync(join(root, LOOP_STATE_FILE), "utf8")).toContain(marker);
     expect(readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8")).not.toContain(marker);
+  });
+
+  it("relocates the frozen cycle selection into the live preamble before archiving", () => {
+    writeFileSync(
+      join(root, LOOP_STATE_FILE),
+      makeLogWithCycleScaffold(ROTATE_KEEP + 1, [SELECTION_MARKER]),
+    );
+
+    expect(rotateLoopState(root)).toBe(1);
+    const live = readFileSync(join(root, LOOP_STATE_FILE), "utf8");
+    const archive = readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8");
+    expect(countCycleEntries(live)).toBe(ROTATE_KEEP);
+    expect(historicalCycleCount(live)).toBe(1);
+    expect(
+      live.split(/\r?\n/u).filter((line) => line.includes("feedback_cycle_selection:")),
+    ).toEqual([SELECTION_MARKER]);
+    expect(live.indexOf(SELECTION_MARKER)).toBeLessThan(live.indexOf("### Cycle result"));
+    expect(live).not.toContain(SELECTION_NEAR_MISS);
+    expect(archive).toContain(SELECTION_NEAR_MISS);
+    expect(archive).not.toContain("feedback_cycle_selection:");
+    expect(parseFeedbackCycleSelection(live, RUN_ID)).toEqual({
+      ok: true,
+      selection: { run_id: RUN_ID, selected_recommendation_id: null },
+    });
+    expect(totalCycleCount(root)).toBe(ROTATE_KEEP + 1);
+
+    expect(rotateLoopState(root)).toBe(0);
+    expect(readFileSync(join(root, LOOP_STATE_FILE), "utf8")).toBe(live);
+    expect(readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8")).toBe(archive);
+  });
+
+  it.each([
+    ["malformed", ['<!-- feedback_cycle_selection: {"run_id": -->']],
+    ["duplicate", [SELECTION_MARKER, SELECTION_MARKER]],
+  ])("keeps %s selection lines live for the seal to reject", (_kind, selectionLines) => {
+    writeFileSync(
+      join(root, LOOP_STATE_FILE),
+      makeLogWithCycleScaffold(ROTATE_KEEP + 1, selectionLines),
+    );
+
+    expect(rotateLoopState(root)).toBe(1);
+    const live = readFileSync(join(root, LOOP_STATE_FILE), "utf8");
+    expect(
+      live.split(/\r?\n/u).filter((line) => line.includes("feedback_cycle_selection:")),
+    ).toEqual(selectionLines);
+    expect(parseFeedbackCycleSelection(live, RUN_ID).ok).toBe(false);
+    expect(readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8")).not.toContain(
+      "feedback_cycle_selection:",
+    );
+  });
+
+  it.each([
+    ["selection-like prose", "- feedback_cycle_selection: prose is not a marker"],
+    ["an indented marker", `  ${SELECTION_MARKER}`],
+    [
+      "a Unicode line separator",
+      "- feedback_cycle_selection: prose\u2028continuation must stay on this LF-delimited line",
+    ],
+    [
+      "a lone carriage return",
+      "- feedback_cycle_selection: prose\rcontinuation must stay on this LF-delimited line",
+    ],
+  ])("does not launder %s beside a canonical selection", (_kind, malformedLine) => {
+    const selectionLines = [SELECTION_MARKER, malformedLine];
+    writeFileSync(
+      join(root, LOOP_STATE_FILE),
+      makeLogWithCycleScaffold(ROTATE_KEEP + 1, selectionLines),
+    );
+
+    expect(rotateLoopState(root)).toBe(1);
+    const live = readFileSync(join(root, LOOP_STATE_FILE), "utf8");
+    expect(
+      live.split(/\r?\n/u).filter((line) => line.includes("feedback_cycle_selection:")),
+    ).toEqual(selectionLines);
+    expect(parseFeedbackCycleSelection(live, RUN_ID).ok).toBe(false);
+    const archive = readFileSync(join(root, LOOP_ARCHIVE_FILE), "utf8");
+    expect(archive).not.toContain("feedback_cycle_selection:");
+    expect(archive).not.toContain("continuation must stay on this LF-delimited line");
   });
 });
 

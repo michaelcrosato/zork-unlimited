@@ -20,6 +20,7 @@ import { join } from "node:path";
 export const LOOP_STATE_FILE = "AI_LOOP_STATE.md";
 export const LOOP_ARCHIVE_FILE = "AI_LOOP_STATE_ARCHIVE.md";
 const HISTORICAL_CYCLE_COUNT_RE = /^<!--\s*historical_cycle_count:\s*(\d+)\s*-->/m;
+const FEEDBACK_CYCLE_SELECTION_SENTINEL = "feedback_cycle_selection:";
 
 /**
  * How many recent rich cycle entries stay in the live log. Sized so the agent keeps
@@ -56,6 +57,40 @@ function upsertHistoricalCycleCount(text: string, count: number): string {
 }
 
 /**
+ * A cycle scaffold sits below the rich history until its final result is prepended.
+ * At the live-entry limit, that puts its frozen selection marker on the archived side
+ * of the cut. Relocate every line the selection parser counts without interpreting it:
+ * canonical bytes stay stable, while malformed or duplicate lines remain available
+ * for the seal to reject instead of being laundered away by archival.
+ */
+function relocateFeedbackCycleSelectionLines(
+  keptText: string,
+  movedText: string,
+): { keptText: string; movedText: string } {
+  const selectionLines: string[] = [];
+  const archiveLines: string[] = [];
+  for (let start = 0; start < movedText.length; ) {
+    const lf = movedText.indexOf("\n", start);
+    const end = lf < 0 ? movedText.length : lf + 1;
+    const line = movedText.slice(start, end);
+    (line.includes(FEEDBACK_CYCLE_SELECTION_SENTINEL) ? selectionLines : archiveLines).push(line);
+    start = end;
+  }
+  if (selectionLines.length === 0) return { keptText, movedText };
+
+  const firstResult = keptText.search(CYCLE_ENTRY);
+  const insertionPoint = firstResult < 0 ? keptText.length : firstResult;
+  const before = keptText.slice(0, insertionPoint).replace(/\s+$/u, "");
+  const after = keptText.slice(insertionPoint);
+  const selectionBlock = selectionLines.join("");
+
+  return {
+    keptText: `${before}\n\n${selectionBlock}\n${after}`,
+    movedText: archiveLines.join(""),
+  };
+}
+
+/**
  * Total completed cycles across the live log + the archive — the monotonic count the
  * generator seed window rides on. New trimmed files carry a historical-cycle marker in
  * AI_LOOP_STATE.md so a fresh clone preserves the count without reading archived prose.
@@ -89,11 +124,12 @@ export function rotateLoopState(root: string, keep: number = ROTATE_KEEP): numbe
 
   const cut = entries[keep]!.index!; // first char of the (keep+1)th entry from the top
   const movedCount = entries.length - keep;
-  const kept = upsertHistoricalCycleCount(
+  let kept = upsertHistoricalCycleCount(
     text.slice(0, cut).replace(/\s+$/, "") + "\n",
     historicalCycleCount(text) + movedCount,
   );
-  const moved = text.slice(cut);
+  let moved = text.slice(cut);
+  ({ keptText: kept, movedText: moved } = relocateFeedbackCycleSelectionLines(kept, moved));
 
   appendFileSync(join(root, LOOP_ARCHIVE_FILE), moved.startsWith("\n") ? moved : "\n" + moved);
   writeFileSync(live, kept);
