@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 744 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T073458Z/hotspots.json","hotspots_sha256":"867a381715754308a237515ef819fdb6224bfafd4d1c0615521f72630d70c2e3","manifest_path":"ai-runs/feedback/20260809T073458Z/report-manifest.json","manifest_sha256":"b09ead701eda60778a21c1fe9891677fc4f8f6d985f1d1c1562431e387a73deb"},"pending_cycle_reports":[{"evidence_sha256":"f8e288048b41cb67a7667c6faf90d8d91e90845c9fd8937d25854917d41429b7","report_id":"pure:faa09646a93e589ba0f89bab5bea34debb7d5578ac8334e71c87bd81157ae4a0","report_sha256":"30372ff66aabea97d9426b43276eca7d631b8535910e3bb13b2ce504d9643375","run_id":"2026-08-09T07-05-04-305Z","sidecar_sha256":"987dde0db6c890e95d3e7135485e6303a7b70eeda9d84b6036e6685606123303","tested_commit":"35ef9df59ff17a9d35c1bcc32ead2a1cce585bd3"},{"evidence_sha256":"1715a9b65828dff8aad8a75f9d65d240f19f5d0197c55a91b6d024cc1fd3a617","report_id":"pure:cf395ca241ca4feba3fa3a150d44cbcfda8a2863e1e929bd9d7b9c6c717f5ad1","report_sha256":"2161142226dff5e429280218191b8c79bf236b21da2610fdc5b19edbc6ca2963","run_id":"2026-08-09T08-52-30-579Z","sidecar_sha256":"464778f66a895399f814d7efe237a05fdb5c1d8964f60dce151d8c20492ad632","tested_commit":"2d58029ee1fe8f2d0083165a446344511d1d0ef8"}],"schema_version":1} -->
+<!-- historical_cycle_count: 745 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-09T10-36-13-614Z","hotspots_path":"ai-runs/feedback/20260809T073458Z/hotspots.json","hotspots_sha256":"867a381715754308a237515ef819fdb6224bfafd4d1c0615521f72630d70c2e3","manifest_path":"ai-runs/feedback/20260809T073458Z/report-manifest.json","manifest_sha256":"b09ead701eda60778a21c1fe9891677fc4f8f6d985f1d1c1562431e387a73deb"},"pending_cycle_reports":[{"evidence_sha256":"f8e288048b41cb67a7667c6faf90d8d91e90845c9fd8937d25854917d41429b7","report_id":"pure:faa09646a93e589ba0f89bab5bea34debb7d5578ac8334e71c87bd81157ae4a0","report_sha256":"30372ff66aabea97d9426b43276eca7d631b8535910e3bb13b2ce504d9643375","run_id":"2026-08-09T07-05-04-305Z","sidecar_sha256":"987dde0db6c890e95d3e7135485e6303a7b70eeda9d84b6036e6685606123303","tested_commit":"35ef9df59ff17a9d35c1bcc32ead2a1cce585bd3"},{"evidence_sha256":"1715a9b65828dff8aad8a75f9d65d240f19f5d0197c55a91b6d024cc1fd3a617","report_id":"pure:cf395ca241ca4feba3fa3a150d44cbcfda8a2863e1e929bd9d7b9c6c717f5ad1","report_sha256":"2161142226dff5e429280218191b8c79bf236b21da2610fdc5b19edbc6ca2963","run_id":"2026-08-09T08-52-30-579Z","sidecar_sha256":"464778f66a895399f814d7efe237a05fdb5c1d8964f60dce151d8c20492ad632","tested_commit":"2d58029ee1fe8f2d0083165a446344511d1d0ef8"},{"evidence_sha256":"8ca485b0070b3d703a276b4d863a5a2e28d7478563abeaa22c25cf30029f75da","report_id":"pure:8c277f94442f944b64c6223c76c02f9a77ff3357eb347bb5b96fabc8b5073315","report_sha256":"b10eb4f25bcc5837afafb03f6467fb2b638956cee8ddb753492d8f9210237a88","run_id":"2026-08-09T10-36-13-614Z","sidecar_sha256":"2c889aa7506fca315f2a2e07088a3b834f5a6fc948c2f04e881a5b942628fc77","tested_commit":"481da537aad278ffaaff051a4ce7ad26fc829563"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - wolf_alarm_threshold_consequence
+- Evidence choice: the newly targetable accepted hotspot came from a successful pure LURE player who had to retain what alarm 4 meant; compact pressure repeatedly showed the boundary but dropped its authored consequence.
+- Surface/effect: Wolf-Winter's minimum-4 band is now `Breaking: cattle missing`, so full, compact MCP, and UI next/current pressure views explain the threshold without a schema, mechanic, action, score, or ending change.
+- Compatibility: the compiled Wolf hash rolls from its exact predecessor while state hashes and the inclusive alarm-3 whole-herd versus alarm-4 two-missing outcomes remain unchanged.
+- Pure evidence: exact-clean Spark seed 7 on `481da537` chose Ledger Advocate, Sheltered Stockway, and LURE, kept the herd and all three wolves alive, ended naturally at the first goal on decision 23, and rated clarity/enjoyment 4/4 with replay yes and no bug or stuck state.
+- Self-critique/next: the consequence-bearing label appeared throughout the route and alarm-threshold confusion did not recur, but one player proves build safety rather than broad pacing relief; staged byre actions and instructional density remain the next observed friction.
+- Feedback/guard: pre-seal feedback remains 2/3 with no compile; independent hostile review, the post-change 6,000-step crawl, exact health (448 files/3,855 tests), all 12 packs, cycle-start integrity, and current-commit pure evidence are green.
 
 ### Cycle result - accepted_feedback_target_fallback
 - Evidence choice: the accepted three-report compile loaded but all six fleet confusions were unmapped, so the assessor offered only routine maintenance and its exact recommended hotspot could never be selected or consumed; this off-list control-plane repair outranked another content tweak.
@@ -144,19 +152,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the canary used 4.041M raw / 147,048 uncached input + 10,847 output (157,895 useful) with 96.36% cache reuse and no retry, fallback, or failed slot.
 - Self-critique/follow-through: the player described a meaningful people/animals/infrastructure tradeoff but still chose LURE; one canary cannot prove diversity, is below the compile threshold, and still names Station density plus NPC/stat continuity as S1, so no premature cohort claim or fleet ran.
 - Guard: independent review closed a false June-support claim and the last “living commitments” label; crawls `20260804T201137Z` / `20260804T204002Z` are green, and canonical health passes 459 files/3,906 tests, UI typecheck, and all 12 packs.
-
-### Cycle result - strict_commentary_provenance
-
-- Evidence choice: Codex 0.146 strict code mode emits authenticated progress commentary as paired private event/message rows; the final-only verifier rejected nine otherwise complete Terra traces before report publication.
-- Surface/effect: strict Sol/Terra/Luna evidence now admits at most one paired pre-game message plus paired commentary only between visible results and later game calls, while Spark direct remains final-only; public/private text, order, gameplay boundary, event count, and item identity all cross-bind.
-- Counterfactual/integrity: orphan or nonadjacent events, commentary before the prompt or inside a call/result pair, post-game commentary, missing/duplicate finals, moved/malformed public messages, duplicate identities, and public/private substitutions all fail closed; game content, mechanics, RNG, saves, and world hash are unchanged.
-- Pure evidence: exact-clean Terra build `4a15e760` verified 10/10 first attempts with zero retries or failed slots; all completed The Wolf-Winter (decision p50 29), none got stuck, clarity/enjoyment were 4.0/4.0, 6/10 continued, and all 10 chose LURE.
-- Economy: the cohort used 32.016M raw / 1.365M uncached input + 100,034 output (1.465M useful) with 95.74% input-cache reuse; no retry, fallback, or replacement player ran.
-- Self-critique/follow-through: the verifier is certified but the quality pilot failed 4.2 clarity/enjoyment, 70% continuation, and strategy-diversity gates; compiled feedback ranks dense Station planning terminology first, so the next gameplay increment must address the opening decision surface and LURE dominance before another pilot.
-- Guard: independent adversarial review is clean, preserved Terra traces validate 9/9, focused provider/authority/certifier coverage passes, crawls `20260804T150247Z` / `20260804T155418Z` have zero findings, and canonical health passes 459 files/3,905 tests plus UI typecheck and all 12 packs.
-## AFK Cycle 2026-08-09T10-36-13-614Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-09T10-36-13-614Z","selected_recommendation_id":"hotspot-3ab74e32"} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-3ab74e32 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
