@@ -152,3 +152,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the canary used 4.041M raw / 147,048 uncached input + 10,847 output (157,895 useful) with 96.36% cache reuse and no retry, fallback, or failed slot.
 - Self-critique/follow-through: the player described a meaningful people/animals/infrastructure tradeoff but still chose LURE; one canary cannot prove diversity, is below the compile threshold, and still names Station density plus NPC/stat continuity as S1, so no premature cohort claim or fleet ran.
 - Guard: independent review closed a false June-support claim and the last “living commitments” label; crawls `20260804T201137Z` / `20260804T204002Z` are green, and canonical health passes 459 files/3,906 tests, UI typecheck, and all 12 packs.
+## AFK Cycle 2026-08-09T13-03-08-410Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T13-03-08-410Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

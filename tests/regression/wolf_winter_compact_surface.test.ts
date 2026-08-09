@@ -43,11 +43,30 @@ import {
 } from "../../src/rpg/runner.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { validateRpg } from "../../src/validate/rpg_validator.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const PRE_DISCLOSURE_SOURCE_HASH =
+  "03a87c97d09d5a30eefa5314d4d2d07dbcf51db2754796e705ecfa1df3262019";
+const LESSON_RETURN_DISCLOSURE_SOURCE_HASH =
+  "ec51d609f3acebe9cf22830256e44bdd0a8bdfa828b69aaa5d14a3d23b3e7dbb";
+
+const WOLF_WINTER_EXTERNAL_FLAGS = [
+  "jamie_market_testimony_certified",
+  "hayden_frost_report_certified",
+  "relief_oath_full_duty",
+  "relief_oath_limited_duty",
+  "relief_oath_unaffiliated_bond",
+  "works_fortification_prepared",
+  "drover_route_prepared",
+  "relief_protocol_prepared",
+  "june_pike_present",
+  "approach_exposed_ridge",
+  "approach_sheltered_stockway",
+] as const;
 
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
@@ -106,6 +125,29 @@ function addJournal(effect: Effect): string | undefined {
 
 function narration(effect: Effect): string | undefined {
   return "narrate" in effect ? effect.narrate : undefined;
+}
+
+const deterministicStep = makeStep(buildRpgRules(index));
+
+function actById(state: GameState, id: string): GameState {
+  const options = enumerateRpgActions(index, state);
+  const option = options.find((candidate) => candidate.id === id);
+  expect(
+    option,
+    `expected ${id} in ${state.current}; legal=${options.map((candidate) => candidate.id).join(",")}`,
+  ).toBeDefined();
+  if (!option) throw new Error(`missing ${id}`);
+  const result = deterministicStep(state, option.action);
+  expect(result.ok, result.rejectionReason).toBe(true);
+  if (!result.ok) throw new Error(`rejected ${id}`);
+  return result.state;
+}
+
+function compactWithActions(state: GameState) {
+  const actions = enumerateRpgActions(index, state);
+  return compactRpgObservation(buildRpgObservation(index, state), actions, {
+    includeActions: true,
+  });
 }
 
 describe("Wolf-Winter compact authored prose", () => {
@@ -309,6 +351,104 @@ describe("Wolf-Winter compact authored prose", () => {
     );
   });
 
+  it.each([
+    { label: "ordinary", limitedDuty: false },
+    { label: "aid-only", limitedDuty: true },
+  ])(
+    "discloses the optional lesson's root-menu return and LURE reselect on the $label compact surface",
+    ({ limitedDuty }) => {
+      let state = initStateForRpgPack(index, limitedDuty ? 9852 : 9851);
+      if (limitedDuty) state.flags.relief_oath_limited_duty = true;
+      state = actById(state, "go_north");
+      state = actById(state, "talk_houndsman");
+      state = actById(state, "ask_lure");
+
+      const offered = compactWithActions(state);
+      expect(offered.dialogue?.[1]).toMatch(
+        /optional quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*committing first closes it[^]*lesson returns to the plan menu[^]*choose LURE again to commit/i,
+      );
+      expect(offered.dialogue?.[1] ?? "").not.toMatch(TRUNCATION_MARKER);
+      expect(offered.choices).toEqual(
+        expect.arrayContaining([
+          [
+            "ask_quick_lesson",
+            "Take Cade's optional quick lesson (+2 attack; +5 final tally). It returns to the plan menu; choose LURE again to commit.",
+          ],
+          ["ask_commit_lure", "Commit to the finite feed-and-hounds line now."],
+        ]),
+      );
+
+      // The lesson remains optional: committing from the first LURE menu does not
+      // silently grant either of its one-shot rewards.
+      const lessonFreeCommit = actById(structuredClone(state), "ask_commit_lure");
+      expect(lessonFreeCommit.flags.strategy_lure_committed).toBe(true);
+      expect(lessonFreeCommit.flags.heard_counsel).not.toBe(true);
+      expect(lessonFreeCommit.vars.attack).toBe(5);
+      expect(lessonFreeCommit.vars.score ?? 0).toBe(0);
+
+      state = actById(state, "ask_quick_lesson");
+      expect(state.flags.heard_counsel).toBe(true);
+      expect(state.vars).toMatchObject({ attack: 7, score: 5 });
+      const returned = compactWithActions(state);
+      expect(returned.dialogue?.[1]).toMatch(/quick spear-hand/i);
+      expect(returned.actions).toEqual(
+        expect.arrayContaining([
+          "ask_commit_hunt_and_hold",
+          "ask_lure",
+          "ask_drive",
+          "ask_fortify",
+        ]),
+      );
+      expect(returned.actions).not.toContain("ask_quick_lesson");
+      expect(returned.actions).not.toContain("ask_commit_lure");
+
+      // Reconsideration is real: HUNT remains legal from the returned root and
+      // crossing north does not smuggle in a LURE commitment.
+      let huntPivot = actById(structuredClone(state), "ask_commit_hunt_and_hold");
+      huntPivot = actById(huntPivot, "go_north");
+      expect(huntPivot.current).toBe("paling_gap");
+      expect(huntPivot.flags.strategy_lure_committed).not.toBe(true);
+      expect(huntPivot.vars).toMatchObject({ attack: 7, score: 5 });
+
+      state = actById(state, "ask_lure");
+      const reselected = compactWithActions(state);
+      expect(reselected.actions).toContain("ask_commit_lure");
+      expect(reselected.actions).not.toContain("ask_quick_lesson");
+      expect(reselected.dialogue?.[1]).toMatch(/commit here/i);
+      if (limitedDuty) expect(reselected.dialogue?.[1]).toMatch(/aid-only lure benefit/i);
+
+      state = actById(state, "ask_commit_lure");
+      expect(state.flags.strategy_lure_committed).toBe(true);
+      expect(state.vars).toMatchObject({ attack: 7, score: 5 });
+    },
+  );
+
+  it("keeps the disclosure copy-only at the lesson, gauntlet, and source-hash boundaries", () => {
+    expect(loaded.compiled.contentHash).toBe(LESSON_RETURN_DISCLOSURE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(PRE_DISCLOSURE_SOURCE_HASH);
+
+    const attackLessonSources = pack.npcs.flatMap((npc) =>
+      npc.dialogue.nodes.flatMap((node) =>
+        node.effects.flatMap((effect) =>
+          "inc_var" in effect && effect.inc_var.name === "attack" && effect.inc_var.by === 2
+            ? [{ npc: npc.id, node: node.id }]
+            : [],
+        ),
+      ),
+    );
+    expect(attackLessonSources).toEqual([{ npc: "houndsman", node: "cade_wolves" }]);
+
+    const gauntletCodes = (hp: number): string[] => {
+      const candidate = structuredClone(pack);
+      candidate.meta.vars_init.hp = hp;
+      return validateRpg(candidate, {
+        extraSettableFlags: WOLF_WINTER_EXTERNAL_FLAGS,
+      }).findings.map((finding) => finding.code);
+    };
+    expect(gauntletCodes(28)).toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
+    expect(gauntletCodes(29)).not.toContain("COMBAT_GAUNTLET_NOT_GUARANTEED");
+  });
+
   it("keeps every journal beat complete in both the recent-journal and event projections", () => {
     const entries = effectInventory(pack).flatMap((entry) => {
       const text = addJournal(entry.effect);
@@ -396,9 +536,9 @@ describe("Wolf-Winter compact authored prose", () => {
     expect(lureWarning).toBeDefined();
     const lure = compactText(lureWarning?.trimEnd() ?? "", COMPACT_DIALOGUE_CHAR_LIMIT);
     expect(lure).toMatch(
-      /quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*commitment closes it/i,
+      /optional quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*committing first closes it/i,
     );
-    expect(lure).toMatch(/choose quick lesson first/i);
+    expect(lure).toMatch(/lesson returns to the plan menu[^]*choose LURE again to commit/i);
     expect(lure).not.toMatch(TRUNCATION_MARKER);
     const plan = compactNode("cade_byre");
     expect(plan).toMatch(/guarded/i);

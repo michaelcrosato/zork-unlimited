@@ -450,7 +450,7 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(session.state.flags.june_combat_line_acknowledged).toBe(true);
   });
 
-  it("keeps Cade's existing quick lesson beside the lure commitment until its +5 credit is decided", () => {
+  it("discloses the optional LURE lesson's plan-menu return while preserving reconsideration", () => {
     const root = startCadeDialogue();
     const rootQuick = buildRpgObservation(index, root).available_actions.find(
       (option) => option.id === "ask_wolves",
@@ -466,33 +466,62 @@ describe("Wolf-Winter dialogue surface", () => {
       (option) => option.id === "ask_quick_lesson",
     );
 
-    // This is the irreversible choice point: the player must see both the lost
-    // final-tally credit and the one existing action that can still secure it.
+    // This is the irreversible choice point: the player must see the lesson's
+    // credit, its navigation consequence, and the direct no-lesson commitment.
     expect(observation.dialogue?.npc_text).toMatch(
-      /quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*commitment closes it/i,
+      /optional quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*committing first closes it[^]*lesson returns to the plan menu[^]*choose LURE again to commit/i,
     );
     expect(unheardCommit?.command).toMatch(/commit[^]*finite feed-and-hounds line/i);
     expect(directQuick).toMatchObject({
       id: "ask_quick_lesson",
-      command: expect.stringMatching(/quick lesson/i),
+      command:
+        "ask: Take Cade's optional quick lesson (+2 attack; +5 final tally). It returns to the plan menu; choose LURE again to commit.",
       action: { type: "ASK", npc: "houndsman", topic: "quick_lesson" },
     });
     expect(
       observation.available_actions.filter((option) => /quick|lesson|wolves/i.test(option.command)),
     ).toEqual([directQuick]);
 
-    // The compact action now names the lesson and keeps Cade's established lure
-    // follow-up rather than making the player reopen his root dialogue.
+    // Direct commitment remains legal without taking the optional lesson.
+    const direct = act(unheard, { type: "ASK", npc: "houndsman", topic: "commit_lure" });
+    expect(direct.flags.strategy_lure_committed).toBe(true);
+    expect(direct.flags.heard_counsel).not.toBe(true);
+    expect(direct.vars.attack).toBe(5);
+    expect(direct.vars.score ?? 0).toBe(0);
+
+    // The disclosed lesson returns to the full plan menu. This preserves the
+    // observed LURE-to-HUNT pivot while requiring LURE to be selected again if kept.
     unheard = act(unheard, { type: "ASK", npc: "houndsman", topic: "quick_lesson" });
     expect(unheard.vars).toMatchObject({ attack: 7, score: 5 });
+    expect(unheard.flags.heard_counsel).toBe(true);
+    expect(unheard.journal).toContain(
+      "Cade's quick/open line: set/drive young wolf; wheel/turn through flank; close/drive old grey. You strike truer (+2 attack).",
+    );
     observation = buildRpgObservation(index, unheard);
-    expect(observation.available_actions.map((option) => option.id)).toContain("ask_lure");
-    expect(observation.available_actions.map((option) => option.id)).not.toContain("ask_wolves");
+    const postLessonIds = observation.available_actions.map((option) => option.id);
+    expect(postLessonIds).toEqual(
+      expect.arrayContaining(["ask_commit_hunt_and_hold", "ask_lure", "ask_drive", "ask_fortify"]),
+    );
+    for (const unavailable of ["ask_wolves", "ask_quick_lesson", "ask_commit_lure"])
+      expect(postLessonIds).not.toContain(unavailable);
+
+    const huntPivot = act(structuredClone(unheard), {
+      type: "ASK",
+      npc: "houndsman",
+      topic: "commit_hunt_and_hold",
+    });
+    expect(huntPivot.flags.strategy_lure_committed).not.toBe(true);
+    expect(huntPivot.flags.heard_counsel).toBe(true);
+    expect(legalActionIds(huntPivot)).toContain("go_north");
+
     unheard = act(unheard, { type: "ASK", npc: "houndsman", topic: "lure" });
     observation = buildRpgObservation(index, unheard);
     expect(observation.available_actions.map((option) => option.id)).toContain("ask_commit_lure");
+    expect(observation.available_actions.map((option) => option.id)).not.toContain(
+      "ask_quick_lesson",
+    );
     expect(observation.dialogue?.npc_text).not.toMatch(
-      /quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*commitment closes it/i,
+      /lesson returns to the plan menu[^]*choose LURE again to commit/i,
     );
     unheard = act(unheard, { type: "ASK", npc: "houndsman", topic: "commit_lure" });
     expect(unheard.flags.strategy_lure_committed).toBe(true);
@@ -505,7 +534,7 @@ describe("Wolf-Winter dialogue surface", () => {
     observation = buildRpgObservation(index, heard);
     expect(observation.available_actions.map((option) => option.id)).toContain("ask_commit_lure");
     expect(observation.dialogue?.npc_text).not.toMatch(
-      /quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*commitment closes it/i,
+      /lesson returns to the plan menu[^]*choose LURE again to commit/i,
     );
     heard = act(heard, { type: "ASK", npc: "houndsman", topic: "commit_lure" });
     expect(heard.flags.strategy_lure_committed).toBe(true);
