@@ -301,15 +301,15 @@ function playStrategy(strategy: Strategy) {
           2,
           "Restless",
           4,
-          "Breaking",
+          "Breaking: cattle missing",
         ]);
         expect(primary.observation.pressure_tracks?.[0]).toMatchObject({
           value: 2,
           band: { min: 2, label: "Restless" },
-          next: { min: 4, label: "Breaking" },
+          next: { min: 4, label: "Breaking: cattle missing" },
         });
         expect(ui.view().facts).toContain(
-          "pressure: Cattle alarm — Restless (2; next Breaking at 4) — The herd is strained but remains below the loss threshold.",
+          "pressure: Cattle alarm — Restless (2; next Breaking: cattle missing at 4) — The herd is strained but remains below the loss threshold.",
         );
       } else {
         const mirror = api.step_action({

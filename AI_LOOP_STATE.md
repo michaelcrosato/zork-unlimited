@@ -154,3 +154,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the cohort used 32.016M raw / 1.365M uncached input + 100,034 output (1.465M useful) with 95.74% input-cache reuse; no retry, fallback, or replacement player ran.
 - Self-critique/follow-through: the verifier is certified but the quality pilot failed 4.2 clarity/enjoyment, 70% continuation, and strategy-diversity gates; compiled feedback ranks dense Station planning terminology first, so the next gameplay increment must address the opening decision surface and LURE dominance before another pilot.
 - Guard: independent adversarial review is clean, preserved Terra traces validate 9/9, focused provider/authority/certifier coverage passes, crawls `20260804T150247Z` / `20260804T155418Z` have zero findings, and canonical health passes 459 files/3,905 tests plus UI typecheck and all 12 packs.
+## AFK Cycle 2026-08-09T10-36-13-614Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T10-36-13-614Z","selected_recommendation_id":"hotspot-3ab74e32"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-3ab74e32 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

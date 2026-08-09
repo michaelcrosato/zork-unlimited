@@ -329,7 +329,7 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
           label: "Restless",
           description: "The herd is strained but remains below the loss threshold.",
         },
-        next: { min: 4, label: "Breaking" },
+        next: { min: 4, label: "Breaking: cattle missing" },
       },
       {
         id: "pack_drive",
@@ -365,14 +365,21 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
       2,
       "Restless",
       4,
-      "Breaking",
+      "Breaking: cattle missing",
     ]);
 
     const breaking = buildRpgObservation(index, lureRoute("fouled").state);
     expect(breaking.pressure_tracks?.[0]).toMatchObject({
       value: 4,
-      band: { min: 4, label: "Breaking" },
+      band: { min: 4, label: "Breaking: cattle missing" },
       next: null,
     });
+    expect(compactRpgObservation(breaking, []).pressure?.[0]).toEqual([
+      "cattle_alarm",
+      "Cattle alarm",
+      4,
+      4,
+      "Breaking: cattle missing",
+    ]);
   });
 });

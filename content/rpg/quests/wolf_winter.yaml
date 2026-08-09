@@ -100,7 +100,7 @@ pressure_tracks:
         label: "Restless"
         description: "The herd is strained but remains below the loss threshold."
       - min: 4
-        label: "Breaking"
+        label: "Breaking: cattle missing"
         description: "The herd's formation is broken; animals are missing from the count."
   - id: pack_drive
     title: "Pack drive"

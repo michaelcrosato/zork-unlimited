@@ -1,0 +1,43 @@
+id: bug_0548
+title: "Compact cattle alarm named the threshold without naming its consequence"
+pack: rpg (Wolf-Winter cattle alarm)
+reported_by: 2026-08-09 accepted pure overworld playtest; accepted hotspot 3ab74e32
+severity: S1
+evidence:
+  source_report: ai-runs/2026-08-09T02-55-42-784Z/playtest.md
+  accepted_hotspot: 3ab74e32
+  player_friction: "Alarm threshold consequences took attention"
+symptom: >
+  A pure player completed the exposed-ridge, aid-only LURE line at cattle alarm 3
+  with the herd whole, but reported that relating alarm thresholds to final
+  consequences took attention. While Restless, the compact pressure tuple exposed
+  the exact next minimum as 4 but called that band only Breaking, so its cattle-loss
+  consequence had to be recovered from other prose or the eventual ending.
+root_cause: >
+  The authored minimum-4 band already described animals missing from the count, and
+  the full observation and browser could carry that description. Compact MCP
+  intentionally projects only current and next minima and labels, not band
+  descriptions. The terse label therefore preserved the numeric 3-versus-4 boundary
+  but dropped its meaning on the pure player's repeated decision surface.
+fix: >
+  Change only the cattle alarm band's minimum-4 label from Breaking to
+  "Breaking: cattle missing". The same authored label then appears as the full
+  observation's next or active band, the compact tuple's next or active label, and
+  the browser pressure fact. Preserve every increment, condition, ending, action,
+  score, and inclusive threshold: alarm 3 still selects the whole-herd living-pack
+  ending, while alarm 4 still selects the living-pack victory with two cattle
+  missing.
+deterministic_witnesses:
+  - "at alarm 2 or 3, the full cattle-alarm view names next min 4 as Breaking: cattle missing"
+  - "the compact Restless tuple ends with [4, Breaking: cattle missing] without adding a new field or legend"
+  - "the browser Restless pressure fact says next Breaking: cattle missing at 4"
+  - "at alarm 4, full and compact views use Breaking: cattle missing as the active band and expose no next band"
+  - "the alarm-3 all-living LURE route still ends with the cattle whole"
+  - "the otherwise equivalent alarm-4 all-living LURE route still ends with two cattle missing"
+tests:
+  - tests/starting_slice/wolf_strategy_counterfactual.test.ts
+  - tests/starting_slice/wolf_strategy_return_e2e.test.ts
+  - tests/starting_slice/hill_approach_gameplay.test.ts
+verification:
+  - npx vitest run tests/starting_slice/wolf_strategy_counterfactual.test.ts tests/starting_slice/wolf_strategy_return_e2e.test.ts tests/starting_slice/hill_approach_gameplay.test.ts
+  - npm run verify:bug-traces
