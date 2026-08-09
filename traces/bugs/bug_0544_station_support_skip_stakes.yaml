@@ -1,0 +1,34 @@
+id: bug_0544
+title: "Collapsed Station board hid the stakes of skipping optional support"
+pack: overworld (Wolf-Winter Station departure)
+reported_by: 2026-08-08 accepted pure overworld playtest
+severity: S1
+symptom: >
+  The launch-first compact Station board showed three open optional rows with their
+  purposes and actions intentionally collapsed. A blind player departed without
+  requesting the detail block, then reported little reason to inspect those rows and
+  uncertainty about whether skipping them mattered.
+root_cause: >
+  Progressive disclosure removed the field kit, relief wagon, and second-rider stakes
+  from the first compact view at the same time that the pure-play prompt correctly told
+  players not to enumerate optional detail without a reason. The generic guidance said
+  support changed cost and aftermath, but did not give a concrete basis for choosing
+  whether to inspect it.
+fix: >
+  Keep the version-3 board and every optional purpose/action collapsed, but make the
+  bounded shared guidance name the one field kit, Albany's last relief wagon, and June
+  as a cattle-first second rider. State that departing now is fastest and that every
+  Wolf-Winter strategy stays legal. No action, route, cost, snapshot, decision, schema,
+  or authenticated handle changes.
+deterministic_witnesses:
+  - "the first compact Station payload names all three support stakes"
+  - "support purposes and authenticated actions remain absent until an explicit read"
+  - "the explicit support read preserves snapshot hash, journey state, and board bytes"
+  - "ready and waiting guidance remain within the 240-character budget"
+tests:
+  - tests/starting_slice/station_dispatch_board.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+verification:
+  - npx vitest run tests/starting_slice/station_dispatch_board.test.ts tests/regression/mcp_pure_play_mode.test.ts
+  - npm run crawl:smoke
+  - npm run health
