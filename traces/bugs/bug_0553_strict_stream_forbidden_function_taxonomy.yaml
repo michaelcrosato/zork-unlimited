@@ -1,0 +1,68 @@
+id: bug_0553
+title: "A forbidden Spark resource probe was mislabeled as an invalid gameplay start"
+pack: n/a (blind Spark direct-MCP strict-stream taxonomy)
+reported_by: 2026-08-09T18-21-58-734Z rejected pure fresh-overworld attempt
+severity: S1
+evidence:
+  rejection_diagnostic: ai-runs/2026-08-09T18-21-58-734Z/playtest.strict-rejection.json
+  public_stream: ai-runs/2026-08-09T18-21-58-734Z/playtest.codex.jsonl
+  provider_log: ai-runs/2026-08-09T18-21-58-734Z/playtest.log
+  rejected_build: fb24fef798063574dd504bbe60c1cc889318a7b5
+  thread_id: 019fe7da-9dae-70b0-8acd-988609bb1288
+  private_row_binding: "ordinal 9; 342 projection bytes; sha256 027bc0038654b98e508b619c588dad78b8b1ee1a35e4b1f9d904562c9dfa065b"
+  captured_private_call: "function_call name list_mcp_resources with no namespace field"
+  public_projection: "item_0 called server codex / tool list_mcp_resources and returned an empty resources array"
+  false_failure_category: direct_invalid_start
+symptom: >
+  The failed attempt made zero AdventureForge gameplay starts: no
+  start_overworld call completed before its first native function was the
+  no-namespace list_mcp_resources probe. The private strict watcher correctly
+  rejected that row and published no report, evidence, or V2 sidecar, but its
+  safe diagnostic called the failure direct_invalid_start. The row was neither
+  a malformed gameplay start nor a duplicate. The public projection exposed
+  the same probe as server codex, and the provider log recorded that resource
+  listing was unsupported. Depending on whether the public or private prefix
+  became actionable first, the same forbidden probe could therefore receive
+  the truthful public forbidden_mcp_server category or the misleading private
+  invalid-start category even though both paths failed closed.
+root_cause: >
+  Spark private function validation combined player-tool allowlisting, the
+  required adventureforge namespace, ids, turn binding, and duplicate checks in
+  one generic predicate. The scanner reached its invalid-or-duplicate branch
+  before distinguishing a function whose name was outside the pre-attested
+  pure-player set or whose namespace was absent or forbidden. The strict
+  diagnostic classifier could only preserve that overly broad reason as
+  direct_invalid_start.
+fix: >
+  Before generic identity validation, classify any private function_call whose
+  name is outside CODEX_PURE_PLAYER_TOOLS or whose namespace is not the exact
+  direct-MCP namespace as a forbidden direct function. Reject it immediately
+  with the safe allowlisted diagnostic category direct_forbidden_function.
+  Keep malformed or duplicate ids in direct_invalid_start, keep fresh-start
+  ordering in direct_fresh_start_order, and keep a public-first server codex
+  probe in forbidden_mcp_server. The category records no raw function name,
+  call id, provider prose, or game output.
+deterministic_witnesses:
+  - "the rejected fb24 diagnostic remains bound to private row ordinal 9 at exactly 342 bytes and sha256 027bc0038654b98e508b619c588dad78b8b1ee1a35e4b1f9d904562c9dfa065b; it is noncanonical, ignored, acceptance-ineligible, and published no playable evidence"
+  - "the captured private fixture preserves list_mcp_resources with no namespace and rejects its prefix as direct MCP call 1 used a forbidden direct function rather than invalid or duplicate start"
+  - "a forbidden preloaded function after one valid start is rejected with gameplay ordinal 2 under the same forbidden-function reason"
+  - "duplicate call ids, duplicate response-item ids, and empty ids on otherwise allowed functions retain the generic invalid-or-duplicate reason, so the new category does not absorb genuine malformed-start cases"
+  - "the private-first strict integration exits 43, writes only direct_forbidden_function without the resource name or call id, publishes no report/evidence/sidecar, and terminates its owned descendant"
+  - "the public-first strict integration exits 43 under forbidden_mcp_server, publishes no evidence, and terminates its owned descendant; surface scheduling cannot make either race outcome acceptable"
+  - "the original public stream contains only the resource probe lifecycle and no start_overworld lifecycle, matching the zero-gameplay-start diagnosis"
+nonclaims:
+  - "This does not accept, ignore, skip, or continue past the forbidden row; both public-first and private-first observations remain terminal strict rejections."
+  - "This does not alias list_mcp_resources to start_overworld or to any allowed player tool, and it does not broaden the player-tool or namespace allowlist."
+  - "This does not retry the rejected attempt, add fallback attempts, or make fb24 eligible for report publication or feedback acceptance."
+  - "This does not implement MCP resources, add a resource namespace, or make AdventureForge support list_mcp_resources."
+  - "This does not merge the surface-specific categories: public forbidden_mcp_server and private direct_forbidden_function remain distinct safe diagnostics for the same terminal policy."
+  - "This does not change fresh-start ordering, the exactly-once start_overworld rule, gameplay, content, world state, report schemas, or diagnostic schema version."
+production:
+  - blind-tester/codex-pure-envelope.mjs
+  - blind-tester/codex-strict-stream.mjs
+tests:
+  - tests/unit/codex_blind_provider.test.ts
+  - tests/regression/blind_strict_stream_fail_fast.test.ts
+verification:
+  - npx vitest run tests/unit/codex_blind_provider.test.ts tests/regression/blind_strict_stream_fail_fast.test.ts
+  - npm run verify:bug-traces

@@ -23,6 +23,23 @@ import {
 // @ts-expect-error — runner helper is intentionally plain ESM.
 import * as strictStream from "../../blind-tester/codex-strict-stream.mjs";
 
+const CAPTURED_PRIVATE_RESOURCE_PROBE = JSON.stringify({
+  timestamp: "2026-08-09T18:48:15.455Z",
+  type: "response_item",
+  payload: {
+    type: "function_call",
+    id: "fc_03e7220d36f21d2d016a78cb6fac08819ab627628a0d144be7",
+    name: "list_mcp_resources",
+    arguments: "{}",
+    call_id: "call_blDR18VQkrYjpIA0t8a1HPFC",
+    internal_chat_message_metadata_passthrough: {
+      turn_id: "019fe7da-a24d-7ac1-aa56-7c67d11cfba0",
+    },
+  },
+});
+const CAPTURED_PRIVATE_RESOURCE_PROBE_SHA256 =
+  "027bc0038654b98e508b619c588dad78b8b1ee1a35e4b1f9d904562c9dfa065b";
+
 const {
   appendCompleteJsonlBytes,
   createCompleteJsonlDecoder,
@@ -39,7 +56,11 @@ function bashPath(path: string): string {
     .replaceAll("\\", "/");
 }
 
-function installFakeCodex(root: string, body: string): { home: string; selected: string } {
+function installFakeCodex(
+  root: string,
+  body: string,
+  cliVersion = "0.144.1",
+): { home: string; selected: string } {
   const home = join(root, "home");
   const selected = join(root, "fake-codex");
   mkdirSync(join(home, "sessions"), { recursive: true });
@@ -47,7 +68,7 @@ function installFakeCodex(root: string, body: string): { home: string; selected:
     selected,
     `#!/usr/bin/env bash
 if [[ "\${1:-}" == "--version" ]]; then
-  printf 'codex-cli 0.144.1\\n'
+  printf 'codex-cli ${cliVersion}\\n'
   exit 0
 fi
 ${body}`,
@@ -62,10 +83,11 @@ function launchFakeCodex(
   out: string,
   seed: string,
   extraEnv: NodeJS.ProcessEnv = {},
+  model = "gpt-5.6-terra",
 ) {
   return spawnSync(
     process.execPath,
-    ["blind-tester/blind-launch.mjs", "--out", out, "--seed", seed, "--model=gpt-5.6-terra"],
+    ["blind-tester/blind-launch.mjs", "--out", out, "--seed", seed, `--model=${model}`],
     {
       cwd: cleanGit.path,
       encoding: "utf8",
@@ -393,6 +415,140 @@ while :; do sleep 1; done
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("rejects the captured private no-namespace resource probe with its fixed category", async () => {
+    const root = mkdtempSync(join(tmpdir(), "af-strict-stream-private-direct-"));
+    const out = join(root, "reports", "attempt");
+    const survived = join(root, "provider-descendant-survived");
+    const threadId = "99999999-9999-4999-8999-999999999999";
+    const turnId = "019fe7da-a24d-7ac1-aa56-7c67d11cfba0";
+    const resourceCallId = "call_blDR18VQkrYjpIA0t8a1HPFC";
+    expect(Buffer.byteLength(CAPTURED_PRIVATE_RESOURCE_PROBE, "utf8")).toBe(342);
+    const fixture = installFakeCodex(
+      root,
+      `home="\${CODEX_HOME}"
+cwd="\${PWD}"
+if command -v cygpath >/dev/null 2>&1; then
+  home="$(cygpath -u "\${home}")"
+  cwd="$(cygpath -m "\${cwd}")"
+fi
+rollout_dir="\${home}/sessions/2026/08/09"
+mkdir -p "\${rollout_dir}"
+rollout="\${rollout_dir}/rollout-2026-08-09T18-48-13-${threadId}.jsonl"
+printf '{"type":"session_meta","payload":{"id":"%s","cwd":"%s"}}\\n' "${threadId}" "\${cwd}" > "\${rollout}"
+printf '{"type":"turn_context","payload":{"turn_id":"%s","cwd":"%s","model":"gpt-5.3-codex-spark"}}\\n' "${turnId}" "\${cwd}" >> "\${rollout}"
+printf '%s\\n' '${CAPTURED_PRIVATE_RESOURCE_PROBE}' >> "\${rollout}"
+(
+  sleep 2
+  printf 'escaped\\n' > "\${FAKE_MCP_SURVIVED}"
+) &
+printf '%s\\n' '{"type":"thread.started","thread_id":"${threadId}"}'
+while :; do sleep 1; done
+`,
+      "0.146.0",
+    );
+    try {
+      const result = launchFakeCodex(
+        cleanGit,
+        fixture,
+        out,
+        "73656",
+        { FAKE_MCP_SURVIVED: bashPath(survived) },
+        "gpt-5.3-codex-spark",
+      );
+      const output = combinedOutput(result);
+      expect(result.error, output).toBeUndefined();
+      expect(result.status, output).toBe(43);
+      expect(output).toMatch(/strict stream rejected/i);
+      expect(output).toContain("direct MCP call 1 used a forbidden direct function");
+      expect(output).not.toMatch(/invalid or duplicate start/i);
+      expect(output).not.toContain("list_mcp_resources");
+      expectNoPublishedEvidence(out);
+
+      const diagnosticPath = `${out}.strict-rejection.json`;
+      const diagnostic = readFileSync(diagnosticPath, "utf8");
+      expect(diagnostic).not.toContain("list_mcp_resources");
+      expect(diagnostic).not.toContain(resourceCallId);
+      expect(JSON.parse(diagnostic)).toMatchObject({
+        schema_version: 2,
+        acceptance_eligible: false,
+        canonical: false,
+        ignored: true,
+        kind: "strict_stream_rejection_diagnostic",
+        surface: "private_rollout",
+        transport_contract: "spark-direct-mcp-v1",
+        binding: {
+          thread_id: threadId,
+          row_ordinal: 3,
+          row_projection_bytes: 342,
+          row_projection_sha256: CAPTURED_PRIVATE_RESOURCE_PROBE_SHA256,
+        },
+        rejection: { failure: "direct_forbidden_function" },
+        usage_lower_bound: null,
+      });
+
+      await delay(2_500);
+      expect(existsSync(survived)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("keeps a public-first Spark resource probe fail-closed with the public category", async () => {
+    const root = mkdtempSync(join(tmpdir(), "af-strict-stream-public-direct-"));
+    const out = join(root, "reports", "attempt");
+    const survived = join(root, "provider-descendant-survived");
+    const threadId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const fixture = installFakeCodex(
+      root,
+      `(
+  sleep 2
+  printf 'escaped\\n' > "\${FAKE_MCP_SURVIVED}"
+) &
+printf '%s\\n' '{"type":"thread.started","thread_id":"${threadId}"}'
+printf '%s\\n' '{"type":"turn.started"}'
+printf '%s\\n' '{"type":"item.started","item":{"id":"item_0","type":"mcp_tool_call","server":"codex","tool":"list_mcp_resources","arguments":{},"result":null,"error":null,"status":"in_progress"}}'
+while :; do sleep 1; done
+`,
+      "0.146.0",
+    );
+    try {
+      const result = launchFakeCodex(
+        cleanGit,
+        fixture,
+        out,
+        "73657",
+        { FAKE_MCP_SURVIVED: bashPath(survived) },
+        "gpt-5.3-codex-spark",
+      );
+      const output = combinedOutput(result);
+      expect(result.error, output).toBeUndefined();
+      expect(result.status, output).toBe(43);
+      expect(output).toMatch(/strict stream rejected/i);
+      expect(output).toMatch(/forbidden MCP server codex/i);
+      expectNoPublishedEvidence(out);
+
+      const diagnostic = readFileSync(`${out}.strict-rejection.json`, "utf8");
+      expect(diagnostic).not.toContain("list_mcp_resources");
+      expect(JSON.parse(diagnostic)).toMatchObject({
+        schema_version: 2,
+        acceptance_eligible: false,
+        canonical: false,
+        ignored: true,
+        kind: "strict_stream_rejection_diagnostic",
+        surface: "public_events",
+        transport_contract: "spark-direct-mcp-v1",
+        binding: { thread_id: threadId, row_ordinal: 3 },
+        rejection: { failure: "forbidden_mcp_server" },
+        usage_lower_bound: null,
+      });
+
+      await delay(2_500);
+      expect(existsSync(survived)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("kills an owned descendant when the provider exits immediately after a violation", async () => {
     const root = mkdtempSync(join(tmpdir(), "af-strict-stream-exit-race-"));

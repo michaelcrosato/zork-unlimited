@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -48,6 +49,22 @@ const GLOBAL_AGENTS_BLOCK =
   "</INSTRUCTIONS>";
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
 const SPARK_MODEL = "gpt-5.3-codex-spark";
+const CAPTURED_PRIVATE_RESOURCE_PROBE = {
+  timestamp: "2026-08-09T18:48:15.455Z",
+  type: "response_item",
+  payload: {
+    type: "function_call",
+    id: "fc_03e7220d36f21d2d016a78cb6fac08819ab627628a0d144be7",
+    name: "list_mcp_resources",
+    arguments: "{}",
+    call_id: "call_blDR18VQkrYjpIA0t8a1HPFC",
+    internal_chat_message_metadata_passthrough: {
+      turn_id: "019fe7da-a24d-7ac1-aa56-7c67d11cfba0",
+    },
+  },
+};
+const CAPTURED_PRIVATE_RESOURCE_PROBE_SHA256 =
+  "027bc0038654b98e508b619c588dad78b8b1ee1a35e4b1f9d904562c9dfa065b";
 const SPARK_UNSTABLE_WARNING_PREFIX =
   "Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in ";
 const SPARK_METADATA_WARNING =
@@ -3553,7 +3570,8 @@ describe("Spark direct MCP transport", () => {
     appendSparkDirectCall(rows, "start_overworld");
     expect(inspectCodexGameplayResultForwarding(rows, direct)).toEqual({
       ok: false,
-      reason: expect.stringMatching(/start_overworld exactly once/i),
+      reason:
+        "Codex gameplay-result forwarding audit failed: direct MCP run must call start_overworld exactly once",
     });
   });
 
@@ -3572,12 +3590,39 @@ describe("Spark direct MCP transport", () => {
     });
   });
 
-  it("rejects a function outside the pre-attested pure-player set", () => {
+  it("classifies the captured no-namespace resource probe before generic identity validation", () => {
+    const rows = sparkDirectMcpRollout({
+      content: [{ type: "text", text: "Choose naturally from the current visible state." }],
+    });
+    const callIndex = rows.findIndex((row) => row.payload?.type === "function_call");
+    if (callIndex < 0) throw new Error("missing captured direct function-call fixture");
+    const capturedRow = JSON.stringify(CAPTURED_PRIVATE_RESOURCE_PROBE);
+    expect(Buffer.byteLength(capturedRow, "utf8")).toBe(342);
+    expect(createHash("sha256").update(capturedRow).digest("hex")).toBe(
+      CAPTURED_PRIVATE_RESOURCE_PROBE_SHA256,
+    );
+    rows[callIndex] = structuredClone(CAPTURED_PRIVATE_RESOURCE_PROBE);
+
+    expect(Object.hasOwn(rows[callIndex]!.payload!, "namespace")).toBe(false);
+    expect(
+      inspectCodexGameplayResultForwardingPrefix(rows.slice(0, callIndex + 1), direct),
+    ).toEqual({
+      ok: false,
+      reason:
+        "Codex gameplay-result forwarding audit failed: direct MCP call 1 used a forbidden direct function",
+    });
+  });
+
+  it("classifies a forbidden preloaded function after start with its gameplay ordinal", () => {
     const rows = sparkDirectMcpRollout({
       content: [{ type: "text", text: "Choose naturally from the current visible state." }],
     });
     appendSparkDirectCall(rows, "list_mcp_resources");
-    expect(inspectCodexGameplayResultForwarding(rows, direct)).toMatchObject({ ok: false });
+    expect(inspectCodexGameplayResultForwarding(rows, direct)).toEqual({
+      ok: false,
+      reason:
+        "Codex gameplay-result forwarding audit failed: direct MCP call 2 used a forbidden direct function",
+    });
   });
 
   it("accepts exact native output beyond the 16 KiB player cap and rejects a truncation splice", () => {
@@ -3610,14 +3655,53 @@ describe("Spark direct MCP transport", () => {
     });
   });
 
-  it("requires globally unique native call ids across preloaded gameplay", () => {
+  it.each([
+    [
+      "a duplicate native call id",
+      2,
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        appendSparkDirectCall(rows);
+        const second = rows.filter((row) => row.payload?.call_id === "function-call-2");
+        for (const row of second) row.payload!.call_id = "function-call-1";
+      },
+    ],
+    [
+      "a duplicate response-item id",
+      2,
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        appendSparkDirectCall(rows);
+        const calls = rows.filter((row) => row.payload?.type === "function_call");
+        if (!calls[1]?.payload) throw new Error("missing second direct function call");
+        calls[1].payload.id = "function-call-1";
+      },
+    ],
+    [
+      "an empty response-item id on an allowed function",
+      1,
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const call = rows.find((row) => row.payload?.type === "function_call")?.payload;
+        if (!call) throw new Error("missing direct function call");
+        call.id = "";
+      },
+    ],
+    [
+      "an empty native call id on an allowed function",
+      1,
+      (rows: ReturnType<typeof sparkDirectMcpRollout>) => {
+        const call = rows.find((row) => row.payload?.type === "function_call")?.payload;
+        if (!call) throw new Error("missing direct function call");
+        call.call_id = "";
+      },
+    ],
+  ])("keeps $0 in the generic invalid-or-duplicate category", (_label, ordinal, mutate) => {
     const rows = sparkDirectMcpRollout({
       content: [{ type: "text", text: "Use get_overworld_session to refresh the view." }],
     });
-    appendSparkDirectCall(rows);
-    const second = rows.filter((row) => row.payload?.call_id === "function-call-2");
-    for (const row of second) row.payload!.call_id = "function-call-1";
-    expect(inspectCodexGameplayResultForwarding(rows, direct)).toMatchObject({ ok: false });
+    mutate(rows);
+    expect(inspectCodexGameplayResultForwarding(rows, direct)).toEqual({
+      ok: false,
+      reason: `Codex gameplay-result forwarding audit failed: direct MCP call ${ordinal} has an invalid or duplicate start`,
+    });
   });
 
   it("rejects wrong-turn direct rows in the live prefix instead of deferring to terminal audit", () => {

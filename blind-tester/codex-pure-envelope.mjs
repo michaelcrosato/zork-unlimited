@@ -629,6 +629,7 @@ export const CODEX_STRICT_STREAM_DIAGNOSTIC_FAILURES = Object.freeze({
     "public_contract_rejection",
   ]),
   private_rollout: Object.freeze([
+    "direct_forbidden_function",
     "direct_invalid_start",
     "direct_fresh_start_order",
     "direct_missing_completion",
@@ -1219,6 +1220,15 @@ function validPrivateDirectFunctionCall(payload, turnId, requiresItemId) {
   );
 }
 
+function privateDirectFunctionOutsidePlayerSurface(payload) {
+  return (
+    isRecord(payload) &&
+    payload.type === "function_call" &&
+    typeof payload.name === "string" &&
+    (!CODEX_PURE_PLAYER_TOOLS.has(payload.name) || payload.namespace !== DIRECT_MCP_NAMESPACE)
+  );
+}
+
 function validPrivateDirectFunctionOutput(payload, turnId, requiresItemId) {
   return (
     isRecord(payload) &&
@@ -1688,6 +1698,9 @@ function scanCodexSparkDirectMcp(rows, { allowIncompletePrefix = false } = {}) {
 
       if (payload?.type === "function_call") {
         const ordinal = gameplayCalls.length + 1;
+        if (privateDirectFunctionOutsidePlayerSurface(payload)) {
+          return rolloutReject(`direct MCP call ${ordinal} used a forbidden direct function`);
+        }
         const arguments_ = parseDirectMcpArguments(payload.arguments);
         if (
           typeof canonicalTurnId !== "string" ||
