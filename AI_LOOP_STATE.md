@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 750 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T185746Z/hotspots.json","hotspots_sha256":"54c2bba9f3de346e84ed9616499a8e2474c51c590d27835b525d97e8e6129e32","manifest_path":"ai-runs/feedback/20260809T185746Z/report-manifest.json","manifest_sha256":"00fc73b6945516d8d5a04f08447e2df1c99531e46d00ba5799952b4007d757e2"},"pending_cycle_reports":[{"evidence_sha256":"d88ec5df8c623ff69f29c093bd66fe0c24cecc7ed58fbf221ec50a395ac78981","report_id":"pure:abc76ff2d774ef76c5210a67c2f4329a25c80d6d1a5c6dc3d1367da189fc3162","report_sha256":"25d1e91d440e7040dced2fec0317e9ef5376767b2ab0c8695c8f7555aa7af74b","run_id":"2026-08-09T18-49-03-763Z","sidecar_sha256":"1f6e2abd3c655b014afd45d3c83ec6b0f86448c3d18305782f0fb102cc860f59","tested_commit":"eff02eb8e7147264a92b4159eb6ea4a7a08c2528"},{"evidence_sha256":"42a954d0b5b047d74a817fb45f4b7ab6e6c5cff3357c7e290d9c6347dbea35bd","report_id":"pure:aa028a6f31d794ac89ca983d6227f0cb2f727111a32d5e4de4277b5058ea04a9","report_sha256":"f956b45f46162888224a94285ee81b4da2eafe99a7edd554b4df0dd7d296bcd3","run_id":"2026-08-09T20-17-10-580Z","sidecar_sha256":"c8998a9cb540b6d142e8f5788a95ac1b7730379792ba3f3e60769d19f5d872ea","tested_commit":"9b4940834b44e3fd321539de3923ee20a01a478d"}],"schema_version":1} -->
+<!-- historical_cycle_count: 751 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T185746Z/hotspots.json","hotspots_sha256":"54c2bba9f3de346e84ed9616499a8e2474c51c590d27835b525d97e8e6129e32","manifest_path":"ai-runs/feedback/20260809T185746Z/report-manifest.json","manifest_sha256":"00fc73b6945516d8d5a04f08447e2df1c99531e46d00ba5799952b4007d757e2"},"pending_cycle_reports":[{"evidence_sha256":"d88ec5df8c623ff69f29c093bd66fe0c24cecc7ed58fbf221ec50a395ac78981","report_id":"pure:abc76ff2d774ef76c5210a67c2f4329a25c80d6d1a5c6dc3d1367da189fc3162","report_sha256":"25d1e91d440e7040dced2fec0317e9ef5376767b2ab0c8695c8f7555aa7af74b","run_id":"2026-08-09T18-49-03-763Z","sidecar_sha256":"1f6e2abd3c655b014afd45d3c83ec6b0f86448c3d18305782f0fb102cc860f59","tested_commit":"eff02eb8e7147264a92b4159eb6ea4a7a08c2528"},{"evidence_sha256":"42a954d0b5b047d74a817fb45f4b7ab6e6c5cff3357c7e290d9c6347dbea35bd","report_id":"pure:aa028a6f31d794ac89ca983d6227f0cb2f727111a32d5e4de4277b5058ea04a9","report_sha256":"f956b45f46162888224a94285ee81b4da2eafe99a7edd554b4df0dd7d296bcd3","run_id":"2026-08-09T20-17-10-580Z","sidecar_sha256":"c8998a9cb540b6d142e8f5788a95ac1b7730379792ba3f3e60769d19f5d872ea","tested_commit":"9b4940834b44e3fd321539de3923ee20a01a478d"},{"evidence_sha256":"97d5f4c6579021e0d770472387b448f4af4c17df48d34e84a7e076538fee31cf","report_id":"pure:ce0d5f190f3d9e5ca1cc41e69c29d37d56ec7859116ec0d4cb7a5784f73735d2","report_sha256":"15e002d3326f4a3a6b134a4fbdd36dc9f4212108fa884ac027f90d75da26137c","run_id":"2026-08-09T22-07-00-576Z","sidecar_sha256":"716182b89eb3e825b61312d8bfddbfa8bbcc15542a285b018ac42925790b629c","tested_commit":"8707f6307eefffa8e3c6acc6644bbcd0cfb6506f"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - accepted_hotspot_compiler_order
+- Evidence choice: the accepted compiler recommended `a919cded`, but three tied 2.5 candidates were re-sorted by unrelated short-hash ids and the assessor offered `6268a10e`, a sibling the exact-selection seal could not consume.
+- Surface/effect: equal-score accepted hotspots now retain their authenticated compiler ordinal after assessor score and playtest recency; every other tie still uses the existing id order.
+- Counterfactual: a lexically first rank-four hotspot stays excluded, higher assessor score still wins, filtered top-three rows are not backfilled, and equal-score unplayable fixes remain ahead of hotspots; compiler artifacts and exact seal matching are unchanged.
+- Pure evidence: exact-clean Spark seed 7 on `8707f630` chose Unaffiliated Courier, Exposed-Ridge FORTIFY, won Wolf-Winter, continued through Gallowmere and Tanner's Fever, then ended naturally at decision 57; clarity/enjoyment 4/5, replay yes, bugs `[]`, not stuck.
+- Feedback/authority: the stale accepted product recommendation remains unconsumed because this off-list authority fix has a null selection; pre-seal status is 2 actionable reports of 3, so no compile ran.
+- Self-critique/guard: raw audit traced the player's perceived hash friction to three transcription errors, not state races, so concurrency guards stay unchanged; 43 focused assessor/seal tests, type/lint/format, 545 traces, hostile reviews, and the pre-crawl are green, with outer gates still required.
 
 ### Cycle result - strict_stream_forbidden_function_taxonomy
 - Evidence choice: the accepted Civic-density recommendation came from an intentionally customizable Ledger path and did not recur on the newest Ledger run; a recurrent Spark resource probe instead exposed a concrete fail-closed diagnostic defect.
@@ -135,18 +143,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Failed evidence: stale-copy artifacts, two invalid Spark runs, and otherwise valid reports tied to revisions later superseded by clean-CI fixes were rejected or retired and never counted as final-build evidence.
 - Self-critique/follow-through: the verified player still found the role shortcut's duty/evidence scope quiet and second-quest continuity thinner; the cross-family experiment remains external because an owner must authorize a non-Codex provider before ≥10 fresh comparable journeys can run.
 - Guard: post-crawl `20260808T135738Z` covers 6,000 steps, all 247 nodes/344 edges/12 quests; exact health passes 442 files/3,775 tests, both typechecks and all 12 packs, with drift at zero errors/six reviewed warnings and the pure evidence gate green.
-
-### Cycle result - repository_closeout
-
-- Scope/effect: reconciled the 22-commit external-remediation line with current main, refreshed every active guide/contract/census, normalized cross-platform text, and brought root/UI dependency audits to zero findings.
-- Correctness: independent review closed reveal snapshot/hash aliasing, exact direct-road event fatigue through serialized compact v45, wide-seed aliases with save-v2 compatibility, reserved-name state-record loss, and unsafe AFK evidence/rollback edges; frozen regressions cover each boundary.
-- Pure evidence: exact-clean Terra seed 8 on `4d3c56a3` completed The Wolf-Winter by all-wolves-alive/full-herd LURE, continued through checkpoint 40, won The Gallowmere by HUNT, and ended naturally at decision 53; clarity/enjoyment 4/4, replay-yes, no bug or stuck state.
-- Failed evidence: the default Spark seed-7 attempt completed three goals and ended at decision 71 but exhausted provider context before its interview; strict-stream rejection published no evidence and was not counted.
-- Self-critique/follow-through: the verified player still found layered Station setup and compact technical phrasing denser than the quests; one new verified report is below the three-report compile threshold, so no premature compile or fleet ran.
-- Guard: post-crawl `20260806T040320Z` covers all 247 nodes/344 edges/12 quests; exact health passes 463 files/4,002 tests, both typechecks, all 12 packs, and authority-verified pure evidence, with root/UI audits clean.
-## AFK Cycle 2026-08-09T22-07-00-576Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-09T22-07-00-576Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-6268a10e (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
