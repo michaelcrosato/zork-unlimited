@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 743 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T073458Z/hotspots.json","hotspots_sha256":"867a381715754308a237515ef819fdb6224bfafd4d1c0615521f72630d70c2e3","manifest_path":"ai-runs/feedback/20260809T073458Z/report-manifest.json","manifest_sha256":"b09ead701eda60778a21c1fe9891677fc4f8f6d985f1d1c1562431e387a73deb"},"pending_cycle_reports":[{"evidence_sha256":"f8e288048b41cb67a7667c6faf90d8d91e90845c9fd8937d25854917d41429b7","report_id":"pure:faa09646a93e589ba0f89bab5bea34debb7d5578ac8334e71c87bd81157ae4a0","report_sha256":"30372ff66aabea97d9426b43276eca7d631b8535910e3bb13b2ce504d9643375","run_id":"2026-08-09T07-05-04-305Z","sidecar_sha256":"987dde0db6c890e95d3e7135485e6303a7b70eeda9d84b6036e6685606123303","tested_commit":"35ef9df59ff17a9d35c1bcc32ead2a1cce585bd3"}],"schema_version":1} -->
+<!-- historical_cycle_count: 744 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T073458Z/hotspots.json","hotspots_sha256":"867a381715754308a237515ef819fdb6224bfafd4d1c0615521f72630d70c2e3","manifest_path":"ai-runs/feedback/20260809T073458Z/report-manifest.json","manifest_sha256":"b09ead701eda60778a21c1fe9891677fc4f8f6d985f1d1c1562431e387a73deb"},"pending_cycle_reports":[{"evidence_sha256":"f8e288048b41cb67a7667c6faf90d8d91e90845c9fd8937d25854917d41429b7","report_id":"pure:faa09646a93e589ba0f89bab5bea34debb7d5578ac8334e71c87bd81157ae4a0","report_sha256":"30372ff66aabea97d9426b43276eca7d631b8535910e3bb13b2ce504d9643375","run_id":"2026-08-09T07-05-04-305Z","sidecar_sha256":"987dde0db6c890e95d3e7135485e6303a7b70eeda9d84b6036e6685606123303","tested_commit":"35ef9df59ff17a9d35c1bcc32ead2a1cce585bd3"},{"evidence_sha256":"1715a9b65828dff8aad8a75f9d65d240f19f5d0197c55a91b6d024cc1fd3a617","report_id":"pure:cf395ca241ca4feba3fa3a150d44cbcfda8a2863e1e929bd9d7b9c6c717f5ad1","report_sha256":"2161142226dff5e429280218191b8c79bf236b21da2610fdc5b19edbc6ca2963","run_id":"2026-08-09T08-52-30-579Z","sidecar_sha256":"464778f66a895399f814d7efe237a05fdb5c1d8964f60dce151d8c20492ad632","tested_commit":"2d58029ee1fe8f2d0083165a446344511d1d0ef8"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - accepted_feedback_target_fallback
+- Evidence choice: the accepted three-report compile loaded but all six fleet confusions were unmapped, so the assessor offered only routine maintenance and its exact recommended hotspot could never be selected or consumed; this off-list control-plane repair outranked another content tweak.
+- Surface/effect: fleet-only unmapped feedback now inherits only one full-count, crawler-free accepted cohort scope (`overworld` or an exact shipped quest id); the live accepted alarm recommendation is again top-ranked at 2.5 without relabeling its location.
+- Fail-closed guard: canonical locations still win, while absent/duplicate/multiple/zero/mismatched metrics, crawler or mixed sources, malformed targets, and unknown quest ids remain inert; the compiler's original top-three boundary is unchanged.
+- Pure evidence: exact-clean Spark seed 7 on `2d58029e` completed The Wolf-Winter (`ending_held`) and The Gallowmere (`ending_hunt_won`), ended naturally at decision 52, rated clarity/enjoyment 4/4, replay-yes, with no bug or stuck state.
+- Self-critique: the cohort target is deliberately broad launch-surface provenance, not proof of the issue's room; candidate evidence says when fallback was used, and a future schema can retain per-hotspot targets for finer attribution.
+- Follow-through: the player found Gallowmere's final packet handoff slightly implicit; feedback is 1/3 with no compile, while the preserved accepted alarm hotspot is now actionable for the next cycle.
 
 ### Cycle result - loop_selection_rotation
 - Evidence choice: the assessor offered only a clean Advocates' Case rotation; the live 15-entry boundary instead reproduced a deterministic finalization failure where trimming the 16th result archived the frozen feedback selection and made the seal reject.
@@ -146,19 +154,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the cohort used 32.016M raw / 1.365M uncached input + 100,034 output (1.465M useful) with 95.74% input-cache reuse; no retry, fallback, or replacement player ran.
 - Self-critique/follow-through: the verifier is certified but the quality pilot failed 4.2 clarity/enjoyment, 70% continuation, and strategy-diversity gates; compiled feedback ranks dense Station planning terminology first, so the next gameplay increment must address the opening decision surface and LURE dominance before another pilot.
 - Guard: independent adversarial review is clean, preserved Terra traces validate 9/9, focused provider/authority/certifier coverage passes, crawls `20260804T150247Z` / `20260804T155418Z` have zero findings, and canonical health passes 459 files/3,905 tests plus UI typecheck and all 12 packs.
-
-### Cycle result - codex_transport_yield_gate
-
-- Evidence choice: a fixed 72-hour audit found five completed-but-rejected journeys consumed 24.38M measured input tokens, including 17.08M lost to report shape, while failed-attempt usage was often unrecoverable.
-- Surface/effect: exact Spark now uses audited preloaded `spark-direct-mcp-v1`; current Sol, Terra, and Luna retain strict-v2 wrappers, and every transport enforces one successful fresh-overworld start plus exact public/private gameplay forwarding.
-- Purity: all current Codex runs reject opaque compaction and repeated world/turn context; `null` preserves the client's maximum default headroom but is not treated as proof that encrypted replacement history is player-visible-only.
-- Admission: any live Spark fleet above three players must present a passed three-run receipt matching the exact clean build/world, transport fingerprint, model, CLI/client authority, and gate configuration before launch.
-- Economy: rejected public/direct streams retain only an allowlisted failure, hashed row commitment, and numeric token lower bound; verified totals count it as observed but incomplete, with zero automatic retry.
-- Report contract: exactly one closed terminal interview and literal `bugs: []` remove the measured format-only rejection class; synthetic clean-checkout verification now retains newly added tracked files.
-- Self-critique/guard: long post-goal journeys may still fail closed at compaction, but the audited run completed Wolf at decision 29 and compacted only after 46; pre/post crawls `20260804T084131Z` / `20260804T090511Z`, 440 integrated tests, 155 all-model purity tests, typecheck, and formatting are green.
-## AFK Cycle 2026-08-09T08-52-30-579Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-09T08-52-30-579Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-advocates_case (content_fix/M; score=0.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
