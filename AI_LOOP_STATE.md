@@ -159,3 +159,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 682742 completed The Wolf-Winter by all-wolves-alive/full-herd LURE at decision 30, ended naturally, rated clarity/enjoyment 4/4 and replay-yes, with no rejection, bug, loop, soft-lock, or stuck state.
 - Self-critique/follow-through: broader early terminology and required Wolf navigation remain S1; only one new verified report exists since compile, so no premature recompile or fleet ran and the next change must wait for accumulated causal evidence.
 - Guard: independent review caught and closed two copy-truth edges; pre/post crawls `20260803T130751Z` / `20260803T133303Z` cover all 247 nodes/344 edges/12 quests, and exact health passes 459 files/3,797 tests, UI typecheck, and all 12 packs.
+## AFK Cycle 2026-08-09T04-51-28-385Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T04-51-28-385Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

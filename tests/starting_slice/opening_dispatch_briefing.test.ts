@@ -11,6 +11,7 @@ import {
   type JourneyPresentation,
   type JourneyStoryChoicePrompt,
 } from "../../src/world/journey_contract.js";
+import { openingDispatchCrisisPreview } from "../../src/world/opening_dispatch_briefing.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession as UiOverworldSession } from "../../ui/src/overworld.js";
@@ -33,8 +34,7 @@ const PREPARATION_HEADER = `Compare field priority, exact cost, and tradeoff. ${
 const RELIEF_ALLOCATION_HEADER = `Compare who is protected, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
 const ALLY_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 const PURPOSES = Object.freeze({
-  registration:
-    "Purpose: choose your permanent background and promise; duty and evidence come next.",
+  registration: "Purpose: choose your permanent background and promise.",
   relief_oath:
     "Purpose: compare what must survive Wolf-Winter, then choose duty; evidence comes next, and field plan stays open.",
   lead_source: "Purpose: choose the evidence Albany carries; the field plan stays open.",
@@ -45,7 +45,12 @@ const PURPOSES = Object.freeze({
   ally: "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
 });
 const STANDARD_PACKET_PURPOSE =
-  "Purpose: take your role's matched duty/evidence shortcut or customize; every field plan stays open.";
+  "Purpose: finish matched duty and evidence, or customize; every field plan stays open.";
+const WOLF_CRISIS_PREVIEW =
+  "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather.";
+const STALE_DEFAULT_CIVIC_FRAMING = /\b(?:1\/3|2\/3|Civic order)\b|role\s*→\s*duty\s*→\s*evidence/i;
+const DEFERRED_STATION_SUPPORT_DETAILS =
+  /Hayden|field kit|last relief wagon|June|second field seat|second rider|cattle-first/i;
 
 function expectedPreparationCheckFit(profile: (typeof PREPARATION.profiles)[number]): string {
   const check = profile.check_disclosure;
@@ -217,6 +222,36 @@ function expectProgressiveReliefAllocationComparison(
 }
 
 describe("Albany Wolf-Winter dispatch briefing", () => {
+  it("splits the authored Station-support boundary without inferring sentence grammar", () => {
+    expect(
+      openingDispatchCrisisPreview(
+        "Dr. Cade's herd is under wolf attack. The live dispatch has June waiting at Station.",
+      ),
+    ).toBe("Dr. Cade's herd is under wolf attack.");
+    expect(
+      openingDispatchCrisisPreview(
+        'Cade asks, "Ready?" The wolf pack is at the cattle byre. The live dispatch has June waiting at Station.',
+      ),
+    ).toBe('Cade asks, "Ready?" The wolf pack is at the cattle byre.');
+    expect(
+      openingDispatchCrisisPreview(
+        "Bring feed, blankets, etc. The live dispatch has June waiting at Station.",
+      ),
+    ).toBe("Bring feed, blankets, etc.");
+    expect(
+      openingDispatchCrisisPreview(
+        "A. Cade's herd is under wolf attack. The live dispatch has June waiting at Station.",
+      ),
+    ).toBe("A. Cade's herd is under wolf attack.");
+    expect(openingDispatchCrisisPreview("Cade's herd needs help")).toBeNull();
+    expect(
+      openingDispatchCrisisPreview(
+        "Cade needs aid. The live dispatch has June. The live dispatch has a relief wagon.",
+      ),
+    ).toBeNull();
+    expect(openingDispatchCrisisPreview(WOLF.discovery)).toBe(WOLF_CRISIS_PREVIEW);
+  });
+
   it("makes the mission concrete before choice one and separates Civic from departure decisions", () => {
     const session = new OverworldSession(WORLD);
     const opening = session.view();
@@ -225,18 +260,23 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
 
     const registration = currentStoryChoice(session);
     expect(registration).toMatchObject({ id: REGISTRATION.id, kind: "registration" });
-    expect(registration.message).toContain(`${WOLF.title} Civic docket · 1/3 — role.`);
+    expect(registration.message).toContain(`${WOLF.title} Civic docket · role.`);
     expect(registration.message).toContain(`${REGISTRATION.title}. ${REGISTRATION_HEADER}`);
     expect(registration.message).not.toContain(REGISTRATION.message);
-    expect(registration.message).toContain(`Mission preview — ${WOLF.discovery}`);
-    expect(registration.message).toContain("Civic order: role → duty → evidence.");
+    expect(registration.message).toContain(`Mission preview — ${WOLF_CRISIS_PREVIEW}`);
+    expect(registration.message).toContain(
+      "In one next choice, a matched role may finish duty and evidence, or customize.",
+    );
+    expect(registration.message).not.toContain(WOLF.discovery);
+    expect(registration.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
+    expect(registration.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
     expectBoundedPurpose(registration, PURPOSES.registration);
     expect(registration.options.map((option) => option.id)).toEqual(
       REGISTRATION.profiles.map((profile) => profile.id),
     );
     expect(registration.options.every((option) => option.group === undefined)).toBe(true);
     expectRoleplayFirstFraming(registration);
-    expect(wordCount(registration.message)).toBeLessThanOrEqual(120);
+    expect(wordCount(registration.message)).toBeLessThanOrEqual(90);
     expectSummaryFirstOptions(registration);
     expect(registration.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
@@ -251,30 +291,25 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
 
     session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
-    const oath = expectStage(session, {
-      id: RELIEF_OATH.id,
-      kind: "relief_oath",
-      phase: "Civic docket",
-      step: 2,
-      total: 3,
-      label: "duty",
-      originalTitle: RELIEF_OATH.title,
-      originalMessage: RELIEF_OATH.message,
-      presentedMessage: STANDARD_PACKET_OATH_HEADER,
-    });
+    const oath = currentStoryChoice(session);
+    expect(oath).toMatchObject({ id: RELIEF_OATH.id, kind: "relief_oath" });
+    expect(oath.message).toContain(`${WOLF.title} Civic docket · matched duty + evidence.`);
+    expect(oath.message).toContain(`${RELIEF_OATH.title}. ${STANDARD_PACKET_OATH_HEADER}`);
+    expect(oath.message).not.toContain(RELIEF_OATH.message);
     const standardPacket = REGISTRATION.doctrines!.find(
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
-    expect(oath.message).toContain(
-      "Role chosen. Take its matched duty/evidence shortcut now, or customize the full comparison.",
-    );
+    expect(oath.message).toContain("A custom duty leaves one evidence choice next.");
+    expect(oath.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
+    expect(oath.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
     expectBoundedPurpose(oath, STANDARD_PACKET_PURPOSE);
     expect(oath.options.map((option) => option.id)).toEqual([
       standardPacket.id,
       ...RELIEF_OATH.options.map((option) => option.id),
     ]);
     expectRoleplayFirstFraming(oath);
-    expect(wordCount(oath.message)).toBeLessThanOrEqual(60);
+    expect(wordCount(oath.message)).toBeLessThanOrEqual(50);
+    expect(wordCount(registration.message) + wordCount(oath.message)).toBeLessThanOrEqual(135);
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     const roadWardenPacket = oath.options.find((option) => option.id === standardPacket.id)!;
@@ -331,6 +366,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     );
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(oath);
 
+    const matchedSession = OverworldSession.restore(WORLD, session.snapshot());
+    const beforeMatchedDecisions = matchedSession.journey().acceptedDecisions;
+    matchedSession.chooseJourneyStory(standardPacket.id);
+    expect(matchedSession.journey().acceptedDecisions).toBe(beforeMatchedDecisions + 2);
+    expect(matchedSession.journey().storyChoice).toBeNull();
+
     const ledgerSession = new OverworldSession(WORLD);
     ledgerSession.scoutPoi(ledgerSession.view().pois[0]!.id);
     ledgerSession.talkToCharacter(REGISTRATION.contact);
@@ -355,6 +396,19 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       RELIEF_OATH.options.map((option) => option.id),
     );
     expect(ledgerOath.message).not.toContain("standard packet for duty + evidence");
+
+    ledgerSession.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
+    expectStage(ledgerSession, {
+      id: LEAD_SOURCE.id,
+      kind: "lead_source",
+      phase: "Civic docket",
+      step: 3,
+      total: 3,
+      label: "evidence",
+      originalTitle: LEAD_SOURCE.title,
+      originalMessage: LEAD_SOURCE.message,
+      presentedMessage: SOURCE_HEADER,
+    });
 
     session.revealJourneyStory(oath.id, oath.progressiveDisclosure!.reveal.id);
     session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
@@ -602,7 +656,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
 
     expect(talked.journey.storyChoice).toEqual(ui.journey().storyChoice);
-    expect(talked.journey.storyChoice?.message).toContain(`Mission preview — ${WOLF.discovery}`);
+    expect(talked.journey.storyChoice?.message).toContain(
+      `Mission preview — ${WOLF_CRISIS_PREVIEW}`,
+    );
     expectSummaryFirstOptions(talked.journey.storyChoice!);
 
     const standardPacket = REGISTRATION.doctrines!.find(

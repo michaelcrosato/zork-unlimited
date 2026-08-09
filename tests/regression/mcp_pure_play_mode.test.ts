@@ -2059,6 +2059,7 @@ describe("MCP pure play mode", () => {
           registration.journey as {
             storyChoice?: {
               kind?: string;
+              message?: string;
               options?: {
                 id: string;
                 group?: string;
@@ -2069,6 +2070,7 @@ describe("MCP pure play mode", () => {
           }
         ).storyChoice;
         expect(registrationChoice?.kind).toBe("registration");
+        expect(registrationChoice?.message).toContain("Enter Albany's Relief Compact");
         expect(
           registrationChoice?.options?.every(
             (option) =>
@@ -2149,6 +2151,7 @@ describe("MCP pure play mode", () => {
           selected.journey as {
             storyChoice?: {
               kind?: string;
+              message?: string;
               options?: { id: string; consequence?: string; summary?: { tradeoff?: string } }[];
               revealOption?: {
                 id: string;
@@ -2158,6 +2161,15 @@ describe("MCP pure play mode", () => {
           }
         ).storyChoice;
         expect(oathChoice?.kind).toBe("relief_oath");
+        const defaultCivicMessages = [registrationChoice?.message, oathChoice?.message].join(" ");
+        expect(defaultCivicMessages).not.toMatch(/\b[12]\/3\b/);
+        expect(defaultCivicMessages).not.toMatch(/Civic order/i);
+        expect(defaultCivicMessages).not.toMatch(/role\s*→\s*duty\s*→\s*evidence/i);
+        expect(defaultCivicMessages).not.toMatch(/June Pike|second field seat/i);
+        expect(oathChoice?.message).toMatch(/matched duty(?:\/| and )evidence/i);
+        expect(oathChoice?.message).toMatch(/finish matched duty(?:\/| and )evidence/i);
+        expect(oathChoice?.message).toMatch(/custom duty[^.]*evidence choice next/i);
+        expect(oathChoice?.message).toMatch(/customize/i);
         expect(
           oathChoice?.options?.every(
             (option) =>
@@ -2169,6 +2181,28 @@ describe("MCP pure play mode", () => {
           "albany:doctrine_fortify_breach",
         ]);
         expect(JSON.stringify(oathChoice)).not.toContain("albany:oath_limited_aid_only");
+        const matchedShortcut = oathChoice?.options?.[0];
+        if (!matchedShortcut) throw new Error("expected the sole matched role shortcut");
+        const matchedShortcutInspection = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: "albany:wolf_relief_oath",
+              option_id: matchedShortcut.id,
+              expected_snapshot_hash: selected.snapshot_hash,
+            },
+          }),
+        );
+        expectPureStoryInspectionEnvelope(matchedShortcutInspection, sessionId);
+        expect(matchedShortcutInspection.snapshot_hash).toBe(selected.snapshot_hash);
+        expect(matchedShortcutInspection.story).toMatchObject({
+          id: "albany:wolf_relief_oath",
+          inspectedOption: {
+            id: matchedShortcut.id,
+            consequence: expect.any(String),
+          },
+        });
         const reveal = oathChoice?.revealOption;
         if (!reveal) throw new Error("expected pure compact oath reveal affordance");
         const expandedOath = textPayload(

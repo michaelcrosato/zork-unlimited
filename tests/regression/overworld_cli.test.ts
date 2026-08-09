@@ -703,6 +703,27 @@ describe("overworld_play CLI (scripted mode)", () => {
     expect(run.output).toMatch(/^[0-9a-f]{64}$/m);
   });
 
+  it("keeps the default Civic briefing compact while its matched shortcut stays inspectable and actionable", () => {
+    const run = runCli([
+      "--commands",
+      "talk rowan; choose albany:road_warden; inspect albany:doctrine_road_warden_aid_route; choose albany:doctrine_road_warden_aid_route; hash",
+    ]);
+
+    expect(run.status, run.output).toBe(0);
+    expect(run.output).toContain("Enter Albany's Relief Compact");
+    expect(run.output).not.toMatch(/\b[12]\/3\b/);
+    expect(run.output).not.toContain("Civic order:");
+    expect(run.output).toContain(
+      "! Story choice detail — Role shortcut — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+    );
+    expect(run.output).toContain("Choose: `choose albany:doctrine_road_warden_aid_route`");
+    expect(run.output).toContain(
+      "Chosen: Role shortcut — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report.",
+    );
+    expect(run.output).toMatch(/^[0-9a-f]{64}$/m);
+    expect(run.output).not.toContain("A scripted command was rejected.");
+  });
+
   it("restates local goal guidance when follow goal has no road passage", () => {
     const run = runCli([
       "--commands",
@@ -743,7 +764,9 @@ describe("overworld_play CLI (scripted mode)", () => {
     const run = runCli(["--commands", "talk rowan; journal; log"]);
 
     expect(run.status, run.output).toBe(0);
-    expect(run.output).toContain("The Wolf-Winter Civic docket · 1/3 — role");
+    expect(run.output).toContain("Enter Albany's Relief Compact");
+    expect(run.output).not.toMatch(/\b1\/3\b/);
+    expect(run.output).not.toContain("Civic order:");
     expect(run.output).toContain("No roads travelled yet.");
     expect(run.output.match(/! Story choice comparison/g)?.length ?? 0).toBe(1);
     expect(run.output).not.toContain("A scripted command was rejected.");
