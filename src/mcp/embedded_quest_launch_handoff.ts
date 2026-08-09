@@ -3,8 +3,8 @@ import type { OverworldQuestView } from "../world/session.js";
 
 export const EMBEDDED_QUEST_LAUNCH_HANDOFF_VERSION = 1 as const;
 
-/** A small, player-facing bridge from Albany planning into actionable quest state. */
-export type EmbeddedQuestLaunchHandoff = Readonly<{
+/** A small, player-facing bridge from campaign planning into actionable quest state. */
+export type WolfWinterEmbeddedQuestLaunchHandoff = Readonly<{
   version: typeof EMBEDDED_QUEST_LAUNCH_HANDOFF_VERSION;
   transition: "Albany Station -> The Wolf-Winter";
   route: readonly [id: string, title: string];
@@ -14,15 +14,46 @@ export type EmbeddedQuestLaunchHandoff = Readonly<{
   childState: "actionable";
 }>;
 
+export type GallowmereEmbeddedQuestLaunchHandoff = Readonly<{
+  version: typeof EMBEDDED_QUEST_LAUNCH_HANDOFF_VERSION;
+  transition: "Queensbury Market -> The Gallowmere";
+  packet: Readonly<{
+    status: "delivered";
+    title: "Hayden's Gallowmere packet";
+    recipient: "Hedrick Cradoc";
+  }>;
+  objective: "Packet delivered; see The Gallowmere through.";
+  childState: "actionable";
+}>;
+
+export type EmbeddedQuestLaunchHandoff =
+  | WolfWinterEmbeddedQuestLaunchHandoff
+  | GallowmereEmbeddedQuestLaunchHandoff;
+
 /**
- * Build only the authored starting-slice handoff. Other embedded quests keep
- * their established launch response until they have an equally truthful
- * parent-to-child presentation contract.
+ * Build only authored, provenance-backed handoffs. Gallowmere's packet receipt
+ * is valid only for the matching campaign goal; local and wardens-route starts
+ * must not invent Hayden's packet.
  */
 export function embeddedQuestLaunchHandoff(args: {
   quest: OverworldQuestView;
   departureRecap: OpeningDepartureRecap | null;
+  journeyGoalId: string;
 }): EmbeddedQuestLaunchHandoff | null {
+  if (args.quest.id === "gallowmere") {
+    if (args.journeyGoalId !== "carry_hedricks_packet_north") return null;
+    return Object.freeze({
+      version: EMBEDDED_QUEST_LAUNCH_HANDOFF_VERSION,
+      transition: "Queensbury Market -> The Gallowmere",
+      packet: Object.freeze({
+        status: "delivered",
+        title: "Hayden's Gallowmere packet",
+        recipient: "Hedrick Cradoc",
+      }),
+      objective: "Packet delivered; see The Gallowmere through.",
+      childState: "actionable",
+    });
+  }
   if (args.quest.id !== "wolf_winter" || args.departureRecap?.questId !== args.quest.id) {
     return null;
   }
