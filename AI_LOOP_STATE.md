@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 749 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T185746Z/hotspots.json","hotspots_sha256":"54c2bba9f3de346e84ed9616499a8e2474c51c590d27835b525d97e8e6129e32","manifest_path":"ai-runs/feedback/20260809T185746Z/report-manifest.json","manifest_sha256":"00fc73b6945516d8d5a04f08447e2df1c99531e46d00ba5799952b4007d757e2"},"pending_cycle_reports":[{"evidence_sha256":"d88ec5df8c623ff69f29c093bd66fe0c24cecc7ed58fbf221ec50a395ac78981","report_id":"pure:abc76ff2d774ef76c5210a67c2f4329a25c80d6d1a5c6dc3d1367da189fc3162","report_sha256":"25d1e91d440e7040dced2fec0317e9ef5376767b2ab0c8695c8f7555aa7af74b","run_id":"2026-08-09T18-49-03-763Z","sidecar_sha256":"1f6e2abd3c655b014afd45d3c83ec6b0f86448c3d18305782f0fb102cc860f59","tested_commit":"eff02eb8e7147264a92b4159eb6ea4a7a08c2528"}],"schema_version":1} -->
+<!-- historical_cycle_count: 750 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T185746Z/hotspots.json","hotspots_sha256":"54c2bba9f3de346e84ed9616499a8e2474c51c590d27835b525d97e8e6129e32","manifest_path":"ai-runs/feedback/20260809T185746Z/report-manifest.json","manifest_sha256":"00fc73b6945516d8d5a04f08447e2df1c99531e46d00ba5799952b4007d757e2"},"pending_cycle_reports":[{"evidence_sha256":"d88ec5df8c623ff69f29c093bd66fe0c24cecc7ed58fbf221ec50a395ac78981","report_id":"pure:abc76ff2d774ef76c5210a67c2f4329a25c80d6d1a5c6dc3d1367da189fc3162","report_sha256":"25d1e91d440e7040dced2fec0317e9ef5376767b2ab0c8695c8f7555aa7af74b","run_id":"2026-08-09T18-49-03-763Z","sidecar_sha256":"1f6e2abd3c655b014afd45d3c83ec6b0f86448c3d18305782f0fb102cc860f59","tested_commit":"eff02eb8e7147264a92b4159eb6ea4a7a08c2528"},{"evidence_sha256":"42a954d0b5b047d74a817fb45f4b7ab6e6c5cff3357c7e290d9c6347dbea35bd","report_id":"pure:aa028a6f31d794ac89ca983d6227f0cb2f727111a32d5e4de4277b5058ea04a9","report_sha256":"f956b45f46162888224a94285ee81b4da2eafe99a7edd554b4df0dd7d296bcd3","run_id":"2026-08-09T20-17-10-580Z","sidecar_sha256":"c8998a9cb540b6d142e8f5788a95ac1b7730379792ba3f3e60769d19f5d872ea","tested_commit":"9b4940834b44e3fd321539de3923ee20a01a478d"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - strict_stream_forbidden_function_taxonomy
+- Evidence choice: the accepted Civic-density recommendation came from an intentionally customizable Ledger path and did not recur on the newest Ledger run; a recurrent Spark resource probe instead exposed a concrete fail-closed diagnostic defect.
+- Surface/effect: recognizable private native calls outside the pure AdventureForge tool/namespace surface now reject as the fixed safe category `direct_forbidden_function`, while public-first observation remains `forbidden_mcp_server` and historical diagnostics stay readable.
+- Exact boundary: the captured no-namespace resource call is pinned at 342 bytes/SHA `027bc003`; both polling races still exit 43, terminate owned descendants, publish no report/evidence/sidecar, and never reveal the raw tool or call id in the diagnostic.
+- Counterfactual: genuine duplicate/malformed allowed calls retain `direct_invalid_start`, repeated starts retain fresh-start ordering, and the change does not accept, skip, alias, retry, auto-start, or implement resource discovery.
+- Pure evidence: exact-clean Spark seed 7 on `9b494083` chose Unaffiliated Courier/personal-bond duty, resolved Albany's Charter backlog, then completed Wolf-Winter by Sheltered-Stockway LURE with herd and wolves alive; it ended naturally at decision 26 with clarity/enjoyment 4/4, replay yes, bugs `[]`, and no stuck state.
+- Self-critique/guard: gameplay could only canary this tooling-only change; 204 focused tests, type/lint/format, 544 traces, exact captured-row/race reviews, and the pre-crawl are green, feedback remains 1/3, and the standard outer gates remain required.
 
 ### Cycle result - wolf_hunt_commitment_label
 - Evidence choice: the assessor offered only a routine Advocates' Case rotation; exact-build players on `ca4accc5` and `e0600a7f` independently showed Cade's HUNT ASK claiming commitment before the real north-crossing boundary.
@@ -136,19 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Failed evidence: the default Spark seed-7 attempt completed three goals and ended at decision 71 but exhausted provider context before its interview; strict-stream rejection published no evidence and was not counted.
 - Self-critique/follow-through: the verified player still found layered Station setup and compact technical phrasing denser than the quests; one new verified report is below the three-report compile threshold, so no premature compile or fleet ran.
 - Guard: post-crawl `20260806T040320Z` covers all 247 nodes/344 edges/12 quests; exact health passes 463 files/4,002 tests, both typechecks, all 12 packs, and authority-verified pure evidence, with root/UI audits clean.
-
-### Cycle result - role_matched_setup_actionable
-
-- Evidence choice: 15/18 verified players mentioned setup/Station density, and 9/11 who used the existing role shortcut still named density, so the redundant oath-selection step was the narrowest measured flow cost.
-- Surface/effect: after role choice, its matching doctrine is the sole actionable Relief Oath option; `Customize duty and evidence` reveals the three ordinary duties read-only, preserving their exact downstream lead-source behavior.
-- Counterfactual/parity: direct shortcut and customized selection reach equivalent durable state; ordinary duties remain unauthorized until revealed, while terminal, UI, compact MCP, restore, mechanics, RNG, hashes, and outcomes stay aligned.
-- Pure evidence: exact-clean Terra seed 80424000 on `58f60fb6` took Road-Warden/Aid-Only/Hayden, diverted every Wolf-Winter wolf with the herd whole at decision 26, voluntarily continued through checkpoint 40, won The Gallowmere, and ended at 49; clarity/enjoyment 4/4, replay-yes, no bug or stuck state.
-- Economy: the verified first attempt used 3.176M raw / 130,904 uncached input + 9,924 output (140,828 useful) at 95.88% cache reuse in 303 seconds, with no retry, fallback, failed attempt, or fanout.
-- Self-critique/follow-through: the three-report compile is 3/3 at clarity/enjoyment 4/4, 0 stuck, 100% replay, and 2/3 continuing past the first goal; one remaining separate-surface density mention is not enough for another trim, so the next increment returns to a systemic consequence candidate.
-- Guard: independent review is clean; crawls `20260805T062211Z` / `20260805T064140Z`, 49 focused tests plus the 16-test pure regression, and exact-tree health (459 files/3,913 tests plus UI/all 12 packs) are green.
-## AFK Cycle 2026-08-09T20-17-10-580Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-09T20-17-10-580Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-6268a10e (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
