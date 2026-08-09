@@ -5,6 +5,7 @@ import {
   compactStationDispatchBoard,
   compactStationDispatchBoardSupport,
   deriveStationDispatchBoard,
+  STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
 } from "../../src/world/station_dispatch_board.js";
 import {
   compactOverworldDepartureContactLeads,
@@ -55,8 +56,9 @@ describe("Station dispatch board", () => {
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
-        "Cade's herd is under pressure. Depart now, or review independent optional support below. Support changes dispatch cost and aftermath, not which Wolf-Winter strategy Cade will offer.",
+        "Cade's herd is under pressure. Depart now for fastest arrival, or review one field kit, Albany's last relief wagon, and June, a cattle-first second rider. Support changes dispatch cost/aftermath; every Wolf-Winter strategy stays legal.",
     });
+    expect(board.guidance.length).toBeLessThanOrEqual(STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT);
     expect(board.support.map((entry) => [entry.slot, entry.status, entry.selectedTitle])).toEqual(
       view.departureRecap.entries
         .filter((entry) => ["preparation", "relief_allocation", "field_team"].includes(entry.slot))
@@ -274,7 +276,10 @@ describe("Station dispatch board", () => {
     });
     expect(waiting?.launch.approaches.every((approach) => !approach.availableNow)).toBe(true);
     expect(waiting?.guidance).toBe(
-      "Cade's herd is under pressure. No departure road is open yet. Review independent optional support below; it changes dispatch cost and aftermath, not which Wolf-Winter strategy Cade will offer.",
+      "Cade's herd is under pressure. No departure road is open yet. Review one field kit, Albany's last relief wagon, and June, a cattle-first second rider. Support changes dispatch cost/aftermath; every Wolf-Winter strategy stays legal.",
+    );
+    expect(waiting?.guidance.length).toBeLessThanOrEqual(
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
     );
     expect(waiting?.guidance).not.toContain("You can leave now");
     expect(fieldLead).toMatchObject({ status: "ready" });

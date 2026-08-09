@@ -161,3 +161,10 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Spark admission: zero-retry five-seat canary verified only 1/5 because four strict-stream wrappers exited 43; valid seed 682740 ended at goal turn 18, rated 4/4, replay-no, and reported no bug, so no Spark scale or guessed rejected-attempt usage.
 - Self-critique/follow-through: both current-build players still cited early terminology/setup density; only two new verified reports exist, below compile threshold, so collect one more clean report before compilation and next target lighter/symmetric briefing rather than reducing depth.
 - Guard: focused cross-surface, malformed-pairing, compact-budget, terminal/UI, MCP pure, and clean-checkout checks pass; exact health is 459 files/3,797 tests plus UI typecheck and all 12 packs.
+## AFK Cycle 2026-08-09T02-55-42-784Z — ULTRAPLAN (saturation re-aim)
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T02-55-42-784Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Mode: ultraplan re-aim; handoff ai-runs/2026-08-09T02-55-42-784Z/current-plan.md.
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

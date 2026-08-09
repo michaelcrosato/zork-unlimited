@@ -21,9 +21,9 @@ const PLAN_SLOTS = ["role", "duty", "evidence", ...SUPPORT_SLOTS] as const;
 type StationDispatchPlanSlot = (typeof PLAN_SLOTS)[number];
 
 const READY_GUIDANCE =
-  "Cade's herd is under pressure. Depart now, or review independent optional support below. Support changes dispatch cost and aftermath, not which Wolf-Winter strategy Cade will offer.";
+  "Cade's herd is under pressure. Depart now for fastest arrival, or review one field kit, Albany's last relief wagon, and June, a cattle-first second rider. Support changes dispatch cost/aftermath; every Wolf-Winter strategy stays legal.";
 const WAITING_GUIDANCE =
-  "Cade's herd is under pressure. No departure road is open yet. Review independent optional support below; it changes dispatch cost and aftermath, not which Wolf-Winter strategy Cade will offer.";
+  "Cade's herd is under pressure. No departure road is open yet. Review one field kit, Albany's last relief wagon, and June, a cattle-first second rider. Support changes dispatch cost/aftermath; every Wolf-Winter strategy stays legal.";
 
 const SUPPORT_COPY: Readonly<
   Record<

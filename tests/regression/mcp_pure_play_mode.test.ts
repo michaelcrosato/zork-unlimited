@@ -2273,6 +2273,10 @@ describe("MCP pure play mode", () => {
         expect(stationedContext.departure_recap).toBeUndefined();
         const stationedBoard = stationedContext.station_dispatch_board;
         expect(stationedBoard?.slice(0, 2)).toEqual([3, "wolf_winter"]);
+        const stationedGuidance = stationedBoard?.[2];
+        expect(stationedGuidance).toMatch(/field kit/i);
+        expect(stationedGuidance).toMatch(/last (?:relief )?wagon/i);
+        expect(stationedGuidance).toMatch(/June[^.]*second rider|second rider[^.]*June/i);
         expect(stationedBoard?.[4]).toEqual(
           expect.arrayContaining([
             ["preparation", "open_optional", null, null, null],
@@ -2297,6 +2301,9 @@ describe("MCP pure play mode", () => {
         );
         expect(supportReview.unchanged).toBeUndefined();
         const supportContext = supportReview.context as CompactAreaContext;
+        expect(supportReview.snapshot_hash).toBe(stationed.snapshot_hash);
+        expect(supportReview.journey).toEqual(stationed.journey);
+        expect(supportContext.station_dispatch_board).toEqual(stationedBoard);
         expect(supportContext.station_dispatch_support).toEqual([
           ["preparation", expect.any(String), ["inspect", "albany:wolf_preparation"]],
           ["relief_allocation", expect.any(String), ["inspect", "albany:wolf_relief_allocation"]],
