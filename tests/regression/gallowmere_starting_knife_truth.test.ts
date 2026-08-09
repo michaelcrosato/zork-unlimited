@@ -40,6 +40,17 @@ const rules = buildRpgRules(index);
 const world = loadOverworldManifest(process.cwd());
 const MOOR_EDGE_PROFILE_CONTEXT =
   "Your history remains your own; on this moor, the hunt is read in spoor, wind, and knife-work.";
+const GALLOWMERE_PACKET_HANDOFF = {
+  version: 1,
+  transition: "Queensbury Market -> The Gallowmere",
+  packet: {
+    status: "delivered",
+    title: "Hayden's Gallowmere packet",
+    recipient: "Hedrick Cradoc",
+  },
+  objective: "Packet delivered; see The Gallowmere through.",
+  childState: "actionable",
+} as const;
 
 function namedCompactContinuity(continuity: EmbeddedQuestCharacterContinuity | undefined) {
   if (!continuity) return undefined;
@@ -83,6 +94,52 @@ function registeredQueensburyMarketSession(): OverworldSession {
   session.exploreArea("queensbury_town__civic_core");
   session.moveArea("queensbury_town__area_route__civic_core__market__1");
   expect(session.view().quests.map((quest) => quest.id)).toContain("gallowmere");
+  return session;
+}
+
+function moveToArea(session: OverworldSession, destinationAreaId: string): void {
+  const route = session
+    .view()
+    .areaExits.find((candidate) => candidate.destination.id === destinationAreaId);
+  if (!route) throw new Error(`Expected a visible area route to ${destinationAreaId}.`);
+  session.moveArea(route.id);
+}
+
+function campaignQueensburyMarketSession(
+  dispatchChoice: "send_wagon_to_cade" | "send_wardens_north",
+): OverworldSession {
+  const session = new OverworldSession(world);
+  session.scoutPoi("albany_city__civic_core__poi");
+  session.talkToCharacter("albany_city__civic_core__contact");
+  session.chooseJourneyStory("albany:road_warden");
+  revealCurrentJourneyStoryOptions(session);
+  session.chooseJourneyStory("albany:oath_limited_aid_only");
+  session.chooseJourneyStory("albany:source_rowan_civic_docket");
+  moveToArea(session, world.opening_preparation!.area);
+  session.chooseJourneyStory("albany:prep_works_fortification");
+  session.chooseJourneyStory("albany:relief_resident_shelter");
+  moveToArea(session, "albany_city__market");
+  session.scoutPoi("albany_city__market__poi");
+  moveToArea(session, "albany_city__transport_hub");
+  session.startQuest("wolf_winter", "albany:wolf_approach_sheltered_stockway");
+  session.completeQuest("wolf_winter", {
+    endingId: "ending_held_timber_saved",
+    endingTitle: "The Byre Held, Paling Timber Saved",
+    death: false,
+  });
+  session.chooseJourney("continue");
+  session.chooseJourneyStory(dispatchChoice);
+  session.travel("road_albany_city__saratoga_springs_city");
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.travel("road_saratoga_springs_city__queensbury_town");
+  if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+  session.exploreArea("queensbury_town__civic_core");
+  moveToArea(session, "queensbury_town__market");
+  expect(session.journey().goal.id).toBe(
+    dispatchChoice === "send_wagon_to_cade"
+      ? "carry_hedricks_packet_north"
+      : "travel_north_with_albany_wardens",
+  );
   return session;
 }
 
@@ -231,8 +288,8 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     expect(direct.characterContinuity).toBeUndefined();
   });
 
-  it("projects the importless boundary in full and compact embedded MCP starts", () => {
-    const snapshot = registeredQueensburyMarketSession().snapshot();
+  it("acknowledges packet delivery without changing the importless Gallowmere child", () => {
+    const snapshot = campaignQueensburyMarketSession("send_wagon_to_cade").snapshot();
     const fullApi = createToolApi({ root: process.cwd() });
     const compactApi = createToolApi({ root: process.cwd() });
     const fullParent = fullApi.restore_overworld_session({
@@ -247,6 +304,7 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       session_id: fullParent.session_id,
       quest_id: "gallowmere",
       seed: 2218,
+      compact_context: false,
       compact_observation: false,
       compact_actions: false,
       compact_result: false,
@@ -255,16 +313,30 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       session_id: compactParent.session_id,
       quest_id: "gallowmere",
       seed: 2218,
+      compact_context: true,
       compact_observation: true,
       compact_actions: true,
     });
 
-    expect(compact).toHaveProperty("context");
-    expect(compact).not.toHaveProperty("launch_handoff");
+    expect(full.launch_handoff).toEqual(GALLOWMERE_PACKET_HANDOFF);
+    expect(compact.launch_handoff).toEqual(GALLOWMERE_PACKET_HANDOFF);
+    expect(compact.launch_handoff).toEqual(full.launch_handoff);
+    expect(full.journeyDecision).toEqual({
+      countsTowardJourney: true,
+      reason: "situation_changed",
+    });
+    expect(compact.journeyDecision).toEqual(full.journeyDecision);
+    expect(full.journey.decisionProof.last).toMatchObject({
+      actionId: "quest_start:gallowmere",
+      reason: "situation_changed",
+    });
+    expect(full.snapshot_hash).toBe(full.overworld_snapshot_hash);
+    expect(compact.snapshot_hash).toBe(compact.overworld_snapshot_hash);
+    expect(compact.snapshot_hash).toBe(full.snapshot_hash);
+    expect(full).toHaveProperty("observation");
+    expect(compact).not.toHaveProperty("context");
     expect(compact.quest).toEqual(["gallowmere", "The Gallowmere", "queensbury_town__market"]);
-    if (!compact.context) throw new Error("expected generic compact parent context");
-    expect(compact.context.here[0]).toBe("queensbury_town");
-    expect(compact.journey).toHaveProperty("decisionProof");
+    expect(compact.journey).not.toHaveProperty("decisionProof");
 
     expect(full.rpg_session.character_continuity).toMatchObject({
       continuity: "same_campaign_character",
@@ -356,6 +428,7 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
       seed: 2218,
       compact_observation: true,
     });
+    expect(directStart).not.toHaveProperty("launch_handoff");
     const directContinuityPull = directApi.get_observation({
       session_id: directStart.session_id,
       compact_observation: true,
@@ -497,6 +570,30 @@ describe("bug_0516 — Gallowmere starts with its promised hunting-knife", () =>
     expect(reloadedSession.overworldSessionId).toBeUndefined();
     expect(Object.isFrozen(reloadedSession.embeddedCharacterContinuity)).toBe(true);
     expect(fullApi.save_game({ session_id: fullReload.session_id }).save).toBe(saved.save);
+  });
+
+  it("does not invent Hayden's packet for wardens or out-of-order Gallowmere starts", () => {
+    const starts = [
+      {
+        label: "wardens",
+        snapshot: campaignQueensburyMarketSession("send_wardens_north").snapshot(),
+      },
+      { label: "out-of-order", snapshot: registeredQueensburyMarketSession().snapshot() },
+    ];
+
+    for (const { label, snapshot } of starts) {
+      const api = createToolApi({ root: process.cwd() });
+      const parent = api.restore_overworld_session({ snapshot, compact_context: true });
+      const launched = api.start_overworld_session_quest({
+        session_id: parent.session_id,
+        quest_id: "gallowmere",
+        seed: 2218,
+        compact_observation: true,
+        compact_actions: true,
+      });
+      expect(launched, label).not.toHaveProperty("launch_handoff");
+      expect(launched, label).toHaveProperty("context");
+    }
   });
 
   it("surfaces a reachable parent story gate while suppressing Gallowmere actions", () => {

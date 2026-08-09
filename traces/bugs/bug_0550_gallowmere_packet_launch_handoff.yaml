@@ -1,0 +1,53 @@
+id: bug_0550
+title: "The embedded Gallowmere launch did not acknowledge Hayden's packet delivery"
+pack: n/a (embedded Gallowmere campaign handoff)
+reported_by: 2026-08-09T08-52-30-579Z accepted pure fresh-overworld playtest; accepted hotspot 9fe9a8ee
+severity: S1
+evidence:
+  source_report: ai-runs/2026-08-09T08-52-30-579Z/playtest.md
+  accepted_hotspot: 9fe9a8ee
+  exact_campaign_action: "quest_start:gallowmere"
+  player_friction: "After the Gallowmere hunt, there was no explicit final 'give packet to Hedrick' action; closure came via narrative progression (ridge exit and win state) rather than a named handoff action."
+symptom: >
+  The accepted player carried an active goal that said to bring Hayden's packet to
+  Hedrick and see The Gallowmere through. Starting the embedded quest moved directly
+  from Queensbury Market Streets into the quest-local moor profile without a campaign
+  handoff receipt. After killing the sow, the player therefore returned to Hedrick,
+  found only his exhausted pre-hunt dialogue, and then retraced the moor to the ridge
+  ending. The quest worked and the player was never stuck, but no visible surface had
+  confirmed that the packet part of the goal was already complete at launch.
+root_cause: >
+  Under the exact carry_hedricks_packet_north goal, the embedded quest start already
+  records quest_start:gallowmere as the meaningful campaign decision, but its
+  launch-handoff projector recognized only Wolf-Winter. That route consequently
+  exposed the active packet goal beside an actionable child session without the
+  corresponding accepted-action receipt. The child pack intentionally owns only its
+  self-contained hunt profile, so neither Hedrick's standalone dialogue nor the ridge
+  locomotion ending was the truthful place to invent an Albany packet transaction.
+fix: >
+  Extend the campaign-only embedded launch presentation so a Gallowmere quest start
+  returns the compact delivery receipt only when the current journey goal id is
+  exactly carry_hedricks_packet_north. The receipt says Hayden's packet is delivered
+  to Hedrick and the hunt remains. The alternate travel_north_with_albany_wardens
+  goal, direct starts, and out-of-order Gallowmere starts expose no packet delivery.
+  This receipt explains one existing world-to-child boundary; it does not add a
+  post-hunt action, change content/rpg/quests/gallowmere.yaml, or alter quest mechanics,
+  score, ending, state, RPG/content hash, overworld snapshot hash, or journey-decision
+  accounting. Standalone RPG play remains campaign-agnostic and has no handoff.
+deterministic_witnesses:
+  - "under current goal carry_hedricks_packet_north, an embedded Gallowmere start names the Queensbury Market to Gallowmere transition"
+  - "that goal-scoped launch receipt says Hayden's packet was delivered to Hedrick Cradoc and that The Gallowmere hunt remains"
+  - "full and compact embedded starts under the packet goal expose the same recipient and remaining objective"
+  - "the goal-scoped receipt accompanies the existing quest_start:gallowmere decision without adding another decision or changing either child state hash or parent snapshot hash"
+  - "the alternate travel_north_with_albany_wardens goal starts Gallowmere without claiming Hayden's packet delivery"
+  - "an out-of-order embedded Gallowmere start under any other current goal exposes no packet launch handoff"
+  - "direct start_world_quest and standalone browser RPG starts remain without a campaign launch handoff"
+  - "Gallowmere still closes only through its authored ridge ending, with no new post-hunt Hedrick action and no RPG source-hash change"
+production:
+  - src/mcp/embedded_quest_launch_handoff.ts
+  - src/mcp/overworld_tool_handlers.ts
+tests:
+  - tests/regression/gallowmere_starting_knife_truth.test.ts
+verification:
+  - npx vitest run tests/regression/gallowmere_starting_knife_truth.test.ts
+  - npm run verify:bug-traces

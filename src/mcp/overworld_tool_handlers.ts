@@ -755,6 +755,7 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       const launchHandoff = embeddedQuestLaunchHandoff({
         quest: started.quest,
         departureRecap,
+        journeyGoalId: session.journey().goal.id,
       });
       const questResult =
         responseOptions.compact_result === true

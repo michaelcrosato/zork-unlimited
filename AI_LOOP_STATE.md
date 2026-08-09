@@ -151,3 +151,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Economy: the canary used 3.338M raw / 127,358 uncached input + 9,772 output (137,130 useful) with 96.18% cache reuse and no retry, fallback, or failed slot.
 - Self-critique/follow-through: the player still found collapsed support easy to overlook and technical session handles dense; one canary proves build safety, not a 4.2 clarity uplift, and leaves support discoverability as an open cohort question rather than grounds for another immediate fleet.
 - Guard: the audit closed stale v2 prompt/assertion paths plus one vacuous UI check; crawls `20260804T221651Z` / `20260804T224521Z` are green, canonical health passes 459 files/3,906 tests plus UI/all 12 packs, and only two fresh reports exist since the last compile.
+## AFK Cycle 2026-08-09T14-36-21-213Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T14-36-21-213Z","selected_recommendation_id":"hotspot-9fe9a8ee"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-9777c9e1 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
