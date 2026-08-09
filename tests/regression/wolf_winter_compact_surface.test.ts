@@ -15,6 +15,7 @@ import type { Effect } from "../../src/core/effects.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
+import { compactMcpActionLabel, MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
 import {
   compactMcpVisibleJournalProse,
@@ -53,6 +54,13 @@ const PRE_DISCLOSURE_SOURCE_HASH =
   "03a87c97d09d5a30eefa5314d4d2d07dbcf51db2754796e705ecfa1df3262019";
 const LESSON_RETURN_DISCLOSURE_SOURCE_HASH =
   "ec51d609f3acebe9cf22830256e44bdd0a8bdfa828b69aaa5d14a3d23b3e7dbb";
+const HUNT_COMMITMENT_LABEL_SOURCE_HASH =
+  "1bdbd697d7a3c287b1a3bb2e22dd5aa8f793442a7eba39d4af11fffa1e157610";
+const CADE_HUNT_EXIT_LABEL =
+  "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
+const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
+const JUNE_HUNT_ACKNOWLEDGEMENT_LABEL =
+  "HUNT / keep June — Hold ground; June stays cattle-first. First wolf death breaks agreement. North commits; closes other plans.";
 
 const WOLF_WINTER_EXTERNAL_FLAGS = [
   "jamie_market_testimony_certified",
@@ -312,6 +320,17 @@ describe("Wolf-Winter compact authored prose", () => {
 
     expect(talked.context.choices).toEqual(expectedChoices);
     expect(dialogueChoices(ordinary)).toEqual(expectedChoices);
+    const exactHuntChoice = ["ask_commit_hunt_and_hold", CADE_HUNT_EXIT_LABEL] as const;
+    expect(talked.context.choices).toContainEqual(exactHuntChoice);
+    expect(dialogueChoices(ordinary)).toContainEqual(exactHuntChoice);
+    expect(compactWithActions(ordinary).choices).toContainEqual(exactHuntChoice);
+    const fullHuntAction = buildRpgObservation(index, ordinary).available_actions.find(
+      (action) => action.id === "ask_commit_hunt_and_hold",
+    );
+    expect(fullHuntAction?.command).toBe(CADE_HUNT_EXIT_COMMAND);
+    expect(CADE_HUNT_EXIT_COMMAND.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(compactMcpActionLabel(CADE_HUNT_EXIT_COMMAND)).toBe(CADE_HUNT_EXIT_COMMAND);
+    expect(CADE_HUNT_EXIT_COMMAND).not.toMatch(TRUNCATION_MARKER);
     expect(expectedChoices.map(([id]) => id)).toEqual([
       "ask_wolves",
       "ask_byre",
@@ -333,6 +352,13 @@ describe("Wolf-Winter compact authored prose", () => {
       ]),
     );
     expect(talked.context.choices?.some(([id]) => id === "go_west")).toBe(false);
+
+    const june = pack.npcs.find((npc) => npc.id === "june_pike");
+    const juneHuntAcknowledgement = june?.dialogue.nodes
+      .flatMap((node) => node.topics)
+      .find((topic) => topic.id === "commit_hunt_and_hold");
+    expect(juneHuntAcknowledgement?.prompt).toBe(JUNE_HUNT_ACKNOWLEDGEMENT_LABEL);
+    expect(juneHuntAcknowledgement?.prompt).not.toBe(CADE_HUNT_EXIT_LABEL);
 
     let released = initStateForRpgPack(index, 9822);
     released = act(released, "go_north");
@@ -424,7 +450,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps the disclosure copy-only at the lesson, gauntlet, and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(LESSON_RETURN_DISCLOSURE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(HUNT_COMMITMENT_LABEL_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(LESSON_RETURN_DISCLOSURE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(PRE_DISCLOSURE_SOURCE_HASH);
 
     const attackLessonSources = pack.npcs.flatMap((npc) =>

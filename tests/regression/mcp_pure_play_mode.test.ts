@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 
 // @ts-expect-error — plain .mjs module without type declarations
 import { validPureMcpToolCatalogEntry } from "../../blind-tester/codex-pure-envelope.mjs";
+import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import {
   PURE_PLAYER_TOOLS,
   resolveAreaMoveSelector,
@@ -42,6 +43,10 @@ const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 const MCP_SERVER = join(ROOT, "src", "mcp", "server.ts");
 const TEST_RUN_SEED = 2731;
 const TEST_BUILD_COMMIT = "b".repeat(40);
+const CADE_HUNT_EXIT_LABEL =
+  "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
+const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
+const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 async function withPureServer<T>(
   evidencePath: string,
@@ -1955,7 +1960,11 @@ describe("MCP pure play mode", () => {
       available_actions: { id: string; command?: string }[];
       dialogue: { npc: string; npc_text: string } | null;
     };
-    type RpgCompactContext = { actions?: string[]; dialogue?: [string, string] };
+    type RpgCompactContext = {
+      actions?: string[];
+      choices?: [string, string][];
+      dialogue?: [string, string];
+    };
     const areaView = (payload: Record<string, unknown>): AreaView => {
       const context = payload.context as CompactAreaContext;
       return {
@@ -2806,6 +2815,13 @@ describe("MCP pure play mode", () => {
         expect(talkActions).toEqual(
           expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
         );
+        expect(talkContext.choices).toContainEqual([
+          "ask_commit_hunt_and_hold",
+          CADE_HUNT_EXIT_LABEL,
+        ]);
+        expect(
+          talkContext.choices?.find(([id]) => id === "ask_commit_hunt_and_hold")?.[1],
+        ).not.toMatch(ACTION_TRUNCATION_MARKER);
         expect(talkActions?.length).toBeLessThanOrEqual(24);
 
         const currentRead = textPayload(
@@ -2817,6 +2833,7 @@ describe("MCP pure play mode", () => {
         expect(currentRead.state_hash).toBe(talked.state_hash);
         expect((currentRead.context as RpgCompactContext).dialogue).toEqual(talkContext.dialogue);
         expect((currentRead.context as RpgCompactContext).actions).toEqual(talkActions);
+        expect((currentRead.context as RpgCompactContext).choices).toEqual(talkContext.choices);
 
         const fullCurrentRead = textPayload(
           await client.callTool({
@@ -2847,10 +2864,16 @@ describe("MCP pure play mode", () => {
             "ask: HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits.",
           ask_byre:
             "ask: HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
-          ask_commit_hunt_and_hold:
-            "ask: Commit HUNT north — Hold ground in prepared combat. Risk: wolf deaths; failure risks cattle/line. Closes LURE/DRIVE/FORTIFY.",
+          ask_commit_hunt_and_hold: CADE_HUNT_EXIT_COMMAND,
           ask_leave: "ask: Leave Cade.",
         });
+        const huntAction = labeledActions.find(
+          (action) => action.id === "ask_commit_hunt_and_hold",
+        );
+        expect(MCP_ACTION_LABEL_CHAR_LIMIT).toBe(160);
+        expect(huntAction?.command).toBe(CADE_HUNT_EXIT_COMMAND);
+        expect(huntAction?.command?.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
+        expect(huntAction?.command).not.toMatch(ACTION_TRUNCATION_MARKER);
         expect(labeledMenu).toMatchObject({
           overworld_session_id: sessionId,
           rpg_session_id: rpgSessionId,
@@ -2862,7 +2885,12 @@ describe("MCP pure play mode", () => {
           }),
         );
         expect(compactMenu.actions).toEqual(
-          expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
+          expect.arrayContaining([
+            "ask_wolves",
+            "ask_byre",
+            "ask_commit_hunt_and_hold",
+            "ask_leave",
+          ]),
         );
 
         // The action menu carried by TALK is immediately executable; a player does

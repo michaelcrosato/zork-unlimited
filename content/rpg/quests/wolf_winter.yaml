@@ -3984,7 +3984,7 @@ npcs:
               goto: cade_byre
             - id: commit_hunt_and_hold
               aliases: [choose_hunt_and_hold, commit_hunt]
-              prompt: "Commit HUNT north — Hold ground in prepared combat. Risk: wolf deaths; failure risks cattle/line. Closes LURE/DRIVE/FORTIFY."
+              prompt: "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
