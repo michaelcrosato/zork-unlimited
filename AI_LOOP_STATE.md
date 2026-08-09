@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 746 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260809T131900Z/hotspots.json","hotspots_sha256":"7c06aa23bd169b392e58555f827b3c282d17e71aa48cefc32eb6ae0aef37c258","manifest_path":"ai-runs/feedback/20260809T131900Z/report-manifest.json","manifest_sha256":"bc0469c6f7649c3fc6e74d6b0934b4c36fa04d2621ed87bdc8b955f0a4993ee6"},"pending_cycle_reports":[{"evidence_sha256":"67a30461ad7209e40a6fa7c63578184ad4400fefd52026500e911c8a315a904b","report_id":"pure:c6beba2be21d0d2f944ac6f600eda8f43da726e177711567ba611c684c5b5f04","report_sha256":"86b90bee1c2599cc4cac6d430793d769579a5a71960d714e51fe03a55f9b0a31","run_id":"2026-08-09T13-03-08-410Z","sidecar_sha256":"e402ca0bec5163fa3dda0bb121d9c946e380d74972c297d4aeb5bfe4dbfb94ce","tested_commit":"ca4accc5b86b25c70b1888f9987b19123ad5c5d1"}],"schema_version":1} -->
+<!-- historical_cycle_count: 747 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-09T14-36-21-213Z","hotspots_path":"ai-runs/feedback/20260809T131900Z/hotspots.json","hotspots_sha256":"7c06aa23bd169b392e58555f827b3c282d17e71aa48cefc32eb6ae0aef37c258","manifest_path":"ai-runs/feedback/20260809T131900Z/report-manifest.json","manifest_sha256":"bc0469c6f7649c3fc6e74d6b0934b4c36fa04d2621ed87bdc8b955f0a4993ee6"},"pending_cycle_reports":[{"evidence_sha256":"67a30461ad7209e40a6fa7c63578184ad4400fefd52026500e911c8a315a904b","report_id":"pure:c6beba2be21d0d2f944ac6f600eda8f43da726e177711567ba611c684c5b5f04","report_sha256":"86b90bee1c2599cc4cac6d430793d769579a5a71960d714e51fe03a55f9b0a31","run_id":"2026-08-09T13-03-08-410Z","sidecar_sha256":"e402ca0bec5163fa3dda0bb121d9c946e380d74972c297d4aeb5bfe4dbfb94ce","tested_commit":"ca4accc5b86b25c70b1888f9987b19123ad5c5d1"},{"evidence_sha256":"99b6eea76af672caf13a681d6178dd125700241371f3556b6fce6d708df95022","report_id":"pure:9659af43c1459aa54d4ca5c32bf8b5c32a95341b2df188f30dbbe4bf09ea6dd0","report_sha256":"369fe2764c6c3666a5756032747b807100e14a47f53ea27a03bc8c6156d0f232","run_id":"2026-08-09T14-36-21-213Z","sidecar_sha256":"e3367ffd9ce6219d1fde795675036265c2390398bd262911108c09b76d15f6d0","tested_commit":"7445e078da12e954ed63fc63905ca8b9a5d60e36"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - gallowmere_packet_launch_handoff
+- Evidence choice: the compiler's mapped recommendation `9fe9a8ee` was the stronger bounded fix; the assessor's equal-score checkpoint pick describes an intentional, regression-pinned first safe boundary rather than a supported timing change.
+- Surface/effect: embedded `quest_start:gallowmere` under the exact packet-carrying goal now returns a versioned receipt that Hayden's packet reached Hedrick and the hunt remains; full and compact starts share it.
+- Fail-closed boundary: wardens, out-of-order, direct, and standalone starts never inherit packet copy, while the existing quest-start decision, parent snapshot, child state/hash, Gallowmere content, score, and ridge ending are unchanged.
+- Pure evidence: exact-clean Spark seed 7 on `7445e078` chose Ledger Advocate, Exposed Ridge, and LURE, kept the whole herd and all wolves alive, then ended naturally at the first goal on decision 26; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
+- Self-critique/next: the canary did not continue to Gallowmere, so causal proof remains the full/compact regression rather than a claimed playtest uplift; its only friction was non-blocking advisory Civic event text beside the active Compact/quest lane.
+- Feedback/guard: status remains 1 actionable report of 3, so no compile; 17 focused behavior/checkpoint tests, type/lint/format, 541 bug traces, and two hostile reviews are green, with the standard outer gates still mandatory.
 
 ### Cycle result - lure_lesson_return_disclosure
 - Evidence choice: the assessor offered only a routine Advocates' Case rotation; the newest accepted player instead had to rediscover LURE after quick counsel, so this off-list navigation disclosure was the narrower evidence-backed move.
@@ -141,19 +149,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Parallel Spark evidence: exact-main admission passed 3/3, then the requested no-retry Spark-10 verified 4/10; all four completed Wolf-Winter with HUNT/LURE/FORTIFY represented, but 59.8% of observed useful tokens landed in six invalid attempts, so this fingerprint was not scaled.
 - Self-critique/follow-through: the canary proves a smooth two-quest handoff and clean build, not a measured clarity uplift; it showed no concrete scope confusion, while the background cohort leaves optional Station support undiscovered and motivates a narrow evidence-bound interview/transport reliability cycle before more Spark fanout.
 - Guard: independent save and presentation audits are clean; crawls `20260805T012948Z` / `20260805T015013Z`, exact-tree health (459 files/3,907 tests plus UI/all 12 packs), and the 16-report feedback compile are green.
-
-### Cycle result - station_support_progressive_disclosure
-
-- Evidence choice: 9/10 verified Terra players named Albany Station's multi-surface planning density despite 10/10 Wolf-Winter completion, so the repeated issue was first-view presentation rather than missing mechanics.
-- Surface/effect: compact MCP v43 / Station board v3, terminal, and UI now lead with legal roads plus one plain field-kit / relief-wagon / second-rider cue; exact optional comparisons and authenticated inspect/talk handles remain behind an explicit read-only detail request.
-- Truthfulness/parity: all support options, costs, order, action ids, full verbose observation, state, RNG, hashes, journal, and decision counts are unchanged; an explicit detail request bypasses snapshot `unchanged` without mutating play, and pure actions remain unauthorized until their handles are shown.
-- Pure evidence: exact-clean Terra seed 80418000 on `385c3a08` verified first attempt, finished The Wolf-Winter by LURE at decision 25, continued at 25/40, won The Gallowmere and ended at 49, rated clarity/enjoyment 4/4, replay-yes, with no bug or stuck state.
-- Economy: the canary used 3.338M raw / 127,358 uncached input + 9,772 output (137,130 useful) with 96.18% cache reuse and no retry, fallback, or failed slot.
-- Self-critique/follow-through: the player still found collapsed support easy to overlook and technical session handles dense; one canary proves build safety, not a 4.2 clarity uplift, and leaves support discoverability as an open cohort question rather than grounds for another immediate fleet.
-- Guard: the audit closed stale v2 prompt/assertion paths plus one vacuous UI check; crawls `20260804T221651Z` / `20260804T224521Z` are green, canonical health passes 459 files/3,906 tests plus UI/all 12 packs, and only two fresh reports exist since the last compile.
-## AFK Cycle 2026-08-09T14-36-21-213Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-09T14-36-21-213Z","selected_recommendation_id":"hotspot-9fe9a8ee"} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-9777c9e1 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
