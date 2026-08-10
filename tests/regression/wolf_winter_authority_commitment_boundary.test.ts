@@ -10,7 +10,10 @@ import { makeStep } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
 import type { Rng } from "../../src/core/rng.js";
 import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
-import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
+import {
+  COMPACT_BLOCKED_EXIT_CHAR_LIMIT,
+  compactRpgObservation,
+} from "../../src/mcp/compact_rpg_observation.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { parseCommand } from "../../src/rpg/command_map.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
@@ -31,6 +34,8 @@ const FULL_DUTY_TERMS =
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+const PALING_NORTH_GUIDANCE =
+  "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
 const YARD_BLOCKED_SOUTH =
   "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
 const YARD_BLOCKED_WEST =
@@ -86,7 +91,11 @@ function observation(state: GameState) {
   });
 }
 
-function assertNorthBlockedOnce(state: GameState, preparationActionId: string): void {
+function assertNorthBlockedOnce(
+  state: GameState,
+  preparationActionId: string,
+  message = NORTH_PENDING_GUIDANCE,
+): void {
   const full = observation(state);
   const compact = compactRpgObservation(
     full,
@@ -101,16 +110,16 @@ function assertNorthBlockedOnce(state: GameState, preparationActionId: string): 
   expect(full.available_actions.filter((action) => action.id === "go_north")).toEqual([]);
   expect(full.exits.filter((exit) => exit.direction === "north")).toEqual([]);
   expect(full.blocked_exits.filter((exit) => exit.direction === "north")).toEqual([
-    { direction: "north", message: NORTH_PENDING_GUIDANCE },
+    { direction: "north", message },
   ]);
   expect(full.available_actions.map((action) => action.id)).toContain(preparationActionId);
   expect(compactNorthExits).toEqual([]);
-  expect(compactNorthBlocks).toEqual([["north", NORTH_PENDING_GUIDANCE]]);
+  expect(compactNorthBlocks).toEqual([["north", message]]);
   expect(compact.actions).toContain(preparationActionId);
   expect(compactNorthBlocks[0]?.[1]).not.toMatch(TRUNCATION_MARKER);
 }
 
-function assertNorthOpenOnce(state: GameState): void {
+function assertNorthOpenOnce(state: GameState, destination = "paling_gap"): void {
   const full = observation(state);
   const compact = compactRpgObservation(
     full,
@@ -125,7 +134,7 @@ function assertNorthOpenOnce(state: GameState): void {
   expect(full.available_actions.filter((action) => action.id === "go_north")).toHaveLength(1);
   expect(full.exits.filter((exit) => exit.direction === "north")).toHaveLength(1);
   expect(full.blocked_exits.filter((exit) => exit.direction === "north")).toEqual([]);
-  expect(compactNorthExits).toEqual([["north", "paling_gap"]]);
+  expect(compactNorthExits).toEqual([["north", destination]]);
   expect(compactNorthBlocks).toEqual([]);
 }
 
@@ -391,6 +400,9 @@ describe("Wolf-Winter authority commitment boundary", () => {
     expect(ALL_SECONDARY_BLOCKED_COPY.every((message) => !TRUNCATION_MARKER.test(message))).toBe(
       true,
     );
+    expect(PALING_NORTH_GUIDANCE.length).toBe(116);
+    expect(PALING_NORTH_GUIDANCE.length).toBeLessThanOrEqual(180);
+    expect(PALING_NORTH_GUIDANCE.length).toBeLessThanOrEqual(COMPACT_BLOCKED_EXIT_CHAR_LIMIT);
   });
 
   it.each([
@@ -401,6 +413,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
       committedFlag: "strategy_drive_committed",
       pickup: "take_drive_signal_rope_kit",
       outer: "use_drive_signal_rope_kit_on_drive_breach_signal",
+      recovery: null,
       threshold: "use_drive_signal_rope_kit_on_drive_threshold_line",
       finalActions: [
         "use_cattle_crisis_priority",
@@ -415,6 +428,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
       committedFlag: "fortify_cade_terms_accepted",
       pickup: "take_cade_household_shutters",
       outer: "use_cade_household_shutters_on_fortify_outer_seal",
+      recovery: "use_cade_failed_seal_help",
       threshold: "use_cade_household_shutters_on_fortify_threshold_seal",
       finalActions: ["use_fortify_dawn_watch"],
     },
@@ -425,12 +439,13 @@ describe("Wolf-Winter authority commitment boundary", () => {
       committedFlag: "fortify_albany_authority_invoked",
       pickup: "take_albany_relief_seals",
       outer: "use_albany_relief_seals_on_fortify_outer_seal",
+      recovery: "use_albany_relief_seals_on_authority_emergency_bind",
       threshold: "use_albany_relief_seals_on_fortify_threshold_seal",
       finalActions: ["use_fortify_dawn_watch"],
     },
   ])(
     "keeps all five secondary blocks exact in full and compact throughout $strategy",
-    ({ discuss, commit, committedFlag, pickup, outer, threshold, finalActions }) => {
+    ({ discuss, commit, committedFlag, pickup, outer, recovery, threshold, finalActions }) => {
       let state = launchSeed4177Imports();
       state = act(state, "use_sheltered_stockway_last_mile");
       state = act(state, "talk_houndsman");
@@ -449,12 +464,18 @@ describe("Wolf-Winter authority commitment boundary", () => {
 
       state = act(state, "go_north");
       assertSecondaryBlockedSurface(state, PALING_SECONDARY_BLOCKS, [outer]);
-      expect(enumerateRpgActions(index, state).map((action) => action.id)).not.toContain(
-        "go_north",
-      );
+      assertNorthBlockedOnce(state, outer, PALING_NORTH_GUIDANCE);
+
+      if (recovery !== null) {
+        let failed = act(structuredClone(state), outer, "worst");
+        assertNorthBlockedOnce(failed, recovery, PALING_NORTH_GUIDANCE);
+        failed = act(failed, recovery);
+        assertNorthOpenOnce(failed, "byre_door");
+      }
 
       state = act(state, outer, "best");
       assertSecondaryBlockedSurface(state, PALING_SECONDARY_BLOCKS, ["go_north"]);
+      assertNorthOpenOnce(state, "byre_door");
       state = act(state, "go_north");
       assertSecondaryBlockedSurface(state, THRESHOLD_SECONDARY_BLOCKS, [threshold]);
       expect(enumerateRpgActions(index, state).map((action) => action.id)).not.toContain(

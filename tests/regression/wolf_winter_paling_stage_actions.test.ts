@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
+import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { SAVE_MODE, load, save } from "../../src/persist/save_load.js";
 import { rpgActionOptionForInputId } from "../../src/rpg/legal_actions.js";
+import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -18,8 +20,10 @@ import { replayTrace } from "../../src/trace/replay.js";
 import { GameSession } from "../../ui/src/engine.js";
 
 const SOURCE_PATH = "content/rpg/quests/wolf_winter.yaml";
-const PREDECESSOR_SOURCE_HASH = "189b14d70a68c0c795167baa9dae695f56c9f3b99bd33151d6a4ece87d083b3b";
-const SOURCE_HASH = "07572512b61250a87583b4c1d6c80586d2f73b171ccde9a080051d7413af15bd";
+const PREDECESSOR_SOURCE_HASH = "07572512b61250a87583b4c1d6c80586d2f73b171ccde9a080051d7413af15bd";
+const SOURCE_HASH = "c9b82ed5637d667a3b9837c15ca7ac05bec358b88e131b0d316a11ae367f8236";
+const PALING_NORTH_GUIDANCE =
+  "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
 const loaded = loadRpgSourceFile(SOURCE_PATH);
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
@@ -69,6 +73,34 @@ function assertOnlyCanonicalRailId(state: GameState, id: string, command: RegExp
   expect(ids(state)).not.toContain("use_paling_rail");
 }
 
+function assertPalingNorthBlocked(state: GameState, requiredActionIds: readonly string[]): void {
+  const before = structuredClone(state);
+  const full = buildRpgObservation(index, state);
+  const actionIds = full.available_actions.map((action) => action.id);
+  const compact = compactRpgObservation(full, actionIds, { includeActions: true });
+  const compactNorthExits = (compact.exits ?? []).filter(
+    (exit) => (typeof exit === "string" ? exit : exit[0]) === "north",
+  );
+
+  expect(state.current).toBe("paling_gap");
+  expect(full.exits).toContainEqual({ direction: "south", to: "byre_yard" });
+  expect(full.exits.filter((exit) => exit.direction === "north")).toEqual([]);
+  expect(full.blocked_exits.filter((exit) => exit.direction === "north")).toEqual([
+    { direction: "north", message: PALING_NORTH_GUIDANCE },
+  ]);
+  expect(compactNorthExits).toEqual([]);
+  expect((compact.blocked ?? []).filter(([direction]) => direction === "north")).toEqual([
+    ["north", PALING_NORTH_GUIDANCE],
+  ]);
+  expect(compact.actions).toEqual(actionIds);
+  for (const actionId of requiredActionIds) {
+    expect(actionIds).toContain(actionId);
+    expect(compact.actions).toContain(actionId);
+  }
+  expect(actionIds).not.toContain("go_north");
+  expect(state).toEqual(before);
+}
+
 describe("Wolf-Winter paling stage action identities", () => {
   it("qualifies only one-to-one verb hubs and rejects legacy-id shadows", () => {
     expect([...index.verbIdentifiedTargetOnlyUseTargets]).toEqual(["paling_rail"]);
@@ -99,7 +131,11 @@ describe("Wolf-Winter paling stage action identities", () => {
     expect(loaded.compiled.contentHash).toBe(SOURCE_HASH);
 
     const publicOpening = atPaling();
+    expect(publicOpening.flags.strategy_lure_committed).not.toBe(true);
+    expect(publicOpening.flags.strategy_drive_committed).not.toBe(true);
+    expect(publicOpening.flags.strategy_fortify_committed).not.toBe(true);
     assertOnlyCanonicalRailId(publicOpening, "wedge_paling_rail", /^wedge /i);
+    assertPalingNorthBlocked(publicOpening, ["wedge_paling_rail"]);
 
     const split = choose(publicOpening, "wedge_paling_rail", "worst");
     assertOnlyCanonicalRailId(split, "bind_paling_rail", /^bind /i);
@@ -121,6 +157,14 @@ describe("Wolf-Winter paling stage action identities", () => {
       breach_braced: true,
     });
     assertOnlyCanonicalRailId(scentPen, "turn_paling_rail", /^turn .*scent-pen/i);
+    assertPalingNorthBlocked(scentPen, [
+      "turn_paling_rail",
+      "maneuver_yearling_wolf_commit_hybrid_strike",
+    ]);
+    const hybrid = choose(scentPen, "maneuver_yearling_wolf_commit_hybrid_strike", "worst");
+    expect(hybrid.flags.lure_hybrid_combat_entered).toBe(true);
+    expect(hybrid.flags.yearling_down).not.toBe(true);
+    assertPalingNorthBlocked(hybrid, ["attack_yearling_wolf"]);
     const redirected = choose(scentPen, "turn_paling_rail");
     expect(redirected.flags.yearling_redirected_with_braced_rail).toBe(true);
     expect(redirected.vars.score).toBe((scentPen.vars.score ?? 0) + 10);

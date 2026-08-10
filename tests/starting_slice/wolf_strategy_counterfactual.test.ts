@@ -27,6 +27,8 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+const PALING_NORTH_GUIDANCE =
+  "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
 
 function fixedRng(face: "best" | "worst"): Rng {
   return {
@@ -40,6 +42,41 @@ type Route = Readonly<{
   actions: readonly string[];
   observations: readonly ReturnType<typeof buildRpgObservation>[];
 }>;
+
+function assertLurePalingNorthBlocked(
+  state: GameState,
+  requiredActionIds: readonly string[],
+  forbiddenActionIds: readonly string[] = [],
+): void {
+  const before = structuredClone(state);
+  const full = buildRpgObservation(index, state);
+  const actionIds = full.available_actions.map((action) => action.id);
+  const compact = compactRpgObservation(full, actionIds, { includeActions: true });
+  const compactNorthExits = (compact.exits ?? []).filter(
+    (exit) => (typeof exit === "string" ? exit : exit[0]) === "north",
+  );
+
+  expect(state.current).toBe("paling_gap");
+  expect(full.exits).toContainEqual({ direction: "south", to: "byre_yard" });
+  expect(full.exits.filter((exit) => exit.direction === "north")).toEqual([]);
+  expect(full.blocked_exits.filter((exit) => exit.direction === "north")).toEqual([
+    { direction: "north", message: PALING_NORTH_GUIDANCE },
+  ]);
+  expect(compactNorthExits).toEqual([]);
+  expect((compact.blocked ?? []).filter(([direction]) => direction === "north")).toEqual([
+    ["north", PALING_NORTH_GUIDANCE],
+  ]);
+  expect(compact.actions).toEqual(actionIds);
+  for (const actionId of requiredActionIds) {
+    expect(actionIds).toContain(actionId);
+    expect(compact.actions).toContain(actionId);
+  }
+  for (const actionId of ["go_north", ...forbiddenActionIds]) {
+    expect(actionIds).not.toContain(actionId);
+    expect(compact.actions).not.toContain(actionId);
+  }
+  expect(state).toEqual(before);
+}
 
 function lureRoute(
   opening: "clean" | "fouled" | "fouled_braced" | "hybrid",
@@ -102,6 +139,7 @@ function lureRoute(
   act("take_winter_feed_sack");
   act("go_east");
   act("go_north");
+  assertLurePalingNorthBlocked(state, ["use_winter_feed_sack_on_downwind_feed_line"]);
   act("use_winter_feed_sack_on_downwind_feed_line");
 
   if (opening !== "clean") {
@@ -110,6 +148,10 @@ function lureRoute(
     expect(enumerateRpgActions(index, state).map((option) => option.id)).not.toContain(
       "use_winter_feed_sack_on_downwind_feed_line",
     );
+    assertLurePalingNorthBlocked(state, [
+      "wedge_paling_rail",
+      "maneuver_yearling_wolf_commit_hybrid_strike",
+    ]);
     if (opening === "fouled") {
       act("wedge_paling_rail"); // worst field roll: the rail splits
       act("bind_paling_rail"); // deterministic salvage: bind the split guard
@@ -131,12 +173,18 @@ function lureRoute(
   const breach = buildRpgObservation(index, state);
   expect(breach.description).toMatch(/ground[^]*north[^]*south[^]*west[^]*up[^]*loft/i);
   expect(breach.description).not.toMatch(/route north is clear|byre runs north|byre north/i);
-  expect(breach.available_actions.map((option) => option.id)).not.toContain("go_north");
-  expect(breach.blocked_exits).toContainEqual({
-    direction: "north",
-    message:
-      "Settle the yearling or finish the outer seal. On the feed plan, return south, then west and up for the loft cast before the ground way opens.",
-  });
+  assertLurePalingNorthBlocked(
+    state,
+    ["go_south"],
+    [
+      "use_winter_feed_sack_on_downwind_feed_line",
+      "wedge_paling_rail",
+      "bind_paling_rail",
+      "turn_paling_rail",
+      "maneuver_yearling_wolf_commit_hybrid_strike",
+      "attack_yearling_wolf",
+    ],
+  );
   act("go_south");
   const yard = buildRpgObservation(index, state);
   expect(yard.description).toMatch(/settled[^]*west[^]*store[^]*up[^]*loft/i);

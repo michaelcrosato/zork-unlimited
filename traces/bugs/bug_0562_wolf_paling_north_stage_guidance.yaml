@@ -1,0 +1,138 @@
+id: bug_0562
+title: "Wolf-Winter's paling north block blurred the current task with LURE's next cast"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: accepted Cycle 18 FORTIFY feedback plus the sealed pending Cycle 21 LURE retry
+severity: S1
+evidence:
+  accepted_source:
+    source_run: 2026-08-10T06-37-25-261Z
+    source_commit: 3dab3322885614f9010fe773c03063c586a2a275
+    source_report_id: pure:b2ca88272fc24296c6591722d02f2a1c1464749222611a4e0ca672f666a39ea8
+    source_report_sha256: 405095260edcc895a7c3c2e00de67e22732e6d31ae42b92238b65abafe018475
+    source_report: ai-runs/2026-08-10T06-37-25-261Z/playtest.md
+    source_raw: ai-runs/2026-08-10T06-37-25-261Z/playtest.codex.jsonl
+    source_raw_sha256: e59ee7da25f4c05b17ef4384cc5b6abaa64e804709a70d735c4a18dafe689d45
+    route: ending_fortified_cade_terms
+    raw_boundary: >
+      Items 14-15 compare the four strategies and open FORTIFY's exact terms;
+      items 16-18 commit Cade's terms and carry the named shutters north. Item 19
+      reaches the Broken Paling, where the old primary north block mixes the current
+      outer-seal task with LURE's later loft-cast route; item 20 seats the outer seal
+      and opens north under the existing condition.
+    player_friction: >
+      "Hard-committed strategy wording (fortify vs. others) was clear but could be
+      overwhelming on first encounter." The player completed the quest at 4/4
+      clarity and enjoyment, would replay, was not stuck, and reported bugs: [].
+  accepted_authority:
+    manifest: ai-runs/feedback/20260810T135652Z/report-manifest.json
+    manifest_sha256: f499b6913590bdfb1c6e19e8a2f26ac4efa0d371289b11cdb066a6b88f5f52ae
+    hotspots: ai-runs/feedback/20260810T135652Z/hotspots.json
+    hotspots_sha256: 1ad00a5137899cbe7fb6eda2a352ce0aee03027652cace1b27b1a1914356fb13
+    recommended_candidate: hotspot-d6a6cd0a
+    accepted_excerpt: >
+      Hard-committed strategy wording (fortify vs. others) was clear but could be
+      overwhelming on first encounter.
+  current_retry:
+    source_run: 2026-08-10T13-50-15-670Z
+    source_commit: 93d8b86b3431bb38c1ae935a870f5c710c12a8dd
+    source_report_id: pure:bbc7f9bdc160402ea22fc612884a8c425030a6b3992ab1bfd54e38d80e6b36b1
+    source_report_sha256: b87230225a2547a52cc032d24b77b9cf67515c1caf50b122d280831b4e1c7fd4
+    source_evidence_sha256: 31a2be38e1806a6f49a47e5dd84e3cf235cf6e6e563dad013dd5c3b09277048a
+    source_sidecar_sha256: 25265f94b67d2ab84ed8ad0429bb469492d8b3523d02f297cad417c03bf3d1a9
+    source_report: ai-runs/2026-08-10T13-50-15-670Z/playtest.md
+    source_raw: ai-runs/2026-08-10T13-50-15-670Z/playtest.codex.jsonl
+    source_raw_sha256: e3f6f629f7823f38db026c5b4fdef4e0c07b984fc897a17241eeb1e455b61090
+    route: ending_pack_diverted_after_blood
+    raw_boundary: >
+      Items 20-23 repeat the same old north block before the first LURE cast,
+      after its foul, and after the rail is braced; item 25 repeats it after a
+      return from the yard, item 26 repeats it after committing the hybrid fight,
+      and item 27 repeats it after the yearling is down, when the live next step
+      has finally become south, west, and up for the loft cast. Item 28 reaches
+      the yard and exposes that same second-cast route through the separate
+      bug_0558 north guidance.
+    player_friction: >
+      The player said the LURE branch became dense after the first foul and that
+      the no-retry, west/up/north recovery sequence required close reading. They
+      completed at 4/4 clarity and enjoyment, would replay, were not stuck, and
+      reported bugs: [].
+  assessment_run: 2026-08-10T15-48-02-040Z
+  selected_candidate: hotspot-d6a6cd0a
+  feedback_status: "delta; 1 verified, 1 actionable, 0 excluded mocks; 3 actionable reports required"
+symptom: >
+  The Broken Paling's one primary north block is shared by ordinary/HUNT,
+  LURE, DRIVE, and both FORTIFY authorities. Its first sentence named the live
+  yearling-or-outer-seal gate, but its LURE sentence immediately gave the later
+  south/west/up loft route even while the first cast, rail recovery, or bounded
+  hybrid fight was still the legal task. The retry therefore saw identical prose
+  across seven LURE observations spanning five materially distinct stages,
+  including both before and after the yearling was settled. This is S1 ordering
+  and density friction, not a
+  broken exit or dead end.
+root_cause: >
+  The locked_msg flattened two sequential LURE stages into one undifferentiated
+  instruction: settle the yearling at the paling, and only afterward leave by the
+  authored return route for the loft cast. Because the same exit also gates DRIVE
+  and FORTIFY, the copy must preserve their yearling/outer-seal truth without
+  suggesting that an optional action or any single shown step necessarily opens
+  north.
+fix: >
+  Replace only the Broken Paling north locked message with a 116-character,
+  22-word sequence: "Settle the yearling or finish the outer seal first. On LURE,
+  only then return south, west, and up for the loft cast." Keep its destination,
+  two existing condition groups, every room variant and legal action, and all
+  other primary and secondary blocked messages unchanged.
+settled_copy: >
+  Settle the yearling or finish the outer seal first. On LURE, only then return
+  south, west, and up for the loft cast.
+deterministic_witnesses:
+  - "the exact new primary block is 116 characters / 22 words, below both the authored 180-character ceiling and compact blocked-exit budget, with no truncation marker"
+  - "full observations and compact MCP expose the same exact north block and the same legal current action while north remains absent from both exit/action projections"
+  - "the Cycle 18 raw item_19 FORTIFY state exposes the outer-seal action beside the block, and item_20 proves that the unchanged successful seal condition opens north"
+  - "the Cycle 21 retry raw items 20-27 independently span LURE's first cast, foul, braced recovery, return, hybrid commitment, and post-yearling route transition"
+  - "clean, split-guard, braced-rail, and hybrid LURE routes keep north closed with the exact copy before settlement and again direct south only after the yearling is redirected or down"
+  - "ordinary/HUNT and LURE hybrid paling stages retain their exact authored current actions; DRIVE and both Cade/Albany FORTIFY retain their exact block-to-open gates"
+  - "Cycle 21's optional-Drover counterexample remains decisive: a successful optional Drover action can leave DRIVE north blocked until the still-shown hurdle turns the yearling, so this copy says settle the yearling rather than finish any shown step"
+  - "bug_0558's 175-character byre-yard north guidance and bug_0561's five secondary blocked messages remain byte-identical; this revision changes only the paling's primary north value"
+  - "building full and compact observations is read-only and retains the exact action ids; no copy read creates a journey decision or changes state"
+  - "the Wolf-Winter source hash advances directly from 07572512b61250a87583b4c1d6c80586d2f73b171ccde9a080051d7413af15bd to c9b82ed5637d667a3b9837c15ca7ac05bec358b88e131b0d316a11ae367f8236"
+  - "a current c9b82ed5 save and structured replay remain valid while the exact 07572512 predecessor fixture rejects under the unchanged source-integrity policy"
+selection_semantics:
+  - "Cycle 22 freezes selected_recommendation_id as exact on-list candidate hotspot-d6a6cd0a; it is neither a routine rotation id nor null/off-list work."
+  - "The accepted d6a6cd0a excerpt is broad first-encounter hard-commit density evidence; the prior sealed Cycle 21 LURE raw items provide the revision-live, stage-specific paling witness. Neither source is misrepresented as a failed action or mechanics report."
+  - "Accepted sibling rows eb005a8c and baf822f1 describe Civic onboarding copy already replaced by bug_0560; selecting the recommended d6a6cd0a row avoids replaying those revision-stale siblings."
+  - "The seal consumes the accepted 20260810T135652Z bundle only when selected_recommendation_id exactly equals hotspot-${recommended_next_fix.hotspot_id}; this exact d6a6cd0a selection therefore sets consumed_by_run_id to 2026-08-10T15-48-02-040Z after green outer gates."
+  - "Current feedback status is only 1/3 actionable before the Cycle 22 pure report, so no compile is authorized. The accepted bundle remains the same hash-bound manifest while its recommendation becomes consumed."
+  - "At seal, the existing Cycle 21 retry report remains pending and the newly verified Cycle 22 pure report is appended for a later cohort; the current report cannot enter a compile or steer its own provisional revision."
+nonclaims:
+  - "Neither source player rejected a legal action, attempted this blocked north exit as a tool call, got stuck, reached a dead end, or reported a bug; both completed Wolf-Winter and ended naturally."
+  - "The accepted FORTIFY report names broad hard-commit density, not this exact paling field as a direct complaint; the current retry's repeated raw observations are the narrower localization evidence."
+  - "This does not add, remove, rename, reorder, reveal, hide, or enable an action or exit; change a condition, destination, room variant, object, dialogue, item, enemy, flag, check, resource, score, ending, consequence, or journey decision; or alter serialization or save schema."
+  - "This does not make LURE's loft cast available at the paling, permit retreat after a hard commitment, add a retry after a fouled cast, or claim that every route settles the yearling in the same way."
+  - "This does not preserve the old content hash. Exact 07572512 content-hash-bound Wolf saves intentionally reject against c9b82ed5 under the unchanged integrity policy."
+  - "This does not compile feedback at a 1/3 delta, consume a sibling hotspot, or use the eventual Cycle 22 pure report as causal evidence for its own provisional revision."
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/regression/wolf_winter_authority_commitment_boundary.test.ts
+    cases:
+      - "keeps all five secondary route messages within their shared projection budget"
+      - "keeps all five secondary blocks exact in full and compact throughout $strategy"
+      - "keeps prepared DRIVE on the shown paling sequence until hurdle recovery opens north"
+  - path: tests/starting_slice/wolf_strategy_counterfactual.test.ts
+    cases:
+      - "redirects all three living wolves without selecting combat and exports a clean nondeath identity"
+      - "makes a fouled opening fail forward through spent guard wood into visible cattle loss"
+      - "makes a successful brace a living failed-lure recovery instead of a forced kill"
+      - "keeps the bounded combat recovery as a truthful hybrid identity"
+  - path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    cases:
+      - "projects all five real stages from the loaded pack without changing its source hash"
+      - "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+  - path: tests/regression/wolf_winter_compact_surface.test.ts
+    cases:
+      - "keeps every object/read/maneuver/effect narration and blocked-exit hint complete"
+      - "keeps each copy-only revision distinct at the gauntlet and source-hash boundaries"
+verification:
+  - npx vitest run tests/regression/wolf_winter_authority_commitment_boundary.test.ts tests/starting_slice/wolf_strategy_counterfactual.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/wolf_winter_compact_surface.test.ts
+  - npm run verify:bug-traces

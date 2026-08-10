@@ -60,6 +60,8 @@ const BLOCKED_ROUTE_GUIDANCE_SOURCE_HASH =
   "189b14d70a68c0c795167baa9dae695f56c9f3b99bd33151d6a4ece87d083b3b";
 const SECONDARY_BLOCKED_COPY_SOURCE_HASH =
   "07572512b61250a87583b4c1d6c80586d2f73b171ccde9a080051d7413af15bd";
+const PALING_NORTH_GUIDANCE_SOURCE_HASH =
+  "c9b82ed5637d667a3b9837c15ca7ac05bec358b88e131b0d316a11ae367f8236";
 const CADE_HUNT_EXIT_LABEL =
   "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
 const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
@@ -454,7 +456,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each copy-only revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(SECONDARY_BLOCKED_COPY_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(PALING_NORTH_GUIDANCE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(SECONDARY_BLOCKED_COPY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(BLOCKED_ROUTE_GUIDANCE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(HUNT_COMMITMENT_LABEL_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(LESSON_RETURN_DISCLOSURE_SOURCE_HASH);
