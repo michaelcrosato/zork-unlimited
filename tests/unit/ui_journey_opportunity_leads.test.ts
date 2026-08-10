@@ -12,6 +12,8 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import { OverworldSession } from "../../ui/src/overworld.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
+const EXPECTED_DEFERRED_GUIDANCE =
+  "Choose the shown journey option first. 3 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.";
 
 describe("journey opportunity UI", () => {
   it("renders the same button-free root summary on completion, story-choice, and active screens", async () => {
@@ -65,6 +67,11 @@ describe("journey opportunity UI", () => {
         ],
       };
       const deferredOpportunities = deferJourneyOpportunityDetails(opportunities)!;
+      expect(deferredOpportunities).toEqual({
+        guidance: EXPECTED_DEFERRED_GUIDANCE,
+        leads: [],
+        deferredLeadCount: 3,
+      });
       const choiceJourney = {
         ...base,
         opportunities: deferredOpportunities,
@@ -127,8 +134,10 @@ describe("journey opportunity UI", () => {
       for (const markup of [choiceMarkup, storyMarkup]) {
         expect(markup).toContain("Optional aftermath");
         expect(markup).toContain("Return opportunities");
-        expect(markup).toContain(deferredOpportunities.guidance);
-        expect(markup).toContain("3 optional aftermath leads remain");
+        expect(markup).toContain(EXPECTED_DEFERRED_GUIDANCE);
+        expect(markup).toContain("Choose the shown journey option first");
+        expect(markup).toContain("if another choice follows, finish it too");
+        expect(markup).toContain("District details return when play resumes");
         expect(markup).not.toContain("Albany Greenway: trail sign damage");
         expect(markup).not.toContain("Albany Station Quarter");
         expect(markup).not.toContain("journey-opportunity-list");

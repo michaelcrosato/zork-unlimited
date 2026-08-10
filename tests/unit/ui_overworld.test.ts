@@ -482,13 +482,15 @@ describe("OverworldSession", () => {
     expect(session.journey().acceptedDecisions).toBe(beforeRejectedDispatchDecisions);
     expect(session.journey().storyChoice).toBeNull();
     const deferredLeadCount = pendingJourney.opportunities?.deferredLeadCount;
-    expect(deferredLeadCount).toBeGreaterThan(0);
+    expect(deferredLeadCount).toBe(4);
     if (!deferredLeadCount) throw new Error("Expected deferred Albany opportunity leads.");
-    expect(pendingJourney.opportunities).toMatchObject({
+    const expectedDeferredGuidance =
+      "Choose the shown journey option first. 4 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.";
+    expect(pendingJourney.opportunities).toEqual({
+      guidance: expectedDeferredGuidance,
       leads: [],
       deferredLeadCount,
     });
-    expect(pendingJourney.opportunities?.guidance).toContain("finish this journey decision first");
 
     session.chooseJourney("continue");
     const dawnJourney = session.journey();
@@ -533,8 +535,11 @@ describe("OverworldSession", () => {
 
       for (const markup of markups) {
         expect(markup).toContain("Return opportunities");
-        expect(markup).toContain(`${String(deferredLeadCount)} optional aftermath leads remain`);
-        expect(markup).toContain("finish this journey decision first");
+        expect(markup).toContain(expectedDeferredGuidance);
+        expect(markup).toContain("Choose the shown journey option first");
+        expect(markup).toContain("if another choice follows, finish it too");
+        expect(markup).toContain("District details return when play resumes");
+        expect(markup).not.toContain("finish this journey decision first");
         expect(markup).not.toContain("Jamie Tanner&#x27;s Winter Price Policy");
         expect(markup).not.toContain("journey-opportunity-list");
         expect(markup).not.toContain("keep your objective");

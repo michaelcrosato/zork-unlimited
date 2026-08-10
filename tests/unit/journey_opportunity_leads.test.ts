@@ -142,7 +142,7 @@ describe("journey opportunity projection", () => {
     const deferredClone = cloneJourneyOpportunityPresentation(deferredPresentation);
     expect(deferredPresentation).toEqual({
       guidance:
-        "2 optional aftermath leads remain; finish this journey decision first, and full district details return if play continues.",
+        "Choose the shown journey option first. 2 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.",
       leads: [],
       deferredLeadCount: 2,
     });
@@ -156,7 +156,9 @@ describe("journey opportunity projection", () => {
       guidance: JOURNEY_OPPORTUNITY_GUIDANCE,
       leads: [base.leads[0]!],
     });
-    expect(one?.guidance).toMatch(/^1 optional aftermath lead remains;/);
+    expect(one?.guidance).toBe(
+      "Choose the shown journey option first. 1 optional aftermath lead remains; if another choice follows, finish it too. District details return when play resumes.",
+    );
 
     expect(() =>
       journeyPresentation(createInitialJourneyContractSnapshot(), {

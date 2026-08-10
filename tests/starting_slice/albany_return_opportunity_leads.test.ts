@@ -33,7 +33,7 @@ const GREENWAY = "albany_city__greenway";
 const GREENWAY_EVENT = "albany_city__greenway__event";
 const FULL = { compact_context: false, compact_result: false } as const;
 const EXPECTED_DEFERRED_GUIDANCE =
-  "5 optional aftermath leads remain; finish this journey decision first, and full district details return if play continues.";
+  "Choose the shown journey option first. 5 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.";
 
 const EXPECTED_LEADS: readonly JourneyOpportunityLeadPresentation[] = [
   {
