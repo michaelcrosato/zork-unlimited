@@ -143,3 +143,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `8407bff3` completed The Wolf-Winter by all-wolves-alive/full-herd LURE at decision 26, ended naturally, rated clarity/enjoyment 4/4 and replay-yes, and found no bug or stuck state; staged prompts and the strict feed chain remained dense.
 - Feedback/self-critique: the fresh no-flags compile reached 822 verified/520 actionable reports and 71 pure exits while excluding 302 mocks; discovery and identity are closed, but authenticated historical runs still need an accepted-cohort freshness contract rather than unsafe Git ancestry guesses.
 - Guard: three independent reviews are clean; 100 focused tests, both 6,000-step crawls, exact 444-file/3,793-test health, UI typecheck, all 12 packs, zero integrity drift, and the exact-build playtest gate pass.
+## AFK Cycle 2026-08-10T03-46-21-407Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T03-46-21-407Z","selected_recommendation_id":"playtest-gallowmere"} -->
+- Assess: rpg=12; world=12; candidates=15.
+- Rec: hotspot-07988b93 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

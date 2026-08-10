@@ -9,6 +9,7 @@
  * and no score change.
  */
 import { describe, it, expect } from "vitest";
+import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import {
   buildRpgRules,
@@ -155,17 +156,32 @@ describe("bug_0447 — Gallowmere turns learned charge-angle prep into a fight t
     expect(buildRpgObservation(index, s).description).toContain("first cut found the blind side");
   });
 
-  it("the perfect-score route still reaches the hunt_won ending after using the tactic", () => {
+  it("signposts the ridge closure while preserving both post-kill routes", () => {
     let s = fullPrepToHollow();
     s = actId(s, "use_hunting_knife_on_sow_blind_side");
     for (let guard = 0; guard < 20 && !s.flags["sow_slain"]; guard += 1) {
       s = actId(s, "attack_gallowmere_sow");
     }
     expect(s.flags["sow_slain"]).toBe(true);
-    s = actId(s, "go_north");
-    expect(s.ended).toBe(true);
-    expect(s.endingId).toBe("ending_hunt_won");
-    expect(s.vars["score"]).toBe(50);
+    const closure = "The hunt closes on the ridge to the north; the gully is back to the south.";
+    const full = buildRpgObservation(index, s);
+    expect(full.description).toContain(closure);
+    expect(actionIds(s)).toEqual(expect.arrayContaining(["go_north", "go_south"]));
+
+    const compact = compactRpgObservation(full, actionIds(s), { includeActions: true });
+    expect(compact.text).toContain(closure);
+    expect(compact.actions).toEqual(expect.arrayContaining(["go_north", "go_south"]));
+
+    const south = actId(s, "go_south");
+    expect(south.current).toBe("moor_gully");
+    expect(south.ended).toBe(false);
+    expect(south.vars["score"]).toBe(35);
+
+    const north = actId(s, "go_north");
+    expect(north.current).toBe("moor_ridge");
+    expect(north.ended).toBe(true);
+    expect(north.endingId).toBe("ending_hunt_won");
+    expect(north.vars["score"]).toBe(50);
   });
 
   it("still validates green under the RPG validator", () => {
