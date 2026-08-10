@@ -1,0 +1,116 @@
+id: bug_0564
+title: "Wolf-Winter's paling room credited Reese's Works without launch preparation"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: sealed pending Cycle 23 pure FORTIFY report plus deterministic counterfactual
+severity: S1
+evidence:
+  cycle_23:
+    source_run: 2026-08-10T17-55-53-098Z
+    source_commit: dd353d9edf8b9b5f3491d630fca274e190b73942
+    source_report_id: pure:57a8796e006989cc05040c1e21525429acf9ce3cc33089947fd644fdaebeec7e
+    source_report_sha256: a791b7b9558c1390a5c07f8f6ccfa0c1097fe0f27b5f3fc4a5d3d12fb206309c
+    source_evidence_sha256: c063394f706ea02a91ddaf305b7b13c252e729f202a6611fb4580988f170de43
+    source_sidecar_sha256: 50d1872e63722fb29b4c33283b2c48f5ec28d45492c40fb648bc668ee5d406b6
+    source_report: ai-runs/2026-08-10T17-55-53-098Z/playtest.md
+    source_raw: ai-runs/2026-08-10T17-55-53-098Z/playtest.codex.jsonl
+    source_raw_sha256: 6f76eaebbb252c472d034ac335f8bc749dd7f3d59b1f196e24642f26feb5cb27
+    route: ending_fortified_cade_terms
+    raw_boundary: >
+      Item 18 moves a Ledger Advocate with Aid-Only duty, Rowan's docket, no
+      Works preparation, and solo travel into the Broken Paling under Cade's
+      FORTIFY terms. The room says "Reese's Works marks lower the Repair
+      difficulty" even though works_fortification_prepared is absent, no Works
+      import was applied, Repair is 0, and the shown shutter action is DC 14.
+      Item 19 then resolves that exact action as d20 18 + 0 versus 14 and emits
+      the generic no-Works success journal, proving that the mechanics did not
+      grant the preparation the room claimed.
+    player_result: >
+      The player completed ending_fortified_cade_terms at 40/60 with the whole
+      herd and all three wolves safe, ended at the goal-completion choice on
+      decision 17, rated clarity and enjoyment 4/4, would replay, was not stuck,
+      and reported bugs: [].
+  accepted_authority:
+    manifest: ai-runs/feedback/20260810T135652Z/report-manifest.json
+    manifest_sha256: f499b6913590bdfb1c6e19e8a2f26ac4efa0d371289b11cdb066a6b88f5f52ae
+    hotspots: ai-runs/feedback/20260810T135652Z/hotspots.json
+    hotspots_sha256: 1ad00a5137899cbe7fb6eda2a352ce0aee03027652cace1b27b1a1914356fb13
+    recommended_candidate: hotspot-d6a6cd0a
+    consumed_by_run_id: 2026-08-10T15-48-02-040Z
+  assessment_run: 2026-08-10T19-41-13-068Z
+  assessor_top_candidate: playtest-advocates_case
+  selected_candidate: playtest-wolf_winter
+  pre_crawl_gate: green
+  feedback_status: "delta; 3 new verified reports, 3 actionable, 0 excluded mocks; compile ready"
+revision_liveness: >
+  The exact false room survives on the merged Cycle 23 build that already contains
+  bug_0563's neutral yearling journal. It is not a stale report excerpt: item 18
+  exposes the current e8e29d0e Wolf source with the absent preparation flag and
+  live DC 14 check, and item 19 executes that same current action boundary.
+symptom: >
+  Both pre-attempt FORTIFY room leaves unconditionally said that Reese's Works
+  marks lowered the Repair difficulty. Those leaves are selected by Cade-versus-
+  Albany authority, not by preparation, so the claim also appeared after Drover
+  preparation when the ordinary DC remained live. The room therefore contradicted
+  its own shown check before a consequential, no-retry roll. This is S1 state-to-
+  copy truth friction, not a broken check or route.
+root_cause: >
+  The mechanics already distinguish Works from non-Works and Full from Aid-Only
+  across the two authority stances, but the two room variants flattened that
+  eight-cell boundary into one unconditional Works attribution per stance. The
+  room copy needed to state the existing launch-preparation condition without
+  duplicating or changing any predicate.
+fix: >
+  Change only the Cade and Albany pre-attempt room leaves so each says Reese's
+  Works marks lower the shown Repair difficulty only if prepared at launch.
+  Preserve the stance-specific item, no-retry rule, and recovery disclosure;
+  preserve every variant condition, action, check, import, flag, effect, and
+  outcome.
+settled_copy:
+  cade: >
+    All three wolves test the open paling from outside. Seat Cade's first
+    household shutter here once. Reese's Works marks lower the shown Repair
+    difficulty only if prepared at launch; a miss cannot retry, but Cade's
+    accepted terms make his bracing hand the recovery.
+  authority: >
+    All three wolves test the open paling from outside. Seat Albany's first
+    relief seal here once. Reese's Works marks lower the shown Repair difficulty
+    only if prepared at launch; a miss cannot retry, and Cade's refusal leaves
+    one emergency public binding strip as recovery.
+deterministic_witnesses:
+  - "the exact Cade leaf is 263 characters / 43 words and the exact Albany-authority leaf is 271 characters / 44 words; full and compact projections expose each byte-complete without truncation"
+  - "the eight real cells are Cade or Albany authority × Full or Aid-Only duty × Works or Drover preparation; each cell exposes exactly its stance action in both full and compact projections"
+  - "Cade remains DC 14 without Works and DC 12 with Works under either oath; Albany authority remains DC 12/10 for Full without/with Works and DC 14/12 for Aid-Only without/with Works"
+  - "works_fortification_prepared and import:wolf_winter_works_fortification are present exactly in the four Works cells and absent in the four Drover cells"
+  - "building full and compact observations is nonmutating: the exact state and state hash remain unchanged in every matrix row"
+  - "the existing Works-specific action branches, lower DCs, success journals, failure-forward recoveries, and Full-duty annex remain authoritative; only the two unconditional room attributions change"
+  - "the Wolf-Winter source hash advances directly from e8e29d0eee6163587353985795fdc2279f480c8053abaac0a44007228523b681 to 8b175deb3b6a575288f6e51701e9a5c3705bbf1746a95fcc414a464c39499b18"
+  - "a current 8b175deb save and structured replay remain valid while the exact e8e29d0e predecessor fixture rejects under the unchanged source-integrity policy"
+selection_semantics:
+  - "Cycle 24 freezes selected_recommendation_id as exact on-list candidate playtest-wolf_winter; it is neither null/off-list work nor the assessor's different playtest-advocates_case top row."
+  - "Cycle 23 item 18 is the revision-live Reese/Wolf witness. The accepted d6a6cd0a recommendation was already consumed by Cycle 22, remains inert, and cannot be consumed again by this routine candidate id."
+  - "Committed status is exactly 3/3 actionable before Cycle 24, so one delta compile is required only after the implementation is frozen in a clean provisional commit and the current pure run exercises that exact commit."
+  - "That compile cohort is exactly the three preexisting pending reports pure:bbc7f9bdc160402ea22fc612884a8c425030a6b3992ab1bfd54e38d80e6b36b1, pure:b290976e29a18e4974cb1f7e919f023e426cd7183aedf62a2c2cfeb9afc3714c, and pure:57a8796e006989cc05040c1e21525429acf9ce3cc33089947fd644fdaebeec7e."
+  - "Cycle 24's current pure report is not yet accepted and must be absent from its own compile. The frozen playtest-wolf_winter selection cannot be changed after compile output is known."
+  - "At seal, the reproducible delta consumes the three prior pending rows, promotes its new accepted bundle unconsumed, appends the verified Cycle 24 pure report as the sole pending row, and removes the selection marker."
+nonclaims:
+  - "The player did not reject the shutter action, fail the check, get stuck, report a bug, or explicitly complain about Reese; the contradiction is localized by comparing the raw room, flags/imports, shown check, and executed outcome."
+  - "This does not claim every Reese reference is false. Works-specific object variants, lower-DC interactions, journals, and recovery copy remain true when Works was prepared at launch."
+  - "This does not add a Works-conditioned room variant or change variant priority; both existing stance leaves remain reachable in Works and Drover states and now state the condition truthfully."
+  - "This does not add, remove, rename, reorder, reveal, hide, or enable an action, check, condition, import, flag, item, exit, room, dialogue, resource, score, quest stage, recovery, ending, consequence, or journey decision; or alter serialization or save schema."
+  - "This does not preserve the old content hash. Exact e8e29d0e content-hash-bound Wolf saves intentionally reject against 8b175deb under the unchanged integrity policy."
+  - "This does not compile before the provisional pure run, include the current report in its own cohort, consume the old d6a6cd0a recommendation again, or use the eventual Cycle 24 report as causal evidence for its own revision."
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/starting_slice/cade_trust_counterfactual.test.ts
+    cases:
+      - "keeps the conditional Works disclosure exact for $stance, $oath, Works=$works at DC $difficulty"
+  - path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    cases:
+      - "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+  - path: tests/regression/wolf_winter_compact_surface.test.ts
+    cases:
+      - "keeps each copy-only revision distinct at the gauntlet and source-hash boundaries"
+verification:
+  - npx vitest run tests/starting_slice/cade_trust_counterfactual.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/wolf_winter_compact_surface.test.ts
+  - npm run verify:bug-traces

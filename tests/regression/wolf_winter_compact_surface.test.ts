@@ -64,6 +64,8 @@ const PALING_NORTH_GUIDANCE_SOURCE_HASH =
   "c9b82ed5637d667a3b9837c15ca7ac05bec358b88e131b0d316a11ae367f8236";
 const YEARLING_DEFEAT_JOURNAL_SOURCE_HASH =
   "e8e29d0eee6163587353985795fdc2279f480c8053abaac0a44007228523b681";
+const WORKS_REPAIR_DISCLOSURE_SOURCE_HASH =
+  "8b175deb3b6a575288f6e51701e9a5c3705bbf1746a95fcc414a464c39499b18";
 const YEARLING_DEFEAT_JOURNAL =
   "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 const CADE_HUNT_EXIT_LABEL =
@@ -460,7 +462,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each copy-only revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(YEARLING_DEFEAT_JOURNAL_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(WORKS_REPAIR_DISCLOSURE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(YEARLING_DEFEAT_JOURNAL_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(PALING_NORTH_GUIDANCE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(SECONDARY_BLOCKED_COPY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(BLOCKED_ROUTE_GUIDANCE_SOURCE_HASH);

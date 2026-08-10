@@ -149,3 +149,10 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `ca4accc5` chose Ledger Advocate, Full Compact Duty, Rowan's docket, Sheltered Stockway, and HUNT, held the byre through all three wolves, then ended naturally at the first goal on decision 19; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
 - Feedback/next: the prior three reports compiled as 3 actionable/0 mocks over an 819-report corpus and stage Gallowmere's implicit final packet handoff (`9fe9a8ee`) for the next cycle; this run remains one-cycle-lagged until sealing, and its setup/action-discovery notes are not widened into this fix.
 - Guard: 43 focused regressions, all 12 packs, trace/type/lint/format/diff checks, two hostile audits, the pre-change crawl, and exact-build pure/compile authority are green; the standard outer post-crawl, health, and integrity bar remain mandatory before landing.
+
+## AFK Cycle 2026-08-10T19-41-13-068Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T19-41-13-068Z","selected_recommendation_id":"playtest-wolf_winter"} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
