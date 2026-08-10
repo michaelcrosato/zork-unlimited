@@ -193,8 +193,8 @@ rooms:
       - when: [{ has_flag: sow_slain }]
         text: >
           The Gallowmere hollow, the great sow down in the reed-bed, her flanks
-          gone still. The moor lifts north to the ridge; the gully is back to
-          the south.
+          gone still. The hunt closes on the ridge to the north; the gully is
+          back to the south.
       - when: [{ has_flag: blind_side_struck }]
         text: >
           The Gallowmere hollow, black peat and broken reed underfoot. The sow is

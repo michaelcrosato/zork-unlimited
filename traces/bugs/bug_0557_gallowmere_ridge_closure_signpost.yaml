@@ -1,0 +1,61 @@
+id: bug_0557
+title: "The post-hunt Gallowmere hollow did not name the ridge as the closure"
+pack: content/rpg/quests/gallowmere.yaml
+reported_by: 2026-08-10T01-54-44-511Z accepted pure raw action sequence (inferred route friction, not a quoted report bug)
+severity: S1
+evidence:
+  source_run: 2026-08-10T01-54-44-511Z
+  source_commit: 370130d9db1fd554429a3a333028f612a772ef08
+  source_raw: ai-runs/2026-08-10T01-54-44-511Z/playtest.codex.jsonl
+  source_route: "item_50 kills the sow; items 51-52 go south; items 54-60 continue at the safe checkpoint, return to Hedrick, leave, and look; items 61-65 retrace the moor and finally go north to the ridge ending"
+  inference_boundary: "The exit report did not identify a ridge bug or stuck state. The extra southbound loop is raw behavioral evidence from which closure friction is inferred."
+  immediate_closure_counterexample_run: 2026-08-09T23-52-24-726Z
+  immediate_closure_counterexample_commit: 2b16e73194ab3ef2abe6925bbc868e97e62eff95
+  immediate_closure_counterexample_raw: ai-runs/2026-08-09T23-52-24-726Z/playtest.codex.jsonl
+  immediate_closure_counterexample_route: "item_52 kills the sow and item_53 immediately goes north to the ridge ending"
+  cycle17_run: 2026-08-10T03-46-21-407Z
+  cycle17_selection: playtest-gallowmere
+  accepted_unconsumed_recommendation: hotspot-07988b93
+symptom: >
+  After the sow died, the old reactive hollow description said only that the moor
+  lifted north to the ridge and the gully lay south. Both exits were correctly
+  legal, but only visiting the ridge closes the hunt. On the latest accepted raw
+  route, the player instead went south, crossed a safe checkpoint, returned to
+  Hedrick, and then retraced four rooms north to the ridge. That action sequence
+  supports a narrow closure-signposting inference; the report itself rated the run
+  clear and playable and did not claim a Gallowmere bug or stuck state.
+root_cause: >
+  The sow-slain room variant described topology but not the existing locomotion
+  completion boundary. The authored win condition has always required visited:
+  moor_ridge, while go_south intentionally remains available for backtracking.
+  Consequently, the only post-hunt sentence shown before that choice did not tell
+  a player that north was closure rather than merely another explorable room.
+fix: >
+  Change only the sow-slain hollow description to say, "The hunt closes on the
+  ridge to the north; the gully is back to the south." Preserve both exits and
+  every existing condition and effect. This is a presentation-only clarification:
+  south remains a legal detour, while north still performs the sole authored
+  locomotion win at the ridge.
+deterministic_witnesses:
+  - "after sow_slain, full and compact observations expose the exact authored sentence 'The hunt closes on the ridge to the north; the gully is back to the south.'"
+  - "the same post-kill state still exposes both go_north and go_south"
+  - "go_south still reaches moor_gully without ending the quest and leaves score at 35"
+  - "go_north still reaches moor_ridge, emits ending_hunt_won, and raises the final score from 35 to 50"
+  - "visited: moor_ridge remains the sole hunt_won condition; sow_slain remains only the north-exit gate"
+  - "the 370130d9 raw route proves a legal south/checkpoint/Hedrick/retrace detour, while the independent 2b16e731 route proves the old surface could also support an immediate north closure"
+  - "the exact compiled source hash advances from dde0cc62a83e95f0eedf5f2cff78550979b754cb0584ca36b31681a2311a4909 to 67fa0f962ea27b5011aece91ef4e47037d3b4bd555bc84e0de4748bbe22f206e"
+nonclaims:
+  - "This does not claim the 370130d9 player reported a ridge bug, misunderstood the quest, or became stuck. Route friction is inferred only from the accepted raw action sequence."
+  - "The south route remains legal and immediate closure is not forced; north is intentionally clearer and preferred for closure without erasing optional unread-log or kill-site cleanup."
+  - "This does not add a packet handoff, warden receipt, current-goal claim, action, dialogue, journal entry, flag, variable, score effect, decision, checkpoint, ending, or route."
+  - "Direct, standalone, embedded, out-of-order, packet, and warden launches still share the same Gallowmere child content; this copy does not inspect campaign provenance."
+  - "This does not change combat, the blind-side tactic, sow stats or defeat, room ids, action ids, exit conditions, hunt_won, ending_hunt_won, or the 35-to-50 ridge score transition."
+  - "This does not preserve the old pack content hash or weaken hash integrity. Save schema and serialization are unchanged, while prior dde0 content-hash-bound runtime saves intentionally reject against the new 67fa source under the existing integrity policy."
+  - "The current 2026-08-10T03-46-21-407Z cycle has assessment evidence only and is not cited as play evidence for this change."
+  - "This on-list maintenance fix selects exact candidate playtest-gallowmere; it does not select or consume accepted recommendation hotspot-07988b93."
+tests:
+  - tests/regression/gallowmere_blind_side_tactic.test.ts
+verification:
+  - npx vitest run tests/regression/gallowmere_blind_side_tactic.test.ts
+  - npm run validate -- gallowmere
+  - npm run verify:bug-traces
