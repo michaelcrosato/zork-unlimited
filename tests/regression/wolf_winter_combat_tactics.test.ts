@@ -14,6 +14,7 @@ import type { RpgAction, StepResult } from "../../src/api/types.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
+import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { rpgStepEvents } from "../../src/mcp/transcript_projection.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
@@ -29,6 +30,8 @@ const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const YEARLING_DEFEAT_JOURNAL =
+  "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 
 type Outcome = "best" | "worst";
 
@@ -171,6 +174,41 @@ describe("Wolf-Winter authored combat tactics", () => {
       maneuver: "drive_set_spear",
     });
     expect(staleChild.ok).toBe(false);
+  });
+
+  it("keeps the ordinary HUNT defeat journal neutral while north remains legal", () => {
+    let state = act(fullyPrepared(), "go_north").state;
+    expect(state.flags.strategy_lure_committed).not.toBe(true);
+    expect(state.flags.strategy_drive_committed).not.toBe(true);
+    expect(state.flags.strategy_fortify_committed).not.toBe(true);
+    const scoreBeforeDefeat = state.vars.score ?? 0;
+
+    const defeated = act(state, "maneuver_yearling_wolf_set_spear", "best");
+    state = defeated.state;
+    expect(state.flags).toMatchObject({
+      yearling_down: true,
+      yearling_spear_set: true,
+      june_blood_condition_broken: true,
+    });
+    expect(state.questStage.the_watch).toBe("breach_held");
+    expect(state.vars.score).toBe(scoreBeforeDefeat + 10);
+
+    const full = buildRpgObservation(index, state);
+    const actionIds = full.available_actions.map((action) => action.id);
+    const compact = compactRpgObservation(full, actionIds, { includeActions: true });
+    expect(full.state.journal.at(-1)).toBe(YEARLING_DEFEAT_JOURNAL);
+    expect(compact.journal?.at(-1)).toBe(YEARLING_DEFEAT_JOURNAL);
+    expect(rpgStepEvents(defeated.events, { compact_events: true })).toContainEqual([
+      "s",
+      "j",
+      YEARLING_DEFEAT_JOURNAL,
+    ]);
+    expect(full.exits).toContainEqual({ direction: "north", to: "byre_door" });
+    expect(actionIds).toContain("go_north");
+    expect(compact.actions).toContain("go_north");
+    expect(
+      (compact.exits ?? []).map((exit) => (typeof exit === "string" ? exit : exit[0])),
+    ).toContain("north");
   });
 
   it("makes a successful target-only wedge earn two competing flank openings", () => {

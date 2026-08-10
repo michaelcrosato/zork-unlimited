@@ -1,0 +1,123 @@
+id: bug_0563
+title: "Wolf-Winter's shared yearling defeat journal falsely pointed committed LURE north"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: sealed pending Cycle 21 and Cycle 22 pure LURE reports
+severity: S1
+evidence:
+  cycle_21_retry:
+    source_run: 2026-08-10T13-50-15-670Z
+    source_commit: 93d8b86b3431bb38c1ae935a870f5c710c12a8dd
+    source_report_id: pure:bbc7f9bdc160402ea22fc612884a8c425030a6b3992ab1bfd54e38d80e6b36b1
+    source_report_sha256: b87230225a2547a52cc032d24b77b9cf67515c1caf50b122d280831b4e1c7fd4
+    source_evidence_sha256: 31a2be38e1806a6f49a47e5dd84e3cf235cf6e6e563dad013dd5c3b09277048a
+    source_sidecar_sha256: 25265f94b67d2ab84ed8ad0429bb469492d8b3523d02f297cad417c03bf3d1a9
+    source_report: ai-runs/2026-08-10T13-50-15-670Z/playtest.md
+    source_raw: ai-runs/2026-08-10T13-50-15-670Z/playtest.codex.jsonl
+    source_raw_sha256: e3f6f629f7823f38db026c5b4fdef4e0c07b984fc897a17241eeb1e455b61090
+    route: ending_pack_diverted_after_blood
+    raw_boundary: >
+      Item 27 defeats the yearling after a fouled, braced LURE opening and emits
+      "The byre runs on north." in the shared defeat journal. The same response
+      has strategy_lure_committed and yearling_down without flank_redirected,
+      describes ground north as not this plan, offers go_south but no go_north,
+      and keeps north blocked for the later south-west-up loft cast.
+    player_result: >
+      The player followed the legal south-west-up recovery, completed at 55/60,
+      rated clarity and enjoyment 4/4, would replay, was not stuck, and reported
+      bugs: [].
+  cycle_22:
+    source_run: 2026-08-10T15-48-02-040Z
+    source_commit: f218b1e10ad89880ca66aaf14e11b9cfef556635
+    source_report_id: pure:b290976e29a18e4974cb1f7e919f023e426cd7183aedf62a2c2cfeb9afc3714c
+    source_report_sha256: 67f109a5cc0958c776a682fd64952dba28a474dc9b886cf714447ce62dc91c23
+    source_evidence_sha256: 56a7083da441b0dee801415e3c3a6f62afb1c63d2dee8fdb29247df6244d0fed
+    source_sidecar_sha256: 6b655ba1c6e532d0c4b63c12cad81152133f45ffbca635c7393f72a974443827
+    source_report: ai-runs/2026-08-10T15-48-02-040Z/playtest.md
+    source_raw: ai-runs/2026-08-10T15-48-02-040Z/playtest.codex.jsonl
+    source_raw_sha256: 8e2a27033b8b59f658cecabadd7a3fbaf080fc4ebb33ac8ad8a76cf8786ba4f4
+    route: ending_pack_diverted_after_blood
+    raw_boundary: >
+      Item 26 independently repeats the same false north sentence immediately
+      after attack_yearling_wolf sets yearling_down. Its live context exposes
+      only south, repeats bug_0562's exact north block, and directs the committed
+      LURE route south, west, and up before north can become legal.
+    player_result: >
+      The player followed that legal recovery, completed at 50/60, rated clarity
+      and enjoyment 4/4, would replay, was not stuck, and reported bugs: [].
+  accepted_authority:
+    manifest: ai-runs/feedback/20260810T135652Z/report-manifest.json
+    manifest_sha256: f499b6913590bdfb1c6e19e8a2f26ac4efa0d371289b11cdb066a6b88f5f52ae
+    hotspots: ai-runs/feedback/20260810T135652Z/hotspots.json
+    hotspots_sha256: 1ad00a5137899cbe7fb6eda2a352ce0aee03027652cace1b27b1a1914356fb13
+    recommended_candidate: hotspot-d6a6cd0a
+    consumed_by_run_id: 2026-08-10T15-48-02-040Z
+  assessment_run: 2026-08-10T17-55-53-098Z
+  assessor_top_candidate: playtest-advocates_case
+  selected_candidate: playtest-wolf_winter
+  feedback_status: "delta; 2 new verified reports, 2 actionable, 0 excluded mocks; 3 actionable reports required"
+revision_liveness: >
+  The false journal is byte-identical in Cycle 21 item 27 and Cycle 22 item 26.
+  Cycle 22 already contains bug_0562's corrected primary north block, so its
+  independent exact-build witness proves that the journal contradiction survived
+  that later copy revision and remains live on the Cycle 23 baseline.
+symptom: >
+  Defeating the yearling during committed LURE appended a journal claiming that
+  the byre ran on north while the same observation truthfully kept north blocked
+  and required the player to return south, west, and up for the loft cast. The
+  sentence is correct for ordinary/HUNT, where yearling_down opens north, but
+  false at LURE's bounded hybrid defeat boundary. This is an S1 state-to-copy
+  contradiction, not an invalid exit or dead end.
+root_cause: >
+  yearling_wolf.on_defeat is shared by ordinary/HUNT combat and the bounded LURE
+  hybrid. Its journal combined route-neutral defeat truth with an unconditional
+  direction sentence even though north's existing condition also requires a
+  committed LURE to have flank_redirected. A shared effect cannot truthfully own
+  that route-conditioned next step.
+fix: >
+  Remove only "The byre runs on north." from the shared on_defeat journal. Keep
+  the exact 92-character, 20-word route-neutral defeat sentence and leave the
+  existing live room, exit, blocked-exit, and action projections responsible for
+  direction. Preserve the remaining on_defeat effects and their order.
+settled_copy: >
+  You take the yearling on its rush as it commits, and it goes down in the snow
+  of the breach.
+deterministic_witnesses:
+  - "the exact new shared journal is 92 characters / 20 words and remains complete in full recent-journal, compact journal, full event, and compact event projections"
+  - "at LURE's hybrid defeat boundary, strategy_lure_committed and yearling_down are true while flank_redirected is absent; full and compact projections expose go_south, omit go_north, and retain the exact bug_0562 north block"
+  - "the ordinary/HUNT counterexample emits the same neutral full/compact journal and event while its unchanged full and compact exit/action projections legally expose north"
+  - "yearling_down, yearling_spear_set, june_blood_condition_broken, the_watch=breach_held, and the exact +10 score consequence remain intact on the ordinary combat oracle"
+  - "the shared effect still records the yearling's defeat without reviving bug_0191's Cade-only attribution; direction is supplied by the reachable route state instead"
+  - "the Wolf-Winter source hash advances directly from c9b82ed5637d667a3b9837c15ca7ac05bec358b88e131b0d316a11ae367f8236 to e8e29d0eee6163587353985795fdc2279f480c8053abaac0a44007228523b681"
+  - "a current e8e29d0e save and structured replay remain valid while the exact c9b82ed5 predecessor fixture rejects under the unchanged source-integrity policy"
+selection_semantics:
+  - "Cycle 23 freezes selected_recommendation_id as exact on-list candidate playtest-wolf_winter; it is neither null/off-list work nor the assessor's different playtest-advocates_case top row."
+  - "The two sealed pending reports and their raw items are causal evidence for this revision. The eventual Cycle 23 pure report is excluded before seal and cannot steer its own provisional build."
+  - "The accepted 20260810T135652Z bundle's d6a6cd0a recommendation was already consumed_by_run_id 2026-08-10T15-48-02-040Z by Cycle 22's exact hotspot selection, so it is inert and cannot be consumed again."
+  - "playtest-wolf_winter does not equal hotspot-d6a6cd0a in any event; this routine on-list selection preserves the accepted bundle's existing consumed marker rather than claiming a second implementation."
+  - "Feedback status is 2/3 actionable before the Cycle 23 pure report, so no feedback compile or provisional manifest is authorized. A verified current report becomes pending only at seal and is eligible for a later cycle's cohort."
+nonclaims:
+  - "Neither player attempted the blocked north exit, received an action rejection, reached a dead end, got stuck, or reported a bug; locating direction friction in the contradictory raw fields is an authority-audit inference."
+  - "This does not add route-conditional journal logic, change ordinary/HUNT north access, open LURE north early, alter bug_0562's primary block, or change the authored south-west-up recovery."
+  - "This does not add, remove, rename, reorder, reveal, hide, or enable an action, exit, condition, destination, room variant, object, dialogue, item, enemy, flag, check, resource, score, quest stage, ending, consequence, or journey decision; or alter serialization or save schema."
+  - "This does not remove the defeat fact, june_blood_condition_broken, +10 score, or breach_held progression; it removes only an unconditional route claim from the journal text."
+  - "This does not preserve the old content hash. Exact c9b82ed5 content-hash-bound Wolf saves intentionally reject against e8e29d0e under the unchanged integrity policy."
+  - "This does not compile feedback at a 2/3 delta, consume or implement the already-consumed d6a6cd0a hotspot, or use the eventual Cycle 23 pure report as causal evidence for its own revision."
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/regression/wolf_winter_combat_tactics.test.ts
+    cases:
+      - "keeps the ordinary HUNT defeat journal neutral while north remains legal"
+  - path: tests/starting_slice/wolf_strategy_counterfactual.test.ts
+    cases:
+      - "keeps the bounded combat recovery as a truthful hybrid identity"
+  - path: tests/regression/wolf_winter_compact_surface.test.ts
+    cases:
+      - "keeps each copy-only revision distinct at the gauntlet and source-hash boundaries"
+      - "keeps every journal beat complete in both the recent-journal and event projections"
+  - path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    cases:
+      - "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+verification:
+  - npx vitest run tests/regression/wolf_winter_combat_tactics.test.ts tests/starting_slice/wolf_strategy_counterfactual.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/wolf_winter_compact_surface.test.ts
+  - npm run verify:bug-traces

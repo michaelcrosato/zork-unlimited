@@ -20,8 +20,8 @@ import { replayTrace } from "../../src/trace/replay.js";
 import { GameSession } from "../../ui/src/engine.js";
 
 const SOURCE_PATH = "content/rpg/quests/wolf_winter.yaml";
-const PREDECESSOR_SOURCE_HASH = "07572512b61250a87583b4c1d6c80586d2f73b171ccde9a080051d7413af15bd";
-const SOURCE_HASH = "c9b82ed5637d667a3b9837c15ca7ac05bec358b88e131b0d316a11ae367f8236";
+const PREDECESSOR_SOURCE_HASH = "c9b82ed5637d667a3b9837c15ca7ac05bec358b88e131b0d316a11ae367f8236";
+const SOURCE_HASH = "e8e29d0eee6163587353985795fdc2279f480c8053abaac0a44007228523b681";
 const PALING_NORTH_GUIDANCE =
   "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
 const loaded = loadRpgSourceFile(SOURCE_PATH);

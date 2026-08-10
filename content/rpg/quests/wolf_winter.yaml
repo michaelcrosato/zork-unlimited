@@ -4786,7 +4786,7 @@ enemies:
           behind the set butt, turn the first check into a driving second stroke, and
           keep the hide shoulder between its teeth and your hands.
     on_defeat:
-      - add_journal: "You take the yearling on its rush as it commits, and it goes down in the snow of the breach. The byre runs on north."
+      - add_journal: "You take the yearling on its rush as it commits, and it goes down in the snow of the breach."
       - set_flag: june_blood_condition_broken
       - inc_var: { name: score, by: 10 }
       # Milestone: the breach is held (quest the_watch). Progress-tracking only — the way
