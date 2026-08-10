@@ -9,6 +9,12 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const requireFromRoot = createRequire(import.meta.url);
+const MATCHED_OATH_MESSAGE =
+  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: finish matched duty and evidence, or customize; every field plan stays open. A custom duty leaves one evidence choice next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+const CUSTOM_DUTY_MESSAGE =
+  "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
+const SOURCE_MESSAGE =
+  "The Wolf-Winter Civic docket · 3/3 — evidence. Purpose: choose evidence; every field plan stays open. Hayden's Station launch board follows. Certify the Wolf-Winter Source Packet. Other accounts close. Compare field priority, exact cost, and tradeoff. Field checks surface with their action before resolution.";
 
 type DomWindow = {
   document: {
@@ -415,6 +421,10 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         });
       };
       await renderStandardPacket();
+      const matchedMessage = rootElement.querySelector("#journey-story-choice-message") as {
+        textContent: string | null;
+      } | null;
+      expect(matchedMessage?.textContent).toBe(MATCHED_OATH_MESSAGE);
       const standardPacketButtons = Array.from(
         rootElement.querySelectorAll(".journey-choice-card > button"),
       ) as Array<{ click: () => void; textContent: string | null }>;
@@ -541,9 +551,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         ledgerJourney.storyChoice!.options.length,
       );
 
-      for (const [comparedJourney, sourceOption] of [
-        [ledgerReliefOathJourney(), WORLD.opening_relief_oath!.options[0]!],
-        [leadSourceJourney(), WORLD.opening_lead_source!.options[0]!],
+      for (const [comparedJourney, sourceOption, expectedMessage] of [
+        [ledgerReliefOathJourney(), WORLD.opening_relief_oath!.options[0]!, CUSTOM_DUTY_MESSAGE],
+        [leadSourceJourney(), WORLD.opening_lead_source!.options[0]!, SOURCE_MESSAGE],
       ] as const) {
         await act(async () => {
           root!.render(
@@ -562,6 +572,10 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         if (!comparedButton || !comparedDetails) {
           throw new Error("Expected every Albany setup kind to use the comparison-first card.");
         }
+        const comparedMessage = rootElement.querySelector("#journey-story-choice-message") as {
+          textContent: string | null;
+        } | null;
+        expect(comparedMessage?.textContent).toBe(expectedMessage);
         const comparedOption = comparedJourney.storyChoice!.options[0]!;
         expect(comparedButton.textContent).toContain("Promise / priority:");
         expect(comparedButton.textContent).toContain("Cost / give up:");

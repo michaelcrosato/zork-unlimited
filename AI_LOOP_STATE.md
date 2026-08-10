@@ -145,3 +145,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 9 on `0fac1d36` used Road-Warden/Aid-Only/June, saved Cade's whole herd and every wolf by LURE, continued to repair the outer line, won The Gallowmere, and ended naturally at decision 52; clarity/enjoyment 4/4, replay yes, no bug, rejection, loop, or stuck state, and the Civic density complaint did not recur.
 - Feedback/next: sealing this run makes three fresh actionable reports, ready for next cycle's compile; compact legends/tuples and the optional Station detail layer remain current friction, so this increment does not widen into either.
 - Guard: three independent audits, 65 focused tests, both 6,000-step crawls, exact health (448 files/3,830 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure gates are green.
+## AFK Cycle 2026-08-10T10-38-43-423Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T10-38-43-423Z","selected_recommendation_id":"playtest-overworld"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-a0d32f61 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
