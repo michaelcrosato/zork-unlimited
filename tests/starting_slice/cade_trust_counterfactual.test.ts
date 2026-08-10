@@ -25,6 +25,8 @@ import {
 import { enemyHpVar } from "../../src/rpg/schema.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { applyOpeningAllyOption } from "../../src/world/opening_ally.js";
+import { applyOpeningPreparationProfile } from "../../src/world/opening_preparation.js";
+import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oath.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
@@ -43,6 +45,16 @@ const registration =
   (() => {
     throw new Error("Albany requires registration");
   })();
+const reliefOath =
+  world.opening_relief_oath ??
+  (() => {
+    throw new Error("Albany requires a relief oath");
+  })();
+const preparation =
+  world.opening_preparation ??
+  (() => {
+    throw new Error("Albany requires preparation profiles");
+  })();
 const wolfQuest =
   world.quests.find((quest) => quest.id === "wolf_winter") ??
   (() => {
@@ -56,6 +68,28 @@ const imports =
 
 type Roll = "best" | "worst";
 type Stance = "cade" | "authority";
+type Oath = "full" | "aid-only";
+
+const CADE_OUTER_SEAL_COPY =
+  "All three wolves test the open paling from outside. Seat Cade's first household shutter here once. Reese's Works marks lower the shown Repair difficulty only if prepared at launch; a miss cannot retry, but Cade's accepted terms make his bracing hand the recovery.";
+const AUTHORITY_OUTER_SEAL_COPY =
+  "All three wolves test the open paling from outside. Seat Albany's first relief seal here once. Reese's Works marks lower the shown Repair difficulty only if prepared at launch; a miss cannot retry, and Cade's refusal leaves one emergency public binding strip as recovery.";
+
+const OUTER_SEAL_DISCLOSURE_CASES = [
+  { stance: "cade", oath: "full", works: false, difficulty: 14 },
+  { stance: "cade", oath: "full", works: true, difficulty: 12 },
+  { stance: "cade", oath: "aid-only", works: false, difficulty: 14 },
+  { stance: "cade", oath: "aid-only", works: true, difficulty: 12 },
+  { stance: "authority", oath: "full", works: false, difficulty: 12 },
+  { stance: "authority", oath: "full", works: true, difficulty: 10 },
+  { stance: "authority", oath: "aid-only", works: false, difficulty: 14 },
+  { stance: "authority", oath: "aid-only", works: true, difficulty: 12 },
+] as const satisfies readonly {
+  stance: Stance;
+  oath: Oath;
+  works: boolean;
+  difficulty: number;
+}[];
 
 const STANCES = {
   cade: {
@@ -131,6 +165,43 @@ function fresh(withJune = false): GameState {
   return withJune
     ? optionState("albany:ally_june_cattle_first")
     : optionState("albany:ally_travel_solo");
+}
+
+function disclosureMatrixState(args: { stance: Stance; oath: Oath; works: boolean }): GameState {
+  const roadWarden = registration.profiles.find((profile) => profile.id === "albany:road_warden");
+  if (!roadWarden) throw new Error("Road-Warden registration must exist");
+
+  let character = applyOpeningReliefOathOption({
+    scene: reliefOath,
+    character: roadWarden.character,
+    optionId:
+      args.oath === "full" ? "albany:oath_full_compact_duty" : "albany:oath_limited_aid_only",
+  }).characterAfter;
+  character = applyOpeningPreparationProfile({
+    scene: preparation,
+    character,
+    profileId: args.works ? "albany:prep_works_fortification" : "albany:prep_drover_route",
+  }).characterAfter;
+  character = applyOpeningAllyOption({
+    scene: ally,
+    character,
+    optionId: "albany:ally_travel_solo",
+  }).characterAfter;
+
+  let state = initStateForRpgPack(index, 1124, { character, imports });
+  const contract = STANCES[args.stance];
+  for (const actionId of [
+    "go_north",
+    "talk_houndsman",
+    "ask_fortify",
+    contract.choice,
+    "ask_leave",
+    contract.take,
+    "go_north",
+  ]) {
+    state = act(state, actionId);
+  }
+  return state;
 }
 
 function expectFortifyWithholdsCombat(state: GameState): void {
@@ -281,6 +352,50 @@ function finishFortify(args: { stance: Stance; roll: Roll; withJune?: boolean })
 }
 
 describe("SS-F08 — Cade terms versus Albany authority under fortification", () => {
+  it.each(OUTER_SEAL_DISCLOSURE_CASES)(
+    "keeps the conditional Works disclosure exact for $stance, $oath, Works=$works at DC $difficulty",
+    ({ stance, oath, works, difficulty }) => {
+      const state = disclosureMatrixState({ stance, oath, works });
+      const contract = STANCES[stance];
+      const before = structuredClone(state);
+      const beforeHash = hashState(state);
+      const actions = enumerateRpgActions(index, state);
+      const full = buildRpgObservation(index, state, { availableActions: actions });
+      const actionIds = actions.map((action) => action.id);
+      const compact = compactRpgObservation(full, actionIds, { includeActions: true });
+      const expectedCopy = stance === "cade" ? CADE_OUTER_SEAL_COPY : AUTHORITY_OUTER_SEAL_COPY;
+      const outerActions = actions.filter((action) => action.id === contract.outer);
+
+      expect(state).toMatchObject({
+        current: "paling_gap",
+        flags: {
+          [contract.flag]: true,
+          [oath === "full" ? "relief_oath_full_duty" : "relief_oath_limited_duty"]: true,
+        },
+      });
+      expect(state.flags[contract.otherFlag]).not.toBe(true);
+      expect(state.flags.works_fortification_prepared === true).toBe(works);
+      expect(state.flags.drover_route_prepared === true).toBe(!works);
+      expect(
+        state.campaignImportReceipt?.applied_rules.includes(
+          "import:wolf_winter_works_fortification",
+        ),
+      ).toBe(works);
+      expect(
+        state.campaignImportReceipt?.applied_rules.includes("import:wolf_winter_drover_route"),
+      ).toBe(!works);
+      expect(full.description).toBe(`${expectedCopy}\n`);
+      expect(compact.text).toBe(expectedCopy);
+      expect(outerActions).toHaveLength(1);
+      expect(outerActions[0]?.skill_check?.difficulty).toBe(difficulty);
+      expect(actionIds).toContain(contract.outer);
+      expect(compact.actions).toContain(contract.outer);
+      expect(actionIds).not.toContain(STANCES[stance === "cade" ? "authority" : "cade"].outer);
+      expect(hashState(state)).toBe(beforeHash);
+      expect(state).toEqual(before);
+    },
+  );
+
   it("forks one identical pre-choice state into different resources, recoveries, and endings", () => {
     let boundary = fresh();
     boundary = act(boundary, "go_north");

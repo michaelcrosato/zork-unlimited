@@ -916,15 +916,17 @@ rooms:
           - { not_flag: fortify_outer_seal_attempted }
         text: >
           All three wolves test the open paling from outside. Seat Cade's first household
-          shutter here once. Reese's Works marks lower the Repair difficulty; a miss cannot
-          retry, but Cade's accepted terms make his bracing hand the recovery.
+          shutter here once. Reese's Works marks lower the shown Repair difficulty only if
+          prepared at launch; a miss cannot retry, but Cade's accepted terms make his
+          bracing hand the recovery.
       - when:
           - { has_flag: fortify_albany_authority_invoked }
           - { not_flag: fortify_outer_seal_attempted }
         text: >
           All three wolves test the open paling from outside. Seat Albany's first relief
-          seal here once. Reese's Works marks lower the Repair difficulty; a miss cannot
-          retry, and Cade's refusal leaves one emergency public binding strip as recovery.
+          seal here once. Reese's Works marks lower the shown Repair difficulty only if
+          prepared at launch; a miss cannot retry, and Cade's refusal leaves one emergency
+          public binding strip as recovery.
     exits:
       - direction: south
         to: byre_yard
