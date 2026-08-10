@@ -1,0 +1,62 @@
+id: bug_0556
+title: "Advocate's Case made official source books look like portable evidence"
+pack: content/rpg/quests/advocates_case.yaml
+reported_by: 2026-07-11T05-20-40-859Z and 20260721T114626Z independent overworld playtests
+severity: S1
+evidence:
+  first_source_report: ai-runs/2026-07-11T05-20-40-859Z/playtest.md
+  first_route: "Charter Office: examined and took the town register; Guild Records Room: examined, took, and read prior conviction records; rhetoric ending_exempted at 50/50"
+  first_friction: "The player can freely take official registers and ledgers with no clerk reaction, permission text, or abstraction like 'take certified copy.'"
+  first_worst_moment: "Being told to take the registered copy but only having the option to take the whole town register."
+  second_source_report: blind-tester/reports/20260721T114626Z_overworld_seed4330.md
+  second_route: "Completed Advocate's Case by overturning Marta's seizure with legal precedent during a six-quest, 141-decision overworld journey"
+  second_friction: "'take' verbs imply stealing official books rather than requesting or consulting certified copies"
+  cycle16_run: 2026-08-10T01-54-44-511Z
+  cycle16_selection: playtest-advocates_case
+  accepted_unconsumed_recommendation: hotspot-07988b93
+symptom: >
+  Two independent players completed the legal evidence route but separately read
+  its TAKE actions as theft. The old Charter Office exposed a heavy bound town
+  register, removed it from the counter when taken, and carried it under the name
+  "town register." The Guild Records Room likewise exposed and carried a bound
+  conviction ledger. Mechanics were sound, but the player-facing fiction made
+  master institutional records leave their offices instead of providing portable
+  hearing evidence.
+root_cause: >
+  The stable object ids town_register and prior_convictions served correctly as
+  portable inventory evidence, but their names, descriptions, commands, and room
+  variants described the master source books themselves. Taking either object
+  therefore made the corresponding official volume disappear from its source room.
+  The content had no distinct fictional boundary between the immobile archive and
+  the evidence the existing TAKE/READ/presentation mechanics were meant to carry.
+fix: >
+  Keep the existing object and action protocol, but present town_register as a
+  "certified register extract" prepared beside the master 1671 register and
+  prior_convictions as a "certified precedent packet" copied from the master guild
+  ledger. Room, object, journal, inventory, and presentation copy now keeps the
+  bound sources in their offices while the portable certified evidence can be
+  taken, read, dropped, recovered, and presented through the unchanged route.
+deterministic_witnesses:
+  - "The initial Charter Office exposes object id town_register as 'certified register extract' beside a master register that remains open in the office; TAKE, READ, and inventory use that portable name."
+  - "The initial Guild Records Room exposes object id prior_convictions as 'certified precedent packet' while the bound master conviction ledger remains shelved; TAKE, READ, and inventory use the packet name."
+  - "After either portable item is dropped, it becomes visible again under the same stable id, while LOOK continues to keep the corresponding master source in its office and never claims the dropped evidence is still held."
+  - "The town_register and prior_convictions ids, aliases, takeability, take/read/use action ids, legal-action count, flags, stages, and one-shot effects are unchanged; each scored READ still grants exactly +3 rhetoric and +10 score."
+  - "A fully prepared failed rhetoric roll still unlocks use_town_register_on_case_record with exact command 'present certified register extract with the charter citation and certified precedent packet on case record'; that deterministic recovery still reaches 50/50."
+  - "The independent 40/50 counterexample still wins legally without taking or reading the certified register extract. Its success narration says 'any certified register extract you gathered' and does not invent possession or presentation of missing evidence."
+  - "A register-only player is still pointed west for the missing guild precedent, while a precedent-prepared player retains use_prior_convictions_on_case_record and the rhetoric route."
+  - "The exact compiled source hash advances from 774b08b109cb1bf9281363dd7b60e660dad09e07217071a4dee8d87f93a7783f to 284d5e2e618b87dd2dd0761715b7cf6c5736111ae15f5d9824ce75ee3f03510e."
+nonclaims:
+  - "This does not add REQUEST, COPY, or CERTIFY verbs, a clerk NPC interaction, a permission check, a fee, a delay, or dynamic evidence-generation mechanics; the certified extracts are authored as already prepared for the hearing."
+  - "This does not make either master register or ledger a separate interactive object or portable item. The existing stable inventory ids now represent only their portable certified evidence."
+  - "This does not rename protocol ids, remove legacy aliases, change action availability or decision count, add flags, change stats or score, alter rhetoric DC/RNG, make the register mandatory, or change the combat fallback, endings, or route topology."
+  - "This does not make the primary rhetoric roll deterministic. The existing prepared failure and deterministic corrected-presentation recovery remain distinct paths."
+  - "This does not change Marta's original charter roll into a copy or remove its existing TAKE behavior; the two reports' repeated fiction gap concerns the official town and guild source books."
+  - "This does not preserve the old pack content hash or weaken hash integrity. Save schema and serialization are unchanged, while prior 774b content-hash-bound runtime saves intentionally reject against the new 284d source under the existing integrity policy."
+  - "This off-recommendation maintenance fix selects exact candidate playtest-advocates_case; it does not select or consume accepted recommendation hotspot-07988b93."
+tests:
+  - tests/regression/advocates_case_reactive_taken_items.test.ts
+  - tests/regression/advocates_case_rhetoric_retry.test.ts
+  - tests/regression/advocates_case_missing_precedent_hint.test.ts
+verification:
+  - npx vitest run tests/regression/advocates_case_reactive_taken_items.test.ts tests/regression/advocates_case_rhetoric_retry.test.ts tests/regression/advocates_case_missing_precedent_hint.test.ts
+  - npm run verify:bug-traces

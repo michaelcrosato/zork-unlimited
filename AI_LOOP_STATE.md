@@ -143,3 +143,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `51311a85` won The Wolf-Winter by HUNT/The Byre Held, ended naturally at decision 18, rated clarity/enjoyment 4/4 and replay-yes, and reported no bug or stuck state; the repository playtest gate accepts the receipt-bound artifacts.
 - Feedback/self-critique: 10 unique actionable verified runs triggered a fresh v2 compile and the false Station priority vanished, but normal `ai-runs/<cycle>/playtest.*` evidence remains absent from default compilation; that discovery/freshness gap is the next target.
 - Guard: independent review is clean; 75 focused tests, both static checks, formatting, trace integrity, exact-build pure evidence, and the required outer crawl/health/integrity gates protect the landing.
+## AFK Cycle 2026-08-10T01-54-44-511Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T01-54-44-511Z","selected_recommendation_id":"playtest-advocates_case"} -->
+- Assess: rpg=12; world=12; candidates=15.
+- Rec: hotspot-07988b93 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
