@@ -149,3 +149,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `7445e078` chose Ledger Advocate, Exposed Ridge, and LURE, kept the whole herd and all wolves alive, then ended naturally at the first goal on decision 26; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
 - Self-critique/next: the canary did not continue to Gallowmere, so causal proof remains the full/compact regression rather than a claimed playtest uplift; its only friction was non-blocking advisory Civic event text beside the active Compact/quest lane.
 - Feedback/guard: status remains 1 actionable report of 3, so no compile; 17 focused behavior/checkpoint tests, type/lint/format, 541 bug traces, and two hostile reviews are green, with the standard outer gates still mandatory.
+## AFK Cycle 2026-08-10T21-53-53-028Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T21-53-53-028Z","selected_recommendation_id":"hotspot-ed51aa6f"} -->
+- Assess: rpg=12; world=12; candidates=15.
+- Rec: hotspot-ed51aa6f (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

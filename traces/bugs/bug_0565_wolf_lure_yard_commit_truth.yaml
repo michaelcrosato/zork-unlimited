@@ -1,0 +1,174 @@
+id: bug_0565
+title: "Wolf-Winter's held-feed yard fallback lost the committed LURE route"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: accepted Cycle 22 pure LURE feedback plus deterministic route counterfactuals
+severity: S1
+evidence:
+  cycle_22_compiled_source:
+    source_run: 2026-08-10T15-48-02-040Z
+    source_commit: f218b1e10ad89880ca66aaf14e11b9cfef556635
+    source_report_id: pure:b290976e29a18e4974cb1f7e919f023e426cd7183aedf62a2c2cfeb9afc3714c
+    source_report_sha256: 67f109a5cc0958c776a682fd64952dba28a474dc9b886cf714447ce62dc91c23
+    source_evidence_sha256: 56a7083da441b0dee801415e3c3a6f62afb1c63d2dee8fdb29247df6244d0fed
+    source_sidecar_sha256: 6b655ba1c6e532d0c4b63c12cad81152133f45ffbca635c7393f72a974443827
+    source_report: ai-runs/2026-08-10T15-48-02-040Z/playtest.md
+    source_raw: ai-runs/2026-08-10T15-48-02-040Z/playtest.codex.jsonl
+    source_raw_sha256: 8e2a27033b8b59f658cecabadd7a3fbaf080fc4ebb33ac8ad8a76cf8786ba4f4
+    route: ending_pack_diverted_after_blood
+    accepted_excerpt: >
+      The one-shot nature of the LURE sequence after a failed first cast raised
+      the stakes but required careful reading of the evolving direction-lock rules.
+    raw_boundary: >
+      Item 21 returns east after taking Cade's finite sack and directly renders
+      the stale pre-cast fallback: strategy_lure_committed is true, the inventory
+      contains winter_feed_sack, north/south/west are legal with no blocked exit,
+      yet the base yard copy tells the player to compare HUNT, LURE, DRIVE, and
+      FORTIFY. Item 23 then fouls the one available first cast, raises cattle
+      alarm, removes the retry, and leaves north blocked. Items 24-26 brace the
+      breach, commit the hybrid fight, and defeat the yearling; items 27-29 execute
+      the legal south-west-up return to the loft. Item 27 is already handled by
+      the earlier first-lure-beat-settled leaf and is not changed here.
+    player_result: >
+      The player completed ending_pack_diverted_after_blood at 50/60 with two
+      wolves alive and two cattle missing, ended at the goal-completion choice on
+      decision 28, rated clarity and enjoyment 4/4, would replay, was not stuck,
+      and reported bugs: [].
+  accepted_authority:
+    manifest: ai-runs/feedback/20260810T194910Z/report-manifest.json
+    manifest_sha256: 3f6e21ae4cdd8ed78611fe8b4c2691051c091cff078b30460385d6ac95b70cbe
+    hotspots: ai-runs/feedback/20260810T194910Z/hotspots.json
+    hotspots_sha256: e8324c3632599b987ba43fd2843fd3c8c7fda23f639338126f60bf108a11b843
+    consumed_by_run_id: null
+    recommended_candidate: hotspot-ed51aa6f
+    recommended_excerpt: >
+      The one-shot nature of the LURE sequence after a failed first cast raised
+      the stakes but required careful reading of the evolving direction-lock rules.
+    sibling_candidate: hotspot-55520653
+    sibling_excerpt: >
+      Travel between rooms during the quest involved several quick context shifts
+      (blocked exits plus changing command menu) that are understandable, but easy
+      to miss if you act too fast.
+  pending_before_cycle:
+    run_id: 2026-08-10T19-41-13-068Z
+    tested_commit: 2bfc04a302f8d8d25d2e7ae6c055a1874f11c351
+    report_id: pure:37b76416aacc26cea01b7fd8d6c5d775377d6b1f78dbe07af28816331c74b75a
+    report_sha256: 20d03c7a979aba9d2cd4c165f23ab2395500117d990b799c08de61cb2f9fc2a7
+    evidence_sha256: 291b54ce5b3e3bdc6927c433a50b9479cce1dc42b084f1bd0685d1a0fa61e28e
+    sidecar_sha256: 8dbd5c47c29c67528ef4e82573dd586d7bd0a898473c166b20696c96af42064e
+  rejected_first_attempt:
+    run_id: 2026-08-10T21-15-45-908Z
+    provisional_commit: 025ce87a6134cd1b1de74a25d337766474a45691
+    gate_failure: "exit interview invalid: clarity — Required"
+    authority: >
+      The rejected prefix contains the provider envelope, raw Codex capture and
+      rollout, and diagnostics only. It published no playtest.md, evidence JSONL,
+      V2 run sidecar or receipt-bound report, feedback pointer, or stable report
+      id, so it cannot become causal feedback authority, consume a recommendation,
+      enter a compile, or seal. The implementation was reset and the commit-enabled
+      retry uses a fresh run and output prefix.
+  rejected_second_attempt:
+    run_id: 2026-08-10T21-44-49-327Z
+    provisional_commit: 7d2aae81e0bb43b383d1f22538ee156ec37d9997
+    gate_failure: >
+      Codex ran out of room in the model's context window. Start a new thread or
+      clear earlier history before retrying.
+    strict_diagnostic: ai-runs/2026-08-10T21-44-49-327Z/playtest.strict-rejection.json
+    strict_diagnostic_sha256: 9a9b3f439bb066b85e17b0b3fea80e069381b1b3f603c35fefff772b56318d97
+    strict_status:
+      surface: public_events
+      failure: top_level_error
+      acceptance_eligible: false
+      canonical: false
+      ignored: true
+    diagnostic_boundary: >
+      The stream records 84 MCP lifecycles: 83 succeeded, while the early
+      inspect_overworld_session_story({}) call failed schema validation. The
+      active journey reached decision 66, never ended, produced zero exit
+      receipts, and never entered LURE or rendered the changed copy before the
+      top-level context-window error and terminal turn failure.
+    authority: >
+      The prefix contains the public Codex event stream, empty launcher log, and
+      ignored strict-rejection diagnostic only. It published no provider envelope,
+      playtest.md, evidence JSONL, V2 run sidecar or receipt-bound report, feedback
+      pointer, or stable report id. It has no product or feedback authority and
+      cannot consume a recommendation, enter a compile, append a pending report,
+      or seal. The implementation was reset again; the third attempt uses a fresh
+      run, output prefix, provisional commit, and player session.
+  assessment_run: 2026-08-10T21-53-53-028Z
+  assessor_top_candidate: hotspot-ed51aa6f
+  selected_candidate: hotspot-ed51aa6f
+  feedback_status: "delta; 1 new verified reports, 1 actionable, 0 excluded mocks; 3 actionable reports required"
+revision_liveness: >
+  Accepted Cycle 22 item 21 directly proves the stale pre-cast held-feed fallback,
+  including the false invitation to compare the four plans after LURE commitment.
+  That variant gap survives on the merged Cycle 24 baseline. Loaded-pack
+  counterfactuals extend the same live selector boundary to a detour south
+  immediately after the foul and a late yard backtrack after the loft cast. Those
+  two states could likewise miss every specialized LURE leaf and fall to base or
+  generic yard prose that omitted the active one-sack route. The accepted raw item
+  is direct causal evidence for pre-cast; only the post-failure and late-backtrack
+  extensions are deterministic inference.
+symptom: >
+  Re-entering the byre yard while committed to LURE and holding the winter-feed
+  sack did not always preserve the commitment in room copy. At the pre-cast,
+  post-failure, and late-backtrack boundaries, the legal route still worked, but
+  the fallback could present opening-plan prose or an unqualified wolf tally
+  instead of naming the closed strategies and the active northward one-sack line.
+  This is S1 state-to-copy guidance friction, not a route lock or dead end.
+root_cause: >
+  The yard had precise leaves for feed pickup before the sack was taken, the
+  relief-protocol interruption, the settled first beat, and completed outcomes,
+  but no bounded fallback for the shared state strategy_lure_committed plus a held
+  winter_feed_sack. Specialized leaves correctly won where applicable; all other
+  held-feed LURE returns leaked into general yard variants authored for open play.
+fix: >
+  Add one ordered yard variant for strategy_lure_committed plus a held
+  winter_feed_sack. State that HUNT, DRIVE, and FORTIFY are closed and direct the
+  player north to the one-sack feed line or its current recovery step. Preserve
+  the higher-priority pickup, protocol, first-beat, and resolved leaves and change
+  no exit, action, check, resource, failure, retry, or outcome rule.
+settled_copy: >
+  LURE is committed; HUNT, DRIVE, and FORTIFY are closed. Go north to continue
+  the one-sack feed line or its current recovery step.
+deterministic_witnesses:
+  - "the exact held-feed fallback is 129 characters / 22 words and is byte-complete in both full and compact room projections"
+  - "immediately after the finite sack is collected and the player returns east, strategy_lure_committed and winter_feed_sack select the new leaf; north, south, and west remain the same legal actions"
+  - "after a failed first cast, a south detour exposes the same exact full/compact copy; returning north advances only the two movement steps and restores the unchanged foul recovery actions"
+  - "after the second cast, a two-room late backtrack to the yard exposes the same exact copy; retracing north advances only four movement steps and restores the unchanged outer-cast route"
+  - "clean, split-guard, living brace, and hybrid-combat LURE routes cover read-tally and no-read states, with a living or defeated yearling, without changing their authored recovery identities"
+  - "the no-feed pickup, one-use relief protocol, and resolved west-up first-beat retain their specific prose; open-plan and implicit-HUNT returns retain their prior base/generic projections; none leak into the held-feed fallback"
+  - "building full and compact observations is nonmutating: exact state, action ids, exits, blocked exits, and state hash remain unchanged"
+  - "the Wolf-Winter source hash advances directly from 8b175deb3b6a575288f6e51701e9a5c3705bbf1746a95fcc414a464c39499b18 to 7beba188a34782a75dd53d86bdef0ba2d93eb381f1541565f9fe07351407ba35"
+  - "a current 7beba188 save and structured replay remain valid while the exact 8b175deb predecessor fixture rejects under the unchanged source-integrity policy"
+selection_semantics:
+  - "The accepted 20260810T194910Z bundle is hash-valid and unconsumed before Cycle 25; its recommended_next_fix is exactly ed51aa6f, derived from the Cycle 22 failed-cast direction-lock excerpt."
+  - "Cycle 25 freezes selected_recommendation_id as exact hotspot-ed51aa6f, so only a green seal for third fresh run 2026-08-10T21-53-53-028Z may set the accepted bundle's consumed_by_run_id to that run and remove the selection marker."
+  - "Accepted Cycle 22 item 21 directly binds ed51aa6f to the stale pre-cast held-feed fallback. Deterministic post-failure and late-backtrack witnesses extend that bounded selector without claiming the source player entered those two counterfactual states or that every room transition caused the reported rereads."
+  - "Sibling hotspot-55520653 describes broader multi-room blocked-exit and command-menu context shifts. This revision does not claim to implement or fix that sibling; protocol consumption is nevertheless bundle-level, so sealing the exact recommended ed51aa6f makes the accepted bundle, including its recorded sibling row, inert as assessor authority until later feedback recompiles any recurrence."
+  - "Committed feedback status is exactly 1/3 actionable, so no feedback compile or provisional manifest is authorized in Cycle 25. The accepted 20260810T194910Z bundle remains the compile authority through seal."
+  - "Cycle 25's eventual pure report is absent from the current feedback delta and cannot steer or compile into its own provisional revision. After green outer gates, seal preserves the prior Cycle 24 pending row, appends the verified current report as the second pending row, and sets the accepted bundle's consumed marker only because the selected id exactly matches its recommendation."
+nonclaims:
+  - "The source player directly entered the stale pre-cast fallback at item 21, but did not take the pinned post-failure south detour or late second-cast backtrack, attempt a blocked direction, receive an action rejection, reach a dead end, get stuck, or report a bug; those two boundary extensions are deterministic inference."
+  - "This does not claim the existing pickup, relief-protocol, first-beat-settled, or completed LURE prose was false. Their higher-priority state-specific guidance remains byte-exact and authoritative."
+  - "This does not claim sibling hotspot-55520653 is resolved, remove all route density, or redesign Wolf-Winter's room graph, blocked-exit messages, or command menu."
+  - "This adds exactly two presentation-only room-selector predicates: has_flag strategy_lure_committed and has_item winter_feed_sack. It does not change any gameplay-legality condition for actions, exits, destinations, or checks; add, remove, rename, reorder, reveal, hide, enable, or disable an item, resource, flag, enemy, combat, recovery, score, quest stage, ending, consequence, or journey decision; or alter serialization or save schema."
+  - "This does not change the one-sack rule, first-cast failure, no-retry rule, cattle alarm, split-guard recovery, living brace, hybrid fight, loft cast, outer cast, or direction legality; it adds only state-true room guidance."
+  - "This does not preserve the old content hash. Exact 8b175deb content-hash-bound Wolf saves intentionally reject against 7beba188 under the unchanged integrity policy."
+  - "This does not compile at a 1/3 delta, include the eventual Cycle 25 report in its own cohort, consume an id other than the exact accepted recommendation, or claim a seal before all outer gates pass."
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/starting_slice/wolf_strategy_counterfactual.test.ts
+    cases:
+      - "redirects all three living wolves without selecting combat and exports a clean nondeath identity"
+      - "makes a fouled opening fail forward through spent guard wood into visible cattle loss"
+      - "keeps no-feed, protocol, resolved west-up, open, and HUNT states outside the held-feed fallback"
+  - path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    cases:
+      - "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+  - path: tests/regression/wolf_winter_compact_surface.test.ts
+    cases:
+      - "keeps each copy-only revision distinct at the gauntlet and source-hash boundaries"
+verification:
+  - npx vitest run tests/starting_slice/wolf_strategy_counterfactual.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/wolf_winter_compact_surface.test.ts
+  - npm run verify:bug-traces
