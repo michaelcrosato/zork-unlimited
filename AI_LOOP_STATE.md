@@ -144,3 +144,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback baseline: bootstrap recorded 813 verified reports (62 pure, 302 structural, 449 legacy-guided; 220 rejected) with an empty ranked cohort, so historical volume cannot steer the next fix.
 - Self-critique/next: Spark failed closed before gameplay and the first Terra build was discarded after health caught one prompt-contract mismatch; the replacement player again found dense opening setup and terse optional Station support, now the strongest current follow-up.
 - Guard: three independent final audits, post-crawl 6,000-step sweep, exact health (448 files/3,828 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure report gates are green.
+## AFK Cycle 2026-08-10T06-37-25-261Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T06-37-25-261Z","selected_recommendation_id":"playtest-wolf_winter"} -->
+- Assess: rpg=12; world=12; candidates=15.
+- Rec: hotspot-07988b93 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

@@ -28,7 +28,7 @@ const FULL_DUTY_TERMS =
   /breach full duty[^]*first Albany Repair 2 easier[^]*Mobile stabilizes a recovered miss[^]*dawn/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const NORTH_PENDING_GUIDANCE =
-  "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft.";
+  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 
 function act(state: GameState, actionId: string): GameState {
   const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === actionId);
@@ -45,7 +45,7 @@ function observation(state: GameState) {
   });
 }
 
-function assertNorthBlockedOnce(state: GameState): void {
+function assertNorthBlockedOnce(state: GameState, preparationActionId: string): void {
   const full = observation(state);
   const compact = compactRpgObservation(
     full,
@@ -62,9 +62,11 @@ function assertNorthBlockedOnce(state: GameState): void {
   expect(full.blocked_exits.filter((exit) => exit.direction === "north")).toEqual([
     { direction: "north", message: NORTH_PENDING_GUIDANCE },
   ]);
-  expect(NORTH_PENDING_GUIDANCE).not.toMatch(/June/i);
+  expect(full.available_actions.map((action) => action.id)).toContain(preparationActionId);
   expect(compactNorthExits).toEqual([]);
   expect(compactNorthBlocks).toEqual([["north", NORTH_PENDING_GUIDANCE]]);
+  expect(compact.actions).toContain(preparationActionId);
+  expect(compactNorthBlocks[0]?.[1]).not.toMatch(TRUNCATION_MARKER);
 }
 
 function assertNorthOpenOnce(state: GameState): void {
@@ -256,9 +258,9 @@ describe("Wolf-Winter authority commitment boundary", () => {
       expect.arrayContaining(["go_south", "go_west", "ask_lure", "ask_drive", "ask_fortify"]),
     );
 
-    assertNorthBlockedOnce(state);
-    expect(NORTH_PENDING_GUIDANCE.length).toBe(171);
-    expect(NORTH_PENDING_GUIDANCE.length).toBeLessThan(180);
+    assertNorthBlockedOnce(state, "take_albany_relief_seals");
+    expect(NORTH_PENDING_GUIDANCE.length).toBe(175);
+    expect(NORTH_PENDING_GUIDANCE.length).toBeLessThanOrEqual(180);
 
     state = act(state, "take_albany_relief_seals");
     assertNorthOpenOnce(state);
@@ -291,7 +293,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
 
       expect(state.flags[committedFlag]).toBe(true);
       expect(enumerateRpgActions(index, state).map((action) => action.id)).toContain(pickup);
-      assertNorthBlockedOnce(state);
+      assertNorthBlockedOnce(state, pickup);
 
       state = act(state, pickup);
       assertNorthOpenOnce(state);

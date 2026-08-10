@@ -472,7 +472,7 @@ rooms:
               - { has_flag: strategy_lure_committed }
               - { has_flag: strategy_drive_committed }
               - { has_flag: strategy_fortify_committed }
-        locked_msg: "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft."
+        locked_msg: "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear."
 
   - id: store
     name: "The Store-Shed"

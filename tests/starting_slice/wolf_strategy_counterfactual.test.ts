@@ -26,7 +26,7 @@ if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const NORTH_PENDING_GUIDANCE =
-  "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft.";
+  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 
 function fixedRng(face: "best" | "worst"): Rng {
   return {
@@ -148,8 +148,14 @@ function lureRoute(
     direction: "north",
     message: NORTH_PENDING_GUIDANCE,
   });
-  expect(NORTH_PENDING_GUIDANCE).not.toMatch(/June/i);
-  expect(NORTH_PENDING_GUIDANCE).toMatch(/finish the lure's second cast in the loft/i);
+  const compactYard = compactRpgObservation(
+    yard,
+    yard.available_actions.map((action) => action.id),
+    { includeActions: true },
+  );
+  expect(compactYard.actions).toContain("go_west");
+  expect(compactYard.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+  expect(NORTH_PENDING_GUIDANCE).toMatch(/LURE:[^]*go west\/up for the second cast/i);
   act("go_west");
   act("go_up");
   const loft = buildRpgObservation(index, state);
