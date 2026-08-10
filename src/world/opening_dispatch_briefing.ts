@@ -25,9 +25,8 @@ const OPENING_DISPATCH_PURPOSE: Readonly<
   Record<NonNullable<JourneyStoryChoicePrompt["kind"]>, string>
 > = Object.freeze({
   registration: "Purpose: choose your permanent background and promise.",
-  relief_oath:
-    "Purpose: compare what must survive Wolf-Winter, then choose duty; evidence comes next, and field plan stays open.",
-  lead_source: "Purpose: choose the evidence Albany carries; the field plan stays open.",
+  relief_oath: "Purpose: choose duty; every field plan stays open.",
+  lead_source: "Purpose: choose evidence; every field plan stays open.",
   preparation:
     "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
   relief_allocation:
@@ -162,13 +161,6 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
   };
 }
 
-function listLabels(labels: readonly string[]): string {
-  if (labels.length === 0) return "none";
-  if (labels.length === 1) return labels[0]!;
-  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
-  return `${labels.slice(0, -1).join(", ")}, and ${labels.at(-1)}`;
-}
-
 /** Add finite mission and planning context without changing the saved journal. */
 export function withOpeningDispatchBriefing(
   world: OverworldManifest,
@@ -225,12 +217,6 @@ export function withOpeningDispatchBriefing(
     : OPENING_DISPATCH_PURPOSE[prompt.kind];
   if (civicStageIndex >= 0) {
     const stage = plan.civicStages[civicStageIndex]!;
-    const completed = plan.civicStages
-      .slice(0, civicStageIndex)
-      .map((candidate) => candidate.label);
-    const remaining = plan.civicStages
-      .slice(civicStageIndex + 1)
-      .map((candidate) => candidate.label);
     const progress =
       civicStageIndex === 0
         ? `${plan.questTitle} Civic docket · role.`
@@ -243,8 +229,8 @@ export function withOpeningDispatchBriefing(
         : civicStageIndex === 1 && offersStandardPacket
           ? "A custom duty leaves one evidence choice next."
           : civicStageIndex === 2
-            ? "Role and duty chosen. Next stop: Hayden's Station launch board."
-            : `Chosen at Civic: ${listLabels(completed)}. Now choose: ${stage.label}.${remaining.length > 0 ? ` Next: ${listLabels(remaining)}.` : " Next: take the certified packet to Hayden's Station launch board."}`;
+            ? "Hayden's Station launch board follows."
+            : "Evidence follows.";
     return {
       ...prompt,
       message: `${progress} ${purpose} ${planningContext} ${displayMessage}`,

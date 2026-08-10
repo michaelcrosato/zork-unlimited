@@ -35,9 +35,8 @@ const RELIEF_ALLOCATION_HEADER = `Compare who is protected, exact cost, and what
 const ALLY_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 const PURPOSES = Object.freeze({
   registration: "Purpose: choose your permanent background and promise.",
-  relief_oath:
-    "Purpose: compare what must survive Wolf-Winter, then choose duty; evidence comes next, and field plan stays open.",
-  lead_source: "Purpose: choose the evidence Albany carries; the field plan stays open.",
+  relief_oath: "Purpose: choose duty; every field plan stays open.",
+  lead_source: "Purpose: choose evidence; every field plan stays open.",
   preparation:
     "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
   relief_allocation:
@@ -48,6 +47,14 @@ const STANDARD_PACKET_PURPOSE =
   "Purpose: finish matched duty and evidence, or customize; every field plan stays open.";
 const WOLF_CRISIS_PREVIEW =
   "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather.";
+const REGISTRATION_MESSAGE =
+  "The Wolf-Winter Civic docket · role. Purpose: choose your permanent background and promise. Mission preview — A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. In one next choice, a matched role may finish duty and evidence, or customize. Enter Albany's Relief Compact. Compare starting resources, first field edge, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+const MATCHED_OATH_MESSAGE =
+  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: finish matched duty and evidence, or customize; every field plan stays open. A custom duty leaves one evidence choice next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+const CUSTOM_DUTY_MESSAGE =
+  "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
+const SOURCE_MESSAGE =
+  "The Wolf-Winter Civic docket · 3/3 — evidence. Purpose: choose evidence; every field plan stays open. Hayden's Station launch board follows. Certify the Wolf-Winter Source Packet. Other accounts close. Compare field priority, exact cost, and tradeoff. Field checks surface with their action before resolution.";
 const STALE_DEFAULT_CIVIC_FRAMING = /\b(?:1\/3|2\/3|Civic order)\b|role\s*→\s*duty\s*→\s*evidence/i;
 const DEFERRED_STATION_SUPPORT_DETAILS =
   /Hayden|field kit|last relief wagon|June|second field seat|second rider|cattle-first/i;
@@ -260,6 +267,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
 
     const registration = currentStoryChoice(session);
     expect(registration).toMatchObject({ id: REGISTRATION.id, kind: "registration" });
+    expect(registration.message).toBe(REGISTRATION_MESSAGE);
     expect(registration.message).toContain(`${WOLF.title} Civic docket · role.`);
     expect(registration.message).toContain(`${REGISTRATION.title}. ${REGISTRATION_HEADER}`);
     expect(registration.message).not.toContain(REGISTRATION.message);
@@ -293,6 +301,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     session.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
     const oath = currentStoryChoice(session);
     expect(oath).toMatchObject({ id: RELIEF_OATH.id, kind: "relief_oath" });
+    expect(oath.message).toBe(MATCHED_OATH_MESSAGE);
     expect(oath.message).toContain(`${WOLF.title} Civic docket · matched duty + evidence.`);
     expect(oath.message).toContain(`${RELIEF_OATH.title}. ${STANDARD_PACKET_OATH_HEADER}`);
     expect(oath.message).not.toContain(RELIEF_OATH.message);
@@ -387,6 +396,8 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       originalMessage: RELIEF_OATH.message,
       presentedMessage: OATH_HEADER,
     });
+    expect(ledgerOath.message).toBe(CUSTOM_DUTY_MESSAGE);
+    expect(wordCount(ledgerOath.message)).toBeLessThanOrEqual(45);
     expect(ledgerOath.options.map((option) => option.id)).toEqual(
       RELIEF_OATH.options.map((option) => option.id),
     );
@@ -397,8 +408,8 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     );
     expect(ledgerOath.message).not.toContain("standard packet for duty + evidence");
 
-    ledgerSession.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
-    expectStage(ledgerSession, {
+    ledgerSession.chooseJourneyStory("albany:oath_full_compact_duty");
+    const ledgerSource = expectStage(ledgerSession, {
       id: LEAD_SOURCE.id,
       kind: "lead_source",
       phase: "Civic docket",
@@ -409,6 +420,16 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       originalMessage: LEAD_SOURCE.message,
       presentedMessage: SOURCE_HEADER,
     });
+    expect(ledgerSource.message).toBe(SOURCE_MESSAGE);
+    expect(wordCount(ledgerSource.message)).toBeLessThanOrEqual(45);
+    expect(
+      wordCount(registration.message) +
+        wordCount(ledgerOath.message) +
+        wordCount(ledgerSource.message),
+    ).toBeLessThanOrEqual(170);
+    expect(
+      registration.message.length + ledgerOath.message.length + ledgerSource.message.length,
+    ).toBeLessThanOrEqual(1_120);
 
     session.revealJourneyStory(oath.id, oath.progressiveDisclosure!.reveal.id);
     session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
@@ -423,14 +444,13 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       originalMessage: LEAD_SOURCE.message,
       presentedMessage: SOURCE_HEADER,
     });
-    expect(source.message).toContain(
-      "Role and duty chosen. Next stop: Hayden's Station launch board.",
-    );
+    expect(source.message).toBe(SOURCE_MESSAGE);
+    expect(source.message).toContain("Hayden's Station launch board follows.");
     expect(source.message).toContain(`Certify the Wolf-Winter Source Packet. ${SOURCE_HEADER}`);
     expect(source.message).not.toContain(LEAD_SOURCE.message);
     expectBoundedPurpose(source, PURPOSES.lead_source);
     expectRoleplayFirstFraming(source);
-    expect(wordCount(source.message)).toBeLessThanOrEqual(60);
+    expect(wordCount(source.message)).toBeLessThanOrEqual(45);
     expectSummaryFirstOptions(source);
     expect(source.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
@@ -634,7 +654,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     );
   });
 
-  it("presents the exact same first briefing through UI and MCP", () => {
+  it("presents the exact same matched briefing through full UI and compact MCP", () => {
     const ui = new UiOverworldSession(WORLD);
     const uiOpening = ui.view();
     ui.scoutPoi(uiOpening.pois[0]!.id);
@@ -664,17 +684,24 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const standardPacket = REGISTRATION.doctrines!.find(
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
-    const sharedChoices = [REGISTRATION.profiles[0]!.id, standardPacket.id];
-    let compactJourney: JourneyPresentation | CompactJourneyPresentation = talked.journey;
-    for (const choice of sharedChoices) {
-      ui.chooseJourneyStory(choice);
-      compactJourney = api.choose_overworld_session_story({
+    ui.chooseJourneyStory(REGISTRATION.profiles[0]!.id);
+    let compactJourney: JourneyPresentation | CompactJourneyPresentation =
+      api.choose_overworld_session_story({
         session_id: started.session_id,
-        choice,
+        choice: REGISTRATION.profiles[0]!.id,
         compact_context: true,
         compact_result: true,
       }).journey;
-    }
+    expect(ui.journey().storyChoice?.message).toBe(MATCHED_OATH_MESSAGE);
+    expect(compactJourney.storyChoice?.message).toBe(MATCHED_OATH_MESSAGE);
+
+    ui.chooseJourneyStory(standardPacket.id);
+    compactJourney = api.choose_overworld_session_story({
+      session_id: started.session_id,
+      choice: standardPacket.id,
+      compact_context: true,
+      compact_result: true,
+    }).journey;
     expect(compactJourney.storyChoice).toEqual(ui.journey().storyChoice);
     expect(compactJourney.storyChoice).toBeNull();
     const stationRoute = ui
@@ -762,5 +789,88 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(mcpAlly).toEqual(ui.journey().storyChoice);
     expect(mcpAlly).not.toBeNull();
     expectBoundedPurpose(mcpAlly!, PURPOSES.ally);
+  });
+
+  it("keeps custom Civic headers literal across full UI and compact MCP", () => {
+    const ui = new UiOverworldSession(WORLD);
+    ui.scoutPoi(ui.view().pois[0]!.id);
+    ui.talkToCharacter(REGISTRATION.contact);
+
+    const api = createToolApi({ root: process.cwd() });
+    const started = api.start_overworld({ compact_context: false });
+    api.scout_overworld_session_poi({
+      session_id: started.session_id,
+      poi_id: started.observation.pois[0]!.id,
+      compact_context: false,
+      compact_result: false,
+    });
+    const talked = api.talk_overworld_session_contact({
+      session_id: started.session_id,
+      character_id: REGISTRATION.contact,
+      compact_context: false,
+      compact_result: false,
+    });
+    expect(talked.journey.storyChoice?.message).toBe(REGISTRATION_MESSAGE);
+
+    const decisionsBeforeRole = ui.journey().acceptedDecisions;
+    ui.chooseJourneyStory("albany:ledger_advocate");
+    const compactDuty = api.choose_overworld_session_story({
+      session_id: started.session_id,
+      choice: "albany:ledger_advocate",
+      compact_context: true,
+      compact_result: true,
+    }).journey.storyChoice;
+    const fullDuty = ui.journey().storyChoice;
+    if (!fullDuty) throw new Error("Expected Ledger Advocate's full duty choice.");
+    expect(fullDuty.message).toBe(CUSTOM_DUTY_MESSAGE);
+    expect(compactDuty?.message).toBe(CUSTOM_DUTY_MESSAGE);
+    expect(compactJourneyStoryChoiceComparison(fullDuty).message).toBe(CUSTOM_DUTY_MESSAGE);
+    expect(fullDuty).not.toHaveProperty("progressiveDisclosure");
+    expect(fullDuty.options.map((option) => option.id)).toEqual([
+      "albany:oath_full_compact_duty",
+      "albany:oath_limited_aid_only",
+      "albany:oath_unaffiliated_personal_bond",
+    ]);
+    expect(ui.journey().acceptedDecisions).toBe(decisionsBeforeRole + 1);
+    const decisionsBeforeDuty = ui.journey().acceptedDecisions;
+    const dutySnapshot = ui.snapshot();
+    compactJourneyStoryChoiceComparison(fullDuty);
+    ui.journey();
+    expect(ui.snapshot()).toEqual(dutySnapshot);
+
+    ui.chooseJourneyStory("albany:oath_full_compact_duty");
+    const compactSource = api.choose_overworld_session_story({
+      session_id: started.session_id,
+      choice: "albany:oath_full_compact_duty",
+      compact_context: true,
+      compact_result: true,
+    }).journey.storyChoice;
+    const fullSource = ui.journey().storyChoice;
+    if (!fullSource) throw new Error("Expected the full Albany evidence choice.");
+    expect(fullSource.message).toBe(SOURCE_MESSAGE);
+    expect(compactSource?.message).toBe(SOURCE_MESSAGE);
+    expect(compactJourneyStoryChoiceComparison(fullSource).message).toBe(SOURCE_MESSAGE);
+    expect(fullSource.options.map((option) => option.id)).toEqual([
+      "albany:source_rowan_civic_docket",
+      "albany:source_jamie_market_testimony",
+      "albany:source_hayden_frost_report",
+    ]);
+    expect(ui.journey().acceptedDecisions).toBe(decisionsBeforeDuty + 1);
+    const sourceSnapshot = ui.snapshot();
+    compactJourneyStoryChoiceComparison(fullSource);
+    ui.journey();
+    expect(ui.snapshot()).toEqual(sourceSnapshot);
+
+    const decisionsBeforeSource = ui.journey().acceptedDecisions;
+    ui.chooseJourneyStory("albany:source_rowan_civic_docket");
+    const compactAfterSource = api.choose_overworld_session_story({
+      session_id: started.session_id,
+      choice: "albany:source_rowan_civic_docket",
+      compact_context: true,
+      compact_result: true,
+    }).journey.storyChoice;
+    expect(ui.journey().acceptedDecisions).toBe(decisionsBeforeSource + 1);
+    expect(ui.journey().storyChoice).toBeNull();
+    expect(compactAfterSource).toBeNull();
   });
 });

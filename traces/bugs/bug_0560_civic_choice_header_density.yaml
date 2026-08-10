@@ -1,0 +1,120 @@
+id: bug_0560
+title: "Civic duty and evidence prompts repeated their stage handoff"
+pack: n/a (derived Albany Wolf-Winter opening presentation)
+reported_by: two pending 2026-08-10 pure fresh-overworld playtests
+severity: S1
+evidence:
+  cycle_18:
+    source_run: 2026-08-10T06-37-25-261Z
+    source_commit: 3dab3322885614f9010fe773c03063c586a2a275
+    source_report_id: pure:b2ca88272fc24296c6591722d02f2a1c1464749222611a4e0ca672f666a39ea8
+    source_report_sha256: 405095260edcc895a7c3c2e00de67e22732e6d31ae42b92238b65abafe018475
+    source_report: ai-runs/2026-08-10T06-37-25-261Z/playtest.md
+    source_raw: ai-runs/2026-08-10T06-37-25-261Z/playtest.codex.jsonl
+    player_friction: >
+      The relief/relief-duty/source-choice chain was functional but text-heavy,
+      with many terms arriving quickly; the first strategic branch used dense
+      civic/legal phrasing that required multiple reads.
+    exact_raw_boundary: >
+      item_2 presents the role briefing; item_3 presents the matched duty +
+      evidence shortcut; item 6 inspects it without changing the snapshot, while
+      item 7 records only the durable customization-reveal receipt without accepting
+      a journey decision or advancing the goal; item_8 chooses Full Compact Duty and
+      presents the old 3/3 evidence briefing; item_9 chooses Rowan's Civic Docket.
+      This player saw the exact source header but not the separate custom-duty header.
+  cycle_19:
+    source_run: 2026-08-10T08-19-00-732Z
+    source_commit: 3dbc399a7cb6e780adcbc6fda69637e7765b91b1
+    source_report_id: pure:44591b7a05c26bc85a352dcd440c72b1da0b62d410b45fcc0b7d185be9918e5c
+    source_report_sha256: f3b8f9d8b350b88fcf7b83741e65dde6e4898c70adb505502780e741cd82f3de
+    source_report: ai-runs/2026-08-10T08-19-00-732Z/playtest.md
+    source_raw: ai-runs/2026-08-10T08-19-00-732Z/playtest.codex.jsonl
+    player_friction: >
+      The quest onboarding includes multiple staged campaign-choice layers
+      (registration, duty, source) separate from normal town actions;
+      understandable but initially dense.
+    exact_raw_boundary: >
+      item_2 presents role, item_3 chooses Ledger Advocate and presents the old
+      2/3 duty briefing, item_4 chooses Aid-Only and presents the old 3/3 evidence
+      briefing, and item_5 chooses Rowan's Civic Docket. This is the exact
+      role -> custom duty -> source sequence preserved by the regression.
+  revision_liveness: >
+    src/world/opening_dispatch_briefing.ts is unchanged from both tested commits
+    through Cycle 20's base 65603ee3. Earlier bug_0545 is already an ancestor and
+    correctly removed false fixed-stage framing from the matched quick setup; these
+    two later players independently found density in the still-live custom path.
+  assessment_run: 2026-08-10T10-38-43-423Z
+  selected_candidate: playtest-overworld
+  feedback_status: "2 verified/actionable pending reports of 3; no compile"
+  accepted_bundle: ai-runs/feedback/20260810T065018Z/hotspots.json
+  stale_recommended_candidate: hotspot-a0d32f61
+  stale_sibling_candidate: hotspot-4ae7e44f
+symptom: >
+  The custom duty message named duty in its 2/3 progress header, purpose, and
+  "Now choose" recap, while announcing evidence in both the purpose and "Next"
+  recap. The following source message likewise named evidence in its 3/3 header and
+  purpose, then announced Station in a separate state recap before its authored
+  title and comparison header. All of those statements were accurate, but their
+  stacked administrative headings made a two-choice handoff feel denser than its
+  mechanics. Two consecutive successful fresh-overworld players reported the same
+  minor friction.
+root_cause: >
+  withOpeningDispatchBriefing composed progress, purpose, planningContext, and the
+  authored displayMessage as independently descriptive blocks. On the genuine
+  custom route, purpose and planningContext repeated the stage and handoff already
+  established by the 2/3 or 3/3 progress header. The three-stage route, option set,
+  and transition logic were already correct.
+fix: >
+  Keep the genuine 2/3 duty and 3/3 evidence progress headers, but reduce each
+  derived purpose to the immediate choice and fold its handoff into one short
+  sentence. Leave the role and matched-shortcut messages byte-identical. The exact
+  settled custom messages are pinned below; only presentation copy changes.
+settled_copy:
+  duty: >
+    The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field
+    plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare
+    promise, exact cost, and what each duty gives up. Field checks surface with
+    their action before resolution.
+  source: >
+    The Wolf-Winter Civic docket · 3/3 — evidence. Purpose: choose evidence; every
+    field plan stays open. Hayden's Station launch board follows. Certify the
+    Wolf-Winter Source Packet. Other accounts close. Compare field priority, exact
+    cost, and tradeoff. Field checks surface with their action before resolution.
+deterministic_witnesses:
+  - "custom duty is the exact 261-character/41-word settled literal; source is the exact 309-character/44-word settled literal"
+  - "the role -> custom duty -> source route remains 2/3 then 3/3 and stays within 1,120 characters/170 words (actual 1,102/168)"
+  - "registration remains the exact 532-character/83-word literal and the matched shortcut remains the exact 323-character/49-word literal"
+  - "full journey, compact MCP, compact comparison projection, and rendered UI show the same exact duty and source messages"
+  - "duty options remain Full Compact, Aid-Only, and Unaffiliated in authored order; source options remain Rowan, Jamie, and Hayden in authored order"
+  - "the Ledger custom route adds exactly one accepted decision at duty and one at source; reading full or compact presentation leaves snapshots unchanged"
+  - "the custom duty still has no progressive disclosure, while the matched role shortcut retains its existing inspect/reveal behavior and may bind duty plus evidence"
+  - "the Cycle 18 item_2 -> item_3 -> item_6 -> item_7 -> item_8 -> item_9 and Cycle 19 item_2 -> item_3 -> item_4 -> item_5 sequences independently preserve both route counterexamples"
+selection_semantics:
+  - "Cycle 20 freezes exact on-list assessor candidate playtest-overworld because the repeated defect is in the shared fresh CORE GAME opening; selection is neither null nor off-list."
+  - "Accepted a0d32f61 quotes the Wolf blocked-direction copy already replaced by bug_0558/Cycle 18, and accepted sibling 4ae7e44f was replaced by bug_0559/Cycle 19; neither is revision-live work for this cycle."
+  - "The seal consumes an accepted compile only when selected_recommendation_id exactly equals hotspot-${recommended_next_fix.hotspot_id}; playtest-overworld therefore correctly leaves recommended a0d32f61 unconsumed."
+  - "The two verified reports remain pending at 2/3, so they authorize the bounded live witness without being compiled or falsely promoted into a new accepted hot spot."
+nonclaims:
+  - "Neither player reported a bug, got stuck, or failed the goal. Both ended naturally at 4/4 clarity and enjoyment, would replay, and reported bugs: []; this is repeated S1 readability friction."
+  - "This does not add, remove, rename, reorder, group, preselect, inspect, reveal, or commit a registration, duty, source, field-plan, or departure option."
+  - "This does not alter option summaries, costs, promises, consequences, support, resources, time, quest availability, route legality, field checks, or endings."
+  - "This does not change story-choice ids or kinds, progressive-disclosure receipts, accepted-decision counts, journey goals, checkpoints, retention, persistence, serialization, or save schema."
+  - "Presentation remains derived and read-only: projection does not mutate snapshot bytes or snapshot hashes. The Git build identity advances, but no overworld content-pack source or hash pin changes."
+  - "This does not regress bug_0545: the role and matched duty + evidence shortcut literals stay exact, and only the genuine custom route retains numeric 2/3 -> 3/3 progress."
+  - "This does not claim the stale accepted recommendation was consumed, and it does not use the eventual Cycle 20 pure run as causal evidence for its own provisional revision."
+production:
+  - src/world/opening_dispatch_briefing.ts
+tests:
+  - path: tests/starting_slice/opening_dispatch_briefing.test.ts
+    cases:
+      - "makes the mission concrete before choice one and separates Civic from departure decisions"
+      - "keeps role packets immediate and makes customization a durable session receipt"
+      - "presents the exact same matched briefing through full UI and compact MCP"
+      - "keeps custom Civic headers literal across full UI and compact MCP"
+  - path: tests/unit/ui_story_choice_summary_first.test.ts
+    case: "keeps native disclosures separate from choice buttons and routes only choices to onChoose"
+  - path: tests/unit/world_opening_registration_doctrine_runtime.test.ts
+    case: "runs every matched packet as exactly two canonical oath and source decisions"
+verification:
+  - npx vitest run tests/starting_slice/opening_dispatch_briefing.test.ts tests/unit/ui_story_choice_summary_first.test.ts tests/unit/world_opening_registration_doctrine_runtime.test.ts
+  - npm run verify:bug-traces
