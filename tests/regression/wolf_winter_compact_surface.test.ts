@@ -62,6 +62,10 @@ const SECONDARY_BLOCKED_COPY_SOURCE_HASH =
   "07572512b61250a87583b4c1d6c80586d2f73b171ccde9a080051d7413af15bd";
 const PALING_NORTH_GUIDANCE_SOURCE_HASH =
   "c9b82ed5637d667a3b9837c15ca7ac05bec358b88e131b0d316a11ae367f8236";
+const YEARLING_DEFEAT_JOURNAL_SOURCE_HASH =
+  "e8e29d0eee6163587353985795fdc2279f480c8053abaac0a44007228523b681";
+const YEARLING_DEFEAT_JOURNAL =
+  "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 const CADE_HUNT_EXIT_LABEL =
   "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
 const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
@@ -456,7 +460,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each copy-only revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(PALING_NORTH_GUIDANCE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(YEARLING_DEFEAT_JOURNAL_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(PALING_NORTH_GUIDANCE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(SECONDARY_BLOCKED_COPY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(BLOCKED_ROUTE_GUIDANCE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(HUNT_COMMITMENT_LABEL_SOURCE_HASH);
@@ -491,6 +496,12 @@ describe("Wolf-Winter compact authored prose", () => {
       return text === undefined ? [] : [{ label: entry.label, text }];
     });
     expect(entries.length).toBeGreaterThan(0);
+    expect(entries).toContainEqual({
+      label: "enemy:yearling_wolf.on_defeat[0]",
+      text: YEARLING_DEFEAT_JOURNAL,
+    });
+    expect(YEARLING_DEFEAT_JOURNAL.length).toBe(92);
+    expect(YEARLING_DEFEAT_JOURNAL.trim().split(/\s+/u)).toHaveLength(20);
 
     for (const { label, text } of entries) {
       expectExactCompact(

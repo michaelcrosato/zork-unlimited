@@ -148,3 +148,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `481da537` chose Ledger Advocate, Sheltered Stockway, and LURE, kept the herd and all three wolves alive, ended naturally at the first goal on decision 23, and rated clarity/enjoyment 4/4 with replay yes and no bug or stuck state.
 - Self-critique/next: the consequence-bearing label appeared throughout the route and alarm-threshold confusion did not recur, but one player proves build safety rather than broad pacing relief; staged byre actions and instructional density remain the next observed friction.
 - Feedback/guard: pre-seal feedback remains 2/3 with no compile; independent hostile review, the post-change 6,000-step crawl, exact health (448 files/3,855 tests), all 12 packs, cycle-start integrity, and current-commit pure evidence are green.
+## AFK Cycle 2026-08-10T17-55-53-098Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T17-55-53-098Z","selected_recommendation_id":"playtest-wolf_winter"} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

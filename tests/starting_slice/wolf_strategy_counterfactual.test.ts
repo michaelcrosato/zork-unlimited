@@ -8,7 +8,9 @@
 import { describe, expect, it } from "vitest";
 
 import { makeStep } from "../../src/core/engine.js";
+import type { GameEvent } from "../../src/core/events.js";
 import type { Rng } from "../../src/core/rng.js";
+import { compactPlayerEvent } from "../../src/mcp/compact_rpg_event.js";
 import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { enemyHpVar } from "../../src/rpg/schema.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
@@ -29,6 +31,8 @@ const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 const PALING_NORTH_GUIDANCE =
   "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
+const YEARLING_DEFEAT_JOURNAL =
+  "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 
 function fixedRng(face: "best" | "worst"): Rng {
   return {
@@ -41,6 +45,7 @@ type Route = Readonly<{
   state: GameState;
   actions: readonly string[];
   observations: readonly ReturnType<typeof buildRpgObservation>[];
+  yearlingDefeatEvents: readonly GameEvent[];
 }>;
 
 function assertLurePalingNorthBlocked(
@@ -94,6 +99,7 @@ function lureRoute(
   );
   const actions: string[] = [];
   const observations = [buildRpgObservation(index, state)];
+  let yearlingDefeatEvents: readonly GameEvent[] = [];
   const act = (id: string): void => {
     const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === id);
     expect(
@@ -111,6 +117,9 @@ function lureRoute(
     const step = makeStep(buildRpgRules(index, () => fixedRng(face)));
     const result = step(state, option.action);
     expect(result.ok, result.rejectionReason).toBe(true);
+    if (!state.flags.yearling_down && result.state.flags.yearling_down) {
+      yearlingDefeatEvents = result.events;
+    }
     state = result.state;
     actions.push(id);
     observations.push(buildRpgObservation(index, state));
@@ -220,7 +229,7 @@ function lureRoute(
   expect(state.flags.leader_redirected).toBe(true);
   act("go_north");
 
-  return { state, actions, observations };
+  return { state, actions, observations, yearlingDefeatEvents };
 }
 
 describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () => {
@@ -343,6 +352,41 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
 
   it("keeps the bounded combat recovery as a truthful hybrid identity", () => {
     const hybrid = lureRoute("hybrid");
+
+    const postDefeat = hybrid.observations.find(
+      (observation) =>
+        observation.state.flags.includes("yearling_down") &&
+        !observation.state.flags.includes("flank_redirected"),
+    );
+    expect(postDefeat).toBeDefined();
+    if (!postDefeat) throw new Error("hybrid route must capture the yearling defeat boundary");
+    const actionIds = postDefeat.available_actions.map((action) => action.id);
+    const compactPostDefeat = compactRpgObservation(postDefeat, actionIds, {
+      includeActions: true,
+    });
+    expect(postDefeat.state.journal.at(-1)).toBe(YEARLING_DEFEAT_JOURNAL);
+    expect(compactPostDefeat.journal?.at(-1)).toBe(YEARLING_DEFEAT_JOURNAL);
+    expect(hybrid.yearlingDefeatEvents).toContainEqual({
+      type: "state_change",
+      effect: "add_journal",
+      text: YEARLING_DEFEAT_JOURNAL,
+    });
+    expect(hybrid.yearlingDefeatEvents.map((event) => compactPlayerEvent(event))).toContainEqual([
+      "s",
+      "j",
+      YEARLING_DEFEAT_JOURNAL,
+    ]);
+    expect(postDefeat.exits).toContainEqual({ direction: "south", to: "byre_yard" });
+    expect(postDefeat.exits.some((exit) => exit.direction === "north")).toBe(false);
+    expect(postDefeat.blocked_exits).toContainEqual({
+      direction: "north",
+      message: PALING_NORTH_GUIDANCE,
+    });
+    expect(actionIds).toContain("go_south");
+    expect(actionIds).not.toContain("go_north");
+    expect(compactPostDefeat.actions).toContain("go_south");
+    expect(compactPostDefeat.actions).not.toContain("go_north");
+    expect(compactPostDefeat.blocked).toContainEqual(["north", PALING_NORTH_GUIDANCE]);
 
     expect(hybrid.state).toMatchObject({
       ended: true,
