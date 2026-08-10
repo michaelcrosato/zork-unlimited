@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 760 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-10T15-48-02-040Z","hotspots_path":"ai-runs/feedback/20260810T135652Z/hotspots.json","hotspots_sha256":"1ad00a5137899cbe7fb6eda2a352ce0aee03027652cace1b27b1a1914356fb13","manifest_path":"ai-runs/feedback/20260810T135652Z/report-manifest.json","manifest_sha256":"f499b6913590bdfb1c6e19e8a2f26ac4efa0d371289b11cdb066a6b88f5f52ae"},"pending_cycle_reports":[{"evidence_sha256":"31a2be38e1806a6f49a47e5dd84e3cf235cf6e6e563dad013dd5c3b09277048a","report_id":"pure:bbc7f9bdc160402ea22fc612884a8c425030a6b3992ab1bfd54e38d80e6b36b1","report_sha256":"b87230225a2547a52cc032d24b77b9cf67515c1caf50b122d280831b4e1c7fd4","run_id":"2026-08-10T13-50-15-670Z","sidecar_sha256":"25265f94b67d2ab84ed8ad0429bb469492d8b3523d02f297cad417c03bf3d1a9","tested_commit":"93d8b86b3431bb38c1ae935a870f5c710c12a8dd"},{"evidence_sha256":"56a7083da441b0dee801415e3c3a6f62afb1c63d2dee8fdb29247df6244d0fed","report_id":"pure:b290976e29a18e4974cb1f7e919f023e426cd7183aedf62a2c2cfeb9afc3714c","report_sha256":"67f109a5cc0958c776a682fd64952dba28a474dc9b886cf714447ce62dc91c23","run_id":"2026-08-10T15-48-02-040Z","sidecar_sha256":"6b655ba1c6e532d0c4b63c12cad81152133f45ffbca635c7393f72a974443827","tested_commit":"f218b1e10ad89880ca66aaf14e11b9cfef556635"},{"evidence_sha256":"c063394f706ea02a91ddaf305b7b13c252e729f202a6611fb4580988f170de43","report_id":"pure:57a8796e006989cc05040c1e21525429acf9ce3cc33089947fd644fdaebeec7e","report_sha256":"a791b7b9558c1390a5c07f8f6ccfa0c1097fe0f27b5f3fc4a5d3d12fb206309c","run_id":"2026-08-10T17-55-53-098Z","sidecar_sha256":"50d1872e63722fb29b4c33283b2c48f5ec28d45492c40fb648bc668ee5d406b6","tested_commit":"dd353d9edf8b9b5f3491d630fca274e190b73942"}],"schema_version":1} -->
+<!-- historical_cycle_count: 761 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260810T194910Z/hotspots.json","hotspots_sha256":"e8324c3632599b987ba43fd2843fd3c8c7fda23f639338126f60bf108a11b843","manifest_path":"ai-runs/feedback/20260810T194910Z/report-manifest.json","manifest_sha256":"3f6e21ae4cdd8ed78611fe8b4c2691051c091cff078b30460385d6ac95b70cbe"},"pending_cycle_reports":[{"evidence_sha256":"291b54ce5b3e3bdc6927c433a50b9479cce1dc42b084f1bd0685d1a0fa61e28e","report_id":"pure:37b76416aacc26cea01b7fd8d6c5d775377d6b1f78dbe07af28816331c74b75a","report_sha256":"20d03c7a979aba9d2cd4c165f23ab2395500117d990b799c08de61cb2f9fc2a7","run_id":"2026-08-10T19-41-13-068Z","sidecar_sha256":"8dbd5c47c29c67528ef4e82573dd586d7bd0a898473c166b20696c96af42064e","tested_commit":"2bfc04a302f8d8d25d2e7ae6c055a1874f11c351"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - wolf_reese_works_room_truth
+- Evidence choice: eleven current-lineage Paling observations credited Reese's Works while Works was absent and the shown check stayed DC 14; exact `playtest-wolf_winter` therefore outranked the routine Advocates rotation.
+- Surface/effect: both Cade and Albany pre-attempt room lines now say Works lowers the shown Repair difficulty only if prepared at launch; predicates, actions, checks, recoveries, flags, scores, and endings are unchanged, with Wolf hash `e8e29d0e…` → `8b175deb…`.
+- Counterfactual: a real eight-cell full/compact matrix pins Cade DC 14/12 regardless of oath, Albany Aid-Only 14/12, Albany Full 12/10, genuine Works/Drover import truth, unique stance actions, and read/projection nonmutation.
+- Pure evidence: exact-clean Spark seed 7 on `2bfc04a3` took Ledger/Aid-Only/Rowan through sheltered-stockway LURE and three clean casts to `ending_pack_diverted`, 50/60, whole herd/all three wolves alive, then ended at the goal-completion choice on decision 23; 30/30 calls green, clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
+- Canary caveat/next: LURE never exposed the FORTIFY-specific Reese copy, so causal proof remains the matrix/trace; the exact-current committed-LURE yard fallback still tells players to compare all four now-closed plans and is the strongest bounded follow-up to the broader density feedback.
+- Feedback: the exact prior three-report delta `20260810T194910Z` recommends `ed51aa6f` and excludes this run; seal promotes it unconsumed, clears that cohort, and leaves this pure report as the sole pending row.
+- Guard: 45 focused tests, 555 traces, both 6,000-step crawls, exact health (448 files/3,886 tests), UI typecheck, all 12 packs, cycle-start integrity, pure provenance, and deterministic compile rebuild are green.
 
 ### Cycle result - wolf_yearling_defeat_route_truth
 - Evidence choice: two sealed LURE players saw the shared yearling defeat journal say the byre ran north while their live route blocked north and required south→west→up; on-list `playtest-wolf_winter` was selected, while accepted `d6a6cd0a` was already consumed.
@@ -140,19 +149,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `7445e078` chose Ledger Advocate, Exposed Ridge, and LURE, kept the whole herd and all wolves alive, then ended naturally at the first goal on decision 26; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
 - Self-critique/next: the canary did not continue to Gallowmere, so causal proof remains the full/compact regression rather than a claimed playtest uplift; its only friction was non-blocking advisory Civic event text beside the active Compact/quest lane.
 - Feedback/guard: status remains 1 actionable report of 3, so no compile; 17 focused behavior/checkpoint tests, type/lint/format, 541 bug traces, and two hostile reviews are green, with the standard outer gates still mandatory.
-
-### Cycle result - lure_lesson_return_disclosure
-- Evidence choice: the assessor offered only a routine Advocates' Case rotation; the newest accepted player instead had to rediscover LURE after quick counsel, so this off-list navigation disclosure was the narrower evidence-backed move.
-- Surface/effect: both pre-lesson LURE variants and the compact action now call counsel optional and state that it returns to the plan menu, where LURE must be selected again to commit; the existing two-step flow and every mechanic remain unchanged.
-- Red-gate correction: a first direct-continuation attempt duplicated the authored +2 attack effect, weakened the conservative three-fight proof, failed health, and was reset; the retry changes exactly three strings, retains one buff source, and pins the real HP-28 red/HP-29 green boundary.
-- Counterfactual: direct no-lesson commitment remains legal, while counsel still allows a HUNT pivot or any other uncommitted plan; full and compact tests execute both the same-plan reselect and HUNT-to-paling paths with the exact `03a87c97` to `ec51d609` hash roll.
-- Pure evidence: exact-clean Spark seed 7 on `ca4accc5` chose Ledger Advocate, Full Compact Duty, Rowan's docket, Sheltered Stockway, and HUNT, held the byre through all three wolves, then ended naturally at the first goal on decision 19; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
-- Feedback/next: the prior three reports compiled as 3 actionable/0 mocks over an 819-report corpus and stage Gallowmere's implicit final packet handoff (`9fe9a8ee`) for the next cycle; this run remains one-cycle-lagged until sealing, and its setup/action-discovery notes are not widened into this fix.
-- Guard: 43 focused regressions, all 12 packs, trace/type/lint/format/diff checks, two hostile audits, the pre-change crawl, and exact-build pure/compile authority are green; the standard outer post-crawl, health, and integrity bar remain mandatory before landing.
-
-## AFK Cycle 2026-08-10T19-41-13-068Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-10T19-41-13-068Z","selected_recommendation_id":"playtest-wolf_winter"} -->
-- Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-advocates_case (content_fix/M; score=0.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
