@@ -28,6 +28,7 @@ if (!loaded.ok) throw new Error("advocates_case must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const step = makeStep(buildRpgRules(index, () => forcedRng(1)));
+const successfulStep = makeStep(buildRpgRules(index, () => forcedRng(20)));
 
 function actionIds(s: GameState): string[] {
   return enumerateRpgActions(index, s).map((o) => o.id);
@@ -39,12 +40,20 @@ function commandFor(s: GameState, id: string): string {
   return action.command;
 }
 
-function choose(s: GameState, id: string): GameState {
+function actWith(runStep: typeof step, s: GameState, id: string) {
   const action = enumerateRpgActions(index, s).find((o) => o.id === id);
   if (!action) throw new Error(`Missing ${id}; available: ${actionIds(s).join(", ")}`);
-  const result = step(s, action.action);
+  const result = runStep(s, action.action);
   expect(result.ok).toBe(true);
-  return result.state;
+  return result;
+}
+
+function chooseWith(runStep: typeof step, s: GameState, id: string): GameState {
+  return actWith(runStep, s, id).state;
+}
+
+function choose(s: GameState, id: string): GameState {
+  return chooseWith(step, s, id);
 }
 
 function fullyPreparedAtCaseRecord(): GameState {
@@ -75,8 +84,8 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     expect(failed.flags["oswin_overruled"]).not.toBe(true);
     expect(actionIds(failed)).not.toContain("use_prior_convictions_on_case_record");
     expect(actionIds(failed)).toContain("use_town_register_on_case_record");
-    expect(commandFor(failed, "use_town_register_on_case_record")).toMatch(
-      /present town register with the charter and guild conviction records/i,
+    expect(commandFor(failed, "use_town_register_on_case_record")).toBe(
+      "present certified register extract with the charter citation and certified precedent packet on case record",
     );
   });
 
@@ -97,5 +106,39 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     expect(obs.ending?.text).toContain("charter exemption confirmed");
     expect(obs.description).toContain("Final score: 50 of 50.");
     expect(validateRpg(pack).findings).toHaveLength(0);
+  });
+
+  it("still permits a 40/50 legal victory without the certified register extract", () => {
+    let s = initStateForRpgPack(index, 7);
+    for (const id of [
+      "read_charter_roll",
+      "go_west",
+      "take_prior_convictions",
+      "read_prior_convictions",
+      "go_east",
+      "go_north",
+    ]) {
+      s = chooseWith(successfulStep, s, id);
+    }
+
+    const presented = actWith(successfulStep, s, "use_prior_convictions_on_case_record");
+    const presentation = presented.events
+      .flatMap((event) => (event.type === "narration" ? [event.text] : []))
+      .join(" ");
+    expect(presentation).toContain("certified precedent packet");
+    expect(presentation).toContain("any certified register extract you gathered");
+    expect(presentation).not.toContain("the certified register extract follows");
+    expect(presentation).not.toContain("reads the register");
+    s = chooseWith(successfulStep, presented.state, "go_north");
+
+    const obs = buildRpgObservation(index, s);
+    expect(s.flags["register_read"]).toBeUndefined();
+    expect(s.flags["town_register_taken"]).toBeUndefined();
+    expect(s.flags["priors_read"]).toBe(true);
+    expect(s.flags["oswin_overruled"]).toBe(true);
+    expect(obs.ended).toBe(true);
+    expect(obs.ending_id).toBe("ending_exempted");
+    expect(obs.state.vars.score).toBe(40);
+    expect(obs.description).toContain("Final score: 40 of 50.");
   });
 });

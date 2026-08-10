@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 752 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260810T001053Z/hotspots.json","hotspots_sha256":"8a6b78c275a9a1e137315108505792b3adf6ab18fe5dd22042ce216ef41adbe0","manifest_path":"ai-runs/feedback/20260810T001053Z/report-manifest.json","manifest_sha256":"edbd63bb0ad2b6582a7a073d9ffa579114819e68ac61d711e54d324dd0bbe2cd"},"pending_cycle_reports":[{"evidence_sha256":"18d336e8c935b9cf92b869132efbeb4aafb420de97f84a03987b91459c6b55d3","report_id":"pure:0e175d6e9da845928dcd3d1f5e321e713d2373562263cb69538717c69a8d3fe7","report_sha256":"33427276751af62de513a177bd45eaa4ece1647fd74be3a9cd62c4f64e7ba94c","run_id":"2026-08-09T23-52-24-726Z","sidecar_sha256":"2c669134cbff5a5b6406ecaf7d08e11c877a4684f062b43557a10a80c864748d","tested_commit":"2b16e73194ab3ef2abe6925bbc868e97e62eff95"}],"schema_version":1} -->
+<!-- historical_cycle_count: 753 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260810T001053Z/hotspots.json","hotspots_sha256":"8a6b78c275a9a1e137315108505792b3adf6ab18fe5dd22042ce216ef41adbe0","manifest_path":"ai-runs/feedback/20260810T001053Z/report-manifest.json","manifest_sha256":"edbd63bb0ad2b6582a7a073d9ffa579114819e68ac61d711e54d324dd0bbe2cd"},"pending_cycle_reports":[{"evidence_sha256":"18d336e8c935b9cf92b869132efbeb4aafb420de97f84a03987b91459c6b55d3","report_id":"pure:0e175d6e9da845928dcd3d1f5e321e713d2373562263cb69538717c69a8d3fe7","report_sha256":"33427276751af62de513a177bd45eaa4ece1647fd74be3a9cd62c4f64e7ba94c","run_id":"2026-08-09T23-52-24-726Z","sidecar_sha256":"2c669134cbff5a5b6406ecaf7d08e11c877a4684f062b43557a10a80c864748d","tested_commit":"2b16e73194ab3ef2abe6925bbc868e97e62eff95"},{"evidence_sha256":"6c6fdf2b5a70fa3b1afbded2143cae1a1257a286a390b6007061e9ee153acabc","report_id":"pure:9fbe84a5b06692f4c74671c0139fe65643d84ef6337e56c697ce910d6b593e12","report_sha256":"89a4dbc6e9aed0426fa1ff8f4f921417155d64b6231b8ab18bd352507f824f9d","run_id":"2026-08-10T01-54-44-511Z","sidecar_sha256":"67514aaa7b873bd1f79ffa380ddb635828f80418870eb1fe6d92d08de9668a7c","tested_commit":"370130d9db1fd554429a3a333028f612a772ef08"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - advocates_certified_evidence_extracts
+- Evidence choice: accepted hash-copy hot spots were client-side stale/mistyped guards; two independent Advocate's Case players instead found TAKE implied stealing master records, so on-list `playtest-advocates_case` was selected and accepted hot spots remain unconsumed.
+- Surface/effect: `town_register` and `prior_convictions` now carry certified register/precedent extracts while master books remain in their offices; IDs, aliases, mechanics, score, rhetoric, and routes are unchanged.
+- Counterfactual: held/read/drop states stay truthful; the 40/50 priors-only win invents no register evidence, while a prepared failed argument still recovers to 50/50 through charter citation → extract → packet.
+- Pure evidence: exact-clean Spark seed 7 on `370130d9` chose Ledger Advocate/Aid-Only, won sheltered FORTIFY Wolf-Winter and 50/50 Gallowmere, continued at goal 17/checkpoint 40, and ended at goal 47; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
+- Canary caveat: the pure route did not enter Advocate's Case, so it proves exact-build integration/retention only; the copy fix is regression/validation-backed, not directly replayed.
+- Feedback/next: pre-seal status was one prior actionable report of three; the seal added this actionable run as the second, still below compile threshold. It reported mild checkpoint/deferred-lead handoff friction but no bug.
+- Guard: content hash `284d5e2e…`, focused 34/34, trace integrity, type/lint/format, exact playtest provenance, and the outer crawl/health/cycle-start integrity gates are green.
 
 ### Cycle result - pure_parent_session_diagnostic
 - Evidence choice: accepted raw `8707f630` used a one-character-short parent handle and got the false "RPG child" diagnosis; this off-list presentation bug outranked stale `a919cded`.
@@ -134,12 +143,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `8407bff3` completed The Wolf-Winter by all-wolves-alive/full-herd LURE at decision 26, ended naturally, rated clarity/enjoyment 4/4 and replay-yes, and found no bug or stuck state; staged prompts and the strict feed chain remained dense.
 - Feedback/self-critique: the fresh no-flags compile reached 822 verified/520 actionable reports and 71 pure exits while excluding 302 mocks; discovery and identity are closed, but authenticated historical runs still need an accepted-cohort freshness contract rather than unsafe Git ancestry guesses.
 - Guard: three independent reviews are clean; 100 focused tests, both 6,000-step crawls, exact 444-file/3,793-test health, UI typecheck, all 12 packs, zero integrity drift, and the exact-build playtest gate pass.
-
-### Cycle result - mock_feedback_provenance
-
-- Evidence choice: the assessor's 130-report Albany Station S3 came entirely from planted structural mocks on a month-old build; a clean current-HEAD baseline completed Wolf-Winter/Gallowmere at clarity/enjoyment 4/4 without reproducing it.
-- Surface/effect: hotspot schema v2 now records 511 actionable reports and 302 excluded mocks; mocks retain verifier/mode QA accounting but cannot affect hotspots, metrics, sycophancy, or recommendations, while pure/legacy/smoke/crawler evidence stays actionable.
-- Cadence/integrity: the three-report compile threshold now excludes deterministic mocks, and schema invariants require actionable + excluded = verified with telemetry covering every actionable report.
-- Pure evidence: exact-clean Spark seed 7 on `51311a85` won The Wolf-Winter by HUNT/The Byre Held, ended naturally at decision 18, rated clarity/enjoyment 4/4 and replay-yes, and reported no bug or stuck state; the repository playtest gate accepts the receipt-bound artifacts.
-- Feedback/self-critique: 10 unique actionable verified runs triggered a fresh v2 compile and the false Station priority vanished, but normal `ai-runs/<cycle>/playtest.*` evidence remains absent from default compilation; that discovery/freshness gap is the next target.
-- Guard: independent review is clean; 75 focused tests, both static checks, formatting, trace integrity, exact-build pure evidence, and the required outer crawl/health/integrity gates protect the landing.

@@ -25,13 +25,14 @@
 # TWO RESOLUTION PATHS (fourth in the RPG corpus after factors_mark, falconers_ransom,
 # tanners_fever):
 #   RHETORIC (primary, full score): read charter_roll (+5, the exemption confirmed),
-#   take and read town_register (+10, +3 rhetoric: official registration confirms it
-#   is heritable and requires no guild license), take and read prior_convictions (+10,
-#   +3 rhetoric: the guild lost three similar cases in this district, two signed by
-#   Oswin himself). Then USE prior_convictions ON case_record at aldermans_antechamber
+#   take and read town_register (+10, +3 rhetoric: a certified extract confirms the
+#   registration is heritable and requires no guild license), take and read
+#   prior_convictions (+10, +3 rhetoric: a certified precedent packet shows that the
+#   guild lost three similar cases in this district, two signed by Oswin himself).
+#   Then USE prior_convictions ON case_record at aldermans_antechamber
 #   — rhetoric DC 12. Success: case dismissed, Oswin overruled; Craf steps aside.
 #   If a fully prepared player fails the roll, the failure text teaches the sequence
-#   and unlocks a deterministic recovery presentation using the town register.
+#   and unlocks a deterministic recovery presentation using the certified extract.
 #   COMBAT (fallback, partial score): skip the evidence or fail the check — Craf must
 #   be fought in the antechamber to force passage. Combat path caps at 40/50.
 #
@@ -121,20 +122,22 @@ rooms:
       A small room off the Guildhall passage — one clerk, one window, and a wall
       of bound registers going back forty years. The clerk on duty knows this room
       the way a carpenter knows his bench: everything is where it was placed and
-      everything has a reason. The town's charter register lies open on the counter,
-      its spine worn flat from being consulted. The market stall is back west.
-    # Reactive: once the register has been taken, the counter reads as cleared.
+      everything has a reason. The town's master charter register lies open on the
+      counter, its spine worn flat from being consulted. Beside it, the clerk has
+      prepared a certified extract of Walter Holm's entry for the hearing. The market
+      stall is back west.
+    # Reactive: the portable extract can leave; the master register never does.
     variants:
       - when: [{ has_flag: register_read }]
         text: >
-          The charter office. The relevant entry has been read, the clerk already
-          satisfied that you are not going to damage the binding. The counter is
-          clear where the town register lay open. The market stall is back west.
+          The charter office. Walter Holm's certified extract has been read, and the
+          master 1671 register remains open on the clerk's counter. Its bound pages
+          stay in the office. The market stall is back west.
       - when: [{ has_flag: town_register_taken }]
         text: >
-          The charter office. The clerk's counter is clear where the town
-          register lay open, and the wall of bound registers waits behind him.
-          The market stall is back west.
+          The charter office. The master charter register remains open on the clerk's
+          counter, its binding safely in the office. The space beside it is clear where
+          the clerk-certified extract was issued. The market stall is back west.
     objects: [town_register]
     exits:
       - { direction: west, to: market_stall }
@@ -143,18 +146,18 @@ rooms:
     name: "The Guild Records Room"
     description: >
       The Weavers' Guild hall's side room, kept locked on most days but standing
-      open for the warden's use on market morning. Shelves of conviction ledgers and
-      impound records line the west wall — every action the guild has taken in this
-      district for the past thirty years, bound and filed. The relevant volume is
-      not hard to find: it is the one with the most recent dates and the most
-      frequently handled spine. The market stall is back east.
-    # Reactive: once the conviction records have been taken, the room reads as done.
+      open for the warden's use on market morning. Shelves of bound master conviction
+      ledgers and impound records line the west wall — every action the guild has taken
+      in this district for the past thirty years, bound and filed. The relevant master
+      volume remains on its shelf; a clerk-certified packet of its three discharged
+      cases has been prepared for the hearing. The market stall is back east.
+    # Reactive: reading the portable packet does not relocate the master ledger.
     variants:
       - when: [{ has_flag: priors_read }]
         text: >
-          The guild records room. The conviction ledger is with you — three prior
-          cases read, Oswin's signature on two of the loss entries. The market stall
-          is back east.
+          The guild records room. The certified precedent packet has been reviewed:
+          three prior cases, with Oswin's signature on two loss entries. The bound
+          master conviction ledger remains on its shelf. The market stall is back east.
     objects: [prior_convictions]
     exits:
       - { direction: east, to: market_stall }
@@ -186,9 +189,9 @@ rooms:
         text: >
           The alderman's antechamber. Craf fills the north doorway, and the case
           slate waits on the clerk's table, but the legal sequence is not complete
-          yet. The charter can state Marta's right and the town register can prove
-          it is recorded; what will move Oswin is the guild's own precedent. The
-          guild records room is west from Marta's stall, if you mean to make this
+          yet. The charter can state Marta's right and the certified register extract
+          can prove it is recorded; what will move Oswin is the guild's own precedent.
+          The guild records room is west from Marta's stall, if you mean to make this
           an argument rather than a struggle.
     objects: [case_record]
     exits:
@@ -235,7 +238,7 @@ objects:
         text: >
           The charter roll, already read — Royal Warrant, Walter Holm, 1671,
           exemption granted to his heirs in perpetuity. The wax seal is genuine.
-          What you need now is the registered copy.
+          What you need now is a certified extract of the registered entry.
     takeable: true
     take_effects:
       - set_flag: charter_roll_taken
@@ -261,7 +264,8 @@ objects:
               The charter roll: Royal Warrant to Walter Holm, 1671. Exemption from guild
               licensing, heritable in perpetuity, Crown seal genuine. Marta is his heir.
               The exemption is hers — but Oswin is betting no one can argue it fast enough.
-              The town charter office holds the registered copy. (+5)
+              The town charter office can issue a certified extract of the registered
+              entry. (+5)
           - narrate: >
               The vellum is worn soft from being unrolled before — Marta has read this
               document many times. The text is plain: Royal Warrant, 1671, Walter Holm,
@@ -272,34 +276,35 @@ objects:
               alone is not an argument, and that you cannot make one fast enough to matter.
 
   - id: town_register
-    name: "town register"
+    name: "certified register extract"
     aliases: [register, charter register, town record, charter record, charter book, registration, registry, official record, official register, registered copy, town charter book, clerk's register]
     description: >
-      A heavy bound volume in faded brown leather — the town's official charter
-      register, open to the relevant page. The entry for Walter Holm's exemption
-      is in clear, formal copyist's hand: date, description, beneficiary, scope,
-      and the critical phrase at the end of the second line.
-    # Reactive: once read, the register shows as already studied.
+      Two portable sheets copied from the town's bound 1671 charter register. The
+      clerk's certification and office seal attest that Walter Holm's entry matches
+      the master: date, beneficiary, scope, and the critical phrase on inheritance.
+      The bound register remains in the charter office.
+    # Reactive: once read, the extract shows as already studied without claiming possession.
     variants:
       - when: [{ has_flag: register_read }]
         text: >
-          The town register, already read — Walter Holm, registered 1671, exemption
-          heritable to his lawful heirs, no guild license required. The clerk has
-          made a note of your name. What the charter says and what the register
-          confirms are the same thing.
+          The certified register extract, already read — Walter Holm, registered 1671,
+          exemption heritable to his lawful heirs, no guild license required. The
+          clerk's seal attests that it matches the master register kept at the charter
+          office.
     takeable: true
     take_effects:
       - set_flag: town_register_taken
     read_text: >
-      The entry is on the third page of the 1671 register: 'Walter Holm, licensed
-      cloth-trader, exemption from Weavers' Guild membership requirement. Authority:
-      Royal Warrant (Crown seal affixed to original, verified by this office). Scope:
-      lawful woollen trade in this town. Inheritable to lawful heirs without further
-      application. No guild license required for exempt household.' The date and the
-      copyist's signature are both clear. There is no ambiguity in the phrasing.
-      Oswin has seen this entry. He is relying on no one else seeing it today.
+      The certified extract transcribes the third page of the master 1671 register:
+      'Walter Holm, licensed cloth-trader, exemption from Weavers' Guild membership
+      requirement. Authority: Royal Warrant (Crown seal affixed to original, verified
+      by this office). Scope: lawful woollen trade in this town. Inheritable to lawful
+      heirs without further application. No guild license required for exempt household.'
+      The clerk's signature and office seal certify the copy. There is no ambiguity in
+      the phrasing. Oswin has seen the master entry. He is relying on no one else
+      bringing its certified wording to the hearing today.
     interactions:
-      # Close study of the register: +10 score and +3 rhetoric (you now have the
+      # Close study of the extract: +10 score and +3 rhetoric (you now have the
       # registered phrasing to cite precisely under pressure). One-shot: gated on
       # has_item AND not_flag register_read; retired after first scored read.
       - verb: READ
@@ -311,47 +316,46 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: weavers_appeal, stage: register_confirmed }
           - add_journal: >
-              Town register, 1671 entry: 'heritable to lawful heirs without further
-              application, no guild license required.' Official copyist's hand, dated
-              and signed. This is the registered version of what the charter says —
-              the authority the alderman's office would accept. (+3 rhetoric, +10)
+              Certified register extract, 1671 entry: 'heritable to lawful heirs without
+              further application, no guild license required.' The clerk's signature
+              and seal attest that it matches the master register — the evidence the
+              alderman's office would accept. (+3 rhetoric, +10)
           - narrate: >
-              The phrase is there in clear formal hand: 'heritable to lawful heirs
-              without further application, no guild license required.' This is not
-              interpretation — it is the registered text. Oswin impounded Marta's goods
-              under a rule the official record explicitly exempts her from. The exemption
-              is registered, the scope is exact, the inheritance is unconditional. You
-              close the register with a clean sense of where the argument begins.
+              The phrase is there in the clerk's certified copy: 'heritable to lawful
+              heirs without further application, no guild license required.' This is not
+              interpretation — it reproduces the registered text. Oswin impounded Marta's
+              goods under a rule the official record explicitly exempts her from. The
+              exemption is registered, the scope exact, the inheritance unconditional.
+              You finish the extract with a clean sense of where the argument begins.
 
   - id: prior_convictions
-    name: "guild conviction records"
+    name: "certified precedent packet"
     aliases: [convictions, priors, prior cases, guild records, conviction ledger, guild ledger, precedents, case records, prior convictions, warden records, guild cases, case book, conviction book, guild conviction book, guild precedent records]
     description: >
-      A bound ledger from the guild records shelves — this district's log of past
-      impound actions and their dispositions, including cases the guild lost. Three
-      entries near the back are marked 'discharged' in a different hand from the
-      original warden's entry. The dates and circumstances are legible.
-    # Reactive: once read, the ledger shows as already studied.
+      Three portable, clerk-certified extracts copied from the guild's bound conviction
+      ledger and tied as a packet for the hearing. Each records an impound discharged
+      under a charter exemption; two reproduce Oswin's filing signature. The bound
+      master ledger remains in the guild records room.
+    # Reactive: once read, the packet shows as already studied without claiming possession.
     variants:
       - when: [{ has_flag: priors_read }]
         text: >
-          The conviction ledger, already read — three discharged cases in this
-          district, all citing valid charter exemptions as sufficient discharge.
-          Two of the loss entries carry Oswin's own signature as the filing warden.
-          He knows the precedent. He filed the impound anyway.
+          The certified precedent packet, already read — three discharged cases in
+          this district, all citing valid charter exemptions as sufficient discharge.
+          Two extracts reproduce Oswin's filing signature. He knows the precedent.
+          He filed the impound anyway.
     takeable: true
     read_text: >
-      Three entries marked 'discharged by order of the alderman's deputy, charter
-      exemption sufficient discharge of impound.' The first is from 1683 — a linen
-      merchant, Royal Warrant exemption, impound voided. The second and third are
-      from 1689 and 1691 — both cloth traders, both with registered heritable
-      exemptions, both impounds dismissed. Each of the three loss entries carries
-      a warden's filing signature. The second and third are Oswin's. He has lost
-      this argument before, in this district, under the same rule, twice. He did
-      not file this impound because he thought he would win. He filed it because
-      he thought no one would argue back in time.
+      The packet contains three certified extracts marked 'discharged by order of the
+      alderman's deputy, charter exemption sufficient discharge of impound.' The first
+      is from 1683 — a linen merchant, Royal Warrant exemption, impound voided. The
+      second and third are from 1689 and 1691 — both cloth traders, both with registered
+      heritable exemptions, both impounds dismissed. Each extract reproduces a warden's
+      filing signature; the second and third are Oswin's. He has lost this argument in
+      this district under the same rule twice. He filed again because he thought no one
+      would argue back in time.
     interactions:
-      # Close study of the conviction ledger: +10 score and +3 rhetoric (you now
+      # Close study of the precedent packet: +10 score and +3 rhetoric (you now
       # have the specific precedent cases to name, including Oswin's own signatures).
       # One-shot: gated on has_item AND not_flag priors_read; retired after first read.
       - verb: READ
@@ -363,19 +367,19 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: weavers_appeal, stage: precedents_found }
           - add_journal: >
-              Guild conviction ledger: three prior discharged impounds in this district,
-              all citing charter exemption as sufficient discharge. Oswin signed the 1689
-              and 1691 loss entries himself. He has lost this argument before under the
-              same rule. He filed anyway, betting on speed. (+3 rhetoric, +10)
+              Certified guild precedent packet: three prior discharged impounds in this
+              district, all citing charter exemption as sufficient discharge. The 1689
+              and 1691 extracts reproduce Oswin's filing signatures. He has lost this
+              argument before under the same rule. He filed anyway, betting on speed.
+              (+3 rhetoric, +10)
           - narrate: >
-              The 1689 entry is in Oswin's own hand for the original impound, and in
-              the alderman's deputy's hand for the discharge. 'Charter exemption
-              sufficient discharge of the guild warden's impound action. Case closed.'
-              The 1691 entry is the same — Oswin filing, deputy discharging, same
-              language. He knows this argument. He has been on the losing side of it.
-              What you have now is the sequence: the exemption's text, the registered
-              confirmation, and the precedent in Oswin's own district. Put those in order
-              in front of the deputy and the outcome has already happened twice before.
+              The certified 1689 extract reproduces Oswin's filing signature and the
+              alderman's deputy's discharge: 'Charter exemption sufficient discharge of
+              the guild warden's impound action. Case closed.' The 1691 extract records
+              the same sequence and ruling. Oswin knows this argument; he has been on its
+              losing side. The packet gives you the order: exemption text, registered
+              confirmation, then precedent in Oswin's own district. Put those before the
+              deputy in sequence and the outcome has already happened twice before.
 
   - id: case_record
     name: "case record"
@@ -395,7 +399,8 @@ objects:
     interactions:
       # The confrontation: USE prior_convictions ON case_record — present the full
       # argument to the case record (and the deputy beyond the door): the exemption's
-      # text, the registered confirmation, and the guild's own precedent. Rhetoric DC 12.
+      # text, the certified registration extract, and the guild's certified precedent
+      # packet. Rhetoric DC 12.
       # One-shot (appeal_attempted set on BOTH branches).
       # The player should have read all three documents first to raise rhetoric to 9
       # (near-certain) — base 3 is a 60% gamble.
@@ -414,20 +419,22 @@ objects:
             - inc_var: { name: score, by: 10 }
             - set_quest_stage: { quest: weavers_appeal, stage: case_dismissed }
             - add_journal: >
-                Appeal made and accepted: exemption text, registered confirmation,
-                guild's own two prior discharges in Oswin's name. The deputy struck
-                the case through on the spot. Impound voided. Craf has no instruction
-                left to enforce. (+10)
+                Appeal made and accepted: Marta's exemption claim, supported by the
+                evidence gathered and the guild's prior discharges, was put in the
+                required legal sequence. The deputy verified the record and struck the
+                case through. Impound voided. Craf has no instruction left to enforce.
+                (+10)
             - narrate: >
-                You lay it out in the correct order — the charter's text first (the
-                authority), the town register's entry second (the registration in
-                official hand), and the guild's own conviction ledger last (Oswin's
-                signature on both prior losses, same rule, same district, same result).
+                You state the legal sequence clearly — Marta's claimed Crown exemption
+                as authority, any certified register extract you gathered as confirmation,
+                and the certified precedent packet as evidence of Oswin's prior losses
+                under the same rule in the same district.
                 You say all of it in one even sequence, without pause, giving no gap
                 for interruption, because the argument does not need a gap — it is
-                already finished before the last line. The deputy listens. He reads
-                the register entry. He reads the ledger. He picks up the stylus and
-                draws a line through 'pending' on the case slate and writes 'discharged,
+                already finished before the last line. The deputy listens. He checks
+                the cited entries against the office records, reads the precedent packet,
+                and picks up the stylus. He draws a line through 'pending' on the case
+                slate and writes 'discharged,
                 charter exemption confirmed.' He does not look at Craf. Craf steps back
                 from the door without being told, because there is nothing left to
                 enforce and Craf is not the kind of man who stands in a doorway for
@@ -436,19 +443,19 @@ objects:
             - set_flag: appeal_attempted
             - add_journal: >
                 The argument did not carry — the sequence broke, the precedent came
-                in the wrong order, and the deputy asked for the registered copy before
-                you had named it. He has adjourned without ruling. Craf has not moved.
+                in the wrong order, and the deputy asked for the certified registration
+                before you had named it. He has adjourned without ruling. Craf has not moved.
             - narrate: >
                 The argument comes out in the wrong order — the precedent before the
-                registered entry, the entry before the charter text has been clearly
-                established, and the deputy raises a hand before you reach the third
-                point. He wants the registered copy cited before the precedent; the
-                precedent requires the registration to have weight; the registration
-                requires the original to be in evidence. You have all of it but you
-                have not said it in the right sequence, and a man who hears arguments
-                for a living knows the difference between an argument and a list of
-                documents. He closes the slate. 'Come back when you have the sequence.'
-                Craf has not moved from the door.
+                certified registration, the registration before the charter text has
+                been clearly established, and the deputy raises a hand before you reach
+                the third point. He wants the certified register extract cited before
+                the precedent; the precedent requires the registration to have weight;
+                the registration requires the original charter's terms to be established.
+                The legal pieces exist, but you have not said them in the right sequence,
+                and a man who hears arguments for a living knows the difference between
+                an argument and a list of documents. He closes the slate. 'Come back
+                when you have the sequence.' Craf has not moved from the door.
       # Recovery after a failed rhetoric roll: the failure text explicitly teaches
       # the required sequence, so a prepared player can now present the same three
       # documents in order instead of being forced into combat by a bad die.
@@ -456,7 +463,7 @@ objects:
         item: town_register
         target: case_record
         command_verb: present
-        command_template: "present {item} with the charter and guild conviction records on {target}"
+        command_template: "present {item} with the charter citation and certified precedent packet on {target}"
         conditions:
           - all_of:
               - { has_flag: appeal_attempted }
@@ -470,19 +477,21 @@ objects:
           - inc_var: { name: score, by: 10 }
           - set_quest_stage: { quest: weavers_appeal, stage: case_dismissed }
           - add_journal: >
-              Appeal recovered and accepted: charter text first, registered copy
-              second, Oswin's prior losses third. The deputy struck the case
-              through after the corrected presentation. Craf stepped aside. (+10)
+              Appeal recovered and accepted: charter text first, certified register
+              extract second, certified extracts of Oswin's prior losses third. The
+              deputy struck the case through after the corrected presentation. Craf
+              stepped aside. (+10)
           - narrate: >
-              You do exactly what the deputy asked for. This time the charter comes
-              first: Walter Holm's Crown exemption, heritable in perpetuity. The
-              town register follows: the official copy, the same language, no guild
-              license required. Only then do you open the conviction ledger to the
-              prior discharges — Oswin's own signatures on two losses under the same
-              rule. The sequence gives each document its weight. The deputy reads
-              the three entries in silence, picks up the stylus, and strikes the
-              slate through: 'discharged, charter exemption confirmed.' Craf looks
-              at the line, then at Oswin, and steps back from the door.
+              You do exactly what the deputy asked for. This time you cite Walter Holm's
+              Crown exemption first: heritable in perpetuity. The
+              certified register extract follows: the clerk-attested copy, the same
+              language, no guild license required. Only then do you open the certified
+              precedent packet to the prior discharges — Oswin's filing signatures
+              reproduced on two losses under the same rule. The sequence gives each
+              document its weight. The deputy reads the certified evidence in silence,
+              picks up the stylus, and strikes the slate through: 'discharged, charter
+              exemption confirmed.' Craf looks at the line, then at Oswin, and steps
+              back from the door.
 
 npcs:
   - id: oswin
