@@ -146,3 +146,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 10 on `35ef9df5` used Road-Warden/Aid-Only, June, and the dawn wagon, saved Cade's whole herd and every wolf by LURE, continued through checkpoint 41, won The Gallowmere, and ended naturally at decision 56; clarity/enjoyment 4/4, replay yes, no bug or stuck state.
 - Feedback/next: the accepted three-report delta compiled 3 actionable/0 mocks and six tied S1 hot spots over an 816-report corpus; alarm-threshold consequences rank first, while this build's player still found Station support fragmented and the in-quest checkpoint abrupt, all reserved for the promoted next cycle.
 - Guard: three independent hostile audits, 46 focused driver/rotation/real-seal tests, Bash syntax, typecheck, lint, formatting, trace/static integrity, and the exact-build pure gate are green; the standard post-crawl and full health bar remain mandatory for landing.
+## AFK Cycle 2026-08-10T13-50-15-670Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T13-50-15-670Z","selected_recommendation_id":"playtest-wolf_winter"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-a0d32f61 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

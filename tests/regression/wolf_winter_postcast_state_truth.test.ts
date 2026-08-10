@@ -57,8 +57,16 @@ const POST_DIVERSION_STEADING =
   "Cade's final feed cast has already drawn the remaining living wolves into the high wood, but the dawn count is unfinished. Go north through the gate, then keep going north through the empty wolf line until you stand among the cattle.";
 const POST_DIVERSION_CADE =
   "Pack's clear of the byre. Do not go south or back to the store. From this yard go north through the settled paling, north through the empty threshold, and north past the spent scent. Stand among the cattle and take the exact count; then Albany gets the truth.";
-const POST_DIVERSION_BLOCKED_SOUTH =
-  "Finish here by going north to the cattle count, completing the drive crisis, or holding the fortification dawn watch. A hard strategy commitment does not reopen retreat or switch to combat; a completed scent line cannot retreat.";
+const POST_DIVERSION_YARD_BLOCKED_SOUTH =
+  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
+const POST_DIVERSION_YARD_BLOCKED_WEST =
+  "West is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
+const POST_DIVERSION_PALING_BLOCKED_SOUTH =
+  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: follow shown paling steps until north opens.";
+const POST_DIVERSION_DOOR_BLOCKED_SOUTH =
+  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: finish any shown threshold step, then go north.";
+const POST_DIVERSION_MOUTH_BLOCKED_SOUTH =
+  "South is closed. LURE complete: go north for the cattle count. DRIVE: resolve the crisis. FORTIFY: hold the dawn watch.";
 const PLAIN_COMBAT =
   "The old grey leader waits between you and the bellowing cattle in the byre's dark heart, shaping a practiced feint. Cade may have taught you to hold or close; a saved guard offers another catch. Without either, only plain spear work remains. The door is south.";
 
@@ -95,6 +103,22 @@ function expectRoomSurface(state: GameState, expected: string): void {
   expect(full.description.trimEnd()).toBe(expected);
   expect(compact.text).toBe(expected);
   expect(compact.actions).toEqual(ids);
+}
+
+function expectBlockedSurface(
+  state: GameState,
+  expected: readonly (readonly [direction: string, message: string])[],
+): void {
+  const full = buildRpgObservation(index, state);
+  const compact = compactRpgObservation(full, actionIds(state), { includeActions: true });
+  const expectedDirections = new Set(expected.map(([direction]) => direction));
+
+  expect(full.blocked_exits.filter((exit) => expectedDirections.has(exit.direction))).toEqual(
+    expected.map(([direction, message]) => ({ direction, message })),
+  );
+  expect(
+    (compact.blocked ?? []).filter(([direction]) => expectedDirections.has(direction)),
+  ).toEqual(expected);
 }
 
 function expectObjectSurface(state: GameState, objectId: string, expected: string): void {
@@ -234,33 +258,30 @@ describe("Wolf-Winter post-cast state truth", () => {
     expect(state.inventory).not.toContain("winter_feed_sack");
     expect(actionIds(state)).toContain("go_north");
     expect(actionIds(state)).not.toContain("go_south");
-    const fullPostDiversion = buildRpgObservation(index, state);
-    expect(fullPostDiversion.blocked_exits).toContainEqual({
-      direction: "south",
-      message: POST_DIVERSION_BLOCKED_SOUTH,
-    });
-    expect(
-      compactRpgObservation(fullPostDiversion, actionIds(state), {
-        includeActions: true,
-      }).blocked,
-    ).toContainEqual(["south", POST_DIVERSION_BLOCKED_SOUTH]);
+    expectBlockedSurface(state, [["south", POST_DIVERSION_MOUTH_BLOCKED_SOUTH]]);
 
     const at = (room: string): GameState => ({ ...state, current: room });
     const restoredDoor = at("byre_door");
     expectRoomSurface(restoredDoor, POST_DIVERSION_DOOR);
     expect(actionIds(restoredDoor)).toContain("go_north");
     expect(actionIds(restoredDoor)).not.toContain("go_south");
+    expectBlockedSurface(restoredDoor, [["south", POST_DIVERSION_DOOR_BLOCKED_SOUTH]]);
 
     const restoredPaling = at("paling_gap");
     expectRoomSurface(restoredPaling, POST_DIVERSION_PALING);
     expect(actionIds(restoredPaling)).toContain("go_north");
     expect(actionIds(restoredPaling)).not.toContain("go_south");
+    expectBlockedSurface(restoredPaling, [["south", POST_DIVERSION_PALING_BLOCKED_SOUTH]]);
 
     const restoredYard = at("byre_yard");
     expectRoomSurface(restoredYard, POST_DIVERSION_YARD);
     expect(actionIds(restoredYard)).toContain("go_north");
     expect(actionIds(restoredYard)).not.toContain("go_south");
     expect(actionIds(restoredYard)).not.toContain("go_west");
+    expectBlockedSurface(restoredYard, [
+      ["south", POST_DIVERSION_YARD_BLOCKED_SOUTH],
+      ["west", POST_DIVERSION_YARD_BLOCKED_WEST],
+    ]);
     const talkingToCade = act(restoredYard, "talk_houndsman");
     expect(buildRpgObservation(index, talkingToCade).dialogue?.npc_text.trimEnd()).toBe(
       POST_DIVERSION_CADE,

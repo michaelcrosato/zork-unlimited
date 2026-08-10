@@ -434,14 +434,14 @@ rooms:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
           - { not_flag: pack_diverted }
-        locked_msg: "The unfinished obligation lies north. Go north: a completed scent line still needs its cattle count; a hard strategy needs its committed beat. The outer yard does not reopen either line."
+        locked_msg: "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north."
       - direction: west
         to: store
         conditions:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
           - { not_flag: pack_diverted }
-        locked_msg: "Store preparation had to finish before commitment. Go north with the completed scent line or the finite drive or fortification resource; the store and other strategies stay closed."
+        locked_msg: "West is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north."
       - direction: north
         to: paling_gap
         conditions:
@@ -932,7 +932,7 @@ rooms:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
           - { not_flag: pack_diverted }
-        locked_msg: "Go north: after the completed scent cast, count the cattle. A hard strategy commitment must finish its drive or fortification beat; it does not reopen the yard or switch to combat."
+        locked_msg: "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: follow shown paling steps until north opens."
       - direction: north
         to: byre_door
         conditions:
@@ -1192,7 +1192,7 @@ rooms:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
           - { not_flag: pack_diverted }
-        locked_msg: "Continue north to the unfinished cattle count or hard-committed threshold beat. The completed scent line and hard drive or fortification lines do not reopen the paling."
+        locked_msg: "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: finish any shown threshold step, then go north."
       - direction: north
         to: byre_mouth
         conditions:
@@ -1500,7 +1500,7 @@ rooms:
           - { not_flag: strategy_drive_committed }
           - { not_flag: strategy_fortify_committed }
           - { not_flag: pack_diverted }
-        locked_msg: "Finish here by going north to the cattle count, completing the drive crisis, or holding the fortification dawn watch. A hard strategy commitment does not reopen retreat or switch to combat; a completed scent line cannot retreat."
+        locked_msg: "South is closed. LURE complete: go north for the cattle count. DRIVE: resolve the crisis. FORTIFY: hold the dawn watch."
       - direction: north
         to: cattle_stand
         conditions:

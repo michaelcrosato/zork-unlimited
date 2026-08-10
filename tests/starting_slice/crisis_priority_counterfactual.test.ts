@@ -307,28 +307,27 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     expect(actionIds(drive)).not.toContain("go_west");
     expect(buildRpgObservation(index, drive).blocked_exits).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
+        {
           direction: "south",
-          message: expect.stringMatching(/go north/i),
-        }),
-        expect.objectContaining({
+          message:
+            "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.",
+        },
+        {
           direction: "west",
-          message: expect.stringMatching(/before commit/i),
-        }),
+          message:
+            "West is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.",
+        },
       ]),
     );
 
     const launched = act(drive, "go_north");
     expect(actionIds(launched)).not.toContain("go_south");
     expectCommittedDriveWithholdsCombat(launched);
-    expect(buildRpgObservation(index, launched).blocked_exits).toContainEqual(
-      expect.objectContaining({
-        direction: "south",
-        message: expect.stringMatching(
-          /hard strategy commitment[^]*does not reopen[^]*switch to combat/i,
-        ),
-      }),
-    );
+    expect(buildRpgObservation(index, launched).blocked_exits).toContainEqual({
+      direction: "south",
+      message:
+        "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: follow shown paling steps until north opens.",
+    });
 
     let lure = fresh();
     lure = act(lure, "go_north");

@@ -1,0 +1,164 @@
+id: bug_0561
+title: "Wolf-Winter's secondary hard-commit blocks repeated cross-route rules"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: three pending 2026-08-10 pure fresh-overworld FORTIFY playtests
+severity: S1
+evidence:
+  cycle_18:
+    source_run: 2026-08-10T06-37-25-261Z
+    source_commit: 3dab3322885614f9010fe773c03063c586a2a275
+    source_report_id: pure:b2ca88272fc24296c6591722d02f2a1c1464749222611a4e0ca672f666a39ea8
+    source_report_sha256: 405095260edcc895a7c3c2e00de67e22732e6d31ae42b92238b65abafe018475
+    source_report: ai-runs/2026-08-10T06-37-25-261Z/playtest.md
+    source_raw: ai-runs/2026-08-10T06-37-25-261Z/playtest.codex.jsonl
+    route: ending_fortified_cade_terms
+    raw_boundary: >
+      Items 16-18 expose the byre-yard south/west blocks before and after taking
+      Cade's shutters; items 19-20 expose the paling south block, items 21-22
+      expose the threshold south block, and item 23 exposes the byre-mouth south
+      block beside the legal dawn-watch action.
+    player_friction: >
+      Hard-committed strategy wording was clear but could be overwhelming on a
+      first encounter; the player finished at 4/4 clarity/enjoyment, would replay,
+      was not stuck, and reported bugs: [].
+  cycle_19:
+    source_run: 2026-08-10T08-19-00-732Z
+    source_commit: 3dbc399a7cb6e780adcbc6fda69637e7765b91b1
+    source_report_id: pure:44591b7a05c26bc85a352dcd440c72b1da0b62d410b45fcc0b7d185be9918e5c
+    source_report_sha256: f3b8f9d8b350b88fcf7b83741e65dde6e4898c70adb505502780e741cd82f3de
+    source_report: ai-runs/2026-08-10T08-19-00-732Z/playtest.md
+    source_raw: ai-runs/2026-08-10T08-19-00-732Z/playtest.codex.jsonl
+    route: ending_fortified_albany_authority
+    raw_boundary: >
+      Items 17-19 expose the same yard south/west blocks around Albany's seal
+      pickup; items 20-21 expose the paling south block, items 22-23 expose the
+      threshold south block, and item 24 exposes the byre-mouth south block beside
+      the legal dawn-watch action.
+    player_friction: >
+      The first hard turn into route-specific actions required careful attention
+      to blocked exits and exact context; the player finished at 4/4, would replay,
+      was not stuck, and reported bugs: [].
+  cycle_20:
+    source_run: 2026-08-10T10-38-43-423Z
+    source_commit: f1bd2f3e090c728b09e3e488093904ca7a732494
+    source_report_id: pure:3f5af6fb086caff24cbf37137e36c3f1e279737291cd8ea29bb810c4321809cc
+    source_report_sha256: a369b56ea31d8f8feed77f9f08659bd24c6687e51d60923b57e74317432b7b14
+    source_report: ai-runs/2026-08-10T10-38-43-423Z/playtest.md
+    source_raw: ai-runs/2026-08-10T10-38-43-423Z/playtest.codex.jsonl
+    route: ending_fortified_cade_terms
+    raw_boundary: >
+      Items 14-15 expose the yard south/west blocks, items 16-18 expose the
+      paling south block across a failed outer seat and Cade's authored recovery,
+      items 19-20 expose the threshold south block, and item 21 exposes the
+      byre-mouth south block beside the legal dawn-watch action.
+    player_friction: >
+      The player explicitly named several middle-fortification closed
+      routes/messages that prompted a check for accidental trapped progression;
+      they recovered the failed seal, finished at 4/4, would replay, were not
+      stuck, and reported bugs: [].
+  revision_liveness: >
+    All five old literals and their exit conditions are byte-identical from the
+    three tested commits through Cycle 21 base e3ba5312. The three independent
+    successful routes therefore reproduce live copy density, while their
+    different Cade/Albany terms are counterevidence to a branch-specific mechanics defect.
+  assessment_run: 2026-08-10T13-50-15-670Z
+  selected_candidate: playtest-wolf_winter
+  feedback_status: "delta; 3 verified, 3 actionable, 0 excluded mocks; compile ready"
+  accepted_bundle: ai-runs/feedback/20260810T065018Z/hotspots.json
+  stale_recommended_candidate: hotspot-a0d32f61
+  red_gate_correction: >
+    First provisional 82d8bb8a6527819ed2bb86710831f2c43839fb43 and its
+    2026-08-10T12-50-40-145Z pure run reached the outer health gate, where only
+    crisis_priority_counterfactual's old blocked-copy assertion failed. Resetting
+    to base preserved the product change; the retry pins the five new literals in
+    that counterfactual too. The failed run's pure report, its 20260810T131903Z
+    feedback compile, and its run-local feedback-compile pointer are discarded
+    diagnostics: none was sealed, accepted, queued as pending, or reused as retry
+    authority.
+symptom: >
+  Once DRIVE or FORTIFY hard-committed, the yard, paling, threshold, and byre-mouth
+  correctly closed their secondary retreat/preparation exits. Their five static
+  messages nevertheless restated a shared LURE/DRIVE/FORTIFY rule union at every
+  beat, even though each room description and legal action already named the
+  immediate forward task. Three consecutive successful FORTIFY players traversed
+  those same rows; the strongest report paused to rule out a progression trap.
+  This is repeated S1 copy density, not a dead end.
+root_cause: >
+  The five locked_msg fields are shared by completed LURE, committed DRIVE, and
+  committed FORTIFY states. Their old prose tried to preserve the entire
+  cross-strategy history and no-switch rule on every secondary direction instead
+  of first naming the closed direction and then indexing the visible current beat.
+  The exit conditions, current-room variants, primary north locks, and legal-action
+  projection already held the exact state truth.
+fix: >
+  Replace only the five secondary south/west locked messages with short,
+  direction-first route indexes. Keep every condition and destination unchanged,
+  leave bug_0558's primary north guidance byte-identical, and preserve all actions,
+  checks, resources, flags, consequences, and endings.
+settled_copy:
+  byre_yard_south: >
+    South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY:
+    take any shown gear, then go north.
+  byre_yard_west: >
+    West is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY:
+    take any shown gear, then go north.
+  paling_south: >
+    South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY:
+    follow shown paling steps until north opens.
+  threshold_south: >
+    South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY:
+    finish any shown threshold step, then go north.
+  byre_mouth_south: >
+    South is closed. LURE complete: go north for the cattle count. DRIVE: resolve
+    the crisis. FORTIFY: hold the dawn watch.
+deterministic_witnesses:
+  - "the five exact literals are respectively 113/19, 112/19, 122/19, 125/20, and 119/20 characters/words; their total falls from 942 to 591 characters"
+  - "full observations and compact MCP expose the same exact secondary blocks without a truncation marker or hidden current action"
+  - "DRIVE, Cade FORTIFY, and Albany FORTIFY traverse yard -> paling -> threshold -> mouth with the same five route-specific blocks and their unchanged forward actions"
+  - "after prepared DRIVE fails its opening check, the shown optional Drover action can succeed while north and the exact full/compact paling block remain; only the still-shown hurdle recovery turns the yearling and opens north"
+  - "the starting-slice DRIVE commitment counterfactual pins the exact yard and paling blocks while the existing explanation-before-commit boundary still permanently excludes LURE"
+  - "all four clean, split-guard, braced-rail, and hybrid completed-LURE recoveries expose the five exact blocks across restored yard, paling, threshold, and mouth states"
+  - "uncommitted, HUNT, and in-progress LURE counterexamples retain their authored open south/west return routes"
+  - "bug_0558's 175-character north guidance stays exact before the named gear or LURE feed is carried, and north opens under the same existing conditions afterward"
+  - "building full and compact projections leaves the state hash unchanged; no read of the new copy becomes a journey decision"
+  - "the exact Wolf-Winter source hash advances directly from committed 189b14d70a68c0c795167baa9dae695f56c9f3b99bd33151d6a4ece87d083b3b to 07572512b61250a87583b4c1d6c80586d2f73b171ccde9a080051d7413af15bd"
+  - "a current 07572512 save/replay remains valid while the exact 189b14d7 predecessor fixture rejects under the unchanged source-integrity policy"
+selection_semantics:
+  - "Cycle 21 freezes exact on-list assessor candidate playtest-wolf_winter because the live evidence and bounded copy change are wholly inside Wolf-Winter; selection is neither null nor off-list."
+  - "Accepted recommendation a0d32f61 quotes the generic north hint already replaced by bug_0558 and merged at 2874f940; bug_0558's primary north literal is a byte-identical counterexample to selecting that stale row again."
+  - "Accepted sibling 4ae7e44f was replaced by bug_0559/65603ee3, while a07d646c describes the deliberate journey Continue/End contract; neither is the live five-row scope."
+  - "The seal consumes the prior recommendation only when selected_recommendation_id exactly equals hotspot-${recommended_next_fix.hotspot_id}; playtest-wolf_winter therefore leaves accepted a0d32f61 unconsumed."
+  - "The required compile runs only after the clean provisional revision and its Cycle 21 pure play, so the delta manifest binds that same provisional commit rather than base e3ba5312."
+  - "The compile cohort is exactly pending Cycle 18 pure:b2ca88272fc24296c6591722d02f2a1c1464749222611a4e0ca672f666a39ea8, Cycle 19 pure:44591b7a05c26bc85a352dcd440c72b1da0b62d410b45fcc0b7d185be9918e5c, and Cycle 20 pure:3f5af6fb086caff24cbf37137e36c3f1e279737291cd8ea29bb810c4321809cc; the unsealed Cycle 21 pure report is excluded from its own compile."
+  - "At seal, the promoted delta clears those three seen pending ids and the newly accepted Cycle 21 pure report becomes pending for a later cohort."
+nonclaims:
+  - "No source player attempted a blocked secondary direction, lost an action, reached a dead end, got stuck, or reported a bug; all three finished Wolf-Winter and ended naturally."
+  - "The Cycle 20 failed outer-seal check is an authored Repair outcome recovered through Cade's shown action, not a tool rejection or evidence of trapped progression."
+  - "This does not add, remove, rename, reorder, reveal, hide, or enable an action or exit; change a condition, destination, room variant, dialogue, item, flag, check, HP cost, score, decision, checkpoint, ending, or consequence; or alter serialization or save schema."
+  - "This does not change the north, combat, LURE, DRIVE, or FORTIFY mechanics, and it does not make all route-specific actions simultaneously available; 'any shown' refers only to the current legal projection."
+  - "This does not preserve the prior content hash. Existing 189b content-hash-bound Wolf saves intentionally reject against 07572512 under the unchanged integrity policy."
+  - "This does not consume or claim to implement stale accepted hotspot-a0d32f61, and it does not use the eventual Cycle 21 pure report as causal evidence for its own provisional revision."
+  - "The failed 82d8bb8a pure report and 20260810T131903Z compile remain ignored diagnostic artifacts only; this trace does not claim either as final-build evidence, an accepted cohort, or seal authority."
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/regression/wolf_winter_authority_commitment_boundary.test.ts
+    cases:
+      - "discloses seed4177's authority commitment in full and compact before the step, then closes the other lines"
+      - "keeps all five secondary route messages within their shared projection budget"
+      - "keeps all five secondary blocks exact in full and compact throughout $strategy"
+      - "keeps prepared DRIVE on the shown paling sequence until hurdle recovery opens north"
+      - "leaves open, HUNT, and in-progress LURE return routes open while retaining bug_0558 north"
+  - path: tests/regression/wolf_winter_postcast_state_truth.test.ts
+    case: "keeps $label exact through both casts"
+  - path: tests/regression/wolf_winter_compact_surface.test.ts
+    case: "keeps each copy-only revision distinct at the gauntlet and source-hash boundaries"
+  - path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    cases:
+      - "projects all five real stages from the loaded pack without changing its source hash"
+      - "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+  - path: tests/starting_slice/crisis_priority_counterfactual.test.ts
+    case: "requires explanation before a drive commitment that permanently excludes the lure"
+verification:
+  - npx vitest run tests/regression/wolf_winter_authority_commitment_boundary.test.ts tests/regression/wolf_winter_postcast_state_truth.test.ts tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/starting_slice/crisis_priority_counterfactual.test.ts
+  - npm run verify:bug-traces
