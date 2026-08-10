@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 753 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260810T001053Z/hotspots.json","hotspots_sha256":"8a6b78c275a9a1e137315108505792b3adf6ab18fe5dd22042ce216ef41adbe0","manifest_path":"ai-runs/feedback/20260810T001053Z/report-manifest.json","manifest_sha256":"edbd63bb0ad2b6582a7a073d9ffa579114819e68ac61d711e54d324dd0bbe2cd"},"pending_cycle_reports":[{"evidence_sha256":"18d336e8c935b9cf92b869132efbeb4aafb420de97f84a03987b91459c6b55d3","report_id":"pure:0e175d6e9da845928dcd3d1f5e321e713d2373562263cb69538717c69a8d3fe7","report_sha256":"33427276751af62de513a177bd45eaa4ece1647fd74be3a9cd62c4f64e7ba94c","run_id":"2026-08-09T23-52-24-726Z","sidecar_sha256":"2c669134cbff5a5b6406ecaf7d08e11c877a4684f062b43557a10a80c864748d","tested_commit":"2b16e73194ab3ef2abe6925bbc868e97e62eff95"},{"evidence_sha256":"6c6fdf2b5a70fa3b1afbded2143cae1a1257a286a390b6007061e9ee153acabc","report_id":"pure:9fbe84a5b06692f4c74671c0139fe65643d84ef6337e56c697ce910d6b593e12","report_sha256":"89a4dbc6e9aed0426fa1ff8f4f921417155d64b6231b8ab18bd352507f824f9d","run_id":"2026-08-10T01-54-44-511Z","sidecar_sha256":"67514aaa7b873bd1f79ffa380ddb635828f80418870eb1fe6d92d08de9668a7c","tested_commit":"370130d9db1fd554429a3a333028f612a772ef08"}],"schema_version":1} -->
+<!-- historical_cycle_count: 754 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260810T001053Z/hotspots.json","hotspots_sha256":"8a6b78c275a9a1e137315108505792b3adf6ab18fe5dd22042ce216ef41adbe0","manifest_path":"ai-runs/feedback/20260810T001053Z/report-manifest.json","manifest_sha256":"edbd63bb0ad2b6582a7a073d9ffa579114819e68ac61d711e54d324dd0bbe2cd"},"pending_cycle_reports":[{"evidence_sha256":"18d336e8c935b9cf92b869132efbeb4aafb420de97f84a03987b91459c6b55d3","report_id":"pure:0e175d6e9da845928dcd3d1f5e321e713d2373562263cb69538717c69a8d3fe7","report_sha256":"33427276751af62de513a177bd45eaa4ece1647fd74be3a9cd62c4f64e7ba94c","run_id":"2026-08-09T23-52-24-726Z","sidecar_sha256":"2c669134cbff5a5b6406ecaf7d08e11c877a4684f062b43557a10a80c864748d","tested_commit":"2b16e73194ab3ef2abe6925bbc868e97e62eff95"},{"evidence_sha256":"6c6fdf2b5a70fa3b1afbded2143cae1a1257a286a390b6007061e9ee153acabc","report_id":"pure:9fbe84a5b06692f4c74671c0139fe65643d84ef6337e56c697ce910d6b593e12","report_sha256":"89a4dbc6e9aed0426fa1ff8f4f921417155d64b6231b8ab18bd352507f824f9d","run_id":"2026-08-10T01-54-44-511Z","sidecar_sha256":"67514aaa7b873bd1f79ffa380ddb635828f80418870eb1fe6d92d08de9668a7c","tested_commit":"370130d9db1fd554429a3a333028f612a772ef08"},{"evidence_sha256":"6761de92528a1095cf12e7a9ea0da07829b26a92994fb2024495d5d493a23a80","report_id":"pure:0869a6d0ccb59a67f707aeabea88de8ffea57da422be1e6c263bd65a23460e29","report_sha256":"7d81103391a6443cba0cc320db81c4ee4946b6abcf07fc62aad86a166b570a9a","run_id":"2026-08-10T03-46-21-407Z","sidecar_sha256":"6d02fbefdcaa552611cbdf873bf1ea0ec3527c5e01707ade548b2095a3241d98","tested_commit":"16cf2c6540e7a26345e557130f3d78c421993729"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - gallowmere_ridge_closure_signpost
+- Evidence choice: accepted `07988b93`/`33adfdd0` hash rows were client stale/mistyped guards; the latest Gallowmere player instead detoured south after the sow kill, so on-list `playtest-gallowmere` was selected and accepted hot spots remain unconsumed.
+- Surface/effect: the sow-slain hollow now says the hunt closes on the ridge north in full and compact views; room/action ids, both exits, combat, score, checkpoint, and ending mechanics are unchanged.
+- Counterfactual: south remains legal and nonterminal at 35 for optional cleanup, while north still reaches `moor_ridge`, adds 15, and ends `ending_hunt_won` at 50; content hash `dde0cc62…` advances to `67fa0f96…`.
+- Pure evidence: exact-clean Spark seed 7 on `16cf2c65` chose Road-Warden/Aid-Only, won sheltered LURE Wolf-Winter with `ending_pack_diverted`, and ended at goal decision 25; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
+- Canary caveat: the pure route did not enter Gallowmere, so it proves exact-build integration/retention only; the closure copy is regression/trace-backed rather than directly replayed.
+- Feedback/next: pre-seal status was two actionable reports of three, so no compile ran; the seal added this run as report three, ready for Cycle 18's compile. Its pending friction is dense Wolf-Winter LURE movement/blocked-exit guidance, not a defect in this increment.
+- Guard: 17 focused route/counterexample tests, both 6,000-step crawls, exact health (448 files/3,872 tests), UI typecheck, all 12 packs, cycle-start integrity, trace integrity, and exact playtest provenance are green.
 
 ### Cycle result - advocates_certified_evidence_extracts
 - Evidence choice: accepted hash-copy hot spots were client-side stale/mistyped guards; two independent Advocate's Case players instead found TAKE implied stealing master records, so on-list `playtest-advocates_case` was selected and accepted hot spots remain unconsumed.
@@ -135,17 +144,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback baseline: bootstrap recorded 813 verified reports (62 pure, 302 structural, 449 legacy-guided; 220 rejected) with an empty ranked cohort, so historical volume cannot steer the next fix.
 - Self-critique/next: Spark failed closed before gameplay and the first Terra build was discarded after health caught one prompt-contract mismatch; the replacement player again found dense opening setup and terse optional Station support, now the strongest current follow-up.
 - Guard: three independent final audits, post-crawl 6,000-step sweep, exact health (448 files/3,828 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure report gates are green.
-
-### Cycle result - cycle_feedback_discovery
-
-- Evidence choice: the assessor's 19-report Wolf-Winter debug-display hot spot was stale evidence for July's landed `bug_0502`; the default compiler instead omitted seven unique verified cycle runs, so this cycle repaired feedback admission rather than already-fixed prose.
-- Surface/effect: no-flags compilation now discovers immediate ISO-cycle pure-V2 publication candidates, applies the full report/receipt/provider gates, preserves stable in-root or opaque external refs, isolates fleet-manifest joins, and deduplicates authority-verified pure copies.
-- Pure evidence: exact-clean Spark seed 7 on `8407bff3` completed The Wolf-Winter by all-wolves-alive/full-herd LURE at decision 26, ended naturally, rated clarity/enjoyment 4/4 and replay-yes, and found no bug or stuck state; staged prompts and the strict feed chain remained dense.
-- Feedback/self-critique: the fresh no-flags compile reached 822 verified/520 actionable reports and 71 pure exits while excluding 302 mocks; discovery and identity are closed, but authenticated historical runs still need an accepted-cohort freshness contract rather than unsafe Git ancestry guesses.
-- Guard: three independent reviews are clean; 100 focused tests, both 6,000-step crawls, exact 444-file/3,793-test health, UI typecheck, all 12 packs, zero integrity drift, and the exact-build playtest gate pass.
-## AFK Cycle 2026-08-10T03-46-21-407Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-10T03-46-21-407Z","selected_recommendation_id":"playtest-gallowmere"} -->
-- Assess: rpg=12; world=12; candidates=15.
-- Rec: hotspot-07988b93 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
