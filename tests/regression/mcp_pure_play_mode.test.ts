@@ -2724,6 +2724,39 @@ describe("MCP pure play mode", () => {
         });
         const parentSnapshotBeforeRejectedStart = parentRecovery.snapshot_hash;
         const journeyBeforeRejectedStart = parentRecovery.journey;
+        expect(parentSnapshotBeforeRejectedStart).toEqual(expect.stringMatching(/^[0-9a-f]{24}$/));
+        expect(journeyBeforeRejectedStart).not.toBeNull();
+        expect(typeof journeyBeforeRejectedStart).toBe("object");
+        expect(Array.isArray(journeyBeforeRejectedStart)).toBe(false);
+        const journeyBytesBeforeRejectedStart = JSON.stringify(journeyBeforeRejectedStart);
+        const expectParentUnchanged = async (): Promise<void> => {
+          const currentParentResult = await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          });
+          expect(currentParentResult.isError).not.toBe(true);
+          const currentParent = textPayload(currentParentResult);
+          expect(currentParent.snapshot_hash).toBe(parentSnapshotBeforeRejectedStart);
+          expect(currentParent.journey).toEqual(journeyBeforeRejectedStart);
+          expect(JSON.stringify(currentParent.journey)).toBe(journeyBytesBeforeRejectedStart);
+          expect(currentParent).toMatchObject({
+            overworld_session_id: sessionId,
+            rpg_session_id: rpgSessionId,
+          });
+        };
+        const expectSessionRecoveryEnvelope = (
+          payload: Record<string, unknown>,
+          expectedField: "overworld_session_id" | "rpg_session_id",
+        ): void => {
+          expect(payload).toMatchObject({
+            ok: false,
+            expected_session_field: expectedField,
+            expected_argument: "session_id",
+            returned_handle_field: expectedField,
+            overworld_session_id: sessionId,
+            rpg_session_id: rpgSessionId,
+          });
+        };
         const repeatedQuestStart = await client.callTool({
           name: "start_overworld_session_quest",
           arguments: {
@@ -2736,51 +2769,79 @@ describe("MCP pure play mode", () => {
         expect(textPayload(repeatedQuestStart)).toMatchObject({
           error: expect.stringMatching(/Finish the active embedded quest/i),
           expected_session_field: "rpg_session_id",
+          expected_argument: "session_id",
+          returned_handle_field: "rpg_session_id",
           overworld_session_id: sessionId,
           rpg_session_id: rpgSessionId,
         });
-        const parentAfterRejectedStart = textPayload(
-          await client.callTool({
-            name: "get_overworld_session_context",
-            arguments: { session_id: sessionId },
-          }),
-        );
-        expect(parentAfterRejectedStart).toMatchObject({
-          snapshot_hash: parentSnapshotBeforeRejectedStart,
-          journey: journeyBeforeRejectedStart,
-          overworld_session_id: sessionId,
-          rpg_session_id: rpgSessionId,
-        });
-        for (const [name, argumentsValue, expectedField] of [
-          ["list_legal_actions", { session_id: null }, "rpg_session_id"],
-          ["list_legal_actions", { session_id: 7 }, "rpg_session_id"],
-          ["list_legal_actions", { session_id: sessionId }, "rpg_session_id"],
-          ["get_overworld_session_context", {}, "overworld_session_id"],
-          ["get_overworld_session_context", { rpg_session_id: sessionId }, "overworld_session_id"],
-          ["get_overworld_session_context", { session_id: null }, "overworld_session_id"],
-          ["get_overworld_session_context", { session_id: 7 }, "overworld_session_id"],
-          ["get_overworld_session_context", { session_id: rpgSessionId }, "overworld_session_id"],
-          [
-            "get_overworld_session_context",
-            { session_id: "not-a-live-handle" },
-            "overworld_session_id",
-          ],
+        await expectParentUnchanged();
+
+        for (const [name, argumentsValue] of [
+          ["list_legal_actions", { session_id: null }],
+          ["list_legal_actions", { session_id: 7 }],
+          ["list_legal_actions", { session_id: sessionId }],
         ] as const) {
           const rejected = await client.callTool({ name, arguments: argumentsValue });
           expect(rejected.isError).toBe(true);
-          expect(textPayload(rejected)).toMatchObject({
-            ok: false,
-            expected_session_field: expectedField,
-            overworld_session_id: sessionId,
-            rpg_session_id: rpgSessionId,
+          expectSessionRecoveryEnvelope(textPayload(rejected), "rpg_session_id");
+          await expectParentUnchanged();
+        }
+
+        const childUsedForParent = await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: { session_id: rpgSessionId },
+        });
+        expect(childUsedForParent.isError).toBe(true);
+        const childUsedForParentPayload = textPayload(childUsedForParent);
+        expectSessionRecoveryEnvelope(childUsedForParentPayload, "overworld_session_id");
+        expect(String(childUsedForParentPayload.error)).toMatch(
+          /requires the parent overworld_session_id, not the active RPG child handle/i,
+        );
+        await expectParentUnchanged();
+
+        const finalSegmentStart = sessionId.lastIndexOf("-") + 1;
+        const cycle14ParentNearMiss =
+          sessionId.slice(0, finalSegmentStart + 2) + sessionId.slice(finalSegmentStart + 3);
+        const nonCurrentRpgShapedHandle = "r999";
+        expect(cycle14ParentNearMiss).toMatch(/^o-/);
+        expect(cycle14ParentNearMiss).toHaveLength(sessionId.length - 1);
+        expect(nonCurrentRpgShapedHandle).not.toBe(rpgSessionId);
+        for (const [label, argumentsValue] of [
+          ["missing", {}],
+          ["wrong field", { rpg_session_id: sessionId }],
+          ["null", { session_id: null }],
+          ["non-string", { session_id: 7 }],
+          ["Cycle 14 one-character parent near-miss", { session_id: cycle14ParentNearMiss }],
+          ["non-current RPG-shaped child", { session_id: nonCurrentRpgShapedHandle }],
+          ["unknown", { session_id: "not-a-live-handle" }],
+        ] as const) {
+          const rejected = await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: argumentsValue,
           });
+          expect(rejected.isError, label).toBe(true);
+          const payload = textPayload(rejected);
+          expectSessionRecoveryEnvelope(payload, "overworld_session_id");
+          expect(String(payload.error), label).toMatch(
+            /requires the exact current parent overworld_session_id/i,
+          );
+          expect(String(payload.error), label).toMatch(/missing, malformed, stale, or unknown/i);
+          expect(String(payload.error), label).not.toMatch(/RPG|child/i);
+          if (label === "Cycle 14 one-character parent near-miss") {
+            expect(JSON.stringify(payload)).not.toContain(cycle14ParentNearMiss);
+          }
+          await expectParentUnchanged();
         }
         const bothRecovered = await client.callTool({ name: "start_overworld", arguments: {} });
         expect(bothRecovered.isError).toBe(true);
         expect(textPayload(bothRecovered)).toMatchObject({
+          expected_session_field: "overworld_session_id",
+          expected_argument: "session_id",
+          returned_handle_field: "overworld_session_id",
           overworld_session_id: sessionId,
           rpg_session_id: rpgSessionId,
         });
+        await expectParentUnchanged();
 
         const enteredByre = textPayload(
           await client.callTool({
