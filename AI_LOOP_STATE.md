@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 761 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260810T194910Z/hotspots.json","hotspots_sha256":"e8324c3632599b987ba43fd2843fd3c8c7fda23f639338126f60bf108a11b843","manifest_path":"ai-runs/feedback/20260810T194910Z/report-manifest.json","manifest_sha256":"3f6e21ae4cdd8ed78611fe8b4c2691051c091cff078b30460385d6ac95b70cbe"},"pending_cycle_reports":[{"evidence_sha256":"291b54ce5b3e3bdc6927c433a50b9479cce1dc42b084f1bd0685d1a0fa61e28e","report_id":"pure:37b76416aacc26cea01b7fd8d6c5d775377d6b1f78dbe07af28816331c74b75a","report_sha256":"20d03c7a979aba9d2cd4c165f23ab2395500117d990b799c08de61cb2f9fc2a7","run_id":"2026-08-10T19-41-13-068Z","sidecar_sha256":"8dbd5c47c29c67528ef4e82573dd586d7bd0a898473c166b20696c96af42064e","tested_commit":"2bfc04a302f8d8d25d2e7ae6c055a1874f11c351"}],"schema_version":1} -->
+<!-- historical_cycle_count: 762 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-10T21-53-53-028Z","hotspots_path":"ai-runs/feedback/20260810T194910Z/hotspots.json","hotspots_sha256":"e8324c3632599b987ba43fd2843fd3c8c7fda23f639338126f60bf108a11b843","manifest_path":"ai-runs/feedback/20260810T194910Z/report-manifest.json","manifest_sha256":"3f6e21ae4cdd8ed78611fe8b4c2691051c091cff078b30460385d6ac95b70cbe"},"pending_cycle_reports":[{"evidence_sha256":"291b54ce5b3e3bdc6927c433a50b9479cce1dc42b084f1bd0685d1a0fa61e28e","report_id":"pure:37b76416aacc26cea01b7fd8d6c5d775377d6b1f78dbe07af28816331c74b75a","report_sha256":"20d03c7a979aba9d2cd4c165f23ab2395500117d990b799c08de61cb2f9fc2a7","run_id":"2026-08-10T19-41-13-068Z","sidecar_sha256":"8dbd5c47c29c67528ef4e82573dd586d7bd0a898473c166b20696c96af42064e","tested_commit":"2bfc04a302f8d8d25d2e7ae6c055a1874f11c351"},{"evidence_sha256":"40d72e54288935243d861a5e5e5f81eac5bfa51abff5a9d2442a6fb7698b0d30","report_id":"pure:c6b9929e5418c6149c896f8a2fde76ebac0843e0fd96974be035e23bf433bfb6","report_sha256":"1943b06756d9bc18018990687a5c6fc6927176109ef2d98ab29c18c2a4cda008","run_id":"2026-08-10T21-53-53-028Z","sidecar_sha256":"4f798e04b6ed804c50b2535d20aabfa8dd7cc1bee575b96cf975941e7aa0429f","tested_commit":"950439538f6746087cfa35e07d9b839be86309ea"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -17,6 +17,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+
+### Cycle result - wolf_lure_yard_commit_truth
+- Evidence choice: accepted `hotspot-ed51aa6f` and Cycle 22 item 21 directly showed committed Wolf-Winter LURE with the sack held but stale four-plan yard prose, so this outranked broader density churn and routine rotation.
+- Surface/effect: that held-feed yard state now names HUNT/DRIVE/FORTIFY as closed and the active northward one-sack route; specialized leaves, actions, exits, checks, recoveries, outcomes, and schema are unchanged, with Wolf hash `8b175deb…` → `7beba188…`.
+- Counterfactual: full/compact real routes pin clean pre-cast, post-foul south-return, and post-second-cast backtrack guidance while no-feed, protocol, settled west/up, leader/pack, open, and HUNT states retain priority.
+- Red-gate correction: `025ce87a` published no canonical report after a clarity-required interview rejection, and `7d2aae81` published none after strict context exhaustion; both were reset and only fresh retry `95043953` carries canonical, retention-eligible evidence.
+- Pure evidence: exact-clean Spark seed 7 on `95043953` took Ledger/Aid-Only/Rowan through sheltered LURE, directly rendered the new copy at item 23, and reached `ending_pack_diverted` 60/60 with herd and all wolves alive before End at decision 26; one premature RPG read failed closed, then all calls succeeded; 4/4, replay yes, bugs `[]`, not stuck.
+- Feedback/next: pre-seal status is 1/3 with no compile; exact selection consumes `ed51aa6f` and seal leaves two pending reports. The player encountered the narrowed rail but missed no LURE step; its failure concern was hypothetical on a clean route, so prefer routine rotation unless later evidence localizes a new state-truth defect.
+- Guard: 29 focused tests, 556 bug traces, exact `7beba188…` validation, hostile review, full health, outer crawl, start-ref integrity, and the exact-pure gate are green.
 
 
 ### Cycle result - wolf_reese_works_room_truth
@@ -141,17 +151,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `e0600a7f` chose Road-Warden/Aid-Only/Hayden, held The Wolf-Winter by HUNT, and ended naturally at the first goal on decision 18; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
 - Self-critique/next: raw Civic choice surfaces showed the corrected pause row, but the player skipped that event, so build evidence complements rather than replaces causal regressions; the separate HUNT "commit" label and dense goal pause remain next evidence.
 - Feedback/guard: status remains 2 actionable reports of 3, so no compile; 81 focused tests, compact signature/size, exact 732/732 opening budget, type/lint/format, 542 traces, and hostile audits are green, with outer gates still required.
-
-### Cycle result - gallowmere_packet_launch_handoff
-- Evidence choice: the compiler's mapped recommendation `9fe9a8ee` was the stronger bounded fix; the assessor's equal-score checkpoint pick describes an intentional, regression-pinned first safe boundary rather than a supported timing change.
-- Surface/effect: embedded `quest_start:gallowmere` under the exact packet-carrying goal now returns a versioned receipt that Hayden's packet reached Hedrick and the hunt remains; full and compact starts share it.
-- Fail-closed boundary: wardens, out-of-order, direct, and standalone starts never inherit packet copy, while the existing quest-start decision, parent snapshot, child state/hash, Gallowmere content, score, and ridge ending are unchanged.
-- Pure evidence: exact-clean Spark seed 7 on `7445e078` chose Ledger Advocate, Exposed Ridge, and LURE, kept the whole herd and all wolves alive, then ended naturally at the first goal on decision 26; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
-- Self-critique/next: the canary did not continue to Gallowmere, so causal proof remains the full/compact regression rather than a claimed playtest uplift; its only friction was non-blocking advisory Civic event text beside the active Compact/quest lane.
-- Feedback/guard: status remains 1 actionable report of 3, so no compile; 17 focused behavior/checkpoint tests, type/lint/format, 541 bug traces, and two hostile reviews are green, with the standard outer gates still mandatory.
-## AFK Cycle 2026-08-10T21-53-53-028Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-10T21-53-53-028Z","selected_recommendation_id":"hotspot-ed51aa6f"} -->
-- Assess: rpg=12; world=12; candidates=15.
-- Rec: hotspot-ed51aa6f (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
