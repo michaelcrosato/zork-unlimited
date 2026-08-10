@@ -147,3 +147,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `2d58029e` completed The Wolf-Winter (`ending_held`) and The Gallowmere (`ending_hunt_won`), ended naturally at decision 52, rated clarity/enjoyment 4/4, replay-yes, with no bug or stuck state.
 - Self-critique: the cohort target is deliberately broad launch-surface provenance, not proof of the issue's room; candidate evidence says when fallback was used, and a future schema can retain per-hotspot targets for finer attribution.
 - Follow-through: the player found Gallowmere's final packet handoff slightly implicit; feedback is 1/3 with no compile, while the preserved accepted alarm hotspot is now actionable for the next cycle.
+## AFK Cycle 2026-08-10T15-48-02-040Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T15-48-02-040Z","selected_recommendation_id":"hotspot-d6a6cd0a"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-d6a6cd0a (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

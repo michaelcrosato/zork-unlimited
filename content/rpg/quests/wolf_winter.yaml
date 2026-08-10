@@ -944,7 +944,7 @@ rooms:
           - any_of:
               - { not_flag: strategy_lure_committed }
               - { has_flag: flank_redirected }
-        locked_msg: "Settle the yearling or finish the outer seal. On the feed plan, return south, then west and up for the loft cast before the ground way opens."
+        locked_msg: "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast."
 
   - id: byre_door
     name: "The Byre Door"
