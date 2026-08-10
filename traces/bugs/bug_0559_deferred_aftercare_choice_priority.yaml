@@ -1,0 +1,82 @@
+id: bug_0559
+title: "Deferred aftermath guidance did not prioritize the choice blocking play"
+pack: n/a (derived overworld journey-opportunity presentation)
+reported_by: 2026-08-10T01-54-44-511Z accepted pure fresh-overworld playtest
+severity: S1
+evidence:
+  source_run: 2026-08-10T01-54-44-511Z
+  source_commit: 370130d9db1fd554429a3a333028f612a772ef08
+  source_report_id: pure:9fbe84a5b06692f4c74671c0139fe65643d84ef6337e56c697ce910d6b593e12
+  source_report: ai-runs/2026-08-10T01-54-44-511Z/playtest.md
+  source_raw: ai-runs/2026-08-10T01-54-44-511Z/playtest.codex.jsonl
+  player_friction: "The deferred-aftercare lead framing is functional but initially reads like extra scaffolding before the next authored lead is obvious."
+  exact_raw_boundary: >
+    item_23 finishes Wolf-Winter at decision 17 and presents Continue/End plus the
+    dawn-dispatch preview; item_24 chooses Continue, opens albany_dawn_dispatch,
+    and shows four empty deferred leads with the old "finish this journey decision"
+    guidance; item_25 sends the wagon to Cade, activates the Gallowmere goal, and
+    restores all four structured lead details.
+  accepted_bundle: ai-runs/feedback/20260810T065018Z/hotspots.json
+  selected_candidate: hotspot-4ae7e44f
+  cycle_19_run: 2026-08-10T08-19-00-732Z
+  stale_recommended_candidate: hotspot-a0d32f61
+  stale_recommendation_counterfactual: >
+    The accepted bundle's first row quotes Wolf-Winter's old "north waits for an
+    applicable step" block. Merged commit 2874f940 replaced that exact witness and
+    its clean Cycle 18 player exercised the replacement, so repeating it would not
+    be revision-live work. The sibling 4ae7e44f aftercare surface has not changed
+    since its accepted report and remains the live on-list candidate.
+symptom: >
+  The accepted player continued after Wolf-Winter, encountered the required dawn
+  dispatch, and then received the detailed optional leads only after resolving that
+  second choice. At the intervening story-choice surface, the old aftercare line said
+  only to "finish this journey decision first" and that details would return "if play
+  continues." It did not name the shown option as the immediate priority or explain
+  that a second authored choice can follow Continue before ordinary play resumes.
+  The sequence worked and the player completed Gallowmere, but the generic framing
+  made the optional lead summary read like another layer of scaffolding.
+root_cause: >
+  deferJourneyOpportunityDetails correctly removes lead details whenever a pending
+  journey choice or story choice pauses ordinary actions, but its single shared copy
+  described both boundaries as "this journey decision." That abstract label omitted
+  the only universally truthful instruction: choose the option currently shown, then
+  finish any immediately following choice. Counts, detail deferral, restoration, and
+  every journey guard were already correct.
+fix: >
+  Change only the derived deferred-guidance string to: "Choose the shown journey
+  option first. N optional aftermath lead(s) remain; if another choice follows,
+  finish it too. District details return when play resumes." Preserve singular/plural
+  grammar and every existing projection field. The wording prioritizes the visible
+  gate, covers both Continue-to-story and direct story-choice boundaries, and says
+  when the optional detail returns without exposing it early.
+deterministic_witnesses:
+  - "one, two, three, and five deferred leads render the exact new sentence with truthful lead/leads grammar"
+  - "the first-goal pending Continue/End screen and the following dawn-dispatch story screen render the same state-neutral priority guidance"
+  - "while either choice is shown, leads stays empty and deferredLeadCount stays exact; no optional title, district, access state, id, consequence, reward, or outcome leaks"
+  - "after the dawn dispatch resolves, storyChoice and deferredLeadCount disappear, the Gallowmere goal becomes active, and the same four structured optional leads return with the existing active-play guidance"
+  - "the 370130d9 raw item_23 -> item_24 -> item_25 sequence independently proves the pending -> story -> active restoration boundary that the deterministic tests preserve"
+  - "full journey, compact MCP, JourneyChoiceScreen, JourneyStoryChoiceScreen, and active JourneyStatus presentations remain consistent"
+  - "cloning and presentation reads remain deep, frozen, and state-neutral; snapshots, snapshot hashes, and accepted-decision counts do not change"
+  - "the existing compact opportunity tuple shape and compact-view schema version remain unchanged because only the guidance value changes"
+selection_semantics:
+  - "Cycle 19 freezes selected_recommendation_id as exact on-list candidate hotspot-4ae7e44f, not null and not the assessor's stale first row."
+  - "The seal consumes an accepted compile only when the frozen selection exactly equals its recommended hotspot; selecting sibling 4ae7e44f therefore correctly leaves recommended a0d32f61 unconsumed."
+  - "Leaving a0d32f61 unconsumed is protocol truth, not evidence that its already-replaced Wolf-Winter wording should be changed again."
+nonclaims:
+  - "The accepted player did not report a bug, get stuck, reject an action, or fail a goal. The run completed Wolf-Winter and Gallowmere at clarity/enjoyment 4/4 and would replay; this is bounded S1 framing friction."
+  - "This does not add, remove, rename, reorder, preselect, or expose a journey option, story option, opportunity lead, action, consequence, reward, or outcome."
+  - "This does not bypass Continue/End, skip the dawn dispatch, alter when ordinary actions resume, or change goal, checkpoint, retention, exit-receipt, or accepted-decision behavior."
+  - "This does not change deferredLeadCount, leads ordering, access classification, opportunity eligibility, detail restoration, campaign state, persistence, serialization, save schema, compact schema, or compact-view version."
+  - "Presentation remains derived and read-only: no snapshot bytes or snapshot hash change from reading it. The Git build identity necessarily advances, but no RPG content-pack hash or hash pin changes because no pack source changes."
+  - "This does not claim hotspot-a0d32f61 is still revision-live or falsely select it to consume the accepted recommendation; merged bug_0558 is the counterexample."
+  - "This does not use the eventual Cycle 19 pure run as causal evidence for its own provisional revision; the accepted 370130d9 report and focused deterministic witnesses authorize the change."
+production:
+  - src/world/journey_opportunity_leads.ts
+tests:
+  - tests/unit/journey_opportunity_leads.test.ts
+  - tests/starting_slice/albany_return_opportunity_leads.test.ts
+  - tests/unit/ui_journey_opportunity_leads.test.ts
+  - tests/unit/ui_overworld.test.ts
+verification:
+  - npx vitest run tests/unit/journey_opportunity_leads.test.ts tests/starting_slice/albany_return_opportunity_leads.test.ts tests/unit/ui_journey_opportunity_leads.test.ts tests/unit/ui_overworld.test.ts
+  - npm run verify:bug-traces

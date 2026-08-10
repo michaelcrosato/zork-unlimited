@@ -145,3 +145,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback queue: the prior accepted run plus this sealed run make two fresh actionable reports, still below the three-report compile threshold; no provisional feedback artifact was created.
 - Self-critique/next: dense registration/duty/evidence setup and alarm-threshold interpretation remain the repeated current friction; measure and narrow that opening burden next rather than widening this copy-only increment.
 - Guard: two independent audits, 78 focused presentation/MCP tests, pre/post 6,000-step crawls, exact health (448 files/3,828 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure gates are green.
+## AFK Cycle 2026-08-10T08-19-00-732Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T08-19-00-732Z","selected_recommendation_id":"hotspot-4ae7e44f"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-a0d32f61 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
