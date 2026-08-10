@@ -421,7 +421,9 @@ function pureCallPreflight(name: string, args: unknown): void {
   const sessionId = input?.session_id;
   if (PURE_OVERWORLD_SESSION_TOOLS.has(name) && sessionId !== pureRunState.overworldSessionId) {
     throw new PureSessionRecoveryError(
-      "This overworld tool requires the parent overworld_session_id, not an RPG child handle.",
+      pureRunState.rpgSessionId !== null && sessionId === pureRunState.rpgSessionId
+        ? "This overworld tool requires the parent overworld_session_id, not the active RPG child handle."
+        : "This overworld tool requires the exact current parent overworld_session_id; the supplied session_id is missing, malformed, stale, or unknown.",
       "overworld_session_id",
     );
   }

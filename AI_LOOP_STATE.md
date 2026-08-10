@@ -143,3 +143,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Failed evidence: stale-copy artifacts, two invalid Spark runs, and otherwise valid reports tied to revisions later superseded by clean-CI fixes were rejected or retired and never counted as final-build evidence.
 - Self-critique/follow-through: the verified player still found the role shortcut's duty/evidence scope quiet and second-quest continuity thinner; the cross-family experiment remains external because an owner must authorize a non-Codex provider before ≥10 fresh comparable journeys can run.
 - Guard: post-crawl `20260808T135738Z` covers 6,000 steps, all 247 nodes/344 edges/12 quests; exact health passes 442 files/3,775 tests, both typechecks and all 12 packs, with drift at zero errors/six reviewed warnings and the pure evidence gate green.
+## AFK Cycle 2026-08-09T23-52-24-726Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-09T23-52-24-726Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-a919cded (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

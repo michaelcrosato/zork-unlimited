@@ -1,0 +1,61 @@
+id: bug_0555
+title: "A mistyped parent session handle was mislabeled as an active RPG child"
+pack: n/a (pure MCP parent-session recovery diagnostic)
+reported_by: 2026-08-09T22-07-00-576Z accepted pure fresh-overworld playtest
+severity: S1
+evidence:
+  source_report: ai-runs/2026-08-09T22-07-00-576Z/playtest.md
+  raw_stream: ai-runs/2026-08-09T22-07-00-576Z/playtest.codex.jsonl
+  tested_build: 8707f6307eefffa8e3c6acc6644bbcd0cfb6506f
+  pre_rejection_item: "item_60: parent o-c476d483-b28b-4e86-8d28-8804e8c8ef31; snapshot 6291acee883dfd53dc4ed0b6; accepted decisions 45"
+  rejected_item: "item_61: start_overworld_session_quest supplied o-c476d483-b28b-4e86-8d28-884e8c8ef31, deleting the third character of the parent handle's final segment"
+  false_diagnostic: "This overworld tool requires the parent overworld_session_id, not an RPG child handle."
+  recovery_fields: "expected_session_field overworld_session_id; expected_argument session_id; returned_handle_field overworld_session_id; exact authoritative parent returned"
+  successful_retry: "item_62: exact returned parent plus unchanged snapshot 6291acee883dfd53dc4ed0b6 starts tanners_fever, advances to decision 46, and returns child r3"
+  cycle15_run: 2026-08-09T23-52-24-726Z
+  cycle15_selection: null
+symptom: >
+  After reaching Oneonta Market Streets, the pure player copied the parent
+  overworld handle with one character missing and attempted to start The
+  Tanner's Fever. The server correctly rejected the non-exact handle and
+  returned the authoritative parent, but its error text falsely classified the
+  supplied value as an RPG child handle. No RPG child was active at item_61.
+  The player copied the returned parent into item_62 and started the quest
+  successfully with the same pre-rejection snapshot hash.
+root_cause: >
+  Pure preflight used one child-handle sentence for every overworld-tool
+  session_id that was not exactly the current parent. That branch also receives
+  missing, malformed, stale, and unknown values, so the diagnostic inferred a
+  handle domain that exact equality had not established. The strict comparison
+  and structured recovery envelope were already correct; only the explanatory
+  presentation was overbroad.
+fix: >
+  Keep exact parent equality as the only accepted input. When the rejected value
+  exactly equals the currently active rpg_session_id, retain a specific active
+  child-versus-parent diagnostic. For every other parent mismatch, say that the
+  exact current parent is required and the supplied session_id is missing,
+  malformed, stale, or unknown. Preserve the structured expected-field metadata
+  and return only the current authoritative recovery handles.
+deterministic_witnesses:
+  - "item_61 is a strict failed MCP call; its malformed parent differs from the authoritative item_60 handle by one deleted character and is not an active child"
+  - "item_61's response payload returns expected_session_field, expected_argument, returned_handle_field, and the exact authoritative overworld_session_id without echoing the malformed submitted id"
+  - "item_62 reuses item_60's exact snapshot hash and succeeds only after copying the returned parent; decision 46 and child r3 appear on that successful retry, not on the rejection"
+  - "the real-server regression derives the same final-segment one-character deletion, rejects it under the generic exact-parent diagnostic, prevents submitted-id echo, and checks the parent snapshot plus byte-stable journey projection after every rejected call"
+  - "the same regression covers missing, wrong-field, null, non-string, and unknown parent values while preserving the complete authoritative recovery envelope"
+  - "supplying the exact active child to an overworld read remains a distinct strict rejection naming the active RPG child, returning both current handles, and leaving the parent unchanged"
+  - "after the diagnostic counterexamples, the existing active child still accepts its next legitimate exact-handle action, proving the rejections neither orphan nor advance it"
+nonclaims:
+  - "This does not accept, normalize, complete, guess, fuzzily correct, or alias any non-exact session handle."
+  - "This does not echo a submitted malformed or unknown handle in the player-visible recovery payload, auto-retry the rejected call, or perform the requested gameplay action on the player's behalf; an exact active child is intentionally returned as the authoritative rpg_session_id, and ordinary request/spectate capture still records submitted arguments."
+  - "This does not mutate parent, child, quest, journey, decision, snapshot, or RPG state on rejection; ordinary transport/spectate recording of the failed call remains intact."
+  - "This does not weaken expected_snapshot_hash or state-hash enforcement, remove refresh requirements, or address the report's separate recoverable hash-refresh friction."
+  - "This does not merge parent and child handle domains, change handle lifetimes, expose another session, or broaden the pure-player tool surface."
+  - "This does not change response schemas or remove expected_session_field, expected_argument, returned_handle_field, overworld_session_id, or an actually active rpg_session_id from recovery payloads."
+  - "This off-list diagnostic fix keeps Cycle 15's selection null; it does not select or consume accepted recommendation hotspot-a919cded."
+production:
+  - src/mcp/server.ts
+tests:
+  - tests/regression/mcp_pure_play_mode.test.ts
+verification:
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts --project standard --testNamePattern "does not advertise or honor QA-only quest graph and seed overrides"
+  - npm run verify:bug-traces
