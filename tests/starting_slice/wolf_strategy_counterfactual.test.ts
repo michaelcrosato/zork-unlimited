@@ -33,6 +33,14 @@ const PALING_NORTH_GUIDANCE =
   "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
 const YEARLING_DEFEAT_JOURNAL =
   "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
+const COMMITTED_LURE_YARD_GUIDANCE =
+  "LURE is committed; HUNT, DRIVE, and FORTIFY are closed. Go north to continue the one-sack feed line or its current recovery step.";
+const LURE_FEED_PICKUP_GUIDANCE =
+  "Cade has now released his last feed sack in the open store-shed west. Go west, take the winter-feed sack, return east, then go north for the first cast. The sack was not available before you committed; the yard's north gate is not the feed pickup.";
+const LURE_PROTOCOL_GUIDANCE =
+  "The rail recovery sent the yearling alive into the high wood, but the cattle still hammer the slats. Cade holds Jamie's sealed docket beside the herd tally. Call its named sequence here before carrying the feed west through the store and up to the loft; it is one-use.";
+const LURE_FIRST_BEAT_SETTLED_GUIDANCE =
+  "The first lure beat is settled. Cade points west through the store, then up to the loft for the second cast. The yard's north gate is not the feed line.";
 
 function fixedRng(face: "best" | "worst"): Rng {
   return {
@@ -47,6 +55,52 @@ type Route = Readonly<{
   observations: readonly ReturnType<typeof buildRpgObservation>[];
   yearlingDefeatEvents: readonly GameEvent[];
 }>;
+
+function exactYardProjection(state: GameState, expectedText: string) {
+  const before = structuredClone(state);
+  const full = buildRpgObservation(index, state);
+  const actionIds = full.available_actions.map((action) => action.id);
+  const compact = compactRpgObservation(full, actionIds, { includeActions: true });
+
+  expect(state.current).toBe("byre_yard");
+  expect(full.description.trimEnd()).toBe(expectedText);
+  expect(compact.text).toBe(expectedText);
+  expect(compact.actions).toEqual(actionIds);
+  expect(state).toEqual(before);
+
+  return { full, compact, actionIds };
+}
+
+function assertCommittedLureYard(state: GameState): void {
+  const { full, compact, actionIds } = exactYardProjection(state, COMMITTED_LURE_YARD_GUIDANCE);
+
+  expect(state.flags.strategy_lure_committed).toBe(true);
+  expect(state.inventory).toContain("winter_feed_sack");
+  expect(full.exits.map((exit) => exit.direction).sort()).toEqual(["north", "south", "west"]);
+  expect(full.blocked_exits).toEqual([]);
+  expect(
+    (compact.exits ?? []).map((exit) => (typeof exit === "string" ? exit : exit[0])).sort(),
+  ).toEqual(["north", "south", "west"]);
+  expect(compact.blocked ?? []).toEqual([]);
+  for (const actionId of ["go_north", "go_south", "go_west"]) {
+    expect(actionIds).toContain(actionId);
+    expect(compact.actions).toContain(actionId);
+  }
+  expect(full.description).not.toMatch(/compare HUNT, LURE, DRIVE, and FORTIFY/i);
+}
+
+function expectOnlyStepAdvanced(state: GameState, before: GameState, increment: number): void {
+  expect(state).toEqual({ ...before, step: before.step + increment });
+}
+
+function stepById(state: GameState, id: string, face: "best" | "worst" = "best"): GameState {
+  const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === id);
+  expect(option, `expected ${id}`).toBeDefined();
+  if (!option) throw new Error(`missing ${id}`);
+  const result = makeStep(buildRpgRules(index, () => fixedRng(face)))(state, option.action);
+  expect(result.ok, result.rejectionReason).toBe(true);
+  return result.state;
+}
 
 function assertLurePalingNorthBlocked(
   state: GameState,
@@ -86,6 +140,7 @@ function assertLurePalingNorthBlocked(
 function lureRoute(
   opening: "clean" | "fouled" | "fouled_braced" | "hybrid",
   preparation: "none" | "missing_counsel" | "complete" = "none",
+  reliefProtocolPrepared = false,
 ): Route {
   let state = initStateForRpgPack(
     index,
@@ -97,6 +152,7 @@ function lureRoute(
           ? 904
           : 903,
   );
+  if (reliefProtocolPrepared) state.flags.relief_protocol_prepared = true;
   const actions: string[] = [];
   const observations = [buildRpgObservation(index, state)];
   let yearlingDefeatEvents: readonly GameEvent[] = [];
@@ -144,9 +200,22 @@ function lureRoute(
   act("ask_commit_lure");
   expect(state.flags.strategy_lure_committed).toBe(true);
   act("ask_leave");
+  const pickup = exactYardProjection(state, LURE_FEED_PICKUP_GUIDANCE);
+  expect(state.inventory).not.toContain("winter_feed_sack");
+  expect(pickup.actionIds).toEqual(expect.arrayContaining(["go_south", "go_west"]));
+  expect(pickup.actionIds).not.toContain("go_north");
+  expect(pickup.full.blocked_exits).toContainEqual({
+    direction: "north",
+    message: NORTH_PENDING_GUIDANCE,
+  });
+  expect(pickup.compact.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
   act("go_west");
   act("take_winter_feed_sack");
   act("go_east");
+  assertCommittedLureYard(state);
+  expect(state.flags.lure_trail_fouled).not.toBe(true);
+  expect(state.flags.yearling_down).not.toBe(true);
+  expect(state.flags.yearling_redirected).not.toBe(true);
   act("go_north");
   assertLurePalingNorthBlocked(state, ["use_winter_feed_sack_on_downwind_feed_line"]);
   act("use_winter_feed_sack_on_downwind_feed_line");
@@ -157,6 +226,18 @@ function lureRoute(
     expect(enumerateRpgActions(index, state).map((option) => option.id)).not.toContain(
       "use_winter_feed_sack_on_downwind_feed_line",
     );
+    assertLurePalingNorthBlocked(state, [
+      "wedge_paling_rail",
+      "maneuver_yearling_wolf_commit_hybrid_strike",
+    ]);
+    const beforeDetour = structuredClone(state);
+    act("go_south");
+    assertCommittedLureYard(state);
+    expect(state.flags.lure_trail_fouled).toBe(true);
+    expect(state.flags.yearling_down).not.toBe(true);
+    expect(state.flags.yearling_redirected).not.toBe(true);
+    act("go_north");
+    expectOnlyStepAdvanced(state, beforeDetour, 2);
     assertLurePalingNorthBlocked(state, [
       "wedge_paling_rail",
       "maneuver_yearling_wolf_commit_hybrid_strike",
@@ -195,8 +276,27 @@ function lureRoute(
     ],
   );
   act("go_south");
-  const yard = buildRpgObservation(index, state);
-  expect(yard.description).toMatch(/settled[^]*west[^]*store[^]*up[^]*loft/i);
+  if (reliefProtocolPrepared) {
+    const protocol = exactYardProjection(state, LURE_PROTOCOL_GUIDANCE);
+    expect(state.flags).toMatchObject({
+      strategy_lure_committed: true,
+      relief_protocol_prepared: true,
+      yearling_redirected_with_split_guard: true,
+    });
+    expect(state.inventory).toContain("winter_feed_sack");
+    expect(protocol.actionIds).toContain("use_relief_protocol_docket");
+    expect(protocol.actionIds).not.toContain("go_north");
+    expect(protocol.full.blocked_exits).toContainEqual({
+      direction: "north",
+      message: NORTH_PENDING_GUIDANCE,
+    });
+    expect(protocol.compact.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+    act("use_relief_protocol_docket");
+  }
+  const { full: yard, compact: compactYard } = exactYardProjection(
+    state,
+    LURE_FIRST_BEAT_SETTLED_GUIDANCE,
+  );
   expect(yard.description).not.toMatch(/young wolf is through|flank-wolf holds/i);
   expect(yard.available_actions.map((option) => option.id)).toContain("go_west");
   expect(yard.available_actions.map((option) => option.id)).not.toContain("go_north");
@@ -205,11 +305,6 @@ function lureRoute(
     direction: "north",
     message: NORTH_PENDING_GUIDANCE,
   });
-  const compactYard = compactRpgObservation(
-    yard,
-    yard.available_actions.map((action) => action.id),
-    { includeActions: true },
-  );
   expect(compactYard.actions).toContain("go_west");
   expect(compactYard.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
   expect(NORTH_PENDING_GUIDANCE).toMatch(/LURE:[^]*go west\/up for the second cast/i);
@@ -224,6 +319,15 @@ function lureRoute(
   expect(state.flags.flank_redirected).toBe(true);
   act("go_east");
   expect(buildRpgObservation(index, state).enemies_present).toEqual([]);
+  const beforeSecondCastBacktrack = structuredClone(state);
+  act("go_south");
+  act("go_south");
+  assertCommittedLureYard(state);
+  expect(state.flags.flank_redirected).toBe(true);
+  expect(state.flags.yearling_redirected || state.flags.yearling_down).toBe(true);
+  act("go_north");
+  act("go_north");
+  expectOnlyStepAdvanced(state, beforeSecondCastBacktrack, 4);
   act("go_north");
   act("use_winter_feed_sack_on_outer_scent_gate");
   expect(state.flags.leader_redirected).toBe(true);
@@ -409,6 +513,53 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
     expect(buildRpgObservation(index, hybrid.state).ending?.text).not.toMatch(
       /all three wolves alive/i,
     );
+  });
+
+  it("keeps no-feed, protocol, resolved west-up, open, and HUNT states outside the held-feed fallback", () => {
+    const protocol = lureRoute("fouled", "none", true);
+    expect(protocol.actions.filter((id) => id === "use_relief_protocol_docket")).toEqual([
+      "use_relief_protocol_docket",
+    ]);
+    expect(protocol.state.flags).toMatchObject({
+      relief_protocol_prepared: true,
+      relief_protocol_attempted: true,
+      pack_diverted: true,
+    });
+
+    let open = initStateForRpgPack(index, 905);
+    open = stepById(open, "go_north");
+    const openBefore = structuredClone(open);
+    const openFull = buildRpgObservation(index, open);
+    const openActionIds = openFull.available_actions.map((action) => action.id);
+    const openCompact = compactRpgObservation(openFull, openActionIds, { includeActions: true });
+    expect(openFull.description).toMatch(
+      /cross north uncommitted[^]*Talk to Cade here to compare HUNT, LURE, DRIVE, and FORTIFY/i,
+    );
+    expect(openFull.description.trimEnd()).not.toBe(COMMITTED_LURE_YARD_GUIDANCE);
+    expect(openCompact.text).toBe(openFull.description.trimEnd());
+    expect(openCompact.actions).toEqual(openActionIds);
+    expect(openActionIds).toEqual(expect.arrayContaining(["go_north", "talk_houndsman"]));
+    expect(open.flags.strategy_lure_committed).not.toBe(true);
+    expect(open).toEqual(openBefore);
+
+    let hunt = stepById(open, "go_north");
+    hunt = stepById(hunt, "go_south");
+    const huntBefore = structuredClone(hunt);
+    const huntFull = buildRpgObservation(index, hunt);
+    const huntActionIds = huntFull.available_actions.map((action) => action.id);
+    const huntCompact = compactRpgObservation(huntFull, huntActionIds, {
+      includeActions: true,
+    });
+    expect(hunt.current).toBe("byre_yard");
+    expect(hunt.visited.paling_gap).toBe(true);
+    expect(hunt.flags.strategy_lure_committed).not.toBe(true);
+    expect(hunt.flags.strategy_drive_committed).not.toBe(true);
+    expect(hunt.flags.strategy_fortify_committed).not.toBe(true);
+    expect(huntFull.description.trimEnd()).not.toBe(COMMITTED_LURE_YARD_GUIDANCE);
+    expect(huntCompact.text).toBe(huntFull.description.trimEnd());
+    expect(huntCompact.actions).toEqual(huntActionIds);
+    expect(huntActionIds).toEqual(expect.arrayContaining(["go_north", "go_south", "go_west"]));
+    expect(hunt).toEqual(huntBefore);
   });
 
   it("shows exact current and next pressure thresholds in full and compact observations", () => {

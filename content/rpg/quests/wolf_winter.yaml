@@ -294,6 +294,12 @@ rooms:
           The trampled yard before the cattle-byre. Old Cade waits beside the day-book
           and open store-shed. North, all three wolves lie dead from broken paling to
           back wall; beyond the grey leader, the cattle stand whole. The yard gate is south.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_item: winter_feed_sack }
+        text: >
+          LURE is committed; HUNT, DRIVE, and FORTIFY are closed. Go north to continue
+          the one-sack feed line or its current recovery step.
       - when: [{ has_flag: flank_wolf_down }]
         text: >
           The trampled yard before the cattle-byre. Old Cade waits beside the day-book;
