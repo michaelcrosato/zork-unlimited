@@ -15,7 +15,7 @@ import type { GameState } from "../../src/core/state.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 
 const NORTH_PENDING_GUIDANCE =
-  "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft.";
+  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
@@ -25,11 +25,23 @@ const LIVING_BOUNDARY =
   /(?:name hunt[^]*cross uncommitted|cross (?:north )?uncommitted[^]*hunt|hunt commits[^]*north crossing)[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast|closes[^]*(?:other plans|other three))/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
-function act(state: GameState, actionId: string): GameState {
+function act(state: GameState, actionId: string, forcedRoll?: number): GameState {
   const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === actionId);
   expect(option, `${actionId} must be legal in ${state.current}`).toBeDefined();
   if (!option) throw new Error(`Missing ${actionId}.`);
-  const result = makeStep(buildRpgRules(index))(state, option.action);
+  let rules = buildRpgRules(index);
+  if (forcedRoll !== undefined) {
+    const roll = forcedRoll;
+    rules = buildRpgRules(index, () => ({
+      next: () => 0.5,
+      int: (min, max) => {
+        expect(roll).toBeGreaterThanOrEqual(min);
+        expect(roll).toBeLessThanOrEqual(max);
+        return roll;
+      },
+    }));
+  }
+  const result = makeStep(rules)(state, option.action);
   expect(result.ok, result.rejectionReason).toBe(true);
   return result.state;
 }
@@ -239,10 +251,19 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       (exit) => exit.direction === "north",
     )?.message;
     expect(pendingNorth).toBe(NORTH_PENDING_GUIDANCE);
-    expect(pendingNorth).not.toMatch(/June/i);
-    expect(pendingNorth).toMatch(/pre-cast feed/i);
-    expect(compactRpgObservation(committedPickup, [], { includeActions: true }).text).toMatch(
+    expect(pendingNorth).toMatch(/LURE:[^]*fetch feed west/i);
+    const compactPickup = compactRpgObservation(
+      committedPickup,
+      committedPickup.available_actions.map((action) => action.id),
+      { includeActions: true },
+    );
+    expect(compactPickup.text).toMatch(
       /go west[^]*take the winter-feed sack[^]*return east[^]*go north/i,
+    );
+    expect(compactPickup.actions).toContain("go_west");
+    expect(compactPickup.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+    expect(compactPickup.blocked?.find(([direction]) => direction === "north")?.[1]).not.toMatch(
+      TRUNCATION_MARKER,
     );
     committed = act(committed, "go_west");
     const committedStore = observation(committed);
@@ -265,6 +286,31 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     expect(enumerateRpgActions(index, committed).map((action) => action.id)).toContain(
       "use_winter_feed_sack_on_downwind_feed_line",
     );
+
+    let docket = act(structuredClone(committed), "use_winter_feed_sack_on_downwind_feed_line", 1);
+    docket = act(docket, "wedge_paling_rail", 1);
+    docket = act(docket, "bind_paling_rail");
+    docket = act(docket, "use_split_rail_guard_on_downwind_feed_line");
+    docket = act(docket, "go_south");
+    const docketYard = observation(docket);
+    expect(docketYard.description).toMatch(/sealed docket[^]*call its named sequence here/i);
+    expect(docketYard.available_actions.map((action) => action.id)).toContain(
+      "use_relief_protocol_docket",
+    );
+    expect(docketYard.blocked_exits).toContainEqual({
+      direction: "north",
+      message: NORTH_PENDING_GUIDANCE,
+    });
+    const compactDocketYard = compactRpgObservation(
+      docketYard,
+      docketYard.available_actions.map((action) => action.id),
+      { includeActions: true },
+    );
+    expect(compactDocketYard.text).toMatch(/sealed docket[^]*call its named sequence here/i);
+    expect(compactDocketYard.actions).toContain("use_relief_protocol_docket");
+    expect(compactDocketYard.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+    expect(NORTH_PENDING_GUIDANCE).toMatch(/LURE: call any shown docket/i);
+
     committed = act(committed, "go_south");
     committed = act(committed, "talk_houndsman");
     const afterCommittedCrossing = observation(committed);

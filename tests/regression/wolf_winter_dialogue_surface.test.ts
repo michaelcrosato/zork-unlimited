@@ -31,6 +31,8 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
+const NORTH_PENDING_GUIDANCE =
+  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 
 type StepResult = { ok: boolean };
 type LegalActionsResult = { actions: { id: string }[] };
@@ -393,15 +395,31 @@ describe("Wolf-Winter dialogue surface", () => {
 
     state = act(state, { type: "ASK", npc: "houndsman", topic: "wolves" });
     state = act(state, { type: "ASK", npc: "houndsman", topic: "leave" });
-    expect(legalActionIds(state)).not.toContain("go_north");
-    expect(legalActionIds(state)).toContain("talk_june_pike");
-    expect(buildRpgObservation(index, state).blocked_exits).toContainEqual({
+    const beforeJune = buildRpgObservation(index, state);
+    expect(beforeJune.available_actions.map((action) => action.id)).not.toContain("go_north");
+    expect(beforeJune.available_actions.map((action) => action.id)).toContain("talk_june_pike");
+    expect(beforeJune.blocked_exits).toContainEqual({
       direction: "north",
-      message: expect.stringMatching(/acknowledge a hunt-and-hold warning/i),
+      message: NORTH_PENDING_GUIDANCE,
     });
+    const compactBeforeJune = compactRpgObservation(beforeJune, beforeJune.available_actions, {
+      includeActions: true,
+    });
+    expect(compactBeforeJune.actions).toContain("talk_june_pike");
+    expect(compactBeforeJune.actions).not.toContain("go_north");
+    expect(compactBeforeJune.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
 
     state = act(state, { type: "TALK", npc: "june_pike" });
     const juneBoundary = buildRpgObservation(index, state);
+    expect(juneBoundary.blocked_exits).toContainEqual({
+      direction: "north",
+      message: NORTH_PENDING_GUIDANCE,
+    });
+    expect(
+      compactRpgObservation(juneBoundary, juneBoundary.available_actions, {
+        includeActions: true,
+      }).blocked,
+    ).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
     expect(juneBoundary.dialogue?.npc_text).toMatch(
       /Choose by outcome[^]*HUNT holds Cade's ground[^]*LURE relocates[^]*DRIVE evacuates[^]*FORTIFY keeps household, herd, and pack apart/i,
     );

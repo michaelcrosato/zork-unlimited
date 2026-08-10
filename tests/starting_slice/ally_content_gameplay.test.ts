@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { Rng } from "../../src/core/rng.js";
 import type { GameState } from "../../src/core/state.js";
+import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -52,7 +53,7 @@ const RELAY = "albany:ally_june_relay_only";
 const SOLO = "albany:ally_travel_solo";
 const JUNE_PROMISE = "albany:promise_june_cattle_first";
 const NORTH_PENDING_GUIDANCE =
-  "North waits for the applicable step: acknowledge a hunt-and-hold warning; carry pre-cast feed, drive rig, shutters, or seals; or finish the lure's second cast in the loft.";
+  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 
 function withoutWolfReturnSceneOverlays<T extends typeof world>(manifest: T): T {
   for (const localAction of [...manifest.local_events, ...manifest.local_jobs]) {
@@ -321,8 +322,16 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
       direction: "north",
       message: NORTH_PENDING_GUIDANCE,
     });
-    expect(NORTH_PENDING_GUIDANCE).not.toMatch(/June/i);
-    expect(NORTH_PENDING_GUIDANCE).toMatch(/hunt-and-hold warning/i);
+    const compactBoundary = compactRpgObservation(
+      boundary,
+      boundary.available_actions.map((action) => action.id),
+      { includeActions: true },
+    );
+    expect(compactBoundary.text).toMatch(/June holds the north gate/i);
+    expect(compactBoundary.actions).toContain("talk_june_pike");
+    expect(compactBoundary.actions).not.toContain("go_north");
+    expect(compactBoundary.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+    expect(NORTH_PENDING_GUIDANCE).toMatch(/talk to June before HUNT/i);
 
     withJune = act(withJune, "talk_june_pike");
     expect(actionIds(withJune)).toEqual(

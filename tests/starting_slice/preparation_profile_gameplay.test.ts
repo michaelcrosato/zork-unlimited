@@ -32,6 +32,9 @@ import { applyOpeningReliefOathOption } from "../../src/world/opening_relief_oat
 import { applyOverworldQuestLaunchOption } from "../../src/world/quest_launch.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
+const NORTH_PENDING_GUIDANCE =
+  "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+
 const world = loadOverworldManifest(process.cwd());
 const preparation =
   world.opening_preparation ??
@@ -969,12 +972,49 @@ describe("SS-F05 — Albany preparation profile gameplay", () => {
     expect(splitGuard.current).toBe("byre_yard");
     expect(actionIds(splitGuard)).toContain("use_relief_protocol_docket");
     const splitGuardObservation = buildRpgObservation(index, splitGuard);
+    const splitGuardCompact = compactRpgObservation(
+      splitGuardObservation,
+      splitGuardObservation.available_actions,
+      { includeActions: true },
+    );
     expect(splitGuardObservation.description).toMatch(
       /Cade holds Jamie's sealed docket[^]*call its named sequence here/i,
     );
-    expect(compactRpgObservation(splitGuardObservation, []).text).toMatch(
+    expect(splitGuardObservation.available_actions.map((action) => action.id)).toEqual(
+      expect.arrayContaining(["use_relief_protocol_docket", "go_west"]),
+    );
+    expect(splitGuardObservation.blocked_exits).toContainEqual({
+      direction: "north",
+      message: NORTH_PENDING_GUIDANCE,
+    });
+    expect(splitGuardCompact.text).toMatch(
       /Cade holds Jamie's sealed docket[^]*call its named sequence here/i,
     );
+    expect(splitGuardCompact.actions).toEqual(
+      expect.arrayContaining(["use_relief_protocol_docket", "go_west"]),
+    );
+    expect(splitGuardCompact.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
+
+    splitGuard = act(splitGuard, "use_relief_protocol_docket");
+    expect(splitGuard.flags.relief_protocol_attempted).toBe(true);
+    expect(actionIds(splitGuard)).not.toContain("use_relief_protocol_docket");
+    expect(actionIds(splitGuard)).toContain("go_west");
+    const afterProtocol = buildRpgObservation(index, splitGuard);
+    const afterProtocolCompact = compactRpgObservation(
+      afterProtocol,
+      afterProtocol.available_actions,
+      { includeActions: true },
+    );
+    expect(afterProtocol.available_actions.map((action) => action.id)).not.toContain(
+      "use_relief_protocol_docket",
+    );
+    expect(afterProtocol.blocked_exits).toContainEqual({
+      direction: "north",
+      message: NORTH_PENDING_GUIDANCE,
+    });
+    expect(afterProtocolCompact.actions).toContain("go_west");
+    expect(afterProtocolCompact.actions).not.toContain("use_relief_protocol_docket");
+    expect(afterProtocolCompact.blocked).toContainEqual(["north", NORTH_PENDING_GUIDANCE]);
 
     let braced = foulFirstCast(profileState(RELIEF, LEDGER));
     braced = act(braced, "wedge_paling_rail", 20);

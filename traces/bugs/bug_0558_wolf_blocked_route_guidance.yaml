@@ -1,0 +1,103 @@
+id: bug_0558
+title: "Wolf-Winter's blocked north hint obscured the room's immediate route cue"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: 2026-08-10T03-46-21-407Z accepted pure fresh-overworld LURE playtest
+severity: S1
+evidence:
+  source_run: 2026-08-10T03-46-21-407Z
+  source_commit: 16cf2c6540e7a26345e557130f3d78c421993729
+  source_report_id: pure:0869a6d0ccb59a67f707aeabea88de8ffea57da422be1e6c263bd65a23460e29
+  source_report: ai-runs/2026-08-10T03-46-21-407Z/playtest.md
+  source_raw: ai-runs/2026-08-10T03-46-21-407Z/playtest.codex.jsonl
+  pre_cast_witness: "item_12 commits LURE and exposes the generic north block beside legal go_west; items 13-19 follow the room's west/pickup/east/north route and complete the first cast"
+  second_cast_witness: "item_20 returns south to the yard and exposes the same generic north block beside legal go_west; items 21-23 follow the room's west/up route and complete the second cast"
+  interview_boundary: "The player rated clarity 4 and enjoyment 4, would replay, was not stuck, and reported bugs: []. The report called the blocked wording accurate but inferential and the movement cadence dense."
+  prior_lure_counterexamples:
+    - "2026-08-09T18-49-03-763Z at eff02eb8e7147264a92b4159eb6ea4a7a08c2528 saw the same block and completed ending_pack_diverted_cattle_scattered at 4/4, not stuck, bugs: []"
+    - "2026-08-09T20-17-10-580Z at 9b4940834b44e3fd321539de3923ee20a01a478d saw the same block and completed ending_pack_diverted at 4/4, not stuck, bugs: []"
+  prior_fortify_counterexamples:
+    - "2026-08-09T22-07-00-576Z at 8707f6307eefffa8e3c6acc6644bbcd0cfb6506f saw the same block and completed ending_fortified_cade_terms at 4/5, not stuck, bugs: []"
+    - "2026-08-09T23-52-24-726Z at 2b16e73194ab3ef2abe6925bbc868e97e62eff95 saw the same block and completed ending_fortified_cade_terms at 5/4, not stuck, bugs: []"
+    - "2026-08-10T01-54-44-511Z at 370130d9db1fd554429a3a333028f612a772ef08 saw the same block and completed ending_fortified_cade_terms at 4/4, not stuck, bugs: []"
+  cycle18_run: 2026-08-10T06-37-25-261Z
+  cycle18_selection: playtest-wolf_winter
+  accepted_unconsumed_recommendation: hotspot-07988b93
+test_witnesses:
+  june_hunt:
+    path: tests/starting_slice/ally_content_gameplay.test.ts
+    case: "makes the hidden paling commitment explicit before June permits an ordinary combat line"
+  june_consequence_dialogue:
+    path: tests/regression/wolf_winter_dialogue_surface.test.ts
+    case: "uses June's explicit HUNT commitment to disclose the wolf-death consequence"
+  lure_pickup_and_docket:
+    path: tests/regression/wolf_winter_uncommitted_living_boundary.test.ts
+    case: "warns seed4174's no-June aid-only route before crossing, retires living actions after it, and preserves a committed lure"
+  lure_second_cast:
+    path: tests/starting_slice/wolf_strategy_counterfactual.test.ts
+    case: "redirects all three living wolves without selecting combat and exports a clean nondeath identity"
+  relief_docket:
+    path: tests/starting_slice/preparation_profile_gameplay.test.ts
+    case: "opens Relief only at Cade after the spent split guard, never after a braced rail"
+  drive_and_fortify_gear:
+    path: tests/regression/wolf_winter_authority_commitment_boundary.test.ts
+    cases:
+      - "discloses seed4177's authority commitment in full and compact before the step, then closes the other lines"
+      - "keeps one truthful north gate while the $strategy resource waits, then opens it once carried"
+  content_hash:
+    path: tests/regression/wolf_winter_compact_surface.test.ts
+    case: "keeps the disclosures copy-only at the lesson, gauntlet, and source-hash boundaries"
+  save_and_replay_hash:
+    path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    case: "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+symptom: >
+  The successful LURE player saw the same north block before picking up feed and
+  after returning from the first cast. Its phrase "the applicable step" compressed
+  HUNT, LURE, DRIVE, and FORTIFY prerequisites into one mechanical list instead of
+  pointing back to the immediate cue and legal action already shown in the current
+  room. The player followed both routes correctly and finished at 4/4, but described
+  the resulting state-and-movement reading as a small cognitive load. Five earlier
+  successful LURE/FORTIFY exposures are counterevidence to hidden actions, a dead
+  end, or a mechanics defect; this is bounded S1 copy density.
+root_cause: >
+  The byre-yard north exit has one static locked_msg shared by every state in which
+  its existing conditions keep north closed. The old union named abstract
+  prerequisites without route labels and did not connect "applicable" to the room's
+  visible June conversation, relief docket, westward pickup, loft path, or named
+  DRIVE/FORTIFY gear. The surrounding room copy and legal-action projection already
+  exposed the correct next step, so no condition or affordance was missing.
+fix: >
+  Change only that static locked message to: "North waits. Follow this room's cue:
+  talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go
+  west/up for the second cast; DRIVE/FORTIFY: take named gear." The route labels
+  turn the shared union into a compact index back to the current room surface while
+  "any shown docket" avoids promising a recovery action outside its authored state.
+  Preserve every exit condition, action, route, resource, and consequence.
+deterministic_witnesses:
+  - "the June-held HUNT boundary exposes the exact 175-character hint and talk_june_pike in both full and compact surfaces; north remains closed until the existing warning acknowledgment"
+  - "June's HUNT commitment dialogue still discloses the wolf-death consequence explicitly; the copy-only blocked-route change does not restore the retired 'ordinary combat line' wording"
+  - "committed LURE before feed pickup exposes go_west and the exact full/compact block; carrying winter_feed_sack still opens north without another state change"
+  - "post-first-cast LURE exposes go_west and the same block, then the unchanged west/up path makes the loft second cast legal"
+  - "the failed-cast split-guard recovery exposes use_relief_protocol_docket only in its authored yard state; after that one-shot call, go_west remains the visible route and the block remains truthful"
+  - "committed DRIVE, Cade FORTIFY, and Albany-authority FORTIFY each expose their named gear action with the exact full/compact block; taking that gear still opens north"
+  - "full and compact projections contain exactly one blocked north entry, no north exit/action while pending, and no truncation marker in the 175-character message"
+  - "the exact Wolf-Winter compiled source hash advances from 1bdbd697d7a3c287b1a3bb2e22dd5aa8f793442a7eba39d4af11fffa1e157610 to 189b14d70a68c0c795167baa9dae695f56c9f3b99bd33151d6a4ece87d083b3b"
+nonclaims:
+  - "This does not claim the source player attempted blocked north, chose a wrong movement, reached a dead end, found a hidden action, got stuck, or reported a bug. Raw items 12-23 show immediate successful use of the room's legal cues."
+  - "The report's hypothetical language about a wrong movement dead-ending the plan is not a reproduced state-machine failure; prior successful LURE and FORTIFY runs independently counterexample that stronger interpretation."
+  - "This does not make the static message state-specific or promise that June, a relief docket, every LURE phase, and every gear item are simultaneously present. It directs the player to whichever cue the current room actually shows."
+  - "This does not add, remove, rename, reorder, or reveal an action; change an exit condition, flag, item, dialogue, check, score, decision, checkpoint, ending, combat beat, or route; or alter save schema or serialization."
+  - "This does not preserve the prior content hash. Existing 1bdb content-hash-bound Wolf saves intentionally reject against the new 189b source under the unchanged integrity policy."
+  - "This on-list maintenance fix selects exact candidate playtest-wolf_winter; it does not select or consume accepted recommendation hotspot-07988b93."
+tests:
+  - tests/starting_slice/ally_content_gameplay.test.ts
+  - tests/regression/wolf_winter_dialogue_surface.test.ts
+  - tests/regression/wolf_winter_uncommitted_living_boundary.test.ts
+  - tests/starting_slice/wolf_strategy_counterfactual.test.ts
+  - tests/starting_slice/preparation_profile_gameplay.test.ts
+  - tests/regression/wolf_winter_authority_commitment_boundary.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/wolf_winter_paling_stage_actions.test.ts
+verification:
+  - npx vitest run tests/starting_slice/ally_content_gameplay.test.ts tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_uncommitted_living_boundary.test.ts tests/starting_slice/wolf_strategy_counterfactual.test.ts tests/starting_slice/preparation_profile_gameplay.test.ts tests/regression/wolf_winter_authority_commitment_boundary.test.ts tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts
+  - npm run validate -- wolf_winter
+  - npm run verify:bug-traces
