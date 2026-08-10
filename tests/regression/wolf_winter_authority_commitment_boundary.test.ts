@@ -7,6 +7,8 @@
 import { describe, expect, it } from "vitest";
 
 import { makeStep } from "../../src/core/engine.js";
+import { hashState } from "../../src/core/hash.js";
+import type { Rng } from "../../src/core/rng.js";
 import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { createToolApi } from "../../src/mcp/tools.js";
@@ -29,12 +31,51 @@ const FULL_DUTY_TERMS =
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+const YARD_BLOCKED_SOUTH =
+  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
+const YARD_BLOCKED_WEST =
+  "West is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
+const PALING_BLOCKED_SOUTH =
+  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: follow shown paling steps until north opens.";
+const THRESHOLD_BLOCKED_SOUTH =
+  "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: finish any shown threshold step, then go north.";
+const MOUTH_BLOCKED_SOUTH =
+  "South is closed. LURE complete: go north for the cattle count. DRIVE: resolve the crisis. FORTIFY: hold the dawn watch.";
+const YARD_SECONDARY_BLOCKS = [
+  ["south", YARD_BLOCKED_SOUTH],
+  ["west", YARD_BLOCKED_WEST],
+] as const;
+const PALING_SECONDARY_BLOCKS = [["south", PALING_BLOCKED_SOUTH]] as const;
+const THRESHOLD_SECONDARY_BLOCKS = [["south", THRESHOLD_BLOCKED_SOUTH]] as const;
+const MOUTH_SECONDARY_BLOCKS = [["south", MOUTH_BLOCKED_SOUTH]] as const;
+const ALL_SECONDARY_BLOCKED_COPY = [
+  YARD_BLOCKED_SOUTH,
+  YARD_BLOCKED_WEST,
+  PALING_BLOCKED_SOUTH,
+  THRESHOLD_BLOCKED_SOUTH,
+  MOUTH_BLOCKED_SOUTH,
+] as const;
 
-function act(state: GameState, actionId: string): GameState {
+type DirectionProjection = readonly [direction: string, destination: string];
+type BlockProjection = readonly [direction: string, message: string];
+
+type Roll = "best" | "worst";
+
+function fixedRng(face: Roll): Rng {
+  return {
+    next: () => (face === "best" ? 0.999999 : 0),
+    int: (min, max) => (face === "best" ? max : min),
+  };
+}
+
+function act(state: GameState, actionId: string, face?: Roll): GameState {
   const option = enumerateRpgActions(index, state).find((candidate) => candidate.id === actionId);
   expect(option, `${actionId} must be legal in ${state.current}`).toBeDefined();
   if (!option) throw new Error(`Missing ${actionId}.`);
-  const result = makeStep(buildRpgRules(index))(state, option.action);
+  const result = makeStep(buildRpgRules(index, face ? () => fixedRng(face) : undefined))(
+    state,
+    option.action,
+  );
   expect(result.ok, result.rejectionReason).toBe(true);
   return result.state;
 }
@@ -88,7 +129,67 @@ function assertNorthOpenOnce(state: GameState): void {
   expect(compactNorthBlocks).toEqual([]);
 }
 
-function launchSeed4177Imports(): GameState {
+function assertSecondaryBlockedSurface(
+  state: GameState,
+  expected: readonly BlockProjection[],
+  requiredActionIds: readonly string[] = [],
+): void {
+  const beforeHash = hashState(state);
+  const full = observation(state);
+  const actionIds = full.available_actions.map((action) => action.id);
+  const compact = compactRpgObservation(full, actionIds, { includeActions: true });
+  const secondaryDirections = new Set(["south", "west"]);
+
+  expect(full.blocked_exits.filter((exit) => secondaryDirections.has(exit.direction))).toEqual(
+    expected.map(([direction, message]) => ({ direction, message })),
+  );
+  expect(
+    (compact.blocked ?? []).filter(([direction]) => secondaryDirections.has(direction)),
+  ).toEqual(expected);
+  expect(compact.actions).toEqual(actionIds);
+  for (const [direction, message] of expected) {
+    expect(actionIds).not.toContain(`go_${direction}`);
+    expect(message).not.toMatch(TRUNCATION_MARKER);
+  }
+  for (const actionId of requiredActionIds) {
+    expect(actionIds).toContain(actionId);
+    expect(compact.actions).toContain(actionId);
+  }
+  expect(hashState(state)).toBe(beforeHash);
+}
+
+function assertSecondaryRoutesOpen(
+  state: GameState,
+  expected: readonly DirectionProjection[],
+): void {
+  const beforeHash = hashState(state);
+  const full = observation(state);
+  const actionIds = full.available_actions.map((action) => action.id);
+  const compact = compactRpgObservation(full, actionIds, { includeActions: true });
+  const expectedDirections = new Set(expected.map(([direction]) => direction));
+
+  expect(full.exits.filter((exit) => expectedDirections.has(exit.direction))).toEqual(
+    expected.map(([direction, destination]) => ({ direction, to: destination })),
+  );
+  expect(
+    (compact.exits ?? []).filter(
+      (exit) => typeof exit !== "string" && expectedDirections.has(exit[0]),
+    ),
+  ).toEqual(expected);
+  expect(full.blocked_exits.filter((exit) => expectedDirections.has(exit.direction))).toEqual([]);
+  expect(
+    (compact.blocked ?? []).filter(([direction]) => expectedDirections.has(direction)),
+  ).toEqual([]);
+  for (const [direction] of expected) expect(actionIds).toContain(`go_${direction}`);
+  expect(compact.actions).toEqual(actionIds);
+  expect(hashState(state)).toBe(beforeHash);
+}
+
+function launchSeed4177Imports(
+  preparationChoice:
+    | "albany:prep_works_fortification"
+    | "albany:prep_drover_route" = "albany:prep_works_fortification",
+): GameState {
   const api = createToolApi({ root: process.cwd() });
   const started = api.start_overworld({ compact_context: false });
   const sessionId = started.session_id;
@@ -137,7 +238,7 @@ function launchSeed4177Imports(): GameState {
     ...FULL,
     session_id: sessionId,
     story_choice_id: "albany:wolf_preparation",
-    choice: "albany:prep_works_fortification",
+    choice: preparationChoice,
   });
   const wolf = prepared.observation.quests.find((quest) => quest.id === "wolf_winter");
   if (!wolf) throw new Error("Hayden's report and Reese's plan must reveal Wolf-Winter.");
@@ -160,6 +261,10 @@ function launchSeed4177Imports(): GameState {
   });
   const state = structuredClone(api.sessions.get(launched.rpg_session_id).state);
   expect(state.flags.june_pike_present).not.toBe(true);
+  const preparationRules =
+    preparationChoice === "albany:prep_drover_route"
+      ? ["import:wolf_winter_drover_route"]
+      : ["import:wolf_winter_works_fortification"];
   expect(state.campaignImportReceipt?.applied_rules).toEqual(
     expect.arrayContaining([
       "import:wolf_winter_approach_sheltered_stockway",
@@ -167,8 +272,8 @@ function launchSeed4177Imports(): GameState {
       "import:wolf_winter_frost_report",
       "import:wolf_winter_full_compact_duty",
       "import:wolf_winter_lure_fieldcraft",
-      "import:wolf_winter_works_fortification",
       "import:wolf_winter_relief_mobile_reserve",
+      ...preparationRules,
     ]),
   );
   return state;
@@ -258,32 +363,74 @@ describe("Wolf-Winter authority commitment boundary", () => {
       expect.arrayContaining(["go_south", "go_west", "ask_lure", "ask_drive", "ask_fortify"]),
     );
 
+    assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS, ["take_albany_relief_seals"]);
     assertNorthBlockedOnce(state, "take_albany_relief_seals");
     expect(NORTH_PENDING_GUIDANCE.length).toBe(175);
     expect(NORTH_PENDING_GUIDANCE.length).toBeLessThanOrEqual(180);
 
     state = act(state, "take_albany_relief_seals");
+    assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS);
     assertNorthOpenOnce(state);
+  });
+
+  it("keeps all five secondary route messages within their shared projection budget", () => {
+    const metrics = ALL_SECONDARY_BLOCKED_COPY.map((message) => ({
+      chars: message.length,
+      words: message.trim().split(/\s+/u).length,
+    }));
+
+    expect(metrics).toEqual([
+      { chars: 113, words: 19 },
+      { chars: 112, words: 19 },
+      { chars: 122, words: 19 },
+      { chars: 125, words: 20 },
+      { chars: 119, words: 20 },
+    ]);
+    expect(Math.max(...metrics.map(({ chars }) => chars))).toBeLessThanOrEqual(125);
+    expect(metrics.reduce((total, { chars }) => total + chars, 0)).toBeLessThanOrEqual(600);
+    expect(ALL_SECONDARY_BLOCKED_COPY.every((message) => !TRUNCATION_MARKER.test(message))).toBe(
+      true,
+    );
   });
 
   it.each([
     {
-      strategy: "drive",
+      strategy: "DRIVE",
       discuss: "ask_drive",
       commit: "ask_commit_drive",
       committedFlag: "strategy_drive_committed",
       pickup: "take_drive_signal_rope_kit",
+      outer: "use_drive_signal_rope_kit_on_drive_breach_signal",
+      threshold: "use_drive_signal_rope_kit_on_drive_threshold_line",
+      finalActions: [
+        "use_cattle_crisis_priority",
+        "use_person_crisis_priority",
+        "use_reserve_crisis_priority",
+      ],
     },
     {
-      strategy: "Cade fortification",
+      strategy: "Cade FORTIFY",
       discuss: "ask_fortify",
       commit: "ask_commit_cade_terms",
       committedFlag: "fortify_cade_terms_accepted",
       pickup: "take_cade_household_shutters",
+      outer: "use_cade_household_shutters_on_fortify_outer_seal",
+      threshold: "use_cade_household_shutters_on_fortify_threshold_seal",
+      finalActions: ["use_fortify_dawn_watch"],
+    },
+    {
+      strategy: "Albany FORTIFY",
+      discuss: "ask_fortify",
+      commit: "ask_commit_albany_authority",
+      committedFlag: "fortify_albany_authority_invoked",
+      pickup: "take_albany_relief_seals",
+      outer: "use_albany_relief_seals_on_fortify_outer_seal",
+      threshold: "use_albany_relief_seals_on_fortify_threshold_seal",
+      finalActions: ["use_fortify_dawn_watch"],
     },
   ])(
-    "keeps one truthful north gate while the $strategy resource waits, then opens it once carried",
-    ({ discuss, commit, committedFlag, pickup }) => {
+    "keeps all five secondary blocks exact in full and compact throughout $strategy",
+    ({ discuss, commit, committedFlag, pickup, outer, threshold, finalActions }) => {
       let state = launchSeed4177Imports();
       state = act(state, "use_sheltered_stockway_last_mile");
       state = act(state, "talk_houndsman");
@@ -293,10 +440,121 @@ describe("Wolf-Winter authority commitment boundary", () => {
 
       expect(state.flags[committedFlag]).toBe(true);
       expect(enumerateRpgActions(index, state).map((action) => action.id)).toContain(pickup);
+      assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS, [pickup]);
       assertNorthBlockedOnce(state, pickup);
 
       state = act(state, pickup);
+      assertSecondaryBlockedSurface(state, YARD_SECONDARY_BLOCKS);
       assertNorthOpenOnce(state);
+
+      state = act(state, "go_north");
+      assertSecondaryBlockedSurface(state, PALING_SECONDARY_BLOCKS, [outer]);
+      expect(enumerateRpgActions(index, state).map((action) => action.id)).not.toContain(
+        "go_north",
+      );
+
+      state = act(state, outer, "best");
+      assertSecondaryBlockedSurface(state, PALING_SECONDARY_BLOCKS, ["go_north"]);
+      state = act(state, "go_north");
+      assertSecondaryBlockedSurface(state, THRESHOLD_SECONDARY_BLOCKS, [threshold]);
+      expect(enumerateRpgActions(index, state).map((action) => action.id)).not.toContain(
+        "go_north",
+      );
+
+      state = act(state, threshold);
+      assertSecondaryBlockedSurface(state, THRESHOLD_SECONDARY_BLOCKS, ["go_north"]);
+      state = act(state, "go_north");
+      assertSecondaryBlockedSurface(state, MOUTH_SECONDARY_BLOCKS, finalActions);
     },
   );
+
+  it("keeps prepared DRIVE on the shown paling sequence until hurdle recovery opens north", () => {
+    let state = launchSeed4177Imports("albany:prep_drover_route");
+    expect(state.flags.drover_route_prepared).toBe(true);
+    expect(state.campaignImportReceipt?.applied_rules).toEqual(
+      expect.arrayContaining(["import:wolf_winter_drover_route"]),
+    );
+
+    for (const actionId of [
+      "use_sheltered_stockway_last_mile",
+      "talk_houndsman",
+      "ask_drive",
+      "ask_commit_drive",
+      "ask_leave",
+      "take_drive_signal_rope_kit",
+      "go_north",
+    ]) {
+      state = act(state, actionId);
+    }
+
+    state = act(state, "use_drive_signal_rope_kit_on_drive_breach_signal", "worst");
+    expect(state.flags).toMatchObject({
+      drive_opening_fouled: true,
+      drover_route_prepared: true,
+    });
+    expect(state.flags.drive_yearling_turned).not.toBe(true);
+    expect(state.vars.pack_drive).toBe(2);
+    assertSecondaryBlockedSurface(state, PALING_SECONDARY_BLOCKS, [
+      "use_drive_drover_route_marks",
+      "use_drive_hurdle_recovery",
+    ]);
+    expect(enumerateRpgActions(index, state).map((action) => action.id)).not.toContain("go_north");
+
+    state = act(state, "use_drive_drover_route_marks", "best");
+    expect(state.flags.drover_route_attempted).toBe(true);
+    expect(state.flags.drive_yearling_turned).not.toBe(true);
+    expect(state.vars.pack_drive).toBe(1);
+    assertSecondaryBlockedSurface(state, PALING_SECONDARY_BLOCKS, ["use_drive_hurdle_recovery"]);
+    expect(enumerateRpgActions(index, state).map((action) => action.id)).not.toContain("go_north");
+
+    state = act(state, "use_drive_hurdle_recovery");
+    expect(state.flags.drive_yearling_turned).toBe(true);
+    assertSecondaryBlockedSurface(state, PALING_SECONDARY_BLOCKS, ["go_north"]);
+  });
+
+  it("leaves open, HUNT, and in-progress LURE return routes open while retaining bug_0558 north", () => {
+    let opening = launchSeed4177Imports();
+    opening = act(opening, "use_sheltered_stockway_last_mile");
+    assertSecondaryRoutesOpen(opening, [
+      ["south", "steading_yard"],
+      ["west", "store"],
+    ]);
+
+    let hunt = act(structuredClone(opening), "talk_houndsman");
+    hunt = act(hunt, "ask_commit_hunt_and_hold");
+    assertSecondaryRoutesOpen(hunt, [
+      ["south", "steading_yard"],
+      ["west", "store"],
+    ]);
+    hunt = act(hunt, "go_north");
+    assertSecondaryRoutesOpen(hunt, [["south", "byre_yard"]]);
+
+    let lure = act(structuredClone(opening), "talk_houndsman");
+    lure = act(lure, "ask_lure");
+    lure = act(lure, "ask_commit_lure");
+    lure = act(lure, "ask_leave");
+    assertSecondaryRoutesOpen(lure, [
+      ["south", "steading_yard"],
+      ["west", "store"],
+    ]);
+    assertNorthBlockedOnce(lure, "go_west");
+
+    lure = act(lure, "go_west");
+    lure = act(lure, "take_winter_feed_sack");
+    lure = act(lure, "go_east");
+    assertSecondaryRoutesOpen(lure, [
+      ["south", "steading_yard"],
+      ["west", "store"],
+    ]);
+    assertNorthOpenOnce(lure);
+    lure = act(lure, "go_north");
+    assertSecondaryRoutesOpen(lure, [["south", "byre_yard"]]);
+    expect(enumerateRpgActions(index, lure).map((action) => action.id)).toContain(
+      "use_winter_feed_sack_on_downwind_feed_line",
+    );
+
+    lure = act(lure, "use_winter_feed_sack_on_downwind_feed_line", "best");
+    assertSecondaryRoutesOpen(lure, [["south", "byre_yard"]]);
+    expect(lure.flags.pack_diverted).not.toBe(true);
+  });
 });
