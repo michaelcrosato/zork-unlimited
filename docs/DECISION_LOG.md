@@ -1102,3 +1102,57 @@ equivalent.
 This entry records architecture, not a green landing claim. Crawl, health,
 integrity drift, exact-revision blind evidence, PR `verify`, and merge status are
 filled from fresh output in the completion record's final checklist.
+
+### Ultraplan re-aim — 2026-08-11 (HEAD = 44689272; next move = RPG terminal-state coherence)
+
+**Confirmed CLOSED boundaries — do not re-nominate:**
+
+- **Replay divergence reporting remains complete.** `src/trace/replay.ts` already
+  reports `divergedAtStep`; the original closed entry above remains authoritative.
+  The programmatic getter/TOCTOU probe is a different, lower-impact API hardening
+  candidate, not evidence that divergence reporting regressed.
+- **Runtime terminal writes are already atomic.** `src/core/state.ts:98-111`
+  initializes `ended:false` with `endingId:null`, and
+  `src/core/effects.ts:269-273` is the sole gameplay writer and sets
+  `ended:true` with the authored ending id in one state update. No reducer,
+  ending, or content change is needed.
+- **Save v3's consistency boundary remains settled.** The 2026-08-06 entry above
+  keeps `stateHash` as a public deterministic consistency check rather than an
+  authenticator, preserves v1/v2 normalization, and reserves version bumps for
+  state-shape incompatibility. This cycle adds no envelope field, migration,
+  authentication claim, or save-version change.
+- **The one-runtime/one-world consolidation remains closed.**
+  `docs/ROADMAP.md:11-20` fixes RPG as the runtime and New York as the single
+  shipped world. The chosen repair is shared state integrity, not another mode,
+  world, or start path.
+- **The starting-slice content boundary and nineteen causal forks remain
+  frozen.** `docs/ROADMAP.md:64-95` keeps Albany -> Wolf-Winter as the bounded
+  milestone and freezes new towns and unrelated prose branches. No pack,
+  authored predicate, causal-matrix row, or certification rule changes here.
+
+**Open findings triaged:**
+
+- The starting-slice proof-ledger helper can false-pass a missing file on an
+  uncounted `proof_status:"proven"` row; this is the next-best verifier repair,
+  but every current proof file exists and exploiting it first requires changing
+  the ledger.
+- Authored-event predicate parity and timed event lifecycles lack a current
+  non-speculative consumer without expanding frozen Albany content. Predictable
+  evidence temp files, refined MCP schema publication, shallow event-decoration
+  snapshots, and programmatic trace getters are real hardening candidates but
+  rank below an already reachable public gameplay-state contradiction.
+
+**Chosen move — reject incoherent RPG terminal state at every untrusted state boundary.**
+
+`src/persist/save_load.ts:109-138` currently validates `ended` and `endingId`
+independently. A locally editable save with a recomputed public hash therefore
+loads with either `ended:true` / `endingId:null` (no rendered ending and no legal
+actions) or `ended:false` / a declared ending id (the ending is hidden and play
+continues while stale terminal identity remains). Require exactly
+`ended === (endingId !== null)` in the reusable well-formed-state assertion and
+route normalized v1/v2/v3 load state through that assertion before hashing.
+`tests/regression/save_load_referential_integrity.test.ts` must reject both
+hostile directions while retaining active and legitimately ended round trips;
+`traces/bugs/bug_0570_rpg_terminal_state_coherence.yaml` records the boundary.
+This is a rejection-only integrity strengthening: no valid engine-produced state,
+content hash, save envelope, action, ending, or observation changes.

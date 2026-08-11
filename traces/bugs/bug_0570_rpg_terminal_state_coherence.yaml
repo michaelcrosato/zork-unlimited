@@ -1,0 +1,70 @@
+id: bug_0570
+title: "Reject imported RPG states whose ended flag and endingId disagree"
+kind: engine
+mode: meta
+severity: enhancement
+layer: persistence/load-integrity
+artifact:
+  source: src/persist/save_load.ts
+  test: tests/regression/save_load_referential_integrity.test.ts
+
+summary: >
+  An RPG state is terminal exactly when it names an ending. Before this repair, the public save
+  loader validated `ended` as a boolean and `endingId` as a nullable string independently, so an
+  editor who recomputed the public v3 `stateHash` could import either incoherent pair. The loader
+  accepted `ended: true` with `endingId: null`, producing an unrendered hard stop with no legal
+  actions, and accepted `ended: false` with `endingId: "ending_victory"`, hiding a declared ending
+  while play continued. Both observations crossed a public untrusted-state boundary despite being
+  impossible runtime states.
+
+root_cause: >
+  `GameStateSchema` enforced each termination field's shape but no shared cross-field invariant.
+  Hashing only detects accidental inconsistency with the editable envelope; it does not establish
+  semantic validity or authenticate the state. Runtime ending writers are the counterexample to
+  treating these pairs as independent: they set `ended` and `endingId` atomically. A fresh active
+  runtime state is `false`/`null`, and the legitimate Sunken Barrow victory is
+  `true`/`"ending_victory"`; neither runtime path creates either hostile pair.
+
+witness: >
+  The exact regression is `RPG: ended and endingId must agree at load (bug_0570)`. It starts from a
+  valid current v3 save through the existing `forgeSave` helper, edits and rehashes the state, and
+  proves both hostile directions are hard `SaveIntegrityError`s with the terminal-coherence
+  diagnostic pinned. Separate GREEN controls assert that a valid active mid-game save carries
+  `false`/`null` and round-trips, and that the existing legitimately ended
+  `true`/`"ending_victory"` save still round-trips.
+
+fix: >
+  `src/persist/save_load.ts` adds one reusable assertion requiring
+  `state.ended === (state.endingId !== null)`. `assertWellFormedState` applies it only after schema
+  parsing. `load` passes the normalized state for every supported envelope through that shared
+  assertion before computing the normalized hash: v1 after its existing object-state migration,
+  and v2/v3 after their existing strict envelope parse. The v1 migration behavior and the v3 digest
+  comparison remain otherwise unchanged. The pre-existing fabricated-ending reference regression
+  now sets `ended: true` so it continues reaching the later pack-aware unknown-ending gate instead
+  of being shadowed by this earlier structural invariant. The existing trace-load phantom-ending
+  fixture does the same, preserving its isolated pack-aware unknown-ending witness.
+
+verification: >
+  `npx vitest run tests/regression/save_load_referential_integrity.test.ts` is GREEN: 1 file and 44
+  tests, with the bug_0570 regression exercising both known-bad imported pairs plus valid active
+  mid-game and ended controls. Typecheck, lint, and scoped Prettier checks are GREEN.
+  `npm run verify:bug-traces` is GREEN for 561 YAML files and 1922 concrete path references (1150
+  current, 771 historical, 1 generated-output). `git diff --check` is GREEN.
+
+rejected_first_pure_attempt: >
+  The first provisional attempt `2026-08-11T08-07-46-247Z` on `00a51683` is operational
+  diagnostics only. Its public stream ended with a top-level context-window error after gameplay;
+  `playtest.strict-rejection.json` classifies `top_level_error` and is explicitly
+  `canonical:false`, `acceptance_eligible:false`, and `ignored:true`. That prefix published no
+  playtest.md, evidence JSONL, V2 run sidecar, stable report id, or feedback pointer, and it made no
+  save/load call that exposed this repair. The provisional commit was reset out of branch ancestry.
+  Only the fresh `2026-08-11T09-04-58-054Z` attempt may bind canonical pure evidence and seal this
+  cycle; the rejected route, outcomes, receipt, and provider failure support no product or retention
+  claim.
+
+regression: >
+  This repair makes no authentication claim and changes no save version, envelope, hash algorithm,
+  content, ending definition, mechanic, reducer, action, observation, migration contract, or valid
+  save behavior. It rejects only states where `ended` and `endingId` disagree. It does not prove
+  that an ending id exists in a pack; the existing pack-aware referential gate retains that separate
+  responsibility.

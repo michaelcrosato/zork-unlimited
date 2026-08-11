@@ -188,6 +188,14 @@ function migrateVersion1State(state: unknown): GameState {
   return current.data as GameState;
 }
 
+function assertTerminalStateCoherence(state: Pick<GameState, "ended" | "endingId">): void {
+  if (state.ended === (state.endingId !== null)) return;
+  throw new SaveIntegrityError(
+    `GameState terminal state is incoherent: ended=${String(state.ended)} and ` +
+      `endingId=${JSON.stringify(state.endingId)}; ended must be true exactly when endingId is non-null.`,
+  );
+}
+
 /**
  * Assert a (possibly untrusted) GameState is well-formed + FINITE per §16
  * "integrity at load". REUSED at every untrusted-state-from-disk boundary: the
@@ -201,7 +209,9 @@ export function assertWellFormedState(state: unknown): GameState {
   if (!parsed.success) {
     throw new SaveIntegrityError(`State is malformed or non-finite: ${parsed.error.message}`);
   }
-  return parsed.data as GameState;
+  const wellFormedState = parsed.data as GameState;
+  assertTerminalStateCoherence(wellFormedState);
+  return wellFormedState;
 }
 
 export type SaveBundle = {
@@ -581,10 +591,9 @@ export function load(
   // §16 integrity at load: v1 recognizes and removes only its deprecated
   // ObjectRuntime.contents field. v2/v3 use the current strict shape. Every
   // envelope and nested state came from schema parsed.data, never the raw object.
-  const normalizedState =
-    persistedVersion === LEGACY_SAVE_VERSION
-      ? migrateVersion1State(bundle.state)
-      : (bundle.state as GameState);
+  const normalizedState = assertWellFormedState(
+    persistedVersion === LEGACY_SAVE_VERSION ? migrateVersion1State(bundle.state) : bundle.state,
+  );
   const normalizedStateHash = hashState(normalizedState);
   if (persistedVersion === SAVE_VERSION && bundle.stateHash !== normalizedStateHash) {
     throw new SaveIntegrityError(

@@ -167,3 +167,10 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Causal evidence: that player supplied malformed parent `…8c3d?`, received the new generic recovery plus exact handle, retried successfully, and did not count it as confusion; active-child wording remains regression-proven.
 - Feedback/next: the exact prior three-report delta ranks `07988b93` then `33adfdd0`, both one-report S1 hash-copy rows; raw calls are stale/mistyped guards rather than state races, so preserve concurrency and prefer routine Advocates absent a reproducible engine defect.
 - Authority/guard: the provisional delta binds `2b16e731` to predecessor `00fc73…`, consumes only the three preaccepted pending identities, and excludes this run until seal; focused checks and exact evidence are green, with outer gates still required.
+## AFK Cycle 2026-08-11T09-04-58-054Z — ULTRAPLAN (saturation re-aim)
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T09-04-58-054Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Mode: ultraplan re-aim; handoff ai-runs/2026-08-11T09-04-58-054Z/current-plan.md.
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

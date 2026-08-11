@@ -16,7 +16,7 @@
  *
  * This is the SoundnessBench (arXiv:2412.03154) rejection oracle: a checker is
  * credibly sound only if it rejects instances that are known-bad BY CONSTRUCTION.
- * Each WITNESS forges ONE field of a CLEAN recorded trace and asserts BOTH
+ * Each WITNESS forges ONE invalid condition in a CLEAN recorded trace and asserts BOTH
  * `replay_trace` AND `inspect_trace` throw `SaveIntegrityError`. The GREEN
  * false-rejection guards prove a legitimate fresh-init trace — and a legitimately
  * mid-game RPG trace — still replays + inspects unchanged, so the gate never
@@ -143,7 +143,7 @@ describe("bug_0190 — trace-load integrity gate: forged-trace REJECTION (§16 t
   it("WITNESS (c) referential: phantom initial_state.endingId — both handlers throw /unknown ending/", () => {
     const poisoned: Trace = {
       ...cleanTrace,
-      initial_state: { ...cleanTrace.initial_state, endingId: "ending_phantom" },
+      initial_state: { ...cleanTrace.initial_state, ended: true, endingId: "ending_phantom" },
     };
     write(FIXTURE("phantom_ending"), poisoned);
     const path = FIXTURE("phantom_ending");

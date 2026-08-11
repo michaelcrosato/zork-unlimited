@@ -19,7 +19,8 @@
  * saves that are known-bad BY CONSTRUCTION, not merely accepts the ones it is fed.
  *
  * Each forged save is built by serializing a VALID save (start_world_quest -> save_game),
- * poisoning ONE referential field, then asserting load_game throws. The GREEN
+ * poisoning the minimum state fields needed for one invalid condition, then asserting
+ * load_game throws. The GREEN
  * false-rejection guards prove that legitimate RPG saves — including an ended
  * save whose `endingId` names a declared ending — still load byte-identically.
  */
@@ -35,7 +36,7 @@ const ROOT = process.cwd();
 const WORLD_QUEST_ID = "sunken_barrow";
 const api = () => createToolApi({ root: ROOT });
 
-/** Serialize a fresh valid save, then mutate ONE state field. */
+/** Serialize a fresh valid save, then mutate one invalid state condition. */
 function forgeSave(poison: (state: Record<string, unknown>) => void): string {
   const a = api();
   const game = a.start_world_quest({ world_quest_id: WORLD_QUEST_ID, seed: 1 });
@@ -239,10 +240,35 @@ describe("save/load referential integrity — forged-reference REJECTION (§16)"
     // The benchmark-credibility witness: a forged save that CLAIMS an ending the
     // pack never declares. endingId is a valid nullable string to bug_0181's gate.
     const forged = forgeSave((s) => {
+      s.ended = true;
       s.endingId = "fabricated_win";
     });
     expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
     expect(() => api().load_game({ save: forged })).toThrow(/unknown ending/);
+  });
+
+  it("RPG: ended and endingId must agree at load (bug_0570)", () => {
+    for (const { ended, endingId, diagnostic } of [
+      {
+        ended: true,
+        endingId: null,
+        diagnostic:
+          "GameState terminal state is incoherent: ended=true and endingId=null; ended must be true exactly when endingId is non-null.",
+      },
+      {
+        ended: false,
+        endingId: "ending_victory",
+        diagnostic:
+          'GameState terminal state is incoherent: ended=false and endingId="ending_victory"; ended must be true exactly when endingId is non-null.',
+      },
+    ] as const) {
+      const forged = forgeSave((state) => {
+        state.ended = ended;
+        state.endingId = endingId;
+      });
+      expect(() => api().load_game({ save: forged })).toThrow(SaveIntegrityError);
+      expect(() => api().load_game({ save: forged })).toThrow(diagnostic);
+    }
   });
 
   it("RPG: a phantom runtime flag is a hard SaveIntegrityError", () => {
@@ -540,6 +566,11 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     stepByCommand(a, game.session_id, "go down");
     const before = a.get_observation({ session_id: game.session_id }).state_hash;
     const saved = a.save_game({ session_id: game.session_id });
+    const bundle = JSON.parse(saved.save) as {
+      state: { ended: boolean; endingId: string | null };
+    };
+    expect(bundle.state.ended).toBe(false);
+    expect(bundle.state.endingId).toBeNull();
     const reloaded = a.load_game({ save: saved.save });
     expect(saved.state_hash).toBe(before);
     expect(reloaded.state_hash).toBe(before);
@@ -671,8 +702,11 @@ describe("save/load referential integrity — GREEN false-rejection guards", () 
     const ended = a.get_observation({ session_id: game.session_id });
     const saved = a.save_game({ session_id: game.session_id });
     // Sanity: the save really carries a declared ending id.
-    const bundle = JSON.parse(saved.save) as { state: { current: string; endingId: string } };
+    const bundle = JSON.parse(saved.save) as {
+      state: { current: string; ended: boolean; endingId: string };
+    };
     expect(bundle.state.current).toBe("relic_chamber");
+    expect(bundle.state.ended).toBe(true);
     expect(bundle.state.endingId).toBe("ending_victory");
     const reloaded = a.load_game({ save: saved.save });
     expect(saved.state_hash).toBe(ended.state_hash);
