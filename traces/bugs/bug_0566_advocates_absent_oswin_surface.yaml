@@ -1,0 +1,100 @@
+id: bug_0566
+title: "The Advocate's Case exposed absent Oswin as a resolved-stall NPC and action"
+pack: content/rpg/quests/advocates_case.yaml
+reported_by: spark-seed2861 pure overworld raw plus current deterministic reproduction
+severity: S1
+evidence:
+  measured_pure:
+    source_commit: 1ad033758c6085fe85d564fd6ce79dc5ec88a843
+    source_report: ai-runs/spark-seed2861.md
+    source_report_sha256: 52c3b6bf2b7e4c271297d23e6cca4dc7eb9afe702ed5918abae1ff8e485c0430
+    source_evidence: ai-runs/spark-seed2861.evidence.jsonl
+    source_evidence_sha256: 2149147772fa05c2dcfbb413740b99badf55d1e0a6f20fe606bdce54fd8fcead
+    source_raw: ai-runs/spark-seed2861.codex.jsonl
+    source_raw_sha256: 17474094ce24f0eb215277664c003a3a4a326324faf20736c9c08bc1f0998c33
+    build_world_hash: 69604947643a24fc2d7c2377a85963742282ac7f83e7cec18a58bfc5eb8f53fc
+    exit_receipt_hash: ad8974b1497997030bbb8f5c95e73d31e66e06b4320707810e34cca148a9650b
+    route: ending_exempted at decision 128 after five completed overworld goals
+    raw_boundary: >
+      Item 278's list_legal_actions response proves talk_oswin is legal at state
+      hash 3d7a9e1d2b6545f797bc1449. Item 279 immediately executes that action
+      against the exact hash. Its response exposes resolved market_stall context
+      with appeal_attempted and oswin_overruled set, room copy saying "Oswin has
+      not returned to the stall," npcs: [oswin], and ask_leave_oswin, while the
+      opening line says Oswin is no longer there. This directly witnesses the
+      contradictory player surface; the player did not identify it in the exit
+      interview.
+  current_reproduction:
+    predecessor_source_hash: 284d5e2e618b87dd2dd0761715b7cf6c5736111ae15f5d9824ce75ee3f03510e
+    boundary: >
+      The same contradiction survives after the certified-extract revision on
+      the exact Cycle 26 predecessor. Both the primary rhetoric success and the
+      corrected-presentation recovery set oswin_overruled, select the resolved
+      stall description, and still expose the unconditional Oswin NPC and
+      talk_oswin action before this fix.
+  accepted_authority:
+    manifest: ai-runs/feedback/20260810T194910Z/report-manifest.json
+    manifest_sha256: 3f6e21ae4cdd8ed78611fe8b4c2691051c091cff078b30460385d6ac95b70cbe
+    hotspots: ai-runs/feedback/20260810T194910Z/hotspots.json
+    hotspots_sha256: e8324c3632599b987ba43fd2843fd3c8c7fda23f639338126f60bf108a11b843
+    recommended_candidate: hotspot-ed51aa6f
+    consumed_by_run_id: 2026-08-10T21-53-53-028Z
+  cycle_26:
+    assessment_run: 2026-08-10T23-47-08-984Z
+    assessor_top_candidate: playtest-advocates_case
+    selected_candidate: playtest-advocates_case
+    feedback_status: "delta; 2 new verified reports, 2 actionable, 0 excluded mocks; 3 actionable reports required"
+revision_liveness: >
+  The July Spark witness predates the certified-extract copy revision, so it is
+  causal evidence for the defect rather than proof of current bytes. The current
+  deterministic predecessor reproduces the same stable oswin_overruled boundary
+  at source hash 284d5e2e, proving the finding remained live when Cycle 26 selected
+  the routine Advocates review.
+symptom: >
+  After either legal route overruled Oswin, the market-stall room truthfully said
+  he had left but full and compact projections still advertised him as present and
+  offered TALK. Opening that action merely had the absent man explain that he was
+  absent, then exposed a leave topic. The surface contradicted itself after the
+  consequential legal success even though quest progression was sound.
+root_cause: >
+  The resolved room variant and dialogue fallback both knew about
+  oswin_overruled, but the market-stall NPC definition was unconditional. Generic
+  RPG NPC and TALK enumeration therefore retained Oswin whenever the player was in
+  his authored room, regardless of the state that had already removed him in the
+  fiction.
+fix: >
+  Add the existing not_flag: oswin_overruled predicate to Oswin's NPC definition.
+  Legal success now removes the NPC and its generated TALK action from both full
+  and compact stall projections. Preserve Oswin before resolution, including
+  after a failed appeal and after combat-only defeat of Craf.
+deterministic_witnesses:
+  - "primary rhetoric success sets oswin_overruled; returning south shows the exact resolved stall description, full npcs_present [], no talk_oswin, compact npcs absent, and the exact eleven non-dialogue actions"
+  - "failed rhetoric followed by use_town_register_on_case_record reaches the identical resolved full/compact absence boundary"
+  - "building full and compact projections is nonmutating: the state remains deeply and byte-for-byte equal before and after each read"
+  - "a failed appeal sets appeal_attempted but not oswin_overruled, so Oswin remains visible and talk_oswin returns the existing 'matter is with the alderman's deputy' line"
+  - "combat-only Craf defeat sets craf_defeated but not oswin_overruled, so the base stall still shows Oswin and both projections retain talk_oswin"
+  - "the Advocate's Case source hash advances directly from 284d5e2e618b87dd2dd0761715b7cf6c5736111ae15f5d9824ce75ee3f03510e to c3dd62683dcbbfa314298faa4bdbda727ebeb62124fd286fcc402a3293ce7e69"
+selection_semantics:
+  - "Cycle 26 implements exact on-list maintenance candidate playtest-advocates_case; its provisional selection must use that id rather than null or the assessor's title text."
+  - "The accepted ed51aa6f recommendation was already consumed by Cycle 25. A routine playtest-advocates_case selection neither matches hotspot-ed51aa6f nor consumes the accepted bundle again."
+  - "Committed feedback status is exactly 2/3, so no compile is permitted. The eventual Cycle 26 pure report is excluded from the current cohort and can become pending only after all outer gates pass and seal binds it to the clean provisional commit."
+  - "At a successful seal, the already-consumed accepted bundle remains unchanged, the current verified report is appended after the two prior pending rows, and the exact selection marker is removed."
+nonclaims:
+  - "The Spark player did not report this contradiction, reject talk_oswin, get stuck, or fail the quest; localization comes from the direct raw state, room, NPC, and action mismatch."
+  - "The intentional surface change is narrow but not copy-only: it adds one existing-flag predicate and removes Oswin plus his generated TALK action exactly while oswin_overruled is true."
+  - "This does not change dialogue graph or wording, room text, legal-appeal or recovery conditions, rhetoric DC/RNG, Craf combat, exits, items, flags, effects, score, endings, route topology, journey decisions, serialization, or schema."
+  - "This does not hide Oswin merely because appeal_attempted or craf_defeated is set. Failed legal attempts and combat-only progress deliberately retain the NPC and TALK surface."
+  - "This does not preserve the predecessor content hash or claim old content-hash-bound artifacts are byte-compatible with the new source."
+  - "The measured Spark artifact is direct causal raw evidence, not an accepted hotspot recommendation, a Cycle 26 pending report, or permission to compile before the seal."
+production:
+  - content/rpg/quests/advocates_case.yaml
+tests:
+  - path: tests/regression/advocates_case_rhetoric_retry.test.ts
+    cases:
+      - "removes absent Oswin from full and compact stall actions after either legal success route"
+      - "keeps Oswin visible and talkable after a failed appeal and a combat-only victory"
+verification:
+  - npx vitest run tests/regression/advocates_case_rhetoric_retry.test.ts
+  - npm run validate -- advocates_case
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0566_advocates_absent_oswin_surface.yaml
