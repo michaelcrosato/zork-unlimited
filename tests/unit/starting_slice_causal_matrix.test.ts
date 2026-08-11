@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  assertCountedStartingSliceProofsExist,
+  assertProvenStartingSliceProofsExist,
   loadStartingSliceCausalMatrix,
   parseStartingSliceCausalMatrix,
 } from "../../src/starting_slice/causal_matrix.js";
@@ -50,7 +50,30 @@ describe("starting-slice causal matrix", () => {
     expect(albanyReturn?.baseline_evidence).toContain(
       "tests/starting_slice/cade_return_packet_counterfactual.test.ts",
     );
-    expect(() => assertCountedStartingSliceProofsExist(matrix)).not.toThrow();
+    expect(() => assertProvenStartingSliceProofsExist(matrix)).not.toThrow();
+  });
+
+  it("requires proof files for proven forks without imposing that requirement on partial proof", () => {
+    const matrix = loadStartingSliceCausalMatrix();
+    const missingPath = "tests/starting_slice/definitely_missing_ss_f19_counterfactual.test.ts";
+    const hostile = structuredClone(matrix);
+    const hostileFork = hostile.forks.find((fork) => fork.id === "SS-F19-witnessed-wound-care");
+    if (!hostileFork) throw new Error("expected the uncounted proven SS-F19 fork");
+    hostileFork.counterfactual_test = missingPath;
+
+    expect(() => assertProvenStartingSliceProofsExist(hostile)).toThrowError(
+      new Error(
+        `Proven starting-slice fork SS-F19-witnessed-wound-care is missing ${missingPath}.`,
+      ),
+    );
+
+    const partialControl = structuredClone(hostile);
+    const partialFork = partialControl.forks.find(
+      (fork) => fork.id === "SS-F19-witnessed-wound-care",
+    );
+    if (!partialFork) throw new Error("expected the uncounted SS-F19 control fork");
+    partialFork.proof_status = "partial";
+    expect(() => assertProvenStartingSliceProofsExist(partialControl)).not.toThrow();
   });
 
   it("rejects duplicate ids and forks counted without implementation and proof", () => {

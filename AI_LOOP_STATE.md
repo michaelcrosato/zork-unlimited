@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 771 -->
+<!-- historical_cycle_count: 772 -->
 <!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-11T18-05-25-511Z","hotspots_path":"ai-runs/feedback/20260811T160054Z/hotspots.json","hotspots_sha256":"e208e2e08214e16de0998597fabc3fecbd76179adab69c03985012af1c421e16","manifest_path":"ai-runs/feedback/20260811T160054Z/report-manifest.json","manifest_sha256":"1b4a1e18202d2e43e1ad38bff4f15096e9b5084bfd158ffc5eaa8a4617d9b0bc"},"pending_cycle_reports":[{"evidence_sha256":"d4fc750e0cde1cf0534b470caaf0f2c1d073873c43ab891606d2deb7b1bb9f9e","report_id":"pure:a5ff4d97d27e10c8ab7e9669d1ecdd1e99baec1cc6ce31237bf09ab731ae2848","report_sha256":"15da3580857bc2a75088bbc3b5165a5f79e8d89017a6ac177dbaadf49be50b30","run_id":"2026-08-11T15-38-06-965Z","sidecar_sha256":"ae5d4cbb1ac43e8c763be29114fe8e4a0b063f427242e5dc73f356134add7b10","tested_commit":"57713e49d638ce5800b6c8b2e43a509787ee5b02"},{"evidence_sha256":"8dee8485aac1310f4c8e996c65af7a6f9e418faa4a0a1ee4380b11bce88e9d0c","report_id":"pure:a358a2cccd0e174a79b8381725b11af5075625ce2973a23dcaa2d48e5a07b697","report_sha256":"850f5f6ada0a7e6b45f7ef4ab24ef4169d483a3cd3bfee4ab35d22f72db45c2f","run_id":"2026-08-11T18-05-25-511Z","sidecar_sha256":"fcff0086866abaac1aaaff5ae425dc57f0a292c8a893903bf51c38bb4d0f8a18","tested_commit":"937a39258c3ad8caad56176fe4ad24cc186cedf7"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
@@ -17,6 +17,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - starting_slice_proven_proof_integrity
+
+- Evidence baseline: exact-clean Spark seed 7 on `1fde4cdc` chose Ledger/Aid-Only/Rowan, resolved Albany's charter backlog, completed sheltered Wolf-Winter LURE as `ending_pack_diverted` 60/60, and ended at decision 28; all 34 calls succeeded, clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
+- Ultraplan choice: maintenance-floor Advocate rotation supplied no strategic rank; bounded local review selected the already-recorded verifier seam where uncounted SS-F19 could claim `proven` while naming a missing counterfactual test. AI_LOOP_COMMIT=0 keeps this off selection/commit authority.
+- Surface/effect: `assertProvenStartingSliceProofsExist` now verifies every row claiming proven status independent of count eligibility; the matrix remains 19 rows/12 counted/`active_unproven`, SS-F19 remains uncounted, and no content, mechanics, threshold, or certification result moves.
+- Counterfactual: a cloned uncounted/proven SS-F19 with a definitely absent test now fails with its exact id/path, while the same partial-proof control remains legal; the live matrix and all four focused unit cases pass.
+- Self-critique: post-quest contact freshness was rejected as unstated chronology that would reinterpret authored scenes/saves; decorator-object cloning and evidence temp-link hardening remain lower-risk follow-ups. The pre-edit pure is baseline only and cannot causally attest this verifier repair.
+- Feedback/next: committed status is 2 verified/actionable reports of 3, so no compile runs and this evidence-only report is not sealed into pending authority; next structural review should compare the shallow decoration snapshot with exclusive evidence publication rather than revive frozen content.
+- Guard: 4 focused matrix tests, 566 bug traces/1,945 references, 6,000-step post-crawl, full health (448 files/3,897 tests), UI typecheck, all 12 packs, exact pure provenance, independent hostile review, and `1fde4cdc` cycle-start integrity are green.
 
 ### Cycle result - wolf_lure_root_commit_cue
 
@@ -158,12 +168,11 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback/next: the exact prior three-report delta promotes `d6a6cd0a` while excluding this run; Civic rows are revision-stale, and the retry's repeated primary paling cue is the narrower live sequencing seam.
 - Guard: 44 focused tests, 552 traces, 6,000-step crawl, exact health (448 files/3,877 tests), UI typecheck, all 12 packs, cycle-start integrity, and retry pure/compile authority are green.
 
-### Cycle result - civic_choice_header_density
+## AFK Cycle 2026-08-11T20-38-10-393Z
 
-- Evidence choice: accepted `a0d32f61` and `4ae7e44f` were already fixed and `a07d646c` is intentional retention cadence; repeated custom Civic density made on-list `playtest-overworld` the live choice, leaving the accepted recommendation unconsumed.
-- Surface/effect: custom duty and evidence headers now state each choice and handoff once (41/44 words; 168 for the full custom route), while registration, matched shortcuts, options, receipts, decisions, field plans, and state are unchanged.
-- Counterfactual: Ledger retains three direct duties with no disclosure; matched roles retain one shortcut or durable customization; exact full/compact/DOM copy, option order, snapshot-stable reads, and separate role/duty/source decision increments are pinned.
-- Pure evidence: exact-clean Spark seed 7 on `f1bd2f3e` used Ledger/Aid-Only/Rowan, read both new literals verbatim, won sheltered Cade-terms FORTIFY at 40/60, and ended at goal decision 18; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
-- Causal evidence: all 24 calls completed with current hashes and no rejection; the custom path advanced directly through both changed screens, then one failed outer-seal check recovered through Cade before the dawn win.
-- Feedback/next: pre-seal status is 2/3 with no compile; sealing queues report three for next-cycle compilation. The only new soft seam is repeated post-commit Wolf blocked-row density, not a regression in this copy-only change.
-- Guard: 30 focused tests, 551 traces, both 6,000-step crawls, exact health (448 files/3,873 tests), UI typecheck, all 12 packs, cycle-start integrity, and exact-build pure provenance are green.
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T20-38-10-393Z","selected_recommendation_id":null} -->
+
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

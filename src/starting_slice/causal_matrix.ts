@@ -137,15 +137,15 @@ export function loadStartingSliceCausalMatrix(root = process.cwd()): StartingSli
   return parseStartingSliceCausalMatrix(JSON.parse(readFileSync(path, "utf8")) as unknown);
 }
 
-export function assertCountedStartingSliceProofsExist(
+export function assertProvenStartingSliceProofsExist(
   matrix: StartingSliceCausalMatrix,
   root = process.cwd(),
 ): void {
   for (const fork of matrix.forks) {
-    if (!fork.counts_toward_contract) continue;
+    if (fork.proof_status !== "proven") continue;
     if (!existsSync(resolve(root, fork.counterfactual_test))) {
       throw new Error(
-        `Counted starting-slice fork ${fork.id} is missing ${fork.counterfactual_test}.`,
+        `Proven starting-slice fork ${fork.id} is missing ${fork.counterfactual_test}.`,
       );
     }
   }

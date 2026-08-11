@@ -1156,3 +1156,54 @@ hostile directions while retaining active and legitimately ended round trips;
 `traces/bugs/bug_0570_rpg_terminal_state_coherence.yaml` records the boundary.
 This is a rejection-only integrity strengthening: no valid engine-produced state,
 content hash, save envelope, action, ending, or observation changes.
+
+### Ultraplan re-aim — 2026-08-11 (HEAD = 1fde4cdc; next move = proven proof-file integrity)
+
+**Confirmed CLOSED or rejected boundaries — do not re-nominate as this move:**
+
+- **RPG terminal-state coherence remains closed.**
+  `src/persist/save_load.ts:191-195` requires
+  `state.ended === (state.endingId !== null)`, and
+  `tests/regression/save_load_referential_integrity.test.ts:250-267` retains the
+  hostile two-direction import proof. No save envelope, version, hash, ending,
+  or gameplay change belongs in this cycle.
+- **Starting-slice breadth and authored causal rows remain frozen.**
+  `docs/ROADMAP.md:64-95` keeps Albany -> Wolf-Winter as the bounded milestone,
+  while `docs/STARTING_SLICE.md:187-232` records all nineteen existing forks as
+  structurally proven but does not certify the wider quality target. This cycle
+  changes no row, town, scene, predicate, count threshold, or certification
+  status.
+- **Post-quest contact freshness is not an established scene contract.**
+  `src/world/session_event_resolution.ts:159-185` and
+  `src/world/session_local_actions.ts:354-377` require a contact presentation,
+  while `src/world/session_snapshot_restore.ts:857-880` explicitly orders the
+  investigation—not the contact presentation—after required quest completion.
+  Requiring a new post-quest conversation would reinterpret several authored
+  scenes and existing saves, so it is rejected without an explicit schema and
+  content decision.
+- **Event-decoration object cloning and evidence-publication link hardening remain
+  lower-priority open hardening.** `src/core/engine.ts:139-149` protects the event
+  array but only shallow-copies its records, and `src/mcp/server.ts:199-219` uses a
+  predictable sibling temporary evidence path. Both require a misbehaving local
+  extension or adversarial filesystem setup; neither outranks the current proof
+  ledger's executable false claim.
+
+**Chosen move — every row marked proven must resolve its counterfactual proof file.**
+
+`docs/STARTING_SLICE.md:1052-1065` defines the causal matrix as the proof ledger
+and records paired deterministic counterfactual evidence on each row. The live
+`SS-F19-witnessed-wound-care` row is implemented and
+`proof_status:"proven"` but intentionally does not count toward the certification
+floor. `src/starting_slice/causal_matrix.ts:140-151` currently checks file
+existence only for counted rows, so a cloned SS-F19 that names a nonexistent test
+still passes `assertCountedStartingSliceProofsExist`.
+
+Rename that helper around the actual proof claim and require an existing
+`counterfactual_test` for every `proof_status:"proven"` row, independent of
+`counts_toward_contract`. Add a hostile SS-F19 missing-file regression plus a
+non-proven control, and record the boundary in
+`traces/bugs/bug_0575_starting_slice_proven_proof_integrity.yaml`. The live matrix
+must remain 19 rows, 12 counted, `active_unproven`, with SS-F19 still uncounted;
+this is a rejection-only verifier repair with no content, mechanics, fleet,
+threshold, or certification-result change. The clean 19:37 pure report predates
+the uncommitted repair and is baseline evidence only, not causal validation.

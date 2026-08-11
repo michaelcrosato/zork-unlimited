@@ -1,0 +1,50 @@
+id: bug_0575
+title: "Require proof files for every starting-slice fork that claims proven status"
+kind: tooling
+mode: meta
+severity: enhancement
+layer: starting-slice/proof-integrity
+artifact:
+  source: src/starting_slice/causal_matrix.ts
+  test: tests/unit/starting_slice_causal_matrix.test.ts
+
+summary: >
+  A starting-slice fork could claim `proof_status: "proven"` while naming a missing
+  `counterfactual_test` whenever it was not counted toward the contract. The live boundary is
+  `SS-F19-witnessed-wound-care`: it is implemented and proven but deliberately uncounted. Before
+  this repair, a clone of SS-F19 whose test path joined the `tests/starting_slice/` directory to
+  the definitely absent `definitely_missing_ss_f19_counterfactual.test.ts` filename passed the
+  proof-file assertion.
+
+root_cause: >
+  `assertCountedStartingSliceProofsExist` selected rows by `counts_toward_contract` instead of by
+  the proof claim it was meant to substantiate. Count eligibility and proof-file integrity are
+  separate concerns, so the counted predicate skipped a proven row and allowed its completed-proof
+  claim to outlive the referenced counterfactual test.
+
+witness: >
+  The regression `requires proof files for proven forks without imposing that requirement on
+  partial proof` preserves the live positive matrix check, clones the uncounted/proven SS-F19 row,
+  assigns the definitely missing path, and pins the exact rejection naming both
+  `SS-F19-witnessed-wound-care` and that path. A control changes the cloned row to `partial` and
+  proves the same absent path is not treated as a completed-proof requirement.
+
+fix: >
+  `assertProvenStartingSliceProofsExist` now visits every row whose `proof_status` is exactly
+  `proven`, regardless of whether the row counts toward the structural contract. It rejects a
+  missing file with the proven fork id and its `counterfactual_test` path. Partial and unproven rows
+  retain their existing behavior because they do not yet claim completed proof.
+
+verification: >
+  `npx vitest run tests/unit/starting_slice_causal_matrix.test.ts` is GREEN: 1 file and 4 tests.
+  Typecheck, targeted ESLint, and scoped Prettier checks are GREEN. `npm run verify:bug-traces` is
+  GREEN for 566 YAML files and 1945 concrete path references (1173 current, 771 historical, 1
+  generated-output). The post-change 6000-step crawl, full health (448 files and 3897 tests), UI
+  typecheck, all 12 pack validations, cycle-start integrity drift, and `git diff --check` are GREEN.
+
+regression: >
+  This repair changes no causal-matrix rows, counts, certification status, content, mechanics,
+  saves, or gameplay behavior. It only rejects a proven row whose named counterfactual test does
+  not exist, and it does not impose that requirement on partial or unproven rows. The clean
+  baseline pure run for `2026-08-11T19-37-33-042Z` preceded this change and did not exercise or
+  prove the repair.
