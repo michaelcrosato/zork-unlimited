@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 769 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-11T11-28-30-987Z","hotspots_path":"ai-runs/feedback/20260811T091400Z/hotspots.json","hotspots_sha256":"eb427b085f1ec2436f1859ddad95dde0c6e4a4a570493de6d6b0c3263eda554f","manifest_path":"ai-runs/feedback/20260811T091400Z/report-manifest.json","manifest_sha256":"147893756a4a10e1c9ebc0aa3eafef060d9442111d5708170a60c49ad0ca887d"},"pending_cycle_reports":[{"evidence_sha256":"ebc215ef83d7ab0adbf8e168b0620438ad49bc41d216e8f54b1f93f9f9cd2f63","report_id":"pure:4c76e0f22c68c9e44c2a01e975a3307bed06d0d93a30186b4f18e3b9628c93f4","report_sha256":"71929ed79072d9ad627478aa92cfc1b9ddda1dc8a16867f2801df470704ee9bb","run_id":"2026-08-11T09-04-58-054Z","sidecar_sha256":"3ee8c3167858753fef442606cf17d0a17039b588493a3522f17a6eb1d8bead06","tested_commit":"05a1d6804b19dc7143e79c081aeaf33546c2af82"},{"evidence_sha256":"eecb40e36c3eb79a7c7d8e0225b7f1d36d1712b6338e0876aa9fdb1907e41fa7","report_id":"pure:b7a98dfbff13147f423a34c7a265b45975595f88ec10a66273b712dee181691f","report_sha256":"4d9aedb537fc2467021b2c4bdf2590269e9c7e74c289b2d481180e7889f0c89a","run_id":"2026-08-11T11-28-30-987Z","sidecar_sha256":"b100715f7962dfa9b8fdc7da9b2424181cb7e3cfc2ae6f58dc0af7294f79159f","tested_commit":"f941d9348bd8f04e4250c8667feb1ec479288d05"},{"evidence_sha256":"aba10cd45b81fc0698162f253bca4e06db94d40d62d17b606c8ae200d0c1967f","report_id":"pure:827951b4f46fec00a349469f9e0ace92ac41271375485022818c6feb1b500349","report_sha256":"21532e096845fa43e605345f07a5521fb060cc0d7ef58d3a34e7ea2472216dee","run_id":"2026-08-11T13-44-53-712Z","sidecar_sha256":"98977cce91bfac5432fa4831343e6a6ca3554f7baef658d1afa0cf83ec4ce4b3","tested_commit":"67cf4018387748e66c6409bc7d353527a483fc34"}],"schema_version":1} -->
+<!-- historical_cycle_count: 770 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260811T160054Z/hotspots.json","hotspots_sha256":"e208e2e08214e16de0998597fabc3fecbd76179adab69c03985012af1c421e16","manifest_path":"ai-runs/feedback/20260811T160054Z/report-manifest.json","manifest_sha256":"1b4a1e18202d2e43e1ad38bff4f15096e9b5084bfd158ffc5eaa8a4617d9b0bc"},"pending_cycle_reports":[{"evidence_sha256":"d4fc750e0cde1cf0534b470caaf0f2c1d073873c43ab891606d2deb7b1bb9f9e","report_id":"pure:a5ff4d97d27e10c8ab7e9669d1ecdd1e99baec1cc6ce31237bf09ab731ae2848","report_sha256":"15da3580857bc2a75088bbc3b5165a5f79e8d89017a6ac177dbaadf49be50b30","run_id":"2026-08-11T15-38-06-965Z","sidecar_sha256":"ae5d4cbb1ac43e8c763be29114fe8e4a0b063f427242e5dc73f356134add7b10","tested_commit":"57713e49d638ce5800b6c8b2e43a509787ee5b02"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,15 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+### Cycle result - advocates_post_dismissal_read_lifecycle
+
+- Evidence choice: exact on-list `playtest-advocates_case` maintenance found all three scored evidence READs rewinding a legally dismissed case; accepted `bd527711` was already consumed and supplied no causal authority for this fix.
+- Surface/effect: charter, register, and precedent READs now retire after `oswin_overruled`, preserving `case_dismissed`, score, rhetoric, and journal truth; failed-appeal and Craf-down routes retain them, while EXAMINE copy and every retained READ effect are unchanged.
+- Counterfactual: an all-unread primary success omits all three READs in full/compact and rejects direct attempts without mutation; failed and Craf-only controls retain them. Two lifecycle cases within 11 focused tests pin `d8b85620…` → `c9c92f95…`.
+- Pure evidence: exact-clean Spark seed 7 on `57713e49` chose Ledger/Aid-Only/Rowan, completed sheltered Cade FORTIFY at 45/60 on decision 18, continued through Gallowmere HUNT at 45/50 on decision 38, and ended at checkpoint 40.
+- Pure audit: 53/57 calls succeeded; four mistyped-parent/snapshot, missing-parent, and premature-End rejections recovered unchanged. Clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck; Advocate's Case was never entered, so this is exact-build canary evidence only.
+- Feedback/next: the prior three reports compiled to revision-live one-report S1 cue `f75b8f23` while excluding this pure. Its checkpoint-friction claim followed a voluntary Continue at decision 38; current FORTIFY exposure does not corroborate the older LURE commit-cue report.
+- Guard: 11 focused tests, 564 traces, both 6,000-step crawls, full health (448 files/3,896 tests), UI typecheck, all 12 packs, cycle-start integrity, and exact pure/compile provenance are green.
 
 ### Cycle result - advocates_case_record_lifecycle_truth
 
@@ -157,19 +166,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `3dbc399a` chose Ledger Advocate/Aid-Only/Rowan, resolved the charter backlog, and won sheltered Wolf-Winter by Albany-authority FORTIFY; it ended naturally at goal decision 19 with clarity/enjoyment 4/4, replay yes, bugs `[]`, and no stuck state.
 - Causal/feedback: that player ended before the compact foldback exposed optional opportunities, so pure evidence is an integration canary and accepted report plus 60 focused tests remain causal; status is 1/3 with no compile, and seal queues this run as pending report two.
 - Guard/next: 550 traces, both 6,000-step crawls, exact health (448 files/3,872 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure gates are green; repeated Civic role/duty/source header density is the next measured seam.
-
-### Cycle result - wolf_blocked_route_guidance
-
-- Evidence choice: accepted `07988b93`/`33adfdd0` hash rows were client stale/mistyped guards; the latest Wolf-Winter player instead found the shared north block inferential, so on-list `playtest-wolf_winter` was selected and the accepted recommendation remains unconsumed.
-- Surface/effect: the byre-yard block now routes HUNT to June, LURE to any shown docket/feed/loft cue, and DRIVE/FORTIFY to named gear; exit conditions, actions, items, routes, scores, and endings are unchanged.
-- Counterfactual: full/compact June, pre-feed and post-cast LURE, split-rail docket, DRIVE, Cade FORTIFY, and Albany FORTIFY states preserve their exact closed/open transitions; Wolf hash `1bdbd697…` advances to `189b14d7…`.
-- Pure evidence: exact-clean Spark seed 7 on `3dab3322` chose Road-Warden/Full Compact/Rowan, won sheltered FORTIFY Wolf-Winter with `ending_fortified_cade_terms` at 40/60, and ended at goal decision 17; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
-- Causal evidence: the player saw the new 175-character hint beside Cade's committed shutters, re-read, then took them with no FORTIFY action rejection; two earlier story-argument errors recovered before this seam, and the report instead flags broader civic/hard-commit density.
-- Feedback/next: the exact prior three-report delta ranks pre-fix `a0d32f61` first; this revision addresses that blocked-copy witness, while rank-four `77464085` preserves broader LURE density for revision-aware Cycle 19 triage.
-- Guard: 62 focused tests, both 6,000-step crawls, exact health (448 files/3,872 tests), UI typecheck, all 12 packs, cycle-start integrity, trace integrity, and exact playtest/compile provenance are green.
-## AFK Cycle 2026-08-11T15-38-06-965Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-11T15-38-06-965Z","selected_recommendation_id":"playtest-advocates_case"} -->
-- Assess: rpg=12; world=12; candidates=13.
-- Rec: playtest-advocates_case (content_fix/M; score=0.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
