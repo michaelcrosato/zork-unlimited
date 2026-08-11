@@ -167,3 +167,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Causal caveat/next: the new cue appeared in five distinct states and the player followed south→west→up after the kill without trying north; combat was optional, while the older unconditional defeat journal `The byre runs on north.` is now the strongest concrete follow-up truth bug.
 - Feedback: pre-seal status was 1 actionable report of 3, so no compile; exact `hotspot-d6a6cd0a` selection consumes the accepted recommendation, and seal leaves Cycle 21 plus this report as the 2 pending rows.
 - Guard: 35 focused tests, 553 traces, both 6,000-step crawls, cycle-start integrity, and exact pure provenance are green; a 20-minute health wrapper expired without verdict, then the identical frozen rerun passed 448 files/3,877 tests, UI typecheck, and all 12 packs.
+## AFK Cycle 2026-08-11T22-43-28-809Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T22-43-28-809Z","selected_recommendation_id":"playtest-gallowmere"} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
