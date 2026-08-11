@@ -164,3 +164,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `eff02eb8` chose Ledger Advocate/Aid-Only/Rowan, won Wolf-Winter by Exposed-Ridge LURE with two cattle lost, continued through checkpoint 40, won The Gallowmere, and ended naturally at decision 56; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
 - Feedback/authority: the three prior actionable reports compiled into a four-hotspot delta on `eff02eb8` with recommendation `a919cded`; the current pure run remains one-cycle-lagged and the failed run is excluded.
 - Self-critique/guard: the canary did not exercise HUNT, so causal proof remains the full/compact/CLI/MCP regressions; 76 focused tests, type/lint/format, 543 traces, all 12 packs, and hostile reviews are green, with outer gates still required.
+
+## AFK Cycle 2026-08-11T01-39-24-429Z
+
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T01-39-24-429Z","selected_recommendation_id":null} -->
+
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

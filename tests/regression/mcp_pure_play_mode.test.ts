@@ -47,6 +47,8 @@ const CADE_HUNT_EXIT_LABEL =
   "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
 const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
+const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
+  "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions by calling with session_id set to the exact current parent overworld_session_id and story_choice_id set to that exact visible id. Merge visible revealOption/reviewOption arguments into that call; they do not replace session_id, and option_id/reveal_id are mutually exclusive. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.";
 
 async function withPureServer<T>(
   evidencePath: string,
@@ -2019,6 +2021,13 @@ describe("MCP pure play mode", () => {
         expect(legalActionSchema?.session_id?.description).toMatch(
           /child.*rpg_session_id.*(?:not|never) overworld_session_id/i,
         );
+        const storyInspectionTool = listed.tools.find(
+          (candidate) => candidate.name === "inspect_overworld_session_story",
+        );
+        expect(storyInspectionTool?.description).toBe(PARENT_BOUND_STORY_INSPECTION_DESCRIPTION);
+        // Pure keeps the parent handle schema-optional only so omission reaches the
+        // authoritative recovery envelope instead of failing at transport validation.
+        expect(storyInspectionTool?.inputSchema.required ?? []).not.toContain("session_id");
 
         const started = textPayload(
           await client.callTool({
@@ -2091,6 +2100,48 @@ describe("MCP pure play mode", () => {
           (option) => option.id === "albany:ironhands_repairer",
         );
         if (!ironhandsRepairer) throw new Error("expected visible Ironhands Repairer profile");
+        const registrationJourney = registration.journey;
+        const registrationJourneyBytes = JSON.stringify(registrationJourney);
+        const missingParentInspection = await client.callTool({
+          name: "inspect_overworld_session_story",
+          arguments: { story_choice_id: "albany:relief_registration" },
+        });
+        expect(missingParentInspection.isError).toBe(true);
+        expect(textPayload(missingParentInspection)).toMatchObject({
+          ok: false,
+          error: expect.stringMatching(
+            /requires the exact current parent overworld_session_id.*missing, malformed, stale, or unknown/i,
+          ),
+          expected_session_field: "overworld_session_id",
+          expected_argument: "session_id",
+          returned_handle_field: "overworld_session_id",
+          overworld_session_id: sessionId,
+        });
+        const afterMissingParentInspection = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(afterMissingParentInspection.snapshot_hash).toBe(registration.snapshot_hash);
+        expect(afterMissingParentInspection.journey).toEqual(registrationJourney);
+        expect(JSON.stringify(afterMissingParentInspection.journey)).toBe(registrationJourneyBytes);
+
+        const exactParentInspection = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: "albany:relief_registration",
+            },
+          }),
+        );
+        expectPureStoryInspectionEnvelope(exactParentInspection, sessionId);
+        expect(exactParentInspection.snapshot_hash).toBe(registration.snapshot_hash);
+        expect(exactParentInspection.story).toMatchObject({
+          id: "albany:relief_registration",
+          inspectedOption: null,
+        });
         for (const optionId of [undefined, ironhandsRepairer.id] as const) {
           const staleInspection = textPayload(
             await client.callTool({
@@ -2214,6 +2265,26 @@ describe("MCP pure play mode", () => {
         });
         const reveal = oathChoice?.revealOption;
         if (!reveal) throw new Error("expected pure compact oath reveal affordance");
+        const mutuallyExclusiveInspection = await client.callTool({
+          name: "inspect_overworld_session_story",
+          arguments: {
+            session_id: sessionId,
+            ...reveal.arguments,
+            option_id: matchedShortcut.id,
+          },
+        });
+        expect(mutuallyExclusiveInspection.isError).toBe(true);
+        expect(textResult(mutuallyExclusiveInspection)).toMatch(
+          /option_id and reveal_id are mutually exclusive/i,
+        );
+        const afterMutuallyExclusiveInspection = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(afterMutuallyExclusiveInspection.snapshot_hash).toBe(selected.snapshot_hash);
+        expect(afterMutuallyExclusiveInspection.journey).toEqual(selected.journey);
         const expandedOath = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",

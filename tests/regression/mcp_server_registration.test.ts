@@ -11,6 +11,9 @@ import { readFileSync } from "node:fs";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { READ_ONLY_TOOLS, TOOL_REGISTRATIONS } from "../../src/mcp/server.js";
 
+const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
+  "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions by calling with session_id set to the exact current parent overworld_session_id and story_choice_id set to that exact visible id. Merge visible revealOption/reviewOption arguments into that call; they do not replace session_id, and option_id/reveal_id are mutually exclusive. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.";
+
 const RETIRED_STATIC_OVERWORLD_TOOLS = [
   "explore_overworld_area",
   "explore_overworld_site",
@@ -142,6 +145,7 @@ describe("MCP server registration", () => {
     const registration = TOOL_REGISTRATIONS.find(
       (candidate) => candidate.name === "inspect_overworld_session_story",
     );
+    expect(registration?.description).toBe(PARENT_BOUND_STORY_INSPECTION_DESCRIPTION);
     expect(registration?.description).toContain("Inspect journey.storyChoice");
     expect(registration?.description).toContain("Station ['inspect', story_choice_id]");
     expect(registration?.description).toContain("legacy departure_interactions");

@@ -1,0 +1,180 @@
+id: bug_0567
+title: "Story inspection's tool catalogue omitted the parent-session call binding"
+pack: n/a (pure MCP player transport and catalogue)
+reported_by: four retained pure fresh-overworld runs across 2b16e731 through 00e0a7be
+severity: S1
+evidence:
+  retained_run_2b16e731:
+    source_run: 2026-08-09T23-52-24-726Z
+    source_commit: 2b16e73194ab3ef2abe6925bbc868e97e62eff95
+    source_report: ai-runs/2026-08-09T23-52-24-726Z/playtest.md
+    source_report_sha256: 33427276751af62de513a177bd45eaa4ece1647fd74be3a9cd62c4f64e7ba94c
+    source_evidence: ai-runs/2026-08-09T23-52-24-726Z/playtest.evidence.jsonl
+    source_evidence_sha256: 18d336e8c935b9cf92b869132efbeb4aafb420de97f84a03987b91459c6b55d3
+    source_sidecar: ai-runs/2026-08-09T23-52-24-726Z/playtest.run.json
+    source_sidecar_sha256: 2c669134cbff5a5b6406ecaf7d08e11c877a4684f062b43557a10a80c864748d
+    source_raw: ai-runs/2026-08-09T23-52-24-726Z/playtest.codex.jsonl
+    source_raw_sha256: c86bd51ac14f97877e191c01988ea0589eee9d3c79407504872ea7c7dc2e5939
+    raw_boundary: >
+      Item 3 called inspect_overworld_session_story with {} and failed MCP input
+      validation because story_choice_id was required. Item 4 recovered directly
+      with the exact parent session_id, visible registration story_choice_id, and
+      current snapshot hash; it returned unchanged true at the same hash. This run
+      did not make the separate missing-parent retry seen in the later three runs.
+    player_result: >
+      The player continued through Wolf-Winter and Gallowmere, ended naturally at
+      decision 39, rated clarity/enjoyment 5/4, would replay, was not stuck, and
+      reported bugs: [].
+  retained_run_3dab3322:
+    source_run: 2026-08-10T06-37-25-261Z
+    source_commit: 3dab3322885614f9010fe773c03063c586a2a275
+    source_report: ai-runs/2026-08-10T06-37-25-261Z/playtest.md
+    source_report_sha256: 405095260edcc895a7c3c2e00de67e22732e6d31ae42b92238b65abafe018475
+    source_evidence: ai-runs/2026-08-10T06-37-25-261Z/playtest.evidence.jsonl
+    source_evidence_sha256: a7dec82731908905758354944670097a4ce51ea963dac43378513d9f39b5fa49
+    source_sidecar: ai-runs/2026-08-10T06-37-25-261Z/playtest.run.json
+    source_sidecar_sha256: 13e7cbbc161ef1c8fa53c6b723d1763183d83e341cd6c7f29661a89fbde8f5f1
+    source_raw: ai-runs/2026-08-10T06-37-25-261Z/playtest.codex.jsonl
+    source_raw_sha256: e59ee7da25f4c05b17ef4384cc5b6abaa64e804709a70d735c4a18dafe689d45
+    raw_boundary: >
+      Item 4 first called inspect_overworld_session_story with {} and failed on
+      required story_choice_id. Item 5 retried with the visible relief-oath
+      story_choice_id but no session_id and received the pure recovery envelope
+      naming the exact current parent handle. Item 6 supplied that parent handle
+      with the same story id and succeeded unchanged at hash 5019d7c064cec3f7d2e37594;
+      item 7 then performed the visible reveal normally.
+    player_result: >
+      The player completed Wolf-Winter and ended naturally at decision 17, rated
+      clarity/enjoyment 4/4, would replay, was not stuck, and reported bugs: [].
+  retained_run_dd353d9e:
+    source_run: 2026-08-10T17-55-53-098Z
+    source_commit: dd353d9edf8b9b5f3491d630fca274e190b73942
+    source_report: ai-runs/2026-08-10T17-55-53-098Z/playtest.md
+    source_report_sha256: a791b7b9558c1390a5c07f8f6ccfa0c1097fe0f27b5f3fc4a5d3d12fb206309c
+    source_evidence: ai-runs/2026-08-10T17-55-53-098Z/playtest.evidence.jsonl
+    source_evidence_sha256: c063394f706ea02a91ddaf305b7b13c252e729f202a6611fb4580988f170de43
+    source_sidecar: ai-runs/2026-08-10T17-55-53-098Z/playtest.run.json
+    source_sidecar_sha256: 50d1872e63722fb29b4c33283b2c48f5ec28d45492c40fb648bc668ee5d406b6
+    source_raw: ai-runs/2026-08-10T17-55-53-098Z/playtest.codex.jsonl
+    source_raw_sha256: 6f76eaebbb252c472d034ac335f8bc749dd7f3d59b1f196e24642f26feb5cb27
+    raw_boundary: >
+      Item 3 first called inspect_overworld_session_story with {} and failed on
+      required story_choice_id. Item 4 retried with the visible registration
+      story_choice_id but omitted session_id, producing the exact-parent recovery
+      envelope. Item 5 added the returned parent handle and succeeded unchanged at
+      the pre-choice hash 9a85115f804d9a9f6d61652f.
+    player_result: >
+      The player completed Wolf-Winter and ended naturally at decision 17, rated
+      clarity/enjoyment 4/4, would replay, was not stuck, and reported bugs: [].
+  retained_run_00e0a7be:
+    source_run: 2026-08-10T23-47-08-984Z
+    source_commit: 00e0a7be0b15d79ac504fd791c5ea09d4ed4a8dc
+    source_report: ai-runs/2026-08-10T23-47-08-984Z/playtest.md
+    source_report_sha256: 91fc6acb75072b2c43c0668288503580c390a87de570689fa55a7df6c7f83c3d
+    source_evidence: ai-runs/2026-08-10T23-47-08-984Z/playtest.evidence.jsonl
+    source_evidence_sha256: c79034d20da0eff153133be4ee0e5c07f9b88325ccd6f04f85795c30f2947f36
+    source_sidecar: ai-runs/2026-08-10T23-47-08-984Z/playtest.run.json
+    source_sidecar_sha256: 220576094516a0187d305a3d394e6b8ba8779fd10b9b06c05f492cedfea36342
+    source_raw: ai-runs/2026-08-10T23-47-08-984Z/playtest.codex.jsonl
+    source_raw_sha256: 0981227a4f813b7d704a5bd5ee8a0f8492c1fcd2fb693618df895e218c76d37b
+    raw_boundary: >
+      Item 4 first called inspect_overworld_session_story with {} and failed on
+      required story_choice_id. Item 5 then copied the visible revealOption's
+      story_choice_id and reveal_id but omitted the parent session_id, producing
+      the exact-parent recovery envelope. Item 6 added that returned handle to the
+      same reveal arguments and succeeded; only this successful reveal recorded its
+      durable receipt and advanced the hash to 769fd401d2f11ac6e69a6c0f.
+    player_result: >
+      The player recovered from both read-only rejections, completed Wolf-Winter,
+      and ended naturally at decision 17; 23/25 calls succeeded, clarity/enjoyment
+      were 4/4, replay was yes, the player was not stuck, and bugs were [].
+  rejection_summary: >
+    The four retained streams contain exactly seven relevant rejected inspections:
+    four initial empty argument objects, plus one missing-parent retry in each of
+    the latter three streams. All four players recovered. The rejected calls occur
+    before the story handler can mutate game state; successful comparison reads
+    preserve the current snapshot, while the recovery call that itself used reveal_id
+    changes only its already-authored durable reveal receipt.
+  accepted_authority:
+    manifest: ai-runs/feedback/20260810T194910Z/report-manifest.json
+    manifest_sha256: 3f6e21ae4cdd8ed78611fe8b4c2691051c091cff078b30460385d6ac95b70cbe
+    hotspots: ai-runs/feedback/20260810T194910Z/hotspots.json
+    hotspots_sha256: e8324c3632599b987ba43fd2843fd3c8c7fda23f639338126f60bf108a11b843
+    recommended_candidate: hotspot-ed51aa6f
+    consumed_by_run_id: 2026-08-10T21-53-53-028Z
+  cycle_27:
+    assessment_run: 2026-08-11T01-39-24-429Z
+    assessor_top_candidate: playtest-advocates_case
+    selected_candidate: null
+    selection_kind: off-list
+    feedback_status: "delta; 3 new verified reports, 3 actionable, 0 excluded mocks; compile ready"
+    pending_report_runs:
+      - 2026-08-10T19-41-13-068Z
+      - 2026-08-10T21-53-53-028Z
+      - 2026-08-10T23-47-08-984Z
+symptom: >
+  The model-visible inspect_overworld_session_story catalogue described the
+  comparison and detail results but did not locally state the complete call binding:
+  the tool still needs the exact current parent overworld_session_id under the input
+  key session_id, while visible revealOption/reviewOption arguments contribute only
+  story-specific fields. Four retained players first submitted an empty object, and
+  three independently retried with a story id but no parent handle. Each failure was
+  recoverable and read-only, but it spent a call and interrupted the opening choice.
+root_cause: >
+  Pure play deliberately leaves session_id schema-optional so a missing handle reaches
+  the authoritative recovery envelope. The existing tool description explained story
+  isolation, reveal persistence, and compact/full results, but it did not join the
+  parent-handle rule, the exact visible story id, and the emitted reveal/review operand
+  objects into one tool-local invocation recipe. Global player instructions did not
+  prevent repeated incomplete calls; the refined tools/list schema publishes no
+  field-level guidance, leaving this tool-local description as the binding recipe
+  before the first call.
+fix: >
+  Replace only inspect_overworld_session_story's model-visible description. It now says
+  to pass session_id as the exact current parent overworld_session_id, pass the exact
+  visible story_choice_id, merge visible revealOption/reviewOption arguments without
+  treating them as a replacement for session_id, and keep option_id/reveal_id mutually
+  exclusive. Pin the exact tools/list catalogue projection to its reviewed digest and
+  add live pure-server counterexamples for missing-parent recovery, exact-parent
+  success, mutual-exclusion rejection, and state nonmutation.
+settled_description: >-
+  Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions by calling with session_id set to the exact current parent overworld_session_id and story_choice_id set to that exact visible id. Merge visible revealOption/reviewOption arguments into that call; they do not replace session_id, and option_id/reveal_id are mutually exclusive. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.
+catalog_contract:
+  projection: "canonical JSON of {name, description, input_schema} from the actual tools/list entry"
+  prior_sha256: f060157f987992018216ded0aa220aefa9c575c813d9451c14d3df3c7bce31f7
+  settled_sha256: 0a613ff914c5f2c9cf02e4280d798440966766fe027521bfedd98f798dbf178b
+deterministic_witnesses:
+  - "the live pure tools/list entry exposes settled_description byte-for-byte while its existing refined inputSchema remains {type: object, properties: {}}; the description supplies the complete parent/story binding and runtime validation remains unchanged"
+  - "a visible registration story id without session_id returns the exact current overworld_session_id plus expected_argument session_id, and a following compact context read proves identical snapshot hash and byte-identical journey"
+  - "the recovered call using that exact parent handle and visible registration id succeeds at the same snapshot with inspectedOption null"
+  - "merging a visible revealOption with the current parent plus option_id fails the unchanged option_id/reveal_id exclusivity gate, after which snapshot hash and journey remain identical"
+  - "the ordinary parent-plus-reveal merge still succeeds and records the existing durable reveal receipt; the description neither performs nor bypasses that state transition"
+  - "the exact reviewed tools/list digest advances only for inspect_overworld_session_story from f060157f987992018216ded0aa220aefa9c575c813d9451c14d3df3c7bce31f7 to 0a613ff914c5f2c9cf02e4280d798440966766fe027521bfedd98f798dbf178b"
+selection_semantics:
+  - "Cycle 27 freezes selected_recommendation_id as null because this shared MCP catalogue correction is off-list work, not the assessor's routine playtest-advocates_case candidate or an accepted hotspot."
+  - "The accepted ed51aa6f recommendation was already consumed by Cycle 25; a null selection cannot consume it again and does not consume any recommendation from the next compiled bundle."
+  - "The compile-ready cohort is exactly the three reports already pending at Cycle 27 start. Per cycle ordering, feedback compilation occurs only after the clean provisional description/test revision and its fresh pure play, so the manifest binds that provisional commit."
+  - "The eventual Cycle 27 pure report is unsealed when compilation runs, is excluded from that three-report cohort, and can become pending only after outer gates pass and the seal binds it to the clean provisional commit."
+  - "The three-report compile may become the next accepted bundle at seal, but null/off-list selection leaves its recommendation unconsumed; this trace claims no hotspot implementation or consumption."
+nonclaims:
+  - "This does not make session_id schema-required in pure mode, add a schema field, change input parsing, infer a handle, inject or merge arguments server-side, or alter the emitted revealOption/reviewOption objects."
+  - "This does not change missing-parent recovery fields, option_id/reveal_id validation, story legality, reveal receipts, snapshot hashing, state, journey decisions, gameplay, UI, gameplay response/world/journey projections, serialization, or save schema."
+  - "This does not claim the seven historical rejected calls blocked a journey, mutated state, caused a stuck report, or were reported as gameplay bugs; all four retained players recovered and completed naturally."
+  - "This intentionally changes one model-visible pure MCP catalogue digest; it does not change any other tool's pinned catalogue entry or authenticate an unreviewed schema/prose drift."
+  - "This does not select, implement, or consume hotspot-ed51aa6f or any recommendation from the post-pure three-report compile."
+  - "This does not use the eventual Cycle 27 pure report as causal evidence for its own provisional revision or include that unsealed report in the current compile cohort."
+production:
+  - src/mcp/server.ts
+  - blind-tester/codex-pure-envelope.mjs
+tests:
+  - path: tests/regression/mcp_pure_play_mode.test.ts
+    cases:
+      - "advertises only player tools and records exactly one fresh overworld start"
+      - "does not advertise or honor QA-only quest graph and seed overrides"
+  - path: tests/regression/mcp_server_registration.test.ts
+    cases:
+      - "qualifies compact story isolation against canonical full inspection"
+verification:
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts tests/regression/mcp_server_registration.test.ts
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0567_story_inspection_parent_binding.yaml
