@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 764 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260811T021237Z/hotspots.json","hotspots_sha256":"927848fe4f7e6ced9bacaa8b89a7922c6a957da873381333da48042d72999ca9","manifest_path":"ai-runs/feedback/20260811T021237Z/report-manifest.json","manifest_sha256":"e9a0b7bb8aee755c03bc42204c0ac0c5c22ef1088e7a7692062aaf4cd04b9c7d"},"pending_cycle_reports":[{"evidence_sha256":"84569578ff4460a949fa93a4a60d9d464d46331acf0ed6a4793ac0bfad7d58e9","report_id":"pure:aaa8ec69da3c8f47b0fd86e86348b51d1af6276b070b0cfac076dca1ff32b17b","report_sha256":"545b1f46ce6fab35a27709c1cfa33930bc2b88e8b7490340d4695c96db3fa943","run_id":"2026-08-11T01-39-24-429Z","sidecar_sha256":"de0ab32cfa4088c1d093d21d9d60de78c0906fb4b60dfed1170cde2651bf8246","tested_commit":"35b1e03428f7f42592800a8a8613332e7bbb84f3"}],"schema_version":1} -->
+<!-- historical_cycle_count: 765 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260811T021237Z/hotspots.json","hotspots_sha256":"927848fe4f7e6ced9bacaa8b89a7922c6a957da873381333da48042d72999ca9","manifest_path":"ai-runs/feedback/20260811T021237Z/report-manifest.json","manifest_sha256":"e9a0b7bb8aee755c03bc42204c0ac0c5c22ef1088e7a7692062aaf4cd04b9c7d"},"pending_cycle_reports":[{"evidence_sha256":"84569578ff4460a949fa93a4a60d9d464d46331acf0ed6a4793ac0bfad7d58e9","report_id":"pure:aaa8ec69da3c8f47b0fd86e86348b51d1af6276b070b0cfac076dca1ff32b17b","report_sha256":"545b1f46ce6fab35a27709c1cfa33930bc2b88e8b7490340d4695c96db3fa943","run_id":"2026-08-11T01-39-24-429Z","sidecar_sha256":"de0ab32cfa4088c1d093d21d9d60de78c0906fb4b60dfed1170cde2651bf8246","tested_commit":"35b1e03428f7f42592800a8a8613332e7bbb84f3"},{"evidence_sha256":"53f71783ca78a054fb916e628d6225d6882713538e6cf3623a973eacaf7b8dae","report_id":"pure:8b3eafeea8b70c60b4f865ccbc695d6f478c3c7b6c05c6dea3e9c71adf97393a","report_sha256":"036972fbf05e96aebc553d5569439d8fdd5fe1db836cbd732185ae3a1cd32858","run_id":"2026-08-11T04-39-52-092Z","sidecar_sha256":"b240493278d44e103378ea707efe73775c7c221b0c219c03ac191fb55beb2d22","tested_commit":"4a8054a62ba73e47846a314c319ef40e097dbbf4"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -17,6 +17,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+
+### Cycle result - advocates_expelled_ending_truth
+
+- Evidence choice: reachable Advocate's Case deaths left the charter held, dropped in the antechamber, or already argued after a failed prepared appeal while `ending_expelled` still called it untouched and unargued; exact on-list `playtest-advocates_case` therefore outranked the partly superseded one-report Wolf density recommendation.
+- Surface/effect: the death ending now preserves the impound/notice outcome but says Marta's claim remains unresolved; ending id, death flag, predicates, combat, items, scores, and schema are unchanged, with Advocates hash `c3dd6268…` → `36350b77…`.
+- Counterfactual: ordinary runtime combat with player d6 1/Craf d6 6 pins untouched, carried, dropped, and failed-appeal deaths in full/compact projections, including flags, inventory/object location, score, terminal actions, and read nonmutation; successful appeals still remove Craf and reach the legal ending.
+- Pure evidence: exact-clean Spark seed 7 on `4a8054a6` took Ledger/Aid-Only/Rowan through Exposed-Ridge LURE to 60/60, continued via Cade's wagon to Gallowmere 50/50, and ended at decision 53; all 69 calls succeeded, clarity/enjoyment 5/4, replay yes, bugs/confusions `[]`, not stuck.
+- Canary caveat: the player never entered Advocate's Case, so the pure is exact-build integration evidence and deterministic regression remains causal proof; its early Gallowmere detour was recoverable and judged deliberate/fair rather than a mechanics defect.
+- Feedback/next: committed status is 1/3 with no compile; this routine selection leaves accepted `64f5227e` unconsumed and seal should leave two pending reports. Current item 28 narrows that low-severity density seam to duplicated Fodder-Loft “no retreat” copy, not a route rewrite.
+- Guard: exact-pure provenance, 6 focused regressions, 559 bug traces, both 6,000-step crawls, full health (448 files/3,890 tests), UI typecheck, all 12 packs, cycle-start integrity, formatting, and hostile authority review are green.
 
 ### Cycle result - story_inspection_parent_binding
 
@@ -155,12 +166,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `8707f630` chose Unaffiliated Courier, Exposed-Ridge FORTIFY, won Wolf-Winter, continued through Gallowmere and Tanner's Fever, then ended naturally at decision 57; clarity/enjoyment 4/5, replay yes, bugs `[]`, not stuck.
 - Feedback/authority: the stale accepted product recommendation remains unconsumed because this off-list authority fix has a null selection; pre-seal status is 2 actionable reports of 3, so no compile ran.
 - Self-critique/guard: raw audit traced the player's perceived hash friction to three transcription errors, not state races, so concurrency guards stay unchanged; 43 focused assessor/seal tests, type/lint/format, 545 traces, hostile reviews, and the pre-crawl are green, with outer gates still required.
-
-### Cycle result - strict_stream_forbidden_function_taxonomy
-
-- Evidence choice: the accepted Civic-density recommendation came from an intentionally customizable Ledger path and did not recur on the newest Ledger run; a recurrent Spark resource probe instead exposed a concrete fail-closed diagnostic defect.
-- Surface/effect: recognizable private native calls outside the pure AdventureForge tool/namespace surface now reject as the fixed safe category `direct_forbidden_function`, while public-first observation remains `forbidden_mcp_server` and historical diagnostics stay readable.
-- Exact boundary: the captured no-namespace resource call is pinned at 342 bytes/SHA `027bc003`; both polling races still exit 43, terminate owned descendants, publish no report/evidence/sidecar, and never reveal the raw tool or call id in the diagnostic.
-- Counterfactual: genuine duplicate/malformed allowed calls retain `direct_invalid_start`, repeated starts retain fresh-start ordering, and the change does not accept, skip, alias, retry, auto-start, or implement resource discovery.
-- Pure evidence: exact-clean Spark seed 7 on `9b494083` chose Unaffiliated Courier/personal-bond duty, resolved Albany's Charter backlog, then completed Wolf-Winter by Sheltered-Stockway LURE with herd and wolves alive; it ended naturally at decision 26 with clarity/enjoyment 4/4, replay yes, bugs `[]`, and no stuck state.
-- Self-critique/guard: gameplay could only canary this tooling-only change; 204 focused tests, type/lint/format, 544 traces, exact captured-row/race reviews, and the pre-crawl are green, feedback remains 1/3, and the standard outer gates remain required.

@@ -1,0 +1,131 @@
+id: bug_0568
+title: "The Advocate's Case death ending invented the charter's location and history"
+pack: content/rpg/quests/advocates_case.yaml
+reported_by: sealed Cycle 26 follow-up plus current deterministic death-route reproduction
+severity: S1
+evidence:
+  tracked_followup:
+    ledger: AI_LOOP_STATE.md
+    source_cycle: advocates_absent_oswin_surface
+    boundary: >
+      The sealed Cycle 26 result explicitly retains the false carried-charter
+      ending_expelled line as a bounded Advocate's Case follow-up. That tracked
+      finding survives on the clean Cycle 28 baseline at source hash c3dd6268.
+  current_reproduction:
+    baseline_commit: c517a1fea757b28f5f7c9e5e438a543dd0597931
+    predecessor_source_hash: c3dd62683dcbbfa314298faa4bdbda727ebeb62124fd286fcc402a3293ce7e69
+    boundary: >
+      Craf's reachable worst-roll combat death always selected ending_expelled.
+      With the charter untouched, its old table-and-unargued sentence happened
+      to fit. Taking it and dying left charter_roll in inventory; taking it,
+      moving north, dropping it, and dying left objectState.charter_roll in the
+      alderman's antechamber. A fully prepared failed appeal set charter_read,
+      register_read, priors_read, appeal_attempted, and charter_roll_taken before
+      the same death. The unconditional ending nevertheless said the roll stayed
+      on Marta's table and was unargued in every route.
+  prior_evidence_only_baseline:
+    run_id: 2026-08-11T03-41-36-875Z
+    tested_commit: c517a1fea757b28f5f7c9e5e438a543dd0597931
+    report_id: pure:7fdcd6517e10869b9f4712d54b7830150e361d8edca352c9615dea92d43cb5f0
+    report_sha256: 30911f1efd1ef3c2afdb77c590a73f69b1c9d9b7934ac0c87111f94df7170d3b
+    evidence_sha256: 56dcd69932b35bbff718dfaa5060e53ec2f3c95ab8e00984e00f0083dde031e8
+    sidecar_sha256: 36dabc8caa4334f9f188a99d5e5be9e6a00aafdfd75e9c093b1c0f79631b4c96
+    raw_sha256: 44acbd6c1932ebc5620a5c6533c5db7e4db932105a7218a8a6876709307915f6
+    route: ending_held at decision 20
+    player_result: >
+      The exact-clean fresh-overworld baseline completed Wolf-Winter through
+      uncommitted HUNT at 55/60, ended at the goal-completion choice, rated
+      clarity and enjoyment 4/4, would replay, was not stuck, and reported bugs:
+      []. Twenty-six of twenty-seven AdventureForge calls succeeded; one
+      truncated snapshot hash failed closed and the next call recovered.
+    causal_boundary: >
+      The baseline player never entered Advocate's Case, fought Craf, or exposed
+      ending_expelled. The prior AI_LOOP_COMMIT=0 run required this clean baseline
+      before any edit, so it is exact-baseline integration evidence only;
+      deterministic runtime regression is the causal proof of this copy fix.
+  ignored_failed_prefix:
+    run_id: 2026-08-11T03-38-58-625Z
+    tested_commit: c517a1fea757b28f5f7c9e5e438a543dd0597931
+    strict_diagnostic: ai-runs/2026-08-11T03-38-58-625Z/playtest.strict-rejection.json
+    strict_diagnostic_sha256: 4d181b76713cd17e86dd1fcd7793fe308a09977ec869a92d02fd93e0a4819a5b
+    failure: forbidden_mcp_server
+    authority: >
+      The prefix contains four public stream rows and an ignored strict-rejection
+      diagnostic after the model called codex/list_mcp_resources instead of an
+      AdventureForge player tool. It published no playtest.md, evidence JSONL,
+      V2 run sidecar, receipt-bound report, or stable report id. It is
+      noncanonical, acceptance-ineligible, and cannot become feedback or product
+      authority; the fresh 03-41 prefix is the only successful evidence-only
+      baseline run.
+  accepted_authority:
+    manifest: ai-runs/feedback/20260811T021237Z/report-manifest.json
+    manifest_sha256: e9a0b7bb8aee755c03bc42204c0ac0c5c22ef1088e7a7692062aaf4cd04b9c7d
+    hotspots: ai-runs/feedback/20260811T021237Z/hotspots.json
+    hotspots_sha256: 927848fe4f7e6ced9bacaa8b89a7922c6a957da873381333da48042d72999ca9
+    recommended_hotspot_id: 64f5227e
+    consumed_by_run_id: null
+  cycle_28:
+    assessment_run: 2026-08-11T04-39-52-092Z
+    mode: commit-enabled retry after the green evidence-only audit
+    assessor_top_candidate: hotspot-64f5227e
+    selected_candidate: playtest-advocates_case
+    feedback_status: "delta; 1 new verified reports, 1 actionable, 0 excluded mocks; 3 actionable reports required"
+revision_liveness: >
+  Cycle 26 changed only Oswin's resolved-stall NPC predicate and preserved every
+  ending. Cycle 27's merge and the prior clean Cycle 28 evidence-only baseline
+  likewise left Advocate's Case content unchanged. The tracked false-ending
+  follow-up therefore remains live at exact predecessor hash c3dd6268. The accepted top hotspot 64f5227e is a
+  one-report Wolf-Winter density observation that is partly revision-stale after
+  Cycle 25; the current ending contradiction is a smaller, deterministic hard-
+  truth defect under the exact on-list Advocate's Case maintenance candidate.
+symptom: >
+  Dying to Craf always narrated the charter roll as still on Marta's stall table
+  and unargued. Both details contradicted reachable state: the player could be
+  carrying the roll, could have dropped it in the antechamber, or could already
+  have made a formal appeal that the deputy adjourned without ruling. Combat and
+  the terminal outcome remained mechanically sound.
+root_cause: >
+  ending_expelled was one unconditional death ending shared by all Craf-loss
+  states, but its closing sentence encoded the untouched direct-combat route's
+  item location and argument history. It had no predicates or variants capable
+  of distinguishing runtime object placement or appeal_attempted.
+fix: >
+  Replace only the false charter-location and unargued sentence with a neutral
+  legal-status close. Marta's claim remains unresolved at market day's end on
+  every reachable Craf death: direct combat leaves it pending, while a failed
+  formal appeal is explicitly adjourned without ruling. Preserve the ending id,
+  title, death flag, and every item, appeal, combat, score, exit, and route rule.
+settled_copy: >-
+  Craf gets his weight into you before you reach the doorway, and after that the choice is no longer yours. Oswin arrives in the antechamber with the measured expression of a man who had anticipated this outcome and is not surprised by it. The deputy notes the disturbance in the hearing record. Marta's bolts remain impounded; Oswin's notice stands. Marta's claim remains unresolved when market day ends. *** You have fallen. ***
+deterministic_witnesses:
+  - "direct combat with the charter untouched reaches ending_expelled at 0/50 and renders the neutral full and compact ending byte-exactly"
+  - "taking the charter and carrying it north into direct combat preserves charter_roll in inventory through the same 0/50 death and renders no stall-table claim"
+  - "a fully prepared failed appeal leaves charter_read, register_read, priors_read, appeal_attempted, and the held charter plus both certified packets intact; three worst-roll attacks then reach the same neutral ending at 25/50"
+  - "taking the charter, moving north, and dropping it records charter_roll in aldermans_antechamber; the same lethal combat preserves that location and renders no stall-table claim"
+  - "the lethal stream uses d6 1 player blows and d6 6 Craf counters for three rounds, reaches hp 0 with Craf still alive, and fires the declared death ending through ordinary runtime combat"
+  - "full and compact terminal projections agree on ending id, title, and death true; they carry the expected newline-preserved full text and trimmed compact text, expose no actions, and do not mutate flags, inventory, object placement, score, or terminal state"
+  - "the Advocate's Case source hash advances directly from c3dd62683dcbbfa314298faa4bdbda727ebeb62124fd286fcc402a3293ce7e69 to 36350b7751c24f6d0fd0457879f187962609e48116cdef6ff39aa238886be66e"
+selection_semantics:
+  - "Cycle 28 chooses exact on-list maintenance candidate playtest-advocates_case rather than hotspot-64f5227e or a null/off-list marker because the tracked Advocate's Case review localized this current hard-truth defect."
+  - "The prior AI_LOOP_COMMIT=0 audit collected the exact-clean c517a1fe pure baseline before uncommitted work and permitted no provisional commit. That baseline report cannot be represented as evidence for the later 36350b source revision."
+  - "Fresh commit-enabled run 2026-08-11T04-39-52-092Z owns the assessment and exact frozen playtest-advocates_case marker. Its scaffold, source, regression, and trace must freeze together before a new exact-build pure run; only that new report may bind the 36350b revision."
+  - "Accepted recommendation hotspot-64f5227e remains unselected and unconsumed. This edit neither claims to implement its Wolf-Winter density finding nor makes its accepted bundle inert."
+  - "Committed feedback status is exactly 1/3 actionable, so no feedback compile is authorized. The future current-revision pure report stays outside the pre-seal count and may only be appended after every outer gate passes."
+nonclaims:
+  - "Neither the rejected 03-38 prefix nor the successful 03-41 baseline entered Advocate's Case, exposed ending_expelled, or causally tested the changed sentence; causal evidence is deterministic current-pack combat and projection regression."
+  - "This does not claim Craf combat was blocked, unwinnable, or incorrectly lethal; change his hp, attack, defense, rolls, counter timing, defeat flag, or death-ending linkage; or alter player hp, attack, defense, score, inventory, object placement, flags, exits, quest stage, win conditions, serialization, or schema."
+  - "This does not add an ending variant or infer whether the charter is held. The one route-neutral sentence is deliberately valid for untouched, held, dropped, and failed-appeal deaths."
+  - "This does not change ending_expelled's id, title, death true classification, terminal marker, or full/compact projection rules."
+  - "This does not preserve the predecessor content hash. Content-hash-bound c3dd6268 artifacts intentionally differ from the 36350b source under the unchanged integrity policy."
+  - "This does not select or consume hotspot-64f5227e, compile at 1/3, seal the prior evidence-only baseline, or claim that baseline exercised the provisional build."
+production:
+  - content/rpg/quests/advocates_case.yaml
+tests:
+  - path: tests/regression/advocates_case_rhetoric_retry.test.ts
+    cases:
+      - "keeps the expelled ending true after failed, untouched, held, and dropped charter routes"
+verification:
+  - npx vitest run tests/regression/advocates_case_rhetoric_retry.test.ts
+  - npm run validate -- advocates_case
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0568_advocates_expelled_ending_truth.yaml
