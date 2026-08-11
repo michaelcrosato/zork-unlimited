@@ -167,3 +167,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat: the pure route did not enter Gallowmere, so it proves exact-build integration/retention only; the closure copy is regression/trace-backed rather than directly replayed.
 - Feedback/next: pre-seal status was two actionable reports of three, so no compile ran; the seal added this run as report three, ready for Cycle 18's compile. Its pending friction is dense Wolf-Winter LURE movement/blocked-exit guidance, not a defect in this increment.
 - Guard: 17 focused route/counterexample tests, both 6,000-step crawls, exact health (448 files/3,872 tests), UI typecheck, all 12 packs, cycle-start integrity, trace integrity, and exact playtest provenance are green.
+## AFK Cycle 2026-08-11T13-44-53-712Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T13-44-53-712Z","selected_recommendation_id":"playtest-advocates_case"} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
