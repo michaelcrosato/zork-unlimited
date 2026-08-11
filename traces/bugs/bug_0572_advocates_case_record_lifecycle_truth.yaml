@@ -1,0 +1,114 @@
+id: bug_0572
+title: "The Advocate's Case record froze its pre-hearing state across the appeal lifecycle"
+pack: content/rpg/quests/advocates_case.yaml
+reported_by: Cycle 32 Advocate's Case maintenance rotation and deterministic runtime reproduction
+severity: S1
+evidence:
+  cycle_32:
+    assessment_run: 2026-08-11T13-44-53-712Z
+    baseline_commit: d44a0be33cc2cdbaf02ff3e341cd583772d585aa
+    assessment_mode: maintenance rotation only
+    assessor_top_candidate: playtest-advocates_case
+    selected_candidate: playtest-advocates_case
+    feedback_status: "delta; 2 new verified reports, 2 actionable, 0 excluded mocks; 3 actionable reports required"
+    compile_authorized: false
+  accepted_authority:
+    manifest: ai-runs/feedback/20260811T091400Z/report-manifest.json
+    manifest_sha256: 147893756a4a10e1c9ebc0aa3eafef060d9442111d5708170a60c49ad0ca887d
+    hotspots: ai-runs/feedback/20260811T091400Z/hotspots.json
+    hotspots_sha256: eb427b085f1ec2436f1859ddad95dde0c6e4a4a570493de6d6b0c3263eda554f
+    recommended_hotspot_id: bd527711
+    consumed_by_run_id: 2026-08-11T11-28-30-987Z
+  pending_before_cycle_32:
+    - run_id: 2026-08-11T09-04-58-054Z
+      tested_commit: 05a1d6804b19dc7143e79c081aeaf33546c2af82
+      report_id: pure:4c76e0f22c68c9e44c2a01e975a3307bed06d0d93a30186b4f18e3b9628c93f4
+      report_sha256: 71929ed79072d9ad627478aa92cfc1b9ddda1dc8a16867f2801df470704ee9bb
+      evidence_sha256: ebc215ef83d7ab0adbf8e168b0620438ad49bc41d216e8f54b1f93f9f9cd2f63
+      sidecar_sha256: 3ee8c3167858753fef442606cf17d0a17039b588493a3522f17a6eb1d8bead06
+    - run_id: 2026-08-11T11-28-30-987Z
+      tested_commit: f941d9348bd8f04e4250c8667feb1ec479288d05
+      report_id: pure:b7a98dfbff13147f423a34c7a265b45975595f88ec10a66273b712dee181691f
+      report_sha256: 4d9aedb537fc2467021b2c4bdf2590269e9c7e74c289b2d481180e7889f0c89a
+      evidence_sha256: eecb40e36c3eb79a7c7d8e0225b7f1d36d1712b6338e0876aa9fdb1907e41fa7
+      sidecar_sha256: b100715f7962dfa9b8fdc7da9b2424181cb7e3cfc2ae6f58dc0af7294f79159f
+  current_reproduction:
+    predecessor_source_hash: 36350b7751c24f6d0fd0457879f187962609e48116cdef6ff39aa238886be66e
+    boundary: >
+      Before the edit, case_record had one base description and one static READ
+      narration. A forced successful primary presentation set appeal_attempted and
+      oswin_overruled, and the antechamber room simultaneously said the deputy had
+      struck the slate through, but EXAMINE still said the case waited for someone
+      to make the argument and READ still said the response was pending and no
+      argument had been made. A forced failed prepared presentation set
+      appeal_attempted without oswin_overruled after the deputy adjourned without
+      ruling, yet the same EXAMINE/READ pair still called the presentation unmade.
+revision_liveness: >
+  The Cycle 32 baseline carries exact Advocate's Case source hash 36350b77. The
+  accepted bd527711 bundle is already consumed by Cycle 31 and concerns a distinct
+  Wolf-Winter action-handoff seam. Cycle 32's deterministic maintenance audit
+  reproduces this contradiction directly in the loaded current pack; no earlier
+  certified-extract, absent-Oswin, or expelled-ending repair changed case_record's
+  static description or READ text.
+symptom: >
+  The same case slate presented mutually exclusive legal states at once. After a
+  successful primary or recovered appeal, the room said the filing was discharged
+  while examining or reading the slate said it was still pending and unargued.
+  After a failed appeal, the deputy had heard and adjourned the presentation, but
+  the object still said no argument had been made. The untouched pre-presentation
+  and combat-only states before any legal presentation were the routes for which
+  the old pending object copy remained accurate.
+root_cause: >
+  case_record exposed only one unconditional object description and one
+  unconditional read_text even though appeal_attempted and oswin_overruled already
+  encode three live presentation states: untouched, attempted and adjourned, and
+  discharged. The room used those flags reactively, but its visible object did not.
+fix: >
+  Keep the untouched base description. Add a first-priority oswin_overruled object
+  variant that names the deputy's discharge and struck-through pending field, then
+  an appeal_attempted-without-oswin_overruled variant that names the adjournment and
+  corrected-sequence recovery. Reframe READ as the original filed lines plus a
+  neutral statement that the current disposition, if any, is recorded on the same
+  slate. Preserve every action, interaction, check, effect, flag writer, recovery,
+  room, exit, score, combat path, and ending.
+settled_copy:
+  untouched: >-
+    The case slate on the clerk's table: 'Holm, Marta — impound notice filed by Warden Oswin under Guild Schedule, Article Fourteen. Goods held. Hearing: this session.' The alderman's deputy is in the hall; the case is waiting for a party to make the argument. The slate and its stylus are there to be used.
+  failed_appeal: >-
+    The case slate on the clerk's table. Marta's original impound filing remains pending after the deputy adjourned the first presentation without ruling. The slate and stylus remain ready for a corrected legal sequence.
+  resolved_appeal: >-
+    The case slate on the clerk's table, the original impound filing still legible beneath the deputy's disposition: 'discharged, charter exemption confirmed.' The word 'pending' is struck through. The slate and stylus remain with the hearing record.
+  read: >-
+    The filed lines read: 'Holm, Marta — impound. Warden: Oswin (Weavers' Guild). Article: Schedule Fourteen, unlicensed sale. Goods: twelve bolts broadcloth, held. Claimant response: pending.' That is the original guild claim and response field; the deputy's current disposition, if any, is recorded on the same slate.
+deterministic_witnesses:
+  - "before any legal presentation, both the untouched antechamber and the ordinary combat-only state after craf_defeated keep appeal_attempted and oswin_overruled absent, project EXAMINE and READ in full and compact action lists, and render the unchanged pending base description plus the neutral filed-lines READ exactly"
+  - "a forced failed fully prepared presentation sets appeal_attempted without oswin_overruled, keeps the existing corrected-sequence recovery legal, selects the exact adjourned variant for EXAMINE, and renders the same neutral READ without calling the appeal unmade"
+  - "a forced successful primary presentation and the deterministic post-failure recovery both set appeal_attempted and oswin_overruled, preserve the room's struck-through description, select the exact discharged object variant, and render the same neutral filed-lines READ"
+  - "full and compact projections retain identical legal action ids in every witness and do not mutate state; EXAMINE and READ change only the ordinary step counter and no flag, variable, inventory, object, quest-stage, or terminal field"
+  - "the exact Advocate's Case source hash advances directly from 36350b7751c24f6d0fd0457879f187962609e48116cdef6ff39aa238886be66e to d8b85620ac7ee8b4672f25e8b5a1552478b3d9d6add0b4894df32bb09dd19dff"
+selection_semantics:
+  - "Cycle 32 implements exact on-list maintenance candidate playtest-advocates_case, the assessor's first routine rotation row, rather than a null/off-list task. Maintenance rank is rotation context, not strategic evidence, while deterministic current-pack reproduction supplies the causal defect proof."
+  - "Before the provisional commit, feedback_cycle_selection must freeze run 2026-08-11T13-44-53-712Z with selected_recommendation_id playtest-advocates_case and remain unchanged through the future pure run and outer gates."
+  - "The accepted bd527711 recommendation was already consumed by run 2026-08-11T11-28-30-987Z. This Advocate's Case fix neither selects it nor changes its accepted manifest or consumption receipt."
+  - "Committed feedback status is exactly 2/3 actionable with the 09-04 report first and the 11-28 report second, so no compile is authorized and no feedback-compile pointer belongs to Cycle 32."
+  - "With no compile pointer, a future successful seal preserves the already-consumed accepted bundle, appends the new exact-build pure report after those two sorted pending rows, and removes the frozen playtest-advocates_case selection marker. The current report cannot count before its outer-gate acceptance."
+nonclaims:
+  - "The maintenance assessment is not blind evidence that a player encountered case_record, and no current-revision pure report exists yet. Deterministic loaded-pack routes are the causal proof; future pure evidence remains exact-build and gate-bound."
+  - "This does not change an action id or command, add or remove an action, alter rhetoric difficulty or RNG, change appeal success/failure/recovery effects, change a flag writer or predicate outside the two presentation variants, or modify score, inventory, object placement, quest stages, exits, rooms, NPCs, combat, win conditions, endings, schemas, serialization, room-description or action-list projection rules, or validators."
+  - "This does not claim the direct combat route or market-square transition is defective. Their intentional partial-score outcome and ending copy are outside this lifecycle repair."
+  - "This does not revisit the certified-extract wording, resolved Oswin presence, or ending_expelled truth fixes, and it does not claim those earlier revisions tested this new d8b85620 source."
+  - "This does not preserve the predecessor content hash. Exact 36350b77 content-hash-bound saves, replays, traces, or evidence intentionally differ from d8b85620 under the unchanged integrity policy."
+  - "This does not compile at 2/3, promote or reorder feedback authority, consume an already-consumed recommendation again, use the unsealed current pure in its own cohort, or edit the machine-owned acceptance marker by hand."
+production:
+  - content/rpg/quests/advocates_case.yaml
+tests:
+  - path: tests/regression/advocates_case_rhetoric_retry.test.ts
+    cases:
+      - "keeps untouched and combat-only case records pending before any legal presentation"
+      - "shows the adjourned case record after a failed prepared presentation"
+      - "shows the discharged case record after primary and recovered legal success"
+verification:
+  - npx vitest run tests/regression/advocates_case_rhetoric_retry.test.ts
+  - npm run validate -- advocates_case
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0572_advocates_case_record_lifecycle_truth.yaml

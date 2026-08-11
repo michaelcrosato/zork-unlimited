@@ -389,13 +389,27 @@ objects:
       Warden Oswin under Guild Schedule, Article Fourteen. Goods held. Hearing:
       this session.' The alderman's deputy is in the hall; the case is waiting for
       a party to make the argument. The slate and its stylus are there to be used.
+    variants:
+      - when: [{ has_flag: oswin_overruled }]
+        text: >
+          The case slate on the clerk's table, the original impound filing still
+          legible beneath the deputy's disposition: 'discharged, charter exemption
+          confirmed.' The word 'pending' is struck through. The slate and stylus
+          remain with the hearing record.
+      - when:
+          - all_of:
+              - { has_flag: appeal_attempted }
+              - { not_flag: oswin_overruled }
+        text: >
+          The case slate on the clerk's table. Marta's original impound filing remains
+          pending after the deputy adjourned the first presentation without ruling.
+          The slate and stylus remain ready for a corrected legal sequence.
     takeable: false
     read_text: >
-      'Holm, Marta — impound. Warden: Oswin (Weavers' Guild). Article: Schedule
-      Fourteen, unlicensed sale. Goods: twelve bolts broadcloth, held. Claimant
-      response: pending.' The 'pending' is the gap. The case is open; the argument
-      has not been made yet. The deputy is in the hall and will hear whoever comes
-      through the door with something to say.
+      The filed lines read: 'Holm, Marta — impound. Warden: Oswin (Weavers' Guild).
+      Article: Schedule Fourteen, unlicensed sale. Goods: twelve bolts broadcloth,
+      held. Claimant response: pending.' That is the original guild claim and response
+      field; the deputy's current disposition, if any, is recorded on the same slate.
     interactions:
       # The confrontation: USE prior_convictions ON case_record — present the full
       # argument to the case record (and the deputy beyond the door): the exemption's

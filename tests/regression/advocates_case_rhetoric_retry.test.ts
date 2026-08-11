@@ -35,10 +35,20 @@ const CERTIFIED_EXTRACTS_SOURCE_HASH =
   "284d5e2e618b87dd2dd0761715b7cf6c5736111ae15f5d9824ce75ee3f03510e";
 const RESOLVED_OSWIN_PRESENCE_SOURCE_HASH =
   "c3dd62683dcbbfa314298faa4bdbda727ebeb62124fd286fcc402a3293ce7e69";
-const EXPELLED_ENDING_TRUTH_SOURCE_HASH =
+const CASE_RECORD_LIFECYCLE_PREDECESSOR_SOURCE_HASH =
   "36350b7751c24f6d0fd0457879f187962609e48116cdef6ff39aa238886be66e";
+const CASE_RECORD_LIFECYCLE_SOURCE_HASH =
+  "d8b85620ac7ee8b4672f25e8b5a1552478b3d9d6add0b4894df32bb09dd19dff";
 const EXPELLED_ENDING_TEXT =
   "Craf gets his weight into you before you reach the doorway, and after that the choice is no longer yours. Oswin arrives in the antechamber with the measured expression of a man who had anticipated this outcome and is not surprised by it. The deputy notes the disturbance in the hearing record. Marta's bolts remain impounded; Oswin's notice stands. Marta's claim remains unresolved when market day ends. *** You have fallen. ***\n";
+const UNTOUCHED_CASE_RECORD_TEXT =
+  "The case slate on the clerk's table: 'Holm, Marta — impound notice filed by Warden Oswin under Guild Schedule, Article Fourteen. Goods held. Hearing: this session.' The alderman's deputy is in the hall; the case is waiting for a party to make the argument. The slate and its stylus are there to be used.\n";
+const FAILED_CASE_RECORD_TEXT =
+  "The case slate on the clerk's table. Marta's original impound filing remains pending after the deputy adjourned the first presentation without ruling. The slate and stylus remain ready for a corrected legal sequence.\n";
+const RESOLVED_CASE_RECORD_TEXT =
+  "The case slate on the clerk's table, the original impound filing still legible beneath the deputy's disposition: 'discharged, charter exemption confirmed.' The word 'pending' is struck through. The slate and stylus remain with the hearing record.\n";
+const CASE_RECORD_READ_TEXT =
+  "The filed lines read: 'Holm, Marta — impound. Warden: Oswin (Weavers' Guild). Article: Schedule Fourteen, unlicensed sale. Goods: twelve bolts broadcloth, held. Claimant response: pending.' That is the original guild claim and response field; the deputy's current disposition, if any, is recorded on the same slate.\n";
 
 const lethalRng = (): Rng => {
   let draw = 0;
@@ -125,6 +135,19 @@ function projected(state: GameState) {
   return { full, compact, ids: actions.map((action) => action.id) };
 }
 
+function observeCaseRecord(state: GameState, id: "examine_case_record" | "read_case_record") {
+  const before = structuredClone(state);
+  const beforeBytes = JSON.stringify(state);
+  const result = actWith(step, state, id);
+
+  expect(state).toEqual(before);
+  expect(JSON.stringify(state)).toBe(beforeBytes);
+  expect(result.state).toEqual({ ...before, step: before.step + 1 });
+  return result.events
+    .flatMap((event) => (event.type === "narration" ? [event.text] : []))
+    .join(" ");
+}
+
 const RESOLVED_STALL_ACTIONS = [
   "go_east",
   "go_north",
@@ -140,6 +163,72 @@ const RESOLVED_STALL_ACTIONS = [
 ];
 
 describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", () => {
+  it("keeps untouched and combat-only case records pending before any legal presentation", () => {
+    const untouched = choose(initStateForRpgPack(index, 7), "go_north");
+    let combatOnly = chooseWith(combatStep, initStateForRpgPack(index, 7), "go_north");
+    combatOnly = chooseWith(combatStep, combatOnly, "attack_craf");
+    combatOnly = chooseWith(combatStep, combatOnly, "attack_craf");
+
+    expect(untouched.flags["craf_defeated"]).toBeUndefined();
+    expect(combatOnly.flags["craf_defeated"]).toBe(true);
+    for (const state of [untouched, combatOnly]) {
+      const { full, compact, ids } = projected(state);
+
+      expect(state.flags["appeal_attempted"]).toBeUndefined();
+      expect(state.flags["oswin_overruled"]).toBeUndefined();
+      expect(ids).toContain("examine_case_record");
+      expect(ids).toContain("read_case_record");
+      expect(full.available_actions.map((action) => action.id)).toEqual(ids);
+      expect(compact.actions).toEqual(ids);
+      expect(observeCaseRecord(state, "examine_case_record")).toBe(UNTOUCHED_CASE_RECORD_TEXT);
+      expect(observeCaseRecord(state, "read_case_record")).toBe(CASE_RECORD_READ_TEXT);
+    }
+  });
+
+  it("shows the adjourned case record after a failed prepared presentation", () => {
+    const failed = choose(fullyPreparedAtCaseRecord(), "use_prior_convictions_on_case_record");
+    const { full, compact, ids } = projected(failed);
+
+    expect(failed.flags["appeal_attempted"]).toBe(true);
+    expect(failed.flags["oswin_overruled"]).toBeUndefined();
+    expect(ids).toContain("use_town_register_on_case_record");
+    expect(ids).toContain("examine_case_record");
+    expect(ids).toContain("read_case_record");
+    expect(full.available_actions.map((action) => action.id)).toEqual(ids);
+    expect(compact.actions).toEqual(ids);
+    expect(observeCaseRecord(failed, "examine_case_record")).toBe(FAILED_CASE_RECORD_TEXT);
+    expect(observeCaseRecord(failed, "read_case_record")).toBe(CASE_RECORD_READ_TEXT);
+  });
+
+  it("shows the discharged case record after primary and recovered legal success", () => {
+    const primarySuccess = chooseWith(
+      successfulStep,
+      fullyPreparedAtCaseRecord(),
+      "use_prior_convictions_on_case_record",
+    );
+    const recoveredSuccess = choose(
+      choose(fullyPreparedAtCaseRecord(), "use_prior_convictions_on_case_record"),
+      "use_town_register_on_case_record",
+    );
+
+    for (const resolved of [primarySuccess, recoveredSuccess]) {
+      const { full, compact, ids } = projected(resolved);
+
+      expect(resolved.flags["appeal_attempted"]).toBe(true);
+      expect(resolved.flags["oswin_overruled"]).toBe(true);
+      expect(full.description).toContain("case slate has been struck through");
+      expect(ids).toContain("examine_case_record");
+      expect(ids).toContain("read_case_record");
+      expect(full.available_actions.map((action) => action.id)).toEqual(ids);
+      expect(compact.actions).toEqual(ids);
+      expect(observeCaseRecord(resolved, "examine_case_record")).toBe(RESOLVED_CASE_RECORD_TEXT);
+      expect(observeCaseRecord(resolved, "read_case_record")).toBe(CASE_RECORD_READ_TEXT);
+    }
+
+    expect(loaded.compiled.contentHash).toBe(CASE_RECORD_LIFECYCLE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(CASE_RECORD_LIFECYCLE_PREDECESSOR_SOURCE_HASH);
+  });
+
   it("unlocks a corrected sequence after a failed prepared rhetoric attempt", () => {
     const failed = choose(fullyPreparedAtCaseRecord(), "use_prior_convictions_on_case_record");
 
@@ -231,7 +320,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
       expect(compact.actions).toEqual(RESOLVED_STALL_ACTIONS);
     }
 
-    expect(loaded.compiled.contentHash).toBe(EXPELLED_ENDING_TRUTH_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(CASE_RECORD_LIFECYCLE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(CERTIFIED_EXTRACTS_SOURCE_HASH);
   });
 
@@ -403,7 +492,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
       expect(compact.actions, scenario.label).toBeUndefined();
     }
 
-    expect(loaded.compiled.contentHash).toBe(EXPELLED_ENDING_TRUTH_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(CASE_RECORD_LIFECYCLE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(RESOLVED_OSWIN_PRESENCE_SOURCE_HASH);
   });
 });
