@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 765 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260811T021237Z/hotspots.json","hotspots_sha256":"927848fe4f7e6ced9bacaa8b89a7922c6a957da873381333da48042d72999ca9","manifest_path":"ai-runs/feedback/20260811T021237Z/report-manifest.json","manifest_sha256":"e9a0b7bb8aee755c03bc42204c0ac0c5c22ef1088e7a7692062aaf4cd04b9c7d"},"pending_cycle_reports":[{"evidence_sha256":"84569578ff4460a949fa93a4a60d9d464d46331acf0ed6a4793ac0bfad7d58e9","report_id":"pure:aaa8ec69da3c8f47b0fd86e86348b51d1af6276b070b0cfac076dca1ff32b17b","report_sha256":"545b1f46ce6fab35a27709c1cfa33930bc2b88e8b7490340d4695c96db3fa943","run_id":"2026-08-11T01-39-24-429Z","sidecar_sha256":"de0ab32cfa4088c1d093d21d9d60de78c0906fb4b60dfed1170cde2651bf8246","tested_commit":"35b1e03428f7f42592800a8a8613332e7bbb84f3"},{"evidence_sha256":"53f71783ca78a054fb916e628d6225d6882713538e6cf3623a973eacaf7b8dae","report_id":"pure:8b3eafeea8b70c60b4f865ccbc695d6f478c3c7b6c05c6dea3e9c71adf97393a","report_sha256":"036972fbf05e96aebc553d5569439d8fdd5fe1db836cbd732185ae3a1cd32858","run_id":"2026-08-11T04-39-52-092Z","sidecar_sha256":"b240493278d44e103378ea707efe73775c7c221b0c219c03ac191fb55beb2d22","tested_commit":"4a8054a62ba73e47846a314c319ef40e097dbbf4"}],"schema_version":1} -->
+<!-- historical_cycle_count: 766 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-11T06-18-45-068Z","hotspots_path":"ai-runs/feedback/20260811T021237Z/hotspots.json","hotspots_sha256":"927848fe4f7e6ced9bacaa8b89a7922c6a957da873381333da48042d72999ca9","manifest_path":"ai-runs/feedback/20260811T021237Z/report-manifest.json","manifest_sha256":"e9a0b7bb8aee755c03bc42204c0ac0c5c22ef1088e7a7692062aaf4cd04b9c7d"},"pending_cycle_reports":[{"evidence_sha256":"84569578ff4460a949fa93a4a60d9d464d46331acf0ed6a4793ac0bfad7d58e9","report_id":"pure:aaa8ec69da3c8f47b0fd86e86348b51d1af6276b070b0cfac076dca1ff32b17b","report_sha256":"545b1f46ce6fab35a27709c1cfa33930bc2b88e8b7490340d4695c96db3fa943","run_id":"2026-08-11T01-39-24-429Z","sidecar_sha256":"de0ab32cfa4088c1d093d21d9d60de78c0906fb4b60dfed1170cde2651bf8246","tested_commit":"35b1e03428f7f42592800a8a8613332e7bbb84f3"},{"evidence_sha256":"53f71783ca78a054fb916e628d6225d6882713538e6cf3623a973eacaf7b8dae","report_id":"pure:8b3eafeea8b70c60b4f865ccbc695d6f478c3c7b6c05c6dea3e9c71adf97393a","report_sha256":"036972fbf05e96aebc553d5569439d8fdd5fe1db836cbd732185ae3a1cd32858","run_id":"2026-08-11T04-39-52-092Z","sidecar_sha256":"b240493278d44e103378ea707efe73775c7c221b0c219c03ac191fb55beb2d22","tested_commit":"4a8054a62ba73e47846a314c319ef40e097dbbf4"},{"evidence_sha256":"1f71e2339928a6a2b10f7ab7e20089e6ad3b186f63e61ae75c3fca938d717bf0","report_id":"pure:9744db83da7a1f200d432ac25ffca8af4e48e6325af9e0ef98eea26def1a7ebe","report_sha256":"3aefae0a4a149744fe5b75cef05aa26e09c8af0a38027b73f9d30719746804e9","run_id":"2026-08-11T06-18-45-068Z","sidecar_sha256":"c70c30ffe533b45c840da6a9a26e2f153179498aa6be784ad1e9e71fd29da2d0","tested_commit":"de8a22586bf22c6dc84440c0cc5b74aea8354864"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -17,6 +17,17 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+
+### Cycle result - wolf_lure_loft_duplicate_guidance
+
+- Evidence choice: accepted `64f5227e` and later exact-build raw both showed the pending Fodder-Loft repeat “the hauled ladder leaves no retreat” in room text and blocked east, so exact `hotspot-64f5227e` outranked tied broader density rows.
+- Surface/effect: the pending room now ends after the second-cast instruction; the exact actionable east lock, one-way geometry, predicates, cast, and post-cast truth remain unchanged, advancing Wolf hash `7beba188…` → `09bd7660…`.
+- Counterfactual: clean, split-guard, braced-rail, and hybrid LURE routes pin exact full/compact room plus blocked east before the cast and open east afterward; current saves/replays load while the exact predecessor rejects.
+- Pure evidence: exact-clean Spark seed 7 on `de8a2258` chose Road-Warden/Aid-Only, Sheltered FORTIFY, recovered a failed first seal with Cade, and ended `ending_fortified_cade_terms` at decision 17 with 35/60; all 25 calls succeeded.
+- Canary caveat: the pure route never entered LURE or the Fodder-Loft, so it proves exact-build integration only; causal proof is the four-route regression. Clarity/enjoyment were 5/4, replay yes, bugs `[]`, not stuck.
+- Feedback/next: pre-seal status remained two actionable reports of three, so no compile ran; the seal consumes `64f5227e` and queues this third report. The visible Cade recovery worked immediately, so defer broader FORTIFY density changes to that later compile.
+- Guard: 28 focused tests, Wolf validation at `09bd7660…`, 560 trace files, type/lint/format, exact pure provenance, post-crawl, health, and cycle-start integrity are green.
 
 ### Cycle result - advocates_expelled_ending_truth
 
@@ -156,21 +167,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Causal evidence: that player supplied malformed parent `…8c3d?`, received the new generic recovery plus exact handle, retried successfully, and did not count it as confusion; active-child wording remains regression-proven.
 - Feedback/next: the exact prior three-report delta ranks `07988b93` then `33adfdd0`, both one-report S1 hash-copy rows; raw calls are stale/mistyped guards rather than state races, so preserve concurrency and prefer routine Advocates absent a reproducible engine defect.
 - Authority/guard: the provisional delta binds `2b16e731` to predecessor `00fc73…`, consumes only the three preaccepted pending identities, and excludes this run until seal; focused checks and exact evidence are green, with outer gates still required.
-
-### Cycle result - accepted_hotspot_compiler_order
-
-- Evidence choice: the accepted compiler recommended `a919cded`, but three tied 2.5 candidates were re-sorted by unrelated short-hash ids and the assessor offered `6268a10e`, a sibling the exact-selection seal could not consume.
-- Surface/effect: equal-score accepted hotspots now retain their authenticated compiler ordinal after assessor score and playtest recency; every other tie still uses the existing id order.
-- Counterfactual: a lexically first rank-four hotspot stays excluded, higher assessor score still wins, filtered top-three rows are not backfilled, and equal-score unplayable fixes remain ahead of hotspots; compiler artifacts and exact seal matching are unchanged.
-- Pure evidence: exact-clean Spark seed 7 on `8707f630` chose Unaffiliated Courier, Exposed-Ridge FORTIFY, won Wolf-Winter, continued through Gallowmere and Tanner's Fever, then ended naturally at decision 57; clarity/enjoyment 4/5, replay yes, bugs `[]`, not stuck.
-- Feedback/authority: the stale accepted product recommendation remains unconsumed because this off-list authority fix has a null selection; pre-seal status is 2 actionable reports of 3, so no compile ran.
-- Self-critique/guard: raw audit traced the player's perceived hash friction to three transcription errors, not state races, so concurrency guards stay unchanged; 43 focused assessor/seal tests, type/lint/format, 545 traces, hostile reviews, and the pre-crawl are green, with outer gates still required.
-
-## AFK Cycle 2026-08-11T06-18-45-068Z
-
-<!-- feedback_cycle_selection: {"run_id":"2026-08-11T06-18-45-068Z","selected_recommendation_id":"hotspot-64f5227e"} -->
-
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-64f5227e (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
