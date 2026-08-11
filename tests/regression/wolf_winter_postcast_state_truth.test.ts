@@ -69,6 +69,8 @@ const POST_DIVERSION_DOOR_BLOCKED_SOUTH =
   "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: finish any shown threshold step, then go north.";
 const POST_DIVERSION_MOUTH_BLOCKED_SOUTH =
   "South is closed. LURE complete: go north for the cattle count. DRIVE: resolve the crisis. FORTIFY: hold the dawn watch.";
+const MOUTH_NORTH_GUIDANCE =
+  "Follow the route actions shown here. The route either finishes directly or opens north when ready.";
 const PLAIN_COMBAT =
   "The old grey leader waits between you and the bellowing cattle in the byre's dark heart, shaping a practiced feint. Cade may have taught you to hold or close; a saved guard offers another catch. Without either, only plain spear work remains. The door is south.";
 
@@ -249,8 +251,10 @@ describe("Wolf-Winter post-cast state truth", () => {
     state = act(state, "go_east");
     state = act(state, "go_north");
     expectRoomSurface(state, spec.finalPending);
+    expectBlockedSurface(state, [["north", MOUTH_NORTH_GUIDANCE]]);
     expect(actionIds(state)).toContain("use_winter_feed_sack_on_outer_scent_gate");
     expect(actionIds(state)).not.toContain("attack_grey_leader");
+    expect(actionIds(state)).not.toContain("go_north");
     if (spec.recovery === "hybrid_guard") {
       expect(state.inventory).toContain("split_rail_guard");
       expect(buildRpgObservation(index, state).description).not.toMatch(/set .*guard|spear work/i);
@@ -309,8 +313,10 @@ describe("Wolf-Winter post-cast state truth", () => {
     state = act(state, "go_north");
 
     expectRoomSurface(state, JUNE_PENDING);
+    expectBlockedSurface(state, [["north", MOUTH_NORTH_GUIDANCE]]);
     expect(actionIds(state)).toContain("talk_june_pike");
     expect(actionIds(state)).not.toContain("use_winter_feed_sack_on_outer_scent_gate");
+    expect(actionIds(state)).not.toContain("go_north");
     const blocked = buildRpgObservation(index, state).blocked_actions;
     expect(blocked).toContainEqual(
       expect.objectContaining({
@@ -344,7 +350,9 @@ describe("Wolf-Winter post-cast state truth", () => {
     const state = initStateForRpgPack(index, 4403);
     state.current = "byre_mouth";
     expectRoomSurface(state, PLAIN_COMBAT);
+    expectBlockedSurface(state, [["north", MOUTH_NORTH_GUIDANCE]]);
     expect(actionIds(state)).toContain("attack_grey_leader");
     expect(actionIds(state)).not.toContain("use_winter_feed_sack_on_outer_scent_gate");
+    expect(actionIds(state)).not.toContain("go_north");
   });
 });

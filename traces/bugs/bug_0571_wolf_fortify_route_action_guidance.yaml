@@ -1,0 +1,142 @@
+id: bug_0571
+title: "Wolf-Winter's final north lock obscured the visible route-action handoff"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: accepted hotspot bd527711
+severity: S1
+evidence:
+  accepted_feedback_source:
+    run_id: 2026-08-11T06-18-45-068Z
+    tested_commit: de8a22586bf22c6dc84440c0cc5b74aea8354864
+    report_id: pure:9744db83da7a1f200d432ac25ffca8af4e48e6325af9e0ef98eea26def1a7ebe
+    report: ai-runs/2026-08-11T06-18-45-068Z/playtest.md
+    report_sha256: 3aefae0a4a149744fe5b75cef05aa26e09c8af0a38027b73f9d30719746804e9
+    evidence_sha256: 1f71e2339928a6a2b10f7ab7e20089e6ad3b186f63e61ae75c3fca938d717bf0
+    sidecar_sha256: c70c30ffe533b45c840da6a9a26e2f153179498aa6be784ad1e9e71fd29da2d0
+    raw: ai-runs/2026-08-11T06-18-45-068Z/playtest.codex.jsonl
+    raw_sha256: 88c7b850e3ca2b05cbccf68c9f77835f0dfd685e8fb66bda9e913a147bf9acad
+    raw_boundary: >
+      Items 12-23 are the complete relevant FORTIFY span. The player asks about
+      FORTIFY, commits Cade's household terms, takes the two shutters, and moves
+      north. Item 17 records the authored Repair failure, d20 10 + 0 against DC
+      14. The same successful response explicitly publishes
+      use_cade_failed_seal_help, and item 18 uses that recovery immediately.
+      After the threshold seal, item 21 reaches byre_mouth with
+      use_fortify_dawn_watch legal while north is locked by the predecessor
+      sentence. Item 22 voluntarily examines the dawn watch; item 23 uses it and
+      reaches ending_fortified_cade_terms. All 25 MCP calls completed without an
+      error or rejected action.
+    player_friction: >
+      The player rated clarity 5 and enjoyment 4, was not stuck, would replay,
+      and reported bugs: []. Its one relevant confusion said the staged FORTIFY
+      prompts required close attention to identify the follow-up action before
+      north became legal; the worst-moment note said the failed seal felt strict
+      only until Cade's contractual aid made recovery clear. This supports one
+      S1 action-handoff copy repair, not a mechanics or reachability defect.
+  accepted_authority:
+    compiled_commit: 05a1d6804b19dc7143e79c081aeaf33546c2af82
+    manifest: ai-runs/feedback/20260811T091400Z/report-manifest.json
+    manifest_sha256: 147893756a4a10e1c9ebc0aa3eafef060d9442111d5708170a60c49ad0ca887d
+    hotspots: ai-runs/feedback/20260811T091400Z/hotspots.json
+    hotspots_sha256: eb427b085f1ec2436f1859ddad95dde0c6e4a4a570493de6d6b0c3263eda554f
+    recommended_hotspot_id: bd527711
+    hotspot_count: 1
+    hotspot_severity: S1
+    hotspot_band: minor
+    hotspot_source: fleet
+    hotspot_location: unmapped
+    consumed_by_run_id: null
+  pending_before_cycle_31:
+    run_id: 2026-08-11T09-04-58-054Z
+    tested_commit: 05a1d6804b19dc7143e79c081aeaf33546c2af82
+    report_id: pure:4c76e0f22c68c9e44c2a01e975a3307bed06d0d93a30186b4f18e3b9628c93f4
+    report_sha256: 71929ed79072d9ad627478aa92cfc1b9ddda1dc8a16867f2801df470704ee9bb
+    evidence_sha256: ebc215ef83d7ab0adbf8e168b0620438ad49bc41d216e8f54b1f93f9f9cd2f63
+    sidecar_sha256: 3ee8c3167858753fef442606cf17d0a17039b588493a3522f17a6eb1d8bead06
+  cycle_31:
+    assessment_run: 2026-08-11T11-28-30-987Z
+    baseline_commit: deb9d007b33d8b1435b5c980da39aecf492d49b1
+    assessor_top_candidate: hotspot-bd527711
+    selected_candidate: hotspot-bd527711
+    feedback_status: "delta; 1 new verified reports, 1 actionable, 0 excluded mocks; 3 actionable reports required"
+    compile_authorized: false
+revision_liveness: >
+  The accepted de8a2258 source and Cycle 31's deb9d007 baseline expose the same
+  byre_mouth north locked_msg byte-for-byte and the same 09bd7660 Wolf-Winter
+  source hash. The accepted compile preserves that source report as its sole
+  bd527711 evidence row. The compiler labels the location unmapped and infers
+  target overworld only from the cohort metric; the raw item boundary, current
+  source, and route-state regressions localize the bounded repair to this one
+  Wolf-Winter exit string.
+symptom: >
+  At the final byre room, the locked north exit repeated a 117-character menu of
+  possible route outcomes beside the route-specific action already shown. On
+  the accepted failed-seal FORTIFY path, use_fortify_dawn_watch was legal, but
+  the adjacent lock still said "Before passing" and listed defeating old grey,
+  Cade's scent or drive line, and holding the seals. FORTIFY's shown dawn watch
+  finishes directly; DRIVE first shows crisis-priority choices and then the
+  evacuation that finishes directly; LURE and ordinary HUNT can open north.
+  The copy therefore added cross-route attention cost and blurred the
+  direct-finish versus open-north distinction without hiding any action.
+root_cause: >
+  One static byre_mouth locked_msg projects across HUNT, LURE, DRIVE, both
+  FORTIFY stances, and their recovery states. It tried to restate every route's
+  terminal requirement even though the room's legal-action projection already
+  owns the exact next step. That duplicated staged guidance and framed all
+  routes as preparation for a northward passage, which is false for FORTIFY's
+  direct dawn watch and DRIVE's priority-to-evacuation resolution.
+fix: >
+  Replace only the final north exit's predecessor sentence with the exact
+  98-character route-action handoff. It tells the player to follow the actions
+  shown in the current state and truthfully distinguishes routes that finish
+  without north from routes whose actions open it. Keep the exit destination and
+  leader_down/leader_redirected conditions, every route action and predicate,
+  unavailable-action reason, room-variant predicates, projection mechanism,
+  check, item, state transition, score, ending, and route order unchanged.
+settled_copy:
+  predecessor: >-
+    Before passing, defeat old grey, complete Cade's scent or drive line, or hold the joined fortification seals to dawn.
+  replacement: >-
+    Follow the route actions shown here. The route either finishes directly or opens north when ready.
+  replacement_characters: 98
+deterministic_witnesses:
+  - "Cade and Albany FORTIFY project the exact replacement beside their legal dawn-watch action; DRIVE projects it first beside the legal crisis-priority choices and again beside the newly exposed cattle-first evacuation after one priority is chosen; all three routes retain every secondary block in full and compact observations and complete directly at cattle_stand without opening a false north route"
+  - "all four clean, fouled split-guard, fouled braced-rail, and yearling-death hybrid LURE recoveries project the replacement while the final scent cast is legal and go_north is absent; the cast then retires, opens north, and preserves each existing ending"
+  - "June's unresolved LURE intervention keeps talk_june_pike legal, the final scent cast unavailable for its existing reason, go_north absent, and the exact replacement visible until her cattle-line decision is heard"
+  - "plain unprepared HUNT keeps attack_grey_leader legal, the final scent cast absent, go_north absent, and the exact replacement in both full and compact observations"
+  - "the exact Wolf-Winter source hash advances directly from 09bd766079b6713d859f7c6642961557aabafe5b95ba0b21cb22816ff7e0efda to 95a441318c374dd0c8f45bf42f7529c11643259c0b5364ab3b3260980af6e261"
+  - "structured replay and a current 95a44131 matching-hash save remain valid while the exact 09bd7660 predecessor fixture rejects under the unchanged source-integrity policy"
+selection_semantics:
+  - "Cycle 31 implements exact accepted recommendation hotspot-bd527711, not a routine playtest target or a null/off-list task. The accepted row remains authoritative even though its compiler location is unmapped because the raw item boundary directly identifies this Wolf-Winter lock."
+  - "Before the provisional commit, feedback_cycle_selection must freeze run 2026-08-11T11-28-30-987Z with selected_recommendation_id hotspot-bd527711 and remain unchanged through the future pure run and outer gates."
+  - "Committed feedback status is exactly 1/3 actionable, so no compile is authorized in Cycle 31. The current revision's future pure report cannot count before it passes outer gates and is sealed."
+  - "With no compile pointer, sealing after every outer gate marks the accepted bundle consumed_by_run_id 2026-08-11T11-28-30-987Z, appends the new pure after the one already pending report, and removes the frozen selection marker."
+  - "Only a later committed three-actionable-report delta may authorize a compile; this trace does not compile, promote, clear, or reorder feedback authority."
+nonclaims:
+  - "The accepted player was not stuck, did not attempt the locked north exit, lost no action, and encountered no rejection. The legal recovery and dawn-watch actions were visible and used immediately; this is a bounded attention/copy seam, not evidence of a missing action, mechanics bug, softlock, or broken FORTIFY route."
+  - "Item 17's d20 10 versus DC 14 result was an authored Repair-check failure. Its no-retry consequence, pressure increase, and Cade recovery are intentional and unchanged."
+  - "The accepted run exercised sheltered, solo, Aid-Only, Cade-terms FORTIFY with a failed first seal. It does not prove confusion on Albany FORTIFY, DRIVE, LURE, HUNT, June, prepared Works, mobile support, or clean-seal states; deterministic current-pack tests establish only that the replacement is truthful there."
+  - "This does not change north-exit conditions or destination; make go_north legal early; remove a route step; alter direct endings; change any action id, check, RNG, flag, variable, pressure, HP, inventory, score, time, journal, quest foldback, or ending."
+  - "This does not claim the accepted report tested the 95a44131 revision or that a current pure player has seen the replacement. The de8a2258 raw report identifies the predecessor seam; deterministic regressions are the causal proof, and any new pure evidence remains future and gate-bound."
+  - "This does not preserve the old content hash. Exact 09bd7660 content-hash-bound Wolf saves intentionally reject against 95a44131 under the unchanged integrity policy."
+  - "This does not compile at 1/3, consume bd527711 before seal, use the unsealed future pure in its own cohort, or edit the machine-owned acceptance marker by hand."
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/regression/wolf_winter_authority_commitment_boundary.test.ts
+    case: "keeps all five secondary blocks exact in full and compact throughout $strategy"
+  - path: tests/regression/wolf_winter_postcast_state_truth.test.ts
+    cases:
+      - "keeps $label exact through both casts"
+      - "keeps June's unresolved intervention ahead of the living final-cast prose"
+      - "leaves the non-LURE combat fallback and its compact actions unchanged"
+  - path: tests/regression/wolf_winter_compact_surface.test.ts
+    case: "keeps each copy-only revision distinct at the gauntlet and source-hash boundaries"
+  - path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    cases:
+      - "projects all five real stages from the loaded pack without changing its source hash"
+      - "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+verification:
+  - npx vitest run tests/regression/wolf_winter_authority_commitment_boundary.test.ts tests/regression/wolf_winter_postcast_state_truth.test.ts tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts
+  - npm run validate -- wolf_winter
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0571_wolf_fortify_route_action_guidance.yaml
