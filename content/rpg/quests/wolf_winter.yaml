@@ -4002,7 +4002,7 @@ npcs:
               end: true
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "LURE — Relocate pack beyond the breach; keep the herd. Cost: last feed, broken paling, two cattle risked on a foul. Inspect."
+              prompt: "LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; a foul risks two cattle. Open or reopen the separate Commit LURE choice."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
