@@ -44,9 +44,9 @@
 #   └─────── aldermans_antechamber: N → market_square (WIN +15)
 #
 # Score (max 50, the 5+10+10+10+15 shape):
-#   +5  READ charter_roll        — exemption confirmed (one-shot: not_flag charter_read)
-#   +10 READ town_register       — official registration (+3 rhetoric; one-shot: has_item + not_flag register_read)
-#   +10 READ prior_convictions   — guild precedent (+3 rhetoric; one-shot: has_item + not_flag priors_read)
+#   +5  READ charter_roll        — exemption confirmed (retires after first READ or legal dismissal)
+#   +10 READ town_register       — official registration (+3 rhetoric; held, unread, unresolved only)
+#   +10 READ prior_convictions   — guild precedent (+3 rhetoric; held, unread, unresolved only)
 #   +10 rhetoric check success   — USE prior_convictions ON case_record, DC 12
 #                                  OR post-failure recovery presentation
 #                                  (one-shot: not_flag oswin_overruled)
@@ -252,10 +252,10 @@ objects:
       someone who can act on it before noon.
     interactions:
       # First read: +5 score (the foundation — the exemption confirmed in your own hands).
-      # One-shot: gated on not_flag charter_read; retired on first READ.
+      # One-shot: retired after its first READ or a legal dismissal.
       - verb: READ
         target: charter_roll
-        conditions: [{ not_flag: charter_read }]
+        conditions: [{ not_flag: charter_read }, { not_flag: oswin_overruled }]
         effects:
           - set_flag: charter_read
           - set_quest_stage: { quest: weavers_appeal, stage: charter_read }
@@ -305,11 +305,15 @@ objects:
       bringing its certified wording to the hearing today.
     interactions:
       # Close study of the extract: +10 score and +3 rhetoric (you now have the
-      # registered phrasing to cite precisely under pressure). One-shot: gated on
-      # has_item AND not_flag register_read; retired after first scored read.
+      # registered phrasing to cite precisely under pressure). One-shot: requires
+      # the held extract; retired after its first scored READ or a legal dismissal.
       - verb: READ
         target: town_register
-        conditions: [{ all_of: [{ has_item: town_register }, { not_flag: register_read }] }]
+        conditions:
+          - all_of:
+              - { has_item: town_register }
+              - { not_flag: register_read }
+              - { not_flag: oswin_overruled }
         effects:
           - set_flag: register_read
           - inc_var: { name: rhetoric, by: 3 }
@@ -357,10 +361,14 @@ objects:
     interactions:
       # Close study of the precedent packet: +10 score and +3 rhetoric (you now
       # have the specific precedent cases to name, including Oswin's own signatures).
-      # One-shot: gated on has_item AND not_flag priors_read; retired after first read.
+      # One-shot: requires the held packet; retired after its first READ or a legal dismissal.
       - verb: READ
         target: prior_convictions
-        conditions: [{ all_of: [{ has_item: prior_convictions }, { not_flag: priors_read }] }]
+        conditions:
+          - all_of:
+              - { has_item: prior_convictions }
+              - { not_flag: priors_read }
+              - { not_flag: oswin_overruled }
         effects:
           - set_flag: priors_read
           - inc_var: { name: rhetoric, by: 3 }

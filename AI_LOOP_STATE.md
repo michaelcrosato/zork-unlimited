@@ -167,3 +167,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Causal evidence: the player saw the new 175-character hint beside Cade's committed shutters, re-read, then took them with no FORTIFY action rejection; two earlier story-argument errors recovered before this seam, and the report instead flags broader civic/hard-commit density.
 - Feedback/next: the exact prior three-report delta ranks pre-fix `a0d32f61` first; this revision addresses that blocked-copy witness, while rank-four `77464085` preserves broader LURE density for revision-aware Cycle 19 triage.
 - Guard: 62 focused tests, both 6,000-step crawls, exact health (448 files/3,872 tests), UI typecheck, all 12 packs, cycle-start integrity, trace integrity, and exact playtest/compile provenance are green.
+## AFK Cycle 2026-08-11T15-38-06-965Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T15-38-06-965Z","selected_recommendation_id":"playtest-advocates_case"} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
