@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 766 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-11T06-18-45-068Z","hotspots_path":"ai-runs/feedback/20260811T021237Z/hotspots.json","hotspots_sha256":"927848fe4f7e6ced9bacaa8b89a7922c6a957da873381333da48042d72999ca9","manifest_path":"ai-runs/feedback/20260811T021237Z/report-manifest.json","manifest_sha256":"e9a0b7bb8aee755c03bc42204c0ac0c5c22ef1088e7a7692062aaf4cd04b9c7d"},"pending_cycle_reports":[{"evidence_sha256":"84569578ff4460a949fa93a4a60d9d464d46331acf0ed6a4793ac0bfad7d58e9","report_id":"pure:aaa8ec69da3c8f47b0fd86e86348b51d1af6276b070b0cfac076dca1ff32b17b","report_sha256":"545b1f46ce6fab35a27709c1cfa33930bc2b88e8b7490340d4695c96db3fa943","run_id":"2026-08-11T01-39-24-429Z","sidecar_sha256":"de0ab32cfa4088c1d093d21d9d60de78c0906fb4b60dfed1170cde2651bf8246","tested_commit":"35b1e03428f7f42592800a8a8613332e7bbb84f3"},{"evidence_sha256":"53f71783ca78a054fb916e628d6225d6882713538e6cf3623a973eacaf7b8dae","report_id":"pure:8b3eafeea8b70c60b4f865ccbc695d6f478c3c7b6c05c6dea3e9c71adf97393a","report_sha256":"036972fbf05e96aebc553d5569439d8fdd5fe1db836cbd732185ae3a1cd32858","run_id":"2026-08-11T04-39-52-092Z","sidecar_sha256":"b240493278d44e103378ea707efe73775c7c221b0c219c03ac191fb55beb2d22","tested_commit":"4a8054a62ba73e47846a314c319ef40e097dbbf4"},{"evidence_sha256":"1f71e2339928a6a2b10f7ab7e20089e6ad3b186f63e61ae75c3fca938d717bf0","report_id":"pure:9744db83da7a1f200d432ac25ffca8af4e48e6325af9e0ef98eea26def1a7ebe","report_sha256":"3aefae0a4a149744fe5b75cef05aa26e09c8af0a38027b73f9d30719746804e9","run_id":"2026-08-11T06-18-45-068Z","sidecar_sha256":"c70c30ffe533b45c840da6a9a26e2f153179498aa6be784ad1e9e71fd29da2d0","tested_commit":"de8a22586bf22c6dc84440c0cc5b74aea8354864"}],"schema_version":1} -->
+<!-- historical_cycle_count: 767 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260811T091400Z/hotspots.json","hotspots_sha256":"eb427b085f1ec2436f1859ddad95dde0c6e4a4a570493de6d6b0c3263eda554f","manifest_path":"ai-runs/feedback/20260811T091400Z/report-manifest.json","manifest_sha256":"147893756a4a10e1c9ebc0aa3eafef060d9442111d5708170a60c49ad0ca887d"},"pending_cycle_reports":[{"evidence_sha256":"ebc215ef83d7ab0adbf8e168b0620438ad49bc41d216e8f54b1f93f9f9cd2f63","report_id":"pure:4c76e0f22c68c9e44c2a01e975a3307bed06d0d93a30186b4f18e3b9628c93f4","report_sha256":"71929ed79072d9ad627478aa92cfc1b9ddda1dc8a16867f2801df470704ee9bb","run_id":"2026-08-11T09-04-58-054Z","sidecar_sha256":"3ee8c3167858753fef442606cf17d0a17039b588493a3522f17a6eb1d8bead06","tested_commit":"05a1d6804b19dc7143e79c081aeaf33546c2af82"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - rpg_terminal_state_coherence
+
+- Evidence choice: the saturation ultraplan proved that hash-recomputed public saves accepted both `ended=true`/no ending and active state/a declared ending even though runtime writers only produce false/null or true/id; this off-list restore-boundary invariant therefore kept the frozen null selection.
+- Surface/effect: well-formed RPG state now requires `ended === (endingId !== null)` before normalized load acceptance; valid active/terminal saves, content, mechanics, envelope/version, digest, and authorization stay unchanged.
+- Counterfactual: hostile current-save pairs now fail with exact integrity diagnostics, valid active and ended controls still round-trip, and a coherent fabricated ending still reaches the later pack-aware unknown-ending gate; save/trace suites cover 108 cases.
+- Red-gate correction: the first provisional pure exhausted provider context after gameplay and published no canonical report/evidence/sidecar; it was reset and quarantined, while fresh `05a1d680` alone binds this cycle's successful evidence.
+- Pure evidence: exact-clean Spark seed 7 chose Road-Warden/Aid-Only/Hayden, completed sheltered LURE as `ending_pack_diverted` at 50/60 with herd and all wolves alive, then End at decision 24; 28/29 calls succeeded and one malformed parent handle recovered unchanged, with 4/4, replay yes, bugs `[]`, and no stuck state.
+- Canary/feedback: no save/load/trace call exposed the invariant, so regressions remain causal; the exact prior three reports compiled to revision-live S1 FORTIFY-attention row `bd527711` while excluding this run, and null selection promotes it unconsumed for bounded action-first copy triage rather than mechanics churn.
+- Guard: both 6,000-step crawls, full health (448 files/3,891 tests), 561 traces, UI typecheck, all 12 packs, reviewed cycle-start integrity, exact pure provenance, deterministic compile, formatting, and hostile authority review are green.
 
 ### Cycle result - wolf_lure_loft_duplicate_guidance
 
@@ -157,13 +167,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat: the pure route did not enter Advocate's Case, so it proves exact-build integration/retention only; the copy fix is regression/validation-backed, not directly replayed.
 - Feedback/next: pre-seal status was one prior actionable report of three; the seal added this actionable run as the second, still below compile threshold. It reported mild checkpoint/deferred-lead handoff friction but no bug.
 - Guard: content hash `284d5e2e…`, focused 34/34, trace integrity, type/lint/format, exact playtest provenance, and the outer crawl/health/cycle-start integrity gates are green.
-
-### Cycle result - pure_parent_session_diagnostic
-
-- Evidence choice: accepted raw `8707f630` used a one-character-short parent handle and got the false "RPG child" diagnosis; this off-list presentation bug outranked stale `a919cded`.
-- Surface/effect: pure overworld recovery now names an active child only on exact child-id equality; missing, malformed, stale, and unknown handles still fail closed and return the exact parent, with no schema, state, or acceptance change.
-- Counterfactual: active-child, stale `r999`, null/wrong-field/non-string, no-echo, byte-stable parent journey, and original-child-hash witnesses preserve the later active-quest gate.
-- Pure evidence: exact-clean Spark seed 7 on `2b16e731` used Road-Warden/Full Compact/Rowan, Sheltered FORTIFY, wardens north, and Gallowmere; ended at 39, clarity/enjoyment 5/4, replay yes, bugs `[]`, not stuck.
-- Causal evidence: that player supplied malformed parent `…8c3d?`, received the new generic recovery plus exact handle, retried successfully, and did not count it as confusion; active-child wording remains regression-proven.
-- Feedback/next: the exact prior three-report delta ranks `07988b93` then `33adfdd0`, both one-report S1 hash-copy rows; raw calls are stale/mistyped guards rather than state races, so preserve concurrency and prefer routine Advocates absent a reproducible engine defect.
-- Authority/guard: the provisional delta binds `2b16e731` to predecessor `00fc73…`, consumes only the three preaccepted pending identities, and excludes this run until seal; focused checks and exact evidence are green, with outer gates still required.
