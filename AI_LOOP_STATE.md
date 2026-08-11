@@ -18,7 +18,6 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
-
 ### Cycle result - rpg_terminal_state_coherence
 
 - Evidence choice: the saturation ultraplan proved that hash-recomputed public saves accepted both `ended=true`/no ending and active state/a declared ending even though runtime writers only produce false/null or true/id; this off-list restore-boundary invariant therefore kept the frozen null selection.
@@ -167,3 +166,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat: the pure route did not enter Advocate's Case, so it proves exact-build integration/retention only; the copy fix is regression/validation-backed, not directly replayed.
 - Feedback/next: pre-seal status was one prior actionable report of three; the seal added this actionable run as the second, still below compile threshold. It reported mild checkpoint/deferred-lead handoff friction but no bug.
 - Guard: content hash `284d5e2e…`, focused 34/34, trace integrity, type/lint/format, exact playtest provenance, and the outer crawl/health/cycle-start integrity gates are green.
+
+## AFK Cycle 2026-08-11T11-28-30-987Z
+
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T11-28-30-987Z","selected_recommendation_id":"hotspot-bd527711"} -->
+
+- Assess: rpg=12; world=12; candidates=14.
+- Rec: hotspot-bd527711 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

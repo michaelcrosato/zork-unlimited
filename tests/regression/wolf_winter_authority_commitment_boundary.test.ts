@@ -36,6 +36,8 @@ const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 const PALING_NORTH_GUIDANCE =
   "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
+const MOUTH_NORTH_GUIDANCE =
+  "Follow the route actions shown here. The route either finishes directly or opens north when ready.";
 const YARD_BLOCKED_SOUTH =
   "South is closed. LURE complete: go north for the cattle count. DRIVE/FORTIFY: take any shown gear, then go north.";
 const YARD_BLOCKED_WEST =
@@ -486,6 +488,16 @@ describe("Wolf-Winter authority commitment boundary", () => {
       assertSecondaryBlockedSurface(state, THRESHOLD_SECONDARY_BLOCKS, ["go_north"]);
       state = act(state, "go_north");
       assertSecondaryBlockedSurface(state, MOUTH_SECONDARY_BLOCKS, finalActions);
+      assertNorthBlockedOnce(state, finalActions[0]!, MOUTH_NORTH_GUIDANCE);
+
+      if (finalActions.includes("use_fortify_dawn_watch")) {
+        state = act(state, "use_fortify_dawn_watch");
+      } else {
+        state = act(state, "use_cattle_crisis_priority");
+        assertNorthBlockedOnce(state, "use_cattle_first_evacuation", MOUTH_NORTH_GUIDANCE);
+        state = act(state, "use_cattle_first_evacuation");
+      }
+      expect(state).toMatchObject({ current: "cattle_stand", ended: true });
     },
   );
 

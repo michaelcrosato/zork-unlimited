@@ -1515,7 +1515,7 @@ rooms:
           - any_of:
               - { has_flag: leader_down }
               - { has_flag: leader_redirected }
-        locked_msg: "Before passing, defeat old grey, complete Cade's scent or drive line, or hold the joined fortification seals to dawn."
+        locked_msg: "Follow the route actions shown here. The route either finishes directly or opens north when ready."
 
   - id: cattle_stand
     name: "Among the Cattle"
