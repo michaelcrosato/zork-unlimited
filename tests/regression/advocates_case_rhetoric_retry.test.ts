@@ -35,10 +35,10 @@ const CERTIFIED_EXTRACTS_SOURCE_HASH =
   "284d5e2e618b87dd2dd0761715b7cf6c5736111ae15f5d9824ce75ee3f03510e";
 const RESOLVED_OSWIN_PRESENCE_SOURCE_HASH =
   "c3dd62683dcbbfa314298faa4bdbda727ebeb62124fd286fcc402a3293ce7e69";
-const CASE_RECORD_LIFECYCLE_PREDECESSOR_SOURCE_HASH =
-  "36350b7751c24f6d0fd0457879f187962609e48116cdef6ff39aa238886be66e";
-const CASE_RECORD_LIFECYCLE_SOURCE_HASH =
+const POST_DISMISSAL_READ_PREDECESSOR_SOURCE_HASH =
   "d8b85620ac7ee8b4672f25e8b5a1552478b3d9d6add0b4894df32bb09dd19dff";
+const POST_DISMISSAL_READ_SOURCE_HASH =
+  "c9c92f95afba12b968d4d5e1aa9701749e0048140bc486b090233584f6e66396";
 const EXPELLED_ENDING_TEXT =
   "Craf gets his weight into you before you reach the doorway, and after that the choice is no longer yours. Oswin arrives in the antechamber with the measured expression of a man who had anticipated this outcome and is not surprised by it. The deputy notes the disturbance in the hearing record. Marta's bolts remain impounded; Oswin's notice stands. Marta's claim remains unresolved when market day ends. *** You have fallen. ***\n";
 const UNTOUCHED_CASE_RECORD_TEXT =
@@ -162,6 +162,27 @@ const RESOLVED_STALL_ACTIONS = [
   "inventory",
 ];
 
+const UNREAD_EVIDENCE_ACTIONS = [
+  "read_charter_roll",
+  "read_town_register",
+  "read_prior_convictions",
+];
+
+function unreadEvidenceAtStall(runStep: typeof step): GameState {
+  let state = initStateForRpgPack(index, 7);
+  for (const id of [
+    "go_east",
+    "take_town_register",
+    "go_west",
+    "go_west",
+    "take_prior_convictions",
+    "go_east",
+  ]) {
+    state = chooseWith(runStep, state, id);
+  }
+  return state;
+}
+
 describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", () => {
   it("keeps untouched and combat-only case records pending before any legal presentation", () => {
     const untouched = choose(initStateForRpgPack(index, 7), "go_north");
@@ -225,8 +246,85 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
       expect(observeCaseRecord(resolved, "read_case_record")).toBe(CASE_RECORD_READ_TEXT);
     }
 
-    expect(loaded.compiled.contentHash).toBe(CASE_RECORD_LIFECYCLE_SOURCE_HASH);
-    expect(loaded.compiled.contentHash).not.toBe(CASE_RECORD_LIFECYCLE_PREDECESSOR_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(POST_DISMISSAL_READ_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(POST_DISMISSAL_READ_PREDECESSOR_SOURCE_HASH);
+  });
+
+  it("retires all unread evidence READs after primary dismissal without regressing resolved state", () => {
+    let resolved = chooseWith(successfulStep, unreadEvidenceAtStall(successfulStep), "go_north");
+    resolved = chooseWith(successfulStep, resolved, "use_prior_convictions_on_case_record");
+    resolved = chooseWith(successfulStep, resolved, "go_south");
+    const before = structuredClone(resolved);
+    const beforeBytes = JSON.stringify(resolved);
+    const { full, compact, ids } = projected(resolved);
+
+    expect(resolved.flags).toMatchObject({ appeal_attempted: true, oswin_overruled: true });
+    expect(resolved.flags["charter_read"]).toBeUndefined();
+    expect(resolved.flags["register_read"]).toBeUndefined();
+    expect(resolved.flags["priors_read"]).toBeUndefined();
+    expect(resolved.questStage["weavers_appeal"]).toBe("case_dismissed");
+    expect(resolved.vars["score"]).toBe(10);
+    expect(resolved.vars["rhetoric"]).toBe(3);
+    expect(resolved.journal).toHaveLength(1);
+    expect(resolved.journal[0]).toContain("Appeal made and accepted");
+    for (const id of UNREAD_EVIDENCE_ACTIONS) expect(ids).not.toContain(id);
+    for (const id of [
+      "examine_charter_roll",
+      "examine_town_register",
+      "examine_prior_convictions",
+    ]) {
+      expect(ids).toContain(id);
+    }
+    expect(full.available_actions.map((action) => action.id)).toEqual(ids);
+    expect(compact.actions).toEqual(ids);
+
+    for (const target of ["charter_roll", "town_register", "prior_convictions"]) {
+      const rejected = step(resolved, { type: "READ", target });
+      expect(rejected.ok, target).toBe(false);
+      expect(rejected.rejectionReason, target).toBe("That action is not available right now.");
+      expect(rejected.events, target).toEqual([
+        { type: "rejected", reason: "That action is not available right now." },
+      ]);
+      expect(rejected.state, target).toBe(resolved);
+    }
+
+    expect(resolved).toEqual(before);
+    expect(JSON.stringify(resolved)).toBe(beforeBytes);
+    expect(resolved.questStage["weavers_appeal"]).toBe("case_dismissed");
+    expect(resolved.vars).toEqual(before.vars);
+    expect(resolved.journal).toEqual(before.journal);
+    expect(loaded.compiled.contentHash).toBe(POST_DISMISSAL_READ_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(POST_DISMISSAL_READ_PREDECESSOR_SOURCE_HASH);
+  });
+
+  it("keeps unread evidence READs legal after a failed appeal and after Craf falls", () => {
+    let failed = choose(unreadEvidenceAtStall(step), "go_north");
+    failed = choose(failed, "use_prior_convictions_on_case_record");
+    failed = choose(failed, "go_south");
+
+    let combatOnly = chooseWith(combatStep, unreadEvidenceAtStall(combatStep), "go_north");
+    combatOnly = chooseWith(combatStep, combatOnly, "attack_craf");
+    combatOnly = chooseWith(combatStep, combatOnly, "attack_craf");
+    combatOnly = chooseWith(combatStep, combatOnly, "go_south");
+
+    expect(failed.flags["appeal_attempted"]).toBe(true);
+    expect(failed.flags["oswin_overruled"]).toBeUndefined();
+    expect(combatOnly.flags["craf_defeated"]).toBe(true);
+    expect(combatOnly.flags["oswin_overruled"]).toBeUndefined();
+    expect(combatOnly.questStage["weavers_appeal"]).toBe("craf_down");
+
+    for (const scenario of [
+      { label: "failed appeal", state: failed },
+      { label: "Craf defeated", state: combatOnly },
+    ]) {
+      const { full, compact, ids } = projected(scenario.state);
+      for (const id of UNREAD_EVIDENCE_ACTIONS) expect(ids, scenario.label).toContain(id);
+      expect(
+        full.available_actions.map((action) => action.id),
+        scenario.label,
+      ).toEqual(ids);
+      expect(compact.actions, scenario.label).toEqual(ids);
+    }
   });
 
   it("unlocks a corrected sequence after a failed prepared rhetoric attempt", () => {
@@ -320,7 +418,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
       expect(compact.actions).toEqual(RESOLVED_STALL_ACTIONS);
     }
 
-    expect(loaded.compiled.contentHash).toBe(CASE_RECORD_LIFECYCLE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(POST_DISMISSAL_READ_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(CERTIFIED_EXTRACTS_SOURCE_HASH);
   });
 
@@ -492,7 +590,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
       expect(compact.actions, scenario.label).toBeUndefined();
     }
 
-    expect(loaded.compiled.contentHash).toBe(CASE_RECORD_LIFECYCLE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(POST_DISMISSAL_READ_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(RESOLVED_OSWIN_PRESENCE_SOURCE_HASH);
   });
 });

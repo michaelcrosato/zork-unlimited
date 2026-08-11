@@ -1,0 +1,114 @@
+id: bug_0573
+title: "The Advocate's Case evidence READs stayed live after legal dismissal and rewound resolved state"
+pack: content/rpg/quests/advocates_case.yaml
+reported_by: Cycle 33 Advocate's Case maintenance rotation and deterministic runtime reproduction
+severity: S1
+evidence:
+  cycle_33:
+    assessment_run: 2026-08-11T15-38-06-965Z
+    baseline_commit: 6bc44a8e031b7d2ea36df9eb8535b003aaf8eb78
+    assessment_mode: maintenance rotation only
+    assessor_top_candidate: playtest-advocates_case
+    selected_candidate: playtest-advocates_case
+    feedback_status: "delta; 3 new verified reports, 3 actionable, 0 excluded mocks; compile ready"
+    compile_authorized_at_step_4: true
+    compile_pointer_before_pure: null
+  accepted_authority:
+    manifest: ai-runs/feedback/20260811T091400Z/report-manifest.json
+    manifest_sha256: 147893756a4a10e1c9ebc0aa3eafef060d9442111d5708170a60c49ad0ca887d
+    hotspots: ai-runs/feedback/20260811T091400Z/hotspots.json
+    hotspots_sha256: eb427b085f1ec2436f1859ddad95dde0c6e4a4a570493de6d6b0c3263eda554f
+    recommended_hotspot_id: bd527711
+    consumed_by_run_id: 2026-08-11T11-28-30-987Z
+  pending_before_cycle_33:
+    - run_id: 2026-08-11T09-04-58-054Z
+      tested_commit: 05a1d6804b19dc7143e79c081aeaf33546c2af82
+      report_id: pure:4c76e0f22c68c9e44c2a01e975a3307bed06d0d93a30186b4f18e3b9628c93f4
+      report_sha256: 71929ed79072d9ad627478aa92cfc1b9ddda1dc8a16867f2801df470704ee9bb
+      evidence_sha256: ebc215ef83d7ab0adbf8e168b0620438ad49bc41d216e8f54b1f93f9f9cd2f63
+      sidecar_sha256: 3ee8c3167858753fef442606cf17d0a17039b588493a3522f17a6eb1d8bead06
+    - run_id: 2026-08-11T11-28-30-987Z
+      tested_commit: f941d9348bd8f04e4250c8667feb1ec479288d05
+      report_id: pure:b7a98dfbff13147f423a34c7a265b45975595f88ec10a66273b712dee181691f
+      report_sha256: 4d9aedb537fc2467021b2c4bdf2590269e9c7e74c289b2d481180e7889f0c89a
+      evidence_sha256: eecb40e36c3eb79a7c7d8e0225b7f1d36d1712b6338e0876aa9fdb1907e41fa7
+      sidecar_sha256: b100715f7962dfa9b8fdc7da9b2424181cb7e3cfc2ae6f58dc0af7294f79159f
+    - run_id: 2026-08-11T13-44-53-712Z
+      tested_commit: 67cf4018387748e66c6409bc7d353527a483fc34
+      report_id: pure:827951b4f46fec00a349469f9e0ace92ac41271375485022818c6feb1b500349
+      report_sha256: 21532e096845fa43e605345f07a5521fb060cc0d7ef58d3a34e7ea2472216dee
+      evidence_sha256: aba10cd45b81fc0698162f253bca4e06db94d40d62d17b606c8ae200d0c1967f
+      sidecar_sha256: 98977cce91bfac5432fa4831343e6a6ca3554f7baef658d1afa0cf83ec4ce4b3
+current_reproduction:
+  predecessor_source_hash: d8b85620ac7ee8b4672f25e8b5a1552478b3d9d6add0b4894df32bb09dd19dff
+  boundary: >
+    A reachable primary presentation needs only the held precedent packet and a
+    successful rhetoric roll. The player can therefore take the certified register
+    extract and precedent packet without reading either, leave the charter untouched,
+    force a legal success, and return south with appeal_attempted and oswin_overruled
+    set, weavers_appeal at case_dismissed, score 10, and rhetoric 3. Before this edit,
+    read_charter_roll, read_town_register, and read_prior_convictions were all still
+    legal. Taking them after the ruling added all three read flags, raised score to 35
+    and rhetoric to 9, and rewrote the resolved quest stage successively to
+    charter_read, register_confirmed, and finally precedents_found while replaying
+    pre-hearing urgency.
+revision_liveness: >
+  The Cycle 33 baseline carries exact Advocate's Case source hash d8b85620. Its
+  previous case-record repair did not change any evidence READ predicate or effect.
+  The accepted bd527711 recommendation is already consumed and concerns a distinct
+  Wolf-Winter handoff. Cycle 33's on-list maintenance audit reproduces this current
+  pack contradiction directly; neither the assessment nor accepted feedback is
+  treated as causal gameplay evidence.
+symptom: >
+  A legally dismissed appeal exposed three optional evidence-progress actions whose
+  existing effects describe preparation for a hearing that has already ended. Those
+  actions could add 25 points and 6 rhetoric after the outcome, append stale
+  preparation journal entries, and overwrite case_dismissed with an earlier evidence
+  stage. Failed appeals and combat-only passage are different states: Oswin has not
+  been legally overruled there, so unread evidence remains useful for a later legal
+  presentation and must stay readable.
+root_cause: >
+  Each evidence object's one-shot READ predicate retired only on its own read flag;
+  none also retired on oswin_overruled. The generic READ resolver correctly ANDs the
+  authored interaction conditions, applies the object's read_text and interaction
+  effects, and the generic set_quest_stage effect correctly assigns the authored
+  stage. The engine has no pack-specific basis for inferring that these three named
+  preparation stages precede case_dismissed, so this is an authored lifecycle gate.
+fix: >
+  Add not_flag oswin_overruled to the existing one-shot READ conditions for
+  charter_roll, town_register, and prior_convictions. Preserve every read_text and
+  effect for unresolved routes. After legal dismissal the three READ actions retire;
+  after a failed appeal or Craf's combat defeat they remain available because neither
+  state sets oswin_overruled.
+deterministic_witnesses:
+  - "an all-unread primary-success route sets appeal_attempted and oswin_overruled, leaves charter_read/register_read/priors_read absent, and reaches the stall at case_dismissed, score 10, rhetoric 3, and one accepted-appeal journal entry"
+  - "after that legal dismissal, full and compact projections omit read_charter_roll, read_town_register, and read_prior_convictions while retaining all three EXAMINE actions; projection does not mutate state"
+  - "direct structured READ attempts against each evidence object after dismissal reject with the ordinary unavailable-action event and preserve the identical state object, stage, variables, and journal"
+  - "the identical all-unread route with a failed rhetoric roll retains all three READ actions at the stall because appeal_attempted is set without oswin_overruled"
+  - "an ordinary two-hit Craf defeat also retains all three READ actions at the stall, craf_defeated and craf_down remain intact, and oswin_overruled remains absent"
+  - "the exact Advocate's Case source hash advances directly from d8b85620ac7ee8b4672f25e8b5a1552478b3d9d6add0b4894df32bb09dd19dff to c9c92f95afba12b968d4d5e1aa9701749e0048140bc486b090233584f6e66396"
+selection_and_compile_semantics:
+  - "Cycle 33 implements the exact on-list maintenance candidate playtest-advocates_case. The assessment supplies rotation scope, while deterministic current-pack routes supply defect authority; this is not a null/off-list selection and does not consume the already-consumed bd527711 recommendation."
+  - "Before the provisional commit, feedback_cycle_selection must freeze run 2026-08-11T15-38-06-965Z with selected_recommendation_id playtest-advocates_case and remain unchanged through pure play and the outer gates."
+  - "The pre-pure status is already 3/3 compile ready solely because the three previously sealed 09-04, 11-28, and 13-44 reports are verified and actionable. No compile or pointer exists yet; the no-flags delta compile belongs at prompted-agent Step 4 after the exact-clean provisional pure, not before freeze or play."
+  - "The current Cycle 33 pure report cannot enter its own compile cohort. A successful compile consumes the prior three pending identities; after all outer gates, the seal promotes that delta as accepted with consumed_by_run_id null, appends only the current exact-build pure as pending, and removes the frozen selection marker."
+nonclaims:
+  - "No Cycle 33 pure report or compile exists at trace authoring time. A future pure may never enter Advocate's Case and would then be exact-build integration evidence only; the deterministic regressions are the causal proof."
+  - "This deliberately changes only the three post-legal-dismissal READ availability predicates. It does not change read_text, interaction effects, read flags, stage names or writers, score awards, rhetoric modifiers, presentation conditions/check/RNG, success/failure/recovery effects, inventory or object placement, rooms, exits, NPCs, combat, win conditions, endings, schemas, serialization, projection code, or validators."
+  - "This does not claim any EXAMINE description or object variant changed or became fully reactive. All EXAMINE copy is byte-for-byte out of scope; the regressions assert those actions remain available after dismissal."
+  - "This does not retire evidence on appeal_attempted or craf_defeated. A failed hearing and combat-only passage do not establish legal dismissal, so the three unresolved-route READs, their points, rhetoric, flags, stages, journals, and narration remain intentional."
+  - "This does not revisit certified-extract copy, resolved Oswin presence, ending_expelled, or case_record lifecycle copy, and it does not claim those earlier revisions tested the new c9c92f95 source."
+  - "This does not preserve the predecessor content hash. Exact d8b85620 content-hash-bound saves, replays, traces, or evidence intentionally differ from c9c92f95 under the unchanged integrity policy."
+  - "Compile-ready status does not authorize this product change or admit the unsealed current report. A failed pure or outer gate promotes neither the provisional compile nor the implementation."
+production:
+  - content/rpg/quests/advocates_case.yaml
+tests:
+  - path: tests/regression/advocates_case_rhetoric_retry.test.ts
+    cases:
+      - "retires all unread evidence READs after primary dismissal without regressing resolved state"
+      - "keeps unread evidence READs legal after a failed appeal and after Craf falls"
+verification:
+  - npx vitest run tests/regression/advocates_case_rhetoric_retry.test.ts
+  - npm run validate -- advocates_case
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0573_advocates_case_post_dismissal_read_lifecycle.yaml
