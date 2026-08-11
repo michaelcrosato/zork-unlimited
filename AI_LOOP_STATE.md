@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 770 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260811T160054Z/hotspots.json","hotspots_sha256":"e208e2e08214e16de0998597fabc3fecbd76179adab69c03985012af1c421e16","manifest_path":"ai-runs/feedback/20260811T160054Z/report-manifest.json","manifest_sha256":"1b4a1e18202d2e43e1ad38bff4f15096e9b5084bfd158ffc5eaa8a4617d9b0bc"},"pending_cycle_reports":[{"evidence_sha256":"d4fc750e0cde1cf0534b470caaf0f2c1d073873c43ab891606d2deb7b1bb9f9e","report_id":"pure:a5ff4d97d27e10c8ab7e9669d1ecdd1e99baec1cc6ce31237bf09ab731ae2848","report_sha256":"15da3580857bc2a75088bbc3b5165a5f79e8d89017a6ac177dbaadf49be50b30","run_id":"2026-08-11T15-38-06-965Z","sidecar_sha256":"ae5d4cbb1ac43e8c763be29114fe8e4a0b063f427242e5dc73f356134add7b10","tested_commit":"57713e49d638ce5800b6c8b2e43a509787ee5b02"}],"schema_version":1} -->
+<!-- historical_cycle_count: 771 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":"2026-08-11T18-05-25-511Z","hotspots_path":"ai-runs/feedback/20260811T160054Z/hotspots.json","hotspots_sha256":"e208e2e08214e16de0998597fabc3fecbd76179adab69c03985012af1c421e16","manifest_path":"ai-runs/feedback/20260811T160054Z/report-manifest.json","manifest_sha256":"1b4a1e18202d2e43e1ad38bff4f15096e9b5084bfd158ffc5eaa8a4617d9b0bc"},"pending_cycle_reports":[{"evidence_sha256":"d4fc750e0cde1cf0534b470caaf0f2c1d073873c43ab891606d2deb7b1bb9f9e","report_id":"pure:a5ff4d97d27e10c8ab7e9669d1ecdd1e99baec1cc6ce31237bf09ab731ae2848","report_sha256":"15da3580857bc2a75088bbc3b5165a5f79e8d89017a6ac177dbaadf49be50b30","run_id":"2026-08-11T15-38-06-965Z","sidecar_sha256":"ae5d4cbb1ac43e8c763be29114fe8e4a0b063f427242e5dc73f356134add7b10","tested_commit":"57713e49d638ce5800b6c8b2e43a509787ee5b02"},{"evidence_sha256":"8dee8485aac1310f4c8e996c65af7a6f9e418faa4a0a1ee4380b11bce88e9d0c","report_id":"pure:a358a2cccd0e174a79b8381725b11af5075625ce2973a23dcaa2d48e5a07b697","report_sha256":"850f5f6ada0a7e6b45f7ef4ab24ef4169d483a3cd3bfee4ab35d22f72db45c2f","run_id":"2026-08-11T18-05-25-511Z","sidecar_sha256":"fcff0086866abaac1aaaff5ae425dc57f0a292c8a893903bf51c38bb4d0f8a18","tested_commit":"937a39258c3ad8caad56176fe4ad24cc186cedf7"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -17,6 +17,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+### Cycle result - wolf_lure_root_commit_cue
+
+- Evidence choice: accepted `f75b8f23` repeated post-`bug_0549` LURE inspect→lesson→reselect friction; exact `hotspot-f75b8f23` was selected for a root-action scan cue, not path or mechanics reduction.
+- Surface/effect: the root LURE action now says to open or reopen the separate Commit LURE choice while preserving costs, optional lesson/reconsideration, action ids, predicates, effects, and state; Wolf hash advances `95a44131…` → `7008bead…`.
+- Counterfactual: full, compact, CLI, semantic, save, and hash guards pin the exact 150-character label without truncation, direct no-lesson commit, HUNT pivot, lesson return, and reselect→commit across 54 focused tests.
+- Red-gate correction: the first provisional pure exhausted provider context after gameplay, then two replacements made forbidden Codex resource probes before AdventureForge gameplay; all three were noncanonical, reset, and quarantined, while clean fourth commit `937a3925` alone binds evidence.
+- Pure evidence: exact-clean Spark seed 7 chose Ledger/Aid-Only/Rowan, entered sheltered Wolf-Winter, rendered the new LURE cue once, chose Cade FORTIFY, recovered one failed seal, and reached `ending_fortified_cade_terms` at 40/60 before End at decision 18.
+- Pure audit: 24/25 calls succeeded and one mistyped parent recovered unchanged; clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck. The cue was a direct render canary only—the player never entered LURE—and the report omitted the rejection and conflated foldback with the separate End choice.
+- Feedback/guard: status remains 1/3 with no compile; seal consumes `f75b8f23` and queues this pure second. Both 6,000-step crawls, full health (448 files/3,896 tests), 565 traces, cycle-start integrity, and exact pure provenance are green.
 
 ### Cycle result - advocates_post_dismissal_read_lifecycle
 
@@ -157,21 +167,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Causal evidence: all 24 calls completed with current hashes and no rejection; the custom path advanced directly through both changed screens, then one failed outer-seal check recovered through Cade before the dawn win.
 - Feedback/next: pre-seal status is 2/3 with no compile; sealing queues report three for next-cycle compilation. The only new soft seam is repeated post-commit Wolf blocked-row density, not a regression in this copy-only change.
 - Guard: 30 focused tests, 551 traces, both 6,000-step crawls, exact health (448 files/3,873 tests), UI typecheck, all 12 packs, cycle-start integrity, and exact-build pure provenance are green.
-
-### Cycle result - deferred_aftercare_choice_priority
-
-- Evidence choice: accepted recommendation `a0d32f61` quoted Wolf copy already replaced in Cycle 18; live sibling `4ae7e44f` exactly matched one accepted player's deferred-aftercare friction, and selecting it truthfully leaves the stale first row unconsumed.
-- Surface/effect: deferred optional leads now say to choose the shown journey option, finish any follow-on choice, and expect district details when play resumes; lead data, Continue/End, story options, goals, checkpoints, state, and persistence are unchanged.
-- Counterfactual: exact singular/plural copy, pending choice, dawn dispatch, End, resumed detail, full/compact/UI parity, no detail leakage, and snapshot/hash/decision invariants are regression-pinned.
-- Pure evidence: exact-clean Spark seed 7 on `3dbc399a` chose Ledger Advocate/Aid-Only/Rowan, resolved the charter backlog, and won sheltered Wolf-Winter by Albany-authority FORTIFY; it ended naturally at goal decision 19 with clarity/enjoyment 4/4, replay yes, bugs `[]`, and no stuck state.
-- Causal/feedback: that player ended before the compact foldback exposed optional opportunities, so pure evidence is an integration canary and accepted report plus 60 focused tests remain causal; status is 1/3 with no compile, and seal queues this run as pending report two.
-- Guard/next: 550 traces, both 6,000-step crawls, exact health (448 files/3,872 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure gates are green; repeated Civic role/duty/source header density is the next measured seam.
-
-## AFK Cycle 2026-08-11T18-05-25-511Z
-
-<!-- feedback_cycle_selection: {"run_id":"2026-08-11T18-05-25-511Z","selected_recommendation_id":"hotspot-f75b8f23"} -->
-
-- Assess: rpg=12; world=12; candidates=14.
-- Rec: hotspot-f75b8f23 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
