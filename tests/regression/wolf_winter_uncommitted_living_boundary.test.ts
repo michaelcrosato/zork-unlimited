@@ -144,7 +144,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
       /hunt[^]*hold ground\/stores[^]*prepared combat[^]*wolf deaths[^]*failure risks cattle\/line/i,
     );
     expect(rootCommands).toMatch(
-      /lure[^]*relocate pack beyond the breach[^]*keep the herd[^]*last feed[^]*broken paling[^]*two cattle risked/i,
+      /lure[^]*keep herd[^]*move pack beyond breach[^]*last feed[^]*broken paling[^]*foul risks two cattle[^]*open or reopen[^]*separate commit lure choice/i,
     );
     expect(rootCommands).toMatch(
       /drive[^]*evacuate people\/herd[^]*force pack clear[^]*abandon outer steading[^]*crisis takes wound, two cattle, or rig/i,

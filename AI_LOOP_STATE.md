@@ -166,3 +166,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `3dbc399a` chose Ledger Advocate/Aid-Only/Rowan, resolved the charter backlog, and won sheltered Wolf-Winter by Albany-authority FORTIFY; it ended naturally at goal decision 19 with clarity/enjoyment 4/4, replay yes, bugs `[]`, and no stuck state.
 - Causal/feedback: that player ended before the compact foldback exposed optional opportunities, so pure evidence is an integration canary and accepted report plus 60 focused tests remain causal; status is 1/3 with no compile, and seal queues this run as pending report two.
 - Guard/next: 550 traces, both 6,000-step crawls, exact health (448 files/3,872 tests), UI typecheck, all 12 packs, cycle-start integrity, and current-commit pure gates are green; repeated Civic role/duty/source header density is the next measured seam.
+
+## AFK Cycle 2026-08-11T18-05-25-511Z
+
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T18-05-25-511Z","selected_recommendation_id":"hotspot-f75b8f23"} -->
+
+- Assess: rpg=12; world=12; candidates=14.
+- Rec: hotspot-f75b8f23 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

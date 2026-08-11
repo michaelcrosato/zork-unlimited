@@ -33,6 +33,9 @@ const rules = buildRpgRules(index);
 const step = makeStep(rules);
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
+const CADE_LURE_ROOT_LABEL =
+  "LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; a foul risks two cattle. Open or reopen the separate Commit LURE choice.";
+const CADE_LURE_ROOT_COMMAND = `ask: ${CADE_LURE_ROOT_LABEL}`;
 
 type StepResult = { ok: boolean };
 type LegalActionsResult = { actions: { id: string }[] };
@@ -163,8 +166,7 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(commands).toMatchObject({
       ask_wolves:
         "ask: HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits.",
-      ask_lure:
-        "ask: LURE — Relocate pack beyond the breach; keep the herd. Cost: last feed, broken paling, two cattle risked on a foul. Inspect.",
+      ask_lure: CADE_LURE_ROOT_COMMAND,
       ask_drive:
         "ask: DRIVE — Evacuate people/herd; force pack clear. Cost: abandon outer steading; Crisis takes wound, two cattle, or rig. Inspect.",
       ask_fortify:
@@ -499,10 +501,18 @@ describe("Wolf-Winter dialogue surface", () => {
 
   it("discloses the optional LURE lesson's plan-menu return while preserving reconsideration", () => {
     const root = startCadeDialogue();
-    const rootQuick = buildRpgObservation(index, root).available_actions.find(
+    const rootObservation = buildRpgObservation(index, root);
+    const rootQuick = rootObservation.available_actions.find(
       (option) => option.id === "ask_wolves",
     );
+    const rootLure = rootObservation.available_actions.find((option) => option.id === "ask_lure");
     expect(rootQuick).toBeDefined();
+    expect(rootLure).toMatchObject({
+      id: "ask_lure",
+      command: CADE_LURE_ROOT_COMMAND,
+      action: { type: "ASK", npc: "houndsman", topic: "lure" },
+    });
+    expect(CADE_LURE_ROOT_COMMAND.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
 
     let unheard = act(root, { type: "ASK", npc: "houndsman", topic: "lure" });
     let observation = buildRpgObservation(index, unheard);
@@ -546,6 +556,11 @@ describe("Wolf-Winter dialogue surface", () => {
     );
     observation = buildRpgObservation(index, unheard);
     const postLessonIds = observation.available_actions.map((option) => option.id);
+    expect(observation.available_actions.find((option) => option.id === "ask_lure")).toMatchObject({
+      id: "ask_lure",
+      command: CADE_LURE_ROOT_COMMAND,
+      action: { type: "ASK", npc: "houndsman", topic: "lure" },
+    });
     expect(postLessonIds).toEqual(
       expect.arrayContaining(["ask_commit_hunt_and_hold", "ask_lure", "ask_drive", "ask_fortify"]),
     );

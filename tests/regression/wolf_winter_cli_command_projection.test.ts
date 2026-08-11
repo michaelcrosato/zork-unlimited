@@ -181,8 +181,8 @@ describe("Wolf-Winter terminal dialogue commands", () => {
   it("shows and executes lure and commit lure as concise commands", () => {
     let state = atCade();
     const rootHelp = renderActionHelp(index, state);
-    expect(rootHelp).toMatch(
-      /\n {2}lure \(also: ask lure, ask feed, ask alive\) — LURE — Relocate pack beyond the breach; keep the herd\. Cost: last feed, broken paling, two cattle risked on a foul\. Inspect\./i,
+    expect(rootHelp.split("\n")).toContain(
+      "  lure (also: ask lure, ask feed, ask alive) — LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; a foul risks two cattle. Open or reopen the separate Commit LURE choice.",
     );
 
     state = act(state, "lure");

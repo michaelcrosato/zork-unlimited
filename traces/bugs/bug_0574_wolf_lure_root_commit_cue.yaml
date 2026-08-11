@@ -1,0 +1,264 @@
+id: bug_0574
+title: "Cade's root LURE action did not expose its separate commit boundary"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: accepted hotspot f75b8f23
+severity: S1
+evidence:
+  accepted_feedback_source:
+    run_id: 2026-08-11T11-28-30-987Z
+    tested_commit: f941d9348bd8f04e4250c8667feb1ec479288d05
+    report_id: pure:b7a98dfbff13147f423a34c7a265b45975595f88ec10a66273b712dee181691f
+    report: ai-runs/2026-08-11T11-28-30-987Z/playtest.md
+    report_sha256: 4d9aedb537fc2467021b2c4bdf2590269e9c7e74c289b2d481180e7889f0c89a
+    evidence_sha256: eecb40e36c3eb79a7c7d8e0225b7f1d36d1712b6338e0876aa9fdb1907e41fa7
+    sidecar_sha256: b100715f7962dfa9b8fdc7da9b2424181cb7e3cfc2ae6f58dc0af7294f79159f
+    raw: ai-runs/2026-08-11T11-28-30-987Z/playtest.codex.jsonl
+    raw_sha256: 3d8d235ded05f7125e60ac4c46d532dee408b47f9409f6c1756e58f0ae9c58c7
+    raw_boundary: >
+      Items 10-13 are the complete relevant LURE commitment span. Item 10 uses
+      ask_lure and exposes ask_quick_lesson plus the already legal
+      ask_commit_lure. Item 11 takes the optional lesson, grants its existing +2
+      attack and +5 score, and returns to Cade's root with ask_lure visible but
+      ask_commit_lure absent. Item 12 selects ask_lure again and re-exposes
+      ask_commit_lure; item 13 commits it and sets strategy_lure_committed. All
+      four responses are ok:true. The exact state hashes advance
+      0001cf0a3558c4c8a07e00fe -> 6b19673441b8c2ff6e0467c8 ->
+      8936eb8656e135317fabc2b8 -> 4d9ce0e1863c181d8d29a958 ->
+      bb89f6989edefbc0ab18aa4a. The run has 30 completed MCP calls: 29
+      successful calls plus item 23's unrelated, nonmutating one-character stale
+      expected-state-hash rejection, recovered by item 24 and retried
+      successfully at item 25.
+    player_friction: >
+      The player rated clarity and enjoyment 4/4, was not stuck, would replay,
+      and reported bugs: []. Its sole confusion said the two LURE ask/commit
+      stages were clear but the commit step was easy to miss when skimming the
+      narrative cues, briefly pausing momentum. This supports one S1
+      action-label cue, not a missing action, path, or mechanics repair.
+  prior_repair:
+    trace: traces/bugs/bug_0549_lure_lesson_return_disclosure.yaml
+    commit: 59b01c4a6e00109805d82f7ab413e30b5d59bb57
+    accepted_tested_commit_descends_from_fix: true
+    exact_preserved_sequence: "ask_lure -> ask_quick_lesson -> ask_lure -> ask_commit_lure"
+    boundary: >
+      bug_0549 truthfully added the lesson's root-menu return and required LURE
+      reselect to the detailed LURE prose and quick-lesson choice. The accepted
+      f941d934 revision descends from that repair and presented those disclosures
+      byte-for-byte. The later report is therefore recurrence at a different
+      surface: a skimming player still had only "Inspect" in the root action label
+      before entering or re-entering the separate commit menu.
+  accepted_authority:
+    compiled_commit: 57713e49d638ce5800b6c8b2e43a509787ee5b02
+    manifest: ai-runs/feedback/20260811T160054Z/report-manifest.json
+    manifest_sha256: 1b4a1e18202d2e43e1ad38bff4f15096e9b5084bfd158ffc5eaa8a4617d9b0bc
+    hotspots: ai-runs/feedback/20260811T160054Z/hotspots.json
+    hotspots_sha256: e208e2e08214e16de0998597fabc3fecbd76179adab69c03985012af1c421e16
+    recommended_hotspot_id: f75b8f23
+    hotspot_count: 1
+    hotspot_severity: S1
+    hotspot_band: minor
+    hotspot_source: fleet
+    hotspot_location: unmapped
+    consumed_by_run_id: null
+  pending_before_cycle_34:
+    run_id: 2026-08-11T15-38-06-965Z
+    tested_commit: 57713e49d638ce5800b6c8b2e43a509787ee5b02
+    report_id: pure:a5ff4d97d27e10c8ab7e9669d1ecdd1e99baec1cc6ce31237bf09ab731ae2848
+    report_sha256: 15da3580857bc2a75088bbc3b5165a5f79e8d89017a6ac177dbaadf49be50b30
+    evidence_sha256: d4fc750e0cde1cf0534b470caaf0f2c1d073873c43ab891606d2deb7b1bb9f9e
+    sidecar_sha256: ae5d4cbb1ac43e8c763be29114fe8e4a0b063f427242e5dc73f356134add7b10
+  failed_attempt:
+    run_id: 2026-08-11T17-23-05-124Z
+    provisional_commit: 00725f1a4bee26b5e72fcb205f44debe927067b0
+    raw: ai-runs/2026-08-11T17-23-05-124Z/playtest.codex.jsonl
+    raw_sha256: 9093e2dd6269beab8c0d0755271deeaf43a9f0d58e5146e46babf322c65ca6e3
+    log: ai-runs/2026-08-11T17-23-05-124Z/playtest.log
+    log_sha256: 6cc87bf8694c8f713416d74903c9891ea0ba04803a6ac43ae4eb77851bf77bd7
+    strict_diagnostic: ai-runs/2026-08-11T17-23-05-124Z/playtest.strict-rejection.json
+    strict_diagnostic_sha256: a4dabc4e4bc9307d20ddab7698d83596b11f8e94fe8d6707b2bd2145d9b506b8
+    strict_status:
+      surface: public_events
+      failure: top_level_error
+      row_ordinal: 167
+      row_projection_sha256: d1fa48cbb1454ad82105d6a81701450b34d044833a60cd57fe1ee8dbe7c5727c
+      transport_warning: max_output_tokens
+      acceptance_eligible: false
+      canonical: false
+      ignored: true
+    absent_outputs:
+      - ai-runs/2026-08-11T17-23-05-124Z/playtest.md
+      - ai-runs/2026-08-11T17-23-05-124Z/playtest.json
+      - ai-runs/2026-08-11T17-23-05-124Z/playtest.evidence.jsonl
+      - ai-runs/2026-08-11T17-23-05-124Z/playtest.run.json
+    authority: >
+      The local raw stream reached gameplay before row 167 recorded a top-level
+      context-window error; its launcher log had first recorded a
+      max_output_tokens transport warning. The ignored diagnostic explicitly
+      marks the prefix noncanonical and acceptance-ineligible. With no report,
+      evidence, V2 sidecar, receipt, or stable report id, this attempt supplies
+      operational failure provenance only: it cannot support a causal product
+      claim, enter feedback, consume f75b8f23, append a pending row, compile, or
+      seal. The failed provisional commit was reset out of branch ancestry.
+  second_failed_attempt:
+    run_id: 2026-08-11T17-54-09-674Z
+    provisional_commit: dff879f4be39ca0ea7586cafa6a50e3a67adf079
+    raw: ai-runs/2026-08-11T17-54-09-674Z/playtest.codex.jsonl
+    raw_sha256: d62d592434eca47103881bc5e39ce8f6cddd19c4ab2168072d56d7fe88f3abf3
+    log: ai-runs/2026-08-11T17-54-09-674Z/playtest.log
+    log_sha256: 9b95dfca2ec172b333a5a05b4859308c598d88ce9293ab77b24bfe4a09d9c051
+    strict_diagnostic: ai-runs/2026-08-11T17-54-09-674Z/playtest.strict-rejection.json
+    strict_diagnostic_sha256: e4dafca408ed14ec424be222d7310b14447e64b5dddf0e6fb6ff5c0db1ab30a1
+    strict_status:
+      surface: private_rollout
+      failure: direct_forbidden_function
+      row_ordinal: 9
+      row_projection_sha256: f8cfbd6570a55edf86b6ba82492d8cc2012ec1b4ade61c9780ab38c8d8280e32
+      acceptance_eligible: false
+      canonical: false
+      ignored: true
+    observed_boundary:
+      codex_list_mcp_resources_calls: 1
+      adventureforge_calls: 0
+      gameplay_started: false
+      public_jsonl_records: 4
+    absent_outputs:
+      - ai-runs/2026-08-11T17-54-09-674Z/playtest.md
+      - ai-runs/2026-08-11T17-54-09-674Z/playtest.json
+      - ai-runs/2026-08-11T17-54-09-674Z/playtest.evidence.jsonl
+      - ai-runs/2026-08-11T17-54-09-674Z/playtest.run.json
+    authority: >
+      The local raw stream contains only one completed
+      codex/list_mcp_resources({}) lifecycle and no AdventureForge call or
+      gameplay. The row-9 private-rollout diagnostic rejects that direct
+      forbidden function and explicitly marks the prefix noncanonical,
+      acceptance-ineligible, and ignored. With no report, evidence, V2 sidecar,
+      receipt, or stable report id, this attempt supplies operational failure
+      provenance only: it cannot support a causal product claim, enter feedback,
+      consume f75b8f23, append a pending row, compile, or seal. The second failed
+      provisional commit was also reset out of branch ancestry.
+  third_failed_attempt:
+    run_id: 2026-08-11T17-59-54-154Z
+    provisional_commit: 3c6422856a5f986bfdaf75d6f941675289944dcb
+    raw: ai-runs/2026-08-11T17-59-54-154Z/playtest.codex.jsonl
+    raw_sha256: 4787e9ba7bf16dad3b5fb78e7bcd3fceb2c91acf5f49744ef2a05fad6cccbc04
+    log: ai-runs/2026-08-11T17-59-54-154Z/playtest.log
+    log_sha256: ade7c83197879efbf57046ccbe8b794fcba8ab21a97812c33c271aa6b040fdde
+    strict_diagnostic: ai-runs/2026-08-11T17-59-54-154Z/playtest.strict-rejection.json
+    strict_diagnostic_sha256: 049b3fd3970af36fa6c5592375c4a984f2e7e43100161fa484a080c986df3574
+    strict_status:
+      surface: public_events
+      failure: forbidden_mcp_server
+      row_ordinal: 4
+      row_projection_sha256: c5a5409944ac9d2e193b82a68cfcf6463515165908590e6d1e3d8f3c78960637
+      acceptance_eligible: false
+      canonical: false
+      ignored: true
+    observed_boundary:
+      codex_list_mcp_resources_calls: 1
+      adventureforge_calls: 0
+      gameplay_started: false
+      public_jsonl_records: 4
+    absent_outputs:
+      - ai-runs/2026-08-11T17-59-54-154Z/playtest.md
+      - ai-runs/2026-08-11T17-59-54-154Z/playtest.json
+      - ai-runs/2026-08-11T17-59-54-154Z/playtest.evidence.jsonl
+      - ai-runs/2026-08-11T17-59-54-154Z/playtest.run.json
+    authority: >
+      The local raw stream contains only one completed
+      codex/list_mcp_resources({}) lifecycle and no AdventureForge call or
+      gameplay. Public event row 4 rejects that server under the forbidden-MCP
+      taxonomy, and the diagnostic explicitly marks the prefix noncanonical,
+      acceptance-ineligible, and ignored. With no report, evidence, V2 sidecar,
+      receipt, or stable report id, this attempt supplies operational failure
+      provenance only: it cannot support a causal product claim, enter feedback,
+      consume f75b8f23, append a pending row, compile, or seal. The third failed
+      provisional commit was also reset out of branch ancestry.
+  cycle_34:
+    assessment_run: 2026-08-11T18-05-25-511Z
+    baseline_commit: bc0a1ea9655cf88cdf872399e787cd0836ab00dc
+    assessor_top_candidate: hotspot-f75b8f23
+    selected_candidate: hotspot-f75b8f23
+    feedback_status: "delta; 1 new verified reports, 1 actionable, 0 excluded mocks; 3 actionable reports required"
+    compile_authorized: false
+revision_liveness: >
+  Wolf-Winter is byte-identical from the accepted f941d934 build through Cycle
+  34's bc0a1ea9 baseline and compiles at exact source hash 95a44131. The accepted
+  compile retains pure:b7a98dfb... as the sole evidence behind f75b8f23. Although
+  the compiler labels the hotspot location unmapped and infers overworld from the
+  cohort metric, raw items 10-13 and the unchanged root prompt localize the
+  bounded repair to Cade's one LURE topic label.
+symptom: >
+  Cade's root action said only that LURE would relocate the pack, keep the herd,
+  spend the last feed, break the paling, risk two cattle on a foul, and
+  "Inspect." The action was an inquiry that opened a second menu containing the
+  actual Commit LURE choice. After the optional lesson deliberately returned to
+  the four-plan root, the same generic label was the scan surface for reopening
+  that commit menu. Detailed prose explained the boundary, but the root action
+  label itself did not, matching the accepted player's skimming friction.
+root_cause: >
+  bug_0549 repaired the previously missing disclosure inside the LURE detail and
+  lesson choice while preserving the shared lesson's intentional return to Cade's
+  root. The unchanged root topic prompt still summarized outcome and cost but
+  called the transition only "Inspect." Full, compact, and terminal action lists
+  all project that prompt, so the most frequently scanned surface did not name the
+  separate commit choice that it opens or reopens.
+fix: >
+  Replace only Cade's root LURE topic prompt. Keep the same outcome and costs in a
+  shorter first sentence, then state that this action opens or reopens the separate
+  Commit LURE choice. Preserve the inquiry, the direct no-lesson commitment, the
+  optional lesson's root return, every reconsideration path, and the exact
+  ask_lure -> ask_quick_lesson -> ask_lure -> ask_commit_lure sequence.
+settled_copy:
+  predecessor: >-
+    LURE — Relocate pack beyond the breach; keep the herd. Cost: last feed, broken paling, two cattle risked on a foul. Inspect.
+  replacement: >-
+    LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; a foul risks two cattle. Open or reopen the separate Commit LURE choice.
+  predecessor_characters: 124
+  replacement_characters: 150
+deterministic_witnesses:
+  - "the initial full observation projects ask_lure with the exact replacement command and unchanged ASK houndsman/lure action, while the compact choice projects the same complete 150-character label without truncation"
+  - "ordinary and Aid-Only LURE detail menus still expose the optional lesson and the separate ask_commit_lure choice; committing directly remains legal and grants neither heard_counsel nor the lesson's +2 attack and +5 score"
+  - "after the optional lesson grants heard_counsel, attack 7, and score 5, full and compact observations return to Cade's root with the exact replacement label, every HUNT/LURE/DRIVE/FORTIFY reconsideration choice, no second lesson, and no ask_commit_lure at root"
+  - "reselecting LURE after the lesson exposes ask_commit_lure; committing preserves attack 7 and score 5 and sets the existing strategy_lure_committed flag, while the counterfactual HUNT pivot still crosses north without that flag"
+  - "terminal help prints the exact replacement beside the concise lure command and its existing aliases, then prints and executes the separate commit lure command on the next menu"
+  - "the exact Wolf-Winter source hash advances directly from 95a441318c374dd0c8f45bf42f7529c11643259c0b5364ab3b3260980af6e261 to 7008beadde22a9f7b69ffeb4a21bbe358e6a98ff95e82f6d04b18fefc14dba6d"
+  - "structured replay and a current 7008bead matching-hash save remain valid while the exact 95a44131 predecessor fixture rejects under the unchanged source-integrity policy"
+selection_semantics:
+  - "Cycle 34 implements exact accepted recommendation hotspot-f75b8f23, not a routine playtest target or null/off-list task. The raw boundary directly localizes its compiler-unmapped excerpt to the current Wolf-Winter LURE root."
+  - "After all three failed provisionals were reset, the fourth assessment ran directly from baseline bc0a1ea9; before the replacement provisional commit, feedback_cycle_selection freezes run 2026-08-11T18-05-25-511Z with selected_recommendation_id hotspot-f75b8f23 and must remain unchanged through the future pure run and outer gates."
+  - "Committed feedback status is exactly 1/3 actionable, so no compile is authorized in Cycle 34. The current revision's future pure report cannot count before it passes outer gates and is sealed."
+  - "With no compile pointer, sealing after every outer gate marks the accepted bundle consumed_by_run_id 2026-08-11T18-05-25-511Z, preserves the existing Cycle 33 pending row, appends only the fourth run's new pure as pending report two in run order, and removes the frozen selection marker."
+  - "Only a later committed three-actionable-report delta may authorize a compile; this trace does not compile, promote, clear, or reorder feedback authority."
+nonclaims:
+  - "The accepted player was not stuck, reported no bug, attempted no invalid LURE action, and completed the exact intended route. This is a bounded discoverability repair for a skimming player, not evidence of a missing action, broken route, softlock, or mechanics defect."
+  - "This does not reduce the LURE path or action count. The optional-lesson route still requires ask_lure, ask_quick_lesson, ask_lure, and ask_commit_lure; direct no-lesson commitment remains the shorter existing alternative."
+  - "This does not change any action id, alias, dialogue node, goto, condition, effect, flag, variable, score, check, RNG, room, exit, item, journal, pressure, combat state, ending, time cost, or quest foldback."
+  - "This does not undo or characterize bug_0549 as ineffective. That repair accurately disclosed the root return inside detailed prose; this later recurrence moves the separate-commit cue upstream into the root action label while preserving bug_0549's reconsideration contract."
+  - "This does not claim to repair the report's separate worst-moment remark about repeated contextual prompts between casts; the accepted hotspot and this change are limited to the pre-commit ask/commit cue."
+  - "The accepted report tested the exact 95a44131 predecessor, not the 7008bead replacement. Deterministic current-pack regressions are the causal proof; any new pure observation remains future and gate-bound."
+  - "The failed 17-23/00725f1a, 17-54/dff879f4, and 17-59/3c642285 attempts supply no causal, retention, feedback, selection, pending, compile, or seal authority; only the fresh 18-05 assessment and its eventual clean replacement provisional may bind this cycle."
+  - "This does not preserve the predecessor content hash. Exact 95a44131 content-hash-bound Wolf saves, replays, traces, or evidence intentionally reject against 7008bead under the unchanged integrity policy."
+  - "This does not compile at 1/3, consume f75b8f23 before seal, use the unsealed future pure in its own cohort, or edit the machine-owned acceptance marker by hand."
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/regression/wolf_winter_complementary_clues.test.ts
+    case: "offers Cade's quick/open and guarded/patient lessons without claiming they are exclusive"
+  - path: tests/regression/wolf_winter_dialogue_surface.test.ts
+    case: "discloses the optional LURE lesson's plan-menu return while preserving reconsideration"
+  - path: tests/regression/wolf_winter_compact_surface.test.ts
+    cases:
+      - "discloses the optional lesson's root-menu return and LURE reselect on the $label compact surface"
+      - "keeps each copy-only revision distinct at the gauntlet and source-hash boundaries"
+  - path: tests/regression/wolf_winter_cli_command_projection.test.ts
+    case: "shows and executes lure and commit lure as concise commands"
+  - path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    cases:
+      - "projects all five real stages from the loaded pack without changing its source hash"
+      - "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+  - path: tests/regression/wolf_winter_uncommitted_living_boundary.test.ts
+    case: "warns seed4174's no-June aid-only route before crossing, retires living actions after it, and preserves a committed lure"
+verification:
+  - npx vitest run tests/regression/wolf_winter_complementary_clues.test.ts tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_cli_command_projection.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/wolf_winter_uncommitted_living_boundary.test.ts
+  - npm run validate -- wolf_winter
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0574_wolf_lure_root_commit_cue.yaml

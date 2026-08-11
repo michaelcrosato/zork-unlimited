@@ -131,7 +131,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       /hunt[^]*hold ground\/stores[^]*prepared combat[^]*risk[^]*wolf deaths[^]*failure risks cattle\/line[^]*\+2 attack\/\+5 tally[^]*north commits/i,
     );
     expect(rootPrompt("lure")).toMatch(
-      /lure[^]*relocate pack beyond the breach[^]*keep the herd[^]*cost[^]*last feed[^]*broken paling[^]*two cattle risked on a foul[^]*inspect/i,
+      /lure[^]*keep herd[^]*move pack beyond breach[^]*costs[^]*last feed[^]*broken paling[^]*foul risks two cattle[^]*open or reopen[^]*separate commit lure choice/i,
     );
     expect(rootPrompt("drive")).toMatch(
       /drive[^]*evacuate people\/herd[^]*force pack clear[^]*cost[^]*abandon outer steading[^]*crisis takes wound, two cattle, or rig[^]*inspect/i,

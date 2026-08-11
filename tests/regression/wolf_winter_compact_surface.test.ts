@@ -72,11 +72,15 @@ const FODDER_LOFT_PENDING_COPY_SOURCE_HASH =
   "09bd766079b6713d859f7c6642961557aabafe5b95ba0b21cb22816ff7e0efda";
 const BYRE_MOUTH_ROUTE_GUIDANCE_SOURCE_HASH =
   "95a441318c374dd0c8f45bf42f7529c11643259c0b5364ab3b3260980af6e261";
+const LURE_ROOT_COMMIT_CUE_SOURCE_HASH =
+  "7008beadde22a9f7b69ffeb4a21bbe358e6a98ff95e82f6d04b18fefc14dba6d";
 const YEARLING_DEFEAT_JOURNAL =
   "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 const CADE_HUNT_EXIT_LABEL =
   "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
 const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
+const CADE_LURE_ROOT_LABEL =
+  "LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; a foul risks two cattle. Open or reopen the separate Commit LURE choice.";
 const JUNE_HUNT_ACKNOWLEDGEMENT_LABEL =
   "HUNT / keep June — Hold ground; June stays cattle-first. First wolf death breaks agreement. North commits; closes other plans.";
 
@@ -405,6 +409,11 @@ describe("Wolf-Winter compact authored prose", () => {
       if (limitedDuty) state.flags.relief_oath_limited_duty = true;
       state = actById(state, "go_north");
       state = actById(state, "talk_houndsman");
+      const initial = compactWithActions(state);
+      expect(initial.choices).toContainEqual(["ask_lure", CADE_LURE_ROOT_LABEL]);
+      expect(CADE_LURE_ROOT_LABEL.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
+      expect(compactMcpActionLabel(CADE_LURE_ROOT_LABEL)).toBe(CADE_LURE_ROOT_LABEL);
+      expect(CADE_LURE_ROOT_LABEL).not.toMatch(TRUNCATION_MARKER);
       state = actById(state, "ask_lure");
 
       const offered = compactWithActions(state);
@@ -435,6 +444,7 @@ describe("Wolf-Winter compact authored prose", () => {
       expect(state.vars).toMatchObject({ attack: 7, score: 5 });
       const returned = compactWithActions(state);
       expect(returned.dialogue?.[1]).toMatch(/quick spear-hand/i);
+      expect(returned.choices).toContainEqual(["ask_lure", CADE_LURE_ROOT_LABEL]);
       expect(returned.actions).toEqual(
         expect.arrayContaining([
           "ask_commit_hunt_and_hold",
@@ -468,7 +478,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each copy-only revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(BYRE_MOUTH_ROUTE_GUIDANCE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(LURE_ROOT_COMMIT_CUE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(BYRE_MOUTH_ROUTE_GUIDANCE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(FODDER_LOFT_PENDING_COPY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(COMMITTED_LURE_YARD_GUIDANCE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(WORKS_REPAIR_DISCLOSURE_SOURCE_HASH);
