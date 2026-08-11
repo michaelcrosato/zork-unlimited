@@ -18,7 +18,6 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
-
 ### Cycle result - advocates_expelled_ending_truth
 
 - Evidence choice: reachable Advocate's Case deaths left the charter held, dropped in the antechamber, or already argued after a failed prepared appeal while `ending_expelled` still called it untouched and unargued; exact on-list `playtest-advocates_case` therefore outranked the partly superseded one-report Wolf density recommendation.
@@ -166,3 +165,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `8707f630` chose Unaffiliated Courier, Exposed-Ridge FORTIFY, won Wolf-Winter, continued through Gallowmere and Tanner's Fever, then ended naturally at decision 57; clarity/enjoyment 4/5, replay yes, bugs `[]`, not stuck.
 - Feedback/authority: the stale accepted product recommendation remains unconsumed because this off-list authority fix has a null selection; pre-seal status is 2 actionable reports of 3, so no compile ran.
 - Self-critique/guard: raw audit traced the player's perceived hash friction to three transcription errors, not state races, so concurrency guards stay unchanged; 43 focused assessor/seal tests, type/lint/format, 545 traces, hostile reviews, and the pre-crawl are green, with outer gates still required.
+
+## AFK Cycle 2026-08-11T06-18-45-068Z
+
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T06-18-45-068Z","selected_recommendation_id":"hotspot-64f5227e"} -->
+
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-64f5227e (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

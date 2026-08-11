@@ -1,0 +1,133 @@
+id: bug_0569
+title: "Wolf-Winter's pending Fodder-Loft repeated its one-way warning"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: accepted hotspot 64f5227e plus Cycle 28 exact-build raw corroboration
+severity: S1
+evidence:
+  accepted_feedback_source:
+    run_id: 2026-08-10T19-41-13-068Z
+    tested_commit: 2bfc04a302f8d8d25d2e7ae6c055a1874f11c351
+    report_id: pure:37b76416aacc26cea01b7fd8d6c5d775377d6b1f78dbe07af28816331c74b75a
+    report: ai-runs/2026-08-10T19-41-13-068Z/playtest.md
+    report_sha256: 20d03c7a979aba9d2cd4c165f23ab2395500117d990b799c08de61cb2f9fc2a7
+    evidence_sha256: 291b54ce5b3e3bdc6927c433a50b9479cce1dc42b084f1bd0685d1a0fa61e28e
+    sidecar_sha256: 8dbd5c47c29c67528ef4e82573dd586d7bd0a898473c166b20696c96af42064e
+    raw: ai-runs/2026-08-10T19-41-13-068Z/playtest.codex.jsonl
+    raw_sha256: 98963e57c9de44c0c639f3af2d1e9e1f7c2d5b8246cefd294a0e515cbe2e02e1
+    raw_boundary: >
+      Item 23 enters fodder_loft through go_up. Its compact room text ends
+      "the hauled ladder leaves no retreat." while the simultaneously projected
+      east block begins "The hauled ladder leaves no retreat." and then names
+      the required second feed cast. Item 24 completes that cast, opens go_east,
+      and preserves the distinct post-cast room truth.
+    player_friction: >
+      The player completed the clean LURE line at ending_pack_diverted after 23
+      decisions, rated clarity/enjoyment 4/4, would replay, was not stuck, and
+      reported bugs: []. Its only relevant friction said the repeated "fetch
+      feed west / no retreat / north waits" prompts were understandable but
+      easy to miss; the exit interview normalized that into one S1 conditional-
+      route density observation rather than a mechanics failure.
+  accepted_authority:
+    manifest: ai-runs/feedback/20260811T021237Z/report-manifest.json
+    manifest_sha256: e9a0b7bb8aee755c03bc42204c0ac0c5c22ef1088e7a7692062aaf4cd04b9c7d
+    hotspots: ai-runs/feedback/20260811T021237Z/hotspots.json
+    hotspots_sha256: 927848fe4f7e6ced9bacaa8b89a7922c6a957da873381333da48042d72999ca9
+    recommended_hotspot_id: 64f5227e
+    hotspot_count: 1
+    hotspot_severity: S1
+    hotspot_source: fleet
+    consumed_by_run_id: null
+  cycle_28_corroboration:
+    run_id: 2026-08-11T04-39-52-092Z
+    tested_commit: 4a8054a62ba73e47846a314c319ef40e097dbbf4
+    report_id: pure:8b3eafeea8b70c60b4f865ccbc695d6f478c3c7b6c05c6dea3e9c71adf97393a
+    report_sha256: 036972fbf05e96aebc553d5569439d8fdd5fe1db836cbd732185ae3a1cd32858
+    evidence_sha256: 53f71783ca78a054fb916e628d6225d6882713538e6cf3623a973eacaf7b8dae
+    sidecar_sha256: b240493278d44e103378ea707efe73775c7c221b0c219c03ac191fb55beb2d22
+    raw: ai-runs/2026-08-11T04-39-52-092Z/playtest.codex.jsonl
+    raw_sha256: c0c24381c03554208f864a6a08e05ceec5a3488bc2863e2d22da708ddb99625b
+    raw_boundary: >
+      Item 28 reaches the same pending Fodder-Loft on the exact 7beba188
+      predecessor build and exposes the same sentence twice across compact text
+      and blocked east. Item 29 makes the cast, retains the post-cast spatial
+      sentence, and exposes go_east. This later pure reported no bugs or
+      confusions and is corroboration of the literal duplication, not evidence
+      for broad route or mechanics changes.
+  cycle_29:
+    assessment_run: 2026-08-11T06-18-45-068Z
+    baseline_commit: 45ac2abac033eba71a4c2b8aef29f673786603be
+    assessor_top_candidate: hotspot-64f5227e
+    selected_candidate: hotspot-64f5227e
+    feedback_status: "delta; 2 new verified reports, 2 actionable, 0 excluded mocks; 3 actionable reports required"
+    compile_authorized: false
+revision_liveness: >
+  The accepted 19-41 raw observation, the later exact-build Cycle 28 observation,
+  and Cycle 29 baseline source all retain the pending room suffix and east-lock
+  prefix byte-for-byte apart from sentence-initial capitalization. Cycle 28's
+  intervening Advocate's Case-only revision did not touch Wolf-Winter. The later
+  7beba188 witness also rules out attributing the duplicate solely to an older
+  accepted build, while the current regression matrix proves the same loaded-pack
+  projection across every clean and recovery LURE route.
+symptom: >
+  Before the second LURE cast, one observation told the player twice that the
+  hauled ladder leaves no retreat: once in the room description and immediately
+  again in the blocked-east explanation. The second sentence was the actionable
+  one because it also said to complete the committed feed cast. This was a small
+  first-contact density seam, not a trap: the legal cast was visible, both source
+  players advanced, and east opened afterward.
+root_cause: >
+  The strategy_lure_committed pending room variant restated the one-way-route fact
+  already owned by the same room's locked east exit. Both fields project together
+  in full observations and the compact blind-player surface, so individually true
+  copy became adjacent duplicate guidance in the actual player view.
+fix: >
+  Remove only the trailing hauled-ladder/no-retreat clause from the pending LURE
+  room variant. Keep its instruction to cast through the hatch before dropping
+  east, and retain the exact blocked-east explanation as the single actionable
+  warning. Do not change the variant predicates, exit conditions, destination,
+  cast action, one-way geometry, post-cast room text, object text, or any LURE
+  state transition.
+settled_copy:
+  pending_room: >-
+    Cade's local feed-plan instruction takes you across the feed-hauler's crawlboard with his sack. Below, the flank-wolf circles from the low hatch. Cast the second measure through it before dropping east.
+  retained_east_lock: >-
+    The hauled ladder leaves no retreat. Complete the committed second feed cast through the low hatch before dropping east.
+  retained_postcast_room: >-
+    The second feed measure is spent beyond the low hatch. The flank-wolf followed it alive into the high wood, leaving the byre threshold empty east. The hauled ladder still leaves no retreat.
+deterministic_witnesses:
+  - "all four clean, fouled split-guard, fouled braced-rail, and yearling-death hybrid LURE recoveries reach fodder_loft and expose the settled pending room text byte-exactly in full and compact projections"
+  - "those same four pending states retain the exact east block in full blocked_exits and compact blocked output, keep use_winter_feed_sack_on_loft_hatch legal, and keep go_east unavailable"
+  - "after the second cast, the exact retained post-cast room and loft-hatch text remain true, the cast action retires, and go_east becomes legal under the unchanged flank_redirected condition"
+  - "variant predicate order is unchanged; all four LURE recoveries select the edited committed pending-feed leaf before the cast and the retained post-cast leaf afterward"
+  - "the one-sack rule, no-retry rule, cattle alarm, scores, living/death flags, later outer cast, endings, and route destinations are unchanged"
+  - "the exact Wolf-Winter source hash advances directly from 7beba188a34782a75dd53d86bdef0ba2d93eb381f1541565f9fe07351407ba35 to 09bd766079b6713d859f7c6642961557aabafe5b95ba0b21cb22816ff7e0efda"
+  - "a current 09bd7660 save and structured replay remain valid while the exact 7beba188 predecessor fixture rejects under the unchanged source-integrity policy"
+selection_semantics:
+  - "Cycle 29 implements exact accepted recommendation hotspot-64f5227e, not the tied aad6b910/e1c1ae98 rows, a routine playtest-wolf_winter review, or a null/off-list task. The raw source localizes the accepted unmapped density finding to this one Wolf-Winter leaf."
+  - "Before the provisional commit, feedback_cycle_selection must freeze run 2026-08-11T06-18-45-068Z with selected_recommendation_id hotspot-64f5227e and remain unchanged through the pure run and outer gates."
+  - "Committed feedback status is exactly 2/3 actionable, so no compile is authorized in Cycle 29. The current revision's future pure report cannot count before it passes outer gates and is sealed."
+  - "With no compile pointer, sealing after every outer gate marks the accepted bundle consumed_by_run_id 2026-08-11T06-18-45-068Z, appends the new pure after the two already pending reports, and removes the frozen selection marker."
+  - "Only the later committed three-report pending state may authorize a future delta compile; this trace does not compile, promote, clear, or reorder feedback authority."
+nonclaims:
+  - "Neither raw player was stuck, attempted the blocked east exit, lost an action, or reported a bug. This is a directly observed S1 copy duplication, not evidence that LURE is broken, linearity must be removed, or the one-way loft should permit retreat."
+  - "This does not remove, shorten, or change the actionable east lock; alter its conditions or destination; expose go_east before flank_redirected; or hide the required second cast."
+  - "This does not change the retained post-cast room sentence, loft-hatch object truth, Jamie testimony route, split-rail route, combat drop, pack state, items, flags, variables, journal, pressure, score, HP, time, quest completion, or endings."
+  - "This does not claim the accepted report tested the 09bd7660 revision. Its raw predecessor observation and Cycle 28 corroboration identify the defect; deterministic current-pack regression is the causal proof of the copy-only fix."
+  - "This does not preserve the old content hash. Exact 7beba188 content-hash-bound Wolf saves intentionally reject against 09bd7660 under the unchanged integrity policy."
+  - "This does not compile at 2/3, consume the recommendation before seal, use the unsealed current pure in its own feedback cohort, or edit the machine-owned feedback marker by hand."
+production:
+  - content/rpg/quests/wolf_winter.yaml
+tests:
+  - path: tests/regression/wolf_winter_postcast_state_truth.test.ts
+    case: "keeps $label exact through both casts"
+  - path: tests/regression/wolf_winter_compact_surface.test.ts
+    case: "keeps each copy-only revision distinct at the gauntlet and source-hash boundaries"
+  - path: tests/regression/wolf_winter_paling_stage_actions.test.ts
+    cases:
+      - "projects all five real stages from the loaded pack without changing its source hash"
+      - "keeps structured replay and a current matching-hash save valid while rejecting the exact predecessor fixture"
+verification:
+  - npx vitest run tests/regression/wolf_winter_postcast_state_truth.test.ts tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts
+  - npm run validate -- wolf_winter
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0569_wolf_lure_loft_duplicate_guidance.yaml

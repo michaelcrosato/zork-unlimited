@@ -28,7 +28,9 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 
 const LOFT_PENDING =
-  "Cade's local feed-plan instruction takes you across the feed-hauler's crawlboard with his sack. Below, the flank-wolf circles from the low hatch. Cast the second measure through it before dropping east; the hauled ladder leaves no retreat.";
+  "Cade's local feed-plan instruction takes you across the feed-hauler's crawlboard with his sack. Below, the flank-wolf circles from the low hatch. Cast the second measure through it before dropping east.";
+const LOFT_PENDING_EAST_BLOCK =
+  "The hauled ladder leaves no retreat. Complete the committed second feed cast through the low hatch before dropping east.";
 const LOFT_POST_CAST =
   "The second feed measure is spent beyond the low hatch. The flank-wolf followed it alive into the high wood, leaving the byre threshold empty east. The hauled ladder still leaves no retreat.";
 const HATCH_PENDING =
@@ -225,6 +227,7 @@ describe("Wolf-Winter post-cast state truth", () => {
     let state = reachLoft(spec.recovery);
 
     expectRoomSurface(state, LOFT_PENDING);
+    expectBlockedSurface(state, [["east", LOFT_PENDING_EAST_BLOCK]]);
     expectObjectSurface(state, "loft_hatch", HATCH_PENDING);
     expect(actionIds(state)).toContain("use_winter_feed_sack_on_loft_hatch");
     expect(actionIds(state)).not.toContain("go_east");

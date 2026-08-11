@@ -564,7 +564,7 @@ rooms:
         text: >
           Cade's local feed-plan instruction takes you across the feed-hauler's crawlboard
           with his sack. Below, the flank-wolf circles from the low hatch. Cast the second
-          measure through it before dropping east; the hauled ladder leaves no retreat.
+          measure through it before dropping east.
       - when:
           - { has_flag: jamie_market_testimony_certified }
           - { not_item: split_rail_guard }
