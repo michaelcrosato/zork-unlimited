@@ -35,6 +35,24 @@ const CERTIFIED_EXTRACTS_SOURCE_HASH =
   "284d5e2e618b87dd2dd0761715b7cf6c5736111ae15f5d9824ce75ee3f03510e";
 const RESOLVED_OSWIN_PRESENCE_SOURCE_HASH =
   "c3dd62683dcbbfa314298faa4bdbda727ebeb62124fd286fcc402a3293ce7e69";
+const EXPELLED_ENDING_TRUTH_SOURCE_HASH =
+  "36350b7751c24f6d0fd0457879f187962609e48116cdef6ff39aa238886be66e";
+const EXPELLED_ENDING_TEXT =
+  "Craf gets his weight into you before you reach the doorway, and after that the choice is no longer yours. Oswin arrives in the antechamber with the measured expression of a man who had anticipated this outcome and is not surprised by it. The deputy notes the disturbance in the hearing record. Marta's bolts remain impounded; Oswin's notice stands. Marta's claim remains unresolved when market day ends. *** You have fallen. ***\n";
+
+const lethalRng = (): Rng => {
+  let draw = 0;
+  const next = (): number => (draw++ === 0 ? 0 : 0.999999);
+  return {
+    next,
+    int(min: number, max: number): number {
+      const lo = Math.ceil(min);
+      const hi = Math.floor(max);
+      return lo + Math.floor(next() * (hi - lo + 1));
+    },
+  };
+};
+const lethalStep = makeStep(buildRpgRules(index, lethalRng));
 
 function actionIds(s: GameState): string[] {
   return enumerateRpgActions(index, s).map((o) => o.id);
@@ -60,6 +78,19 @@ function chooseWith(runStep: typeof step, s: GameState, id: string): GameState {
 
 function choose(s: GameState, id: string): GameState {
   return chooseWith(step, s, id);
+}
+
+function fallToCraf(state: GameState): GameState {
+  for (let round = 0; round < 3; round += 1) {
+    const result = actWith(lethalStep, state, "attack_craf");
+    const combat = result.events.flatMap((event) =>
+      event.type === "narration" ? [event.text] : [],
+    );
+    expect(combat[0]).toContain("d6 1 + 4 atk - 2 def");
+    expect(combat[1]).toContain("d6 6 + 5 atk - 2 def");
+    state = result.state;
+  }
+  return state;
 }
 
 function fullyPreparedAtCaseRecord(): GameState {
@@ -200,7 +231,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
       expect(compact.actions).toEqual(RESOLVED_STALL_ACTIONS);
     }
 
-    expect(loaded.compiled.contentHash).toBe(RESOLVED_OSWIN_PRESENCE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(EXPELLED_ENDING_TRUTH_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(CERTIFIED_EXTRACTS_SOURCE_HASH);
   });
 
@@ -258,5 +289,121 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     );
     expect(combatProjection.compact.npcs).toContain("oswin");
     expect(combatProjection.compact.actions).toContain("talk_oswin");
+  });
+
+  it("keeps the expelled ending true after failed, untouched, held, and dropped charter routes", () => {
+    const preparedFailure = chooseWith(
+      lethalStep,
+      fullyPreparedAtCaseRecord(),
+      "use_prior_convictions_on_case_record",
+    );
+    expect(preparedFailure.flags).toMatchObject({
+      charter_read: true,
+      charter_roll_taken: true,
+      register_read: true,
+      town_register_taken: true,
+      priors_read: true,
+      appeal_attempted: true,
+    });
+    expect(preparedFailure.flags["oswin_overruled"]).toBeUndefined();
+
+    const direct = chooseWith(lethalStep, initStateForRpgPack(index, 7), "go_north");
+    const carried = chooseWith(
+      lethalStep,
+      chooseWith(lethalStep, initStateForRpgPack(index, 7), "take_charter_roll"),
+      "go_north",
+    );
+    const dropped = chooseWith(
+      lethalStep,
+      chooseWith(
+        lethalStep,
+        chooseWith(lethalStep, initStateForRpgPack(index, 7), "take_charter_roll"),
+        "go_north",
+      ),
+      "drop_charter_roll",
+    );
+    const cases = [
+      {
+        label: "failed prepared appeal with the charter held",
+        state: fallToCraf(preparedFailure),
+        score: 25,
+        inventory: ["charter_roll", "town_register", "prior_convictions"],
+        flags: {
+          charter_read: true,
+          charter_roll_taken: true,
+          town_register_taken: true,
+          register_read: true,
+          priors_read: true,
+          appeal_attempted: true,
+        },
+        charterLocation: undefined,
+      },
+      {
+        label: "untouched charter and direct combat",
+        state: fallToCraf(direct),
+        score: 0,
+        inventory: [],
+        flags: {},
+        charterLocation: undefined,
+      },
+      {
+        label: "unargued charter carried into direct combat",
+        state: fallToCraf(carried),
+        score: 0,
+        inventory: ["charter_roll"],
+        flags: { charter_roll_taken: true },
+        charterLocation: undefined,
+      },
+      {
+        label: "charter dropped in the antechamber",
+        state: fallToCraf(dropped),
+        score: 0,
+        inventory: [],
+        flags: { charter_roll_taken: true },
+        charterLocation: {
+          room: "aldermans_antechamber",
+          takenBy: "player" as const,
+        },
+      },
+    ];
+
+    for (const scenario of cases) {
+      const { full, compact, ids } = projected(scenario.state);
+      expect(scenario.state.ended, scenario.label).toBe(true);
+      expect(scenario.state.endingId, scenario.label).toBe("ending_expelled");
+      expect(scenario.state.flags, scenario.label).toEqual(scenario.flags);
+      expect(scenario.state.inventory, scenario.label).toEqual(scenario.inventory);
+      expect(scenario.state.objectState["charter_roll"], scenario.label).toEqual(
+        scenario.charterLocation,
+      );
+      expect(scenario.state.vars["hp"], scenario.label).toBe(0);
+      expect(scenario.state.vars["score"] ?? 0, scenario.label).toBe(scenario.score);
+      expect(ids, scenario.label).toEqual([]);
+      expect(full.ended, scenario.label).toBe(true);
+      expect(full.ending_id, scenario.label).toBe("ending_expelled");
+      expect(full.score, scenario.label).toBe(scenario.score);
+      expect(full.ending, scenario.label).toEqual({
+        id: "ending_expelled",
+        title: "Expelled from the Market",
+        text: EXPELLED_ENDING_TEXT,
+        death: true,
+      });
+      expect(full.description, scenario.label).toBe(
+        `${EXPELLED_ENDING_TEXT}\nFinal score: ${scenario.score} of 50.`,
+      );
+      expect(compact.ended, scenario.label).toBe(true);
+      expect(compact.ending_id, scenario.label).toBe("ending_expelled");
+      expect(compact.ending, scenario.label).toEqual({
+        id: "ending_expelled",
+        title: "Expelled from the Market",
+        text: EXPELLED_ENDING_TEXT.trimEnd(),
+        death: true,
+      });
+      expect(compact.text, scenario.label).toBe(full.description);
+      expect(compact.actions, scenario.label).toBeUndefined();
+    }
+
+    expect(loaded.compiled.contentHash).toBe(EXPELLED_ENDING_TRUTH_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(RESOLVED_OSWIN_PRESENCE_SOURCE_HASH);
   });
 });

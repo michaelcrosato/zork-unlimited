@@ -164,3 +164,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Counterfactual: genuine duplicate/malformed allowed calls retain `direct_invalid_start`, repeated starts retain fresh-start ordering, and the change does not accept, skip, alias, retry, auto-start, or implement resource discovery.
 - Pure evidence: exact-clean Spark seed 7 on `9b494083` chose Unaffiliated Courier/personal-bond duty, resolved Albany's Charter backlog, then completed Wolf-Winter by Sheltered-Stockway LURE with herd and wolves alive; it ended naturally at decision 26 with clarity/enjoyment 4/4, replay yes, bugs `[]`, and no stuck state.
 - Self-critique/guard: gameplay could only canary this tooling-only change; 204 focused tests, type/lint/format, 544 traces, exact captured-row/race reviews, and the pre-crawl are green, feedback remains 1/3, and the standard outer gates remain required.
+
+## AFK Cycle 2026-08-11T04-39-52-092Z
+
+<!-- feedback_cycle_selection: {"run_id":"2026-08-11T04-39-52-092Z","selected_recommendation_id":"playtest-advocates_case"} -->
+
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-64f5227e (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
