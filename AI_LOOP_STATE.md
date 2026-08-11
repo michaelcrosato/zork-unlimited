@@ -151,3 +151,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `e0600a7f` chose Road-Warden/Aid-Only/Hayden, held The Wolf-Winter by HUNT, and ended naturally at the first goal on decision 18; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
 - Self-critique/next: raw Civic choice surfaces showed the corrected pause row, but the player skipped that event, so build evidence complements rather than replaces causal regressions; the separate HUNT "commit" label and dense goal pause remain next evidence.
 - Feedback/guard: status remains 2 actionable reports of 3, so no compile; 81 focused tests, compact signature/size, exact 732/732 opening budget, type/lint/format, 542 traces, and hostile audits are green, with outer gates still required.
+## AFK Cycle 2026-08-10T23-47-08-984Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-10T23-47-08-984Z","selected_recommendation_id":"playtest-advocates_case"} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

@@ -501,6 +501,7 @@ npcs:
       coat, not unkind in expression but entirely without doubt. He has filed this
       kind of notice before. He will wait as long as he needs to.
     room: market_stall
+    conditions: [{ not_flag: oswin_overruled }]
     dialogue:
       root: oswin_root
       nodes:
