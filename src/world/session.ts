@@ -1953,6 +1953,18 @@ export class OverworldSession {
       this.journeyState.goal.version,
     );
     this.journeyState = activateJourneyGoal(this.journeyState, goal);
+    // A campaign goal is an authenticated direct lead: its canonical
+    // definition names both the quest and the district where that quest can be
+    // acted on. Reveal exactly that anchor without spending or reordering
+    // ordinary local discovery.
+    revealOverworldQuestAnchor(
+      {
+        discoveredAreaIds: this.discoveredAreaIds,
+        discoveredQuestIds: this.discoveredQuestIds,
+      },
+      this.questsById,
+      definition.targetQuestId,
+    );
     const journalCopy = journeyCampaignGoalJournalCopy(definition, this.questOutcomeIds);
     const entry: OverworldJournalEntry = {
       id: `campaign_goal:${String(goal.version)}:${goal.id}`,

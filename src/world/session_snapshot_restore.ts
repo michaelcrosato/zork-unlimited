@@ -24,8 +24,13 @@ import {
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalDefinition,
   journeyCampaignSelectedStoryChoiceRefs,
+  journeyCampaignStoryChoiceRefForGoal,
 } from "./journey_campaign.js";
-import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
+import {
+  cloneJourneyContractSnapshot,
+  INITIAL_JOURNEY_GOAL,
+  type JourneyContractSnapshot,
+} from "./journey_contract.js";
 import { assertKnownIds, assertUniqueTupleMap, replaceStringSet } from "./session_collections.js";
 import {
   assertSnapshotEventResolutionProofs,
@@ -426,6 +431,7 @@ type CurrentCampaignSnapshotProof = Readonly<{
   campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
   characterAfter: CampaignCharacterState;
   characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState;
+  directQuestAnchorActivationOrdinals: ReadonlyMap<string, number>;
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
 }>;
 
@@ -1323,15 +1329,69 @@ function proveCurrentCampaignSnapshot(args: {
     );
   }
 
+  const storyChoiceProofOrdinalByKey = storyChoiceProofOrdinals(
+    boundaryProofs,
+    args.indexes,
+    args.snapshot.journey,
+    reliefOathProof,
+  );
+  const directQuestAnchorActivationOrdinals = new Map<string, number>();
+  const bindDirectQuestAnchorActivation = (questId: string, acceptedDecisions: number): void => {
+    const existing = directQuestAnchorActivationOrdinals.get(questId);
+    if (existing === undefined || acceptedDecisions < existing) {
+      directQuestAnchorActivationOrdinals.set(questId, acceptedDecisions);
+    }
+  };
+  if (
+    args.indexes.openingLeadSource !== null &&
+    leadSourceProof.option !== null &&
+    leadSourceProof.selectionBoundary !== null
+  ) {
+    bindDirectQuestAnchorActivation(
+      args.indexes.openingLeadSource.target_quest,
+      leadSourceProof.selectionBoundary.acceptedDecisions,
+    );
+  }
+  for (const goal of [...args.snapshot.journey.goalHistory, args.snapshot.journey.goal]) {
+    if (goal.version <= INITIAL_JOURNEY_GOAL.version) continue;
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (!definition) continue; // The authenticated campaign proof reports unknown goals.
+    const storyChoiceRef = journeyCampaignStoryChoiceRefForGoal(definition);
+    if (storyChoiceRef) {
+      const acceptedDecisions = storyChoiceProofOrdinalByKey.get(
+        campaignStoryChoiceRefKey(storyChoiceRef),
+      );
+      if (acceptedDecisions === undefined) {
+        throw new Error(
+          `Overworld session snapshot campaign goal "${goal.id}" has no replayable activation decision.`,
+        );
+      }
+      bindDirectQuestAnchorActivation(definition.targetQuestId, acceptedDecisions);
+      continue;
+    }
+
+    const previousGoal = args.snapshot.journey.goalHistory[goal.version - 2];
+    const retention = previousGoal
+      ? args.snapshot.journey.retentionHistory.find(
+          (event) =>
+            event.choice === "continue" &&
+            event.goalVersion === previousGoal.version &&
+            event.goalId === previousGoal.id,
+        )
+      : undefined;
+    const replayed = retention ? boundaryProofs.get(retention.atDecision) : undefined;
+    if (!retention || !replayed || replayed.decisionProofHash !== retention.decisionProofHash) {
+      throw new Error(
+        `Overworld session snapshot campaign goal "${goal.id}" has no replayable continuation activation.`,
+      );
+    }
+    bindDirectQuestAnchorActivation(definition.targetQuestId, retention.atDecision);
+  }
+
   return {
     campaignBoundaries: {
       byAcceptedDecisions: boundaryProofs,
-      storyChoiceProofOrdinalByKey: storyChoiceProofOrdinals(
-        boundaryProofs,
-        args.indexes,
-        args.snapshot.journey,
-        reliefOathProof,
-      ),
+      storyChoiceProofOrdinalByKey,
       localJobOptionProofOrdinalByKey: localJobOptionProofOrdinals(
         args.indexes,
         args.snapshot.journalEntries,
@@ -1346,6 +1406,7 @@ function proveCurrentCampaignSnapshot(args: {
     },
     characterAfter,
     characterAt: (entry) => characterAt(entry),
+    directQuestAnchorActivationOrdinals,
     openingLeadSourceDecisionTrail,
   };
 }
@@ -1668,13 +1729,23 @@ export function planOverworldSessionSnapshotRestore(args: {
   );
   assertSnapshotCurrentAreaReachability(snapshot.currentAreaId, discoveredAreaIds);
 
-  const directQuestAnchorIds = new Set<string>();
-  const nonFifoQuestIds = new Set<string>();
+  // An authenticated current or historical campaign goal is a direct lead to
+  // its canonical quest and district, even before that town has been visited.
+  const campaignQuestAnchorIds = new Set(
+    [...snapshot.journey.goalHistory, snapshot.journey.goal]
+      .filter((goal) => goal.version > INITIAL_JOURNEY_GOAL.version)
+      .map((goal) => journeyCampaignGoalDefinition(goal)?.targetQuestId)
+      .filter((questId): questId is string => questId !== undefined),
+  );
+  const directQuestAnchorIds = new Set<string>(campaignQuestAnchorIds);
+  const nonFifoQuestIds = new Set<string>(campaignQuestAnchorIds);
   if (indexes.openingLeadSource) {
     const targetQuestId = indexes.openingLeadSource.target_quest;
     nonFifoQuestIds.add(targetQuestId);
     if (discoveredQuestIds.has(targetQuestId)) directQuestAnchorIds.add(targetQuestId);
   }
+  // Upgrade authenticated older saves that predate campaign-anchor discovery.
+  for (const questId of campaignQuestAnchorIds) discoveredQuestIds.add(questId);
   const directAnchorAreaIds = new Set(
     [...directQuestAnchorIds].flatMap((questId) => {
       const areaId = indexes.questsById.get(questId)?.area;
@@ -1684,11 +1755,13 @@ export function planOverworldSessionSnapshotRestore(args: {
   for (const areaId of directAnchorAreaIds) discoveredAreaIds.add(areaId);
   const localActionJournalSources = {
     ...indexes,
+    campaignDecisionProofsByOrdinal: campaignReplay.campaignBoundaries.byAcceptedDecisions,
     discoveredAreaIds,
     discoveredJobIds,
     discoveredQuestIds,
     discoveredSiteIds,
     directQuestAnchorIds,
+    directQuestAnchorActivationOrdinals: campaignReplay.directQuestAnchorActivationOrdinals,
     nonFifoQuestIds,
     townVisitMinutes,
     visitedTownIds,
@@ -1720,6 +1793,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   assertSnapshotDiscoveryLocality({
     ...indexes,
     completedQuestIds,
+    directQuestAnchorIds,
     discoveredAreaIds,
     discoveredJobIds,
     discoveredQuestIds,

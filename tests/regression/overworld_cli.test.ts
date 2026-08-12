@@ -1312,7 +1312,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     }
   });
 
-  it("keeps the Queensbury objective visible after Wolf choices and follows it to the northbound encounter", () => {
+  it("follows the Queensbury objective through its encounter to the actionable market anchor", () => {
     const completed = sessionAtCompletedWolfGoal();
     const snapshot = completed.snapshot();
     const expected = OverworldSession.restore(WORLD, snapshot);
@@ -1327,6 +1327,14 @@ describe("overworld_play CLI (scripted mode)", () => {
     expect(expectedFollow.stopReason).toBe("road_encounter");
     expect(expectedFollow.stoppedAt).toBe("Saratoga Springs city");
     expect(expectedEncounter).not.toBeNull();
+    expected.resolveRoadEncounter("press_on");
+    const expectedArrival = expected.followGoalPassage();
+    expect(expectedArrival.stopReason).toBe("objective");
+    expect(expectedArrival.stoppedAt).toBe("Queensbury town");
+    expect(expected.view().areaExits.map((exit) => exit.destination.id)).toContain(
+      "queensbury_town__market",
+    );
+    expect(expected.view().quests.map((quest) => quest.id)).toContain("gallowmere");
 
     const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-north-goal-"));
     const snapshotPath = join(temp, "wolf-complete.json");
@@ -1336,7 +1344,7 @@ describe("overworld_play CLI (scripted mode)", () => {
         "--restore",
         snapshotPath,
         "--commands",
-        "choose continue; choose Send the wagon back to Cade; look; follow goal",
+        "choose continue; choose Send the wagon back to Cade; look; follow goal; press; follow goal; enter Queensbury Market Streets",
       ]);
       expect(run.status, run.output).toBe(0);
       expect(run.output).toContain("Queensbury town");
@@ -1350,6 +1358,11 @@ describe("overworld_play CLI (scripted mode)", () => {
       );
       expect(run.output).toContain(expectedEncounter!.event.title);
       expect(run.output).toContain(expectedEncounter!.event.summary);
+      expect(run.output).toContain(`Goal passage stop: objective at ${expectedArrival.stoppedAt}.`);
+      expect(run.output).toContain("Walked");
+      expect(run.output).toContain("to Queensbury Market Streets");
+      expect(run.output).not.toContain('No local route matches "queensbury market streets"');
+      expect(run.output).not.toContain("A scripted command was rejected.");
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

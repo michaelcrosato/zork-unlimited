@@ -67,7 +67,10 @@ function finishGallowmereAndActivateTanner(session: OverworldSession): void {
   session.resolveRoadEncounter("press_on");
   const second = session.followGoalPassage();
   expect(second.stopReason).toBe("objective");
-  session.exploreArea("queensbury_town__civic_core");
+  expect(session.view().areaExits.map((exit) => exit.destination.id)).toContain(
+    "queensbury_town__market",
+  );
+  expect(session.view().quests.map((quest) => quest.id)).toContain("gallowmere");
   moveToArea(session, "queensbury_town__market");
   session.startQuest("gallowmere");
   session.completeQuest("gallowmere", {

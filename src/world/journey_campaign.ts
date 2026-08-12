@@ -1005,6 +1005,12 @@ export function assertJourneyCampaignJournalProof(args: {
     if (!entry) {
       throw new Error(`Overworld session snapshot is missing campaign journal entry "${entryId}".`);
     }
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (!definition) throw new Error(`Unknown journey campaign goal "${goal.id}".`);
+    const expected = journeyCampaignGoalJournalCopy(definition, args.questOutcomeIds);
+    if (entry.title !== expected.title || entry.text !== expected.text) {
+      throw new Error(`Overworld session snapshot campaign journal entry "${entryId}" is forged.`);
+    }
   }
 }
 

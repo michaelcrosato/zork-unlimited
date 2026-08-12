@@ -342,6 +342,32 @@ describe("overworld local action journal replay", () => {
     ).toThrow(/started quest "quest_a" is not discovered/);
   });
 
+  it("allows only an exact direct quest anchor outside a visited town", () => {
+    expect(() =>
+      assertSnapshotDiscoveryLocality(
+        locality({
+          directQuestAnchorIds: new Set([questA.id]),
+          discoveredAreaIds: new Set([areaA.id]),
+          discoveredQuestIds: new Set([questA.id]),
+          questIdsAllowedOutsideDiscoveredArea: new Set([questA.id]),
+          visitedTownIds: new Set(),
+        }),
+      ),
+    ).not.toThrow();
+
+    expect(() =>
+      assertSnapshotDiscoveryLocality(
+        locality({
+          directQuestAnchorIds: new Set([questA.id]),
+          discoveredAreaIds: new Set([areaA.id, areaB.id]),
+          discoveredQuestIds: new Set([questA.id]),
+          questIdsAllowedOutsideDiscoveredArea: new Set([questA.id]),
+          visitedTownIds: new Set(),
+        }),
+      ),
+    ).toThrow(/discovered area "area_b" belongs to unvisited town/);
+  });
+
   it("rejects forged discovered area and local source counts", () => {
     expect(() =>
       assertSnapshotDiscoveredAreaCountReplay(
