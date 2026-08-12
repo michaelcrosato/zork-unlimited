@@ -9,6 +9,10 @@ import type {
   OverworldServiceResult,
   TravelLogEntry,
 } from "../world/session.js";
+import type {
+  JourneyOpportunityExplanation,
+  JourneyOpportunityNextAction,
+} from "../world/journey_opportunity_explainer.js";
 import { compactText } from "../core/compact_text.js";
 import {
   compactOverworldJournalEntries,
@@ -104,6 +108,22 @@ export type OverworldCompactAreaTravelResult = {
   route: string;
   m: number;
   at: string;
+};
+
+export type OverworldCompactOpportunityExplanation = {
+  lead: readonly [
+    kind: JourneyOpportunityExplanation["lead"]["kind"],
+    id: string,
+    title: string,
+    area: string,
+    access: JourneyOpportunityExplanation["lead"]["access"],
+  ];
+  next_action: readonly [
+    tool: JourneyOpportunityNextAction["tool"],
+    arguments: JourneyOpportunityNextAction["arguments"],
+    command: string,
+    label: string,
+  ];
 };
 
 /**
@@ -322,6 +342,26 @@ export function compactOverworldAreaTravelResult(
     route: compactOverworldLabel(result.route),
     m: result.minutes,
     at: result.arrivedAt,
+  };
+}
+
+export function compactOverworldOpportunityExplanation(
+  explanation: JourneyOpportunityExplanation,
+): OverworldCompactOpportunityExplanation {
+  return {
+    lead: [
+      explanation.lead.kind,
+      explanation.lead.id,
+      compactOverworldTitle(explanation.lead.title),
+      compactOverworldLabel(explanation.lead.area),
+      explanation.lead.access,
+    ],
+    next_action: [
+      explanation.nextAction.tool,
+      { ...explanation.nextAction.arguments },
+      explanation.nextAction.command,
+      compactOverworldLabel(explanation.nextAction.label),
+    ],
   };
 }
 

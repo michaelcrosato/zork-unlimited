@@ -11,7 +11,7 @@ import type { OpeningReliefAllocation } from "./opening_relief_allocation.js";
 import type { OpeningReliefAllocationJournalProof } from "./opening_relief_allocation_journal.js";
 import {
   applyOpeningAllyOption,
-  formatOpeningAllyCost,
+  formatOpeningAllyTimingDisclosure,
   openingAllyOptionById,
   parseOpeningAlly,
   type OpeningAlly,
@@ -71,7 +71,7 @@ export function openingAllyJournalDraft(args: {
     id: openingAllyJournalId(parsed.id, applied.option.id),
     kind: "ally" as const,
     title: `Field team: ${applied.option.title}`,
-    text: `${applied.option.summary} ${applied.option.preview} Actual cost: ${formatOpeningAllyCost(applied.terms)}. ${applied.option.consequence}`,
+    text: `${applied.option.summary} ${applied.option.preview} ${formatOpeningAllyTimingDisclosure(applied.terms)} ${applied.option.consequence}`,
   });
 }
 

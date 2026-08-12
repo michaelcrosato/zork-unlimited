@@ -60,6 +60,7 @@ function winBreakingWeir({ readBook }: { readBook: boolean }): GameState {
     "take_life_line",
     "examine_weir_iron",
     "take_weir_iron",
+    "examine_npc_pell",
     "look_around",
     "inventory",
   ]);

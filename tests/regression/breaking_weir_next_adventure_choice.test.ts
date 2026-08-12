@@ -14,6 +14,7 @@ import {
   ROME_POST_WEIR_DISPATCH_ID,
   ROME_POST_WEIR_DISPATCH_TEASER,
   TANNERS_FEVER_ACCOUNTABILITY_GOALS,
+  journeyCampaignGoalDefinition,
   type RomePostWeirDispatchChoiceId,
 } from "../../src/world/journey_campaign.js";
 import { planOverworldRoute } from "../../src/world/overworld.js";
@@ -195,6 +196,48 @@ function finishSelectedFirstPacket(
   });
 }
 
+const FOLLOWUP_ENDINGS = Object.freeze({
+  advocates_case: Object.freeze({
+    endingId: "ending_exempted",
+    endingTitle: "The Charter Upheld",
+  }),
+  cold_forge: Object.freeze({
+    endingId: "ending_victory",
+    endingTitle: "Keeper of the Ember",
+  }),
+  dawn_beacon: Object.freeze({
+    endingId: "ending_lit",
+    endingTitle: "The Beacon Lit",
+  }),
+  factors_mark: Object.freeze({
+    endingId: "ending_cleared",
+    endingTitle: "The Mark Cleared",
+  }),
+  falconers_ransom: Object.freeze({
+    endingId: "ending_cleared",
+    endingTitle: "The Ransom Cleared",
+  }),
+} as const);
+
+function finishActiveFollowupQuest(session: OverworldSession): void {
+  const definition = journeyCampaignGoalDefinition(session.journey().goal);
+  if (!definition) throw new Error("Expected an active canonical campaign goal.");
+  const ending = FOLLOWUP_ENDINGS[definition.targetQuestId as keyof typeof FOLLOWUP_ENDINGS];
+  if (!ending) {
+    throw new Error(`No test ending is configured for ${definition.targetQuestId}.`);
+  }
+  travelToTown(session, definition.targetTownId);
+  moveToArea(session, definition.targetAreaId);
+  session.startQuest(definition.targetQuestId);
+  continueAtFixedCheckpoint(session);
+  session.completeQuest(definition.targetQuestId, {
+    ...ending,
+    death: false,
+  });
+  expect(session.journey().pendingChoice?.reasons).toContain("goal_completed");
+  session.chooseJourney("continue");
+}
+
 describe("Breaking Weir next-adventure dispatch", () => {
   it("offers a genuine Continue/End choice and records an honest exit without selecting a packet", () => {
     const session = reachBreakingWeirGoalCompletion();
@@ -352,5 +395,36 @@ describe("Breaking Weir next-adventure dispatch", () => {
     expect(JSON.stringify(restored.journey.storyChoice)).not.toMatch(
       /targetQuestId|targetTownId|targetAreaId|questOutcomeIds|endingId|content\/rpg|win_conditions|solution|maneuver_/i,
     );
+  });
+
+  it("replays a canonical action from the remote New York Waterfront anchor", () => {
+    const session = reachBreakingWeirGoalCompletion();
+    session.chooseJourney("continue");
+    session.chooseJourneyStory("take_oswego_charter_packet");
+    finishSelectedFirstPacket(session, "take_oswego_charter_packet");
+    finishActiveFollowupQuest(session); // Cold Forge
+    finishActiveFollowupQuest(session); // Dawn Beacon
+    finishActiveFollowupQuest(session); // Factor's Mark
+    finishActiveFollowupQuest(session); // Falconer's Ransom
+
+    expect(session.journey().goal).toMatchObject({
+      id: "new_york_tide_mill",
+      status: "active",
+    });
+    travelToTown(session, "new_york_city");
+    expect(
+      session
+        .view()
+        .areas.map((area) => area.id)
+        .filter((areaId) => areaId.startsWith("new_york_city__")),
+    ).toEqual(["new_york_city__civic_core", "new_york_city__waterfront"]);
+
+    moveToArea(session, "new_york_city__waterfront");
+    const scouted = session.scoutPoi("new_york_city__waterfront__poi");
+    expect(scouted.discoveredAreas?.map((area) => area.id)).toEqual(["new_york_city__market"]);
+    expect(session.snapshot().startedQuestIds).not.toContain("tide_mill");
+
+    const snapshot = session.snapshot();
+    expect(OverworldSession.restore(WORLD, snapshot).snapshot()).toEqual(snapshot);
   });
 });

@@ -164,6 +164,10 @@ function resolveRpgActionCore(
   const here = state.current;
   switch (action.type) {
     case "LOOK": {
+      if (action.npc !== undefined) {
+        const npc = npcsInRoom(index, state, here).find((candidate) => candidate.id === action.npc);
+        return npc ? { conditions: [], effects: [{ narrate: npc.description }] } : null;
+      }
       if (action.target === undefined) {
         const room = index.rooms.get(here);
         return room
@@ -688,6 +692,19 @@ export function enumerateRpgBaseActions(index: RpgModelIndex, state: GameState):
 
   // NPCs present.
   for (const npc of npcsInRoom(index, state, here)) {
+    const preferredId = `examine_npc_${npc.id}`;
+    let id = preferredId;
+    let disambiguator = 2;
+    while (out.some((candidate) => candidate.id === id)) {
+      id = `${preferredId}__${String(disambiguator)}`;
+      disambiguator += 1;
+    }
+    push(
+      option(index, state, id, `look at ${npc.name}`, {
+        type: "LOOK",
+        npc: npc.id,
+      }),
+    );
     push(
       option(index, state, `talk_${npc.id}`, `talk to ${npc.name}`, { type: "TALK", npc: npc.id }),
     );

@@ -177,15 +177,33 @@ export const OverworldCharacterVariantSchema = z
     id: z.string().min(1),
     after_quests: z.array(z.string().min(1)).min(1).optional(),
     after_relationship_memories: z.array(CampaignCharacterIdSchema).min(1).optional(),
+    after_world_facts: z.array(z.string().min(1)).min(1).optional(),
+    after_event_options: z
+      .array(
+        z
+          .object({
+            event_id: z.string().min(1),
+            option_id: z.string().min(1),
+          })
+          .strict(),
+      )
+      .min(1)
+      .optional(),
     summary: z.string().min(1).optional(),
     agenda: z.string().min(1).optional(),
   })
   .strict()
   .superRefine((variant, ctx) => {
-    if (variant.after_quests === undefined && variant.after_relationship_memories === undefined) {
+    if (
+      variant.after_quests === undefined &&
+      variant.after_relationship_memories === undefined &&
+      variant.after_world_facts === undefined &&
+      variant.after_event_options === undefined
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "An overworld character variant must require a quest or relationship memory.",
+        message:
+          "An overworld character variant must require a quest, relationship memory, world fact, or event option.",
       });
     }
     if (variant.summary === undefined && variant.agenda === undefined) {
@@ -1213,6 +1231,12 @@ function assertEntitiesIntegrity(
   edgeIds: Set<string>,
 ): void {
   const questIds = new Set(world.quests.map((quest) => quest.id));
+  const eventOptionsById = new Map(
+    world.local_events.map((event) => [
+      event.id,
+      new Set(event.authored_scene?.options.map((option) => option.id) ?? []),
+    ]),
+  );
   const authoredWorldFactIds = new Set(
     world.quests.flatMap((quest) =>
       (quest.campaign_exports ?? []).flatMap((campaignExport) =>
@@ -1310,9 +1334,20 @@ function assertEntitiesIntegrity(
       }
       const afterQuestIds = new Set(variant.after_quests ?? []);
       const afterRelationshipMemoryIds = new Set(variant.after_relationship_memories ?? []);
-      if (afterQuestIds.size === 0 && afterRelationshipMemoryIds.size === 0) {
+      const afterWorldFactIds = new Set(variant.after_world_facts ?? []);
+      const afterEventOptionKeys = new Set(
+        (variant.after_event_options ?? []).map(({ event_id: eventId, option_id: optionId }) =>
+          JSON.stringify([eventId, optionId]),
+        ),
+      );
+      if (
+        afterQuestIds.size === 0 &&
+        afterRelationshipMemoryIds.size === 0 &&
+        afterWorldFactIds.size === 0 &&
+        afterEventOptionKeys.size === 0
+      ) {
         throw new Error(
-          `Overworld character "${character.id}" variant "${variant.id}" has no quest or relationship-memory condition.`,
+          `Overworld character "${character.id}" variant "${variant.id}" has no campaign condition.`,
         );
       }
       if (afterQuestIds.size !== (variant.after_quests?.length ?? 0)) {
@@ -1344,10 +1379,42 @@ function assertEntitiesIntegrity(
           );
         }
       }
+      if (afterWorldFactIds.size !== (variant.after_world_facts?.length ?? 0)) {
+        throw new Error(
+          `Overworld character "${character.id}" variant "${variant.id}" repeats an after_world_facts id.`,
+        );
+      }
+      for (const factId of afterWorldFactIds) {
+        if (!authoredWorldFactIds.has(factId)) {
+          throw new Error(
+            `Overworld character "${character.id}" variant "${variant.id}" references missing world fact "${factId}".`,
+          );
+        }
+      }
+      if (afterEventOptionKeys.size !== (variant.after_event_options?.length ?? 0)) {
+        throw new Error(
+          `Overworld character "${character.id}" variant "${variant.id}" repeats an after_event_options tuple.`,
+        );
+      }
+      for (const { event_id: eventId, option_id: optionId } of variant.after_event_options ?? []) {
+        const optionIds = eventOptionsById.get(eventId);
+        if (!optionIds) {
+          throw new Error(
+            `Overworld character "${character.id}" variant "${variant.id}" references missing event "${eventId}".`,
+          );
+        }
+        if (!optionIds.has(optionId)) {
+          throw new Error(
+            `Overworld character "${character.id}" variant "${variant.id}" references missing event option "${eventId}:${optionId}".`,
+          );
+        }
+      }
       variantConditionSets.push(
         new Set([
           ...[...afterQuestIds].map((questId) => `quest:${questId}`),
           ...[...afterRelationshipMemoryIds].map((memoryId) => `memory:${memoryId}`),
+          ...[...afterWorldFactIds].map((factId) => `world_fact:${factId}`),
+          ...[...afterEventOptionKeys].map((key) => `event_option:${key}`),
         ]),
       );
     }

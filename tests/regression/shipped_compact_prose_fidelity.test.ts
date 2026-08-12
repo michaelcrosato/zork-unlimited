@@ -218,6 +218,7 @@ function expectOpeningPromptExact(
 ): CompactJourneyStoryChoicePrompt {
   expect(prompt.id).toBe(source.id);
   const projected = compactJourneyStoryChoicePrompt(prompt);
+  const registrationDetail = prompt.kind === "registration";
   expectExact(`opening:${source.id}.prompt`, prompt.message, projected.message);
   expect(projected.message).toContain(source.title);
   if (authoredMessageVisible) expect(projected.message).toContain(source.message);
@@ -294,9 +295,11 @@ function expectOpeningPromptExact(
       expect(inspectedOption!.checkFit).toBe(canonicalOption!.summary.checkFit);
     }
     expect(inspectedOption!.consequence).not.toMatch(TRUNCATION_CHROME);
-    expect(openingSelectionReceiptWordCount(inspectedOption!.consequence)).toBeLessThanOrEqual(
-      OPENING_SELECTION_RECEIPT_WORD_LIMIT,
-    );
+    if (!registrationDetail) {
+      expect(openingSelectionReceiptWordCount(inspectedOption!.consequence)).toBeLessThanOrEqual(
+        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      );
+    }
     expect(inspected).not.toHaveProperty("message");
     expect(inspected).not.toHaveProperty("options");
     const inspectedJson = JSON.stringify(inspected);
@@ -304,22 +307,26 @@ function expectOpeningPromptExact(
       expect(inspectedJson).not.toContain(sibling.consequence);
     }
 
-    expect(comparisonOption!.summary).toEqual({
-      commitment: sourceOption.summary,
-      immediateCost: canonicalOption!.summary!.immediateCost,
-      tradeoff: canonicalOption!.summary!.tradeoff,
-    });
+    const { checkFit: _checkFit, ...expectedCompactSummary } = canonicalOption!.summary!;
+    expect(comparisonOption!.summary).toEqual(expectedCompactSummary);
     expect(comparisonOption!.summary).not.toHaveProperty("checkFit");
-    expect(Object.keys(comparisonOption!.summary!).sort()).toEqual(
-      ["commitment", "immediateCost", "tradeoff"].sort(),
-    );
-    expect(inspectedOption!.consequence).toMatch(/^Benefit: \S/);
-    expect(inspectedOption!.consequence).toContain(
-      ` Cost: ${canonicalOption!.summary!.immediateCost}. ` +
-        `Boundary: ${canonicalOption!.summary!.tradeoff}`,
-    );
-    expect(inspectedOption!.consequence).not.toContain(sourceOption.preview);
-    expect(inspectedOption!.consequence).not.toContain(sourceOption.consequence);
+    if (registrationDetail) {
+      expect(inspectedOption!.consequence).toContain(sourceOption.preview);
+      expect(inspectedOption!.consequence).toContain(sourceOption.consequence);
+      if (sourceOption.trigger_category) {
+        expect(inspectedOption!.consequence).toContain(
+          `Field trigger: ${sourceOption.trigger_category}`,
+        );
+      }
+    } else {
+      expect(inspectedOption!.consequence).toMatch(/^Benefit: \S/);
+      expect(inspectedOption!.consequence).toContain(
+        ` Cost: ${canonicalOption!.summary!.immediateCost}. ` +
+          `Boundary: ${canonicalOption!.summary!.tradeoff}`,
+      );
+      expect(inspectedOption!.consequence).not.toContain(sourceOption.preview);
+      expect(inspectedOption!.consequence).not.toContain(sourceOption.consequence);
+    }
   }
   return projected;
 }
@@ -416,6 +423,16 @@ function serializedRpgProseResponse(pack: RpgPack): number {
           text: `${npc.name}: "${variant.text}"`,
         });
       }
+      for (const fragment of node.append_variants ?? []) {
+        dialogues.push({
+          label: `npc:${npc.id}.${node.id}.append_variant`,
+          text: fragment.text.trimEnd(),
+        });
+        narrations.push({
+          label: `npc:${npc.id}.${node.id}.append_variant`,
+          text: `${npc.name}: "${fragment.text}"`,
+        });
+      }
     }
   }
   for (const enemy of pack.enemies) {
@@ -425,7 +442,11 @@ function serializedRpgProseResponse(pack: RpgPack): number {
   }
   const scoreSuffix = `\n\nFinal score: ${pack.meta.max_score} of ${pack.meta.max_score}.`;
   for (const ending of pack.endings) {
-    const variants = [ending.text, ...(ending.variants ?? []).map((variant) => variant.text)];
+    const variants = [
+      ending.text,
+      ...(ending.variants ?? []).map((variant) => variant.text),
+      ...(ending.append_variants ?? []).map((fragment) => fragment.text),
+    ];
     for (const text of variants) {
       const nested = text.trimEnd();
       endings.push({ label: `ending:${ending.id}`, text: nested });
@@ -544,17 +565,27 @@ describe("shipped compact prose fidelity", () => {
       const canonicalOption = prompt.options.find((option) => option.id === sourceOption.id)!;
       const selected = session.chooseJourneyStory(sourceOption.id, source.id);
       const projected = compactOverworldJourneyStoryChoiceResult(selected);
+      const registrationSelection = prompt.kind === "registration";
       expectExact(
         `opening:${source.id}.${sourceOption.id}.selection`,
         canonicalOption.consequence,
         projected.consequence,
       );
-      expect(openingSelectionReceiptWordCount(projected.consequence)).toBeLessThanOrEqual(
-        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
-      );
-      expect(projected.consequence).not.toContain(sourceOption.consequence);
-      expect(selected.entry.text).toBe(canonicalOption.consequence);
-      expect(projected).not.toHaveProperty("entry_text");
+      if (!registrationSelection) {
+        expect(openingSelectionReceiptWordCount(projected.consequence)).toBeLessThanOrEqual(
+          OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+        );
+        expect(projected.consequence).not.toContain(sourceOption.consequence);
+      }
+      if (registrationSelection) {
+        expect(selected.entry.text).toBe(
+          `${sourceOption.summary} ${sourceOption.preview} ${sourceOption.consequence}`,
+        );
+        expect(projected.entry_text).toBe(selected.entry.text);
+      } else {
+        expect(selected.entry.text).toBe(canonicalOption.consequence);
+        expect(projected).not.toHaveProperty("entry_text");
+      }
       expect(
         session.snapshot().journalEntries.find((entry) => entry.id === selected.entry.id)?.text,
       ).toContain(sourceOption.consequence);
@@ -644,7 +675,11 @@ describe("shipped compact prose fidelity", () => {
 
     for (const npc of pack.npcs) {
       for (const node of npc.dialogue.nodes) {
-        const dialogue = [node.npc_text, ...(node.variants ?? []).map((variant) => variant.text)];
+        const dialogue = [
+          node.npc_text,
+          ...(node.variants ?? []).map((variant) => variant.text),
+          ...(node.append_variants ?? []).map((fragment) => fragment.text),
+        ];
         for (const text of dialogue) {
           expectExact(
             `npc:${npc.id}.node:${node.id}`,
@@ -669,7 +704,11 @@ describe("shipped compact prose fidelity", () => {
 
     const scoreSuffix = `\n\nFinal score: ${pack.meta.max_score} of ${pack.meta.max_score}.`;
     for (const ending of pack.endings) {
-      const texts = [ending.text, ...(ending.variants ?? []).map((variant) => variant.text)];
+      const texts = [
+        ending.text,
+        ...(ending.variants ?? []).map((variant) => variant.text),
+        ...(ending.append_variants ?? []).map((fragment) => fragment.text),
+      ];
       for (const text of texts) {
         const nested = text.trimEnd();
         expectExact(

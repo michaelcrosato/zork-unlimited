@@ -104,6 +104,7 @@ export function JourneyStoryChoiceScreen({
     const usesRoleplayReceipt =
       conciseSummary !== undefined && conciseSummary.fieldTrigger === undefined;
     const usesTriggerCategory = conciseSummary?.fieldTriggerScope === "category";
+    const usesStarterPackage = conciseSummary?.fieldTriggerScope === "starter";
     return (
       <div key={option.id} className="journey-choice-card">
         <button type="button" onClick={() => onChoose(option.id)}>
@@ -124,10 +125,21 @@ export function JourneyStoryChoiceScreen({
           )}
           {conciseSummary?.fieldTrigger && (
             <small className="journey-choice-trigger">
-              <b>{usesTriggerCategory ? "Trigger category:" : "First field trigger / tradeoff:"}</b>{" "}
+              <b>
+                {usesTriggerCategory
+                  ? "Trigger category:"
+                  : usesStarterPackage
+                    ? "Starter package / field edge:"
+                    : "First field trigger / tradeoff:"}
+              </b>{" "}
               {conciseSummary.fieldTrigger}
             </small>
           )}
+          {conciseSummary?.highlights?.map((highlight) => (
+            <small className="journey-choice-highlight" key={highlight.label}>
+              <b>{highlight.label}:</b> {highlight.value}
+            </small>
+          ))}
           {conciseSummary && usesRoleplayReceipt && (
             <small className="journey-choice-cost">
               <b>Cost / give up:</b> {conciseSummary.immediateCost}; {conciseSummary.tradeoff}

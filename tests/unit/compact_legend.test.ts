@@ -509,6 +509,7 @@ describe("compact legends", () => {
     }
     // The one-time legend also decodes the step_action event tuples.
     expect(started.legend!.events).toContain("step_action");
+    expect(started.legend!.npcs).toContain("[npc_id, display_name]");
     expect(started.legend!.actions).toContain("more counts truncation");
     expect(started.legend!.actions).toContain("complete menu");
     expect(started.legend!.choices).toContain("authored_prompt");

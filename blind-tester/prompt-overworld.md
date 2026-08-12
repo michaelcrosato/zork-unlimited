@@ -21,6 +21,15 @@ PLAY AS A NEW PLAYER
   `context.quest_starts` presents an exact `[quest_id, approach_id|null]` tuple;
   pass those values unchanged, omitting `approach_id` when it is null. The separate
   direct quest drop-in bypasses the overworld and is not part of this playthrough.
+- An authored local event is described in `context.event_scenes`. Its nested
+  option tuples preview terms; they are not current legal choices. Resolve it
+  only when the latest `context.event_choices` presents an exact
+  `[event_id, option_id]` tuple, passing both values unchanged to
+  `mcp__adventureforge__resolve_overworld_session_event`. If the latest
+  state-bearing context omits `event_choices`, no authored event option is legal;
+  an `unchanged: true` reply preserves the prior state-bearing menu. A visible
+  legacy event absent from `event_scenes` still follows the shown
+  investigate/resolve flow with its `event_id` only.
 - An authored local job is described in `context.job_scenes`. Work it only when
   `context.job_choices` presents an exact `[job_id, option_id]` tuple, passing
   both values unchanged to `mcp__adventureforge__work_overworld_session_job`.

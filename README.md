@@ -149,7 +149,9 @@ carry an initial `legend` for the positional fields used there, later responses
 add same-response `legend_delta` definitions before a field's first use (dotted
 keys name exact nested result paths), events arrive as tagged tuples, and
 state-hash guards skip unchanged payloads — terse enough for a blind agent to
-play a long session in one context window.
+play a long session in one context window. RPG `context.npcs` rows preserve
+stable authored ids while pairing them with player-facing names as
+`[npc_id, display_name]`; executable action ids remain stable.
 `tests/unit/compact_legend.test.ts` holds the tool descriptions and legends to
 that contract; the handlers (`src/mcp/tools.ts`) are unit-tested without a live
 client. All paths are confined to the project root; content and traces are data

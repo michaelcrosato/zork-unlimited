@@ -34,9 +34,10 @@ export const COMPACT_DIALOGUE_CHOICE_LIMIT = 12;
 export const COMPACT_BLOCKED_EXIT_CHAR_LIMIT = 256;
 export const COMPACT_BLOCKED_ACTION_REASON_CHAR_LIMIT = RPG_BLOCKED_ACTION_REASON_CHAR_LIMIT;
 export const COMPACT_ENDING_TEXT_CHAR_LIMIT = 720;
-export const RPG_COMPACT_OBSERVATION_VERSION = 20 as const;
+export const RPG_COMPACT_OBSERVATION_VERSION = 21 as const;
 
 export type RpgCompactRef = string;
+export type RpgCompactNpc = readonly [id: string, displayName: string];
 export type RpgCompactExit = string | readonly [direction: string, to: string];
 export type RpgCompactBlockedExit = readonly [direction: string, message: string];
 export type RpgCompactUnavailableAction = readonly [actionId: string, reason: string];
@@ -92,7 +93,7 @@ export type RpgCompactObservation = {
   actions?: string[];
   checks?: RpgCompactCheck[];
   objects?: RpgCompactRef[];
-  npcs?: RpgCompactRef[];
+  npcs?: RpgCompactNpc[];
   blocked?: RpgCompactBlockedExit[];
   unavailable?: RpgCompactUnavailableAction[];
   inv?: string[];
@@ -128,7 +129,7 @@ export const RPG_COMPACT_LEGEND = {
   checks:
     "[[action_id, skill, current_modifier, die, difficulty, authored_stakes?], ...] checks for the included legal actions",
   objects: "visible object ids",
-  npcs: "ids of NPCs present",
+  npcs: "[[npc_id, display_name], ...] NPCs present",
   blocked: "[[direction, reason], ...] blocked exits",
   unavailable: "[[action_id, reason], ...] visible authored actions unavailable right now",
   inv: "carried item ids",
@@ -283,9 +284,9 @@ export function compactRpgObservation(
   for (const object of compactObjects) {
     objects.push(compactMcpTranscriptSummaryValue(object.id));
   }
-  const npcs: RpgCompactRef[] = [];
+  const npcs: RpgCompactNpc[] = [];
   for (const npc of compactNpcs) {
-    npcs.push(compactMcpTranscriptSummaryValue(npc.id));
+    npcs.push([compactMcpTranscriptSummaryValue(npc.id), compactMcpTranscriptTitle(npc.name)]);
   }
   const blocked: RpgCompactBlockedExit[] = [];
   for (const exit of compactBlockedExits) {

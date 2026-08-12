@@ -274,7 +274,8 @@ function completeReturn(choice: DawnChoice): CompletedReturn {
   expect(view.current.id).toBe("albany_city");
   expect(view.currentArea?.id).toBe(STATION_AREA_ID);
   expect(view.completedQuestIds).toContain("wolf_winter");
-  expect(view.discoveredAreaIds).toHaveLength(6);
+  expect(view.discoveredAreaIds).toHaveLength(7);
+  expect(view.discoveredAreaIds).toContain("queensbury_town__market");
   return { api, sessionId: launched.overworldSessionId, choice };
 }
 

@@ -61,6 +61,26 @@ function lookNarration(s: GameState): string {
   return effect.narrate;
 }
 
+function expectCommittedLureFeedAvailable(s: GameState): void {
+  expect(s.inventory).not.toContain("winter_feed_sack");
+  expect(commands(s)).toContain("take Cade's winter-feed sack");
+  expect(desc(s)).toContain("Cade's last feed sack");
+  expect(desc(s)).toContain("Take the finite feed before the breach");
+  expect(desc(s)).toContain("feed-hauler's crawlboard");
+  expect(desc(s)).not.toContain("padded byre-jerkin hangs beside");
+  expect(lookNarration(s)).toBe(desc(s));
+}
+
+function expectCommittedLureFeedHeld(s: GameState): void {
+  expect(s.inventory).toContain("winter_feed_sack");
+  expect(commands(s)).not.toContain("take Cade's winter-feed sack");
+  expect(desc(s)).toContain("winter-feed peg is bare");
+  expect(desc(s)).toContain("finite sack rides with you");
+  expect(desc(s)).toContain("second cast across the feed-hauler's crawlboard");
+  expect(desc(s)).not.toContain("padded byre-jerkin hangs beside");
+  expect(lookNarration(s)).toBe(desc(s));
+}
+
 describe("wolf_winter rooms react to preparation object state", () => {
   it("removes the peg-hung jerkin prose after the byre-jerkin is taken", () => {
     let s = play(initStateForRpgPack(index, 83), ["go_north", "go_west"]);
@@ -103,6 +123,88 @@ describe("wolf_winter rooms react to preparation object state", () => {
     );
     expect(desc(s)).not.toContain("not yet on your back");
     expect(desc(s)).not.toContain("carried hide will not turn teeth");
+    expect(lookNarration(s)).toBe(desc(s));
+  });
+
+  it("keeps lure guidance when the jerkin was prepared before commitment", () => {
+    let s = play(initStateForRpgPack(index, 83), [
+      "go_north",
+      "go_west",
+      "take_byre_jerkin",
+      "use_byre_jerkin",
+      "go_east",
+      "talk_houndsman",
+      "ask_lure",
+      "ask_commit_lure",
+      "ask_leave",
+      "go_west",
+    ]);
+
+    expect(s.flags["strategy_lure_committed"]).toBe(true);
+    expect(s.flags["jerkin_donned"]).toBe(true);
+    expect(s.inventory).toContain("byre_jerkin");
+    expect(s.vars.defense).toBe(5);
+    expect(desc(s)).toContain("jerkin peg is bare");
+    expect(desc(s)).toContain("padded hide now on your back");
+    expectCommittedLureFeedAvailable(s);
+
+    s = actById(s, "take_winter_feed_sack").state;
+    expectCommittedLureFeedHeld(s);
+  });
+
+  it("keeps lure guidance when the jerkin is taken after commitment", () => {
+    let s = play(initStateForRpgPack(index, 83), [
+      "go_north",
+      "talk_houndsman",
+      "ask_lure",
+      "ask_commit_lure",
+      "ask_leave",
+      "go_west",
+    ]);
+    s = actById(s, "take_byre_jerkin").state;
+
+    expect(s.flags["strategy_lure_committed"]).toBe(true);
+    expect(s.flags["byre_jerkin_taken"]).toBe(true);
+    expect(s.inventory).toContain("byre_jerkin");
+    expect(s.vars.defense).toBe(3);
+    expect(desc(s)).toContain("jerkin peg is bare");
+    expect(desc(s)).toContain("not yet on your back");
+    expectCommittedLureFeedAvailable(s);
+
+    s = actById(s, "use_byre_jerkin").state;
+
+    expect(s.flags["jerkin_donned"]).toBe(true);
+    expect(s.inventory).toContain("byre_jerkin");
+    expect(s.vars.defense).toBe(5);
+    expect(desc(s)).toContain("jerkin peg is bare");
+    expect(desc(s)).toContain("padded hide now on your back");
+    expect(desc(s)).not.toContain("not yet on your back");
+    expectCommittedLureFeedAvailable(s);
+
+    s = actById(s, "take_winter_feed_sack").state;
+    expectCommittedLureFeedHeld(s);
+  });
+
+  it("retires the committed-drive pickup instruction after Cade's rig is taken", () => {
+    let s = play(initStateForRpgPack(index, 83), [
+      "go_north",
+      "talk_houndsman",
+      "ask_drive",
+      "ask_commit_drive",
+      "ask_leave",
+    ]);
+    s = actById(s, "take_drive_signal_rope_kit").state;
+
+    expect(s.flags["strategy_drive_committed"]).toBe(true);
+    expect(s.inventory).toContain("drive_signal_rope_kit");
+    expect(s.vars.defense).toBe(3);
+    expect(desc(s)).toContain("The drive is irreversible");
+    expect(desc(s)).toContain("Cade's two-charge rig rides with you now");
+    expect(desc(s)).toContain("go north");
+    expect(desc(s)).toContain("shutter signal at the broken paling");
+    expect(desc(s)).toContain("cannot switch to lure or combat");
+    expect(desc(s)).not.toContain("Take Cade's two-charge rig");
+    expect(desc(s)).not.toContain("west");
     expect(lookNarration(s)).toBe(desc(s));
   });
 

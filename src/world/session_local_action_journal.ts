@@ -18,16 +18,23 @@ import {
   presentOverworldContact,
   type OverworldContactPresentation,
 } from "./session_contact_presentation.js";
-import { journalSourceId, type OverworldJournalTimelineIndex } from "./session_journal_timeline.js";
+import {
+  journalSourceId,
+  overworldJournalEntryPrecedes,
+  resolveOverworldContactJournalPresentation,
+  type OverworldJournalTimelineIndex,
+} from "./session_journal_timeline.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { indexedList } from "./session_collections.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
 import { resolveLocalJobSceneOption } from "./local_job_scene.js";
 import { resolveLocalEventSceneOption } from "./local_event_scene.js";
+import type { JourneyCountedDecisionReason, JourneyDecisionProofLast } from "./journey_contract.js";
 
 export type OverworldDiscoveryLocalityIndex = {
   areaHomes: ReadonlyMap<string, string>;
   completedQuestIds: ReadonlySet<string>;
+  directQuestAnchorIds?: ReadonlySet<string>;
   discoveredAreaIds: ReadonlySet<string>;
   discoveredJobIds: ReadonlySet<string>;
   discoveredQuestIds: ReadonlySet<string>;
@@ -46,6 +53,15 @@ export type OverworldDiscoveryLocalityIndex = {
 export type OverworldLocalActionJournalReachabilityIndex = {
   areasById: ReadonlyMap<string, OverworldArea>;
   areasByTown: ReadonlyMap<string, readonly OverworldArea[]>;
+  campaignDecisionProofsByOrdinal?: ReadonlyMap<
+    number,
+    Readonly<{
+      decision: JourneyDecisionProofLast | null;
+      decisionProofHash: string;
+      townId: string | null;
+      areaId: string | null;
+    }>
+  >;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
   contactPresentationsByJournalId: ReadonlyMap<string, OverworldContactPresentation>;
   discoveredAreaIds: ReadonlySet<string>;
@@ -53,6 +69,7 @@ export type OverworldLocalActionJournalReachabilityIndex = {
   discoveredQuestIds: ReadonlySet<string>;
   discoveredSiteIds: ReadonlySet<string>;
   directQuestAnchorIds?: ReadonlySet<string>;
+  directQuestAnchorActivationOrdinals?: ReadonlyMap<string, number>;
   eventsById: ReadonlyMap<string, OverworldLocalEvent>;
   jobsById: ReadonlyMap<string, OverworldLocalJob>;
   jobsByTown: ReadonlyMap<string, readonly OverworldLocalJob[]>;
@@ -75,10 +92,12 @@ type OverworldLocalJournalSource = {
 };
 
 export type OverworldLocalActionJournalReplayEntry = {
+  countsTowardDiscovery: boolean;
   entry: OverworldJournalEntry;
   source: OverworldLocalJournalSource;
   recordedAt: number;
   duration: number | null;
+  acceptedDecisions: number | null;
 };
 
 export type OverworldLocalActionJournalReplayIndex = {
@@ -86,6 +105,78 @@ export type OverworldLocalActionJournalReplayIndex = {
   localActionCountByArea: ReadonlyMap<string, number>;
   localActionCountByTown: ReadonlyMap<string, number>;
 };
+
+type OverworldLocalJournalDecisionExpectation = Readonly<{
+  actionId: string;
+  allowsOptionSuffix: boolean;
+  reason: JourneyCountedDecisionReason;
+}>;
+
+function localJournalDecisionExpectation(
+  entry: OverworldJournalEntry,
+  source: OverworldLocalJournalSource,
+): OverworldLocalJournalDecisionExpectation | null {
+  switch (entry.kind) {
+    case "area":
+      return {
+        actionId: `explore_area:${source.sourceId}`,
+        allowsOptionSuffix: false,
+        reason: "stateful_clue",
+      };
+    case "contact":
+      return {
+        actionId: `talk:${source.sourceId}`,
+        allowsOptionSuffix: false,
+        reason: "substantive_dialogue",
+      };
+    case "event":
+      return {
+        actionId: `investigate_event:${source.sourceId}`,
+        allowsOptionSuffix: false,
+        reason: "stateful_clue",
+      };
+    case "job":
+      return {
+        actionId: `work_job:${source.sourceId}`,
+        allowsOptionSuffix: true,
+        reason: "situation_changed",
+      };
+    case "poi":
+      return {
+        actionId: `scout:${source.sourceId}`,
+        allowsOptionSuffix: false,
+        reason: "stateful_clue",
+      };
+    case "resolution":
+      return {
+        actionId: `resolve_event:${source.sourceId}`,
+        allowsOptionSuffix: true,
+        reason: "situation_changed",
+      };
+    case "site":
+      return {
+        actionId: `explore_site:${source.sourceId}`,
+        allowsOptionSuffix: false,
+        reason: "situation_changed",
+      };
+    case "quest_done":
+      return null;
+    default:
+      return null;
+  }
+}
+
+function localJournalDecisionMatches(
+  expectation: OverworldLocalJournalDecisionExpectation,
+  decision: JourneyDecisionProofLast,
+): boolean {
+  const actionMatches =
+    decision.actionId === expectation.actionId ||
+    (expectation.allowsOptionSuffix && decision.actionId.startsWith(`${expectation.actionId}:`));
+  return (
+    actionMatches && decision.surface === "overworld" && decision.reason === expectation.reason
+  );
+}
 
 function localJournalActionDuration(
   entry: OverworldJournalEntry,
@@ -98,9 +189,12 @@ function localJournalActionDuration(
       return area?.travel_minutes ?? null;
     }
     case "contact": {
-      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
-      return presentation
-        ? describeOverworldContactAction(presentation.contact, presentation.presentationId).minutes
+      const resolved = resolveOverworldContactJournalPresentation(entry, sources);
+      return resolved
+        ? describeOverworldContactAction(
+            resolved.presentation.contact,
+            resolved.presentation.presentationId,
+          ).minutes
         : null;
     }
     case "event": {
@@ -197,9 +291,14 @@ function assertDiscoveredAreaForDiscovery(
 }
 
 export function assertSnapshotDiscoveryLocality(sources: OverworldDiscoveryLocalityIndex): void {
+  const directAnchorAreaIds = new Set(
+    [...(sources.directQuestAnchorIds ?? [])]
+      .map((questId) => sources.questsById.get(questId)?.area)
+      .filter((areaId): areaId is string => areaId !== undefined),
+  );
   for (const areaId of sources.discoveredAreaIds) {
     const home = sources.areaHomes.get(areaId);
-    if (home) {
+    if (home && !directAnchorAreaIds.has(areaId)) {
       assertVisitedTownForDiscovery("discovered area", areaId, home, sources.visitedTownIds);
     }
   }
@@ -234,7 +333,14 @@ export function assertSnapshotDiscoveryLocality(sources: OverworldDiscoveryLocal
   for (const questId of sources.discoveredQuestIds) {
     const quest = sources.questsById.get(questId);
     if (!quest) continue;
-    assertVisitedTownForDiscovery("discovered quest", questId, quest.home, sources.visitedTownIds);
+    if (!sources.directQuestAnchorIds?.has(questId)) {
+      assertVisitedTownForDiscovery(
+        "discovered quest",
+        questId,
+        quest.home,
+        sources.visitedTownIds,
+      );
+    }
     if (sources.questIdsAllowedOutsideDiscoveredArea?.has(questId)) continue;
     assertDiscoveredAreaForDiscovery(
       "discovered quest",
@@ -302,13 +408,13 @@ function localJournalSource(
       };
     }
     case "contact": {
-      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
-      if (!presentation) return null;
+      const resolved = resolveOverworldContactJournalPresentation(entry, sources);
+      if (!resolved) return null;
       return {
         sourceLabel: "journal contact",
-        sourceId: presentation.character.id,
-        home: presentation.character.home,
-        area: presentation.character.area,
+        sourceId: resolved.presentation.character.id,
+        home: resolved.presentation.character.home,
+        area: resolved.presentation.character.area,
       };
     }
     case "event": {
@@ -397,28 +503,70 @@ export function assertSnapshotContactPresentationProofs(
   sources: OverworldLocalActionJournalReachabilityIndex,
   journalTimeline: OverworldJournalTimelineIndex,
   characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState,
+  worldFactIdsAt?: (entry: OverworldJournalEntry, recordedAt: number) => ReadonlySet<string>,
+  eventOptionIdAt?: (
+    entry: OverworldJournalEntry,
+    recordedAt: number,
+    eventId: string,
+  ) => string | null,
+  verifyAuthoredCopy = true,
 ): void {
   for (const { entry, recordedAt } of journalTimeline.localActionEntries) {
     if (entry.kind !== "contact") continue;
-    const stored = sources.contactPresentationsByJournalId.get(entry.id);
-    if (!stored) continue; // The timeline source gate reports the precise unknown-id error.
+    const resolved = resolveOverworldContactJournalPresentation(entry, sources);
+    if (!resolved) continue; // The timeline source gate reports the precise unknown-id error.
+    const stored = resolved.presentation;
+    if (resolved.canonicalJournalId !== entry.id) {
+      const canonicalEntry = journalTimeline.localActionEntries.find(
+        (candidate) =>
+          candidate.entry.kind === "contact" && candidate.entry.id === resolved.canonicalJournalId,
+      )?.entry;
+      if (
+        !canonicalEntry ||
+        !overworldJournalEntryPrecedes(
+          journalTimeline.eventResolutionProofs.recordedAtById,
+          journalTimeline.journalIndexById,
+          canonicalEntry.id,
+          entry.id,
+        )
+      ) {
+        throw new Error(
+          `Overworld session snapshot repeated contact presentation "${entry.id}" has no earlier canonical occurrence "${resolved.canonicalJournalId}".`,
+        );
+      }
+    }
 
     const completedQuestIds = new Set<string>();
     for (const questId of sources.questsById.keys()) {
-      const completedAt = journalTimeline.eventResolutionProofs.recordedAtById.get(
-        `quest_done:${questId}`,
-      );
-      if (completedAt !== undefined && completedAt <= recordedAt) {
+      if (
+        overworldJournalEntryPrecedes(
+          journalTimeline.eventResolutionProofs.recordedAtById,
+          journalTimeline.journalIndexById,
+          `quest_done:${questId}`,
+          entry.id,
+        )
+      ) {
         completedQuestIds.add(questId);
       }
     }
     const expected = presentOverworldContact(stored.character, {
       character: characterAt(entry, recordedAt),
       completedQuestIds,
+      ...(worldFactIdsAt ? { worldFactIds: worldFactIdsAt(entry, recordedAt) } : {}),
+      ...(eventOptionIdAt
+        ? { eventOptionIdFor: (eventId: string) => eventOptionIdAt(entry, recordedAt, eventId) }
+        : {}),
     });
-    if (expected.journalId !== entry.id) {
+    if (expected.journalId !== resolved.canonicalJournalId) {
       throw new Error(
         `Overworld session snapshot contact presentation "${entry.id}" was not active at ${entry.recordedAt}.`,
+      );
+    }
+
+    const action = describeOverworldContactAction(expected.contact, expected.presentationId);
+    if (verifyAuthoredCopy && (entry.title !== action.title || entry.text !== action.text)) {
+      throw new Error(
+        `Overworld session snapshot contact presentation "${entry.id}" does not match its authored copy.`,
       );
     }
 
@@ -435,26 +583,74 @@ export function localActionJournalReplayIndex(
   sources: OverworldLocalActionJournalReachabilityIndex,
   journalTimeline: OverworldJournalTimelineIndex,
 ): OverworldLocalActionJournalReplayIndex {
-  const entries: OverworldLocalActionJournalReplayEntry[] = [];
+  const replayEntries: Array<
+    OverworldLocalActionJournalReplayEntry & { newestFirstIndex: number }
+  > = [];
   const localActionCountByTown = new Map<string, number>();
   const localActionCountByArea = new Map<string, number>();
 
-  for (const { entry, recordedAt } of journalTimeline.localActionEntries) {
+  journalTimeline.localActionEntries.forEach(({ entry, recordedAt }, newestFirstIndex) => {
     const source = localJournalSource(entry, sources);
-    if (!source) continue;
-    entries.push({
+    if (!source) return;
+    const resolvedContact =
+      entry.kind === "contact" ? resolveOverworldContactJournalPresentation(entry, sources) : null;
+    const isRepeatedContact =
+      resolvedContact !== null && resolvedContact.canonicalJournalId !== entry.id;
+    const countsTowardDiscovery = entry.kind !== "quest_done" && !isRepeatedContact;
+    replayEntries.push({
+      countsTowardDiscovery,
       entry,
       source,
       recordedAt,
-      duration: localJournalActionDuration(entry, sources),
+      duration: isRepeatedContact ? null : localJournalActionDuration(entry, sources),
+      acceptedDecisions: null,
+      newestFirstIndex,
     });
-    if (entry.kind !== "quest_done") {
+    if (countsTowardDiscovery) {
       incrementCount(localActionCountByTown, source.home);
       incrementCount(localActionCountByArea, source.area);
     }
+  });
+
+  // The journal is newest-first. Reverse equal-clock entries while sorting so
+  // replay stays oldest-first even when multiple zero-minute boundaries share
+  // one timestamp.
+  replayEntries.sort(
+    (left, right) =>
+      left.recordedAt - right.recordedAt || right.newestFirstIndex - left.newestFirstIndex,
+  );
+  const usedDecisionOrdinals = new Set<number>();
+  for (const replayEntry of replayEntries) {
+    if (!replayEntry.countsTowardDiscovery) continue;
+    const expectation = localJournalDecisionExpectation(replayEntry.entry, replayEntry.source);
+    if (!expectation || !sources.campaignDecisionProofsByOrdinal) continue;
+    const storedBoundary =
+      replayEntry.entry.localSceneProof?.boundary ?? replayEntry.entry.questCompletionBoundary;
+    const matches = [...sources.campaignDecisionProofsByOrdinal.entries()]
+      .filter(([acceptedDecisions, proof]) => {
+        if (
+          usedDecisionOrdinals.has(acceptedDecisions) ||
+          !proof.decision ||
+          proof.townId !== replayEntry.source.home ||
+          proof.areaId !== replayEntry.source.area ||
+          !localJournalDecisionMatches(expectation, proof.decision)
+        ) {
+          return false;
+        }
+        return (
+          !storedBoundary ||
+          (storedBoundary.acceptedDecisions === acceptedDecisions &&
+            storedBoundary.decisionProofHash === proof.decisionProofHash)
+        );
+      })
+      .sort(([left], [right]) => left - right);
+    const match = matches[0];
+    if (!match) continue;
+    replayEntry.acceptedDecisions = match[0];
+    usedDecisionOrdinals.add(match[0]);
   }
 
-  entries.sort((left, right) => left.recordedAt - right.recordedAt);
+  const entries = replayEntries.map(({ newestFirstIndex: _newestFirstIndex, ...entry }) => entry);
   return { entries, localActionCountByArea, localActionCountByTown };
 }
 
@@ -534,6 +730,83 @@ function replayedDiscoveredJobIdsBeforeLocalAction(
   return discovered;
 }
 
+function revealFirstMissingArea(
+  discoveredAreaIds: Set<string>,
+  localAreas: readonly OverworldArea[],
+): void {
+  const next = localAreas.find((area) => !discoveredAreaIds.has(area.id));
+  if (next) discoveredAreaIds.add(next.id);
+}
+
+function replayExactDiscoveredAreaIds(
+  localActionJournal: OverworldLocalActionJournalReplayIndex,
+  sources: OverworldLocalActionJournalReachabilityIndex,
+  beforeLocalAction?: (
+    replayEntry: OverworldLocalActionJournalReplayEntry,
+    discoveredAreaIds: ReadonlySet<string>,
+  ) => void,
+): ReadonlySet<string> {
+  const activationOrdinals = sources.directQuestAnchorActivationOrdinals;
+  if (!activationOrdinals) {
+    throw new Error("Exact local discovery replay requires direct-anchor activation proof.");
+  }
+
+  const discoveredAreaIds = new Set<string>();
+  for (const townId of sources.visitedTownIds) {
+    const initialArea = indexedList(sources.areasByTown, townId)[0];
+    if (initialArea) discoveredAreaIds.add(initialArea.id);
+  }
+
+  const processLocalAction = (replayEntry: OverworldLocalActionJournalReplayEntry): void => {
+    beforeLocalAction?.(replayEntry, discoveredAreaIds);
+    revealFirstMissingArea(
+      discoveredAreaIds,
+      indexedList(sources.areasByTown, replayEntry.source.home),
+    );
+  };
+
+  // Entries outside the replayable campaign suffix are authenticated by the
+  // older local journal/town-visit proofs. They precede every campaign anchor.
+  for (const replayEntry of localActionJournal.entries) {
+    if (!replayEntry.countsTowardDiscovery || replayEntry.acceptedDecisions !== null) {
+      continue;
+    }
+    processLocalAction(replayEntry);
+  }
+
+  const activationsByOrdinal = new Map<number, string[]>();
+  for (const [questId, acceptedDecisions] of activationOrdinals) {
+    const questIds = activationsByOrdinal.get(acceptedDecisions) ?? [];
+    questIds.push(questId);
+    activationsByOrdinal.set(acceptedDecisions, questIds);
+  }
+  const actionsByOrdinal = new Map<number, OverworldLocalActionJournalReplayEntry[]>();
+  for (const replayEntry of localActionJournal.entries) {
+    if (!replayEntry.countsTowardDiscovery || replayEntry.acceptedDecisions === null) {
+      continue;
+    }
+    const entries = actionsByOrdinal.get(replayEntry.acceptedDecisions) ?? [];
+    entries.push(replayEntry);
+    actionsByOrdinal.set(replayEntry.acceptedDecisions, entries);
+  }
+  const replayOrdinals = new Set([...activationsByOrdinal.keys(), ...actionsByOrdinal.keys()]);
+  for (const acceptedDecisions of [...replayOrdinals].sort((left, right) => left - right)) {
+    for (const questId of activationsByOrdinal.get(acceptedDecisions) ?? []) {
+      const quest = sources.questsById.get(questId);
+      if (quest) discoveredAreaIds.add(quest.area);
+    }
+    const actions = actionsByOrdinal.get(acceptedDecisions) ?? [];
+    if (actions.length > 1) {
+      throw new Error(
+        `Overworld session snapshot binds multiple local actions to accepted decision ${String(acceptedDecisions)}.`,
+      );
+    }
+    for (const replayEntry of actions) processLocalAction(replayEntry);
+  }
+
+  return discoveredAreaIds;
+}
+
 function replayedDiscoveredSiteIdsBeforeLocalAction(
   sitesByArea: ReadonlyMap<string, readonly OverworldExplorationSite[]>,
   areaId: string,
@@ -552,6 +825,16 @@ export function assertSnapshotLocalActionDiscoveryChronology(
   localActionJournal: OverworldLocalActionJournalReplayIndex,
   sources: OverworldLocalActionJournalReachabilityIndex,
 ): void {
+  if (sources.directQuestAnchorActivationOrdinals) {
+    replayExactDiscoveredAreaIds(localActionJournal, sources, ({ source }, discoveredAreaIds) => {
+      if (!discoveredAreaIds.has(source.area)) {
+        throw new Error(
+          `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering area "${source.area}".`,
+        );
+      }
+    });
+  }
+
   const priorLocalActionCountByTown = new Map<string, number>();
   const priorLocalActionCountByArea = new Map<string, number>();
 
@@ -573,7 +856,12 @@ export function assertSnapshotLocalActionDiscoveryChronology(
       );
       const certifiedDirectAnchor =
         entry.kind === "quest_done" && sources.directQuestAnchorIds?.has(source.sourceId) === true;
-      if (areaIndex > 0 && priorLocalActionCount < areaIndex && !certifiedDirectAnchor) {
+      if (
+        !sources.directQuestAnchorActivationOrdinals &&
+        areaIndex > 0 &&
+        priorLocalActionCount < areaIndex &&
+        !certifiedDirectAnchor
+      ) {
         throw new Error(
           `Overworld session snapshot ${source.sourceLabel} "${source.sourceId}" was recorded before discovering area "${source.area}".`,
         );
@@ -603,7 +891,8 @@ export function assertSnapshotLocalActionDiscoveryChronology(
       }
     }
 
-    for (const { source } of group) {
+    for (const { countsTowardDiscovery, source } of group) {
+      if (!countsTowardDiscovery) continue;
       priorLocalActionCountByTown.set(
         source.home,
         (priorLocalActionCountByTown.get(source.home) ?? 0) + 1,
@@ -624,6 +913,27 @@ export function assertSnapshotDiscoveredAreaCountReplay(
   sources: OverworldLocalActionJournalReachabilityIndex,
   localActionJournal: OverworldLocalActionJournalReplayIndex,
 ): void {
+  if (sources.directQuestAnchorActivationOrdinals) {
+    const replayedDiscoveredAreaIds = replayExactDiscoveredAreaIds(localActionJournal, sources);
+    for (const [townId, localAreas] of sources.areasByTown) {
+      const expectedDiscoveredAreaIds = new Set(
+        localAreas.filter((area) => replayedDiscoveredAreaIds.has(area.id)).map((area) => area.id),
+      );
+      const actualDiscoveredAreaIds = new Set(
+        localAreas.filter((area) => sources.discoveredAreaIds.has(area.id)).map((area) => area.id),
+      );
+      if (
+        actualDiscoveredAreaIds.size !== expectedDiscoveredAreaIds.size ||
+        [...actualDiscoveredAreaIds].some((areaId) => !expectedDiscoveredAreaIds.has(areaId))
+      ) {
+        throw new Error(
+          `Overworld session snapshot discovered area count in town "${townId}" does not match exact local action replay with campaign anchors.`,
+        );
+      }
+    }
+    return;
+  }
+
   for (const townId of sources.visitedTownIds) {
     const localAreas = indexedList(sources.areasByTown, townId);
     const expectedDiscoveredAreaIds = new Set(

@@ -33,6 +33,8 @@ const SOURCE_HEADER = `Other accounts close. Compare field priority, exact cost,
 const PREPARATION_HEADER = `Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 const RELIEF_ALLOCATION_HEADER = `Compare who is protected, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
 const ALLY_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const JUNE_TOTAL_TIMING =
+  "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.";
 const PURPOSES = Object.freeze({
   registration: "Purpose: choose your permanent background and promise.",
   relief_oath: "Purpose: choose duty; every field plan stays open.",
@@ -120,6 +122,12 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
     expect(option.summary?.commitment.length).toBeGreaterThan(0);
     expect(option.summary?.immediateCost.length).toBeGreaterThan(0);
     expect(option.summary?.tradeoff.length).toBeGreaterThan(0);
+    if (option.summary?.fieldTriggerScope === "starter") {
+      expect(option.summary.fieldTrigger).toEqual(expect.any(String));
+      expect(option.summary.highlights?.length).toBeGreaterThan(0);
+      expect(option.consequence.length).toBeGreaterThan(0);
+      continue;
+    }
     expect(option.summary).not.toHaveProperty("fieldTrigger");
     expect(option.consequence).toContain("Benefit:");
     expect(option.consequence).toContain(`Cost: ${option.summary!.immediateCost}.`);
@@ -484,10 +492,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(preparation.message).toContain(
       `${ALLY_CONTACT.name}'s field-team conversation is separate.`,
     );
+    expect(preparation.message).toContain(JUNE_TOTAL_TIMING);
     expectBoundedPurpose(preparation, PURPOSES.preparation);
     expectRoleplayFirstFraming(preparation);
     expect(preparation.message).not.toMatch(/Departure plan|1\/2|Still ahead/i);
-    expect(wordCount(preparation.message)).toBeLessThanOrEqual(70);
+    expect(wordCount(preparation.message)).toBeLessThanOrEqual(110);
     expectLaunchDetailsDeferred(preparation);
     expectSummaryFirstOptions(preparation);
     expectProgressivePreparationOptions(preparation);
@@ -528,9 +537,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(allocation.message).toContain(
       `${ALLY_CONTACT.name}'s field-team conversation is separate; launching now keeps the solo route legal.`,
     );
+    expect(allocation.message).toContain(JUNE_TOTAL_TIMING);
     expectBoundedPurpose(allocation, PURPOSES.relief_allocation);
     expectRoleplayFirstFraming(allocation);
-    expect(wordCount(allocation.message)).toBeLessThanOrEqual(75);
+    expect(wordCount(allocation.message)).toBeLessThanOrEqual(115);
     expectLaunchDetailsDeferred(allocation);
     expectSummaryFirstOptions(allocation);
     expectProgressiveReliefAllocationOptions(allocation);

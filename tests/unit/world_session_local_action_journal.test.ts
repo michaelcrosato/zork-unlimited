@@ -154,10 +154,13 @@ function timeline(
   return {
     eventResolutionProofs: {
       contactTimeByArea: new Map(),
-      recordedAtById: new Map(),
+      recordedAtById: new Map(
+        localActionEntries.map(({ entry, recordedAt }) => [entry.id, recordedAt]),
+      ),
       resolutionTimeByTown: new Map(),
       scoutTimeByArea: new Map(),
     },
+    journalIndexById: new Map(localActionEntries.map(({ entry }, index) => [entry.id, index])),
     localActionEntries,
     progressSources: {
       completedJobIds: new Set(),
@@ -342,6 +345,32 @@ describe("overworld local action journal replay", () => {
     ).toThrow(/started quest "quest_a" is not discovered/);
   });
 
+  it("allows only an exact direct quest anchor outside a visited town", () => {
+    expect(() =>
+      assertSnapshotDiscoveryLocality(
+        locality({
+          directQuestAnchorIds: new Set([questA.id]),
+          discoveredAreaIds: new Set([areaA.id]),
+          discoveredQuestIds: new Set([questA.id]),
+          questIdsAllowedOutsideDiscoveredArea: new Set([questA.id]),
+          visitedTownIds: new Set(),
+        }),
+      ),
+    ).not.toThrow();
+
+    expect(() =>
+      assertSnapshotDiscoveryLocality(
+        locality({
+          directQuestAnchorIds: new Set([questA.id]),
+          discoveredAreaIds: new Set([areaA.id, areaB.id]),
+          discoveredQuestIds: new Set([questA.id]),
+          questIdsAllowedOutsideDiscoveredArea: new Set([questA.id]),
+          visitedTownIds: new Set(),
+        }),
+      ),
+    ).toThrow(/discovered area "area_b" belongs to unvisited town/);
+  });
+
   it("rejects forged discovered area and local source counts", () => {
     expect(() =>
       assertSnapshotDiscoveredAreaCountReplay(
@@ -430,5 +459,93 @@ describe("overworld local action journal replay", () => {
     expect(() =>
       assertSnapshotContactPresentationProofs(sources, contactTimeline, () => before),
     ).toThrow(/presentation .* was not active at Day 1, 11:40/);
+  });
+
+  it("proves event/world-fact variants chronologically and accepts only lawful repeat aliases", () => {
+    const proofContact: OverworldCharacter = {
+      ...characterA,
+      variants: [
+        {
+          id: "held_clinic",
+          after_quests: ["quest_a"],
+          after_world_facts: ["fact:held"],
+          after_event_options: [{ event_id: "event_a", option_id: "clinic" }],
+          agenda: "The exact held-byre clinic closure is active.",
+        },
+      ],
+    };
+    const presentations = allOverworldContactPresentations(proofContact);
+    const variant = presentations.find((candidate) => candidate.presentationId === "held_clinic")!;
+    const action = describeOverworldContactAction(variant.contact, variant.presentationId);
+    const canonical: OverworldJournalEntry = {
+      id: action.id,
+      kind: action.kind,
+      town: "Town B",
+      title: action.title,
+      text: action.text,
+      recordedAt: timeLabel(700),
+    };
+    const repeated: OverworldJournalEntry = {
+      ...canonical,
+      id: `${canonical.id}:710`,
+      recordedAt: timeLabel(710),
+    };
+    const contactTimeline = timeline([
+      { entry: repeated, recordedAt: 710 },
+      { entry: canonical, recordedAt: 700 },
+    ]);
+    const contactRecordedAt = contactTimeline.eventResolutionProofs.recordedAtById as Map<
+      string,
+      number
+    >;
+    contactRecordedAt.set("quest_done:quest_a", 650);
+    contactRecordedAt.set("resolve:event_a", 660);
+    const sources = reachability({
+      charactersById: new Map([[proofContact.id, proofContact]]),
+      contactPresentationsByJournalId: new Map(
+        presentations.map((presentation) => [presentation.journalId, presentation]),
+      ),
+    });
+
+    const replay = localActionJournalReplayIndex(sources, contactTimeline);
+    expect(
+      replay.entries.map(({ countsTowardDiscovery, duration, entry }) => ({
+        countsTowardDiscovery,
+        duration,
+        id: entry.id,
+      })),
+    ).toEqual([
+      { countsTowardDiscovery: true, duration: 15, id: canonical.id },
+      { countsTowardDiscovery: false, duration: null, id: repeated.id },
+    ]);
+    expect(replay.localActionCountByTown.get(proofContact.home)).toBe(1);
+    expect(replay.localActionCountByArea.get(proofContact.area)).toBe(1);
+
+    expect(() =>
+      assertSnapshotContactPresentationProofs(
+        sources,
+        contactTimeline,
+        () => createInitialCampaignCharacterState(),
+        () => new Set(["fact:held"]),
+        (_entry, _at, eventId) => (eventId === "event_a" ? "clinic" : null),
+      ),
+    ).not.toThrow();
+
+    const forgedTimeline = timeline([{ entry: repeated, recordedAt: 710 }]);
+    const forgedRecordedAt = forgedTimeline.eventResolutionProofs.recordedAtById as Map<
+      string,
+      number
+    >;
+    forgedRecordedAt.set("quest_done:quest_a", 650);
+    forgedRecordedAt.set("resolve:event_a", 660);
+    expect(() =>
+      assertSnapshotContactPresentationProofs(
+        sources,
+        forgedTimeline,
+        () => createInitialCampaignCharacterState(),
+        () => new Set(["fact:held"]),
+        () => "clinic",
+      ),
+    ).toThrow(/no earlier canonical occurrence/);
   });
 });

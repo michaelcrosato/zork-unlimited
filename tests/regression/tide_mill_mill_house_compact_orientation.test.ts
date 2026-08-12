@@ -28,6 +28,6 @@ describe("Tide-Mill Mill-House compact prose keeps the opening map visible", () 
     expect(started.context.text).toMatch(/boat is caught/i);
     expect(started.context.exits).toEqual(expect.arrayContaining(["east", "north"]));
     expect(started.context.objects).toEqual(expect.arrayContaining(["millboard", "gaff_hook"]));
-    expect(started.context.npcs).toEqual(expect.arrayContaining(["ives"]));
+    expect(started.context.npcs).toEqual(expect.arrayContaining([["ives", "Miller Ives"]]));
   });
 });

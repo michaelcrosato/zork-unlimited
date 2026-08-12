@@ -259,6 +259,9 @@ function relabelNode(
     id: r(node.id),
     npc_text: node.npc_text,
     ...(node.variants ? { variants: node.variants.map((v) => relabelNodeVariant(v, r, rv)) } : {}),
+    ...(node.append_variants
+      ? { append_variants: node.append_variants.map((v) => relabelNodeVariant(v, r, rv)) }
+      : {}),
     effects: node.effects.map((e) => relabelEffect(e, r, rv)),
     topics: node.topics.map((t) => relabelTopic(t, r, rv)),
   };
@@ -321,6 +324,14 @@ function relabelEnding(e: Ending, r: (id: string) => string, rv: (n: string) => 
     ...(e.variants
       ? {
           variants: e.variants.map((v) => ({
+            when: v.when.map((c) => relabelCondition(c, r, rv)),
+            text: v.text,
+          })),
+        }
+      : {}),
+    ...(e.append_variants
+      ? {
+          append_variants: e.append_variants.map((v) => ({
             when: v.when.map((c) => relabelCondition(c, r, rv)),
             text: v.text,
           })),

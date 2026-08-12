@@ -680,6 +680,8 @@ export type ValidateRpgOptions = {
   extraSettableFlags?: readonly string[];
   /** Pack-local objects a trusted higher-level boundary can place in starting inventory. */
   extraObtainable?: readonly string[];
+  /** Bounded values a trusted higher-level boundary can install before the first RPG turn. */
+  extraInitialVarRanges?: ReadonlyMap<string, Readonly<{ min: number; max: number }>>;
 };
 
 export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): ValidationReport {
@@ -741,6 +743,9 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
       (enemy.maneuvers ?? []).map((maneuver) => maneuver.result_flag),
     ),
     extraObtainable,
+    ...(opts.extraInitialVarRanges === undefined
+      ? {}
+      : { extraInitialVarRanges: opts.extraInitialVarRanges }),
     extraEffects: maneuverEffects,
     extraScoreAwards,
     extraFalsifierEffects: enemyEffects,

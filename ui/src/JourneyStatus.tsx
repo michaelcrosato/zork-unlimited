@@ -1,18 +1,36 @@
-import type { JourneyPresentation } from "../../src/world/journey_contract.js";
+import type {
+  JourneyOpportunityKind,
+  JourneyPresentation,
+} from "../../src/world/journey_contract.js";
+import type { JourneyOpportunityExplanation } from "../../src/world/journey_opportunity_explainer.js";
 import { journeyNextPauseText } from "./journeyCheckpointStatus.js";
 import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 
 type JourneyStatusProps = {
   journey: JourneyPresentation;
   onFollowGoalPassage: () => void;
+  opportunityExplanation?: JourneyOpportunityExplanation | null;
+  onExplainOpportunity?: (kind: JourneyOpportunityKind, id: string) => void;
+  hasPendingRoadEncounter?: boolean;
 };
 
-export function JourneyStatus({ journey, onFollowGoalPassage }: JourneyStatusProps): JSX.Element {
+export function JourneyStatus({
+  journey,
+  onFollowGoalPassage,
+  opportunityExplanation = null,
+  onExplainOpportunity,
+  hasPendingRoadEncounter = false,
+}: JourneyStatusProps): JSX.Element {
   const goalProgress =
     journey.goal.status === "completed"
       ? `Completed at decision ${journey.goal.completedAtDecision}.`
       : "In progress.";
   const nextChoice = journeyNextPauseText(journey);
+  const canExplainOpportunities =
+    journey.status === "active" &&
+    journey.pendingChoice === null &&
+    journey.storyChoice === null &&
+    !hasPendingRoadEncounter;
 
   return (
     <section className="journey-status" aria-labelledby="journey-goal-title">
@@ -39,6 +57,10 @@ export function JourneyStatus({ journey, onFollowGoalPassage }: JourneyStatusPro
       <JourneyOpportunityLeads
         opportunities={journey.opportunities}
         headingId="journey-status-opportunities-title"
+        explanation={canExplainOpportunities ? opportunityExplanation : null}
+        {...(canExplainOpportunities && onExplainOpportunity
+          ? { onExplain: onExplainOpportunity }
+          : {})}
       />
       {journey.goalPassage && (
         <article

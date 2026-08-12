@@ -58,6 +58,7 @@ export const PURE_PLAYER_TOOLS = new Set<string>([
   "start_overworld",
   "get_overworld_session",
   "get_overworld_session_context",
+  "explain_overworld_session_opportunity",
   "plan_overworld_session_route",
   "travel_overworld_session",
   "follow_overworld_session_goal",
@@ -943,6 +944,7 @@ export const READ_ONLY_TOOLS = new Set<string>([
   "list_overworld",
   "get_overworld_session",
   "get_overworld_session_context",
+  "explain_overworld_session_opportunity",
   "export_overworld_session",
   "inspect_overworld_session_story",
   "plan_overworld_session_route",
@@ -1336,6 +1338,17 @@ tool(
     ...OVERWORLD_READ_DETAILS,
   },
   (a) => api.get_overworld_session_context(a),
+);
+tool(
+  "explain_overworld_session_opportunity",
+  "Revalidate one exact current opportunity lead and return one existing lawful next action without changing the journey, discovery, or snapshot.",
+  {
+    ...OVERWORLD_SESSION,
+    kind: z.enum(["event", "job"]).describe("Exact lead kind from opportunity_leads."),
+    id: z.string().describe("Exact lead id from opportunity_leads."),
+    ...OVERWORLD_ACTION_CONTEXT,
+  },
+  (a) => api.explain_overworld_session_opportunity(defaultCompactOverworld(a)),
 );
 tool(
   "export_overworld_session",

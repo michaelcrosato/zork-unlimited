@@ -61,6 +61,7 @@ describe("bug_0401 — factors_mark retires Breckel after Harwick folds", () => 
       "ask_ask_private",
       "ask_leave_silas",
       "go_east",
+      "examine_npc_silas",
       "look_around",
       "inventory",
     ]);

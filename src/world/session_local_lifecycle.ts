@@ -118,6 +118,8 @@ export type OverworldSessionContactTalkPlanState = {
   characterId: string;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
   completedQuestIds: ReadonlySet<string>;
+  campaignWorldFactIds?: ReadonlySet<string>;
+  eventOptionIdFor?: (eventId: string) => string | null;
   currentTownId: string;
   currentAreaId: () => string;
 };
@@ -256,6 +258,8 @@ export function planOverworldSessionContactTalk(
   const presentation = presentOverworldContact(character, {
     character: state.character,
     completedQuestIds: state.completedQuestIds,
+    ...(state.campaignWorldFactIds ? { worldFactIds: state.campaignWorldFactIds } : {}),
+    ...(state.eventOptionIdFor ? { eventOptionIdFor: state.eventOptionIdFor } : {}),
   });
   return {
     action: describeOverworldContactAction(presentation.contact, presentation.presentationId),
@@ -301,6 +305,66 @@ export function planOverworldSessionEventInvestigation(
     throw new Error(`No authored option for ${event.title} is available in this journey.`);
   }
   return { action: describeOverworldEventAction(event) };
+}
+
+export type OverworldOpportunityInteractionDiscoveryState = Readonly<{
+  character: CampaignCharacterState;
+  characters: readonly OverworldCharacter[];
+  charactersById: ReadonlyMap<string, OverworldCharacter>;
+  events: readonly OverworldLocalEvent[];
+  eventsById: ReadonlyMap<string, OverworldLocalEvent>;
+  completedQuestIds: ReadonlySet<string>;
+  completedJobIds: ReadonlySet<string>;
+  campaignWorldFactIds: ReadonlySet<string>;
+  eventOptionIdFor: (eventId: string) => string | null;
+  currentTownId: string;
+  currentAreaId: string;
+  journalEntryIds: ReadonlySet<string>;
+}>;
+
+export type OverworldOpportunityInteractionDiscoveryPlan = Readonly<{
+  sourceId: string;
+  plan: OverworldSessionLocalInteractionPlan<"contact" | "event">;
+}>;
+
+/** First lawful contact or event interaction that can advance local opportunity discovery. */
+export function planOverworldOpportunityInteractionDiscovery(
+  state: OverworldOpportunityInteractionDiscoveryState,
+): OverworldOpportunityInteractionDiscoveryPlan | null {
+  for (const character of state.characters) {
+    const plan = planOverworldSessionContactTalk({
+      character: state.character,
+      characterId: character.id,
+      charactersById: state.charactersById,
+      completedQuestIds: state.completedQuestIds,
+      campaignWorldFactIds: state.campaignWorldFactIds,
+      eventOptionIdFor: state.eventOptionIdFor,
+      currentTownId: state.currentTownId,
+      currentAreaId: () => state.currentAreaId,
+    });
+    if (!state.journalEntryIds.has(plan.action.id)) {
+      return { sourceId: character.id, plan };
+    }
+  }
+  for (const event of state.events) {
+    try {
+      const plan = planOverworldSessionEventInvestigation({
+        eventId: event.id,
+        eventsById: state.eventsById,
+        completedQuestIds: state.completedQuestIds,
+        completedJobIds: state.completedJobIds,
+        campaignWorldFactIds: state.campaignWorldFactIds,
+        currentTownId: state.currentTownId,
+        currentAreaId: () => state.currentAreaId,
+      });
+      if (!state.journalEntryIds.has(plan.action.id)) {
+        return { sourceId: event.id, plan };
+      }
+    } catch {
+      // Canonical planning remains the authority for whether this visible event is lawful now.
+    }
+  }
+  return null;
 }
 
 export function applyOverworldSessionLocalInteraction(

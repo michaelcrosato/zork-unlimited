@@ -123,6 +123,9 @@ describe("Winter Return Docket", () => {
       { minutes: 50, renown: 2 },
       { minutes: 50, renown: 2 },
     ]);
+    expect(event?.authored_scene?.prompt).toMatch(
+      /after a truthful field return[^]*takes longer[^]*Both cost 50 minutes to open today[^]*earn 2 Capital \/ Mohawk renown/i,
+    );
     expect(session.view().eventChoices).toEqual([]);
     expect(() => session.resolveEvent(EVENT_ID)).toThrow(/Before resolving/i);
 

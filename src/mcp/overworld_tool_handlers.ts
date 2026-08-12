@@ -24,12 +24,15 @@ import {
   type OverworldSessionRoutePlan,
   type TravelLogEntry,
 } from "../world/session.js";
+import type { JourneyOpportunityKind } from "../world/journey_contract.js";
+import type { JourneyOpportunityExplanation } from "../world/journey_opportunity_explainer.js";
 import {
   compactOverworldActionResultLegendKeys,
   compactOverworldActionResult,
   compactOverworldAreaTravelResult,
   compactOverworldGoalPassageResult,
   compactOverworldJourneyStoryChoiceResult,
+  compactOverworldOpportunityExplanation,
   compactOverworldQuestCompletionResult,
   compactOverworldRoadEncounterResult,
   compactOverworldServiceResultLegendKeys,
@@ -40,6 +43,7 @@ import {
   type OverworldCompactAreaTravelResult,
   type OverworldCompactGoalPassageResult,
   type OverworldCompactJourneyStoryChoiceResult,
+  type OverworldCompactOpportunityExplanation,
   type OverworldCompactQuestCompletionResult,
   type OverworldCompactRoadEncounterResult,
   type OverworldCompactServiceResult,
@@ -379,6 +383,30 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
       args: Args,
     ): OverworldMcpContextResponse<Args> {
       return overworldSessions.readContext(args);
+    },
+
+    explain_overworld_session_opportunity<
+      Args extends {
+        session_id: string;
+        kind: JourneyOpportunityKind;
+        id: string;
+      } & OverworldResponseOptions,
+    >(
+      args: Args,
+    ): OverworldSessionResponse<
+      "explanation",
+      JourneyOpportunityExplanation,
+      DefaultCompactOverworldResponse<Args>,
+      OverworldCompactOpportunityExplanation
+    > {
+      const responseOptions = defaultCompactOverworldResponse(args);
+      return overworldSessions.run(
+        responseOptions,
+        args.session_id,
+        "explanation",
+        (session) => session.explainOpportunity({ kind: args.kind, id: args.id }),
+        compactOverworldOpportunityExplanation,
+      );
     },
 
     export_overworld_session<Args extends OverworldMcpExportArgs>(

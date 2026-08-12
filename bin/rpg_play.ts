@@ -94,18 +94,54 @@ export function resolve(
   state: import("../src/core/state.js").GameState,
   raw: string,
 ): { ok: true; action: RpgAction } | { ok: false; reason: string } {
+  const resolved = resolveActionOption(index, state, raw);
+  return resolved.ok ? { ok: true, action: resolved.option.action } : resolved;
+}
+
+export type RpgActionOptionResolution =
+  | { ok: true; option: RpgActionOption }
+  | { ok: false; reason: string };
+
+function optionForParsedAction(
+  legal: readonly RpgActionOption[],
+  action: RpgAction,
+  raw: string,
+): RpgActionOptionResolution {
+  const matches = legal.filter((option) => actionEquals(option.action, action));
+  if (matches.length === 1) return { ok: true, option: matches[0]! };
+  if (matches.length > 1) {
+    return {
+      ok: false,
+      reason: `"${raw.trim()}" maps to more than one current action. Use an exact command from \`actions\`.`,
+    };
+  }
+  return { ok: false, reason: "You can't do that right now." };
+}
+
+/** Resolve terminal input to the exact canonical legal-action row. */
+export function resolveActionOption(
+  index: ReturnType<typeof indexRpgPack>,
+  state: import("../src/core/state.js").GameState,
+  raw: string,
+): RpgActionOptionResolution {
   const text = raw.trim().toLowerCase();
   const legal = enumerateRpgActions(index, state);
   const projected = resolveRpgPlayerCommand(legal, raw, { index, state });
-  if (projected.kind === "resolved") return { ok: true, action: projected.option.action };
+  if (projected.kind === "resolved") return { ok: true, option: projected.option };
   if (projected.kind === "ambiguous") return { ok: false, reason: projected.reason };
   // Authored commands are controlled vocabulary too. Match every exact legal
   // legacy label before unavailable affordances or the generic command grammar.
   // Current terminal labels were already handled by the shared projection. In
   // particular, a blocked USE may deliberately share ordinary vocabulary such
   // as "read" with a different legal action; the legal menu remains ground truth.
-  const exactLegal = legal.find((option) => option.command.trim().toLowerCase() === text);
-  if (exactLegal) return { ok: true, action: exactLegal.action };
+  const exactLegal = legal.filter((option) => option.command.trim().toLowerCase() === text);
+  if (exactLegal.length === 1) return { ok: true, option: exactLegal[0]! };
+  if (exactLegal.length > 1) {
+    return {
+      ok: false,
+      reason: `"${raw.trim()}" matches more than one current action. Use an exact command from \`actions\`.`,
+    };
+  }
   const blocked = enumerateRpgBlockedActions(index, state).find(
     (option) => option.command.trim().toLowerCase() === text,
   );
@@ -116,10 +152,16 @@ export function resolve(
     const here = index.enemyByRoom.get(state.current) ?? [];
     const enemy = here.find((e) => e.id === phrase || e.name.toLowerCase().includes(phrase));
     return enemy
-      ? { ok: true, action: { type: "ATTACK", enemy: enemy.id } }
+      ? optionForParsedAction(legal, { type: "ATTACK", enemy: enemy.id }, raw)
       : { ok: false, reason: `There's no "${phrase}" to attack here.` };
   }
-  return parseCommand(index, state, raw);
+  const parsed = parseCommand(index, state, raw);
+  if (!parsed.ok) return parsed;
+  const resolved = optionForParsedAction(legal, parsed.action, raw);
+  if (!resolved.ok && resolved.reason === "You can't do that right now.") {
+    return { ok: false, reason: illegalReason(index, state, parsed.action) };
+  }
+  return resolved;
 }
 
 /** Player-facing terminal label for one legal action, including tactical math. */

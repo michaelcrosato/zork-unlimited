@@ -99,7 +99,11 @@ import {
   applyOverworldSessionPoiScoutFromState,
   applyOverworldSessionSiteFromState,
   applyOverworldSessionTownVisit,
+  planOverworldOpportunityInteractionDiscovery,
+  planOverworldSessionArea,
   planOverworldSessionLocalJob,
+  planOverworldSessionPoiScout,
+  planOverworldSessionSite,
 } from "./session_local_lifecycle.js";
 import {
   cloneOpeningLeadSourceDecisionTrail,
@@ -124,7 +128,7 @@ import {
   applyOpeningRegistrationProfile,
   type OpeningStartingDoctrine,
 } from "./opening_registration.js";
-import { applyOpeningAllyOption } from "./opening_ally.js";
+import { applyOpeningAllyOption, openingAllyContactTimingSummary } from "./opening_ally.js";
 import {
   openingAllyJournalEntry,
   openingAllyJournalId,
@@ -271,6 +275,20 @@ import {
   projectJourneyOpportunities,
 } from "./journey_opportunity_leads.js";
 import {
+  explainJourneyOpportunity,
+  OPPORTUNITY_EXPLORE_AREA_TOOL,
+  OPPORTUNITY_EXPLORE_SITE_TOOL,
+  OPPORTUNITY_INVESTIGATE_EVENT_TOOL,
+  OPPORTUNITY_RESOLVE_EVENT_TOOL,
+  OPPORTUNITY_SCOUT_POI_TOOL,
+  OPPORTUNITY_TALK_CONTACT_TOOL,
+  OPPORTUNITY_WORK_JOB_TOOL,
+  type JourneyOpportunityExplanation,
+  type JourneyOpportunityIdentity,
+  type JourneyOpportunityNextAction,
+  type JourneyOpportunityRoadStep,
+} from "./journey_opportunity_explainer.js";
+import {
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalIsComplete,
   journeyCampaignGoalJournalCopy,
@@ -344,6 +362,11 @@ export type {
   JourneyPresentation,
   JourneyRetentionEvent,
 } from "./journey_contract.js";
+export type {
+  JourneyOpportunityExplanation,
+  JourneyOpportunityIdentity,
+  JourneyOpportunityNextAction,
+} from "./journey_opportunity_explainer.js";
 
 export type OverworldJourneyActionResult = JourneyDecisionAnnotated<OverworldActionResult>;
 export type OverworldJourneyAreaTravelResult = JourneyDecisionAnnotated<OverworldAreaTravelResult>;
@@ -492,6 +515,7 @@ export class OverworldSession {
   private readonly discoveredQuestIds = new Set<string>();
   private readonly startedQuestIds = new Set<string>();
   private readonly completedQuestIds = new Set<string>();
+  private readonly questLaunchCharacters = new Map<string, CampaignCharacterState>();
   private readonly questOutcomeIds = new Map<string, string>();
   private readonly exploredSiteIds = new Set<string>();
   private readonly regionRenown = new Map<string, number>();
@@ -624,6 +648,12 @@ export class OverworldSession {
    */
   campaignCharacterState(): CampaignCharacterState {
     return cloneCampaignCharacterState(this.characterState);
+  }
+
+  /** Character proven at this quest's authored launch boundary. */
+  questLaunchCharacterState(questId: string): CampaignCharacterState | null {
+    const character = this.questLaunchCharacters.get(questId);
+    return character ? cloneCampaignCharacterState(character) : null;
   }
 
   /** Derived historical world truth; detached so callers cannot mutate session state. */
@@ -1133,6 +1163,10 @@ export class OverworldSession {
         questId: quest.id,
         questTitle: quest.title,
         status: chain || this.openingPreparationResolved() ? "ready" : "requires_preparation",
+        timing: openingAllyContactTimingSummary(
+          scene,
+          this.journalEntriesById.has(overworldContactTalkJournalId(scene.contact, null)),
+        ),
       }),
     ];
   }
@@ -1953,6 +1987,18 @@ export class OverworldSession {
       this.journeyState.goal.version,
     );
     this.journeyState = activateJourneyGoal(this.journeyState, goal);
+    // A campaign goal is an authenticated direct lead: its canonical
+    // definition names both the quest and the district where that quest can be
+    // acted on. Reveal exactly that anchor without spending or reordering
+    // ordinary local discovery.
+    revealOverworldQuestAnchor(
+      {
+        discoveredAreaIds: this.discoveredAreaIds,
+        discoveredQuestIds: this.discoveredQuestIds,
+      },
+      this.questsById,
+      definition.targetQuestId,
+    );
     const journalCopy = journeyCampaignGoalJournalCopy(definition, this.questOutcomeIds);
     const entry: OverworldJournalEntry = {
       id: `campaign_goal:${String(goal.version)}:${goal.id}`,
@@ -2408,6 +2454,7 @@ export class OverworldSession {
       discoveredQuestIds: this.discoveredQuestIds,
       startedQuestIds: this.startedQuestIds,
       completedQuestIds: this.completedQuestIds,
+      questLaunchCharacters: this.questLaunchCharacters,
       questOutcomeIds: this.questOutcomeIds,
       exploredSiteIds: this.exploredSiteIds,
       regionRenown: this.regionRenown,
@@ -2711,6 +2758,179 @@ export class OverworldSession {
       eventOptionIdFor: (eventId) =>
         this.journalEntriesById.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
     });
+  }
+
+  private nextOpportunityRoadStep(townId: string): JourneyOpportunityRoadStep | null {
+    const route = indexedOverworldRoute(this.routePlannerIndex, this.currentId, townId);
+    const first = route?.steps[0];
+    return first
+      ? {
+          roadId: first.edge.id,
+          destinationId: first.to.id,
+          destinationName: first.to.name,
+        }
+      : null;
+  }
+
+  private currentOpportunityDiscoveryAction(): JourneyOpportunityNextAction | null {
+    const currentAreaId = this.currentAreaId;
+    const currentArea = currentAreaId ? this.areasById.get(currentAreaId) : null;
+    if (
+      !currentArea ||
+      !(this.areasByTown.get(this.currentId) ?? []).some(
+        (area) => !this.discoveredAreaIds.has(area.id),
+      )
+    ) {
+      return null;
+    }
+    const campaignWorldFactIds = new Set(this.campaignWorldFactIds());
+    const eventOptionIdFor = (eventId: string): string | null =>
+      this.journalEntriesById.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null;
+
+    const areaPlan = planOverworldSessionArea({
+      areaId: currentArea.id,
+      areasById: this.areasById,
+      currentTownId: this.currentId,
+      currentAreaId,
+      discoveredAreaIds: this.discoveredAreaIds,
+      visitedAreaIds: this.visitedAreaIds,
+      journalEntries: this.journalEntriesById,
+    });
+    if (!areaPlan.alreadyKnown) {
+      return {
+        tool: OPPORTUNITY_EXPLORE_AREA_TOOL,
+        arguments: { area_id: currentArea.id },
+        command: `explore ${currentArea.id}`,
+        label: `Explore ${currentArea.name} to advance local discovery.`,
+      };
+    }
+
+    const current = this.currentNode();
+    for (const poi of this.poisByArea.get(currentArea.id) ?? []) {
+      const plan = planOverworldSessionPoiScout({
+        poiId: poi.id,
+        poisById: this.poisById,
+        currentTown: current,
+        currentAreaId: () => currentArea.id,
+      });
+      if (!this.journalEntriesById.has(plan.action.id)) {
+        return {
+          tool: OPPORTUNITY_SCOUT_POI_TOOL,
+          arguments: { poi_id: poi.id },
+          command: `scout ${poi.id}`,
+          label: "Scout a visible local point of interest to advance local discovery.",
+        };
+      }
+    }
+    for (const site of this.sitesByArea.get(currentArea.id) ?? []) {
+      try {
+        const plan = planOverworldSessionSite({
+          siteId: site.id,
+          sitesById: this.sitesById,
+          currentTownId: this.currentId,
+          currentAreaId,
+          discoveredSiteIds: this.discoveredSiteIds,
+          exploredSiteIds: this.exploredSiteIds,
+          journalEntries: this.journalEntriesById,
+        });
+        if (!plan.alreadyKnown) {
+          return {
+            tool: OPPORTUNITY_EXPLORE_SITE_TOOL,
+            arguments: { site_id: site.id },
+            command: `explore site ${site.id}`,
+            label: "Explore a visible local site to advance local discovery.",
+          };
+        }
+      } catch {
+        // Canonical planning remains the authority for whether this visible site is lawful now.
+      }
+    }
+    const interaction = planOverworldOpportunityInteractionDiscovery({
+      character: this.characterState,
+      characters: this.charactersByArea.get(currentArea.id) ?? [],
+      charactersById: this.charactersById,
+      events: this.eventsByArea.get(currentArea.id) ?? [],
+      eventsById: this.localEventsById,
+      completedQuestIds: this.completedQuestIds,
+      completedJobIds: this.completedJobIds,
+      campaignWorldFactIds,
+      eventOptionIdFor,
+      currentTownId: this.currentId,
+      currentAreaId: currentArea.id,
+      journalEntryIds: new Set(this.journalEntriesById.keys()),
+    });
+    if (interaction?.plan.action.kind === "contact") {
+      const characterId = interaction.sourceId;
+      return {
+        tool: OPPORTUNITY_TALK_CONTACT_TOOL,
+        arguments: { character_id: characterId },
+        command: `talk ${characterId}`,
+        label: "Talk to a visible local contact to advance local discovery.",
+      };
+    }
+    if (interaction?.plan.action.kind === "event") {
+      const eventId = interaction.sourceId;
+      return {
+        tool: OPPORTUNITY_INVESTIGATE_EVENT_TOOL,
+        arguments: { event_id: eventId },
+        command: `investigate ${eventId}`,
+        label: "Investigate a visible local event to advance local discovery.",
+      };
+    }
+    const eventChoice = this.liveEventChoices(this.eventsByArea.get(currentArea.id) ?? [])[0];
+    if (eventChoice) {
+      return {
+        tool: OPPORTUNITY_RESOLVE_EVENT_TOOL,
+        arguments: { event_id: eventChoice[0], option_id: eventChoice[1] },
+        command: `resolve ${eventChoice[0]} ${eventChoice[1]}`,
+        label: "Choose a currently visible local event action to advance local discovery.",
+      };
+    }
+    const jobChoice = this.liveJobChoices(
+      (this.jobsByTown.get(this.currentId) ?? []).filter((job) => job.area === currentArea.id),
+    )[0];
+    if (jobChoice) {
+      return {
+        tool: OPPORTUNITY_WORK_JOB_TOOL,
+        arguments: { job_id: jobChoice[0], option_id: jobChoice[1] },
+        command: `work ${jobChoice[0]} ${jobChoice[1]}`,
+        label: "Choose a currently visible local job action to advance local discovery.",
+      };
+    }
+    return null;
+  }
+
+  /** Revalidate one projected lead and return one existing lawful action without mutating state. */
+  explainOpportunity(identity: JourneyOpportunityIdentity): JourneyOpportunityExplanation {
+    this.assertJourneyAcceptingDecision();
+    this.assertNoPendingRoadEncounter("explaining an opportunity");
+    return explainJourneyOpportunity(
+      {
+        opportunities: this.journeyOpportunities(),
+        currentTownId: this.currentId,
+        currentAreaId: this.currentAreaId,
+        areasById: this.areasById,
+        areaExitsByArea: this.areaExitsByArea,
+        discoveredAreaIds: this.discoveredAreaIds,
+        visitedAreaIds: this.visitedAreaIds,
+        eventsById: this.localEventsById,
+        jobsById: this.jobsById,
+        journalEntryIds: new Set(this.journalEntriesById.keys()),
+        eventChoices: this.liveEventChoices(
+          this.currentAreaId ? (this.eventsByArea.get(this.currentAreaId) ?? []) : [],
+        ),
+        jobChoices: this.liveJobChoices(
+          this.currentAreaId
+            ? (this.jobsByTown.get(this.currentId) ?? []).filter(
+                (job) => job.area === this.currentAreaId,
+              )
+            : [],
+        ),
+        nextRoadToward: (townId) => this.nextOpportunityRoadStep(townId),
+        currentAreaDiscoveryAction: () => this.currentOpportunityDiscoveryAction(),
+      },
+      identity,
+    );
   }
 
   private discoverLocalProgressForTown(nodeId: string): OverworldLocalDiscoveryResult {
@@ -3079,6 +3299,10 @@ export class OverworldSession {
     );
     this.applyResourceClockState(applied);
     this.characterState = cloneCampaignCharacterState(applied.characterAfter);
+    this.questLaunchCharacters.set(
+      canonicalPlan.quest.id,
+      cloneCampaignCharacterState(applied.characterAfter),
+    );
     const journeyDecision = this.recordOverworldDecision(
       canonicalPlan.journeyActionId,
       "progress",
@@ -3291,6 +3515,9 @@ export class OverworldSession {
       characterId,
       charactersById: this.charactersById,
       completedQuestIds: this.completedQuestIds,
+      campaignWorldFactIds: new Set(this.campaignWorldFactIds()),
+      eventOptionIdFor: (eventId) =>
+        this.journalEntriesById.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
       currentTownId: this.currentId,
       currentAreaId: () => this.currentAreaIdOrThrow(),
       currentTownName: current.name,

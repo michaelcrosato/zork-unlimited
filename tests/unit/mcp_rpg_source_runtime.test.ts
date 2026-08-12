@@ -454,6 +454,94 @@ describe("RpgSourceRuntime caches", () => {
     });
   });
 
+  it("uses a declared campaign skill range for an optional additive dialogue guard", () => {
+    withTempRoot((root) => {
+      const raw = parseYaml(VALID_PACK_SOURCE) as {
+        meta: { vars_init: Record<string, number> };
+        npcs: Array<{
+          dialogue: {
+            nodes: Array<{
+              append_variants?: Array<{ when: unknown[]; text: string }>;
+            }>;
+          };
+        }>;
+      };
+      raw.meta.vars_init.imported_lore = 0;
+      const node = raw.npcs[0]?.dialogue.nodes[0];
+      if (!node) throw new Error("Sunken Barrow fixture is missing dialogue");
+      node.append_variants = [
+        {
+          when: [{ var_gte: { name: "imported_lore", value: 4 } }],
+          text: "The imported lore earns one independent note.",
+        },
+      ];
+      writeTempWorldQuest(root, stringifyYaml(raw), undefined, {
+        version: 1,
+        rules: [
+          {
+            id: "import:test_lore_note",
+            type: "skill_rank_to_var",
+            skill_id: "skill:lore",
+            target_var: "imported_lore",
+          },
+        ],
+      });
+
+      const source = new RpgSourceRuntime(root).loadWorldQuestReport(TEMP_WORLD_QUEST_ID);
+      expect(source.result.ok).toBe(true);
+      expect(source.result.report.ok).toBe(true);
+      expect(
+        source.result.report.findings.some((finding) => finding.code === "IMPOSSIBLE_GATE"),
+      ).toBe(false);
+    });
+  });
+
+  it("still rejects an additive numeric guard whose variable is not imported", () => {
+    withTempRoot((root) => {
+      const raw = parseYaml(VALID_PACK_SOURCE) as {
+        meta: { vars_init: Record<string, number> };
+        npcs: Array<{
+          dialogue: {
+            nodes: Array<{
+              append_variants?: Array<{ when: unknown[]; text: string }>;
+            }>;
+          };
+        }>;
+      };
+      raw.meta.vars_init.imported_lore = 0;
+      raw.meta.vars_init.unimported_lore = 0;
+      const node = raw.npcs[0]?.dialogue.nodes[0];
+      if (!node) throw new Error("Sunken Barrow fixture is missing dialogue");
+      node.append_variants = [
+        {
+          when: [{ var_gte: { name: "unimported_lore", value: 4 } }],
+          text: "This note has no lawful player-state source.",
+        },
+      ];
+      writeTempWorldQuest(root, stringifyYaml(raw), undefined, {
+        version: 1,
+        rules: [
+          {
+            id: "import:test_other_lore",
+            type: "skill_rank_to_var",
+            skill_id: "skill:lore",
+            target_var: "imported_lore",
+          },
+        ],
+      });
+
+      const source = new RpgSourceRuntime(root).loadWorldQuestReport(TEMP_WORLD_QUEST_ID);
+      expect(source.result.ok).toBe(true);
+      expect(source.result.report.ok).toBe(false);
+      expect(source.result.report.findings).toContainEqual(
+        expect.objectContaining({
+          code: "IMPOSSIBLE_GATE",
+          where: expect.arrayContaining(["append_variant:0"]),
+        }),
+      );
+    });
+  });
+
   it("rejects an any-of win when every branch requires imported state", () => {
     withTempRoot((root) => {
       const raw = parseYaml(VALID_PACK_SOURCE) as {

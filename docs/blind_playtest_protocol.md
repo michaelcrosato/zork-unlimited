@@ -360,6 +360,10 @@ it only while an embedded quest is active, with the exact current
 legal choices already appear in the current overworld response and use their
 corresponding overworld tools.
 
+Compact `context.npcs` rows pair each stable authored NPC id with its
+player-facing display name as `[npc_id, display_name]`; executable action ids
+such as `talk_<npc_id>` remain unchanged.
+
 Pure mode repeats the parent `overworld_session_id` on every successful player
 response. While an embedded quest is unresolved, it also repeats the current
 child `rpg_session_id`; the two handles are never interchangeable. Missing,
@@ -527,7 +531,24 @@ Before any live member launches, preflight freezes one full tracked Git commit,
 the canonical fresh-overworld world id/hash, the contiguous planned seeds, and
 the run/model contract. The tracked worktree must be clean; dirty state or a Git
 or world-provenance error aborts before tokens are spent. Untracked local notes
-are ignored by the cleanliness test.
+are ignored by the cleanliness test. The runner repeats that exact build capture
+at every slot boundary and immediately before every token-spending attempt. Those
+check-and-spawn starts are serialized through one fleet-wide abort gate: the
+first drift blocks every queued sibling slot and retry while already-started
+players are allowed to settle. On Windows, the real launcher is created
+suspended and assigned to its Job Object while that gate remains held. The
+runner repeats the build capture after the custody-ready receipt, resumes only
+an exact match, and waits for the provider-started receipt before releasing the
+gate.
+
+On `SIGINT` or `SIGTERM`, persistent handlers first block new starts, terminate
+the tracked process tree, and wait for every spawned child to close. POSIX
+launchers run in their own process group and the group must be proven absent.
+Windows launchers are created suspended, assigned to a kill-on-close Job Object,
+and resumed only after assignment; the anchor verifies that the Job Object's
+active-process count reached zero. Only then may report and cohort locks be
+released. An error event, bare root-process close, or unsettled descendant is
+not treated as proof of closure and leaves cleanup fail-closed.
 
 Each plan and lock row records the exact provider and model. Each live fleet
 label must be fresh and names one closed cohort. An existing

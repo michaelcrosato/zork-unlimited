@@ -98,11 +98,28 @@ export type OverworldLocalActionJournalTimelineEntry = {
 
 export type OverworldJournalTimelineIndex = {
   eventResolutionProofs: OverworldEventResolutionJournalIndex;
+  journalIndexById: ReadonlyMap<string, number>;
   localActionEntries: readonly OverworldLocalActionJournalTimelineEntry[];
   progressSources: OverworldProgressJournalSourceIndex;
   roadJournalEntries: readonly OverworldRoadJournalResolutionEntry[];
   serviceJournal: OverworldServiceJournalReplayIndex;
 };
+
+/** Compare two journal proofs, including their authoritative newest-first order at equal times. */
+export function overworldJournalEntryPrecedes(
+  recordedAtById: ReadonlyMap<string, number>,
+  journalIndexById: ReadonlyMap<string, number>,
+  earlierId: string,
+  laterId: string,
+): boolean {
+  const earlierAt = recordedAtById.get(earlierId);
+  const laterAt = recordedAtById.get(laterId);
+  if (earlierAt === undefined || laterAt === undefined) return false;
+  if (earlierAt !== laterAt) return earlierAt < laterAt;
+  const earlierIndex = journalIndexById.get(earlierId);
+  const laterIndex = journalIndexById.get(laterId);
+  return earlierIndex !== undefined && laterIndex !== undefined && earlierIndex > laterIndex;
+}
 
 function assertKnownJournalSource(
   entry: OverworldJournalEntry,
@@ -136,27 +153,36 @@ function assertKnownJournalSource(
   }
 }
 
-function contactPresentationForJournalEntry(
+export type ResolvedOverworldContactJournalPresentation = Readonly<{
+  canonicalJournalId: string;
+  presentation: OverworldContactPresentation;
+}>;
+
+/** Resolve either a canonical contact id or its repeatable `<id>:<minute>` form. */
+export function resolveOverworldContactJournalPresentation(
   entry: OverworldJournalEntry,
   sources: Pick<OverworldJournalSourceIndex, "contactPresentationsByJournalId">,
-): OverworldContactPresentation | null {
+): ResolvedOverworldContactJournalPresentation | null {
   const exact = sources.contactPresentationsByJournalId.get(entry.id);
-  if (exact) return exact;
+  if (exact) return { canonicalJournalId: entry.id, presentation: exact };
   const repeated = /^(.*):(\d+)$/.exec(entry.id);
   if (!repeated || Number(repeated[2]) !== parseTimeLabel(entry.recordedAt)) return null;
-  return sources.contactPresentationsByJournalId.get(repeated[1]!) ?? null;
+  const canonicalJournalId = repeated[1]!;
+  const presentation = sources.contactPresentationsByJournalId.get(canonicalJournalId);
+  return presentation ? { canonicalJournalId, presentation } : null;
 }
 
 function assertKnownContactPresentation(
   entry: OverworldJournalEntry,
   sources: OverworldJournalSourceIndex,
 ): void {
-  const presentation = contactPresentationForJournalEntry(entry, sources);
-  if (!presentation) {
+  const resolved = resolveOverworldContactJournalPresentation(entry, sources);
+  if (!resolved) {
     throw new Error(
       `Overworld session snapshot journal contact entry references unknown contact presentation "${entry.id}".`,
     );
   }
+  const { presentation } = resolved;
   const expectedTown = sources.characterTownNames.get(presentation.character.id);
   if (expectedTown && entry.town !== expectedTown) {
     throw new Error(
@@ -558,9 +584,13 @@ function recordEventResolutionJournalProof(
       return;
     }
     case "contact": {
-      const presentation = contactPresentationForJournalEntry(entry, sources);
-      if (presentation) {
-        recordEarliestTime(proofs.contactTimeByArea, presentation.character.area, recordedAt);
+      const resolved = resolveOverworldContactJournalPresentation(entry, sources);
+      if (resolved) {
+        recordEarliestTime(
+          proofs.contactTimeByArea,
+          resolved.presentation.character.area,
+          recordedAt,
+        );
       }
       return;
     }
@@ -598,6 +628,7 @@ export function assertSnapshotTimeline(
   let previousBoundaryDecision = Number.POSITIVE_INFINITY;
   const progressSources = emptyProgressJournalSourceIndex();
   const localActionEntries: OverworldLocalActionJournalTimelineEntry[] = [];
+  const journalIndexById = new Map<string, number>();
   const recordedAtById = new Map<string, number>();
   const roadJournalEntries: OverworldRoadJournalResolutionEntry[] = [];
   const serviceReplayEntries: OverworldServiceJournalReplayEntry[] = [];
@@ -607,7 +638,7 @@ export function assertSnapshotTimeline(
     resolutionTimeByTown: new Map<string, number>(),
     scoutTimeByArea: new Map<string, number>(),
   };
-  for (const entry of snapshot.journalEntries) {
+  for (const [journalIndex, entry] of snapshot.journalEntries.entries()) {
     if (recordedAtById.has(entry.id)) {
       throw new Error(`Overworld session snapshot has duplicate journal entry id "${entry.id}".`);
     }
@@ -640,6 +671,7 @@ export function assertSnapshotTimeline(
       throw new Error("Overworld session snapshot journal must be newest-first.");
     }
     recordedAtById.set(entry.id, recordedAt);
+    journalIndexById.set(entry.id, journalIndex);
     recordProgressJournalSource(progressSources, entry);
     recordEventResolutionJournalProof(eventResolutionProofs, sources, entry, recordedAt);
     recordLocalActionJournalEntry(localActionEntries, entry, recordedAt);
@@ -650,6 +682,7 @@ export function assertSnapshotTimeline(
 
   return {
     eventResolutionProofs,
+    journalIndexById,
     localActionEntries,
     progressSources,
     roadJournalEntries,

@@ -1045,9 +1045,9 @@ describe("MCP tools — validate / load (§9.4)", () => {
       "Campaign supplies, fatigue, and character persist; quest HP, stats and issued inventory are local; only authored imports/exports cross.",
     );
     const compactLaunchBytes = Buffer.byteLength(JSON.stringify(compactStartedQuest));
-    // 6_771 before the retired unlock_exit legend tag and the dead compact-state
-    // contents fields came out; the ceiling below is the real budget.
-    expect(compactLaunchBytes).toBe(6_747);
+    // NPC display-name tuples add a small amount of actionable orientation;
+    // the ceiling below remains the real transport budget.
+    expect(compactLaunchBytes).toBe(6_770);
     expect(compactLaunchBytes).toBeLessThanOrEqual(7_500);
     const fieldHandoff = a.step_action({
       session_id: compactStartedQuest.rpg_session_id,
@@ -1069,7 +1069,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(fieldHandoff.journey).not.toHaveProperty("decisionProof");
     expect(fieldHandoff.journey.pendingChoice).toBeNull();
     const compactFieldTurnBytes = Buffer.byteLength(JSON.stringify(fieldHandoff));
-    expect(compactFieldTurnBytes).toBe(2_194);
+    expect(compactFieldTurnBytes).toBe(2_245);
     expect(compactFieldTurnBytes).toBeLessThanOrEqual(3_500);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,
@@ -3526,7 +3526,7 @@ describe("MCP tools — the play loop (§9.1)", () => {
       COMPACT_DESCRIPTION_CHAR_LIMIT,
     );
     expect(proseBudgetStart.context.objects).toEqual(["flood_book", "life_line", "weir_iron"]);
-    expect(proseBudgetStart.context.npcs).toEqual(["pell"]);
+    expect(proseBudgetStart.context.npcs).toEqual([["pell", "old Pell the weir-keeper"]]);
     // The one-time legend rides only on session-creating responses; the recurring
     // payload (everything except the legend) still has to clear the prose budget.
     expect(proseBudgetStart.legend).toBeDefined();
@@ -3589,10 +3589,10 @@ describe("MCP tools — the play loop (§9.1)", () => {
     const refStart = a.start_world_quest({ world_quest_id: "breaking_weir" });
     const repeatedRefObservation = a.get_observation({ session_id: refStart.session_id });
     repeatedRefObservation.context.objects![0] = "mutated_object";
-    repeatedRefObservation.context.npcs![0] = "mutated_npc";
+    (repeatedRefObservation.context.npcs![0] as [string, string])[1] = "mutated NPC";
     const afterRefMutation = a.get_observation({ session_id: refStart.session_id });
     expect(afterRefMutation.context.objects).toEqual(["flood_book", "life_line", "weir_iron"]);
-    expect(afterRefMutation.context.npcs).toEqual(["pell"]);
+    expect(afterRefMutation.context.npcs).toEqual([["pell", "old Pell the weir-keeper"]]);
     expect("actions" in afterCompactObservationMutation.context).toBe(false);
 
     const actionBundledObservation = a.get_observation({

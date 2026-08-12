@@ -17,7 +17,8 @@
  * no RNG — determinism comes from action order alone; `--seed` only affects the
  * RPG quest sub-sessions. In `--commands` mode the run succeeds (exit 0) when every
  * scripted command is accepted; any rejected or unparseable command sets exit 1.
- * `save <name>` / `load <name>` snapshot to saves/<name>.json (gitignored).
+ * `save <name>` / `load <name>` snapshot the parent plus any active/suspended
+ * embedded quest to saves/<name>.json (gitignored).
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -36,10 +37,15 @@ import { renderRpgActiveDialoguePrompt } from "../src/rpg/player_command_project
 import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../src/rpg/embedded_quest_character_continuity.js";
 import { RpgSourceRuntime } from "../src/mcp/rpg_source_runtime.js";
 import {
+  CliJourneySession,
+  isCliJourneyIntegrityError,
+} from "../src/cli/embedded_quest_journey.js";
+import {
   render as renderQuest,
   renderActionHelp as renderQuestActionHelp,
   illegalReason,
   resolve as resolveRpgCommand,
+  resolveActionOption as resolveRpgActionOption,
 } from "./rpg_play.js";
 import {
   isStructuredTerminalStoryChoice,
@@ -78,6 +84,16 @@ export function renderQuestCompletion(result: OverworldQuestCompletionResult): s
   return result.entry.text;
 }
 
+/** Append a destination only when the authored route label does not already
+ * name it. Generated local routes commonly include both endpoints. */
+export function routeLabelWithDestination(route: string, destination: string): string {
+  const normalizedRoute = route.trim().toLocaleLowerCase();
+  const normalizedDestination = destination.trim().toLocaleLowerCase();
+  return normalizedDestination && normalizedRoute.includes(normalizedDestination)
+    ? route
+    : `${route} to ${destination}`;
+}
+
 /** The full status screen (pure; exported for tests). */
 export function render(view: OverworldView): string {
   const lines = [
@@ -87,6 +103,7 @@ export function render(view: OverworldView): string {
   ];
   if (view.exits.length) {
     lines.push("Roads:");
+    lines.push("  Type `go <road number>` to travel (e.g. `go 1`).");
     view.exits.forEach((exit, i) => {
       lines.push(
         `  ${i + 1}. ${exit.destination.name} — ${exit.route}, ${exit.distance_mi.toFixed(1)} mi, ${exit.travel_minutes} min`,
@@ -621,9 +638,10 @@ const HELP = `Commands:
   talk <contact>           talk to a local contact
   investigate <event> · resolve <event>
   work <job>               work a discovered local job
-  start <quest>            start a discovered quest lead (hands off to quest play)
+  start <quest>            start or resume a discovered quest lead
+  abandon                  suspend the active quest without repaying its start
   journal · log            recent journal entries · travel log
-  save [name] · load [name]  snapshot to saves/<name>.json
+  save [name] · load [name]  snapshot the parent and embedded quest together
   hash                     deterministic snapshot hash
   actions · help · quit`;
 
@@ -770,22 +788,27 @@ async function main(): Promise<void> {
 
   const manifest = loadOverworldManifest(process.cwd());
   const restorePath = arg("--restore");
-  let session: OverworldSession;
+  let cli: CliJourneySession;
   if (restorePath !== undefined) {
-    session = OverworldSession.restore(manifest, JSON.parse(readFileSync(restorePath, "utf8")));
-    printRestoreWarnings(session);
-    if (session.journey().status !== "ended") {
-      console.log(`Resumed in ${session.view().current.name}.`);
+    cli = CliJourneySession.restore(
+      process.cwd(),
+      manifest,
+      JSON.parse(readFileSync(restorePath, "utf8")),
+    );
+    printRestoreWarnings(cli.overworld());
+    if (cli.journey().status !== "ended") {
+      console.log(`Resumed in ${cli.overworld().view().current.name}.`);
     }
   } else {
-    session = new OverworldSession(manifest);
+    cli = CliJourneySession.fresh(process.cwd(), manifest);
     console.log(
-      `You begin in ${session.view().current.name}. Roads leave town, but the work is local until you find it.`,
+      `You begin in ${cli.overworld().view().current.name}. Roads leave town, but the work is local until you find it.`,
     );
   }
-  if (session.journey().status !== "ended") {
+  let session = cli.overworld();
+  if (cli.journey().status !== "ended") {
     console.log(render(session.view()));
-    console.log(renderJourneyStatus(session.journey()));
+    console.log(renderJourneyStatus(cli.journey()));
   }
 
   const interactive = commands === null;
@@ -802,18 +825,125 @@ async function main(): Promise<void> {
       return next;
     },
   };
-  const runtime = new RpgSourceRuntime(process.cwd());
-
   try {
     running: while (true) {
+      session = cli.overworld();
       const view = session.view();
-      const journey = session.journey();
+      const journey = cli.journey();
       if (journey.status === "ended") {
         const receipt = session.journeyExitReceipt();
         if (!receipt) throw new Error("An ended journey is missing its truthful exit receipt.");
         console.log(renderEndedJourney(journey, receipt));
         break;
       }
+
+      // One persistent child owns quest turns, but every parent journey/story
+      // gate preempts it until the player answers that parent boundary.
+      const child = cli.child();
+      if (!journey.pendingChoice && !journey.storyChoice && child?.phase === "active") {
+        const observation = buildRpgObservation(child.index, child.state, {
+          includeWorldIntro: true,
+          availableActions: [...child.actions],
+        });
+        console.log(renderQuest(observation));
+        const dialoguePrompt = renderRpgActiveDialoguePrompt(observation, child.actions, {
+          index: child.index,
+          state: child.state,
+        });
+        if (dialoguePrompt) console.log(dialoguePrompt);
+
+        const raw = await reader.read(`\n[quest: ${child.title}] > `);
+        if (raw === null) break;
+        const line = raw.trim();
+        if (!line) continue;
+        const low = line.toLowerCase();
+        if (["quit", "q", "exit"].includes(low)) break;
+        if (["actions", "help", "?"].includes(low)) {
+          console.log(renderQuestActionHelp(child.index, child.state));
+          continue;
+        }
+        if (low === "abandon") {
+          cli.suspendQuest();
+          console.log(`You set ${child.title} aside and return to the road.`);
+          continue;
+        }
+        if (low === "hash") {
+          console.log(cli.snapshotHash());
+          continue;
+        }
+        if (low === "save" || low.startsWith("save ")) {
+          try {
+            saveSnapshot(cli, line.slice(4).trim());
+          } catch (error) {
+            if (isCliJourneyIntegrityError(error)) throw error;
+            console.log(
+              `Could not continue: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            scriptedFailure = true;
+          }
+          continue;
+        }
+        if (low === "load" || low.startsWith("load ")) {
+          try {
+            const path = savePath(line.slice(4).trim());
+            cli = CliJourneySession.restore(
+              process.cwd(),
+              manifest,
+              JSON.parse(readFileSync(path, "utf8")),
+            );
+            session = cli.overworld();
+            printRestoreWarnings(session);
+            console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
+          } catch (error) {
+            if (isCliJourneyIntegrityError(error)) throw error;
+            console.log(
+              `Could not continue: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            scriptedFailure = true;
+          }
+          continue;
+        }
+
+        const parsed = resolveRpgActionOption(child.index, child.state, raw);
+        if (!parsed.ok) {
+          // `leave` remains available as a legacy escape only when it was not
+          // an exact authored command on this turn.
+          if (low === "leave") {
+            cli.suspendQuest();
+            console.log(`You set ${child.title} aside and return to the road.`);
+          } else {
+            console.log(parsed.reason);
+            scriptedFailure = true;
+          }
+          continue;
+        }
+        try {
+          const result = cli.stepQuest(parsed.option);
+          if (!result.ok) {
+            console.log(`(${result.rejectionReason ?? "Action rejected."})`);
+            scriptedFailure = true;
+            continue;
+          }
+          for (const event of result.events) {
+            if (event.type === "narration") console.log(event.text);
+          }
+          if (result.questCompletion) {
+            console.log(renderQuestCompletion(result.questCompletion));
+          } else if (result.terminalDeath) {
+            console.log(
+              "That ending does not complete the quest — the lead stays open in your journal, and this journey cannot restart it.",
+            );
+          }
+        } catch (error) {
+          if (isCliJourneyIntegrityError(error)) throw error;
+          console.log(
+            `Could not continue: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          scriptedFailure = true;
+        }
+        continue;
+      }
+
       const fail = (message: string): void => {
         console.log(message);
         scriptedFailure = true;
@@ -842,7 +972,7 @@ async function main(): Promise<void> {
           return "handled";
         }
         if (verb === "hash" && rest.length === 0) {
-          console.log(session.snapshotHash());
+          console.log(cli.snapshotHash());
           return "handled";
         }
         if (verb === "journal" && rest.length === 0) {
@@ -854,12 +984,17 @@ async function main(): Promise<void> {
           return "handled";
         }
         if (verb === "save") {
-          saveSnapshot(session, rest);
+          saveSnapshot(cli, rest);
           return "handled";
         }
         if (verb === "load") {
           const path = savePath(rest);
-          session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
+          cli = CliJourneySession.restore(
+            process.cwd(),
+            manifest,
+            JSON.parse(readFileSync(path, "utf8")),
+          );
+          session = cli.overworld();
           printRestoreWarnings(session);
           if (session.journey().status !== "ended") {
             console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
@@ -883,8 +1018,10 @@ async function main(): Promise<void> {
             allowComparisonExit: false,
             onAuxiliary: handleStoryChoiceAuxiliary,
           });
+          if (outcome === "chosen") cli.afterParentChoice();
           if (outcome === "quit" || outcome === "closed") break;
         } catch (error) {
+          if (isCliJourneyIntegrityError(error)) throw error;
           fail(`Could not continue: ${error instanceof Error ? error.message : String(error)}`);
         }
         continue;
@@ -915,16 +1052,21 @@ async function main(): Promise<void> {
           } else if (verb === "review" && rest === "support") {
             printStationDispatchSupport(session);
           } else if (verb === "hash") {
-            console.log(session.snapshotHash());
+            console.log(cli.snapshotHash());
           } else if (verb === "journal") {
             printJournal(session.view());
           } else if (verb === "log") {
             printTravelLog(session.view());
           } else if (verb === "save") {
-            saveSnapshot(session, line.slice(4).trim());
+            saveSnapshot(cli, line.slice(4).trim());
           } else if (verb === "load") {
             const path = savePath(rest);
-            session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
+            cli = CliJourneySession.restore(
+              process.cwd(),
+              manifest,
+              JSON.parse(readFileSync(path, "utf8")),
+            );
+            session = cli.overworld();
             printRestoreWarnings(session);
             if (session.journey().status !== "ended") {
               console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
@@ -932,6 +1074,7 @@ async function main(): Promise<void> {
             }
           } else if (verb === "choose") {
             const chosen = chooseJourneyGate(session, line.slice(verb.length).trim());
+            cli.afterParentChoice();
             console.log(`Chosen: ${chosen.label}.`);
             console.log(`Consequence: ${chosen.consequence}`);
             if (session.journey().status === "ended") {
@@ -963,9 +1106,9 @@ async function main(): Promise<void> {
           } else if (low === "review support") {
             printStationDispatchSupport(session);
           } else if (low === "hash") {
-            console.log(session.snapshotHash());
+            console.log(cli.snapshotHash());
           } else if (low.startsWith("save")) {
-            saveSnapshot(session, line.slice(4).trim());
+            saveSnapshot(cli, line.slice(4).trim());
           } else {
             fail("Resolve the pending road encounter first (assist / scout / press).");
           }
@@ -1058,7 +1201,9 @@ async function main(): Promise<void> {
               break;
             }
             const result = session.moveArea(exit.id);
-            console.log(`Walked ${result.route} to ${result.to.name} — ${result.minutes} min.`);
+            console.log(
+              `Walked ${routeLabelWithDestination(result.route, result.to.name)} — ${result.minutes} min.`,
+            );
             break;
           }
           case "explore": {
@@ -1214,13 +1359,45 @@ async function main(): Promise<void> {
             break;
           }
           case "start": {
+            const retained = cli.child();
+            const retainedMatch = retained
+              ? matchEntity(
+                  [{ id: retained.worldQuestId, title: retained.title }],
+                  rest,
+                  (candidate) => candidate.title,
+                )
+              : null;
             const quest = matchEntity(session.view().quests, rest, (q) => q.title);
+            if (retained) {
+              if (!retainedMatch) {
+                fail(`Finish or resume ${retained.title} before starting another quest.`);
+                break;
+              }
+              if (retained.phase === "terminal") {
+                fail(`${retained.title} has already reached a terminal death outcome.`);
+                break;
+              }
+              cli.resumeQuest(retained.worldQuestId);
+              console.log(`Resumed local quest: ${retained.title}.`);
+              break;
+            }
             if (!quest) {
               fail(`No discovered quest lead matches "${rest}". Scouting reveals more.`);
               break;
             }
-            const outcome = await runQuestSession(session, runtime, quest.id, seed, reader);
-            if (outcome === "quit") break running;
+            const approach = await chooseQuestApproach(quest, reader, () => {
+              scriptedFailure = true;
+            });
+            if (approach === "quit") break running;
+            if (approach === "cancel") break;
+            const started = cli.beginQuest(quest.id, seed, approach);
+            console.log(
+              `Started local quest: ${started.title}${
+                started.launch?.selected
+                  ? ` via ${started.launch.options.find((option) => option.id === started.launch?.selected?.optionId)?.title ?? started.launch.selected.optionId}`
+                  : ""
+              }. (Type \`abandon\` to set it aside.)`,
+            );
             break;
           }
           case "journal": {
@@ -1232,11 +1409,16 @@ async function main(): Promise<void> {
             break;
           }
           case "save":
-            saveSnapshot(session, rest);
+            saveSnapshot(cli, rest);
             break;
           case "load": {
             const path = savePath(rest);
-            session = OverworldSession.restore(manifest, JSON.parse(readFileSync(path, "utf8")));
+            cli = CliJourneySession.restore(
+              process.cwd(),
+              manifest,
+              JSON.parse(readFileSync(path, "utf8")),
+            );
+            session = cli.overworld();
             printRestoreWarnings(session);
             if (session.journey().status !== "ended") {
               console.log(`Restored ${path}. Resumed in ${session.view().current.name}.`);
@@ -1245,12 +1427,13 @@ async function main(): Promise<void> {
             break;
           }
           case "hash":
-            console.log(session.snapshotHash());
+            console.log(cli.snapshotHash());
             break;
           default:
             fail(`Unknown command "${verb}". Try \`help\`.`);
         }
       } catch (error) {
+        if (isCliJourneyIntegrityError(error)) throw error;
         fail(`Could not continue: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
@@ -1290,6 +1473,38 @@ function travelToward(session: OverworldSession, target: string): TravelLogEntry
   if (!first) throw new Error("You are already there.");
   console.log(`Heading toward ${plan.destination.name} — leg 1 of ${plan.steps.length}.`);
   return session.travel(first.edge.id);
+}
+
+async function chooseQuestApproach(
+  quest: OverworldQuestView,
+  reader: QuestCommandReader,
+  onRejectedCommand?: () => void,
+): Promise<string | undefined | "cancel" | "quit"> {
+  if (!quest.launch) return undefined;
+  console.log(renderQuestLaunch(quest));
+  while (true) {
+    const raw = await reader.read(`\n[approach: ${quest.title}] > `);
+    if (raw === null) return "cancel";
+    const low = raw.trim().toLowerCase();
+    if (["quit", "q", "exit"].includes(low)) return "quit";
+    if (["abandon", "leave", "cancel"].includes(low)) return "cancel";
+    if (["actions", "help", "?"].includes(low)) {
+      console.log(renderQuestLaunch(quest));
+      continue;
+    }
+    const selection = resolveQuestLaunchChoice(quest.launch.options, raw);
+    if (selection.kind !== "resolved") {
+      console.log(selection.reason);
+      if (reader.scripted) onRejectedCommand?.();
+      continue;
+    }
+    if (selection.option.projection?.available === false) {
+      console.log(selection.option.projection.blockedReason ?? "That approach is unavailable.");
+      if (reader.scripted) onRejectedCommand?.();
+      continue;
+    }
+    return selection.option.id;
+  }
 }
 
 /**
@@ -1425,10 +1640,10 @@ export async function runQuestSession(
   return quitting ? "quit" : "done";
 }
 
-function saveSnapshot(session: OverworldSession, name: string): void {
+function saveSnapshot(session: CliJourneySession, name: string): void {
   const path = savePath(name);
   mkdirSync(SAVE_DIR, { recursive: true });
-  writeFileSync(path, JSON.stringify(session.snapshot(), null, 2));
+  writeFileSync(path, session.serialize());
   console.log(`Saved journey to ${path}.`);
 }
 

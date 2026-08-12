@@ -383,6 +383,9 @@ describe("journey checkpoints wait for embedded RPG safe boundaries", () => {
     });
 
     const deferred = OverworldSession.restore(world, parent.snapshot());
+    expect(deferred.questLaunchCharacterState("gallowmere")).toEqual(
+      parent.questLaunchCharacterState("gallowmere"),
+    );
     expect(deferred.journey()).toMatchObject({
       status: "active",
       acceptedDecisions: 40,

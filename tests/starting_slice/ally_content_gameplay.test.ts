@@ -55,7 +55,7 @@ const JUNE_PROMISE = "albany:promise_june_cattle_first";
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 
-function withoutWolfReturnSceneOverlays<T extends typeof world>(manifest: T): T {
+function withoutWolfReturnDependents<T extends typeof world>(manifest: T): T {
   for (const localAction of [...manifest.local_events, ...manifest.local_jobs]) {
     const scene = localAction.authored_scene;
     if (
@@ -71,6 +71,13 @@ function withoutWolfReturnSceneOverlays<T extends typeof world>(manifest: T): T 
     ) {
       delete localAction.authored_scene;
     }
+  }
+  for (const character of manifest.characters) {
+    character.variants = character.variants?.filter(
+      (variant) =>
+        !(variant.after_world_facts ?? []).some((factId) => factId.startsWith("fact:wolf_winter_")),
+    );
+    if (character.variants?.length === 0) delete character.variants;
   }
   return manifest;
 }
@@ -206,9 +213,9 @@ describe("SS-F04 — June Pike authored ally gameplay", () => {
     expect(() => assertOverworldIntegrity(omitted)).toThrow(/leaves field promise.*unresolved/i);
 
     // This assertion is about the opening contract's target export requirement.
-    // Remove optional Albany return scenes which correctly depend on those exports
-    // so their downstream reference error cannot mask the target-contract error.
-    const exportless = withoutWolfReturnSceneOverlays(structuredClone(world));
+    // Remove optional Albany return scenes and contact variants which correctly depend
+    // on those exports so their downstream reference errors cannot mask the target contract.
+    const exportless = withoutWolfReturnDependents(structuredClone(world));
     const exportlessWolf = exportless.quests.find((quest) => quest.id === "wolf_winter");
     if (!exportlessWolf) throw new Error("Wolf-Winter must exist");
     delete exportlessWolf.campaign_exports;

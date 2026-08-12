@@ -616,7 +616,10 @@ describe("SS-F02 — relief oath paired counterfactual", () => {
       );
     }
     expect(menus[1]).toEqual(menus[0]);
-    expect(menus[2]).toEqual(menus[0]);
+    expect(menus[0]).toContain("ask_current_support");
+    expect(menus[1]).toContain("ask_current_support");
+    expect(menus[2]).not.toContain("ask_current_support");
+    expect(menus[2]).toEqual(menus[0]!.filter((id) => id !== "ask_current_support"));
 
     const fullPass = act(
       commitAuthorityFortify(FULL),

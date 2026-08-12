@@ -15,10 +15,22 @@ export type QualifiedRpgAsk = {
   topic: string;
 };
 
+export type RpgTalkCommand = {
+  speaker: string;
+};
+
+/** Recognize TALK after the same id/alias punctuation normalization used by
+ * dialogue topics. This prevents an authored `talk_to_<name>` topic alias from
+ * stealing input that is visibly a speaker-selection command. */
+export function parseRpgTalkCommand(value: string): RpgTalkCommand | null {
+  const match = normalizeRpgTopicCommand(value).match(/^talk(?:\s+to)?\s+(.+)$/);
+  return match ? { speaker: match[1]! } : null;
+}
+
 /** Recognize the speaker-qualified ASK form before topic aliases are resolved.
  * `ask about <topic>` remains the ordinary unqualified form. */
 export function parseQualifiedRpgAskCommand(value: string): QualifiedRpgAsk | null {
-  const match = normalizeRpgCommand(value).match(/^ask\s+(.+?)\s+about\s+(.+)$/);
+  const match = normalizeRpgTopicCommand(value).match(/^ask\s+(.+?)\s+about\s+(.+)$/);
   if (!match) return null;
   return { speaker: match[1]!, topic: match[2]! };
 }

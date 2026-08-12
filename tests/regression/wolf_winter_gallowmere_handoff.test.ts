@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { hashState } from "../../src/core/hash.js";
+import { createToolApi } from "../../src/mcp/tools.js";
 import { planOverworldRoute } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -28,6 +30,29 @@ function moveToArea(session: OverworldSession, destinationAreaId: string): void 
     .areaExits.find((candidate) => candidate.destination.id === destinationAreaId);
   if (!route) throw new Error(`Expected a discovered area route to ${destinationAreaId}.`);
   session.moveArea(route.id);
+}
+
+function continueFixedCheckpoint(session: OverworldSession): void {
+  const pending = session.journey().pendingChoice;
+  if (
+    pending?.reasons.includes("checkpoint") === true &&
+    !pending.reasons.includes("goal_completed")
+  ) {
+    session.chooseJourney("continue");
+  }
+}
+
+function travelSessionToTown(session: OverworldSession, destinationTownId: string): void {
+  const route = planOverworldRoute(world, session.view().current.id, destinationTownId);
+  if (!route) throw new Error(`Expected a route to ${destinationTownId}.`);
+  for (const step of route.steps) {
+    session.travel(step.edge.id);
+    continueFixedCheckpoint(session);
+    if (session.view().pendingRoadEncounter) {
+      session.resolveRoadEncounter("press_on");
+      continueFixedCheckpoint(session);
+    }
+  }
 }
 
 function startAlbanyWolf(session: OverworldSession): void {
@@ -138,7 +163,6 @@ function travelToQueensburyMarket(session: OverworldSession): void {
   if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
   session.travel(SARATOGA_TO_QUEENSBURY);
   if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
-  session.exploreArea("queensbury_town__civic_core");
   moveToArea(session, "queensbury_town__market");
 }
 
@@ -189,8 +213,21 @@ function startGallowmereAfterWolf(
     "send_wagon_to_cade",
     "send_wardens_north",
   ]);
+  const beforeDispatch = session.snapshot();
   session.chooseJourneyStory(choice);
   expect(session.journey().acceptedDecisions).toBe(23);
+  const afterDispatch = session.snapshot();
+  expect(
+    afterDispatch.discoveredAreaIds.filter(
+      (areaId) => !beforeDispatch.discoveredAreaIds.includes(areaId),
+    ),
+  ).toEqual(["queensbury_town__market"]);
+  expect(
+    afterDispatch.discoveredQuestIds.filter(
+      (questId) => !beforeDispatch.discoveredQuestIds.includes(questId),
+    ),
+  ).toEqual(["gallowmere"]);
+  expect(OverworldSession.restore(world, afterDispatch).snapshot()).toEqual(afterDispatch);
   expect(session.journey().goalGuidance).toBe(
     "Objective route: take the road toward Saratoga Springs city. Queensbury town is 2 roads and about 60 road minutes away.",
   );
@@ -204,17 +241,17 @@ function startGallowmereAfterWolf(
   expect(session.view().pendingRoadEncounter).toBeNull();
   expect(session.journey().acceptedDecisions).toBe(26);
 
-  session.exploreArea("queensbury_town__civic_core");
   expect(session.journey().goalGuidance).toBe(
     "Objective town reached: move toward Queensbury Market Streets to find the authored lead.",
   );
+  expect(session.view().areaExits.map((route) => route.id)).toContain(QUEENSBURY_MARKET_ROUTE);
   expect(session.view().quests.map((quest) => quest.id)).toContain("gallowmere");
   session.moveArea(QUEENSBURY_MARKET_ROUTE);
   const started = session.startQuest("gallowmere");
 
   expect(started.id).toBe("gallowmere");
-  expect(session.journey().acceptedDecisions).toBe(29);
-  expect(session.journey().acceptedDecisions - 22).toBe(7);
+  expect(session.journey().acceptedDecisions).toBe(28);
+  expect(session.journey().acceptedDecisions - 22).toBe(6);
   expect(session.view()).toMatchObject({
     current: { id: "queensbury_town" },
     currentArea: { id: "queensbury_town__market" },
@@ -292,7 +329,7 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
   });
 
   it.each(["send_wagon_to_cade", "send_wardens_north"] as const)(
-    "starts Gallowmere at decision 29 through %s without a generic job dependency",
+    "starts Gallowmere at decision 28 through %s without a scout detour or generic job dependency",
     (choice) => {
       const session = startGallowmereAfterWolf(choice);
       expect(session.view().log.map((entry) => entry.edgeId)).toEqual([
@@ -316,6 +353,206 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       });
     },
   );
+
+  it("migrates only the authenticated campaign anchor and replays the first Queensbury action across UI and MCP restore", () => {
+    const session = new OverworldSession(world);
+    completeWolfAtDecision22(session);
+    session.chooseJourney("continue");
+    session.chooseJourneyStory("send_wagon_to_cade");
+
+    const current = session.snapshot();
+    expect(current.discoveredQuestIds).toContain("gallowmere");
+    expect(current.discoveredAreaIds).toContain("queensbury_town__market");
+
+    const preAnchor = structuredClone(current);
+    preAnchor.discoveredQuestIds = preAnchor.discoveredQuestIds.filter(
+      (questId) => questId !== "gallowmere",
+    );
+    preAnchor.discoveredAreaIds = preAnchor.discoveredAreaIds.filter(
+      (areaId) => areaId !== "queensbury_town__market",
+    );
+    const migrated = OverworldSession.restore(world, preAnchor);
+    expect(migrated.snapshot().discoveredQuestIds).toContain("gallowmere");
+    expect(migrated.snapshot().discoveredAreaIds).toContain("queensbury_town__market");
+    expect(OverworldSession.restore(world, migrated.snapshot()).snapshot()).toEqual(
+      migrated.snapshot(),
+    );
+
+    const forgedCampaignCopy = structuredClone(current);
+    const campaignEntry = forgedCampaignCopy.journalEntries.find(
+      (entry) => entry.kind === "campaign",
+    );
+    if (!campaignEntry) throw new Error("Expected the authenticated campaign goal journal.");
+    campaignEntry.text += " Forged route.";
+    expect(() => OverworldSession.restore(world, forgedCampaignCopy)).toThrow(
+      /campaign journal entry.*forged/i,
+    );
+
+    const unrelatedQuest = world.quests.find(
+      (quest) => quest.home === "oneonta_city" && quest.id !== "gallowmere",
+    );
+    if (!unrelatedQuest) throw new Error("Expected an unrelated remote quest fixture.");
+    const forgedRemoteDiscovery = structuredClone(current);
+    forgedRemoteDiscovery.discoveredQuestIds.push(unrelatedQuest.id);
+    forgedRemoteDiscovery.discoveredAreaIds.push(unrelatedQuest.area);
+    expect(() => OverworldSession.restore(world, forgedRemoteDiscovery)).toThrow(
+      /belongs to unvisited town/i,
+    );
+
+    session.followGoalPassage();
+    session.resolveRoadEncounter("press_on");
+    session.followGoalPassage();
+    session.moveArea(QUEENSBURY_MARKET_ROUTE);
+    const scouted = session.scoutPoi("queensbury_town__market__poi");
+    expect(scouted.discoveredAreas?.map((area) => area.id)).toEqual([
+      "queensbury_town__transport_hub",
+    ]);
+    const afterFirstAction = session.snapshot();
+    expect(
+      afterFirstAction.discoveredAreaIds.filter((areaId) => areaId.startsWith("queensbury_town__")),
+    ).toEqual([
+      "queensbury_town__civic_core",
+      "queensbury_town__market",
+      "queensbury_town__transport_hub",
+    ]);
+    expect(OverworldSession.restore(world, afterFirstAction).snapshot()).toEqual(afterFirstAction);
+    const mcp = createToolApi({ root: process.cwd() }).restore_overworld_session({
+      snapshot: afterFirstAction,
+      compact_context: false,
+      compact_result: false,
+    });
+    expect(mcp.observation.areas.map((area) => area.id)).toEqual([
+      "queensbury_town__civic_core",
+      "queensbury_town__market",
+      "queensbury_town__transport_hub",
+    ]);
+
+    const actionBeforeActivation = structuredClone(afterFirstAction);
+    const trail = actionBeforeActivation.openingLeadSourceDecisionTrail;
+    if (!trail) throw new Error("Expected the replayable campaign decision trail.");
+    const activation = trail.decisions.find(
+      (decision) => decision.actionId === "campaign_story:albany_dawn_dispatch:send_wagon_to_cade",
+    );
+    const marketAction = trail.decisions.find(
+      (decision) => decision.actionId === "scout:queensbury_town__market__poi",
+    );
+    if (!activation || !marketAction) {
+      throw new Error("Expected activation and anchored-market action decisions.");
+    }
+    const activationAction = {
+      surface: activation.surface,
+      actionId: activation.actionId,
+      reason: activation.reason,
+    };
+    activation.surface = marketAction.surface;
+    activation.actionId = marketAction.actionId;
+    activation.reason = marketAction.reason;
+    marketAction.surface = activationAction.surface;
+    marketAction.actionId = activationAction.actionId;
+    marketAction.reason = activationAction.reason;
+    let decisionProofHash = trail.baseDecisionProofHash;
+    for (const decision of trail.decisions) {
+      decisionProofHash = hashState({ previous: decisionProofHash, ...decision });
+    }
+    actionBeforeActivation.journey.decisionProof = {
+      hash: decisionProofHash,
+      last: { ...trail.decisions.at(-1)! },
+    };
+    expect(() => OverworldSession.restore(world, actionBeforeActivation)).toThrow(
+      /before discovering area "queensbury_town__market"/i,
+    );
+  });
+
+  it("accepts a Oneonta market event before the anchored quest and restores it exactly", () => {
+    const session = startGallowmereAfterWolf("send_wagon_to_cade");
+    session.completeQuest("gallowmere", {
+      endingId: "ending_hunt_won",
+      endingTitle: "The Gallowmere Hunt Won",
+      death: false,
+    });
+    session.chooseJourney("continue");
+    expect(session.journey().goal.id).toBe("oneonta_tanners_fever");
+
+    travelSessionToTown(session, "oneonta_city");
+    expect(
+      session
+        .view()
+        .areas.map((area) => area.id)
+        .filter((areaId) => areaId.startsWith("oneonta_city__")),
+    ).toEqual(["oneonta_city__civic_core", "oneonta_city__market"]);
+    moveToArea(session, "oneonta_city__market");
+    const investigated = session.investigateEvent("oneonta_city__market__event");
+    expect(investigated.entry.id).toBe("investigate:oneonta_city__market__event");
+    expect(session.snapshot().startedQuestIds).not.toContain("tanners_fever");
+
+    const snapshot = session.snapshot();
+    expect(OverworldSession.restore(world, snapshot).snapshot()).toEqual(snapshot);
+  });
+
+  it.each([
+    [
+      "area",
+      (session: OverworldSession) => {
+        session.exploreArea("queensbury_town__market");
+      },
+    ],
+    [
+      "contact",
+      (session: OverworldSession) => {
+        session.talkToCharacter("queensbury_town__market__contact");
+      },
+    ],
+    [
+      "event",
+      (session: OverworldSession) => {
+        session.investigateEvent("queensbury_town__market__event");
+      },
+    ],
+    [
+      "point of interest",
+      (session: OverworldSession) => {
+        session.scoutPoi("queensbury_town__market__poi");
+      },
+    ],
+    [
+      "site",
+      (session: OverworldSession) => {
+        session.scoutPoi("queensbury_town__market__poi");
+        session.exploreSite("queensbury_town__market__site");
+      },
+    ],
+    [
+      "job",
+      (session: OverworldSession) => {
+        session.scoutPoi("queensbury_town__market__poi");
+        session.talkToCharacter("queensbury_town__market__contact");
+        session.workLocalJob("queensbury_town__market__job");
+      },
+    ],
+    [
+      "resolution",
+      (session: OverworldSession) => {
+        session.scoutPoi("queensbury_town__market__poi");
+        session.talkToCharacter("queensbury_town__market__contact");
+        session.investigateEvent("queensbury_town__market__event");
+        session.resolveEvent("queensbury_town__market__event");
+      },
+    ],
+  ] as const)("restores a campaign-anchored Queensbury %s action", (_label, act) => {
+    const prepared = new OverworldSession(world);
+    completeWolfAtDecision22(prepared);
+    prepared.chooseJourney("continue");
+    prepared.chooseJourneyStory("send_wagon_to_cade");
+    prepared.followGoalPassage();
+    prepared.resolveRoadEncounter("press_on");
+    prepared.followGoalPassage();
+    prepared.moveArea(QUEENSBURY_MARKET_ROUTE);
+
+    const session = OverworldSession.restore(world, prepared.snapshot());
+    act(session);
+    const snapshot = session.snapshot();
+    expect(OverworldSession.restore(world, snapshot).snapshot()).toEqual(snapshot);
+  });
 
   it("evolves Hayden's contact card and one-time talk across both dispatch branches and restore", () => {
     const baseCopies: string[] = [];
@@ -491,7 +728,14 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
     if (session.view().pendingRoadEncounter) session.resolveRoadEncounter("press_on");
     completeWolfAtDecision22(session);
     session.chooseJourney("continue");
+    const beforeDispatch = session.snapshot();
     session.chooseJourneyStory("send_wagon_to_cade");
+    const afterDispatch = session.snapshot();
+    expect(
+      afterDispatch.discoveredAreaIds.filter(
+        (areaId) => !beforeDispatch.discoveredAreaIds.includes(areaId),
+      ),
+    ).toEqual([]);
 
     expect(session.journey()).toMatchObject({
       acceptedDecisions: 23,
@@ -514,5 +758,14 @@ describe("Wolf-Winter to Gallowmere authored handoff", () => {
       id: "oneonta_tanners_fever",
       status: "active",
     });
+
+    travelSessionToTown(session, "queensbury_town");
+    expect(session.view().currentArea?.id).toBe("queensbury_town__market");
+    const next = session.scoutPoi("queensbury_town__market__poi");
+    expect(next.discoveredAreas?.map((area) => area.id)).toEqual([
+      "queensbury_town__transport_hub",
+    ]);
+    const replayed = session.snapshot();
+    expect(OverworldSession.restore(world, replayed).snapshot()).toEqual(replayed);
   });
 });

@@ -20,6 +20,7 @@ import {
   renderJourneyGate,
   renderJourneyStatus,
   renderQuestLaunch,
+  routeLabelWithDestination,
   renderStationDispatchBoard,
   matchJourneyGateOption,
   resolveQuestLaunchChoice,
@@ -197,6 +198,18 @@ function chooseNorthGoal(session: OverworldSession): void {
 }
 
 describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
+  it("does not repeat a destination already present in an authored route label", () => {
+    expect(
+      routeLabelWithDestination(
+        "Albany Market Streets to Albany Station Quarter",
+        "Albany Station Quarter",
+      ),
+    ).toBe("Albany Market Streets to Albany Station Quarter");
+    expect(routeLabelWithDestination("cobbled incline", "Station Quarter")).toBe(
+      "cobbled incline to Station Quarter",
+    );
+  });
+
   it("renders the fresh-session status from OverworldSession.view()", () => {
     const manifest = loadOverworldManifest(ROOT);
     const session = new OverworldSession(manifest);
@@ -205,7 +218,15 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(text).toContain(view.current.name);
     expect(text).toContain(`Supplies ${view.supplies}/${view.maxSupplies}`);
     expect(text).toContain("Roads:");
+    expect(text).toContain("Roads:\n  Type `go <road number>` to travel (e.g. `go 1`).");
     expect(text).not.toMatch(/\.ya?ml/i); // public surface: no pack paths
+  });
+
+  it("omits the road heading and command hint when there are no exits", () => {
+    const session = new OverworldSession(WORLD);
+    const text = render({ ...session.view(), exits: [] });
+    expect(text).not.toContain("Roads:");
+    expect(text).not.toContain("Type `go <road number>` to travel (e.g. `go 1`).");
   });
 
   it("renders a certified lead's exact local anchor route without a scout detour", () => {
@@ -472,11 +493,21 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(text).toContain("! Story choice comparison");
     for (const option of story!.options) {
       expect(text).toContain(option.label);
-      expect(option.summary).not.toHaveProperty("fieldTrigger");
-      expect(text).toContain(`Promise / priority: ${option.summary!.commitment}`);
-      expect(text).toContain(
-        `Cost / give up: ${option.summary!.immediateCost}; ${option.summary!.tradeoff}`,
-      );
+      expect(option.summary).toMatchObject({
+        fieldTriggerScope: "starter",
+        highlights: expect.arrayContaining([
+          expect.objectContaining({ label: "Permanent role" }),
+          expect.objectContaining({ label: "Return obligation — ACTIVE" }),
+          expect.objectContaining({ label: "Quest DEF" }),
+        ]),
+      });
+      expect(text).toContain(`Commitment: ${option.summary!.commitment}`);
+      expect(text).toContain(`Starter package / field edge: ${option.summary!.fieldTrigger!}`);
+      for (const highlight of option.summary!.highlights ?? []) {
+        expect(text).toContain(`${highlight.label}: ${highlight.value}`);
+      }
+      expect(text).toContain(`Immediate cost: ${option.summary!.immediateCost}`);
+      expect(text).toContain(`Tradeoff: ${option.summary!.tradeoff}`);
       expect(text).toContain(`Inspect: \`inspect ${option.id}\``);
       expect(text).toContain(`Choose: \`choose ${option.id}\``);
       expect(text).not.toContain(option.consequence);
@@ -1312,7 +1343,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     }
   });
 
-  it("keeps the Queensbury objective visible after Wolf choices and follows it to the northbound encounter", () => {
+  it("follows the Queensbury objective through its encounter to the actionable market anchor", () => {
     const completed = sessionAtCompletedWolfGoal();
     const snapshot = completed.snapshot();
     const expected = OverworldSession.restore(WORLD, snapshot);
@@ -1327,6 +1358,14 @@ describe("overworld_play CLI (scripted mode)", () => {
     expect(expectedFollow.stopReason).toBe("road_encounter");
     expect(expectedFollow.stoppedAt).toBe("Saratoga Springs city");
     expect(expectedEncounter).not.toBeNull();
+    expected.resolveRoadEncounter("press_on");
+    const expectedArrival = expected.followGoalPassage();
+    expect(expectedArrival.stopReason).toBe("objective");
+    expect(expectedArrival.stoppedAt).toBe("Queensbury town");
+    expect(expected.view().areaExits.map((exit) => exit.destination.id)).toContain(
+      "queensbury_town__market",
+    );
+    expect(expected.view().quests.map((quest) => quest.id)).toContain("gallowmere");
 
     const temp = mkdtempSync(join(tmpdir(), "adventureforge-cli-north-goal-"));
     const snapshotPath = join(temp, "wolf-complete.json");
@@ -1336,7 +1375,7 @@ describe("overworld_play CLI (scripted mode)", () => {
         "--restore",
         snapshotPath,
         "--commands",
-        "choose continue; choose Send the wagon back to Cade; look; follow goal",
+        "choose continue; choose Send the wagon back to Cade; look; follow goal; press; follow goal; enter Queensbury Market Streets",
       ]);
       expect(run.status, run.output).toBe(0);
       expect(run.output).toContain("Queensbury town");
@@ -1350,6 +1389,11 @@ describe("overworld_play CLI (scripted mode)", () => {
       );
       expect(run.output).toContain(expectedEncounter!.event.title);
       expect(run.output).toContain(expectedEncounter!.event.summary);
+      expect(run.output).toContain(`Goal passage stop: objective at ${expectedArrival.stoppedAt}.`);
+      expect(run.output).toContain("Walked");
+      expect(run.output).toContain("to Queensbury Market Streets");
+      expect(run.output).not.toContain('No local route matches "queensbury market streets"');
+      expect(run.output).not.toContain("A scripted command was rejected.");
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

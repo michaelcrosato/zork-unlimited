@@ -267,8 +267,13 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const registrationSource = WORLD.opening_registration!;
       const registrationDetailsText = (details as { textContent?: string | null }).textContent;
       const registrationOption = registration.options[0]!;
-      expect(choiceButtonText).toContain("Promise / priority:");
-      expect(choiceButtonText).toContain("Cost / give up:");
+      expect(choiceButtonText).toContain("Commitment:");
+      expect(choiceButtonText).toContain("Starter package / field edge:");
+      expect(choiceButtonText).toContain("Permanent role:");
+      expect(choiceButtonText).toContain("Return obligation — ACTIVE:");
+      expect(choiceButtonText).toContain("Quest DEF:");
+      expect(choiceButtonText).toContain("Immediate cost:");
+      expect(choiceButtonText).toContain("Tradeoff:");
       expect(choiceButtonText).toContain(registrationOption.summary!.commitment);
       expect(choiceButtonText).toContain(registrationOption.summary!.immediateCost);
       expect(choiceButtonText).toContain(registrationOption.summary!.tradeoff);
@@ -276,8 +281,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(choiceButtonText).not.toContain(registrationSource.profiles[0]!.trigger_category);
       expect(choiceButtonText).not.toContain(registrationSource.profiles[0]!.preview);
       expect(registrationDetailsText).toContain(registrationOption.consequence);
-      expect(registrationDetailsText).not.toContain(registrationSource.profiles[0]!.preview);
-      expect(registrationDetailsText).not.toContain(registrationSource.profiles[0]!.consequence);
+      expect(registrationDetailsText).toContain(registrationSource.profiles[0]!.preview);
+      expect(registrationDetailsText).toContain(registrationSource.profiles[0]!.consequence);
 
       expect(details.parentElement).toBe(card);
       expect(choiceButton.contains(details)).toBe(false);

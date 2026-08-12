@@ -9,6 +9,7 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { campaignCharacterImportPlayerStateContract } from "../../src/rpg/campaign_character_import.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -62,14 +63,11 @@ describe("single-engine RPG validation bar", () => {
     if (!loaded.ok) return;
 
     const quest = world.quests.find((candidate) => candidate.source === path);
-    const importRules = quest?.campaign_imports?.rules ?? [];
+    const importContract = campaignCharacterImportPlayerStateContract(quest?.campaign_imports);
     const errors = validateRpg(loaded.compiled.pack, {
-      extraSettableFlags: importRules.flatMap((rule) =>
-        "target_flag" in rule ? [rule.target_flag] : [],
-      ),
-      extraObtainable: importRules.flatMap((rule) =>
-        rule.type === "equipment_to_item" ? [rule.target_object] : [],
-      ),
+      extraSettableFlags: importContract.settableFlagIds,
+      extraObtainable: importContract.obtainableObjectIds,
+      extraInitialVarRanges: importContract.initialVarRanges,
     }).findings.filter((finding) => finding.severity === "error");
     expect(errors, `${path} has validation errors: ${JSON.stringify(errors)}`).toEqual([]);
   });

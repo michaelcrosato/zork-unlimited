@@ -256,11 +256,21 @@ rooms:
           Cade's ordinary lessons, store gear, yard preparation, and backtracking remain.
       - when:
           - { has_flag: strategy_drive_committed }
+          - { not_item: drive_signal_rope_kit }
           - { not_visited: paling_gap }
         text: >
           The drive is irreversible. Take Cade's two-charge rig, then go north. Reading,
           preparation, and donning store gear had to happen before commitment. The moving
           herd forfeits outer defense and retreat; this strategy cannot switch to lure or combat.
+      - when:
+          - { has_flag: strategy_drive_committed }
+          - { has_item: drive_signal_rope_kit }
+          - { not_visited: paling_gap }
+        text: >
+          The drive is irreversible. Cade's two-charge rig rides with you now: go north and
+          fire its shutter signal at the broken paling. Reading, preparation, and donning store
+          gear are closed. The moving herd forfeits outer defense and retreat; this strategy
+          cannot switch to lure or combat.
       - when:
           - { has_flag: strategy_lure_committed }
           - { not_item: winter_feed_sack }
@@ -500,6 +510,7 @@ rooms:
           to the low hatch. Yard east.
       - when:
           - { has_flag: strategy_lure_committed }
+          - { not_item: byre_jerkin }
           - { not_item: winter_feed_sack }
           - { not_flag: pack_diverted }
         text: >
@@ -507,6 +518,28 @@ rooms:
           draws the wolves through the broken paling. Take the finite feed before the
           breach; his local instruction sends the second cast across the feed-hauler's
           crawlboard above this ladder. Yard east.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_item: byre_jerkin }
+          - { none_of: [{ has_flag: jerkin_donned }] }
+          - { not_item: winter_feed_sack }
+          - { not_flag: pack_diverted }
+        text: >
+          The jerkin peg is bare. Its padded hide is in your hands, not yet on your back;
+          don it before the breach. Cade's last feed sack remains here for the nonlethal
+          plan. Take the finite feed before the breach; his local instruction sends the
+          second cast across the feed-hauler's crawlboard above this ladder. Yard east.
+      - when:
+          - { has_flag: strategy_lure_committed }
+          - { has_item: byre_jerkin }
+          - { has_flag: jerkin_donned }
+          - { not_item: winter_feed_sack }
+          - { not_flag: pack_diverted }
+        text: >
+          The jerkin peg is bare, its padded hide now on your back. Cade's last feed sack
+          remains here for the nonlethal plan. Take the finite feed before the breach; his
+          local instruction sends the second cast across the feed-hauler's crawlboard above
+          this ladder. Yard east.
       - when: [{ has_item: byre_jerkin }, { none_of: [{ has_flag: jerkin_donned }] }]
         text: >
           The peg by the door is bare where the steading's padded byre-jerkin hung. Its
@@ -819,7 +852,10 @@ rooms:
           The gap in the broken paling, the young wolf dead in the snow of it now and the
           breach held. The byre runs on north past the door; the byre-yard is back to the
           south.
-      - when: [{ has_flag: yearling_spear_driven }]
+      - when:
+          - any_of:
+              - { has_flag: yearling_spear_driven }
+              - { has_flag: yearling_spear_driven_unarmored }
         text: >
           The yearling is alive but driven sideways against the broken paling by the
           second spear stroke. Its rush is spent and its shoulder is open; if it still
@@ -1646,7 +1682,10 @@ objects:
         text: >
           The Albany relief spear, scored along the shaft where the flank-wolf met
           your chosen line at the byre door.
-      - when: [{ has_flag: yearling_spear_driven }]
+      - when:
+          - any_of:
+              - { has_flag: yearling_spear_driven }
+              - { has_flag: yearling_spear_driven_unarmored }
         text: >
           The Albany relief spear, its butt packed with paling-snow and its head marked
           by the second drive that followed the yearling's checked rush.
@@ -2899,7 +2938,7 @@ objects:
             - set_flag: yearling_redirected
             - inc_var: { name: score, by: 10 }
             - set_quest_stage: { quest: the_watch, stage: breach_redirected }
-            - add_journal: "Cade's pre-feed absorbs the ridge pressure. The yearling follows the clean line; cattle alarm does not rise."
+            - add_journal: "Emery's Albany wagon fodder absorbs the ridge pressure. The yearling follows the clean line; cattle alarm does not rise."
             - narrate: >
                 Emery's drovers have already fed the herd down from its first panic. The
                 exposed ridge makes the crosswind plain; your clean cast turns the
@@ -2908,12 +2947,13 @@ objects:
           on_failure:
             - set_flag: lure_trail_fouled
             - inc_var: { name: cattle_alarm, by: 2 }
-            - add_journal: "The ridge cast fouls despite Cade's pre-feed. No retry; alarm +2. Bind a rail to redirect the yearling or fight."
+            - add_journal: "The ridge cast fouls despite Emery's Albany wagon fodder. No retry; alarm +2. Bind a rail to redirect the yearling or fight."
             - narrate: >
                 The pre-fed cattle hold only until the cast clips the paling and folds
                 into churned snow. The yearling stays, the herd hammers the slats, and the
-                full failed-cast pressure lands. The feed is spent: bind a split rail or
-                fight and carry the lure deeper.
+                full failed-cast pressure lands. The first cast is spent, but the sack
+                still holds the loft and leader measures: bind a split rail or fight and
+                carry the lure deeper.
           on_failure_when:
             - conditions:
                 - { has_flag: dispatch_opening_delayed }
@@ -2959,8 +2999,9 @@ objects:
             - narrate: >
                 The crosswind is plain, but the cast clips the paling and folds into
                 churned snow. The yearling smells it but stays; cattle hammer the slats.
-                The feed is spent: bind a split rail to force the wolf onto the remaining
-                scent, or fight and carry the lure deeper.
+                The first cast is spent, but the sack still holds the loft and leader
+                measures: bind a split rail to force the wolf onto the remaining scent,
+                or fight and carry the lure deeper.
           on_failure_when:
             - conditions:
                 - { has_flag: dispatch_opening_delayed }
@@ -3004,9 +3045,10 @@ objects:
             - add_journal: "Hidden stockway crosswind folds the first cast. No retry; alarm rises by 2. Bind a rail to redirect the yearling or fight."
             - narrate: >
                 The stockway's hidden crosswind folds the cast into churned snow. The
-                yearling smells it but stays; cattle hammer the slats. The feed is spent:
-                bind a split rail to force the wolf onto the remaining scent, or fight
-                and carry the lure deeper.
+                yearling smells it but stays; cattle hammer the slats. The first cast is
+                spent, but the sack still holds the loft and leader measures: bind a split
+                rail to force the wolf onto the remaining scent, or fight and carry the
+                lure deeper.
           on_failure_when:
             - conditions:
                 - { has_flag: dispatch_opening_delayed }
@@ -4030,9 +4072,59 @@ npcs:
                 - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_fortify
+            - id: current_support
+              aliases: [compare_support, ask_current_support]
+              prompt: "Review how this dispatch's Fieldcraft, oath, June, and Works support affect the four plans; this chooses nothing."
+              conditions:
+                - any_of:
+                    - { var_gte: { name: fieldcraft, value: 4 } }
+                    - { has_flag: relief_oath_limited_duty }
+                    - { has_flag: relief_oath_full_duty }
+                    - { has_flag: june_pike_present }
+                    - { has_flag: works_fortification_prepared }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_current_support
             - id: leave
               aliases: [leave_cade]
               prompt: "Leave Cade."
+              end: true
+        # These notes describe independent imported facts. They deliberately compose instead
+        # of replacing the four-plan scorecard or competing in a combinatorial variant table.
+        - id: cade_current_support
+          npc_text: "Current dispatch support; nothing in this ledger chooses or changes a plan."
+          append_variants:
+            - when: [{ var_gte: { name: fieldcraft, value: 4 } }]
+              text: >
+                Fieldcraft 4 sets starting DEF to 4 and supplies the DRIVE/LURE checks;
+                FORTIFY still rolls Repair.
+            - when: [{ has_flag: relief_oath_limited_duty }]
+              text: >
+                Aid-only adds no DRIVE/HUNT benefit; its clean LURE skips the final ordinary
+                +1 alarm, while household FORTIFY fits and Albany authority bends the promise.
+            - when: [{ has_flag: june_pike_present }]
+              text: >
+                June holds a separate cattle line: HUNT releases her at first blood, LURE can
+                lower a recovered foul, DRIVE keeps its front Crisis cost, and FORTIFY gains
+                her paid brace only on an unstabilized pressure-3 line.
+            - when: [{ has_flag: relief_oath_full_duty }]
+              text: >
+                Full Compact lowers the first Albany-authority FORTIFY seat by 2; other plan
+                checks are unchanged.
+            - when: [{ has_flag: works_fortification_prepared }]
+              text: >
+                Works makes Cade's first FORTIFY seat DC 12 and Albany's DC 12, or DC 10 with
+                Full Compact. At the LURE/HUNT rail it replaces the wedge with Repair DC 12;
+                a miss exposes the marked no-roll splice and raises alarm when set.
+          topics:
+            - id: current_support_back
+              prompt: "Close the current-support ledger and return to Cade's four plans."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave Cade without choosing a plan."
               end: true
         - id: cade_wolves
           # The combat_guaranteed promise spoken aloud — and TRUE, because the validator
@@ -4785,14 +4877,32 @@ enemies:
       - id: drive_set_spear
         command: "drive the set spear through the yearling's committed rush"
         after: set_spear
-        conditions: [{ has_item: relief_spear }, { not_flag: strategy_lure_committed }]
+        conditions:
+          - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
+          - { has_flag: jerkin_donned }
         result_flag: yearling_spear_driven
         attack_bonus: 0
         defense_bonus: 1
         narration: >
           The yearling's weight is still committed along the ash shaft. You step in
           behind the set butt, turn the first check into a driving second stroke, and
-          keep the hide shoulder between its teeth and your hands.
+          keep the jerkin's hide shoulder between its teeth and your hands.
+      - id: drive_set_spear_unarmored
+        command: "drive the set spear behind the ash shaft"
+        after: set_spear
+        conditions:
+          - { has_item: relief_spear }
+          - { not_flag: strategy_lure_committed }
+          - { none_of: [{ has_flag: jerkin_donned }] }
+        result_flag: yearling_spear_driven_unarmored
+        attack_bonus: 0
+        defense_bonus: 1
+        narration: >
+          The yearling's weight is still committed along the ash shaft. You step in
+          behind the set butt, turn the first check into a driving second stroke, and
+          keep the spear crosswise between its teeth and your hands. No worn armor
+          stands between you and its teeth in this line.
     on_defeat:
       - add_journal: "You take the yearling on its rush as it commits, and it goes down in the snow of the breach."
       - set_flag: june_blood_condition_broken
@@ -5402,6 +5512,13 @@ endings:
       the slats; the pack is going, and the steading will see spring. June had already
       taken the cattle-first return to Albany with your agreement intact and no field aid.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when:
           - { has_flag: cattle_gate_barred_with_split_guard }
@@ -5466,6 +5583,13 @@ endings:
       the fighting now holds one last line against the dark byre. Cade sees the choice at
       the slats; the pack is going, and the steading will see spring.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when:
           - { has_flag: cattle_gate_barred_with_split_guard }
@@ -5525,6 +5649,13 @@ endings:
       repair at the breach. Cade sees tomorrow's work already saved. June had already
       taken the cattle-first return to Albany with your agreement intact and no field aid.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when:
           - { has_item: split_rail_guard }
@@ -5589,6 +5720,13 @@ endings:
       chose another line for old grey and carried this cross-piece through for daylight
       repair at the breach. Cade sees tomorrow's work already saved.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when:
           - { has_item: split_rail_guard }
@@ -5644,10 +5782,17 @@ endings:
     title: "The Byre Held — June Released"
     text: >
       Grey dawn finds you among warm, whole cattle; the broken pack is silent in the high
-      wood. With only the spear, you held the line between wolves and winter. Cade sees
+      wood. With the spear, you held the line between wolves and winter. Cade sees
       you below and knows. The steading faces a hard spring, not its last. June had already
       taken the cattle-first return to Albany with your agreement intact and no field aid.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when: [{ has_flag: leader_split_guard_set }]
         text: >
@@ -5741,9 +5886,16 @@ endings:
     title: "The Byre Held"
     text: >
       Grey dawn finds you among warm, whole cattle; the broken pack is silent in the high
-      wood. With only the spear, you held the line between wolves and winter. Cade sees
+      wood. With the spear, you held the line between wolves and winter. Cade sees
       you below and knows. The steading faces a hard spring, not its last.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when: [{ has_flag: leader_split_guard_set }]
         text: >

@@ -12,7 +12,10 @@ param(
   [string]$ControlPipe,
 
   [Parameter(Mandatory = $true)]
-  [string]$TerminationFileBase64
+  [string]$TerminationFileBase64,
+
+  [Parameter(Mandatory = $true)]
+  [string]$ResumeFileBase64
 )
 
 $ErrorActionPreference = "Stop"
@@ -177,6 +180,34 @@ function Write-Control($Writer, $Value) {
   $Writer.WriteLine(($Value | ConvertTo-Json -Compress))
 }
 
+function Stop-OwnedJob($Job, $Writer) {
+  if (-not [CodexBlindJob]::TerminateJobObject($Job, 1)) {
+    throw (Last-Win32Error "TerminateJobObject")
+  }
+  $deadline = [DateTime]::UtcNow.AddSeconds(2)
+  do {
+    $accounting = New-Object CodexBlindJob+JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
+    $accountingSize = [Runtime.InteropServices.Marshal]::SizeOf($accounting)
+    if (
+      -not [CodexBlindJob]::QueryInformationJobObject(
+        $Job,
+        1,
+        [ref]$accounting,
+        $accountingSize,
+        [IntPtr]::Zero
+      )
+    ) {
+      throw (Last-Win32Error "QueryInformationJobObject")
+    }
+    if ($accounting.ActiveProcesses -eq 0) {
+      Write-Control $Writer @{ type = "tree_terminated" }
+      return
+    }
+    Start-Sleep -Milliseconds 25
+  } while ([DateTime]::UtcNow -lt $deadline)
+  throw "Windows process job remained active after forced termination"
+}
+
 $pipe = $null
 $writer = $null
 $job = [IntPtr]::Zero
@@ -196,6 +227,9 @@ try {
   $writer.AutoFlush = $true
   $terminationFile = [Text.Encoding]::UTF8.GetString(
     [Convert]::FromBase64String($TerminationFileBase64)
+  )
+  $resumeFile = [Text.Encoding]::UTF8.GetString(
+    [Convert]::FromBase64String($ResumeFileBase64)
   )
 
   $job = [CodexBlindJob]::CreateJobObject([IntPtr]::Zero, $null)
@@ -248,10 +282,29 @@ try {
     throw (Last-Win32Error "AssignProcessToJobObject")
   }
   $providerAssigned = $true
-  if ([CodexBlindJob]::ResumeThread($processInformation.hThread) -eq 0xffffffff) {
-    throw (Last-Win32Error "ResumeThread")
-  }
   Write-Control $writer @{ type = "custody_ready" }
+
+  while (-not (Test-Path -LiteralPath $resumeFile -PathType Leaf)) {
+    $anchorWait = [CodexBlindJob]::WaitForSingleObject($anchor, 0)
+    if ($anchorWait -ne 0 -and $anchorWait -ne 258) {
+      throw (Last-Win32Error "WaitForSingleObject")
+    }
+    if (
+      $anchorWait -eq 0 -or
+      (Test-Path -LiteralPath $terminationFile -PathType Leaf)
+    ) {
+      Stop-OwnedJob $job $writer
+      $treeTerminated = $true
+      break
+    }
+    Start-Sleep -Milliseconds 10
+  }
+  if (-not $treeTerminated) {
+    if ([CodexBlindJob]::ResumeThread($processInformation.hThread) -eq 0xffffffff) {
+      throw (Last-Win32Error "ResumeThread")
+    }
+    Write-Control $writer @{ type = "provider_started" }
+  }
 
   $providerReported = $false
   while (-not $treeTerminated) {
@@ -263,34 +316,8 @@ try {
       $anchorWait -eq 0 -or
       (Test-Path -LiteralPath $terminationFile -PathType Leaf)
     ) {
-      if (-not [CodexBlindJob]::TerminateJobObject($job, 1)) {
-        throw (Last-Win32Error "TerminateJobObject")
-      }
-      $deadline = [DateTime]::UtcNow.AddSeconds(2)
-      do {
-        $accounting = New-Object CodexBlindJob+JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
-        $accountingSize = [Runtime.InteropServices.Marshal]::SizeOf($accounting)
-        if (
-          -not [CodexBlindJob]::QueryInformationJobObject(
-            $job,
-            1,
-            [ref]$accounting,
-            $accountingSize,
-            [IntPtr]::Zero
-          )
-        ) {
-          throw (Last-Win32Error "QueryInformationJobObject")
-        }
-        if ($accounting.ActiveProcesses -eq 0) {
-          $treeTerminated = $true
-          break
-        }
-        Start-Sleep -Milliseconds 25
-      } while ([DateTime]::UtcNow -lt $deadline)
-      if (-not $treeTerminated) {
-        throw "Windows process job remained active after forced termination"
-      }
-      Write-Control $writer @{ type = "tree_terminated" }
+      Stop-OwnedJob $job $writer
+      $treeTerminated = $true
       break
     }
 

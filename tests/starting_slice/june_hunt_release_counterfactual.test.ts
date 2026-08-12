@@ -196,7 +196,7 @@ function reachBloodiedEvacuation(release: boolean): GameState {
   state = act(state, "go_north");
   state = actWorst(state, "maneuver_yearling_wolf_set_spear");
   if (!state.flags.yearling_down) {
-    state = actWorst(state, "maneuver_yearling_wolf_drive_set_spear");
+    state = actWorst(state, "maneuver_yearling_wolf_drive_set_spear_unarmored");
   }
   for (let guard = 0; guard < 10 && !state.flags.yearling_down; guard += 1) {
     state = actWorst(state, "attack_yearling_wolf");

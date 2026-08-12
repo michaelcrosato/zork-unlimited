@@ -34,6 +34,7 @@ import {
   codexFleetMemberEnv,
   createPureFleetBuildFingerprint,
   createSparkAdmissionReceipt,
+  createFleetLaunchControl,
   createFleetTransportFingerprint,
   executeRun,
   FLEET_USAGE,
@@ -1591,6 +1592,13 @@ describe("fleet attempt evidence", () => {
     let launches = 0;
     const resolved = resolveCodexClientBinary(process.execPath);
     const client = codexClientAuthorityRecord(resolved.identity_token, "0.146.0");
+    const fleetBuild = {
+      git_commit: "a".repeat(40),
+      tracked_worktree_clean: true,
+      world_id: "new_york_overworld",
+      world_hash: "b".repeat(64),
+    };
+    let buildCaptures = 0;
     try {
       const result = await executeRun(
         {
@@ -1606,14 +1614,21 @@ describe("fleet attempt evidence", () => {
           opts: { mock: false, resume: false, maxRetries: 2, admissionCanary: false },
           bashPath: "fake-bash",
           fleetDir,
-          fleetBuild: { commit: "a".repeat(40) },
+          fleetBuild,
           fleetClient: client,
-          fleetControl: {
-            clientPreflightFailure: null,
-            admissionFailure: false,
-            transportFingerprint: "b".repeat(64),
-            strictRejectedTransportFingerprints: new Set<string>(),
-          },
+          fleetControl: Object.assign(
+            createFleetLaunchControl({
+              captureBuild: async () => {
+                buildCaptures += 1;
+                return fleetBuild;
+              },
+            }),
+            {
+              admissionFailure: false,
+              transportFingerprint: "b".repeat(64),
+              strictRejectedTransportFingerprints: new Set<string>(),
+            },
+          ),
           spawnRun: async (_command: string, args: string[]) => {
             launches += 1;
             const out = args[args.indexOf("--out") + 1];
@@ -1649,6 +1664,7 @@ describe("fleet attempt evidence", () => {
         },
       );
       expect(launches).toBe(1);
+      expect(buildCaptures).toBe(2);
       expect(result).toMatchObject({
         status: "failed",
         attempts: 1,

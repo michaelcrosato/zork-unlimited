@@ -570,7 +570,7 @@ describe("overworld snapshot restore integrity", () => {
     );
   });
 
-  it("rejects unknown, future, and rewritten contact presentations", () => {
+  it("rejects current-provenance contact rewrites while preserving legacy journal copy", () => {
     const { a, snapshot, entry } = exportedSnapshotWithBaseHaydenConversation();
     const replaceEntry = (replacement: JournalEntry): Snapshot => ({
       ...snapshot,
@@ -598,7 +598,21 @@ describe("overworld snapshot restore integrity", () => {
       a.restore_overworld_session({
         snapshot: replaceEntry({ ...entry, text: "Hayden's earlier dispatch wording." }),
       }),
-    ).not.toThrow();
+    ).toThrow(/does not match its authored copy/);
+
+    const legacyText = "Hayden's earlier dispatch wording.";
+    const legacy = a.restore_overworld_session({
+      snapshot: {
+        ...replaceEntry({ ...entry, text: legacyText }),
+        worldHash: "0".repeat(64),
+      },
+    });
+    const legacyExport = a.export_overworld_session({ session_id: legacy.session_id });
+    expect(legacyExport.ok).toBe(true);
+    if (!legacyExport.ok) throw new Error("expected legacy contact export");
+    expect(
+      legacyExport.snapshot.journalEntries.find((candidate) => candidate.id === entry.id)?.text,
+    ).toBe(legacyText);
   });
 
   it.each([

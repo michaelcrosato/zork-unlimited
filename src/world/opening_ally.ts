@@ -13,6 +13,8 @@ import {
 export const OPENING_ALLY_VERSION = 1 as const;
 export const OPENING_ALLY_MIN_OPTIONS = 3 as const;
 export const OPENING_ALLY_MAX_OPTIONS = 4 as const;
+/** Every opening ally offer begins with the standard substantive contact. */
+export const OPENING_ALLY_CONTACT_MINUTES = 15 as const;
 
 const AUTHORED_TEXT = z
   .string()
@@ -232,6 +234,50 @@ export function openingAllyOptionById(
 
 export function formatOpeningAllyCost(terms: OpeningAllyTerms): string {
   return terms.minutes === 0 ? "no added time" : `${String(terms.minutes)} minutes`;
+}
+
+/** State both the follow-up cost and the cost from choosing to contact the ally. */
+export function formatOpeningAllyTimingDisclosure(terms: OpeningAllyTerms): string {
+  const totalMinutes = OPENING_ALLY_CONTACT_MINUTES + terms.minutes;
+  return `Additional time after the ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute conversation: ${formatOpeningAllyCost(terms)}. Total time including the conversation: ${String(totalMinutes)} minutes.`;
+}
+
+/** Keep the same total-time truth compact enough for the bounded selection receipt. */
+export function formatOpeningAllyChoiceTiming(terms: OpeningAllyTerms): string {
+  const totalMinutes = OPENING_ALLY_CONTACT_MINUTES + terms.minutes;
+  const additional =
+    terms.minutes === 0 ? "no added time" : `${String(terms.minutes)} minutes additional`;
+  return `${additional} after ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute talk; ${String(totalMinutes)} minutes total`;
+}
+
+function openingAllyOptionTimingSummary(scene: OpeningAlly): string {
+  const parsed = parseOpeningAlly(scene);
+  return parsed.options
+    .map((option) => {
+      const totalMinutes = OPENING_ALLY_CONTACT_MINUTES + option.terms.minutes;
+      const additional =
+        option.terms.minutes === 0
+          ? "no added time"
+          : `${formatOpeningAllyCost(option.terms)} additional`;
+      return `${option.title}: ${additional}, ${String(totalMinutes)} minutes total`;
+    })
+    .join("; ");
+}
+
+/** Disclose totals without asserting whether this session has already paid for the conversation. */
+export function openingAllyTotalTimingSummary(scene: OpeningAlly): string {
+  return `Totals include the standard ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute conversation: ${openingAllyOptionTimingSummary(scene)}.`;
+}
+
+/** Summarize every option before the player spends the initial conversation time. */
+export function openingAllyContactTimingSummary(
+  scene: OpeningAlly,
+  conversationAlreadyPaid = false,
+): string {
+  const conversation = conversationAlreadyPaid
+    ? `The ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute conversation is already recorded; reviewing it now adds no time.`
+    : `Talking takes ${String(OPENING_ALLY_CONTACT_MINUTES)} minutes.`;
+  return `${conversation} ${openingAllyOptionTimingSummary(scene)}.`;
 }
 
 /** Apply one departure commitment atomically; authored effects own party and promise state. */

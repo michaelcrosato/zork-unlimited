@@ -70,7 +70,7 @@ describe("compactRpgObservation", () => {
     expect(compactRpgObservation(obs, ["look"], { includeVersion: true }).v).toBe(
       RPG_COMPACT_OBSERVATION_VERSION,
     );
-    expect(RPG_COMPACT_OBSERVATION_VERSION).toBe(20);
+    expect(RPG_COMPACT_OBSERVATION_VERSION).toBe(21);
     expect("mode" in compact).toBe(false);
     expect(compact.inv).toEqual(ids("item", 16));
     expect(compact.flags).toEqual(ids("flag", 16));
@@ -327,7 +327,7 @@ describe("compactRpgObservation", () => {
     expect(compact.unavailable).toHaveLength(COMPACT_BLOCKED_ACTION_LIMIT);
     expect(compact.enemies).toHaveLength(COMPACT_ENEMY_LIMIT);
     expect(compact.objects?.[0]).toBe("obj_0");
-    expect(compact.npcs?.[0]).toBe("npc_0");
+    expect(compact.npcs?.[0]).toEqual(["npc_0", "NPC 0"]);
     expect(compact.enemies?.[0]).toEqual(["enemy_0", 1]);
     expect(compact.more).toEqual([0, 0, 0, 0, 3, 4, 5, 5, 2, 6, 2]);
     expect(obs.exits).toHaveLength(exitCount);
@@ -498,7 +498,8 @@ describe("compactRpgObservation", () => {
       expect.stringMatching(/\.\.\.\(\+\d+ chars\)#[0-9a-f]{12}$/),
     ]);
     expect(compact.objects?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
-    expect(compact.npcs?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.npcs?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
+    expect(compact.npcs?.[0]?.[1]).toHaveLength(MCP_TRANSCRIPT_TITLE_CHAR_LIMIT);
     expect(compact.blocked?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.dialogue?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);
     expect(compact.enemies?.[0]?.[0]).toHaveLength(MCP_TRANSCRIPT_SUMMARY_VALUE_CHAR_LIMIT);

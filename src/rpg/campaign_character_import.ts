@@ -11,6 +11,8 @@ import { cloneGameState, type GameState } from "../core/state.js";
 import {
   CAMPAIGN_CHARACTER_MAX_EQUIPMENT_CONDITION,
   CAMPAIGN_CHARACTER_MAX_EQUIPMENT_QUANTITY,
+  CAMPAIGN_CHARACTER_MAX_HEALTH,
+  CAMPAIGN_CHARACTER_MAX_RANK,
   CampaignCharacterIdSchema,
   parseCampaignCharacterState,
   type CampaignCharacterState,
@@ -143,6 +145,45 @@ export const CampaignCharacterImportsSchema = z
   });
 
 export type CampaignCharacterImports = z.infer<typeof CampaignCharacterImportsSchema>;
+
+export type CampaignCharacterImportVarRange = Readonly<{
+  min: number;
+  max: number;
+}>;
+
+export type CampaignCharacterImportPlayerStateContract = Readonly<{
+  settableFlagIds: readonly string[];
+  obtainableObjectIds: readonly string[];
+  initialVarRanges: ReadonlyMap<string, CampaignCharacterImportVarRange>;
+}>;
+
+/**
+ * Describe exactly which fresh quest-state fields the declared campaign import
+ * boundary may change. Numeric bounds come from the persisted player schema,
+ * while an absent matching skill still leaves the pack's authored default in
+ * play; the validator merges these ranges with that default.
+ */
+export function campaignCharacterImportPlayerStateContract(
+  imports: CampaignCharacterImports | undefined,
+): CampaignCharacterImportPlayerStateContract {
+  const settableFlagIds: string[] = [];
+  const obtainableObjectIds: string[] = [];
+  const initialVarRanges = new Map<string, CampaignCharacterImportVarRange>();
+  for (const rule of imports?.rules ?? []) {
+    if (rule.type === "health_current_to_var") {
+      initialVarRanges.set(rule.target_var, { min: 0, max: CAMPAIGN_CHARACTER_MAX_HEALTH });
+    } else if (rule.type === "skill_rank_to_var") {
+      initialVarRanges.set(rule.target_var, { min: 1, max: CAMPAIGN_CHARACTER_MAX_RANK });
+    } else if (rule.type === "equipment_to_item") {
+      obtainableObjectIds.push(rule.target_object);
+    } else {
+      settableFlagIds.push(rule.target_flag);
+    }
+  }
+  settableFlagIds.sort();
+  obtainableObjectIds.sort();
+  return { initialVarRanges, obtainableObjectIds, settableFlagIds };
+}
 
 export class CampaignImportReceiptCatalogError extends Error {
   constructor(message: string) {

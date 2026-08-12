@@ -10,9 +10,20 @@
  */
 import type { RpgAction } from "../api/types.js";
 import type { GameState } from "../core/state.js";
-import { normalizeRpgTopicCommand, parseQualifiedRpgAskCommand } from "./command_normalization.js";
-import { type RpgModelIndex, activeDialogue, npcsInRoom } from "./model.js";
+import {
+  normalizeRpgTopicCommand,
+  parseQualifiedRpgAskCommand,
+  parseRpgTalkCommand,
+} from "./command_normalization.js";
+import {
+  type RpgModelIndex,
+  activeDialogue,
+  npcsInRoom,
+  objectName,
+  visibleObjectIds,
+} from "./model.js";
 import { enumerateRpgBaseActions, useInteraction } from "./legal_actions.js";
+import { projectRpgPlayerCommands } from "./player_command_projection.js";
 
 export type ParseResult = { ok: true; action: RpgAction } | { ok: false; reason: string };
 
@@ -32,6 +43,8 @@ const DIRECTIONS: Record<string, string> = {
 };
 
 const stripArticle = (s: string): string => s.replace(/^\s*(the|a|an)\s+/i, "").trim();
+const normalizeEntitySelector = (value: string): string =>
+  stripArticle(normalizeRpgTopicCommand(value));
 
 /** Build a lowercase alias → object-id map from the pack (names + aliases). */
 function aliasMap(index: RpgModelIndex): Map<string, string> {
@@ -132,23 +145,132 @@ function resolveVisibleNpc(
   state: GameState,
   phrase: string,
 ): VisibleNpcResolution {
-  const norm = stripArticle(phrase).toLowerCase().trim();
+  const norm = normalizeEntitySelector(phrase);
   if (!norm) return { kind: "unmatched" };
   const visible = npcsInRoom(index, state, state.current);
   const exact = visible.filter(
-    (npc) => npc.id.toLowerCase() === norm || npc.name.toLowerCase() === norm,
+    (npc) => normalizeEntitySelector(npc.id) === norm || normalizeEntitySelector(npc.name) === norm,
   );
   if (exact.length === 1) {
     return { kind: "resolved", id: exact[0]!.id, name: exact[0]!.name };
   }
   if (exact.length > 1) return { kind: "ambiguous" };
   const partial = visible.filter(
-    (npc) => npc.id.toLowerCase().includes(norm) || npc.name.toLowerCase().includes(norm),
+    (npc) =>
+      normalizeEntitySelector(npc.id).includes(norm) ||
+      normalizeEntitySelector(npc.name).includes(norm),
   );
   if (partial.length === 1) {
     return { kind: "resolved", id: partial[0]!.id, name: partial[0]!.name };
   }
   return partial.length > 1 ? { kind: "ambiguous" } : { kind: "unmatched" };
+}
+
+type VisibleLookCandidate =
+  | { kind: "object"; id: string }
+  | { kind: "npc"; id: string; name: string };
+
+type VisibleLookResolution =
+  | { kind: "resolved"; candidate: VisibleLookCandidate }
+  | { kind: "ambiguous" }
+  | { kind: "unmatched" };
+
+/** Resolve LOOK across the visible object and NPC namespaces together. Exact
+ * selectors win before the controlled parser's legacy noun-phrase affordance
+ * is tried in both directions: "spear" may abbreviate "Albany relief spear",
+ * while "my relief spear" may contain the authored "relief spear" alias. Each
+ * entity contributes at most one candidate regardless of how many of its
+ * selectors match; candidates from different namespaces remain distinct and
+ * therefore fail closed within the same matching tier. */
+function resolveVisibleLookTarget(
+  index: RpgModelIndex,
+  state: GameState,
+  phrase: string,
+): VisibleLookResolution {
+  const norm = normalizeEntitySelector(phrase);
+  if (!norm) return { kind: "unmatched" };
+
+  const entries: Array<{ candidate: VisibleLookCandidate; names: string[] }> = [];
+  const objectIds = new Set([...visibleObjectIds(index, state, state.current), ...state.inventory]);
+  for (const id of objectIds) {
+    const object = index.objects.get(id);
+    if (!object) continue;
+    entries.push({
+      candidate: { kind: "object", id },
+      names: [object.id, object.name, objectName(object, state), ...object.aliases].map((name) =>
+        normalizeEntitySelector(name),
+      ),
+    });
+  }
+  for (const npc of npcsInRoom(index, state, state.current)) {
+    entries.push({
+      candidate: { kind: "npc", id: npc.id, name: npc.name },
+      names: [npc.id, npc.name].map(normalizeEntitySelector),
+    });
+  }
+
+  const exact = entries
+    .filter((entry) => entry.names.some((name) => name === norm))
+    .map((entry) => entry.candidate);
+  if (exact.length === 1) return { kind: "resolved", candidate: exact[0]! };
+  if (exact.length > 1) return { kind: "ambiguous" };
+
+  const partial = entries
+    .filter((entry) => entry.names.some((name) => name.includes(norm) || norm.includes(name)))
+    .map((entry) => entry.candidate);
+  if (partial.length === 1) return { kind: "resolved", candidate: partial[0]! };
+  return partial.length > 1 ? { kind: "ambiguous" } : { kind: "unmatched" };
+}
+
+function lookParseResult(index: RpgModelIndex, state: GameState, phrase: string): ParseResult {
+  const resolved = resolveVisibleLookTarget(index, state, phrase);
+  if (resolved.kind === "resolved") {
+    return resolved.candidate.kind === "npc"
+      ? { ok: true, action: { type: "LOOK", npc: resolved.candidate.id } }
+      : { ok: true, action: { type: "LOOK", target: resolved.candidate.id } };
+  }
+  return resolved.kind === "ambiguous"
+    ? {
+        ok: false,
+        reason: `"${phrase}" matches more than one visible object or person. Use an exact command from \`actions\`.`,
+      }
+    : { ok: false, reason: `You don't see "${phrase}" here.` };
+}
+
+function activeDialogueTalkFailure(
+  index: RpgModelIndex,
+  state: GameState,
+  speaker: string,
+): ParseResult | null {
+  const active = activeDialogue(index, state);
+  if (!active) return null;
+  const requested = resolveVisibleNpc(index, state, speaker);
+  if (requested.kind === "ambiguous") {
+    return {
+      ok: false,
+      reason: `"${speaker}" matches more than one person here. Use a full name.`,
+    };
+  }
+  const commands = projectRpgPlayerCommands(enumerateRpgBaseActions(index, state), {
+    index,
+    state,
+  })
+    .filter(({ option }) => option.action.type === "ASK" && option.action.npc === active.npc.id)
+    .map(({ command }) => `\`${command}\``);
+  const continueWith =
+    commands.length > 0
+      ? ` Continue that exchange with ${commands.join(" or ")}.`
+      : " Continue that exchange first.";
+  if (requested.kind === "resolved" && requested.id !== active.npc.id) {
+    return {
+      ok: false,
+      reason: `You are speaking with ${active.npc.name}, not ${requested.name}.${continueWith}`,
+    };
+  }
+  return {
+    ok: false,
+    reason: `You are already speaking with ${active.npc.name}.${continueWith}`,
+  };
 }
 
 function currentCustomUseVerbs(index: RpgModelIndex, state: GameState): string[] {
@@ -182,11 +304,15 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
   // through the normal parser below; same-room actions preserve the exchange,
   // while leaving the scene closes it atomically before the move.
   const active = activeDialogue(index, state);
-  if (active && (verb === "ask" || verb === "say" || verb === "topic")) {
-    let arg = rest.replace(/^about\s+/, "").trim();
-    const qualified = verb === "ask" ? parseQualifiedRpgAskCommand(text) : null;
-    if (qualified) {
-      const qualifier = qualified.speaker;
+  const talkCommand = parseRpgTalkCommand(raw);
+  const qualifiedAsk = parseQualifiedRpgAskCommand(raw);
+  if (active && talkCommand) {
+    return activeDialogueTalkFailure(index, state, talkCommand.speaker)!;
+  }
+  if (active && (qualifiedAsk || verb === "ask" || verb === "say" || verb === "topic")) {
+    let arg = qualifiedAsk?.topic ?? rest.replace(/^about\s+/, "").trim();
+    if (qualifiedAsk) {
+      const qualifier = qualifiedAsk.speaker;
       const resolvedNpc = resolveVisibleNpc(index, state, qualifier);
       if (resolvedNpc.kind === "ambiguous") {
         return {
@@ -203,7 +329,7 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
           reason: `You are speaking with ${active.npc.name}, not ${resolvedNpc.name}.`,
         };
       }
-      arg = qualified.topic;
+      arg = qualifiedAsk.topic;
     }
     const normalizedArg = normalizeRpgTopicCommand(arg);
     const topic =
@@ -239,18 +365,12 @@ export function parseCommand(index: RpgModelIndex, state: GameState, raw: string
     case "l": {
       if (rest === "" || rest === "around") return { ok: true, action: { type: "LOOK" } };
       const at = rest.replace(/^at\s+/, "");
-      const id = resolveObject(index, at);
-      return id
-        ? { ok: true, action: { type: "LOOK", target: id } }
-        : { ok: false, reason: `You don't see "${at}" here.` };
+      return lookParseResult(index, state, at);
     }
     case "examine":
     case "x":
     case "inspect": {
-      const id = resolveObject(index, rest);
-      return id
-        ? { ok: true, action: { type: "LOOK", target: id } }
-        : { ok: false, reason: `You don't see "${rest}" here.` };
+      return lookParseResult(index, state, rest);
     }
     case "read": {
       const id = resolveObject(index, rest);

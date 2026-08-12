@@ -854,7 +854,7 @@ describe("bug_0505 — Wolf-Winter saved wood has a post-hunt consequence", () =
       };
       expect(() =>
         completed.api.restore_overworld_session({ snapshot: historicalJournal }),
-      ).not.toThrow();
+      ).toThrow(/campaign journal entry .* is forged/i);
     }
   });
 

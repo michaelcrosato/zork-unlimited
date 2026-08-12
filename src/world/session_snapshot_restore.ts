@@ -14,6 +14,7 @@ import {
 } from "./campaign_character_state.js";
 import {
   applyCampaignConsequences,
+  deriveCampaignWorldFactIds,
   type CampaignConsequenceEffect,
 } from "./campaign_consequences.js";
 import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
@@ -24,14 +25,22 @@ import {
   assertJourneyCampaignQuestOutcome,
   journeyCampaignGoalDefinition,
   journeyCampaignSelectedStoryChoiceRefs,
+  journeyCampaignStoryChoiceRefForGoal,
 } from "./journey_campaign.js";
-import { cloneJourneyContractSnapshot, type JourneyContractSnapshot } from "./journey_contract.js";
+import {
+  cloneJourneyContractSnapshot,
+  INITIAL_JOURNEY_GOAL,
+  type JourneyContractSnapshot,
+} from "./journey_contract.js";
 import { assertKnownIds, assertUniqueTupleMap, replaceStringSet } from "./session_collections.js";
 import {
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
 } from "./session_event_resolution.js";
-import { assertSnapshotTimeline } from "./session_journal_timeline.js";
+import {
+  assertSnapshotTimeline,
+  overworldJournalEntryPrecedes,
+} from "./session_journal_timeline.js";
 import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import {
   assertSnapshotDiscoveredAreaCountReplay,
@@ -56,7 +65,12 @@ import {
   replayOpeningDispatchChoices,
   type OpeningDispatchReplayChoice,
 } from "./opening_dispatch_choice_replay.js";
-import { proveOpeningAllyJournal, type OpeningAllyJournalProof } from "./opening_ally_journal.js";
+import { formatOpeningAllyCost } from "./opening_ally.js";
+import {
+  openingAllyJournalDraft,
+  proveOpeningAllyJournal,
+  type OpeningAllyJournalProof,
+} from "./opening_ally_journal.js";
 import {
   openingLeadSourceOfferJournalId,
   proveOpeningLeadSourceJournal,
@@ -98,6 +112,7 @@ import {
   type OverworldCampaignBoundaryReplayProof,
 } from "./session_resource_replay.js";
 import { restoreOverworldPendingRoadEncounter } from "./session_road_encounters.js";
+import { questCampaignEffectGroupsForOutcomes } from "./session_quests.js";
 import {
   type OverworldJournalEntry,
   type OverworldJournalDecisionBoundary,
@@ -426,7 +441,9 @@ type CurrentCampaignSnapshotProof = Readonly<{
   campaignBoundaries: OverworldCampaignBoundaryReplayIndex;
   characterAfter: CampaignCharacterState;
   characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState;
+  directQuestAnchorActivationOrdinals: ReadonlyMap<string, number>;
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
+  questLaunchCharacters: ReadonlyMap<string, CampaignCharacterState>;
 }>;
 
 function assertCurrentOpeningStoryBoundary(args: {
@@ -1188,6 +1205,13 @@ function proveCurrentCampaignSnapshot(args: {
     args.snapshot.journalEntries.map((entry, index) => [entry.id, index] as const),
   );
   const mutations: CampaignReplayMutation[] = [];
+  const questLaunchMutations = new Map<
+    string,
+    Readonly<{
+      entry: OverworldJournalEntry;
+      effects: readonly CampaignConsequenceEffect[];
+    }>
+  >();
   for (const entry of args.snapshot.journalEntries) {
     if (entry.questStartProof === undefined) continue;
     const questId = entry.id.startsWith("quest:") ? entry.id.slice("quest:".length) : "";
@@ -1199,7 +1223,7 @@ function proveCurrentCampaignSnapshot(args: {
     }
   }
   for (const [questId, quest] of args.indexes.questsById) {
-    if (!quest.launch || !args.startedQuestIds.has(questId)) continue;
+    if (!args.startedQuestIds.has(questId)) continue;
     const journalIndex = journalIndexById.get(`quest:${questId}`);
     const entry =
       journalIndex === undefined ? undefined : args.snapshot.journalEntries[journalIndex];
@@ -1208,6 +1232,21 @@ function proveCurrentCampaignSnapshot(args: {
         `Overworld session snapshot started quest "${questId}" has no canonical launch journal.`,
       );
     }
+    if (!quest.launch) {
+      const expectedTown = args.indexes.questTownNames.get(quest.id) ?? quest.home;
+      if (
+        entry.id !== `quest:${quest.id}` ||
+        entry.kind !== "quest" ||
+        entry.town !== expectedTown ||
+        entry.questStartProof !== undefined
+      ) {
+        throw new Error(
+          `Overworld session snapshot quest start "${quest.id}" is not bound to its canonical journal identity and town.`,
+        );
+      }
+      questLaunchMutations.set(questId, { entry, effects: [] });
+      continue;
+    }
     const effects = assertCurrentQuestStartJournal({
       boundaryProofs,
       entry,
@@ -1215,6 +1254,7 @@ function proveCurrentCampaignSnapshot(args: {
       journey: args.snapshot.journey,
       quest,
     });
+    questLaunchMutations.set(questId, { entry, effects });
     const proof = entry.questStartProof;
     if (proof?.kind === "approach") {
       const expectedWindow = deriveQuestDispatchWindow({
@@ -1322,16 +1362,82 @@ function proveCurrentCampaignSnapshot(args: {
       "Overworld session snapshot campaign character does not match replayed quest consequences or care services.",
     );
   }
+  const questLaunchCharacters = new Map<string, CampaignCharacterState>();
+  for (const [questId, launch] of questLaunchMutations) {
+    const characterBefore = characterAt(launch.entry);
+    const characterAfterLaunch =
+      launch.effects.length === 0
+        ? characterBefore
+        : applyCampaignConsequences({
+            character: characterBefore,
+            effects: launch.effects,
+          }).characterAfter;
+    questLaunchCharacters.set(questId, cloneCampaignCharacterState(characterAfterLaunch));
+  }
+
+  const storyChoiceProofOrdinalByKey = storyChoiceProofOrdinals(
+    boundaryProofs,
+    args.indexes,
+    args.snapshot.journey,
+    reliefOathProof,
+  );
+  const directQuestAnchorActivationOrdinals = new Map<string, number>();
+  const bindDirectQuestAnchorActivation = (questId: string, acceptedDecisions: number): void => {
+    const existing = directQuestAnchorActivationOrdinals.get(questId);
+    if (existing === undefined || acceptedDecisions < existing) {
+      directQuestAnchorActivationOrdinals.set(questId, acceptedDecisions);
+    }
+  };
+  if (
+    args.indexes.openingLeadSource !== null &&
+    leadSourceProof.option !== null &&
+    leadSourceProof.selectionBoundary !== null
+  ) {
+    bindDirectQuestAnchorActivation(
+      args.indexes.openingLeadSource.target_quest,
+      leadSourceProof.selectionBoundary.acceptedDecisions,
+    );
+  }
+  for (const goal of [...args.snapshot.journey.goalHistory, args.snapshot.journey.goal]) {
+    if (goal.version <= INITIAL_JOURNEY_GOAL.version) continue;
+    const definition = journeyCampaignGoalDefinition(goal);
+    if (!definition) continue; // The authenticated campaign proof reports unknown goals.
+    const storyChoiceRef = journeyCampaignStoryChoiceRefForGoal(definition);
+    if (storyChoiceRef) {
+      const acceptedDecisions = storyChoiceProofOrdinalByKey.get(
+        campaignStoryChoiceRefKey(storyChoiceRef),
+      );
+      if (acceptedDecisions === undefined) {
+        throw new Error(
+          `Overworld session snapshot campaign goal "${goal.id}" has no replayable activation decision.`,
+        );
+      }
+      bindDirectQuestAnchorActivation(definition.targetQuestId, acceptedDecisions);
+      continue;
+    }
+
+    const previousGoal = args.snapshot.journey.goalHistory[goal.version - 2];
+    const retention = previousGoal
+      ? args.snapshot.journey.retentionHistory.find(
+          (event) =>
+            event.choice === "continue" &&
+            event.goalVersion === previousGoal.version &&
+            event.goalId === previousGoal.id,
+        )
+      : undefined;
+    const replayed = retention ? boundaryProofs.get(retention.atDecision) : undefined;
+    if (!retention || !replayed || replayed.decisionProofHash !== retention.decisionProofHash) {
+      throw new Error(
+        `Overworld session snapshot campaign goal "${goal.id}" has no replayable continuation activation.`,
+      );
+    }
+    bindDirectQuestAnchorActivation(definition.targetQuestId, retention.atDecision);
+  }
 
   return {
     campaignBoundaries: {
       byAcceptedDecisions: boundaryProofs,
-      storyChoiceProofOrdinalByKey: storyChoiceProofOrdinals(
-        boundaryProofs,
-        args.indexes,
-        args.snapshot.journey,
-        reliefOathProof,
-      ),
+      storyChoiceProofOrdinalByKey,
       localJobOptionProofOrdinalByKey: localJobOptionProofOrdinals(
         args.indexes,
         args.snapshot.journalEntries,
@@ -1346,7 +1452,9 @@ function proveCurrentCampaignSnapshot(args: {
     },
     characterAfter,
     characterAt: (entry) => characterAt(entry),
+    directQuestAnchorActivationOrdinals,
     openingLeadSourceDecisionTrail,
+    questLaunchCharacters,
   };
 }
 
@@ -1358,6 +1466,7 @@ export type OverworldSessionSnapshotRestorePlan = {
   journalEntriesAfter: readonly OverworldJournalEntry[];
   openingLeadSourceDecisionTrailAfter: OverworldOpeningLeadSourceDecisionTrail | null;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  questLaunchCharacters: ReadonlyMap<string, CampaignCharacterState>;
   questOutcomeIds: ReadonlyMap<string, string>;
   regionRenown: ReadonlyMap<string, number>;
   resolvedEventHomeIds: ReadonlySet<string>;
@@ -1378,6 +1487,7 @@ export type OverworldSessionSnapshotRestoreState = {
   exploredSiteIds: Set<string>;
   journalEntries: OverworldJournalEntry[];
   journalEntriesById: Map<string, OverworldJournalEntry>;
+  questLaunchCharacters: Map<string, CampaignCharacterState>;
   questOutcomeIds: Map<string, string>;
   regionRenown: Map<string, number>;
   resolvedEventIds: Set<string>;
@@ -1409,6 +1519,14 @@ function replaceStringMap(target: Map<string, string>, source: ReadonlyMap<strin
 function replaceNumberMap(target: Map<string, number>, source: ReadonlyMap<string, number>): void {
   target.clear();
   for (const [key, value] of source) target.set(key, value);
+}
+
+function replaceCampaignCharacterMap(
+  target: Map<string, CampaignCharacterState>,
+  source: ReadonlyMap<string, CampaignCharacterState>,
+): void {
+  target.clear();
+  for (const [key, value] of source) target.set(key, cloneCampaignCharacterState(value));
 }
 
 function replaceTravelLog(target: TravelLogEntry[], source: readonly TravelLogEntry[]): void {
@@ -1451,6 +1569,7 @@ export function applyOverworldSessionSnapshotRestore(
   replaceStringSet(state.discoveredQuestIds, plan.discoveredQuestIdsAfter);
   replaceStringSet(state.startedQuestIds, snapshot.startedQuestIds);
   replaceStringSet(state.completedQuestIds, snapshot.completedQuestIds);
+  replaceCampaignCharacterMap(state.questLaunchCharacters, plan.questLaunchCharacters);
   replaceStringMap(state.questOutcomeIds, plan.questOutcomeIds);
   replaceStringSet(state.exploredSiteIds, snapshot.exploredSiteIds);
   replaceNumberMap(state.regionRenown, plan.regionRenown);
@@ -1473,6 +1592,49 @@ export function applyOverworldSessionSnapshotRestore(
   };
 }
 
+/**
+ * Upgrade only the exact immediately prior code-owned ally journal copy. The
+ * normal ally replay still owns the option, clock, chronology, and character
+ * effects; near-matches and unrelated historical prose are left untouched.
+ */
+function normalizeOpeningAllyTimingDisclosurePredecessorJournal(args: {
+  scene: NonNullable<OverworldSnapshotManifestIndex["openingAlly"]>;
+  journalEntries: OverworldSessionSnapshot["journalEntries"];
+}): OverworldSessionSnapshot["journalEntries"] {
+  const character = createInitialCampaignCharacterState();
+  const copiesById = new Map(
+    args.scene.options.map((option) => {
+      const current = openingAllyJournalDraft({
+        scene: args.scene,
+        character,
+        optionId: option.id,
+      });
+      return [
+        current.id,
+        {
+          current,
+          predecessorText: `${option.summary} ${option.preview} Actual cost: ${formatOpeningAllyCost(option.terms)}. ${option.consequence}`,
+        },
+      ] as const;
+    }),
+  );
+  let changed = false;
+  const journalEntries = args.journalEntries.map((entry) => {
+    const copies = copiesById.get(entry.id);
+    if (
+      !copies ||
+      entry.kind !== "ally" ||
+      entry.title !== copies.current.title ||
+      entry.text !== copies.predecessorText
+    ) {
+      return entry;
+    }
+    changed = true;
+    return Object.freeze({ ...entry, text: copies.current.text });
+  });
+  return changed ? journalEntries : args.journalEntries;
+}
+
 export function planOverworldSessionSnapshotRestore(args: {
   indexes: OverworldSnapshotManifestIndex;
   snapshot: OverworldSessionSnapshot;
@@ -1480,7 +1642,17 @@ export function planOverworldSessionSnapshotRestore(args: {
   worldHash: string;
   worldId: string;
 }): OverworldSessionSnapshotRestorePlan {
-  const { indexes, snapshot, startTownId, worldHash, worldId } = args;
+  const { indexes, snapshot: sourceSnapshot, startTownId, worldHash, worldId } = args;
+  const normalizedJournalEntries = indexes.openingAlly
+    ? normalizeOpeningAllyTimingDisclosurePredecessorJournal({
+        scene: indexes.openingAlly,
+        journalEntries: sourceSnapshot.journalEntries,
+      })
+    : sourceSnapshot.journalEntries;
+  const snapshot =
+    normalizedJournalEntries === sourceSnapshot.journalEntries
+      ? sourceSnapshot
+      : Object.freeze({ ...sourceSnapshot, journalEntries: normalizedJournalEntries });
   if (snapshot.worldId !== worldId) {
     throw new Error(
       `Overworld session snapshot is for world "${snapshot.worldId}", not "${worldId}".`,
@@ -1668,13 +1840,23 @@ export function planOverworldSessionSnapshotRestore(args: {
   );
   assertSnapshotCurrentAreaReachability(snapshot.currentAreaId, discoveredAreaIds);
 
-  const directQuestAnchorIds = new Set<string>();
-  const nonFifoQuestIds = new Set<string>();
+  // An authenticated current or historical campaign goal is a direct lead to
+  // its canonical quest and district, even before that town has been visited.
+  const campaignQuestAnchorIds = new Set(
+    [...snapshot.journey.goalHistory, snapshot.journey.goal]
+      .filter((goal) => goal.version > INITIAL_JOURNEY_GOAL.version)
+      .map((goal) => journeyCampaignGoalDefinition(goal)?.targetQuestId)
+      .filter((questId): questId is string => questId !== undefined),
+  );
+  const directQuestAnchorIds = new Set<string>(campaignQuestAnchorIds);
+  const nonFifoQuestIds = new Set<string>(campaignQuestAnchorIds);
   if (indexes.openingLeadSource) {
     const targetQuestId = indexes.openingLeadSource.target_quest;
     nonFifoQuestIds.add(targetQuestId);
     if (discoveredQuestIds.has(targetQuestId)) directQuestAnchorIds.add(targetQuestId);
   }
+  // Upgrade authenticated older saves that predate campaign-anchor discovery.
+  for (const questId of campaignQuestAnchorIds) discoveredQuestIds.add(questId);
   const directAnchorAreaIds = new Set(
     [...directQuestAnchorIds].flatMap((questId) => {
       const areaId = indexes.questsById.get(questId)?.area;
@@ -1684,11 +1866,13 @@ export function planOverworldSessionSnapshotRestore(args: {
   for (const areaId of directAnchorAreaIds) discoveredAreaIds.add(areaId);
   const localActionJournalSources = {
     ...indexes,
+    campaignDecisionProofsByOrdinal: campaignReplay.campaignBoundaries.byAcceptedDecisions,
     discoveredAreaIds,
     discoveredJobIds,
     discoveredQuestIds,
     discoveredSiteIds,
     directQuestAnchorIds,
+    directQuestAnchorActivationOrdinals: campaignReplay.directQuestAnchorActivationOrdinals,
     nonFifoQuestIds,
     townVisitMinutes,
     visitedTownIds,
@@ -1720,6 +1904,7 @@ export function planOverworldSessionSnapshotRestore(args: {
   assertSnapshotDiscoveryLocality({
     ...indexes,
     completedQuestIds,
+    directQuestAnchorIds,
     discoveredAreaIds,
     discoveredJobIds,
     discoveredQuestIds,
@@ -1736,6 +1921,41 @@ export function planOverworldSessionSnapshotRestore(args: {
     localActionJournalSources,
     journalTimeline,
     campaignReplay.characterAt,
+    (entry) => {
+      const completedOutcomesAtContact = new Map(
+        [...questOutcomeIds].filter(([questId]) =>
+          overworldJournalEntryPrecedes(
+            journalTimeline.eventResolutionProofs.recordedAtById,
+            journalTimeline.journalIndexById,
+            `quest_done:${questId}`,
+            entry.id,
+          ),
+        ),
+      );
+      return new Set(
+        deriveCampaignWorldFactIds(
+          questCampaignEffectGroupsForOutcomes(indexes.questsById, completedOutcomesAtContact),
+        ),
+      );
+    },
+    (entry, _recordedAt, eventId) => {
+      const proofId = `resolve:${eventId}`;
+      if (
+        !overworldJournalEntryPrecedes(
+          journalTimeline.eventResolutionProofs.recordedAtById,
+          journalTimeline.journalIndexById,
+          proofId,
+          entry.id,
+        )
+      ) {
+        return null;
+      }
+      return (
+        snapshot.journalEntries.find((candidate) => candidate.id === proofId)?.localSceneProof
+          ?.optionId ?? null
+      );
+    },
+    snapshot.worldHash === worldHash,
   );
   assertSnapshotEventResolutionProofs(
     resolvedEventIds,
@@ -1785,6 +2005,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     journalEntriesAfter: Object.freeze([...snapshot.journalEntries]),
     openingLeadSourceDecisionTrailAfter: campaignReplay.openingLeadSourceDecisionTrail,
     pendingRoadEncounter,
+    questLaunchCharacters: campaignReplay.questLaunchCharacters,
     questOutcomeIds,
     regionRenown,
     resolvedEventHomeIds: resolvedOverworldEventHomeIds(resolvedEventIds, indexes),

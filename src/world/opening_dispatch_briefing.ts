@@ -1,4 +1,5 @@
 import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
+import { openingAllyTotalTimingSummary } from "./opening_ally.js";
 import type { OverworldManifest } from "./overworld.js";
 
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
@@ -54,6 +55,7 @@ type OpeningDispatchPlan = Readonly<{
   questTitle: string;
   questCrisisPreview: string;
   allyContactName: string | null;
+  allyTimingSummary: string | null;
   civicStages: readonly OpeningDispatchStage[];
   departureChoices: readonly OpeningDispatchStage[];
   allyChoice: OpeningDispatchStage | null;
@@ -126,6 +128,7 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
     questTitle: quest.title,
     questCrisisPreview,
     allyContactName: ally && allyContact ? allyContact.name : null,
+    allyTimingSummary: ally && allyContact ? openingAllyTotalTimingSummary(ally) : null,
     civicStages: Object.freeze([
       Object.freeze({
         id: registration.id,
@@ -253,10 +256,10 @@ export function withOpeningDispatchBriefing(
   const planningContext =
     choice.kind === "preparation"
       ? plan.allyContactName
-        ? `${plan.allyContactName}'s field-team conversation is separate.`
+        ? `${plan.allyContactName}'s field-team conversation is separate. ${plan.allyTimingSummary ?? ""}`
         : ""
       : plan.allyContactName
-        ? `${plan.allyContactName}'s field-team conversation is separate; launching now keeps the solo route legal.`
+        ? `${plan.allyContactName}'s field-team conversation is separate; launching now keeps the solo route legal. ${plan.allyTimingSummary ?? ""}`
         : "";
   const missionCard = `Route costs and tactics remain on ${plan.questTitle}'s launch card.`;
   return {

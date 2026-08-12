@@ -3,7 +3,11 @@ import type {
   JourneyAllyStoryChoiceOptions,
   JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
-import { formatOpeningAllyCost, parseOpeningAlly, type OpeningAlly } from "./opening_ally.js";
+import {
+  formatOpeningAllyChoiceTiming,
+  parseOpeningAlly,
+  type OpeningAlly,
+} from "./opening_ally.js";
 import { presentOpeningChoiceOption } from "./opening_choice_receipt.js";
 
 function allyFieldCategory(
@@ -26,7 +30,7 @@ function allySummary(
   return {
     commitment: option.summary,
     exactBenefit: allyFieldCategory(scene, option),
-    immediateCost: formatOpeningAllyCost(option.terms),
+    immediateCost: formatOpeningAllyChoiceTiming(option.terms),
     giveUp: option.tradeoff,
   };
 }

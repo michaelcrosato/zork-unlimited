@@ -274,7 +274,11 @@ function rpgOptionId(index: RpgIndex, a: RpgAction, command: string): string {
     case "MANEUVER":
       return `maneuver_${a.enemy}_${a.maneuver}`;
     case "LOOK":
-      return a.target === undefined ? "look_around" : `examine_${a.target}`;
+      return a.npc !== undefined
+        ? `examine_npc_${a.npc}`
+        : a.target === undefined
+          ? "look_around"
+          : `examine_${a.target}`;
     case "READ":
       return `read_${a.target}`;
     case "TAKE":
@@ -314,7 +318,11 @@ function relabelAction(a: RpgAction, mapId: (id: string) => string): RpgAction {
     case "MANEUVER":
       return { type: "MANEUVER", enemy: mapId(a.enemy), maneuver: mapId(a.maneuver) };
     case "LOOK":
-      return a.target === undefined ? { type: "LOOK" } : { type: "LOOK", target: mapId(a.target) };
+      return a.npc !== undefined
+        ? { type: "LOOK", npc: mapId(a.npc) }
+        : a.target === undefined
+          ? { type: "LOOK" }
+          : { type: "LOOK", target: mapId(a.target) };
     case "READ":
       return { type: "READ", target: mapId(a.target) };
     case "TAKE":

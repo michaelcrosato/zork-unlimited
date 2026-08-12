@@ -40,7 +40,12 @@ import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
 import { EMBEDDED_QUEST_CONTINUITY_EXPLANATION } from "../../src/rpg/embedded_quest_character_continuity.js";
-import type { JourneyChoice, JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
+import type {
+  JourneyChoice,
+  JourneyOpportunityKind,
+  JourneyStoryChoicePrompt,
+} from "../../src/world/journey_contract.js";
+import type { JourneyOpportunityExplanation } from "../../src/world/journey_opportunity_explainer.js";
 import type { OverworldQuest } from "../../src/world/overworld.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 
@@ -439,6 +444,10 @@ export default function App(): JSX.Element {
     return worldState.notice ? [worldState.notice, opener] : [opener];
   });
   const [error, setError] = useState<string | null>(null);
+  const [opportunityInspection, setOpportunityInspection] = useState<{
+    snapshotHash: string;
+    explanation: JourneyOpportunityExplanation;
+  } | null>(null);
   const [nightWatchPanel, setNightWatchPanel] = useState<NightWatchPanel>("scene");
   const journey = worldSession.journey();
 
@@ -693,6 +702,7 @@ export default function App(): JSX.Element {
     setQuestView(null);
     setActiveQuest(null);
     setInspectedDepartureStory(null);
+    setOpportunityInspection(null);
     setNightWatchPanel("scene");
     setLog([
       `Started a new journey in ${session.view().current.name}. Roads leave town, but the work is local until you find it.`,
@@ -709,6 +719,20 @@ export default function App(): JSX.Element {
       if (option) setLog((previous) => [option.consequence, ...previous]);
       setError(null);
     } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  function explainOpportunity(kind: JourneyOpportunityKind, id: string): void {
+    try {
+      const explanation = worldSession.explainOpportunity({ kind, id });
+      setOpportunityInspection({
+        snapshotHash: worldSession.snapshotHash(),
+        explanation,
+      });
+      setError(null);
+    } catch (e) {
+      setOpportunityInspection(null);
       setError((e as Error).message);
     }
   }
@@ -1238,6 +1262,12 @@ export default function App(): JSX.Element {
       prioritySectionIds={prioritySectionIds}
       panel={nightWatchPanel}
       error={error}
+      opportunityExplanation={
+        opportunityInspection?.snapshotHash === worldSession.snapshotHash()
+          ? opportunityInspection.explanation
+          : null
+      }
+      {...(worldView.pendingRoadEncounter ? {} : { onExplainOpportunity: explainOpportunity })}
       onPanelChange={setNightWatchPanel}
       onNewJourney={startNewJourney}
       onOpenTutorial={() => {

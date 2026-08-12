@@ -76,14 +76,19 @@ export function isStructuredTerminalStoryChoice(prompt: JourneyStoryChoicePrompt
 
 function summaryLabels(summary: JourneyStoryChoiceSummary): {
   commitment: "Commitment" | "Purpose" | "Promise / priority";
-  trigger?: "Field trigger" | "Trigger category";
+  trigger?: "Field trigger" | "Starter package / field edge" | "Trigger category";
 } {
   if (summary.fieldTrigger === undefined) {
     return { commitment: "Promise / priority" };
   }
-  return summary.fieldTriggerScope === "category"
-    ? { commitment: "Purpose", trigger: "Trigger category" }
-    : { commitment: "Commitment", trigger: "Field trigger" };
+  if (summary.fieldTriggerScope === "category") {
+    return { commitment: "Purpose", trigger: "Trigger category" };
+  }
+  return {
+    commitment: "Commitment",
+    trigger:
+      summary.fieldTriggerScope === "starter" ? "Starter package / field edge" : "Field trigger",
+  };
 }
 
 function renderSummaryLines(summary: JourneyStoryChoiceSummary, indent: string): string[] {
@@ -91,6 +96,9 @@ function renderSummaryLines(summary: JourneyStoryChoiceSummary, indent: string):
   if (!labels.trigger || summary.fieldTrigger === undefined) {
     return [
       `${indent}${labels.commitment}: ${summary.commitment}`,
+      ...(summary.highlights ?? []).map(
+        (highlight) => `${indent}${highlight.label}: ${highlight.value}`,
+      ),
       ...(summary.checkFit === undefined ? [] : [`${indent}Check fit: ${summary.checkFit}`]),
       `${indent}Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`,
     ];
@@ -98,6 +106,9 @@ function renderSummaryLines(summary: JourneyStoryChoiceSummary, indent: string):
   return [
     `${indent}${labels.commitment}: ${summary.commitment}`,
     `${indent}${labels.trigger}: ${summary.fieldTrigger}`,
+    ...(summary.highlights ?? []).map(
+      (highlight) => `${indent}${highlight.label}: ${highlight.value}`,
+    ),
     ...(summary.checkFit === undefined ? [] : [`${indent}Check fit: ${summary.checkFit}`]),
     `${indent}Immediate cost: ${summary.immediateCost}`,
     `${indent}Tradeoff: ${summary.tradeoff}`,

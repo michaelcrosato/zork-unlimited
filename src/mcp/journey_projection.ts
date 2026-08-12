@@ -242,6 +242,13 @@ function compactJourneyStoryChoiceBriefSummary(
     ...(summary.fieldTriggerScope === undefined
       ? {}
       : { fieldTriggerScope: summary.fieldTriggerScope }),
+    ...(summary.highlights === undefined
+      ? {}
+      : {
+          highlights: Object.freeze(
+            summary.highlights.map((highlight) => Object.freeze({ ...highlight })),
+          ) as NonNullable<JourneyStoryChoiceSummary["highlights"]>,
+        }),
     immediateCost: summary.immediateCost,
     tradeoff: summary.tradeoff,
   });
