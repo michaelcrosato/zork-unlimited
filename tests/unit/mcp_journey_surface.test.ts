@@ -445,12 +445,12 @@ function mcpWolfWinterCheckpointInsideQuest() {
     observation: { room: "paling_gap" },
   });
   expect(setSpear.observation.available_actions.map((action) => action.id)).toContain(
-    "maneuver_yearling_wolf_drive_set_spear",
+    "maneuver_yearling_wolf_drive_set_spear_unarmored",
   );
 
   const checkpoint = a.step_action({
     session_id: launched.rpg_session_id,
-    action_id: "maneuver_yearling_wolf_drive_set_spear",
+    action_id: "maneuver_yearling_wolf_drive_set_spear_unarmored",
     expected_state_hash: setSpear.state_hash,
     compact_observation: false,
     compact_events: false,
@@ -813,10 +813,13 @@ describe("MCP journey surface", () => {
     if (compactAction.ok !== true || fullAction.ok !== true) {
       throw new Error("expected accepted story choices");
     }
+    const ledgerProfile = WORLD.opening_registration?.profiles.find(
+      (profile) => profile.id === "albany:ledger_advocate",
+    );
+    if (!ledgerProfile) throw new Error("expected the Ledger Advocate profile");
     expect(fullAction.result.entry.text).toBe(fullAction.result.consequence);
-    expect(fullAction.result.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
-    expect(openingSelectionReceiptWordCount(fullAction.result.consequence)).toBeLessThanOrEqual(
-      OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+    expect(fullAction.result.consequence).toBe(
+      `${ledgerProfile.summary} ${ledgerProfile.preview} ${ledgerProfile.consequence}`,
     );
     expect(compactAction.result).toMatchObject({
       storyChoiceId: fullAction.result.storyChoiceId,
@@ -874,17 +877,36 @@ describe("MCP journey surface", () => {
           consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
         });
         expect(compactOption.consequence.length).toBeLessThan(fullOption.consequence.length);
-        expect(Object.keys(fullOption.summary).sort()).toEqual([
-          "commitment",
-          "immediateCost",
-          "tradeoff",
-        ]);
-        expect(fullOption.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
-        expect(fullOption.consequence).toContain(`Cost: ${fullOption.summary.immediateCost}.`);
-        expect(fullOption.consequence).toContain(`Boundary: ${fullOption.summary.tradeoff}`);
-        expect(openingSelectionReceiptWordCount(fullOption.consequence)).toBeLessThanOrEqual(
-          OPENING_SELECTION_RECEIPT_WORD_LIMIT,
-        );
+        if (kind === "registration") {
+          expect(Object.keys(fullOption.summary).sort()).toEqual([
+            "commitment",
+            "fieldTrigger",
+            "fieldTriggerScope",
+            "highlights",
+            "immediateCost",
+            "tradeoff",
+          ]);
+          expect(fullOption.summary).toMatchObject({
+            fieldTriggerScope: "starter",
+            highlights: expect.arrayContaining([
+              expect.objectContaining({ label: "Permanent role" }),
+              expect.objectContaining({ label: "Return obligation — ACTIVE" }),
+              expect.objectContaining({ label: "Quest DEF" }),
+            ]),
+          });
+        } else {
+          expect(Object.keys(fullOption.summary).sort()).toEqual([
+            "commitment",
+            "immediateCost",
+            "tradeoff",
+          ]);
+          expect(fullOption.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
+          expect(fullOption.consequence).toContain(`Cost: ${fullOption.summary.immediateCost}.`);
+          expect(fullOption.consequence).toContain(`Boundary: ${fullOption.summary.tradeoff}`);
+          expect(openingSelectionReceiptWordCount(fullOption.consequence)).toBeLessThanOrEqual(
+            OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+          );
+        }
         expect(compactOption.consequence).not.toContain(fullOption.summary.commitment);
         expect(compactOption.consequence).not.toContain(fullOption.summary.immediateCost);
         expect(compactOption.consequence).not.toContain(fullOption.summary.tradeoff);

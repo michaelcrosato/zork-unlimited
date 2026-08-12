@@ -1625,6 +1625,38 @@ button:hover {
   font-size: 0.76rem;
 }
 
+.journey-opportunity-list button {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--water) 45%, var(--line));
+  border-radius: 5px;
+  color: var(--water);
+  cursor: pointer;
+  font: 0.72rem var(--font-mono);
+  margin-top: 0.35rem;
+  padding: 0.38rem 0.5rem;
+  text-align: left;
+}
+
+.journey-opportunity-list button:hover,
+.journey-opportunity-list button:focus-visible {
+  border-color: var(--water);
+  color: var(--text);
+}
+
+.journey-opportunity-explanation {
+  border-top: 1px solid var(--line);
+  font-size: 0.78rem;
+  margin: 0.4rem 0 0;
+  padding-top: 0.4rem;
+}
+
+.journey-opportunity-explanation code {
+  color: var(--water);
+  display: block;
+  margin-top: 0.2rem;
+  overflow-wrap: anywhere;
+}
+
 .journey-opportunity-list small {
   color: var(--water);
   font-family: var(--font-mono);

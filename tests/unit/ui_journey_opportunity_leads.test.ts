@@ -13,10 +13,10 @@ import { OverworldSession } from "../../ui/src/overworld.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const EXPECTED_DEFERRED_GUIDANCE =
-  "Choose the shown journey option first. 3 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.";
+  "Choose the shown journey option first. 5 optional aftermath leads remain; if another choice follows, finish it too. District details return when play resumes.";
 
 describe("journey opportunity UI", () => {
-  it("renders the same button-free root summary on completion, story-choice, and active screens", async () => {
+  it("keeps roots bounded and offers read-only next steps only during active play", async () => {
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
       root: uiRoot,
@@ -64,13 +64,27 @@ describe("journey opportunity UI", () => {
             area: "Albany Greenway",
             access: "route_unmapped" as const,
           },
+          {
+            id: "albany_city__campus__event",
+            kind: "event" as const,
+            title: "Albany Campus Row: Return Evidence Mandate",
+            area: "Albany Campus Row",
+            access: "route_unmapped" as const,
+          },
+          {
+            id: "albany_city__transport_hub__event",
+            kind: "event" as const,
+            title: "Hayden Hale's Cade Return Filing Standard",
+            area: "Albany Station Quarter",
+            access: "here" as const,
+          },
         ],
       };
       const deferredOpportunities = deferJourneyOpportunityDetails(opportunities)!;
       expect(deferredOpportunities).toEqual({
         guidance: EXPECTED_DEFERRED_GUIDANCE,
         leads: [],
-        deferredLeadCount: 3,
+        deferredLeadCount: 5,
       });
       const choiceJourney = {
         ...base,
@@ -128,6 +142,23 @@ describe("journey opportunity UI", () => {
         react.createElement(statusModule.JourneyStatus, {
           journey: statusJourney,
           onFollowGoalPassage: () => undefined,
+          onExplainOpportunity: () => undefined,
+          opportunityExplanation: {
+            lead: opportunities.leads[0],
+            nextAction: {
+              tool: "talk_overworld_session_contact",
+              arguments: { character_id: "albany_city__transport_hub__contact" },
+              command: "talk albany_city__transport_hub__contact",
+              label: "Talk to the job's visible local contact.",
+            },
+          },
+        }),
+      );
+      const pendingStatusMarkup = reactDomServer.renderToStaticMarkup(
+        react.createElement(statusModule.JourneyStatus, {
+          journey: choiceJourney,
+          onFollowGoalPassage: () => undefined,
+          onExplainOpportunity: () => undefined,
         }),
       );
 
@@ -153,10 +184,14 @@ describe("journey opportunity UI", () => {
       expect(statusMarkup).toContain("Here now");
       expect(statusMarkup).toContain("Mapped district");
       expect(statusMarkup).toContain("Route not yet mapped");
-      expect(statusMarkup).not.toMatch(/albany_city__|dispatch_|option_id|reward|renown/i);
+      expect(statusMarkup).not.toMatch(/dispatch_|option_id|reward|renown/i);
       expect(choiceMarkup.match(/<button/g)).toHaveLength(2);
       expect(storyMarkup.match(/<button/g)).toHaveLength(storyJourney.storyChoice.options.length);
-      expect(statusMarkup).not.toContain("<button");
+      expect(statusMarkup.match(/<button/g)).toHaveLength(opportunities.leads.length);
+      expect(statusMarkup).toContain("Show one lawful next action");
+      expect(statusMarkup).toContain("Talk to the job&#x27;s visible local contact.");
+      expect(statusMarkup).toContain("talk albany_city__transport_hub__contact");
+      expect(pendingStatusMarkup).not.toContain("Show one lawful next action");
     } finally {
       await server.close();
     }

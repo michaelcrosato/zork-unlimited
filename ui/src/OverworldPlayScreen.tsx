@@ -6,10 +6,15 @@ import { Info } from "@phosphor-icons/react/Info";
 import { MapPin } from "@phosphor-icons/react/MapPin";
 import { Signpost } from "@phosphor-icons/react/Signpost";
 import { Sparkle } from "@phosphor-icons/react/Sparkle";
-import type { JourneyPresentation } from "../../src/world/journey_contract.js";
+import type {
+  JourneyOpportunityKind,
+  JourneyPresentation,
+} from "../../src/world/journey_contract.js";
+import type { JourneyOpportunityExplanation } from "../../src/world/journey_opportunity_explainer.js";
 import { CampaignCharacterPanel } from "./CampaignCharacterPanel.js";
 import { DepartureRecap } from "./DepartureRecap.js";
 import { NightWatchDock, NightWatchMasthead, type NightWatchPanel } from "./NightWatchChrome.js";
+import { JourneyOpportunityLeads } from "./JourneyOpportunityLeads.js";
 import type { OverworldView } from "./overworld.js";
 
 export type WorldActionTone = "ice" | "ember" | "lichen";
@@ -43,6 +48,8 @@ type OverworldPlayScreenProps = {
   prioritySectionIds: readonly string[];
   panel: NightWatchPanel;
   error: string | null;
+  opportunityExplanation: JourneyOpportunityExplanation | null;
+  onExplainOpportunity?: (kind: JourneyOpportunityKind, id: string) => void;
   onPanelChange: (panel: NightWatchPanel) => void;
   onNewJourney: () => void;
   onOpenTutorial: () => void;
@@ -246,6 +253,8 @@ export function OverworldPlayScreen({
   prioritySectionIds,
   panel,
   error,
+  opportunityExplanation,
+  onExplainOpportunity,
   onPanelChange,
   onNewJourney,
   onOpenTutorial,
@@ -340,13 +349,15 @@ export function OverworldPlayScreen({
                   </div>
                 </dl>
 
-                {journey.opportunities && journey.opportunities.leads.length > 0 && (
-                  <section className="nw-opportunities">
-                    <h3>Nearby leads</h3>
-                    {journey.opportunities.leads.slice(0, 3).map((opportunity) => (
-                      <p key={`${opportunity.kind}:${opportunity.id}`}>{opportunity.title}</p>
-                    ))}
-                  </section>
+                {journey.opportunities && (
+                  <div className="nw-opportunities">
+                    <JourneyOpportunityLeads
+                      opportunities={journey.opportunities}
+                      headingId="nw-world-opportunities-title"
+                      explanation={opportunityExplanation}
+                      {...(onExplainOpportunity ? { onExplain: onExplainOpportunity } : {})}
+                    />
+                  </div>
                 )}
               </aside>
             </section>

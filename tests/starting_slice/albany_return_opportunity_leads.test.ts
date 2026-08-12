@@ -444,4 +444,112 @@ describe("optional return opportunity leads", () => {
       GREENWAY_EVENT,
     ]);
   });
+
+  it("revalidates exact active identities into one lawful action without changing state", () => {
+    const session = atNorthGoal();
+    const before = session.snapshot();
+    const beforeHash = session.snapshotHash();
+    const cadeLead = session
+      .journey()
+      .opportunities?.leads.find((lead) => lead.kind === "job" && lead.id === CADE_JOB);
+    if (!cadeLead) throw new Error("Expected the Cade return lead.");
+
+    const here = session.explainOpportunity({ kind: "job", id: CADE_JOB });
+    expect(here).toEqual({
+      lead: cadeLead,
+      nextAction: {
+        tool: "talk_overworld_session_contact",
+        arguments: { character_id: STATION_CONTACT },
+        command: `talk ${STATION_CONTACT}`,
+        label: "Talk to the job's visible local contact.",
+      },
+    });
+
+    const mapped = session.explainOpportunity({ kind: "event", id: MARKET_EVENT });
+    expect(mapped.nextAction).toMatchObject({
+      tool: "move_overworld_session_area",
+      arguments: { area_route_id: expect.any(String) },
+    });
+    const unmapped = session.explainOpportunity({ kind: "event", id: GREENWAY_EVENT });
+    expect(unmapped.nextAction).toEqual({
+      tool: "explore_overworld_session_area",
+      arguments: { area_id: STATION },
+      command: `explore ${STATION}`,
+      label: "Explore Albany Station Quarter to advance local discovery.",
+    });
+
+    expect(session.snapshot()).toEqual(before);
+    expect(session.snapshotHash()).toBe(beforeHash);
+    expect(JSON.stringify([here, mapped, unmapped])).not.toMatch(
+      /dispatch_pasture|hold_household|terms|preview|consequence|minutes|renown|reward|prompt/i,
+    );
+
+    const executable = OverworldSession.restore(WORLD, before);
+    executable.talkToCharacter(STATION_CONTACT);
+    expect(executable.view().jobChoices).toContainEqual([CADE_JOB, CADE_OPTION]);
+  });
+
+  it("fails closed at stale, journey-choice, story-choice, and road-encounter boundaries", () => {
+    const active = atNorthGoal();
+    expect(() => active.explainOpportunity({ kind: "event", id: CADE_JOB })).toThrow(
+      `Opportunity lead "event:${CADE_JOB}" is not currently projected.`,
+    );
+    active.talkToCharacter(STATION_CONTACT);
+    active.workLocalJob(CADE_JOB, CADE_OPTION);
+    expect(() => active.explainOpportunity({ kind: "job", id: CADE_JOB })).toThrow(
+      /not currently projected/i,
+    );
+
+    const continueEnd = atWolfCompletion();
+    expect(() => continueEnd.explainOpportunity({ kind: "job", id: CADE_JOB })).toThrow(
+      /continue or end/i,
+    );
+    continueEnd.chooseJourney("continue");
+    expect(() => continueEnd.explainOpportunity({ kind: "job", id: CADE_JOB })).toThrow(
+      /choose the presented story consequence/i,
+    );
+
+    const road = atNorthGoal();
+    expect(road.followGoalPassage().stopReason).toBe("road_encounter");
+    expect(() => road.explainOpportunity({ kind: "job", id: CADE_JOB })).toThrow(
+      /resolve the pending road encounter/i,
+    );
+  });
+
+  it("keeps full and compact MCP explanations on the same unchanged snapshot", () => {
+    const session = atNorthGoal();
+    const api = createToolApi({ root: process.cwd() });
+    const fullStart = api.restore_overworld_session({ ...FULL, snapshot: session.snapshot() });
+    const compactStart = api.restore_overworld_session({
+      compact_context: true,
+      snapshot: session.snapshot(),
+    });
+    const full = api.explain_overworld_session_opportunity({
+      session_id: fullStart.session_id,
+      kind: "job",
+      id: CADE_JOB,
+      ...FULL,
+    });
+    const compact = api.explain_overworld_session_opportunity({
+      session_id: compactStart.session_id,
+      kind: "job",
+      id: CADE_JOB,
+    });
+    expect(full.explanation).toEqual(session.explainOpportunity({ kind: "job", id: CADE_JOB }));
+    expect(full.snapshot_hash).toBe(fullStart.snapshot_hash);
+    expect(compact.snapshot_hash).toBe(compactStart.snapshot_hash);
+    expect(compact.explanation.lead).toEqual([
+      full.explanation.lead.kind,
+      full.explanation.lead.id,
+      full.explanation.lead.title,
+      full.explanation.lead.area,
+      full.explanation.lead.access,
+    ]);
+    expect(compact.explanation.next_action).toEqual([
+      full.explanation.nextAction.tool,
+      full.explanation.nextAction.arguments,
+      full.explanation.nextAction.command,
+      full.explanation.nextAction.label,
+    ]);
+  });
 });

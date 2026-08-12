@@ -78,6 +78,7 @@ export const CODEX_PURE_PLAYER_TOOLS = new Set([
   "start_overworld",
   "get_overworld_session",
   "get_overworld_session_context",
+  "explain_overworld_session_opportunity",
   "plan_overworld_session_route",
   "travel_overworld_session",
   "follow_overworld_session_goal",
@@ -115,6 +116,10 @@ const PURE_MCP_TOOL_CATALOG_SHA256 = new Map([
   [
     "get_overworld_session_context",
     "4e4c8a1bb5e8af5e4316d4669513f96f1e0eef7ae23fd895e580c3d3aff6d5f8",
+  ],
+  [
+    "explain_overworld_session_opportunity",
+    "659c370523559e54f15ee9b61d3374da16bbdb6ca4ff844146678377177fdd6b",
   ],
   ["travel_overworld_session", "a950b0f764ad06b11baaf6cc656303b8ff43f15309cf8816157b32ac8a3d74cc"],
   [
