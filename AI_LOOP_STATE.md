@@ -167,3 +167,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat/next: FORTIFY withheld combat, so the journal was not directly exposed; 23/25 calls succeeded and two read-only story inspections failed input validation before exact recovery. `Reese's Works` was again falsely credited without preparation at DC 14 and is the strongest next truth seam.
 - Feedback: pre-seal status is 2 actionable reports of 3 and no compile; sealing this run appends the third pending report while preserving the already-consumed accepted bundle.
 - Guard: 35 focused tests, 554 traces, both 6,000-step crawls, exact health (448 files/3,878 tests), UI typecheck, all 12 packs, cycle-start integrity, and pure provenance are green.
+## AFK Cycle 2026-08-12T01-29-11-314Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-12T01-29-11-314Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-4e42fc3a (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
