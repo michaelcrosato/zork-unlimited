@@ -237,7 +237,13 @@ describe("progressive authored-event disclosure", () => {
 
     const appSource = readFileSync("ui/src/App.tsx", "utf8");
     expect(appSource).toContain("hasLiveOverworldEventChoice(");
-    expect(appSource).toContain("{!hasLegalSceneChoice ? (");
-    expect(appSource).toContain("<p>{scene.prompt}</p>");
+    expect(appSource).toContain(
+      "const liveOptions = hasLiveOverworldEventChoice(event.id, worldView.eventChoices)",
+    );
+    expect(appSource).toContain("if (liveOptions && liveOptions.length > 0)");
+    expect(appSource).toContain("summary: event.authored_scene!.prompt");
+    expect(appSource).toContain(
+      "onChoose: () => runWorldAction(() => worldSession.resolveEvent(event.id, option.id))",
+    );
   });
 });

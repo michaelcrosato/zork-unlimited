@@ -281,12 +281,14 @@ describe("bug_0511 - failed Tanner treatment keeps a visible recovery affordance
   });
 
   it("renders unavailable web choices disabled with their authored reason", () => {
-    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const questScreen = readFileSync("ui/src/QuestPlayScreen.tsx", "utf8");
     const styles = readFileSync("ui/src/styles.css", "utf8");
-    expect(app).toContain("questView.unavailableChoices.map");
-    expect(app).toMatch(/<button disabled[\s\S]{0,220}choice\.reason[\s\S]{0,80}<\/button>/);
-    expect(styles).toContain(".choices button:disabled");
-    expect(styles).toContain(".choice-reason");
+    expect(questScreen).toContain("view.unavailableChoices.map");
+    expect(questScreen).toMatch(
+      /view\.unavailableChoices\.map[\s\S]{0,500}choice\.reason[\s\S]{0,240}<button type="button" disabled>/,
+    );
+    expect(styles).toContain(".nw-action-card.is-disabled");
+    expect(styles).toContain(".nw-action-card > button:disabled");
   });
 
   it("never blocks the same-id recovery when a prepared failed case is already legal", () => {

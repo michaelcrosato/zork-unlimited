@@ -15,14 +15,14 @@ import {
 } from "../../src/world/journey_contract.js";
 
 const read = (p: string): string => readFileSync(p, "utf8");
-const NON_RPG_SOURCE = `
-meta: { id: non_rpg, title: "Non RPG", start_room: start }
+const NON_RPG_SOURCE = "title: A legacy content shape\nscenes: []\n";
+const NON_COMBAT_RPG_SOURCE = `
+meta: { id: non_combat_rpg, title: "Non-combat RPG", start_room: start }
 rooms:
   - id: start
     name: "Start"
-    description: "No RPG enemies field."
+    description: "A valid RPG with no enemies declaration."
     exits: []
-objects: []
 win_conditions:
   - { id: done, conditions: [{ visited: start }], ending: done }
 endings:
@@ -32,8 +32,10 @@ endings:
 describe("GameSession — RPG-only structured play", () => {
   it("accepts RPG sources and rejects legacy pack shapes", () => {
     expect(isRpgSource(read("content/rpg/quests/sunken_barrow.yaml"))).toBe(true);
+    expect(isRpgSource(NON_COMBAT_RPG_SOURCE)).toBe(true);
+    expect(GameSession.start(NON_COMBAT_RPG_SOURCE, 1).view().enemies).toEqual([]);
     expect(isRpgSource(NON_RPG_SOURCE)).toBe(false);
-    expect(() => GameSession.start(NON_RPG_SOURCE, 1)).toThrow(/RPG-only/i);
+    expect(() => GameSession.start(NON_RPG_SOURCE, 1)).toThrow(/schema validation/i);
   });
 
   it("shows current skill math and authored stakes before a checked choice", () => {

@@ -99,20 +99,24 @@ describe("Goal Passage human UI", () => {
     ).toContain("before another road would worsen your travel condition");
   });
 
-  it("renders every shared forecast field and wires the engine-owned action", () => {
+  it("builds a Night Watch action from the engine forecast and wires the engine-owned action", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
-    const status = readFileSync("ui/src/JourneyStatus.tsx", "utf8");
-    const styles = readFileSync("ui/src/styles.css", "utf8");
+    const screen = readFileSync("ui/src/OverworldPlayScreen.tsx", "utf8");
+    const modelStart = app.indexOf("if (journey.goalPassage)");
+    const modelEnd = app.indexOf("const dispatchActions", modelStart);
+    expect(modelStart).toBeGreaterThanOrEqual(0);
+    expect(modelEnd).toBeGreaterThan(modelStart);
+    const model = app.slice(modelStart, modelEnd);
 
     expect(app).toContain("worldSession.followGoalPassage()");
     expect(app).toContain("formatGoalPassageLog(result)");
     expect(app).toContain("setQuestSession(null)");
     expect(app).toContain("setQuestView(null)");
     expect(app).toContain("setActiveQuest(null)");
-    expect(app).toContain(
-      "<JourneyStatus journey={journey} onFollowGoalPassage={followGoalPassage}",
-    );
-    expect(status).toContain("journey.goalPassage &&");
+    expect(model).toContain("id: `goal:${passage.id}`");
+    expect(model).toContain('group: "Goal passage"');
+    expect(model).toContain('buttonLabel: "Follow goal"');
+    expect(model).toContain("onChoose: followGoalPassage");
     for (const field of [
       "label",
       "destination",
@@ -127,17 +131,19 @@ describe("Goal Passage human UI", () => {
       "consequence",
       "stopRule",
     ]) {
-      expect(status).toContain(`journey.goalPassage.${field}`);
+      expect(model).toContain(`passage.${field}`);
     }
-    expect(styles).toContain(".journey-passage");
-    expect(styles).toContain(".journey-passage-action");
+    expect(app).toContain("sections={worldActionSections}");
+    expect(screen).toContain("section.actions.map((action)");
+    expect(screen).toContain("action.disabledReason !== undefined");
+    expect(screen).toContain("disabled={disabled}");
   });
 
   it("keeps manual roads but never reads raw manifest events into road cards", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
 
     expect(app).toContain("worldView.exits.map((exit)");
-    expect(app).toContain("onClick={() => travel(exit.id)}");
+    expect(app).toContain("onChoose: () => travel(exit.id)");
     expect(app).toContain("worldView.pendingRoadEncounter.event.title");
     expect(app).not.toContain("OVERWORLD.road_events");
   });

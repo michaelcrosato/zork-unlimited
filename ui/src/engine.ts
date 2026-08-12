@@ -52,19 +52,27 @@ import { parse as parseYaml } from "yaml";
 /** Browser-side compile: parse YAML, require RPG shape, validate, and hash. */
 function compileRpgSource(source: string) {
   const raw = parseYaml(source);
-  if (raw === null || typeof raw !== "object" || !("enemies" in raw)) {
-    throw new Error("The Web UI is RPG-only; legacy pack shapes are not playable here.");
-  }
   const parsed = RpgPackSchema.safeParse(raw);
   if (!parsed.success) {
     throw new Error(
-      `Pack failed RPG schema validation: ${parsed.error.issues[0]?.message ?? "invalid"}`,
+      `RPG-only UI pack failed schema validation: ${parsed.error.issues[0]?.message ?? "invalid"}`,
     );
   }
   return { pack: parsed.data, contentHash: hashState(parsed.data) };
 }
 
 export type Mode = "rpg";
+
+export type ViewChoice = {
+  id: string;
+  title: string;
+  label: string;
+  kind: RpgAction["type"];
+  detail?: string;
+  skillCheck?: NonNullable<RpgObservation["available_actions"][number]["skill_check"]>;
+  combat?: NonNullable<RpgObservation["available_actions"][number]["combat"]>;
+  resources?: NonNullable<RpgObservation["available_actions"][number]["resources"]>;
+};
 
 /** A UI-normalized view of the RPG observation. */
 export type View = {
@@ -73,10 +81,21 @@ export type View = {
   title: string;
   text: string;
   dialogue: { npc: string; text: string } | null;
-  choices: { id: string; label: string; detail?: string }[];
+  choices: ViewChoice[];
   unavailableChoices: { id: string; label: string; reason: string }[];
   inventory: string[];
+  stats: RpgObservation["stats"];
+  score: number;
+  maxScore: number;
   pressureTracks?: NonNullable<RpgObservation["pressure_tracks"]>;
+  visibleObjects: RpgObservation["visible_objects"];
+  npcs: RpgObservation["npcs_present"];
+  exits: RpgObservation["exits"];
+  blockedExits: RpgObservation["blocked_exits"];
+  enemies: RpgObservation["enemies_present"];
+  publicState: RpgObservation["state"];
+  ending: RpgObservation["ending"];
+  /** @deprecated Prefer the structured scene/public-state fields above. */
   facts: string[];
   journal: string[];
   ended: boolean;
@@ -95,8 +114,11 @@ export type StepOutcome = {
 
 /** Fast shape predicate for catalog filtering and tests. */
 export function isRpgSource(source: string): boolean {
-  const raw = parseYaml(source);
-  return raw !== null && typeof raw === "object" && "enemies" in raw;
+  try {
+    return RpgPackSchema.safeParse(parseYaml(source)).success;
+  } catch {
+    return false;
+  }
 }
 
 /** One playable browser session bound to a compiled RPG pack and a live GameState. */
@@ -206,12 +228,17 @@ export class GameSession {
         : null,
       choices: o.available_actions.map((a) => ({
         id: a.id,
-        label: a.skill_check
-          ? a.command
-          : a.combat
-            ? `${a.command}  ⟨${a.combat.phase === "opening" ? "opening" : a.combat.phase === "follow_through" ? "follow-through" : "one-shot"}, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round${resourceHint(a.resources)}⟩`
-            : a.command,
+        title: a.command,
+        label: a.combat
+          ? `${a.command}  ⟨${a.combat.phase === "opening" ? "opening" : a.combat.phase === "follow_through" ? "follow-through" : "one-shot"}, ATK ${signed(a.combat.attack_bonus)}, DEF ${signed(a.combat.defense_bonus)} this round${resourceHint(a.resources)}⟩`
+          : a.command,
+        kind: a.action.type,
         ...(a.skill_check ? { detail: renderRpgSkillCheckDisclosure(a.skill_check) } : {}),
+        ...(a.skill_check ? { skillCheck: a.skill_check } : {}),
+        ...(a.combat ? { combat: a.combat } : {}),
+        ...(a.resources
+          ? { resources: { gains: [...a.resources.gains], costs: [...a.resources.costs] } }
+          : {}),
       })),
       unavailableChoices: o.blocked_actions.map((action) => ({
         id: action.id,
@@ -219,13 +246,27 @@ export class GameSession {
         reason: action.reason,
       })),
       inventory: o.inventory,
+      stats: { ...o.stats },
+      score: o.score,
+      maxScore: o.max_score,
       ...(o.pressure_tracks ? { pressureTracks: o.pressure_tracks } : {}),
+      visibleObjects: o.visible_objects.map((object) => ({ ...object })),
+      npcs: o.npcs_present.map((npc) => ({ ...npc })),
+      exits: o.exits.map((exit) => ({ ...exit })),
+      blockedExits: o.blocked_exits.map((exit) => ({ ...exit })),
+      enemies: o.enemies_present.map((enemy) => ({ ...enemy })),
+      publicState: {
+        flags: [...o.state.flags],
+        vars: { ...o.state.vars },
+        journal: [...o.state.journal],
+      },
+      ending: o.ending ? { ...o.ending } : null,
       facts: [
         `HP ${o.stats.hp}  ATK ${o.stats.attack}  DEF ${o.stats.defense}`,
         ...(o.pressure_tracks ?? []).map(pressureFact),
-        ...o.enemies_present.map((e) => `foe: ${e.name} (HP ${e.hp})`),
-        ...o.exits.map((e) => `exit: ${e.direction}`),
-        ...o.blocked_exits.map((e) => `blocked: ${e.direction} — ${e.message}`),
+        ...o.enemies_present.map((enemy) => `foe: ${enemy.name} (HP ${enemy.hp})`),
+        ...o.exits.map((exit) => `exit: ${exit.direction}`),
+        ...o.blocked_exits.map((exit) => `blocked: ${exit.direction} — ${exit.message}`),
       ],
       journal: o.state.journal,
       ended: o.ended,

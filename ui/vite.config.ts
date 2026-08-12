@@ -5,5 +5,10 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: { fs: { allow: [".."] } },
-  build: { outDir: "dist" },
+  build: {
+    outDir: "dist",
+    // The released UI is one offline HTML file. Keep the generated Night Watch
+    // texture inside the stylesheet so the existing inliner has no asset tail.
+    assetsInlineLimit: 4_000_000,
+  },
 });

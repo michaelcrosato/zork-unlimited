@@ -1,3 +1,4 @@
+import { CaretDown } from "@phosphor-icons/react/CaretDown";
 import type { CampaignCharacterView } from "./overworld.js";
 
 type IdListProps = {
@@ -53,7 +54,7 @@ export function CampaignCharacterPanel({
             </span>
             <span className="character-readonly">Read only</span>
             <span className="character-toggle" aria-hidden="true">
-              ▾
+              <CaretDown />
             </span>
           </span>
         </h2>

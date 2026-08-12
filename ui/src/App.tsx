@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { GameSession, type View } from "./engine.js";
 import {
+  hasLiveOverworldEventChoice,
   OverworldSession,
   type OverworldActionResult,
   type OverworldAreaTravelResult,
@@ -15,7 +16,6 @@ import {
   type OverworldServiceResult,
   type OverworldSessionSnapshot,
   type OverworldView,
-  hasLiveOverworldEventChoice,
 } from "./overworld.js";
 import { PACKS } from "./packs.js";
 import { OVERWORLD } from "./worldData.js";
@@ -23,10 +23,19 @@ import { NewJourneyTutorial } from "./NewJourneyTutorial.js";
 import { JourneyChoiceScreen } from "./JourneyChoiceScreen.js";
 import { JourneyStoryChoiceScreen } from "./JourneyStoryChoiceScreen.js";
 import { JourneyEndedScreen } from "./JourneyEndedScreen.js";
-import { JourneyStatus } from "./JourneyStatus.js";
 import { DepartureRecap } from "./DepartureRecap.js";
-import { CampaignCharacterPanel } from "./CampaignCharacterPanel.js";
-import { QuestCharacterContinuityPanel } from "./QuestCharacterContinuityPanel.js";
+import { QuestPlayScreen } from "./QuestPlayScreen.js";
+import type { NightWatchPanel } from "./NightWatchChrome.js";
+import {
+  OverworldPlayScreen,
+  type WorldActionCard,
+  type WorldActionSection,
+} from "./OverworldPlayScreen.js";
+import {
+  presentServiceSection,
+  primaryWorldSectionIds,
+  serviceActionTitle,
+} from "./worldActionPresentation.js";
 import { formatGoalPassageLog } from "./goalPassage.js";
 import { FRESH_GAME_TUTORIAL } from "../../src/world/fresh_game_tutorial.js";
 import { timeLabel } from "../../src/world/session_journal_codec.js";
@@ -43,10 +52,6 @@ const packsByPath = new Map(PACKS.map((pack) => [normalizePackPath(pack.path), p
 // The session exposes quests as OverworldQuestView (no pack source — the view
 // is what a PLAYER knows); the pack path lives only on the manifest quest.
 const questsById = new Map<string, OverworldQuest>(OVERWORLD.quests.map((q) => [q.id, q]));
-const poiTitlesById = new Map(OVERWORLD.points_of_interest.map((poi) => [poi.id, poi.title]));
-const characterNamesById = new Map(
-  OVERWORLD.characters.map((character) => [character.id, character.name]),
-);
 const OVERWORLD_SAVE_KEY = "adventureforge:new-york-overworld:v1";
 
 function jobChoiceKey(jobId: string, optionId: string): string {
@@ -150,7 +155,7 @@ export function ServiceAction({
         aria-disabled={!serviceAction.available}
         onClick={serviceAction.available ? onActivate : undefined}
       >
-        {action === "rest" ? "Rest" : action === "care" ? "Receive Care" : "Resupply"}
+        {serviceActionTitle(action)}
       </button>
       <small className="service-action-preview" id={previewId}>
         {serviceAction.message} {serviceAction.minutes} min · supplies{" "}
@@ -434,20 +439,15 @@ export default function App(): JSX.Element {
     return worldState.notice ? [worldState.notice, opener] : [opener];
   });
   const [error, setError] = useState<string | null>(null);
+  const [nightWatchPanel, setNightWatchPanel] = useState<NightWatchPanel>("scene");
   const journey = worldSession.journey();
 
   useEffect(() => {
-    persistWorldSession(worldSession);
-  }, [worldSession, worldView]);
+    // Quest state is currently tab-local. Hold the last pre-quest road save so
+    // a reload loses quest progress but never strands a started quest.
+    if (questSession === null) persistWorldSession(worldSession);
+  }, [questSession, worldSession, worldView]);
 
-  const roadLabel = useMemo(
-    () =>
-      worldView.exits
-        .slice(0, 4)
-        .map((exit) => exit.destination.name)
-        .join(" / "),
-    [worldView.exits],
-  );
   const legalJobChoiceKeys = useMemo(
     () => new Set(worldView.jobChoices.map(([jobId, optionId]) => jobChoiceKey(jobId, optionId))),
     [worldView.jobChoices],
@@ -518,6 +518,10 @@ export default function App(): JSX.Element {
         manifestQuest.campaign_imports,
         1,
       );
+      // Freeze a relaunchable road snapshot immediately before the canonical
+      // quest-start commit. While the quest is active, the save effect above
+      // deliberately leaves this snapshot in place.
+      persistWorldSession(worldSession);
       const localQuest = worldSession.commitQuestStart(plan);
       const selectedApproach = localQuest.launch?.options.find(
         (option) => option.id === localQuest.launch?.selected?.optionId,
@@ -525,6 +529,7 @@ export default function App(): JSX.Element {
       setQuestSession(session);
       setQuestView(session.view());
       setActiveQuest(localQuest);
+      setNightWatchPanel("scene");
       setWorldView(worldSession.view());
       setLog((prev) => [
         `Started local quest: ${localQuest.title}${selectedApproach ? ` via ${selectedApproach.title}` : ""} (${worldView.current.name}, ${questAreaName(localQuest)}).`,
@@ -608,56 +613,71 @@ export default function App(): JSX.Element {
 
   function choose(id: string, label: string): void {
     if (!questSession) return;
-    const out = questSession.choose(id);
-    const view = questSession.view();
-    setQuestView(view);
-    const lines = [
-      `> ${label}`,
-      ...out.narration,
-      ...(out.rejection ? [`(${out.rejection})`] : []),
-    ];
-    if (out.ok) {
-      if (out.journeyActionId === null) throw new Error("Accepted quest action has no id.");
-      worldSession.recordQuestDecision(
-        out.journeyActionId,
-        out.journeyDecision,
-        questSession.isCheckpointSafeBoundary(),
-      );
-      setWorldView(worldSession.view());
-    }
-    // Close a finished quest back into the overworld (MCP-bridge parity,
-    // src/mcp/overworld_quest_bridge.ts): a non-death ending completes the lead
-    // (journal entry + completedQuestIds); a death ending preserves the unfinished
-    // goal and moves play to the journey's mandatory end choice.
-    if (view.ended && activeQuest) {
-      const ending = questSession.ending();
-      if (ending && !ending.death) {
-        try {
-          const result = worldSession.completeQuest(activeQuest.id, {
+    setError(null);
+    try {
+      const out = questSession.choose(id);
+      const view = questSession.view();
+      setQuestView(view);
+      const lines = [
+        `> ${label}`,
+        ...out.narration,
+        ...(out.rejection ? [`(${out.rejection})`] : []),
+      ];
+      if (out.ok) {
+        if (out.journeyActionId === null) throw new Error("Accepted quest action has no id.");
+        worldSession.recordQuestDecision(
+          out.journeyActionId,
+          out.journeyDecision,
+          questSession.isCheckpointSafeBoundary(),
+        );
+        setWorldView(worldSession.view());
+      }
+      // Close a finished quest back into the overworld (MCP-bridge parity,
+      // src/mcp/overworld_quest_bridge.ts): a non-death ending completes the lead
+      // (journal entry + completedQuestIds); a death ending preserves the unfinished
+      // goal and moves play to the journey's mandatory end choice.
+      if (view.ended && activeQuest) {
+        const ending = questSession.ending();
+        if (ending && !ending.death) {
+          try {
+            const result = worldSession.completeQuest(activeQuest.id, {
+              endingId: ending.id,
+              endingTitle: ending.title,
+              death: ending.death,
+            });
+            persistWorldSession(worldSession);
+            setWorldView(worldSession.view());
+            lines.unshift(`Completed ${result.quest.title}: ${result.entry.text}`);
+          } catch (e) {
+            setError((e as Error).message);
+          }
+        } else if (ending?.death) {
+          worldSession.recordQuestCharacterDeath(activeQuest.id, {
             endingId: ending.id,
-            endingTitle: ending.title,
             death: ending.death,
           });
+          persistWorldSession(worldSession);
           setWorldView(worldSession.view());
-          lines.unshift(`Completed ${result.quest.title}: ${result.entry.text}`);
-        } catch (e) {
-          setError((e as Error).message);
+          lines.unshift(
+            `${activeQuest.title} ends in death — this journey must now be ended with its unfinished goal preserved.`,
+          );
         }
-      } else if (ending?.death) {
-        worldSession.recordQuestCharacterDeath(activeQuest.id, {
-          endingId: ending.id,
-          death: ending.death,
-        });
-        setWorldView(worldSession.view());
-        lines.unshift(
-          `${activeQuest.title} ends in death — this journey must now be ended with its unfinished goal preserved.`,
-        );
       }
+      setLog((prev) => [...lines, ...prev]);
+    } catch (e) {
+      setError((e as Error).message);
     }
-    setLog((prev) => [...lines, ...prev]);
   }
 
   function returnToRoad(): void {
+    if (
+      activeQuest &&
+      !worldView.completedQuestIds.includes(activeQuest.id) &&
+      journey.pendingChoice?.reasons.includes("character_died") !== true
+    ) {
+      setError("Campaign foldback has not been recorded; the quest must remain open.");
+      return;
+    }
     setQuestSession(null);
     setQuestView(null);
     setActiveQuest(null);
@@ -673,6 +693,7 @@ export default function App(): JSX.Element {
     setQuestView(null);
     setActiveQuest(null);
     setInspectedDepartureStory(null);
+    setNightWatchPanel("scene");
     setLog([
       `Started a new journey in ${session.view().current.name}. Roads leave town, but the work is local until you find it.`,
     ]);
@@ -811,727 +832,418 @@ export default function App(): JSX.Element {
     return <JourneyEndedScreen journey={journey} onNewJourney={startNewJourney} />;
   }
 
+  if (questView && activeQuest) {
+    const latestQuestConsequence =
+      log.find((entry) => !entry.startsWith("> ")) ?? `Entered ${questView.title}.`;
+    // A death foldback is routed to JourneyChoiceScreen above this branch.
+    const canLeaveQuest = worldView.completedQuestIds.includes(activeQuest.id);
+    return (
+      <QuestPlayScreen
+        view={questView}
+        quest={activeQuest}
+        world={worldView}
+        journey={journey}
+        latestConsequence={latestQuestConsequence}
+        error={error}
+        log={log}
+        panel={nightWatchPanel}
+        onPanelChange={setNightWatchPanel}
+        onChoose={choose}
+        canLeave={canLeaveQuest}
+        onLeave={returnToRoad}
+      />
+    );
+  }
+
+  function questActionCards(
+    quests: readonly OverworldQuestView[],
+    group: string,
+  ): WorldActionCard[] {
+    return quests.flatMap((quest) => {
+      const areaName = questAreaName(quest);
+      const inArea = worldView.currentArea?.id === quest.area;
+      if (!quest.launch) {
+        const projected = worldView.questStarts.some(([questId]) => questId === quest.id);
+        return [
+          {
+            id: `quest:${quest.id}`,
+            group,
+            title: quest.title,
+            summary: quest.discovery,
+            terms: `Posted in ${areaName}`,
+            buttonLabel: "Begin",
+            tone: "ember" as const,
+            ...(!projected
+              ? { disabledReason: inArea ? "Not currently projected." : `Move to ${areaName}.` }
+              : {}),
+            onChoose: () => startQuest(quest),
+          },
+        ];
+      }
+
+      return quest.launch.options.map((option) => {
+        const projected = worldView.questStarts.some(
+          ([questId, approachId]) => questId === quest.id && approachId === option.id,
+        );
+        const blocked =
+          option.projection?.blockedReason ?? (!inArea ? `Move to ${areaName}.` : undefined);
+        return {
+          id: `quest:${quest.id}:${option.id}`,
+          group,
+          title: option.title,
+          summary: option.preview,
+          terms: `${option.terms.minutes} min · ${suppliesLabel(option.terms.supplies)} · fatigue +${option.terms.fatigue}`,
+          consequence: option.tradeoffSummary ?? option.consequence,
+          buttonLabel: `Depart for ${quest.title}`,
+          tone: "ember" as const,
+          ...(!projected ? { disabledReason: blocked ?? "Not currently projected." } : {}),
+          onChoose: () => startQuest(quest, option.id),
+        };
+      });
+    });
+  }
+
+  const worldActionSections: WorldActionSection[] = [];
+
+  if (worldView.pendingRoadEncounter) {
+    worldActionSections.push({
+      id: "encounter",
+      title: worldView.pendingRoadEncounter.event.title,
+      description: worldView.pendingRoadEncounter.event.summary,
+      actions: worldView.pendingRoadEncounter.options.map((option) => ({
+        id: `encounter:${option.strategy}`,
+        group: "Road encounter",
+        title: option.label,
+        summary: worldView.pendingRoadEncounter!.event.summary,
+        terms: `${option.minutes} min · supplies -${option.suppliesCost} · fatigue +${option.fatigueGained} · renown +${option.renownGained}`,
+        consequence: `Resolve the interruption on ${worldView.pendingRoadEncounter!.route}.`,
+        buttonLabel: "Choose response",
+        tone:
+          option.strategy === "press_on"
+            ? "ember"
+            : option.strategy === "assist_travelers"
+              ? "lichen"
+              : "ice",
+        onChoose: () =>
+          runRoadEncounterAction(() => worldSession.resolveRoadEncounter(option.strategy)),
+      })),
+    });
+  }
+
+  if (journey.goalPassage) {
+    const passage = journey.goalPassage;
+    worldActionSections.push({
+      id: "goal",
+      title: "Follow the current goal",
+      description: passage.consequence,
+      actions: [
+        {
+          id: `goal:${passage.id}`,
+          group: "Goal passage",
+          title: passage.label,
+          summary: passage.consequence,
+          terms: `To ${passage.destination} · ${passage.roadCount} roads · ${passage.baseMinutes} base / ${passage.estimatedMinutes} estimated min · ${passage.suppliesNeeded} supplies needed${passage.supplyDeficit > 0 ? ` · ${passage.supplyDeficit} short` : ""} · ${passage.suppliesAfter} left · fatigue ${passage.fatigueAfter} · ${passage.travelConditionAfter}`,
+          consequence: passage.stopRule,
+          buttonLabel: "Follow goal",
+          tone: "ice",
+          onChoose: followGoalPassage,
+        },
+      ],
+    });
+  }
+
+  const dispatchActions = questActionCards(departureQuest ? [departureQuest] : [], "Dispatch");
+  for (const interaction of worldView.departureInteractions) {
+    dispatchActions.push({
+      id: `dispatch:${interaction.id}`,
+      group: "Optional support",
+      title: interaction.title,
+      summary: `Review the ${interaction.kind.replaceAll("_", " ")} commitment before departure.`,
+      terms: "Inspect before committing",
+      buttonLabel: "Review support",
+      tone: "ice",
+      onChoose: () => inspectDepartureStory(interaction.id),
+    });
+  }
+  for (const lead of worldView.departureContactLeads) {
+    dispatchActions.push({
+      id: `dispatch:${lead.id}`,
+      group: "Optional support",
+      title: lead.title,
+      summary: lead.guidance,
+      terms: lead.action ? `Talk with ${lead.contactName}` : "Choose a field kit first",
+      buttonLabel: "Ask about riding",
+      tone: "lichen",
+      ...(!lead.action
+        ? { disabledReason: `Choose a field kit before asking ${lead.contactName}.` }
+        : {}),
+      onChoose: () => {
+        if (!lead.action) return;
+        runWorldAction(() => worldSession.talkToCharacter(lead.action!.arguments.character_id));
+      },
+    });
+  }
+  if (dispatchActions.length > 0) {
+    worldActionSections.push({
+      id: "dispatch",
+      title: departureQuest ? `${departureQuest.title} field briefing` : "Before you depart",
+      description:
+        worldView.stationDispatchBoard?.guidance ??
+        "Choose a projected route now or inspect one optional support commitment.",
+      actions: dispatchActions,
+    });
+  }
+
+  const areaActions: WorldActionCard[] = worldView.areaExits.map((exit) => ({
+    id: `area-route:${exit.id}`,
+    group: "Local route",
+    title: exit.destination.name,
+    summary: exit.destination.summary,
+    terms: `${exit.route} · ${exit.travel_minutes} min`,
+    buttonLabel: "Move locally",
+    tone: "ice",
+    onChoose: () => moveArea(exit.id),
+  }));
+  for (const area of worldView.areas) {
+    if (worldView.currentArea?.id !== area.id || worldView.visitedAreaIds.includes(area.id))
+      continue;
+    areaActions.push({
+      id: `area:${area.id}`,
+      group: "Explore",
+      title: area.name,
+      summary: area.summary,
+      terms: `${area.travel_minutes} min on foot`,
+      buttonLabel: "Explore area",
+      tone: "lichen",
+      onChoose: () => runWorldAction(() => worldSession.exploreArea(area.id)),
+    });
+  }
+  worldActionSections.push({
+    id: "areas",
+    title: "Local movement",
+    description: `${worldView.hiddenAreaCount} unmapped local ${worldView.hiddenAreaCount === 1 ? "area" : "areas"} remain.`,
+    actions: areaActions,
+  });
+
+  const discoveryActions: WorldActionCard[] = worldView.pois.map((poi) => ({
+    id: `poi:${poi.id}`,
+    group: "Scout",
+    title: poi.title,
+    summary: poi.summary,
+    terms: "Local investigation",
+    buttonLabel: "Scout",
+    tone: "lichen",
+    onChoose: () => runWorldAction(() => worldSession.scoutPoi(poi.id)),
+  }));
+  discoveryActions.push(
+    ...worldView.sites.map((site) => ({
+      id: `site:${site.id}`,
+      group: "Regional site",
+      title: site.title,
+      summary: site.discovery,
+      terms: `${site.kind} · danger ${site.danger}`,
+      buttonLabel: worldView.exploredSiteIds.includes(site.id) ? "Explored" : "Explore site",
+      tone: "ember" as const,
+      ...(worldView.exploredSiteIds.includes(site.id)
+        ? { disabledReason: "This expedition site is already explored." }
+        : {}),
+      onChoose: () => runWorldAction(() => worldSession.exploreSite(site.id)),
+    })),
+  );
+  worldActionSections.push({
+    id: "discoveries",
+    title: "Discoveries and sites",
+    description: `${worldView.hiddenSiteCount} regional ${worldView.hiddenSiteCount === 1 ? "site" : "sites"} remain hidden.`,
+    actions: discoveryActions,
+  });
+
+  worldActionSections.push({
+    id: "contacts",
+    title: "Local contacts",
+    actions: worldView.characters.map((character) => ({
+      id: `contact:${character.id}`,
+      group: "Talk",
+      title: character.name,
+      summary: character.agenda,
+      terms: `${character.role} · ${character.faction}`,
+      buttonLabel: "Talk",
+      tone: "ice",
+      onChoose: () => runWorldAction(() => worldSession.talkToCharacter(character.id)),
+    })),
+  });
+
+  const eventActions: WorldActionCard[] = [];
+  for (const event of worldView.events) {
+    const resolved = worldView.resolvedEventIds.includes(event.id);
+    const liveOptions = hasLiveOverworldEventChoice(event.id, worldView.eventChoices)
+      ? event.authored_scene?.options.filter((option) =>
+          legalEventChoiceKeys.has(eventChoiceKey(event.id, option.id)),
+        )
+      : undefined;
+    if (liveOptions && liveOptions.length > 0) {
+      eventActions.push(
+        ...liveOptions.map((option) => ({
+          id: `event:${event.id}:${option.id}`,
+          group: "Current event",
+          title: option.title,
+          summary: event.authored_scene!.prompt,
+          terms: `${option.preview} · ${option.terms.minutes} min · renown ${option.terms.renown}`,
+          consequence: option.consequence,
+          buttonLabel: "Choose response",
+          tone:
+            event.pressure === "conflict" || event.pressure === "hazard"
+              ? ("ember" as const)
+              : event.pressure === "opportunity"
+                ? ("lichen" as const)
+                : ("ice" as const),
+          onChoose: () => runWorldAction(() => worldSession.resolveEvent(event.id, option.id)),
+        })),
+      );
+    } else {
+      eventActions.push({
+        id: `event:${event.id}:investigate`,
+        group: "Current event",
+        title: event.title,
+        summary: event.summary,
+        terms: `${event.pressure} pressure · intensity ${event.intensity}`,
+        buttonLabel: resolved ? "Resolved" : "Investigate",
+        tone:
+          event.pressure === "conflict" || event.pressure === "hazard"
+            ? "ember"
+            : event.pressure === "opportunity"
+              ? "lichen"
+              : "ice",
+        ...(resolved ? { disabledReason: "This event is resolved." } : {}),
+        onChoose: () => runWorldAction(() => worldSession.investigateEvent(event.id)),
+      });
+      if (!event.authored_scene && !resolved) {
+        eventActions.push({
+          id: `event:${event.id}:resolve`,
+          group: "Current event",
+          title: `Resolve ${event.title}`,
+          summary: event.summary,
+          terms: `${event.pressure} pressure · intensity ${event.intensity}`,
+          buttonLabel: "Resolve event",
+          tone:
+            event.pressure === "conflict" || event.pressure === "hazard"
+              ? "ember"
+              : event.pressure === "opportunity"
+                ? "lichen"
+                : "ice",
+          onChoose: () => runWorldAction(() => worldSession.resolveEvent(event.id)),
+        });
+      }
+    }
+  }
+  worldActionSections.push({ id: "events", title: "Current events", actions: eventActions });
+
+  const jobActions: WorldActionCard[] = [];
+  for (const job of worldView.jobs) {
+    const completed = worldView.completedJobIds.includes(job.id);
+    if (job.authored_scene) {
+      jobActions.push(
+        ...job.authored_scene.options.map((option) => {
+          const projected = legalJobChoiceKeys.has(jobChoiceKey(job.id, option.id));
+          return {
+            id: `job:${job.id}:${option.id}`,
+            group: "Local job",
+            title: option.title,
+            summary: option.preview,
+            terms: `${option.terms.minutes} min · renown ${option.terms.renown}`,
+            consequence: option.consequence,
+            buttonLabel: "Choose priority",
+            tone: "lichen" as const,
+            ...(!projected
+              ? { disabledReason: completed ? "This job is complete." : "Requirements not met." }
+              : {}),
+            onChoose: () => runWorldAction(() => worldSession.workLocalJob(job.id, option.id)),
+          };
+        }),
+      );
+    } else {
+      jobActions.push({
+        id: `job:${job.id}`,
+        group: "Local job",
+        title: job.title,
+        summary: job.summary,
+        terms: `${job.kind.replaceAll("_", " ")} · difficulty ${job.difficulty} · ${job.minutes} min`,
+        buttonLabel: completed ? "Completed" : "Work job",
+        tone: "lichen",
+        ...(completed ? { disabledReason: "This job is complete." } : {}),
+        onChoose: () => runWorldAction(() => worldSession.workLocalJob(job.id)),
+      });
+    }
+  }
+  worldActionSections.push({ id: "jobs", title: "Local jobs", actions: jobActions });
+
+  worldActionSections.push({
+    id: "quests",
+    title: "Notice board",
+    description:
+      noticeBoardQuests.length > 0
+        ? "Discovered work anchored in this town."
+        : "Scout, talk, or investigate to surface local leads.",
+    actions: questActionCards(noticeBoardQuests, "Notice board"),
+  });
+
+  worldActionSections.push(presentServiceSection(worldView, worldSession, runServiceAction));
+
+  worldActionSections.push({
+    id: "roads",
+    title: "Roads from here",
+    description: worldView.pendingRoadEncounter
+      ? "Resolve the road encounter before travelling again."
+      : `${worldView.exits.length} direct roads are known from ${worldView.current.name}.`,
+    actions: worldView.exits.map((exit) => ({
+      id: `road:${exit.id}`,
+      group: "Road",
+      title: exit.destination.name,
+      summary: `${exit.route} to ${exit.destination.name}`,
+      terms: `${exit.distance_mi.toFixed(1)} mi · ${exit.estimate.baseMinutes} road min${exit.estimate.delayMinutes > 0 ? ` + ${exit.estimate.delayMinutes} delay` : ""} · supplies ${exit.estimate.suppliesUsed}/${exit.estimate.suppliesNeeded} · fatigue +${exit.estimate.fatigueGained}`,
+      buttonLabel: "Take road",
+      tone: "ice",
+      ...(worldView.pendingRoadEncounter
+        ? { disabledReason: "Resolve the pending road encounter first." }
+        : {}),
+      onChoose: () => travel(exit.id),
+    })),
+  });
+
+  if (worldView.pendingRoadEncounter) {
+    const encounterBlock = "Resolve the pending road encounter before taking another action.";
+    for (const section of worldActionSections) {
+      if (section.id === "encounter") continue;
+      for (const action of section.actions) {
+        action.disabledReason = encounterBlock;
+      }
+    }
+  }
+
+  const hasLegalDispatchAction = dispatchActions.some(
+    (action) => action.disabledReason === undefined,
+  );
+  const prioritySectionIds = primaryWorldSectionIds(
+    worldActionSections,
+    worldView.pendingRoadEncounter !== null,
+    hasLegalDispatchAction,
+  );
+
   return (
-    <main className="af">
-      <header className="world-header">
-        <p className="kicker">New York State</p>
-        <h1>{OVERWORLD.name}</h1>
-        <p className="sub">{OVERWORLD.premise}</p>
-      </header>
-
-      <JourneyStatus journey={journey} onFollowGoalPassage={followGoalPassage} />
-
-      <CampaignCharacterPanel character={worldView.character} />
-
-      <section className="overworld">
-        <article className="location-panel">
-          <div className="location-topline">
-            <span className={`settlement ${worldView.current.kind}`}>
-              {worldView.current.kind.replace("_", " ")}
-            </span>
-            <span>{worldView.timeLabel}</span>
-          </div>
-          <h2>{worldView.current.name}</h2>
-          <p>{worldView.current.description}</p>
-          <dl className="location-facts">
-            <div>
-              <dt>Population</dt>
-              <dd>{worldView.current.population_2025.toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt>Region</dt>
-              <dd>{worldView.current.region}</dd>
-            </div>
-            <div>
-              <dt>Known Roads</dt>
-              <dd>{roadLabel || "None"}</dd>
-            </div>
-            <div>
-              <dt>Supplies</dt>
-              <dd>
-                {worldView.supplies}/{worldView.maxSupplies}
-              </dd>
-            </div>
-            <div>
-              <dt>Fatigue</dt>
-              <dd>{worldView.fatigue}</dd>
-            </div>
-            <div>
-              <dt>Condition</dt>
-              <dd>{worldView.travelCondition}</dd>
-            </div>
-          </dl>
-          <div className="service-actions">
-            {worldView.serviceActions.map((serviceAction) => (
-              <ServiceAction
-                key={serviceAction.action}
-                serviceAction={serviceAction}
-                offer={worldView.serviceOffers.find((offer) => offer.id === serviceAction.offerId)}
-                onActivate={() =>
-                  runServiceAction(() =>
-                    serviceAction.action === "rest"
-                      ? worldSession.restAtTown()
-                      : serviceAction.action === "care"
-                        ? worldSession.careAtTown()
-                        : worldSession.resupplyAtTown(),
-                  )
-                }
-              />
-            ))}
-            <button className="secondary" onClick={startNewJourney}>
-              New Journey
-            </button>
-          </div>
-          {worldView.stationDispatchBoard ? (
-            <StationDispatchBoard
-              board={worldView.stationDispatchBoard}
-              recap={worldView.departureRecap}
-              onInspect={inspectDepartureStory}
-              onTalk={(characterId) => {
-                runWorldAction(() => worldSession.talkToCharacter(characterId));
-              }}
-            >
-              {departureQuest && (
-                <DepartureLaunchPanel
-                  quest={departureQuest}
-                  areaName={questAreaName(departureQuest)}
-                  onStart={(approachId) => startQuest(departureQuest, approachId)}
-                />
-              )}
-            </StationDispatchBoard>
-          ) : (
-            <>
-              {departureQuest && (
-                <DepartureLaunchPanel
-                  quest={departureQuest}
-                  areaName={questAreaName(departureQuest)}
-                  onStart={(approachId) => startQuest(departureQuest, approachId)}
-                />
-              )}
-              {(worldView.departureRecap ||
-                worldView.departureInteractions.length > 0 ||
-                worldView.departureContactLeads.length > 0) && (
-                <div className="departure-interactions">
-                  <h3>{departureQuest ? "Plan the dispatch (optional)" : "Before you depart"}</h3>
-                  <p>
-                    Your accumulated dispatch plan and any optional Station decisions still open;
-                    {" you may inspect one or leave without choosing."} Optional contacts are listed
-                    alongside them.
-                  </p>
-                  {worldView.departureRecap && <DepartureRecap recap={worldView.departureRecap} />}
-                  {worldView.departureInteractions.map((interaction) => (
-                    <button
-                      className="mini-command"
-                      key={interaction.id}
-                      type="button"
-                      onClick={() => inspectDepartureStory(interaction.id)}
-                    >
-                      Inspect {interaction.title}
-                    </button>
-                  ))}
-                  {worldView.departureContactLeads.map((lead) => (
-                    <DepartureContactLead
-                      key={lead.id}
-                      lead={lead}
-                      onTalk={() => {
-                        if (!lead.action) return;
-                        runWorldAction(() =>
-                          worldSession.talkToCharacter(lead.action.arguments.character_id),
-                        );
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </article>
-
-        <aside className="atlas-panel">
-          <h2>Atlas</h2>
-          <p>
-            {worldView.visitedCount} visited / {worldView.totalTowns} towns
-          </p>
-          <div className="discovered-list">
-            {worldView.discovered.slice(0, 18).map((node) => (
-              <span key={node.id}>{node.name}</span>
-            ))}
-          </div>
-          {worldView.routeOptions.length > 0 && (
-            <div className="route-planner">
-              <h3>Known Routes</h3>
-              {worldView.routeOptions.slice(0, 5).map((route) => (
-                <button key={route.destination.id} onClick={() => travel(route.steps[0]!.edge.id)}>
-                  <strong>{route.destination.name}</strong>
-                  <span>
-                    {route.totalDistanceMi.toFixed(1)} mi - {route.estimate.baseMinutes} road min
-                    {route.estimate.delayMinutes > 0
-                      ? ` + ${route.estimate.delayMinutes} delay`
-                      : ""}{" "}
-                    - supplies {route.estimate.suppliesUsed}/{route.estimate.suppliesNeeded}
-                    {route.estimate.supplyDeficit > 0
-                      ? ` (${route.estimate.supplyDeficit} short)`
-                      : ""}{" "}
-                    - fatigue +{route.estimate.fatigueGained} - next {route.steps[0]!.to.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          {worldView.journal.length > 0 && (
-            <div className="world-journal">
-              <h3>Journal</h3>
-              {worldView.journal.slice(0, 5).map((entry) => (
-                <div key={entry.id}>
-                  <strong>{entry.title}</strong>
-                  <span>
-                    {entry.town} - {entry.recordedAt}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          {Object.keys(worldView.regionRenown).length > 0 && (
-            <div className="renown-list">
-              <h3>Regional Renown</h3>
-              {Object.entries(worldView.regionRenown).map(([region, renown]) => (
-                <span key={region}>
-                  {region}: {renown}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="regional-thread-list">
-            <h3>Regional Threads</h3>
-            {worldView.regionalArcs.slice(0, 3).map((arc) => (
-              <div key={arc.id} className={arc.completed ? "thread complete" : "thread"}>
-                <strong>{arc.title}</strong>
-                <span>
-                  {arc.resolvedInRegion}/{arc.requiredResolutions} anchor towns - {arc.region}
-                </span>
-                <p>
-                  Anchors:{" "}
-                  {arc.anchorTowns
-                    .slice(0, 4)
-                    .map((town) => town.name)
-                    .join(", ")}
-                </p>
-                {arc.resolvedAnchorTowns.length > 0 && (
-                  <p>Cleared: {arc.resolvedAnchorTowns.map((town) => town.name).join(", ")}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </aside>
-      </section>
-
-      <section className="world-grid">
-        <article className="roads-panel">
-          <h2>Roads From Here</h2>
-          {worldView.pendingRoadEncounter && (
-            <div className={`road-encounter ${worldView.pendingRoadEncounter.event.risk}`}>
-              <strong>{worldView.pendingRoadEncounter.event.title}</strong>
-              <span>
-                {worldView.pendingRoadEncounter.route} - {worldView.pendingRoadEncounter.event.risk}{" "}
-                risk
-              </span>
-              <p>{worldView.pendingRoadEncounter.event.summary}</p>
-              <div className="encounter-actions">
-                {worldView.pendingRoadEncounter.options.map((option) => (
-                  <button
-                    key={option.strategy}
-                    className="mini-command"
-                    onClick={() =>
-                      runRoadEncounterAction(() =>
-                        worldSession.resolveRoadEncounter(option.strategy),
-                      )
-                    }
-                  >
-                    <span>{option.label}</span>
-                    <small>
-                      {option.minutes} min - supplies {option.suppliesCost} - fatigue +
-                      {option.fatigueGained} - renown +{option.renownGained}
-                    </small>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <ul className="road-list">
-            {worldView.exits.map((exit) => (
-              <li key={exit.id}>
-                <button
-                  disabled={worldView.pendingRoadEncounter !== null}
-                  onClick={() => travel(exit.id)}
-                >
-                  <span>{exit.destination.name}</span>
-                  <small>
-                    {exit.route} - {exit.distance_mi.toFixed(1)} mi - {exit.travel_minutes} min
-                  </small>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="local-panel">
-          <h2>Local Areas</h2>
-          {worldView.currentArea && (
-            <div className="current-area">
-              <strong>{worldView.currentArea.name}</strong>
-              <span>Current local area</span>
-              <p>{worldView.currentArea.summary}</p>
-            </div>
-          )}
-          {worldView.areaExits.length > 0 && (
-            <div className="area-route-list">
-              <h3>Local Routes</h3>
-              {worldView.areaExits.map((exit) => (
-                <button key={exit.id} className="mini-command" onClick={() => moveArea(exit.id)}>
-                  <span>{exit.destination.name}</span>
-                  <small>
-                    {exit.route} - {exit.travel_minutes} min
-                  </small>
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="area-list">
-            {worldView.areas.map((area) => (
-              <div key={area.id} className={`area ${area.kind}`}>
-                <strong>{area.name}</strong>
-                <span>
-                  {area.kind.replace("_", " ")} - {area.travel_minutes} min on foot
-                </span>
-                <p>{area.summary}</p>
-                {worldView.currentArea?.id !== area.id ? (
-                  <small className="resolved-label">Mapped route</small>
-                ) : worldView.visitedAreaIds.includes(area.id) ? (
-                  <small className="resolved-label">Mapped</small>
-                ) : (
-                  <button
-                    className="mini-command"
-                    onClick={() => runWorldAction(() => worldSession.exploreArea(area.id))}
-                  >
-                    Explore Area
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          {worldView.hiddenAreaCount > 0 && (
-            <p className="empty">
-              {worldView.hiddenAreaCount} unmapped local{" "}
-              {worldView.hiddenAreaCount === 1 ? "area" : "areas"} remain here.
-            </p>
-          )}
-
-          <h2>Local Jobs</h2>
-          {worldView.jobs.length === 0 ? (
-            <p className="empty">
-              {worldView.hiddenJobCount > 0
-                ? "No local jobs are currently available. Some work may be hidden or unavailable until its conditions change."
-                : "No local jobs remain in this town."}
-            </p>
-          ) : (
-            <div className="job-list">
-              {worldView.jobs.map((job) => {
-                const scene = job.authored_scene;
-                const journalIds = new Set(worldView.journal.map((entry) => entry.id));
-                const hasPoi = scene ? journalIds.has(`scout:${scene.required_poi_id}`) : true;
-                const contactPrefix = scene ? `talk:${scene.required_contact_id}` : "";
-                const hasContact = scene
-                  ? [...journalIds].some(
-                      (id) => id === contactPrefix || id.startsWith(`${contactPrefix}@`),
-                    )
-                  : true;
-                const hasQuests = scene
-                  ? (scene.requires_completed_quests ?? []).every((id) =>
-                      worldView.completedQuestIds.includes(id),
-                    )
-                  : true;
-                const missingSceneRequirements: string[] = [];
-                if (scene && !hasPoi) {
-                  missingSceneRequirements.push(
-                    `scout ${poiTitlesById.get(scene.required_poi_id) ?? "the marked point"}`,
-                  );
-                }
-                if (scene && !hasContact) {
-                  missingSceneRequirements.push(
-                    `talk to ${characterNamesById.get(scene.required_contact_id) ?? "the local contact"}`,
-                  );
-                }
-                if (scene && !hasQuests) {
-                  for (const questId of scene.requires_completed_quests ?? []) {
-                    if (!worldView.completedQuestIds.includes(questId)) {
-                      missingSceneRequirements.push(
-                        `complete ${questsById.get(questId)?.title ?? questId}`,
-                      );
-                    }
-                  }
-                }
-                const hasLegalSceneChoice =
-                  scene?.options.some((option) =>
-                    legalJobChoiceKeys.has(jobChoiceKey(job.id, option.id)),
-                  ) ?? false;
-
-                return (
-                  <div key={job.id} className={`job ${job.kind}`}>
-                    <strong>{job.title}</strong>
-                    {!scene && (
-                      <span>
-                        {job.kind.replace("_", " ")} - difficulty {job.difficulty} - {job.minutes}{" "}
-                        min
-                      </span>
-                    )}
-                    <p>{job.summary}</p>
-                    {worldView.completedJobIds.includes(job.id) ? (
-                      <small className="resolved-label">Completed</small>
-                    ) : scene ? (
-                      <div className="job-scene">
-                        <p>{scene.prompt}</p>
-                        {!hasLegalSceneChoice && (
-                          <small className="empty">
-                            {missingSceneRequirements.length > 0
-                              ? `Required first: ${missingSceneRequirements.join(", ")}.`
-                              : "No priority is currently available in this journey state."}
-                          </small>
-                        )}
-                        {scene.options.map((option) => {
-                          const optionAvailable = legalJobChoiceKeys.has(
-                            jobChoiceKey(job.id, option.id),
-                          );
-                          return (
-                            <div key={option.id} className="job-scene-option">
-                              <strong>{option.title}</strong>
-                              <span>
-                                {option.terms.minutes} min - {option.terms.renown} renown
-                              </span>
-                              <p>{option.preview}</p>
-                              <p>
-                                <b>Commitment:</b> {option.consequence}
-                              </p>
-                              <button
-                                className="mini-command"
-                                disabled={!optionAvailable}
-                                onClick={() =>
-                                  runWorldAction(() => worldSession.workLocalJob(job.id, option.id))
-                                }
-                              >
-                                Choose {option.title}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <button
-                        className="mini-command"
-                        onClick={() => runWorldAction(() => worldSession.workLocalJob(job.id))}
-                      >
-                        Work Job
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {worldView.hiddenJobCount > 0 && (
-            <p className="empty">
-              {worldView.hiddenJobCount} local{" "}
-              {worldView.hiddenJobCount === 1 ? "job is" : "jobs are"} hidden or currently
-              unavailable here.
-            </p>
-          )}
-
-          <h2>Local Discoveries</h2>
-          <div className="poi-list">
-            {worldView.pois.map((poi) => (
-              <div key={poi.id} className="poi">
-                <strong>{poi.title}</strong>
-                <span>{poi.summary}</span>
-                <button
-                  className="mini-command"
-                  onClick={() => runWorldAction(() => worldSession.scoutPoi(poi.id))}
-                >
-                  Scout
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <h3>Regional Sites</h3>
-          {worldView.sites.length === 0 ? (
-            <p className="empty">
-              {worldView.hiddenSiteCount > 0
-                ? "Scout a local point of interest to reveal nearby expeditions."
-                : "No regional expedition site is anchored here."}
-            </p>
-          ) : (
-            <div className="site-list">
-              {worldView.sites.map((site) => (
-                <div key={site.id} className={`site ${site.kind}`}>
-                  <strong>{site.title}</strong>
-                  <span>
-                    {site.kind} - danger {site.danger}
-                  </span>
-                  <p>{site.discovery}</p>
-                  {worldView.exploredSiteIds.includes(site.id) ? (
-                    <small className="resolved-label">Explored</small>
-                  ) : (
-                    <button
-                      className="mini-command"
-                      onClick={() => runWorldAction(() => worldSession.exploreSite(site.id))}
-                    >
-                      Explore
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <h3>Local Contacts</h3>
-          <div className="contact-list">
-            {worldView.characters.map((character) => (
-              <div key={character.id} className="contact">
-                <strong>{character.name}</strong>
-                <span>
-                  {character.role} - {character.faction}
-                </span>
-                <p>{character.agenda}</p>
-                <button
-                  className="mini-command"
-                  onClick={() => runWorldAction(() => worldSession.talkToCharacter(character.id))}
-                >
-                  Talk
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <h3>Current Events</h3>
-          <div className="event-list">
-            {worldView.events.map((event) => {
-              const scene = event.authored_scene;
-              const journalIds = new Set(worldView.journal.map((entry) => entry.id));
-              const hasPoi = scene ? journalIds.has(`scout:${scene.required_poi_id}`) : true;
-              const contactPrefix = scene ? `talk:${scene.required_contact_id}` : "";
-              const hasContact = scene
-                ? [...journalIds].some(
-                    (id) => id === contactPrefix || id.startsWith(`${contactPrefix}@`),
-                  )
-                : true;
-              const hasInvestigation = journalIds.has(`investigate:${event.id}`);
-              const hasLegalSceneChoice = hasLiveOverworldEventChoice(
-                event.id,
-                worldView.eventChoices,
-              );
-              const missing: string[] = [];
-              if (scene && !hasPoi) {
-                missing.push(
-                  `scout ${poiTitlesById.get(scene.required_poi_id) ?? "the marked point"}`,
-                );
-              }
-              if (scene && !hasContact) {
-                missing.push(
-                  `talk to ${characterNamesById.get(scene.required_contact_id) ?? "the local contact"}`,
-                );
-              }
-              if (scene && !hasInvestigation) missing.push("investigate this event");
-
-              return (
-                <div key={event.id} className={`event ${event.pressure}`}>
-                  <strong>{event.title}</strong>
-                  <span>
-                    {event.pressure} - intensity {event.intensity}
-                  </span>
-                  <p>{event.summary}</p>
-                  {worldView.resolvedEventIds.includes(event.id) ? (
-                    <small className="resolved-label">Resolved</small>
-                  ) : scene ? (
-                    <div className="event-scene">
-                      {!hasLegalSceneChoice && missing.length > 0 && (
-                        <small className="empty">Required first: {missing.join(", ")}.</small>
-                      )}
-                      {!hasLegalSceneChoice ? (
-                        <button
-                          className="mini-command"
-                          onClick={() =>
-                            runWorldAction(() => worldSession.investigateEvent(event.id))
-                          }
-                        >
-                          Investigate
-                        </button>
-                      ) : (
-                        <>
-                          <p>{scene.prompt}</p>
-                          {scene.options.map((option) => {
-                            const optionAvailable = legalEventChoiceKeys.has(
-                              eventChoiceKey(event.id, option.id),
-                            );
-                            return (
-                              <div key={option.id} className="event-scene-option">
-                                <strong>{option.title}</strong>
-                                <span>
-                                  {option.terms.minutes} min - {option.terms.renown} renown
-                                </span>
-                                <p>{option.preview}</p>
-                                <p>
-                                  <b>Commitment:</b> {option.consequence}
-                                </p>
-                                <button
-                                  className="mini-command"
-                                  disabled={!optionAvailable}
-                                  onClick={() =>
-                                    runWorldAction(() =>
-                                      worldSession.resolveEvent(event.id, option.id),
-                                    )
-                                  }
-                                >
-                                  Choose {option.title}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="inline-actions">
-                      <button
-                        className="mini-command"
-                        onClick={() =>
-                          runWorldAction(() => worldSession.investigateEvent(event.id))
-                        }
-                      >
-                        Investigate
-                      </button>
-                      <button
-                        className="mini-command"
-                        onClick={() => runWorldAction(() => worldSession.resolveEvent(event.id))}
-                      >
-                        Resolve
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          <h3>Notice Board</h3>
-          {noticeBoardQuests.length === 0 ? (
-            <p className="empty">
-              {departureQuest
-                ? "No other posted work is known here."
-                : worldView.hiddenQuestCount > 0
-                  ? "No posted work discovered yet. Scout, talk, or investigate to surface local leads."
-                  : "No posted work is known here. Travel the road network to find more."}
-            </p>
-          ) : (
-            <ul className="quest-list">
-              {noticeBoardQuests.map((quest) => (
-                <QuestNotice
-                  key={quest.id}
-                  quest={quest}
-                  areaName={questAreaName(quest)}
-                  isCurrentArea={worldView.currentArea?.id === quest.area}
-                  onStart={(approachId) => startQuest(quest, approachId)}
-                />
-              ))}
-            </ul>
-          )}
-        </article>
-      </section>
-
-      {error && <p className="error">Could not continue: {error}</p>}
-
-      {questView && activeQuest && (
-        <section className="game">
-          <div className="scene">
-            <div className="scene-heading">
-              <div>
-                <span className="mode">{questView.mode}</span>
-                <h2>{questView.title}</h2>
-              </div>
-              <button className="secondary" onClick={returnToRoad}>
-                Leave Quest
-              </button>
-            </div>
-            <p className="quest-origin">{activeQuest.discovery}</p>
-            <p className="text">{questView.text}</p>
-            {questView.dialogue && (
-              <section
-                aria-label={`Conversation with ${questView.dialogue.npc}`}
-                className="quest-dialogue"
-              >
-                <h3>{questView.dialogue.npc}</h3>
-                <p>{questView.dialogue.text}</p>
-              </section>
-            )}
-
-            {questView.ended ? (
-              <p className="ending">{questView.endingId} - The End</p>
-            ) : (
-              <ul className="choices">
-                {questView.choices.map((choice) => (
-                  <li key={choice.id}>
-                    <button onClick={() => choose(choice.id, choice.label)}>
-                      <span>{choice.label}</span>
-                      {choice.detail && <small className="choice-detail">{choice.detail}</small>}
-                    </button>
-                  </li>
-                ))}
-                {questView.unavailableChoices.map((choice) => (
-                  <li key={`unavailable:${choice.id}`}>
-                    <button disabled aria-disabled="true">
-                      <span>{choice.label}</span>
-                      <small className="choice-reason">{choice.reason}</small>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <aside className="state">
-            {questView.characterContinuity && (
-              <QuestCharacterContinuityPanel continuity={questView.characterContinuity} />
-            )}
-            <h3>{worldView.current.name} Record</h3>
-            {questView.facts.length > 0 && (
-              <ul className="facts">
-                {questView.facts.map((fact, i) => (
-                  <li key={i}>{fact}</li>
-                ))}
-              </ul>
-            )}
-            {questView.inventory.length > 0 && (
-              <p>
-                <strong>Inventory:</strong> {questView.inventory.join(", ")}
-              </p>
-            )}
-            {questView.journal.length > 0 && (
-              <div className="journal">
-                <strong>Journal</strong>
-                <ul>
-                  {questView.journal.map((entry, i) => (
-                    <li key={i}>{entry}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <p className="hash">state: {questView.stateHash.slice(0, 8)}</p>
-          </aside>
-        </section>
-      )}
-
-      <section className="log">
-        <h3>Travel Log</h3>
-        <pre>{log.join("\n")}</pre>
-      </section>
-    </main>
+    <OverworldPlayScreen
+      world={worldView}
+      journey={journey}
+      latestConsequence={log[0] ?? `You are in ${worldView.current.name}.`}
+      log={log}
+      sections={worldActionSections}
+      prioritySectionIds={prioritySectionIds}
+      panel={nightWatchPanel}
+      error={error}
+      onPanelChange={setNightWatchPanel}
+      onNewJourney={startNewJourney}
+      onOpenTutorial={() => {
+        setNightWatchPanel("scene");
+        setTutorialOpen(true);
+      }}
+    />
   );
 }
