@@ -1317,7 +1317,7 @@ body {
   }
 }
 
-@media (max-width: 620px) {
+@media (max-width: 768px) {
   .nw-app {
     width: 100%;
   }

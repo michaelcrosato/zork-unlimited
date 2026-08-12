@@ -20,7 +20,11 @@ import type {
   OverworldRegionalArc,
 } from "../../src/world/overworld.js";
 import type { OverworldJournalEntry } from "../../src/world/session_snapshot.js";
-import { planOverworldSessionEventInvestigation } from "../../src/world/session_local_lifecycle.js";
+import {
+  planOverworldOpportunityInteractionDiscovery,
+  planOverworldSessionEventInvestigation,
+} from "../../src/world/session_local_lifecycle.js";
+import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 
 function event(id: string, home: string, area: string): OverworldLocalEvent {
   return {
@@ -504,6 +508,47 @@ describe("overworld event and regional arc proof replay", () => {
         campaignWorldFactIds: new Set(["fact:record_recovered"]),
       }),
     ).not.toThrow();
+  });
+
+  it("discovers events only under current campaign facts and completed-job state", () => {
+    const localEvent = authoredEvent("event_a", "town_a", "area_a");
+    localEvent.authored_scene!.forbids_completed_jobs = ["job:closed"];
+    for (const option of localEvent.authored_scene!.options) {
+      option.requires_all_world_facts = ["fact:record_recovered"];
+    }
+    const base = {
+      character: createInitialCampaignCharacterState(),
+      characters: [],
+      charactersById: new Map(),
+      events: [localEvent],
+      eventsById: new Map([[localEvent.id, localEvent]]),
+      completedQuestIds: new Set<string>(),
+      campaignWorldFactIds: new Set(["fact:record_recovered"]),
+      eventOptionIdFor: () => null,
+      currentTownId: "town_a",
+      currentAreaId: "area_a",
+      journalEntryIds: new Set<string>(),
+    };
+
+    expect(
+      planOverworldOpportunityInteractionDiscovery({
+        ...base,
+        completedJobIds: new Set<string>(),
+      })?.plan.action.id,
+    ).toBe("investigate:event_a");
+    expect(
+      planOverworldOpportunityInteractionDiscovery({
+        ...base,
+        completedJobIds: new Set(["job:closed"]),
+      }),
+    ).toBeNull();
+    expect(
+      planOverworldOpportunityInteractionDiscovery({
+        ...base,
+        completedJobIds: new Set<string>(),
+        campaignWorldFactIds: new Set<string>(),
+      }),
+    ).toBeNull();
   });
 
   it("computes regional arc completion proof time from the required earliest anchors", () => {

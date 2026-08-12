@@ -18,7 +18,10 @@ import {
   allOverworldContactPresentations,
   presentOverworldContact,
 } from "../../src/world/session_contact_presentation.js";
-import { planOverworldSessionContactTalk } from "../../src/world/session_local_lifecycle.js";
+import {
+  planOverworldOpportunityInteractionDiscovery,
+  planOverworldSessionContactTalk,
+} from "../../src/world/session_local_lifecycle.js";
 
 const HAYDEN: OverworldCharacter = {
   id: "albany_city__transport_hub__contact",
@@ -209,6 +212,37 @@ describe("overworld contact presentation", () => {
     expect(exact.afterEventOptions).toEqual([
       { eventId: "campus_return", optionId: "clinic_thresholds" },
     ]);
+  });
+
+  it("discovers a newly active repeated contact from current campaign proof", () => {
+    const journalEntryIds = new Set([`talk:${CAMPAIGN_PROOF_CONTACT.id}`]);
+    const base = {
+      character: DEFAULT_CHARACTER,
+      characters: [CAMPAIGN_PROOF_CONTACT],
+      charactersById: new Map([[CAMPAIGN_PROOF_CONTACT.id, CAMPAIGN_PROOF_CONTACT]]),
+      events: [],
+      eventsById: new Map(),
+      completedQuestIds: new Set(["wolf_winter"]),
+      completedJobIds: new Set<string>(),
+      currentTownId: CAMPAIGN_PROOF_CONTACT.home,
+      currentAreaId: CAMPAIGN_PROOF_CONTACT.area,
+      journalEntryIds,
+    };
+
+    expect(
+      planOverworldOpportunityInteractionDiscovery({
+        ...base,
+        campaignWorldFactIds: new Set<string>(),
+        eventOptionIdFor: () => null,
+      }),
+    ).toBeNull();
+    expect(
+      planOverworldOpportunityInteractionDiscovery({
+        ...base,
+        campaignWorldFactIds: new Set(["fact:wolf_winter_byre_held"]),
+        eventOptionIdFor: (eventId) => (eventId === "campus_return" ? "clinic_thresholds" : null),
+      })?.plan.action.id,
+    ).toBe(`talk:${CAMPAIGN_PROOF_CONTACT.id}@held_clinic`);
   });
 
   it("validates namespaced bindings and requires a condition plus a copy override", () => {

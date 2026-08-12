@@ -99,9 +99,8 @@ import {
   applyOverworldSessionPoiScoutFromState,
   applyOverworldSessionSiteFromState,
   applyOverworldSessionTownVisit,
+  planOverworldOpportunityInteractionDiscovery,
   planOverworldSessionArea,
-  planOverworldSessionContactTalk,
-  planOverworldSessionEventInvestigation,
   planOverworldSessionLocalJob,
   planOverworldSessionPoiScout,
   planOverworldSessionSite,
@@ -2784,6 +2783,9 @@ export class OverworldSession {
     ) {
       return null;
     }
+    const campaignWorldFactIds = new Set(this.campaignWorldFactIds());
+    const eventOptionIdFor = (eventId: string): string | null =>
+      this.journalEntriesById.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null;
 
     const areaPlan = planOverworldSessionArea({
       areaId: currentArea.id,
@@ -2843,44 +2845,37 @@ export class OverworldSession {
         // Canonical planning remains the authority for whether this visible site is lawful now.
       }
     }
-    for (const character of this.charactersByArea.get(currentArea.id) ?? []) {
-      const plan = planOverworldSessionContactTalk({
-        character: this.characterState,
-        characterId: character.id,
-        charactersById: this.charactersById,
-        completedQuestIds: this.completedQuestIds,
-        currentTownId: this.currentId,
-        currentAreaId: () => currentArea.id,
-      });
-      if (!this.journalEntriesById.has(plan.action.id)) {
-        return {
-          tool: OPPORTUNITY_TALK_CONTACT_TOOL,
-          arguments: { character_id: character.id },
-          command: `talk ${character.id}`,
-          label: "Talk to a visible local contact to advance local discovery.",
-        };
-      }
+    const interaction = planOverworldOpportunityInteractionDiscovery({
+      character: this.characterState,
+      characters: this.charactersByArea.get(currentArea.id) ?? [],
+      charactersById: this.charactersById,
+      events: this.eventsByArea.get(currentArea.id) ?? [],
+      eventsById: this.localEventsById,
+      completedQuestIds: this.completedQuestIds,
+      completedJobIds: this.completedJobIds,
+      campaignWorldFactIds,
+      eventOptionIdFor,
+      currentTownId: this.currentId,
+      currentAreaId: currentArea.id,
+      journalEntryIds: new Set(this.journalEntriesById.keys()),
+    });
+    if (interaction?.plan.action.kind === "contact") {
+      const characterId = interaction.sourceId;
+      return {
+        tool: OPPORTUNITY_TALK_CONTACT_TOOL,
+        arguments: { character_id: characterId },
+        command: `talk ${characterId}`,
+        label: "Talk to a visible local contact to advance local discovery.",
+      };
     }
-    for (const event of this.eventsByArea.get(currentArea.id) ?? []) {
-      try {
-        const plan = planOverworldSessionEventInvestigation({
-          eventId: event.id,
-          eventsById: this.localEventsById,
-          completedQuestIds: this.completedQuestIds,
-          currentTownId: this.currentId,
-          currentAreaId: () => currentArea.id,
-        });
-        if (!this.journalEntriesById.has(plan.action.id)) {
-          return {
-            tool: OPPORTUNITY_INVESTIGATE_EVENT_TOOL,
-            arguments: { event_id: event.id },
-            command: `investigate ${event.id}`,
-            label: "Investigate a visible local event to advance local discovery.",
-          };
-        }
-      } catch {
-        // Canonical planning remains the authority for whether this visible event is lawful now.
-      }
+    if (interaction?.plan.action.kind === "event") {
+      const eventId = interaction.sourceId;
+      return {
+        tool: OPPORTUNITY_INVESTIGATE_EVENT_TOOL,
+        arguments: { event_id: eventId },
+        command: `investigate ${eventId}`,
+        label: "Investigate a visible local event to advance local discovery.",
+      };
     }
     const eventChoice = this.liveEventChoices(this.eventsByArea.get(currentArea.id) ?? [])[0];
     if (eventChoice) {

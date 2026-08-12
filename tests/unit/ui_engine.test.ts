@@ -176,6 +176,7 @@ describe("GameSession — RPG-only structured play", () => {
       "go_north",
       "go_west",
       "examine_falcon_jesses",
+      "examine_npc_aldric",
       "look_around",
       "inventory",
     ]);
