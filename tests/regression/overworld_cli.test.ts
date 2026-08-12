@@ -20,6 +20,7 @@ import {
   renderJourneyGate,
   renderJourneyStatus,
   renderQuestLaunch,
+  routeLabelWithDestination,
   renderStationDispatchBoard,
   matchJourneyGateOption,
   resolveQuestLaunchChoice,
@@ -197,6 +198,18 @@ function chooseNorthGoal(session: OverworldSession): void {
 }
 
 describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
+  it("does not repeat a destination already present in an authored route label", () => {
+    expect(
+      routeLabelWithDestination(
+        "Albany Market Streets to Albany Station Quarter",
+        "Albany Station Quarter",
+      ),
+    ).toBe("Albany Market Streets to Albany Station Quarter");
+    expect(routeLabelWithDestination("cobbled incline", "Station Quarter")).toBe(
+      "cobbled incline to Station Quarter",
+    );
+  });
+
   it("renders the fresh-session status from OverworldSession.view()", () => {
     const manifest = loadOverworldManifest(ROOT);
     const session = new OverworldSession(manifest);

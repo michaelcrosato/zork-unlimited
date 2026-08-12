@@ -24,6 +24,7 @@ import {
   indexRpgPack,
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
+import { ObjectSchema } from "../../src/rpg/schema.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
@@ -111,6 +112,212 @@ describe("Wolf-Winter terminal dialogue commands", () => {
         .filter((line) => line.startsWith("People here:")),
     ).toEqual(["People here: old Cade the houndsman."]);
     expect(renderCli({ ...duplicated, ended: true })).not.toContain("People here:");
+  });
+
+  it("makes a visible person an executable LOOK target with their current description", () => {
+    const state = atCade();
+    expect(enumerateRpgActions(index, state)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "examine_npc_houndsman",
+          command: "look at old Cade the houndsman",
+          action: { type: "LOOK", npc: "houndsman" },
+        }),
+      ]),
+    );
+    for (const command of ["look at old Cade the houndsman", "examine Cade"]) {
+      expect(resolveCli(index, state, command)).toEqual({
+        ok: true,
+        action: { type: "LOOK", npc: "houndsman" },
+      });
+    }
+
+    const result = makeStep(rules)(state, { type: "LOOK", npc: "houndsman" });
+    expect(result.ok, result.rejectionReason).toBe(true);
+    expect(result.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "narration",
+          text: expect.stringMatching(/bent old houndsman in a wolfskin cap/i),
+        }),
+      ]),
+    );
+  });
+
+  it("uses a reactive NPC's current name, room presentation, and description for LOOK", () => {
+    const pack = structuredClone(loaded.compiled.pack);
+    const houndsman = pack.npcs.find((npc) => npc.id === "houndsman");
+    if (!houndsman) throw new Error("expected Cade fixture");
+    houndsman.variants = [
+      {
+        when: [{ has_flag: "reactive_cade" }],
+        name: "Cade after the watch",
+        description: "Cade's current watch-worn presentation.",
+        room: "byre_yard",
+      },
+    ];
+    const fixtureIndex = indexRpgPack(pack);
+    const baseState = atCade();
+    const state = {
+      ...baseState,
+      flags: { ...baseState.flags, reactive_cade: true },
+    };
+
+    expect(enumerateRpgActions(fixtureIndex, state)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          command: "look at Cade after the watch",
+          action: { type: "LOOK", npc: "houndsman" },
+        }),
+      ]),
+    );
+    expect(resolveCli(fixtureIndex, state, "examine Cade after the watch")).toEqual({
+      ok: true,
+      action: { type: "LOOK", npc: "houndsman" },
+    });
+    expect(
+      makeStep(buildRpgRules(fixtureIndex))(state, { type: "LOOK", npc: "houndsman" }).events,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "narration",
+          text: "Cade's current watch-worn presentation.",
+        }),
+      ]),
+    );
+  });
+
+  it("preserves natural object LOOK phrases and prefers exact visible entities", () => {
+    const initial = initStateForRpgPack(index, 541);
+    for (const command of [
+      "look at my relief spear",
+      "look at old relief spear",
+      "examine the sturdy spear",
+    ]) {
+      expect(resolveCli(index, initial, command), command).toEqual({
+        ok: true,
+        action: { type: "LOOK", target: "relief_spear" },
+      });
+    }
+
+    const pack = structuredClone(loaded.compiled.pack);
+    pack.objects.push(
+      ObjectSchema.parse({
+        id: "cade_token",
+        name: "Cade",
+        aliases: ["cade-token"],
+        description: "A token stamped with Cade's name.",
+      }),
+      ObjectSchema.parse({
+        id: "houndsman_keepsake",
+        name: "houndsman keepsake",
+        aliases: ["keepsake"],
+        description: "A small keepsake.",
+      }),
+    );
+    pack.rooms
+      .find((room) => room.id === "byre_yard")
+      ?.objects.push("cade_token", "houndsman_keepsake");
+    const fixtureIndex = indexRpgPack(pack);
+    const state = atCade();
+
+    expect(resolveCli(fixtureIndex, state, "look cade")).toEqual({
+      ok: true,
+      action: { type: "LOOK", target: "cade_token" },
+    });
+    expect(resolveCli(fixtureIndex, state, "look houndsman")).toEqual({
+      ok: true,
+      action: { type: "LOOK", npc: "houndsman" },
+    });
+    expect(
+      resolveCli(fixtureIndex, state, "look at old Cade the houndsman beside his token"),
+    ).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/more than one visible object or person/i),
+    });
+  });
+
+  it("keeps object and NPC LOOK targets distinct even when their ids match", () => {
+    const pack = structuredClone(loaded.compiled.pack);
+    pack.objects.push(
+      ObjectSchema.parse({
+        id: "houndsman",
+        name: "carved dispatch marker",
+        aliases: ["marker"],
+        description: "A carved object, not old Cade.",
+      }),
+    );
+    pack.rooms.find((room) => room.id === "byre_yard")?.objects.push("houndsman");
+    const fixtureIndex = indexRpgPack(pack);
+    const state = atCade();
+
+    expect(resolveCli(fixtureIndex, state, "look at old Cade the houndsman")).toEqual({
+      ok: true,
+      action: { type: "LOOK", npc: "houndsman" },
+    });
+    expect(resolveCli(fixtureIndex, state, "look at carved dispatch marker")).toEqual({
+      ok: true,
+      action: { type: "LOOK", target: "houndsman" },
+    });
+    expect(resolveCli(fixtureIndex, state, "look houndsman")).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/more than one visible object or person/i),
+    });
+
+    const fixtureRules = buildRpgRules(fixtureIndex);
+    const npcLook = makeStep(fixtureRules)(state, { type: "LOOK", npc: "houndsman" });
+    const objectLook = makeStep(fixtureRules)(state, { type: "LOOK", target: "houndsman" });
+    expect(npcLook.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "narration", text: expect.stringMatching(/wolfskin cap/) }),
+      ]),
+    );
+    expect(objectLook.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "narration", text: "A carved object, not old Cade." }),
+      ]),
+    );
+  });
+
+  it("allocates unique NPC LOOK ids and fails closed on a shared visible label", () => {
+    const pack = structuredClone(loaded.compiled.pack);
+    pack.objects.push(
+      ObjectSchema.parse({
+        id: "npc_houndsman",
+        name: "old Cade the houndsman",
+        aliases: ["old-cade"],
+        description: "A painted sign bearing Cade's name.",
+      }),
+    );
+    pack.rooms.find((room) => room.id === "byre_yard")?.objects.push("npc_houndsman");
+    const fixtureIndex = indexRpgPack(pack);
+    const state = atCade();
+    const looks = enumerateRpgActions(fixtureIndex, state).filter(
+      (option) => option.command === "look at old Cade the houndsman",
+    );
+
+    expect(looks).toEqual([
+      expect.objectContaining({
+        id: "examine_npc_houndsman",
+        action: { type: "LOOK", target: "npc_houndsman" },
+      }),
+      expect.objectContaining({
+        id: "examine_npc_houndsman__2",
+        action: { type: "LOOK", npc: "houndsman" },
+      }),
+    ]);
+    expect(resolveCli(fixtureIndex, state, "look at old Cade the houndsman")).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/matches more than one current action/i),
+    });
+    expect(resolveCli(fixtureIndex, state, "choose examine_npc_houndsman")).toEqual({
+      ok: true,
+      action: { type: "LOOK", target: "npc_houndsman" },
+    });
+    expect(resolveCli(fixtureIndex, state, "choose examine_npc_houndsman__2")).toEqual({
+      ok: true,
+      action: { type: "LOOK", npc: "houndsman" },
+    });
   });
 
   it("accepts exact-id and unique-partial speaker qualifiers for the active NPC", () => {
@@ -344,6 +551,32 @@ describe("Wolf-Winter terminal dialogue commands", () => {
     const huntActions = enumerateRpgActions(index, state).map((option) => option.id);
     expect(huntActions).toContain("maneuver_yearling_wolf_set_spear");
     expect(huntActions).not.toContain("ask_commit_lure");
+  });
+
+  it("guides a speaker switch through June's exact current replies", () => {
+    let state = initStateForRpgPack(index, 541);
+    state = { ...state, flags: { ...state.flags, june_pike_present: true } };
+    state = act(state, "go north");
+    state = act(state, "talk to Road Warden June Pike");
+    const exactReplies = projectRpgPlayerCommands(enumerateRpgActions(index, state), {
+      index,
+      state,
+    })
+      .filter(({ option }) => option.action.type === "ASK" && option.action.npc === "june_pike")
+      .map(({ command }) => command);
+
+    for (const command of ["talk to old Cade the houndsman", "TALK_TO_OLD-CADE_THE-HOUNDSMAN"]) {
+      const blocked = resolveCli(index, state, command);
+      expect(blocked).toMatchObject({
+        ok: false,
+        reason: expect.stringMatching(
+          /speaking with Road Warden June Pike, not old Cade the houndsman/i,
+        ),
+      });
+      if (blocked.ok) throw new Error("active speaker switch must fail closed");
+      for (const reply of exactReplies) expect(blocked.reason).toContain(`\`${reply}\``);
+    }
+    expect(state.flags.june_combat_line_acknowledged).toBeUndefined();
   });
 
   it("lets the real overworld handoff execute Cade's legal leave before abandon", async () => {

@@ -129,12 +129,17 @@ describe("terminal RPG command projection", () => {
 
   it("leaves grammar-shaped qualified ASK aliases for active-speaker validation", () => {
     const options = [
-      ask("ask_lure", "lure", "Ask about the lure.", ["ask Rowan about lure", "ask_lure"]),
+      ask("ask_lure", "lure", "Ask about the lure.", [
+        "ask Rowan about lure",
+        "ask_rowan_about_lure",
+        "ASK-ROWAN-ABOUT-LURE",
+        "ask_lure",
+      ]),
     ];
 
-    expect(resolveRpgPlayerCommand(options, "ask Rowan about lure")).toEqual({
-      kind: "unmatched",
-    });
+    for (const input of ["ask Rowan about lure", "ask_rowan_about_lure", "ASK-ROWAN-ABOUT-LURE"]) {
+      expect(resolveRpgPlayerCommand(options, input)).toEqual({ kind: "unmatched" });
+    }
     expect(resolveRpgPlayerCommand(options, "lure")).toMatchObject({
       kind: "resolved",
       option: { id: "ask_lure" },
@@ -142,6 +147,45 @@ describe("terminal RPG command projection", () => {
     expect(resolveRpgPlayerCommand(options, "ask lure")).toMatchObject({
       kind: "resolved",
       option: { id: "ask_lure" },
+    });
+  });
+
+  it("leaves normalized TALK-shaped topic aliases for requested-speaker validation", () => {
+    const options = [
+      ask("ask_other", "other", "Ask about another person.", [
+        "talk to Other",
+        "talk_to_other",
+        "TALK-TO-OTHER",
+      ]),
+    ];
+
+    for (const input of ["talk to Other", "talk_to_other", "TALK-TO-OTHER"]) {
+      expect(resolveRpgPlayerCommand(options, input)).toEqual({ kind: "unmatched" });
+    }
+    expect(projectRpgPlayerCommands(options)).toMatchObject([
+      { command: "other", aliases: [], option: { id: "ask_other" } },
+    ]);
+  });
+
+  it("fails closed when distinct legal rows share an id", () => {
+    const options = [
+      {
+        id: "duplicate",
+        command: "look at the marker",
+        action: { type: "LOOK", target: "marker" },
+      },
+      {
+        id: "duplicate",
+        command: "look at the marker",
+        action: { type: "LOOK", npc: "marker" },
+      },
+    ] satisfies RpgActionOption[];
+
+    expect(resolveRpgPlayerCommand(options, "look at the marker")).toMatchObject({
+      kind: "ambiguous",
+    });
+    expect(resolveRpgPlayerCommand(options, "choose duplicate")).toMatchObject({
+      kind: "ambiguous",
     });
   });
 

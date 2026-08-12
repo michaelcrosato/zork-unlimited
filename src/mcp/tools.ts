@@ -346,7 +346,11 @@ function compactTraceActionLabel(action: RpgAction): string {
   switch (action.type) {
     case "LOOK":
       return compactMcpTranscriptSummaryValue(
-        action.target === undefined ? "LOOK" : `LOOK:${action.target}`,
+        action.npc !== undefined
+          ? `LOOK:NPC:${action.npc}`
+          : action.target === undefined
+            ? "LOOK"
+            : `LOOK:${action.target}`,
       );
     case "MOVE":
       return compactMcpTranscriptSummaryValue(`MOVE:${action.direction}`);

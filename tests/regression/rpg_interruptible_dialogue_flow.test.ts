@@ -17,6 +17,7 @@ import type { GameState } from "../../src/core/state.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { activeDialogue } from "../../src/rpg/model.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { projectRpgPlayerCommands } from "../../src/rpg/player_command_projection.js";
 import {
   buildRpgRules,
   enumerateRpgActions,
@@ -175,10 +176,16 @@ describe("bug_0512 — interruptible, auto-resuming RPG dialogue", () => {
     let state = drive(game.index, game.rules, game.state, "go_west").state;
     state = drive(game.index, game.rules, state, "talk_hedrick").state;
 
-    expect(resolveCli(game.index, state, "ask Hedrick about sow")).toEqual({
-      ok: true,
-      action: { type: "ASK", npc: "hedrick", topic: "ask_sow" },
-    });
+    for (const command of [
+      "ask Hedrick about sow",
+      "ASK_HEDRICK_ABOUT_SOW",
+      "ask-Hedrick-about-sow",
+    ]) {
+      expect(resolveCli(game.index, state, command)).toEqual({
+        ok: true,
+        action: { type: "ASK", npc: "hedrick", topic: "ask_sow" },
+      });
+    }
     expect(resolveCli(game.index, state, "ask Hed about sow")).toMatchObject({
       ok: false,
       reason: expect.stringMatching(/more than one person here/i),
@@ -191,6 +198,44 @@ describe("bug_0512 — interruptible, auto-resuming RPG dialogue", () => {
       ok: false,
       reason: expect.stringMatching(/no visible person called "rowan" here/i),
     });
+  });
+
+  it("gives speaker-aware TALK guidance using every exact current reply", () => {
+    const pack = structuredClone(BASE_PACK);
+    const hedrick = pack.npcs.find((npc) => npc.id === "hedrick");
+    if (!hedrick) throw new Error("expected Hedrick");
+    pack.npcs.push({
+      ...structuredClone(hedrick),
+      id: "hedrick_witness",
+      name: "Hedrick witness",
+    });
+
+    const game = fresh(pack);
+    let state = drive(game.index, game.rules, game.state, "go_west").state;
+    state = drive(game.index, game.rules, state, "talk_hedrick").state;
+    const exactReplies = projectRpgPlayerCommands(enumerateRpgActions(game.index, state), {
+      index: game.index,
+      state,
+    })
+      .filter(({ option }) => option.action.type === "ASK" && option.action.npc === "hedrick")
+      .map(({ command }) => command);
+
+    for (const command of ["talk to Hedrick", "TALK_TO_HEDRICK"]) {
+      const retry = resolveCli(game.index, state, command);
+      expect(retry).toMatchObject({
+        ok: false,
+        reason: expect.stringMatching(/already speaking with Hedrick/i),
+      });
+      if (retry.ok) throw new Error("active TALK retry must fail closed");
+      for (const reply of exactReplies) expect(retry.reason).toContain(`\`${reply}\``);
+    }
+
+    const switchSpeaker = resolveCli(game.index, state, "TALK-TO-HEDRICK-WITNESS");
+    expect(switchSpeaker).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/speaking with Hedrick, not Hedrick witness/i),
+    });
+    expect(activeDialogue(game.index, state)?.npc.id).toBe("hedrick");
   });
 
   it("keeps a genuine child-only branch instead of folding it out of sight", () => {

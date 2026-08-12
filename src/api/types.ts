@@ -8,7 +8,8 @@ import type { GameState } from "../core/state.js";
 import type { GameEvent } from "../core/events.js";
 
 export type RpgAction =
-  | { type: "LOOK"; target?: string }
+  | { type: "LOOK"; target?: string; npc?: never }
+  | { type: "LOOK"; npc: string; target?: never }
   | { type: "MOVE"; direction: string }
   | { type: "TAKE"; item: string }
   | { type: "DROP"; item: string }

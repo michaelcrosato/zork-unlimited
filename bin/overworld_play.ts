@@ -78,6 +78,16 @@ export function renderQuestCompletion(result: OverworldQuestCompletionResult): s
   return result.entry.text;
 }
 
+/** Append a destination only when the authored route label does not already
+ * name it. Generated local routes commonly include both endpoints. */
+export function routeLabelWithDestination(route: string, destination: string): string {
+  const normalizedRoute = route.trim().toLocaleLowerCase();
+  const normalizedDestination = destination.trim().toLocaleLowerCase();
+  return normalizedDestination && normalizedRoute.includes(normalizedDestination)
+    ? route
+    : `${route} to ${destination}`;
+}
+
 /** The full status screen (pure; exported for tests). */
 export function render(view: OverworldView): string {
   const lines = [
@@ -1059,7 +1069,9 @@ async function main(): Promise<void> {
               break;
             }
             const result = session.moveArea(exit.id);
-            console.log(`Walked ${result.route} to ${result.to.name} — ${result.minutes} min.`);
+            console.log(
+              `Walked ${routeLabelWithDestination(result.route, result.to.name)} — ${result.minutes} min.`,
+            );
             break;
           }
           case "explore": {

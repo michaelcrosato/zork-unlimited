@@ -3,6 +3,7 @@ import {
   normalizeRpgCommand,
   normalizeRpgTopicCommand,
   parseQualifiedRpgAskCommand,
+  parseRpgTalkCommand,
 } from "./command_normalization.js";
 import type { RpgActionOption, RpgBlockedActionOption } from "./legal_actions.js";
 import { objectName, type RpgModelIndex } from "./model.js";
@@ -104,18 +105,20 @@ function matchingOptions(
   );
   if (fallbacks.length > 0) return fallbacks;
   const qualifiedAsk = parseQualifiedRpgAskCommand(raw) !== null;
+  const talkCommand = parseRpgTalkCommand(raw) !== null;
   const advertised = options.filter((option) => {
     if (option.action.type !== "ASK") return normalizeRpgCommand(option.command) === command;
     // A grammar-shaped alias must never bypass visible-speaker validation in
     // command_map. Leave every qualified ASK unmatched here so it reaches that
     // parser before an authored topic alias can resolve it.
-    if (qualifiedAsk) return false;
+    if (qualifiedAsk || talkCommand) return false;
     return dialogueInputs(option).includes(topic);
   });
   const matches = [...advertised, ...contextualWearOptions(options, raw, context)];
-  return unique(matches.map((option) => option.id)).map(
-    (id) => matches.find((option) => option.id === id)!,
-  );
+  // The same option can enter through its authored command and contextual alias.
+  // De-duplicate only that object identity. Distinct rows sharing an id or input
+  // remain distinct so resolution fails closed instead of selecting the first.
+  return matches.filter((option, index) => matches.indexOf(option) === index);
 }
 
 /** Resolve exact projected inputs plus narrowly-scoped contextual aliases.
