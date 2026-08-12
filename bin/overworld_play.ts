@@ -87,6 +87,7 @@ export function render(view: OverworldView): string {
   ];
   if (view.exits.length) {
     lines.push("Roads:");
+    lines.push("  Type `go <road number>` to travel (e.g. `go 1`).");
     view.exits.forEach((exit, i) => {
       lines.push(
         `  ${i + 1}. ${exit.destination.name} — ${exit.route}, ${exit.distance_mi.toFixed(1)} mi, ${exit.travel_minutes} min`,

@@ -124,7 +124,7 @@ import {
   applyOpeningRegistrationProfile,
   type OpeningStartingDoctrine,
 } from "./opening_registration.js";
-import { applyOpeningAllyOption } from "./opening_ally.js";
+import { applyOpeningAllyOption, openingAllyContactTimingSummary } from "./opening_ally.js";
 import {
   openingAllyJournalEntry,
   openingAllyJournalId,
@@ -1133,6 +1133,10 @@ export class OverworldSession {
         questId: quest.id,
         questTitle: quest.title,
         status: chain || this.openingPreparationResolved() ? "ready" : "requires_preparation",
+        timing: openingAllyContactTimingSummary(
+          scene,
+          this.journalEntriesById.has(overworldContactTalkJournalId(scene.contact, null)),
+        ),
       }),
     ];
   }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
+import { compactJourneyStoryChoiceComparison } from "../../src/mcp/journey_projection.js";
 import { compactOverworldView, OVERWORLD_COMPACT_LEGEND } from "../../src/world/compact_view.js";
+import {
+  formatOpeningAllyChoiceTiming,
+  formatOpeningAllyCost,
+  formatOpeningAllyTimingDisclosure,
+} from "../../src/world/opening_ally.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { compactStationDispatchBoardSupport } from "../../src/world/station_dispatch_board.js";
@@ -17,6 +23,8 @@ const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD.target_quest)!;
 const APPROACH = WOLF.launch!.options[0]!.id;
 const FULL = { compact_context: false, compact_result: false } as const;
+const JUNE_TIMING =
+  "Talking takes 15 minutes. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.";
 
 function moveToStation(session: OverworldSession): void {
   if (session.view().currentArea?.id === PREPARATION.area) return;
@@ -255,7 +263,7 @@ describe("optional Station departure interactions", () => {
         questId: WOLF.id,
         questTitle: WOLF.title,
         status: "ready",
-        guidance: `Optional second rider: ask ${june.name} about cattle-first authority, or leave for ${WOLF.title} alone now.`,
+        guidance: `Optional second rider: ${JUNE_TIMING} Ask ${june.name} about cattle-first authority, or leave for ${WOLF.title} alone now.`,
         action: {
           tool: "talk_overworld_session_contact",
           characterId: june.id,
@@ -311,6 +319,50 @@ describe("optional Station departure interactions", () => {
     expect(session.journey().storyChoice).toMatchObject({ id: ALLY.id, kind: "ally" });
     expect(() => session.startQuest(WOLF.id, APPROACH)).toThrow(/field-team commitment/i);
   });
+
+  it.each(ALLY.options.map((option) => [option.id, option.terms.minutes] as const))(
+    "discloses, pays, journals, and restores June's complete timing for %s",
+    (optionId, additionalMinutes) => {
+      const session = sessionAtStation();
+      session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+      session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
+      const beforeTalk = session.snapshot().minutes;
+      const talked = session.talkToCharacter(ALLY.contact);
+      expect(talked.minutes).toBe(15);
+
+      const story = session.journey().storyChoice;
+      if (!story) throw new Error("Expected June's field-team choice.");
+      const option = ALLY.options.find((candidate) => candidate.id === optionId)!;
+      const presented = story.options.find((candidate) => candidate.id === optionId);
+      expect(presented?.summary?.immediateCost).toBe(
+        formatOpeningAllyChoiceTiming(option.terms),
+      );
+      expect(presented?.consequence).toContain(
+        `${String(15 + additionalMinutes)} minutes total`,
+      );
+      expect(
+        compactJourneyStoryChoiceComparison(story, optionId).inspectedOption?.consequence,
+      ).toBe(presented?.consequence);
+
+      const selected = session.chooseJourneyStory(optionId);
+      expect(session.snapshot().minutes - beforeTalk).toBe(15 + additionalMinutes);
+      const selectedJournal = session
+        .snapshot()
+        .journalEntries.find((entry) => entry.id === selected.entry.id);
+      expect(selectedJournal?.text).toContain(formatOpeningAllyTimingDisclosure(option.terms));
+      const current = session.snapshot();
+      expect(OverworldSession.restore(WORLD, current).snapshot()).toEqual(current);
+
+      const predecessor = structuredClone(current);
+      const predecessorEntry = predecessor.journalEntries.find(
+        (entry) => entry.id === selected.entry.id,
+      );
+      if (!predecessorEntry) throw new Error("Expected June's selected ally journal entry.");
+      predecessorEntry.text = `${option.summary} ${option.preview} Actual cost: ${formatOpeningAllyCost(option.terms)}. ${option.consequence}`;
+      expect(predecessorEntry.text).not.toBe(selectedJournal?.text);
+      expect(OverworldSession.restore(WORLD, predecessor).snapshot()).toEqual(current);
+    },
+  );
 
   it("inspects without mutation and atomically records a replayable offer plus selection", () => {
     const { api, sessionId } = startMcpAtStation();

@@ -205,7 +205,15 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(text).toContain(view.current.name);
     expect(text).toContain(`Supplies ${view.supplies}/${view.maxSupplies}`);
     expect(text).toContain("Roads:");
+    expect(text).toContain("Roads:\n  Type `go <road number>` to travel (e.g. `go 1`).");
     expect(text).not.toMatch(/\.ya?ml/i); // public surface: no pack paths
+  });
+
+  it("omits the road heading and command hint when there are no exits", () => {
+    const session = new OverworldSession(WORLD);
+    const text = render({ ...session.view(), exits: [] });
+    expect(text).not.toContain("Roads:");
+    expect(text).not.toContain("Type `go <road number>` to travel (e.g. `go 1`).");
   });
 
   it("renders a certified lead's exact local anchor route without a scout detour", () => {

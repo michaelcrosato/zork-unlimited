@@ -8,6 +8,10 @@ import { describe, expect, it } from "vitest";
 
 import { createToolApi } from "../../src/mcp/tools.js";
 import { compactOverworldView } from "../../src/world/compact_view.js";
+import {
+  formatOpeningAllyChoiceTiming,
+  formatOpeningAllyTimingDisclosure,
+} from "../../src/world/opening_ally.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { GameSession } from "../../ui/src/engine.js";
@@ -150,9 +154,10 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
             expect(prompt.options.map((option) => option.id)).toEqual([ACCEPT, RELAY, SOLO]);
             const acceptSource = ALLY.options.find((option) => option.id === ACCEPT)!;
             const acceptOption = prompt.options.find((option) => option.id === ACCEPT)!;
+            const acceptCost = formatOpeningAllyChoiceTiming(acceptSource.terms);
             expect(acceptOption.summary).toEqual({
               commitment: acceptSource.summary,
-              immediateCost: "15 minutes",
+              immediateCost: acceptCost,
               tradeoff: acceptSource.tradeoff,
             });
             expect(Object.keys(acceptOption.summary!).sort()).toEqual([
@@ -161,7 +166,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
               "tradeoff",
             ]);
             expect(acceptOption.consequence).toBe(
-              `Benefit: Independent cattle-pressure ally Cost: 15 minutes. Boundary: ${acceptSource.tradeoff}`,
+              `Benefit: Independent cattle-pressure ally Cost: ${acceptCost}. Boundary: ${acceptSource.tradeoff}`,
             );
             expect(
               prompt.options.every((option) =>
@@ -179,6 +184,9 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
             expect(
               after.journalEntries.find((entry) => entry.id === selection.entry.id)?.text,
             ).toContain(selectedSource.preview);
+            expect(
+              after.journalEntries.find((entry) => entry.id === selection.entry.id)?.text,
+            ).toContain(formatOpeningAllyTimingDisclosure(selectedSource.terms));
             expect(after.minutes - before.minutes).toBe(
               optionId === ACCEPT ? 15 : optionId === RELAY ? 5 : 0,
             );
@@ -248,9 +256,22 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
 
     session.chooseJourneyStory(RESIDENT_SHELTER);
     moveToArea(session, ALLY.area);
+    const paidLead = session.view().departureContactLeads[0];
+    expect(paidLead?.guidance).toContain(
+      "The 15-minute conversation is already recorded; reviewing it now adds no time.",
+    );
+    expect(paidLead?.guidance).toContain(
+      "Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total",
+    );
+    expect(OverworldSession.restore(WORLD, session.snapshot()).view().departureContactLeads).toEqual(
+      session.view().departureContactLeads,
+    );
     const decisionsBeforeContact = session.journey().acceptedDecisions;
+    const minutesBeforeContact = session.snapshot().minutes;
     const repeated = session.talkToCharacter(ALLY.contact);
     expect(repeated.alreadyKnown).toBe(true);
+    expect(repeated.minutes).toBe(0);
+    expect(session.snapshot().minutes).toBe(minutesBeforeContact);
     expect(repeated.journeyDecision).toEqual({
       countsTowardJourney: true,
       reason: "substantive_dialogue",

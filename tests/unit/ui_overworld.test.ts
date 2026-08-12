@@ -1126,7 +1126,10 @@ describe("OverworldSession", () => {
       expect(initiallyReadyMarkup).toContain(
         `aria-describedby="departure-contact-lead-${world.opening_ally!.id.replaceAll(":", "-")}"`,
       );
-      expect(initiallyReadyMarkup).toContain("Optional second rider: ask June Pike");
+      expect(initiallyReadyMarkup).toContain("Optional second rider: Talking takes 15 minutes.");
+      expect(initiallyReadyMarkup).toContain(
+        "Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total",
+      );
       expect(initiallyReadyMarkup).toContain("leave for The Wolf-Winter alone now");
       expect(initiallyReadyMarkup).toContain("Ask June Pike about riding");
       expect(initiallyReadyMarkup).not.toContain("choose a field kit first");
@@ -1165,7 +1168,10 @@ describe("OverworldSession", () => {
         }),
       );
       expect(readyMarkup).toContain('aria-disabled="false"');
-      expect(readyMarkup).toContain("Optional second rider: ask June Pike");
+      expect(readyMarkup).toContain("Optional second rider: Talking takes 15 minutes.");
+      expect(readyMarkup).toContain(
+        "Leave with a Solo Field Team: no added time, 15 minutes total",
+      );
       expect(readyMarkup).toContain("Ask June Pike about riding");
       expect(readyMarkup).not.toContain("choose a field kit first");
     } finally {

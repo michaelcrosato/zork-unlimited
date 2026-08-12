@@ -32181,7 +32181,7 @@
       "authored_scene": {
         "version": 1,
         "id": "albany:winter-return-charter-record",
-        "prompt": "Rowan can clear the blocked winter-relief petitions only if you choose how the household affidavits enter Albany's record. A public record supports stronger later scrutiny and standing but takes longer to close; a protected schedule keeps names sealed and can be closed faster. Both clear today's stair on identical terms, and Rowan will not reopen the choice after a field return.",
+        "prompt": "Rowan can clear the blocked winter-relief petitions only if you choose how the household affidavits enter Albany's record. A public record supports stronger later scrutiny and standing after a truthful field return, when its audit takes longer; a protected schedule keeps names sealed and can close that later return faster. Both cost 50 minutes to open today and earn 2 Capital / Mohawk renown, and Rowan will not reopen the choice after a field return.",
         "required_poi_id": "albany_city__civic_core__poi",
         "required_contact_id": "albany_city__civic_core__contact",
         "forbids_completed_quests": ["wolf_winter"],

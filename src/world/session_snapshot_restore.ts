@@ -61,7 +61,12 @@ import {
   replayOpeningDispatchChoices,
   type OpeningDispatchReplayChoice,
 } from "./opening_dispatch_choice_replay.js";
-import { proveOpeningAllyJournal, type OpeningAllyJournalProof } from "./opening_ally_journal.js";
+import { formatOpeningAllyCost } from "./opening_ally.js";
+import {
+  openingAllyJournalDraft,
+  proveOpeningAllyJournal,
+  type OpeningAllyJournalProof,
+} from "./opening_ally_journal.js";
 import {
   openingLeadSourceOfferJournalId,
   proveOpeningLeadSourceJournal,
@@ -1534,6 +1539,49 @@ export function applyOverworldSessionSnapshotRestore(
   };
 }
 
+/**
+ * Upgrade only the exact immediately prior code-owned ally journal copy. The
+ * normal ally replay still owns the option, clock, chronology, and character
+ * effects; near-matches and unrelated historical prose are left untouched.
+ */
+function normalizeOpeningAllyTimingDisclosurePredecessorJournal(args: {
+  scene: NonNullable<OverworldSnapshotManifestIndex["openingAlly"]>;
+  journalEntries: readonly OverworldJournalEntry[];
+}): readonly OverworldJournalEntry[] {
+  const character = createInitialCampaignCharacterState();
+  const copiesById = new Map(
+    args.scene.options.map((option) => {
+      const current = openingAllyJournalDraft({
+        scene: args.scene,
+        character,
+        optionId: option.id,
+      });
+      return [
+        current.id,
+        {
+          current,
+          predecessorText: `${option.summary} ${option.preview} Actual cost: ${formatOpeningAllyCost(option.terms)}. ${option.consequence}`,
+        },
+      ] as const;
+    }),
+  );
+  let changed = false;
+  const journalEntries = args.journalEntries.map((entry) => {
+    const copies = copiesById.get(entry.id);
+    if (
+      !copies ||
+      entry.kind !== "ally" ||
+      entry.title !== copies.current.title ||
+      entry.text !== copies.predecessorText
+    ) {
+      return entry;
+    }
+    changed = true;
+    return Object.freeze({ ...entry, text: copies.current.text });
+  });
+  return changed ? Object.freeze(journalEntries) : args.journalEntries;
+}
+
 export function planOverworldSessionSnapshotRestore(args: {
   indexes: OverworldSnapshotManifestIndex;
   snapshot: OverworldSessionSnapshot;
@@ -1541,7 +1589,17 @@ export function planOverworldSessionSnapshotRestore(args: {
   worldHash: string;
   worldId: string;
 }): OverworldSessionSnapshotRestorePlan {
-  const { indexes, snapshot, startTownId, worldHash, worldId } = args;
+  const { indexes, snapshot: sourceSnapshot, startTownId, worldHash, worldId } = args;
+  const normalizedJournalEntries = indexes.openingAlly
+    ? normalizeOpeningAllyTimingDisclosurePredecessorJournal({
+        scene: indexes.openingAlly,
+        journalEntries: sourceSnapshot.journalEntries,
+      })
+    : sourceSnapshot.journalEntries;
+  const snapshot =
+    normalizedJournalEntries === sourceSnapshot.journalEntries
+      ? sourceSnapshot
+      : Object.freeze({ ...sourceSnapshot, journalEntries: normalizedJournalEntries });
   if (snapshot.worldId !== worldId) {
     throw new Error(
       `Overworld session snapshot is for world "${snapshot.worldId}", not "${worldId}".`,
