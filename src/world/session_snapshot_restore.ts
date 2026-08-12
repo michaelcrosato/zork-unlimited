@@ -1546,8 +1546,8 @@ export function applyOverworldSessionSnapshotRestore(
  */
 function normalizeOpeningAllyTimingDisclosurePredecessorJournal(args: {
   scene: NonNullable<OverworldSnapshotManifestIndex["openingAlly"]>;
-  journalEntries: readonly OverworldJournalEntry[];
-}): readonly OverworldJournalEntry[] {
+  journalEntries: OverworldSessionSnapshot["journalEntries"];
+}): OverworldSessionSnapshot["journalEntries"] {
   const character = createInitialCampaignCharacterState();
   const copiesById = new Map(
     args.scene.options.map((option) => {
@@ -1579,7 +1579,7 @@ function normalizeOpeningAllyTimingDisclosurePredecessorJournal(args: {
     changed = true;
     return Object.freeze({ ...entry, text: copies.current.text });
   });
-  return changed ? Object.freeze(journalEntries) : args.journalEntries;
+  return changed ? journalEntries : args.journalEntries;
 }
 
 export function planOverworldSessionSnapshotRestore(args: {

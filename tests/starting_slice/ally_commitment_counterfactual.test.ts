@@ -263,9 +263,9 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     expect(paidLead?.guidance).toContain(
       "Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total",
     );
-    expect(OverworldSession.restore(WORLD, session.snapshot()).view().departureContactLeads).toEqual(
-      session.view().departureContactLeads,
-    );
+    expect(
+      OverworldSession.restore(WORLD, session.snapshot()).view().departureContactLeads,
+    ).toEqual(session.view().departureContactLeads);
     const decisionsBeforeContact = session.journey().acceptedDecisions;
     const minutesBeforeContact = session.snapshot().minutes;
     const repeated = session.talkToCharacter(ALLY.contact);

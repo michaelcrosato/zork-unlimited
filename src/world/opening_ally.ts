@@ -246,9 +246,7 @@ export function formatOpeningAllyTimingDisclosure(terms: OpeningAllyTerms): stri
 export function formatOpeningAllyChoiceTiming(terms: OpeningAllyTerms): string {
   const totalMinutes = OPENING_ALLY_CONTACT_MINUTES + terms.minutes;
   const additional =
-    terms.minutes === 0
-      ? "no added time"
-      : `${String(terms.minutes)} minutes additional`;
+    terms.minutes === 0 ? "no added time" : `${String(terms.minutes)} minutes additional`;
   return `${additional} after ${String(OPENING_ALLY_CONTACT_MINUTES)}-minute talk; ${String(totalMinutes)} minutes total`;
 }
 

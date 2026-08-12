@@ -334,12 +334,8 @@ describe("optional Station departure interactions", () => {
       if (!story) throw new Error("Expected June's field-team choice.");
       const option = ALLY.options.find((candidate) => candidate.id === optionId)!;
       const presented = story.options.find((candidate) => candidate.id === optionId);
-      expect(presented?.summary?.immediateCost).toBe(
-        formatOpeningAllyChoiceTiming(option.terms),
-      );
-      expect(presented?.consequence).toContain(
-        `${String(15 + additionalMinutes)} minutes total`,
-      );
+      expect(presented?.summary?.immediateCost).toBe(formatOpeningAllyChoiceTiming(option.terms));
+      expect(presented?.consequence).toContain(`${String(15 + additionalMinutes)} minutes total`);
       expect(
         compactJourneyStoryChoiceComparison(story, optionId).inspectedOption?.consequence,
       ).toBe(presented?.consequence);
