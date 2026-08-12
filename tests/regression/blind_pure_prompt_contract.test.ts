@@ -316,6 +316,12 @@ describe("pure blind prompt + runner contract", () => {
     });
   });
 
+  it("makes the latest authored-event choice menu authoritative", () => {
+    expect(promptBullet("- An authored local event is described")).toBe(
+      "- An authored local event is described in `context.event_scenes`. Its nested option tuples preview terms; they are not current legal choices. Resolve it only when the latest `context.event_choices` presents an exact `[event_id, option_id]` tuple, passing both values unchanged to `mcp__adventureforge__resolve_overworld_session_event`. If the latest state-bearing context omits `event_choices`, no authored event option is legal; an `unchanged: true` reply preserves the prior state-bearing menu. A visible legacy event absent from `event_scenes` still follows the shown investigate/resolve flow with its `event_id` only.",
+    );
+  });
+
   it("locks the visible goal-passage id to its exact route-neutral transport", () => {
     expect({
       promptGoalPassage: promptBullet("- A non-null `journey.goalPassage`"),

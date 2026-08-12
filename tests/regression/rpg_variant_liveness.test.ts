@@ -733,7 +733,7 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     "go_north",
     ["wedge_paling_rail", "worst"],
     ["maneuver_yearling_wolf_set_spear", "worst"],
-    ["maneuver_yearling_wolf_drive_set_spear", "best"],
+    ["maneuver_yearling_wolf_drive_set_spear_unarmored", "best"],
     "go_north",
   ];
   run("hayden_frost_report_certified", [
@@ -849,7 +849,13 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
       "Road-Warden field import with a certified source packet",
       "separately certified source packet remains the controlling field evidence",
     ),
-    "room:store#4",
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "store",
+      "Jamie certified crawlboard testimony",
+      "Jamie's certified testimony marks the feed-hauler's crawlboard",
+    ),
     "room:fodder_loft#1",
     "room:byre_door#9",
     "room:byre_door#24",

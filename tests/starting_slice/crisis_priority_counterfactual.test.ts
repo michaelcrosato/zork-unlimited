@@ -581,6 +581,6 @@ describe("SS-F10 — drive-and-evacuate crisis priority", () => {
     expect(actionIds(state).some((id) => id.includes("drive_breach_signal"))).toBe(false);
     state = act(state, "maneuver_yearling_wolf_set_spear", "worst");
     expect(state.flags.yearling_down).not.toBe(true);
-    expect(actionIds(state)).toContain("maneuver_yearling_wolf_drive_set_spear");
+    expect(actionIds(state)).toContain("maneuver_yearling_wolf_drive_set_spear_unarmored");
   });
 });

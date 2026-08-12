@@ -74,6 +74,13 @@ function act(state: GameState, id: string, outcome: Outcome = "best"): StepResul
   return result;
 }
 
+function narration(result: StepResult): string {
+  return result.events
+    .filter((event) => event.type === "narration")
+    .map((event) => event.text)
+    .join(" ");
+}
+
 function play(state: GameState, ids: readonly string[], outcome: Outcome = "best"): GameState {
   for (const id of ids) state = act(state, id, outcome).state;
   return state;
@@ -163,10 +170,13 @@ describe("Wolf-Winter authored combat tactics", () => {
     });
     expect(staleRoot.ok).toBe(false);
 
-    state = act(state, childId, "worst").state;
+    const finish = act(state, childId, "worst");
+    state = finish.state;
     expect(state.flags.yearling_spear_driven).toBe(true);
     expect(state.flags.yearling_down).toBe(true);
     expect(state.vars.hp).toBe(25);
+    expect(narration(finish)).toContain("jerkin's hide shoulder");
+    expect(narration(finish)).not.toContain("No worn armor");
     expect(optionIds(state)).not.toContain("attack_yearling_wolf");
     const staleChild = makeStep(buildRpgRules(index, () => outcomeRng("best")))(state, {
       type: "MANEUVER",
@@ -174,6 +184,31 @@ describe("Wolf-Winter authored combat tactics", () => {
       maneuver: "drive_set_spear",
     });
     expect(staleChild.ok).toBe(false);
+  });
+
+  it("uses the spear, not carried-undonned hide, as the yearling guard", () => {
+    let state = play(start(), ["go_north", "go_west", "take_byre_jerkin", "go_east", "go_north"]);
+
+    expect(state.inventory).toContain("byre_jerkin");
+    expect(state.flags.jerkin_donned).not.toBe(true);
+    expect(state.vars.defense).toBe(3);
+
+    state = act(state, "maneuver_yearling_wolf_set_spear", "worst").state;
+    expect(optionIds(state)).toContain("maneuver_yearling_wolf_drive_set_spear_unarmored");
+    expect(optionIds(state)).not.toContain("maneuver_yearling_wolf_drive_set_spear");
+
+    const finish = act(state, "maneuver_yearling_wolf_drive_set_spear_unarmored", "best");
+    state = finish.state;
+
+    expect(state.flags.yearling_spear_driven_unarmored).toBe(true);
+    expect(state.flags.yearling_spear_driven).not.toBe(true);
+    expect(state.flags.yearling_down).toBe(true);
+    expect(state.inventory).toContain("byre_jerkin");
+    expect(state.flags.jerkin_donned).not.toBe(true);
+    expect(state.vars.defense).toBe(3);
+    expect(narration(finish)).toContain("keep the spear crosswise");
+    expect(narration(finish)).toContain("No worn armor");
+    expect(narration(finish)).not.toContain("jerkin's hide shoulder");
   });
 
   it("keeps the ordinary HUNT defeat journal neutral while north remains legal", () => {
