@@ -360,6 +360,10 @@ it only while an embedded quest is active, with the exact current
 legal choices already appear in the current overworld response and use their
 corresponding overworld tools.
 
+Compact `context.npcs` rows pair each stable authored NPC id with its
+player-facing display name as `[npc_id, display_name]`; executable action ids
+such as `talk_<npc_id>` remain unchanged.
+
 Pure mode repeats the parent `overworld_session_id` on every successful player
 response. While an embedded quest is unresolved, it also repeats the current
 child `rpg_session_id`; the two handles are never interchangeable. Missing,

@@ -217,7 +217,7 @@ export function cloneCompactRpgObservation(context: RpgCompactObservation): RpgC
     ...(context.actions ? { actions: [...context.actions] } : {}),
     ...(context.checks ? { checks: cloneCompactTupleList(context.checks) } : {}),
     ...(context.objects ? { objects: [...context.objects] } : {}),
-    ...(context.npcs ? { npcs: [...context.npcs] } : {}),
+    ...(context.npcs ? { npcs: cloneCompactTupleList(context.npcs) } : {}),
     ...(context.blocked ? { blocked: cloneCompactTupleList(context.blocked) } : {}),
     ...(context.unavailable ? { unavailable: cloneCompactTupleList(context.unavailable) } : {}),
     ...(context.inv ? { inv: [...context.inv] } : {}),
