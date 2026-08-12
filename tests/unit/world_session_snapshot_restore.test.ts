@@ -90,6 +90,7 @@ function restorePlan(
     journalEntriesAfter: [],
     openingLeadSourceDecisionTrailAfter: null,
     pendingRoadEncounter: null,
+    questLaunchCharacters: new Map(),
     questOutcomeIds: new Map([["quest_b", "ending_b"]]),
     regionRenown: new Map([["Region", 3]]),
     resolvedEventHomeIds: new Set(["town_b"]),
@@ -123,6 +124,7 @@ function restoreState(
     exploredSiteIds: new Set(["old_site"]),
     journalEntries: [staleJournalEntry],
     journalEntriesById: new Map([[staleJournalEntry.id, staleJournalEntry]]),
+    questLaunchCharacters: new Map([["old_quest", createInitialCampaignCharacterState()]]),
     questOutcomeIds: new Map([["old_quest", "old_ending"]]),
     regionRenown: new Map([["Old Region", 99]]),
     resolvedEventIds: new Set(["old_event"]),
@@ -169,6 +171,7 @@ describe("overworld session snapshot restore application", () => {
     expect([...state.discoveredQuestIds]).toEqual(["quest_b"]);
     expect([...state.startedQuestIds]).toEqual(["quest_b"]);
     expect([...state.completedQuestIds]).toEqual(["quest_b"]);
+    expect([...state.questLaunchCharacters]).toEqual([]);
     expect([...state.questOutcomeIds]).toEqual([["quest_b", "ending_b"]]);
     expect([...state.exploredSiteIds]).toEqual(["site_b"]);
     expect([...state.regionRenown]).toEqual([["Region", 3]]);

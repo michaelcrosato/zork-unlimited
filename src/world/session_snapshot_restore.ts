@@ -438,6 +438,7 @@ type CurrentCampaignSnapshotProof = Readonly<{
   characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState;
   directQuestAnchorActivationOrdinals: ReadonlyMap<string, number>;
   openingLeadSourceDecisionTrail: OverworldOpeningLeadSourceDecisionTrail | null;
+  questLaunchCharacters: ReadonlyMap<string, CampaignCharacterState>;
 }>;
 
 function assertCurrentOpeningStoryBoundary(args: {
@@ -1199,6 +1200,13 @@ function proveCurrentCampaignSnapshot(args: {
     args.snapshot.journalEntries.map((entry, index) => [entry.id, index] as const),
   );
   const mutations: CampaignReplayMutation[] = [];
+  const questLaunchMutations = new Map<
+    string,
+    Readonly<{
+      entry: OverworldJournalEntry;
+      effects: readonly CampaignConsequenceEffect[];
+    }>
+  >();
   for (const entry of args.snapshot.journalEntries) {
     if (entry.questStartProof === undefined) continue;
     const questId = entry.id.startsWith("quest:") ? entry.id.slice("quest:".length) : "";
@@ -1210,7 +1218,7 @@ function proveCurrentCampaignSnapshot(args: {
     }
   }
   for (const [questId, quest] of args.indexes.questsById) {
-    if (!quest.launch || !args.startedQuestIds.has(questId)) continue;
+    if (!args.startedQuestIds.has(questId)) continue;
     const journalIndex = journalIndexById.get(`quest:${questId}`);
     const entry =
       journalIndex === undefined ? undefined : args.snapshot.journalEntries[journalIndex];
@@ -1219,6 +1227,21 @@ function proveCurrentCampaignSnapshot(args: {
         `Overworld session snapshot started quest "${questId}" has no canonical launch journal.`,
       );
     }
+    if (!quest.launch) {
+      const expectedTown = args.indexes.questTownNames.get(quest.id) ?? quest.home;
+      if (
+        entry.id !== `quest:${quest.id}` ||
+        entry.kind !== "quest" ||
+        entry.town !== expectedTown ||
+        entry.questStartProof !== undefined
+      ) {
+        throw new Error(
+          `Overworld session snapshot quest start "${quest.id}" is not bound to its canonical journal identity and town.`,
+        );
+      }
+      questLaunchMutations.set(questId, { entry, effects: [] });
+      continue;
+    }
     const effects = assertCurrentQuestStartJournal({
       boundaryProofs,
       entry,
@@ -1226,6 +1249,7 @@ function proveCurrentCampaignSnapshot(args: {
       journey: args.snapshot.journey,
       quest,
     });
+    questLaunchMutations.set(questId, { entry, effects });
     const proof = entry.questStartProof;
     if (proof?.kind === "approach") {
       const expectedWindow = deriveQuestDispatchWindow({
@@ -1333,6 +1357,18 @@ function proveCurrentCampaignSnapshot(args: {
       "Overworld session snapshot campaign character does not match replayed quest consequences or care services.",
     );
   }
+  const questLaunchCharacters = new Map<string, CampaignCharacterState>();
+  for (const [questId, launch] of questLaunchMutations) {
+    const characterBefore = characterAt(launch.entry);
+    const characterAfterLaunch =
+      launch.effects.length === 0
+        ? characterBefore
+        : applyCampaignConsequences({
+            character: characterBefore,
+            effects: launch.effects,
+          }).characterAfter;
+    questLaunchCharacters.set(questId, cloneCampaignCharacterState(characterAfterLaunch));
+  }
 
   const storyChoiceProofOrdinalByKey = storyChoiceProofOrdinals(
     boundaryProofs,
@@ -1413,6 +1449,7 @@ function proveCurrentCampaignSnapshot(args: {
     characterAt: (entry) => characterAt(entry),
     directQuestAnchorActivationOrdinals,
     openingLeadSourceDecisionTrail,
+    questLaunchCharacters,
   };
 }
 
@@ -1424,6 +1461,7 @@ export type OverworldSessionSnapshotRestorePlan = {
   journalEntriesAfter: readonly OverworldJournalEntry[];
   openingLeadSourceDecisionTrailAfter: OverworldOpeningLeadSourceDecisionTrail | null;
   pendingRoadEncounter: OverworldPendingRoadEncounter | null;
+  questLaunchCharacters: ReadonlyMap<string, CampaignCharacterState>;
   questOutcomeIds: ReadonlyMap<string, string>;
   regionRenown: ReadonlyMap<string, number>;
   resolvedEventHomeIds: ReadonlySet<string>;
@@ -1444,6 +1482,7 @@ export type OverworldSessionSnapshotRestoreState = {
   exploredSiteIds: Set<string>;
   journalEntries: OverworldJournalEntry[];
   journalEntriesById: Map<string, OverworldJournalEntry>;
+  questLaunchCharacters: Map<string, CampaignCharacterState>;
   questOutcomeIds: Map<string, string>;
   regionRenown: Map<string, number>;
   resolvedEventIds: Set<string>;
@@ -1475,6 +1514,14 @@ function replaceStringMap(target: Map<string, string>, source: ReadonlyMap<strin
 function replaceNumberMap(target: Map<string, number>, source: ReadonlyMap<string, number>): void {
   target.clear();
   for (const [key, value] of source) target.set(key, value);
+}
+
+function replaceCampaignCharacterMap(
+  target: Map<string, CampaignCharacterState>,
+  source: ReadonlyMap<string, CampaignCharacterState>,
+): void {
+  target.clear();
+  for (const [key, value] of source) target.set(key, cloneCampaignCharacterState(value));
 }
 
 function replaceTravelLog(target: TravelLogEntry[], source: readonly TravelLogEntry[]): void {
@@ -1517,6 +1564,7 @@ export function applyOverworldSessionSnapshotRestore(
   replaceStringSet(state.discoveredQuestIds, plan.discoveredQuestIdsAfter);
   replaceStringSet(state.startedQuestIds, snapshot.startedQuestIds);
   replaceStringSet(state.completedQuestIds, snapshot.completedQuestIds);
+  replaceCampaignCharacterMap(state.questLaunchCharacters, plan.questLaunchCharacters);
   replaceStringMap(state.questOutcomeIds, plan.questOutcomeIds);
   replaceStringSet(state.exploredSiteIds, snapshot.exploredSiteIds);
   replaceNumberMap(state.regionRenown, plan.regionRenown);
@@ -1917,6 +1965,7 @@ export function planOverworldSessionSnapshotRestore(args: {
     journalEntriesAfter: Object.freeze([...snapshot.journalEntries]),
     openingLeadSourceDecisionTrailAfter: campaignReplay.openingLeadSourceDecisionTrail,
     pendingRoadEncounter,
+    questLaunchCharacters: campaignReplay.questLaunchCharacters,
     questOutcomeIds,
     regionRenown,
     resolvedEventHomeIds: resolvedOverworldEventHomeIds(resolvedEventIds, indexes),

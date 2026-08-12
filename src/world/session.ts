@@ -516,6 +516,7 @@ export class OverworldSession {
   private readonly discoveredQuestIds = new Set<string>();
   private readonly startedQuestIds = new Set<string>();
   private readonly completedQuestIds = new Set<string>();
+  private readonly questLaunchCharacters = new Map<string, CampaignCharacterState>();
   private readonly questOutcomeIds = new Map<string, string>();
   private readonly exploredSiteIds = new Set<string>();
   private readonly regionRenown = new Map<string, number>();
@@ -648,6 +649,12 @@ export class OverworldSession {
    */
   campaignCharacterState(): CampaignCharacterState {
     return cloneCampaignCharacterState(this.characterState);
+  }
+
+  /** Character proven at this quest's authored launch boundary. */
+  questLaunchCharacterState(questId: string): CampaignCharacterState | null {
+    const character = this.questLaunchCharacters.get(questId);
+    return character ? cloneCampaignCharacterState(character) : null;
   }
 
   /** Derived historical world truth; detached so callers cannot mutate session state. */
@@ -2448,6 +2455,7 @@ export class OverworldSession {
       discoveredQuestIds: this.discoveredQuestIds,
       startedQuestIds: this.startedQuestIds,
       completedQuestIds: this.completedQuestIds,
+      questLaunchCharacters: this.questLaunchCharacters,
       questOutcomeIds: this.questOutcomeIds,
       exploredSiteIds: this.exploredSiteIds,
       regionRenown: this.regionRenown,
@@ -3296,6 +3304,10 @@ export class OverworldSession {
     );
     this.applyResourceClockState(applied);
     this.characterState = cloneCampaignCharacterState(applied.characterAfter);
+    this.questLaunchCharacters.set(
+      canonicalPlan.quest.id,
+      cloneCampaignCharacterState(applied.characterAfter),
+    );
     const journeyDecision = this.recordOverworldDecision(
       canonicalPlan.journeyActionId,
       "progress",
