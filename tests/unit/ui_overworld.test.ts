@@ -567,6 +567,7 @@ describe("OverworldSession", () => {
 
   it("routes visible story-choice ids through generic app plumbing", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
+    const overworldScreen = readFileSync("ui/src/OverworldPlayScreen.tsx", "utf8");
     const screen = readFileSync("ui/src/JourneyStoryChoiceScreen.tsx", "utf8");
     const styles = readFileSync("ui/src/styles.css", "utf8");
     const handlerStart = app.indexOf("function chooseJourneyStory(choiceId: string)");
@@ -597,9 +598,13 @@ describe("OverworldSession", () => {
     expect(handler).not.toMatch(
       /targetQuestId|targetTownId|targetAreaId|questOutcomeIds|endingId|content\/rpg/i,
     );
-    expect(app).toContain("worldView.departureInteractions.map");
+    expect(app).toContain("for (const interaction of worldView.departureInteractions)");
     expect(app).toContain("worldSession.inspectJourneyStory(storyChoiceId)");
-    expect(app).toContain("you may inspect one or leave without choosing");
+    expect(app).toContain("onChoose: () => inspectDepartureStory(interaction.id)");
+    expect(app).toContain('terms: "Inspect before committing"');
+    expect(app).toContain("sections={worldActionSections}");
+    expect(overworldScreen).toContain('panel === "terms"');
+    expect(overworldScreen).toContain("section.actions.map((action)");
     expect(screen).toContain("Journey consequence");
     expect(screen).toContain("Choose what follows");
     expect(screen).toContain("Character registration");
@@ -646,37 +651,40 @@ describe("OverworldSession", () => {
 
   it("authorizes authored local-job buttons from exact projected choices", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
-    const panelStart = app.indexOf("<h2>Local Jobs</h2>");
-    const panelEnd = app.indexOf("<h2>Local Discoveries</h2>", panelStart);
-    expect(panelStart).toBeGreaterThanOrEqual(0);
-    expect(panelEnd).toBeGreaterThan(panelStart);
-    const panel = app.slice(panelStart, panelEnd);
+    const screen = readFileSync("ui/src/OverworldPlayScreen.tsx", "utf8");
+    const modelStart = app.indexOf("const jobActions: WorldActionCard[] = []");
+    const modelEnd = app.indexOf('worldActionSections.push({ id: "jobs"', modelStart);
+    expect(modelStart).toBeGreaterThanOrEqual(0);
+    expect(modelEnd).toBeGreaterThan(modelStart);
+    const model = app.slice(modelStart, modelEnd);
 
     expect(app).toContain("worldView.jobChoices.map(([jobId, optionId])");
-    expect(panel).toContain("legalJobChoiceKeys.has(");
-    expect(panel).toContain("jobChoiceKey(job.id, option.id)");
-    expect(panel).toContain("disabled={!optionAvailable}");
-    expect(panel).not.toContain("disabled={!sceneReady}");
-    expect(panel).toContain("Required first:");
-    expect(panel).toContain("poiTitlesById.get(scene.required_poi_id)");
-    expect(panel).toContain("characterNamesById.get(scene.required_contact_id)");
-    expect(panel).toContain("<b>Commitment:</b> {option.consequence}");
+    expect(model).toContain("job.authored_scene.options.map((option)");
+    expect(model).toContain("legalJobChoiceKeys.has(jobChoiceKey(job.id, option.id))");
+    expect(model).toContain(
+      'disabledReason: completed ? "This job is complete." : "Requirements not met."',
+    );
+    expect(model).toContain("worldSession.workLocalJob(job.id, option.id)");
+    expect(model).not.toContain("sceneReady");
+    expect(screen).toContain("action.disabledReason !== undefined");
+    expect(screen).toContain("disabled={disabled}");
+    expect(screen).toContain("disabled ? undefined : action.onChoose");
   });
 
-  it("describes unlisted local jobs as hidden or unavailable, not all undiscovered", () => {
+  it("builds job actions only from the projected view and labels empty sections truthfully", () => {
     const app = readFileSync("ui/src/App.tsx", "utf8");
-    const panelStart = app.indexOf("<h2>Local Jobs</h2>");
-    const panelEnd = app.indexOf("<h2>Local Discoveries</h2>", panelStart);
-    expect(panelStart).toBeGreaterThanOrEqual(0);
-    expect(panelEnd).toBeGreaterThan(panelStart);
-    const panel = app.slice(panelStart, panelEnd);
+    const screen = readFileSync("ui/src/OverworldPlayScreen.tsx", "utf8");
+    const modelStart = app.indexOf("const jobActions: WorldActionCard[] = []");
+    const modelEnd = app.indexOf('worldActionSections.push({ id: "jobs"', modelStart);
+    expect(modelStart).toBeGreaterThanOrEqual(0);
+    expect(modelEnd).toBeGreaterThan(modelStart);
+    const model = app.slice(modelStart, modelEnd);
 
-    expect(panel).toContain("No local jobs are currently available.");
-    expect(panel).toContain("hidden or unavailable until its conditions change.");
-    expect(panel).toContain("hidden or currently");
-    expect(panel).toContain("unavailable here.");
-    expect(panel).not.toContain("undiscovered local");
-    expect(panel).not.toContain("No local jobs mapped yet.");
+    expect(model).toContain("for (const job of worldView.jobs)");
+    expect(model).not.toContain("OVERWORLD.jobs");
+    expect(screen).toContain("Nothing is currently projected in this category.");
+    expect(screen).not.toContain("undiscovered local");
+    expect(screen).not.toContain("No local jobs mapped yet.");
   });
 
   it("omits policy-hidden authored Market job options from the rendered app", async () => {
@@ -732,10 +740,19 @@ describe("OverworldSession", () => {
 
       expect(markup).toContain("Jamie&#x27;s Disputed Crates");
       expect(markup).toContain("Release the price-hold crates through Jamie&#x27;s kitchen ledger");
-      expect(markup).toContain("30 min - 3 renown");
-      expect(markup).toContain("Audit the price-hold household chain in public");
-      expect(markup).toContain("75 min - 5 renown");
-      expect(markup.match(/job-scene-option/g)).toHaveLength(2);
+      expect(markup).toContain("30 min · renown 3");
+      // The focused scene shows one relevant job; the Exact terms panel receives
+      // the complete section model built from every engine-projected option.
+      expect(markup).not.toContain("Audit the price-hold household chain in public");
+      const app = readFileSync("ui/src/App.tsx", "utf8");
+      const screen = readFileSync("ui/src/OverworldPlayScreen.tsx", "utf8");
+      const jobModelStart = app.indexOf("const jobActions: WorldActionCard[] = []");
+      const jobModelEnd = app.indexOf('worldActionSections.push({ id: "jobs"', jobModelStart);
+      const jobModel = app.slice(jobModelStart, jobModelEnd);
+      expect(jobModel).toContain("job.authored_scene.options.map((option)");
+      expect(jobModel).toContain("legalJobChoiceKeys.has(jobChoiceKey(job.id, option.id))");
+      expect(screen).toContain("sections.map((section)");
+      expect(screen).toContain("section.actions.map((action)");
       expect(markup).not.toContain("Release the open-bid crates from the visible buyer board");
       expect(markup).not.toContain("Earn 1 Capital / Mohawk renown");
       expect(markup).not.toContain("Audit the open-bid public chain");
@@ -846,26 +863,7 @@ describe("OverworldSession", () => {
     }
   });
 
-  it("keeps standard service actions and accessibly associates their one-time terms", async () => {
-    const app = readFileSync("ui/src/App.tsx", "utf8");
-    const actionsStart = app.indexOf('<div className="service-actions">');
-    const actionsEnd = app.indexOf('<aside className="atlas-panel">', actionsStart);
-    expect(actionsStart).toBeGreaterThanOrEqual(0);
-    expect(actionsEnd).toBeGreaterThan(actionsStart);
-    const actions = app.slice(actionsStart, actionsEnd);
-
-    expect(actions).toContain("worldSession.resupplyAtTown()");
-    expect(actions).toContain("worldSession.restAtTown()");
-    expect(actions).toContain("worldView.serviceActions.map");
-    expect(actions).toContain('serviceAction.action === "rest"');
-    expect(app).toContain("aria-disabled={!serviceAction.available}");
-    expect(app).toContain("onClick={serviceAction.available ? onActivate : undefined}");
-    expect(app).toContain("serviceAction.suppliesBefore");
-    expect(app).toContain("serviceAction.fatigueAfter");
-    expect(app).toContain("{offer.title}");
-    expect(app).toContain("{offer.summary}");
-    expect(app).toContain("{offer.minutes} min, one time");
-
+  it("keeps service legality and projected costs in the Night Watch action model", async () => {
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
       root: uiRoot,
@@ -876,8 +874,37 @@ describe("OverworldSession", () => {
       server: { middlewareMode: true },
     });
     try {
-      const module = (await server.ssrLoadModule("/src/App.tsx")) as {
-        ServiceAction: unknown;
+      const module = (await server.ssrLoadModule("/src/OverworldPlayScreen.tsx")) as {
+        OverworldPlayScreen: unknown;
+      };
+      const presenter = (await server.ssrLoadModule("/src/worldActionPresentation.ts")) as {
+        activateProjectedService: (
+          session: Record<string, () => unknown>,
+          action: "care" | "rest" | "resupply",
+        ) => unknown;
+        presentServiceSection: (
+          view: ReturnType<OverworldSession["view"]>,
+          session: OverworldSession,
+          run: (action: () => unknown) => void,
+        ) => {
+          id: string;
+          actions: Array<{
+            id: string;
+            title: string;
+            terms: string;
+            disabledReason?: string;
+            onChoose: () => void;
+          }>;
+        };
+        primaryWorldSectionIds: (
+          sections: Array<{
+            id: string;
+            title: string;
+            actions: Array<{ id: string; disabledReason?: string }>;
+          }>,
+          pendingRoadEncounter: boolean,
+          hasLegalDispatchAction: boolean,
+        ) => string[];
       };
       const requireFromUi = createRequire(resolve(uiRoot, "package.json"));
       const react = requireFromUi("react") as {
@@ -886,68 +913,126 @@ describe("OverworldSession", () => {
       const reactDomServer = requireFromUi("react-dom/server") as {
         renderToStaticMarkup: (element: unknown) => string;
       };
-      const offer = {
-        id: "albany:test_accessible_service",
-        action: "resupply",
-        title: "Draw the one-time relief issue",
-        summary: "Fill the field pack from Albany's reserved relief stock.",
-        minutes: 15,
-        providerId: "albany_city__market__contact",
-        providerName: "Jamie Tanner",
-      } as const;
+      const session = new OverworldSession(world);
+      const view = session.view();
+      const serviceSection = presenter.presentServiceSection(view, session, () => undefined);
+      expect(serviceSection.id).toBe("services");
+      expect(serviceSection.actions.map((action) => action.id)).toEqual(
+        view.serviceActions.map((action) => `service:${action.action}`),
+      );
+      for (const projected of view.serviceActions) {
+        const action = serviceSection.actions.find(
+          (candidate) => candidate.id === `service:${projected.action}`,
+        );
+        expect(action?.terms).toContain(`${projected.minutes} min`);
+        expect(action?.terms).toContain(
+          `supplies ${projected.suppliesBefore}→${projected.suppliesAfter}`,
+        );
+        expect(action?.terms).toContain(
+          `fatigue ${projected.fatigueBefore}→${projected.fatigueAfter}`,
+        );
+        expect(action?.disabledReason).toBe(projected.available ? undefined : projected.message);
+      }
+
+      const invoked: string[] = [];
+      const fakeSession = {
+        careAtTown: () => invoked.push("care"),
+        restAtTown: () => invoked.push("rest"),
+        resupplyAtTown: () => invoked.push("resupply"),
+      };
+      for (const action of ["care", "rest", "resupply"] as const) {
+        presenter.activateProjectedService(fakeSession, action);
+      }
+      expect(invoked).toEqual(["care", "rest", "resupply"]);
+
+      expect(
+        presenter.primaryWorldSectionIds(
+          [
+            {
+              id: "future-gameplay-shape",
+              title: "Future gameplay shape",
+              actions: [{ id: "future:act" }],
+            },
+          ],
+          false,
+          false,
+        ),
+      ).toEqual(["future-gameplay-shape"]);
       const markup = reactDomServer.renderToStaticMarkup(
-        react.createElement(module.ServiceAction, {
-          serviceAction: {
-            action: "resupply",
-            source: "campaign_override",
-            offerId: offer.id,
-            available: true,
-            changed: true,
-            minutes: 15,
-            suppliesBefore: 2,
-            suppliesAfter: 8,
-            fatigueBefore: 12,
-            fatigueAfter: 12,
-            message: "The relief stores fill the field pack.",
-            blockedReason: null,
-          },
-          offer,
-          onActivate: () => undefined,
+        react.createElement(module.OverworldPlayScreen, {
+          world: view,
+          journey: session.journey(),
+          latestConsequence: "The relief stores fill the field pack.",
+          log: [],
+          sections: [
+            {
+              id: "services",
+              title: "Town services",
+              actions: [
+                {
+                  id: "service:resupply",
+                  group: "Service",
+                  title: "Resupply",
+                  summary: "The relief stores fill the field pack.",
+                  terms:
+                    "15 min · supplies 2→8 · fatigue 12→12 · Fill the field pack from Albany's reserved relief stock.",
+                  buttonLabel: "Use service",
+                  tone: "lichen",
+                  onChoose: () => undefined,
+                },
+              ],
+            },
+          ],
+          prioritySectionIds: ["services"],
+          panel: "scene",
+          error: null,
+          onPanelChange: () => undefined,
+          onNewJourney: () => undefined,
+          onOpenTutorial: () => undefined,
         }),
       );
 
-      expect(markup).toContain(
-        'aria-describedby="service-action-resupply-preview service-offer-resupply-terms"',
-      );
-      expect(markup).toContain('id="service-action-resupply-preview"');
-      expect(markup).toContain('id="service-offer-resupply-terms"');
+      expect(markup).toContain('class="nw-action-kind"');
+      expect(markup).toContain("<h2>Resupply</h2>");
+      expect(markup).toContain("The relief stores fill the field pack.");
       expect(markup).toContain("15 min · supplies 2→8 · fatigue 12→12");
-      expect(markup).toContain("Draw the one-time relief issue");
-      expect(markup).toContain("Available from Jamie Tanner.");
-      expect(markup).toContain("15 min, one time");
+      expect(markup).toContain("Fill the field pack from Albany&#x27;s reserved relief stock.");
+      expect(markup).toContain("Use service");
 
       const unavailable = reactDomServer.renderToStaticMarkup(
-        react.createElement(module.ServiceAction, {
-          serviceAction: {
-            action: "rest",
-            source: "ordinary",
-            offerId: null,
-            available: false,
-            changed: false,
-            minutes: 0,
-            suppliesBefore: 3,
-            suppliesAfter: 3,
-            fatigueBefore: 20,
-            fatigueAfter: 20,
-            message: "There is no inn or healer here to rest safely.",
-            blockedReason: "There is no inn or healer here to rest safely.",
-          },
-          offer: undefined,
-          onActivate: () => undefined,
+        react.createElement(module.OverworldPlayScreen, {
+          world: view,
+          journey: session.journey(),
+          latestConsequence: "No service used.",
+          log: [],
+          sections: [
+            {
+              id: "services",
+              title: "Town services",
+              actions: [
+                {
+                  id: "service:rest",
+                  group: "Service",
+                  title: "Rest",
+                  summary: "There is no inn or healer here to rest safely.",
+                  buttonLabel: "Use service",
+                  tone: "lichen",
+                  disabledReason: "There is no inn or healer here to rest safely.",
+                  onChoose: () => undefined,
+                },
+              ],
+            },
+          ],
+          prioritySectionIds: ["services"],
+          panel: "terms",
+          error: null,
+          onPanelChange: () => undefined,
+          onNewJourney: () => undefined,
+          onOpenTutorial: () => undefined,
         }),
       );
-      expect(unavailable).toContain('aria-disabled="true"');
-      expect(unavailable).not.toContain('disabled=""');
+      expect(unavailable).toContain('disabled=""');
+      expect(unavailable).toContain("Unavailable");
       expect(unavailable).toContain("There is no inn or healer here to rest safely.");
     } finally {
       await server.close();
@@ -975,13 +1060,20 @@ describe("OverworldSession", () => {
     if (!ready?.action) throw new Error("expected June's ready departure contact action");
 
     const app = readFileSync("ui/src/App.tsx", "utf8");
+    const overworldScreen = readFileSync("ui/src/OverworldPlayScreen.tsx", "utf8");
     const recapComponent = readFileSync("ui/src/DepartureRecap.tsx", "utf8");
     const storyChoiceScreen = readFileSync("ui/src/JourneyStoryChoiceScreen.tsx", "utf8");
-    expect(app).toContain("worldView.departureContactLeads.map");
-    expect(app).toContain("worldView.departureContactLeads.length > 0");
+    expect(app).toContain("for (const lead of worldView.departureContactLeads)");
+    expect(app).toContain("if (!lead.action) return");
+    expect(app).toContain("worldSession.talkToCharacter(lead.action!.arguments.character_id)");
+    expect(app).toContain(
+      "disabledReason: `Choose a field kit before asking ${lead.contactName}.`",
+    );
     expect(app).toContain("worldView.departureRecap");
-    expect(app).toContain("<DepartureRecap recap={worldView.departureRecap} />");
     expect(app).toContain("departureRecap={worldView.departureRecap}");
+    expect(overworldScreen).toContain(
+      "{world.departureRecap && <DepartureRecap recap={world.departureRecap} />}",
+    );
     expect(recapComponent).toContain('<details className="departure-recap-slots">');
     expect(recapComponent).toContain("<summary>Review selected and optional plan slots</summary>");
     expect(recapComponent).toContain('className="departure-recap-selected"');
@@ -999,9 +1091,8 @@ describe("OverworldSession", () => {
     expect(storyChoiceScreen.indexOf("<DepartureRecap")).toBeLessThan(
       storyChoiceScreen.indexOf("<JourneyOpportunityLeads"),
     );
-    expect(app).toContain("aria-disabled={!ready}");
-    expect(app).toContain("onClick={ready ? onTalk : undefined}");
-    expect(app).toContain("worldSession.talkToCharacter(lead.action.arguments.character_id)");
+    expect(overworldScreen).toContain("action.disabledReason !== undefined");
+    expect(overworldScreen).toContain("disabled={disabled}");
 
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
@@ -1402,7 +1493,10 @@ describe("OverworldSession", () => {
     expect(app).toContain("worldSession.prepareQuestStart(quest.id, approachId)");
     expect(app).toContain("plan.characterAfter");
     expect(app).toContain("worldSession.commitQuestStart(plan)");
-    expect(app).toContain("onStart={(approachId) => startQuest(quest, approachId)}");
+    expect(app).toContain("quest.launch.options.map((option)");
+    expect(app).toContain("summary: option.preview");
+    expect(app).toContain("option.projection?.blockedReason");
+    expect(app).toContain("onChoose: () => startQuest(quest, option.id)");
   });
 
   it("renders registration choices without claiming a goal was completed or replaced", async () => {
@@ -1912,8 +2006,10 @@ describe("OverworldSession", () => {
   });
 
   it("renders the fully populated canonical character as a semantic read-only record", async () => {
-    const app = readFileSync("ui/src/App.tsx", "utf8");
-    expect(app).toContain("<CampaignCharacterPanel character={worldView.character} />");
+    const screen = readFileSync("ui/src/OverworldPlayScreen.tsx", "utf8");
+    expect(screen).toContain(
+      'panel === "character" && <CampaignCharacterPanel character={world.character} />',
+    );
 
     const uiRoot = resolve(process.cwd(), "ui");
     const server = await createServer({
@@ -2306,6 +2402,23 @@ describe("OverworldSession", () => {
     expect(returnedView.pendingRoadEncounter).toBeNull();
     expect(returnedView.log[0]?.roadEvent).toBeNull();
     expect(session.snapshot().travelLog[0]?.roadEventId).toBeNull();
+  });
+
+  it("disables every non-encounter Night Watch action while route trouble is pending", () => {
+    const app = readFileSync("ui/src/App.tsx", "utf8");
+    const guardStart = app.indexOf(
+      "if (worldView.pendingRoadEncounter) {",
+      app.indexOf('id: "roads"'),
+    );
+    const priorityStart = app.indexOf("const hasLegalDispatchAction", guardStart);
+    expect(guardStart).toBeGreaterThanOrEqual(0);
+    expect(priorityStart).toBeGreaterThan(guardStart);
+    const guard = app.slice(guardStart, priorityStart);
+
+    expect(guard).toContain('if (section.id === "encounter") continue');
+    expect(guard).toContain("for (const action of section.actions)");
+    expect(guard).toContain("action.disabledReason = encounterBlock");
+    expect(guard).toContain("Resolve the pending road encounter before taking another action.");
   });
 
   it("round-trips stateful sessions through content-bound snapshots", () => {
@@ -3310,6 +3423,38 @@ describe("OverworldSession", () => {
     expect(repeatedCompletion.alreadyKnown).toBe(true);
     expect(repeatedCompletion.minutes).toBe(0);
     expect(session.view().completedQuestIds).toEqual([discoveredQuest.id]);
+  });
+
+  it("keeps a pre-quest save relaunchable while a committed save rejects duplicate starts", () => {
+    const session = new OverworldSession(world);
+    const opening = session.view();
+    session.scoutPoi(opening.pois[0]!.id);
+    session.talkToCharacter(opening.characters[0]!.id);
+    settleOpeningRegistration(session);
+    const quest = session.view().quests.find((candidate) => candidate.id === "wolf_winter");
+    expect(quest).toBeDefined();
+    moveToArea(session, quest!.area);
+    settleReliefAllocation(session);
+    const approach = quest!.launch?.options.find(
+      (candidate) => candidate.projection?.available === true,
+    );
+    expect(approach).toBeDefined();
+
+    const plan = session.prepareQuestStart(quest!.id, approach!.id);
+    const preQuestSave = session.snapshot();
+    session.commitQuestStart(plan);
+    const committedSave = session.snapshot();
+
+    const rollback = OverworldSession.restore(world, preQuestSave);
+    expect(rollback.view().startedQuestIds).not.toContain(quest!.id);
+    expect(rollback.view().questStarts).toContainEqual([quest!.id, approach!.id]);
+    expect(() => rollback.prepareQuestStart(quest!.id, approach!.id)).not.toThrow();
+
+    const committed = OverworldSession.restore(world, committedSave);
+    expect(committed.view().startedQuestIds).toContain(quest!.id);
+    expect(() => committed.prepareQuestStart(quest!.id, approach!.id)).toThrow(
+      /already been started/i,
+    );
   });
 
   it("names an off-anchor quest start area without presenting it as a legal launch", () => {

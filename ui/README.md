@@ -9,6 +9,34 @@ It renders the structured observation and turns clicks into
 does. One code path plays RPG quests, because `ui/src/engine.ts` exposes a single
 RPG `View`.
 
+## Adaptation contract
+
+The game does not change to fit this UI. Engine rules, authored content, legal
+actions, consequences, and campaign state remain authoritative; the web layer
+adapts to whatever those projections contain. A rough edge during game growth
+is preferable to hiding a new mechanic or pushing presentation concerns back
+into the engine.
+
+The current UI is split along replaceable presentation seams:
+
+- `engine.ts` and `overworld.ts` expose structured, player-facing projections.
+- `App.tsx` coordinates sessions and translates projected actions into generic
+  screen models; it does not decide legality or outcomes.
+- `worldActionPresentation.ts` contains exhaustive adapters and focused-deck
+  selection. Unknown legal section categories surface by default, while a new
+  service kind fails visibly until the UI gives it an explicit label and engine
+  call.
+- `OverworldPlayScreen.tsx` and `QuestPlayScreen.tsx` own distinct play modes.
+- `NightWatchChrome.tsx` owns reusable masthead, utility navigation, and panel
+  types. Character, atlas, journal, exact-term, and menu surfaces stay outside
+  the main decision deck.
+- Action grids respond to count and text density, and long authored dialogue
+  gains progressive disclosure without truncating the source text.
+
+When the game adds a genuinely new interaction shape, extend the structured
+projection first and add or replace a UI module for it. Do not infer legality
+from prose, hard-code quest ids, or constrain content to preserve this layout.
+
 ## Run
 
 No terminal needed: double-click `PLAY.bat` at the repo root — it rebuilds and
@@ -42,3 +70,7 @@ time (see below), so nothing else is needed at runtime.
 - **Quests are data.** Vite bundles the shipped `content/rpg/quests/*.yaml` and
   `content/world/new_york_overworld.json` as raw text; the browser never touches
   the filesystem and content never runs as code (§16).
+- **Reloads do not orphan quests.** Quest progress is tab-local for now. The UI
+  holds the exact pre-quest overworld save until the quest reaches a canonical
+  ending, so a mid-quest reload returns to a relaunchable lead rather than an
+  already-started dead end.

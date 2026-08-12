@@ -357,7 +357,7 @@ describe("Depth Contract #11 — authored Albany Works scene", () => {
     expect(worked.observation.regionRenown["Capital / Mohawk"]).toBe(renownBefore + 2);
 
     const appSource = readFileSync("ui/src/App.tsx", "utf8");
-    expect(appSource).toContain("scene.options.map((option)");
+    expect(appSource).toContain("job.authored_scene.options.map((option)");
     expect(appSource).toContain("option.terms.minutes");
     expect(appSource).toContain("option.terms.renown");
     expect(appSource).toContain("worldSession.workLocalJob(job.id, option.id)");

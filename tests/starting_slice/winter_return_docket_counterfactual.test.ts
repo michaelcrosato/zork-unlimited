@@ -248,7 +248,7 @@ describe("Winter Return Docket", () => {
     expect(resolved.observation.resolvedEventIds).toContain(EVENT_ID);
 
     const app = readFileSync("ui/src/App.tsx", "utf8");
-    expect(app).toContain("scene.options.map((option)");
+    expect(app).toContain("liveOptions.map((option)");
     expect(app).toContain("worldSession.resolveEvent(event.id, option.id)");
     expect(app).toContain("option.terms.minutes");
     expect(app).toContain("option.terms.renown");
