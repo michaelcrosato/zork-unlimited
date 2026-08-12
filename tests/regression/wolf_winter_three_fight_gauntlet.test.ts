@@ -36,8 +36,10 @@
  */
 import { describe, it, expect } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
+import { campaignCharacterImportPlayerStateContract } from "../../src/rpg/campaign_character_import.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import type { RpgPack } from "../../src/rpg/schema.js";
 import type { Effect } from "../../src/core/effects.js";
 import type { Rng } from "../../src/core/rng.js";
@@ -51,6 +53,11 @@ import {
 } from "../../src/rpg/runner.js";
 
 const PACK_PATH = "content/rpg/quests/wolf_winter.yaml";
+const wolfCampaignImports = loadOverworldManifest(process.cwd()).quests.find(
+  (quest) => quest.id === "wolf_winter",
+)?.campaign_imports;
+if (!wolfCampaignImports) throw new Error("Wolf-Winter must declare campaign imports");
+const wolfImportContract = campaignCharacterImportPlayerStateContract(wolfCampaignImports);
 
 function loadPack(): RpgPack {
   const r = loadRpgSourceFile(PACK_PATH);
@@ -61,19 +68,9 @@ function loadPack(): RpgPack {
 
 function codes(pack: RpgPack): string[] {
   return validateRpg(pack, {
-    extraSettableFlags: [
-      "jamie_market_testimony_certified",
-      "hayden_frost_report_certified",
-      "relief_oath_full_duty",
-      "relief_oath_limited_duty",
-      "relief_oath_unaffiliated_bond",
-      "works_fortification_prepared",
-      "drover_route_prepared",
-      "relief_protocol_prepared",
-      "june_pike_present",
-      "approach_exposed_ridge",
-      "approach_sheltered_stockway",
-    ],
+    extraSettableFlags: wolfImportContract.settableFlagIds,
+    extraObtainable: wolfImportContract.obtainableObjectIds,
+    extraInitialVarRanges: wolfImportContract.initialVarRanges,
   }).findings.map((f) => f.code);
 }
 
@@ -263,22 +260,9 @@ describe("bug_0189 — The Wolf-Winter: a fair THREE-fight combat_guaranteed gau
     expect(pack.meta.combat_guaranteed).toBe(true);
     expect(pack.enemies.length).toBe(3); // a three-fight GAUNTLET, harder cumulative surface
     const report = validateRpg(pack, {
-      extraSettableFlags: [
-        "jamie_market_testimony_certified",
-        "hayden_frost_report_certified",
-        "relief_oath_full_duty",
-        "relief_oath_limited_duty",
-        "relief_oath_unaffiliated_bond",
-        "works_fortification_prepared",
-        "drover_route_prepared",
-        "relief_protocol_prepared",
-        "june_pike_present",
-        "approach_exposed_ridge",
-        "approach_sheltered_stockway",
-        "relief_cade_fodder_allocated",
-        "relief_resident_shelter_allocated",
-        "relief_mobile_reserve_allocated",
-      ],
+      extraSettableFlags: wolfImportContract.settableFlagIds,
+      extraObtainable: wolfImportContract.obtainableObjectIds,
+      extraInitialVarRanges: wolfImportContract.initialVarRanges,
     });
     expect(report.findings.filter((f) => f.severity === "error")).toEqual([]);
     const c = report.findings.map((f) => f.code);

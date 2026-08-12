@@ -218,6 +218,7 @@ function expectOpeningPromptExact(
 ): CompactJourneyStoryChoicePrompt {
   expect(prompt.id).toBe(source.id);
   const projected = compactJourneyStoryChoicePrompt(prompt);
+  const registrationDetail = prompt.kind === "registration";
   expectExact(`opening:${source.id}.prompt`, prompt.message, projected.message);
   expect(projected.message).toContain(source.title);
   if (authoredMessageVisible) expect(projected.message).toContain(source.message);
@@ -294,9 +295,11 @@ function expectOpeningPromptExact(
       expect(inspectedOption!.checkFit).toBe(canonicalOption!.summary.checkFit);
     }
     expect(inspectedOption!.consequence).not.toMatch(TRUNCATION_CHROME);
-    expect(openingSelectionReceiptWordCount(inspectedOption!.consequence)).toBeLessThanOrEqual(
-      OPENING_SELECTION_RECEIPT_WORD_LIMIT,
-    );
+    if (!registrationDetail) {
+      expect(openingSelectionReceiptWordCount(inspectedOption!.consequence)).toBeLessThanOrEqual(
+        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+      );
+    }
     expect(inspected).not.toHaveProperty("message");
     expect(inspected).not.toHaveProperty("options");
     const inspectedJson = JSON.stringify(inspected);
@@ -304,22 +307,26 @@ function expectOpeningPromptExact(
       expect(inspectedJson).not.toContain(sibling.consequence);
     }
 
-    expect(comparisonOption!.summary).toEqual({
-      commitment: sourceOption.summary,
-      immediateCost: canonicalOption!.summary!.immediateCost,
-      tradeoff: canonicalOption!.summary!.tradeoff,
-    });
+    const { checkFit: _checkFit, ...expectedCompactSummary } = canonicalOption!.summary!;
+    expect(comparisonOption!.summary).toEqual(expectedCompactSummary);
     expect(comparisonOption!.summary).not.toHaveProperty("checkFit");
-    expect(Object.keys(comparisonOption!.summary!).sort()).toEqual(
-      ["commitment", "immediateCost", "tradeoff"].sort(),
-    );
-    expect(inspectedOption!.consequence).toMatch(/^Benefit: \S/);
-    expect(inspectedOption!.consequence).toContain(
-      ` Cost: ${canonicalOption!.summary!.immediateCost}. ` +
-        `Boundary: ${canonicalOption!.summary!.tradeoff}`,
-    );
-    expect(inspectedOption!.consequence).not.toContain(sourceOption.preview);
-    expect(inspectedOption!.consequence).not.toContain(sourceOption.consequence);
+    if (registrationDetail) {
+      expect(inspectedOption!.consequence).toContain(sourceOption.preview);
+      expect(inspectedOption!.consequence).toContain(sourceOption.consequence);
+      if (sourceOption.trigger_category) {
+        expect(inspectedOption!.consequence).toContain(
+          `Field trigger: ${sourceOption.trigger_category}`,
+        );
+      }
+    } else {
+      expect(inspectedOption!.consequence).toMatch(/^Benefit: \S/);
+      expect(inspectedOption!.consequence).toContain(
+        ` Cost: ${canonicalOption!.summary!.immediateCost}. ` +
+          `Boundary: ${canonicalOption!.summary!.tradeoff}`,
+      );
+      expect(inspectedOption!.consequence).not.toContain(sourceOption.preview);
+      expect(inspectedOption!.consequence).not.toContain(sourceOption.consequence);
+    }
   }
   return projected;
 }
@@ -558,17 +565,27 @@ describe("shipped compact prose fidelity", () => {
       const canonicalOption = prompt.options.find((option) => option.id === sourceOption.id)!;
       const selected = session.chooseJourneyStory(sourceOption.id, source.id);
       const projected = compactOverworldJourneyStoryChoiceResult(selected);
+      const registrationSelection = prompt.kind === "registration";
       expectExact(
         `opening:${source.id}.${sourceOption.id}.selection`,
         canonicalOption.consequence,
         projected.consequence,
       );
-      expect(openingSelectionReceiptWordCount(projected.consequence)).toBeLessThanOrEqual(
-        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
-      );
-      expect(projected.consequence).not.toContain(sourceOption.consequence);
-      expect(selected.entry.text).toBe(canonicalOption.consequence);
-      expect(projected).not.toHaveProperty("entry_text");
+      if (!registrationSelection) {
+        expect(openingSelectionReceiptWordCount(projected.consequence)).toBeLessThanOrEqual(
+          OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+        );
+        expect(projected.consequence).not.toContain(sourceOption.consequence);
+      }
+      if (registrationSelection) {
+        expect(selected.entry.text).toBe(
+          `${sourceOption.summary} ${sourceOption.preview} ${sourceOption.consequence}`,
+        );
+        expect(projected.entry_text).toBe(selected.entry.text);
+      } else {
+        expect(selected.entry.text).toBe(canonicalOption.consequence);
+        expect(projected).not.toHaveProperty("entry_text");
+      }
       expect(
         session.snapshot().journalEntries.find((entry) => entry.id === selected.entry.id)?.text,
       ).toContain(sourceOption.consequence);

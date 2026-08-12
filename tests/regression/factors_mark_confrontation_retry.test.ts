@@ -81,6 +81,7 @@ function fullyPreparedYard(): GameState {
     "ask_ask_private",
     "ask_leave_silas",
     "go_east",
+    "examine_npc_silas",
     "look_around",
     "inventory",
   ]);

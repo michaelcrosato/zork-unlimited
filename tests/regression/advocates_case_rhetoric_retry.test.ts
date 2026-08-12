@@ -440,7 +440,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     expect(failedProjection.full.available_actions.map((action) => action.id)).toContain(
       "talk_oswin",
     );
-    expect(failedProjection.compact.npcs).toContain("oswin");
+    expect(failedProjection.compact.npcs).toContainEqual(["oswin", "Warden Oswin"]);
     expect(failedProjection.compact.actions).toContain("talk_oswin");
     const failedTalk = actWith(step, failedAppeal, "talk_oswin");
     expect(
@@ -474,7 +474,7 @@ describe("bug_0406 — advocates_case rhetoric failure has a legal recovery", ()
     expect(combatProjection.full.available_actions.map((action) => action.id)).toContain(
       "talk_oswin",
     );
-    expect(combatProjection.compact.npcs).toContain("oswin");
+    expect(combatProjection.compact.npcs).toContainEqual(["oswin", "Warden Oswin"]);
     expect(combatProjection.compact.actions).toContain("talk_oswin");
   });
 

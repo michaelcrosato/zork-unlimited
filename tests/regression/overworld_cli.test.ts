@@ -493,11 +493,21 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(text).toContain("! Story choice comparison");
     for (const option of story!.options) {
       expect(text).toContain(option.label);
-      expect(option.summary).not.toHaveProperty("fieldTrigger");
-      expect(text).toContain(`Promise / priority: ${option.summary!.commitment}`);
-      expect(text).toContain(
-        `Cost / give up: ${option.summary!.immediateCost}; ${option.summary!.tradeoff}`,
-      );
+      expect(option.summary).toMatchObject({
+        fieldTriggerScope: "starter",
+        highlights: expect.arrayContaining([
+          expect.objectContaining({ label: "Permanent role" }),
+          expect.objectContaining({ label: "Return obligation — ACTIVE" }),
+          expect.objectContaining({ label: "Quest DEF" }),
+        ]),
+      });
+      expect(text).toContain(`Commitment: ${option.summary!.commitment}`);
+      expect(text).toContain(`Starter package / field edge: ${option.summary!.fieldTrigger!}`);
+      for (const highlight of option.summary!.highlights ?? []) {
+        expect(text).toContain(`${highlight.label}: ${highlight.value}`);
+      }
+      expect(text).toContain(`Immediate cost: ${option.summary!.immediateCost}`);
+      expect(text).toContain(`Tradeoff: ${option.summary!.tradeoff}`);
       expect(text).toContain(`Inspect: \`inspect ${option.id}\``);
       expect(text).toContain(`Choose: \`choose ${option.id}\``);
       expect(text).not.toContain(option.consequence);

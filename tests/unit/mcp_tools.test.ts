@@ -1069,7 +1069,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(fieldHandoff.journey).not.toHaveProperty("decisionProof");
     expect(fieldHandoff.journey.pendingChoice).toBeNull();
     const compactFieldTurnBytes = Buffer.byteLength(JSON.stringify(fieldHandoff));
-    expect(compactFieldTurnBytes).toBe(2_221);
+    expect(compactFieldTurnBytes).toBe(2_245);
     expect(compactFieldTurnBytes).toBeLessThanOrEqual(3_500);
     expect(JSON.stringify(compactStartedQuest).length).toBeLessThan(
       JSON.stringify(startedQuest).length,

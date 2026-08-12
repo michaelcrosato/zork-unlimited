@@ -75,6 +75,7 @@ function hearSowCounsel(s: GameState): GameState {
     "examine_shepherd_log",
     "read_shepherd_log",
     "examine_hunting_knife",
+    "examine_npc_hedrick",
     "look_around",
     "inventory",
   ]);

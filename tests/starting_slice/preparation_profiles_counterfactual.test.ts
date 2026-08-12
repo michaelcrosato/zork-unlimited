@@ -235,7 +235,9 @@ function returnedSession(args: {
   session.scoutPoi(station.pois[0]!.id);
   session.talkToCharacter(station.characters[0]!.id);
   session.investigateEvent(station.events[0]!.id);
-  expect(session.snapshot().discoveredAreaIds).toHaveLength(6);
+  const returned = session.view();
+  expect(returned.discoveredAreaIds).toHaveLength(7);
+  expect(returned.discoveredAreaIds).toContain("queensbury_town__market");
   addRoadStrain(session);
   expect(session.snapshot().journey.acceptedDecisions).toBeLessThanOrEqual(45);
   return { session, baselineMinutes, baselineMoney };

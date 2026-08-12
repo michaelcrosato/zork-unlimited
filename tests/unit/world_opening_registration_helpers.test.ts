@@ -17,10 +17,6 @@ import {
   openingRegistrationOfferJournalId,
   proveOpeningRegistrationJournal,
 } from "../../src/world/opening_registration_journal.js";
-import {
-  OPENING_SELECTION_RECEIPT_WORD_LIMIT,
-  openingSelectionReceiptWordCount,
-} from "../../src/world/opening_choice_receipt.js";
 import { presentOpeningRegistration } from "../../src/world/opening_registration_presentation.js";
 import {
   OPENING_REGISTRATION_VERSION,
@@ -146,46 +142,39 @@ describe("opening registration presentation", () => {
     });
     const prompt = presentOpeningRegistration(scene);
 
-    expect(prompt).toEqual({
+    expect(prompt).toMatchObject({
       id: scene.id,
       kind: "registration",
       message: `${scene.title}. ${scene.message}`,
-      options: scene.profiles.map((profile) => ({
-        id: profile.id,
-        label: profile.title,
-        summary: {
-          commitment: profile.summary,
-          immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
-          tradeoff: profile.tradeoff,
-        },
-        consequence:
-          `Benefit: ${profile.title} Cost: no time/fee; starts with $${String(
-            profile.character.money,
-          )}. ` + `Boundary: ${profile.tradeoff}`,
-      })),
     });
+    expect(Object.keys(prompt).sort()).toEqual(["id", "kind", "message", "options"]);
     expect(prompt.options).toHaveLength(4);
     for (const [index, option] of prompt.options.entries()) {
+      const profile = scene.profiles[index]!;
+      expect(option.id).toBe(profile.id);
+      expect(option.label).toBe(profile.title);
       expect(option.consequence).toBe(
-        `Benefit: ${scene.profiles[index]!.title} Cost: no time/fee; starts with $${String(
-          scene.profiles[index]!.character.money,
-        )}. Boundary: ${scene.profiles[index]!.tradeoff}`,
-      );
-      expect(openingSelectionReceiptWordCount(option.consequence)).toBeLessThanOrEqual(
-        OPENING_SELECTION_RECEIPT_WORD_LIMIT,
+        `${profile.summary} ${profile.preview} Field trigger: ${profile.trigger_category}. ${profile.consequence}`,
       );
       expect(option.summary).toEqual({
-        commitment: scene.profiles[index]!.summary,
-        immediateCost: `no time/fee; starts with $${String(
-          scene.profiles[index]!.character.money,
-        )}`,
-        tradeoff: scene.profiles[index]!.tradeoff,
+        commitment: profile.summary,
+        fieldTrigger: profile.preview,
+        fieldTriggerScope: "starter",
+        highlights: [
+          { label: "Permanent role", value: profile.title },
+          { label: "Role experience", value: profile.summary },
+          {
+            label: "Return obligation",
+            value: "No active return obligation is included in this role.",
+          },
+          {
+            label: "Quest DEF",
+            value: "No additional starting-DEF distinction is stated on this role.",
+          },
+        ],
+        immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
+        tradeoff: profile.tradeoff,
       });
-      expect(Object.keys(option.summary ?? {}).sort()).toEqual([
-        "commitment",
-        "immediateCost",
-        "tradeoff",
-      ]);
       expect(Object.keys(option).sort()).toEqual(["consequence", "id", "label", "summary"]);
       expect(Object.isFrozen(option.summary)).toBe(true);
       expect(Object.isFrozen(option)).toBe(true);
@@ -194,23 +183,16 @@ describe("opening registration presentation", () => {
     expect(Object.isFrozen(prompt.options)).toBe(true);
   });
 
-  it("uses all-or-none trigger authoring only inside the inspected receipt", () => {
+  it("keeps all-or-none trigger authoring in one profile's exact inspected terms", () => {
     const categorized = registration();
     categorized.profiles.forEach((profile, index) => {
       profile.trigger_category = `First use ${String(index + 1)}.`;
     });
     const prompt = presentOpeningRegistration(categorized);
-    expect(prompt.options.map((option) => option.summary)).toEqual(
-      categorized.profiles.map((profile) => ({
-        commitment: profile.summary,
-        immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
-        tradeoff: profile.tradeoff,
-      })),
-    );
     expect(prompt.options[0]!.consequence).toBe(
-      `Benefit: First use 1. Cost: no time/fee; starts with $0. Boundary: Visible tradeoff 1.`,
+      "Summary 1. Visible mechanical preview 1. Field trigger: First use 1. Permanent consequence 1.",
     );
-    expect(prompt.options[0]!.consequence).not.toContain(categorized.profiles[0]!.preview);
+    expect(prompt.options[0]!.summary?.fieldTrigger).toBe(categorized.profiles[0]!.preview);
 
     const exactLegacy = structuredClone(categorized);
     for (const profile of exactLegacy.profiles) {
@@ -223,7 +205,20 @@ describe("opening registration presentation", () => {
       summary: {
         commitment: exactLegacy.profiles[0]!.summary,
         fieldTrigger: exactLegacy.profiles[0]!.preview,
-        immediateCost: "No added time or fee; starting funds $0",
+        fieldTriggerScope: "starter",
+        highlights: [
+          { label: "Permanent role", value: exactLegacy.profiles[0]!.title },
+          { label: "Role experience", value: exactLegacy.profiles[0]!.summary },
+          {
+            label: "Return obligation",
+            value: "No active return obligation is included in this role.",
+          },
+          {
+            label: "Quest DEF",
+            value: "No additional starting-DEF distinction is stated on this role.",
+          },
+        ],
+        immediateCost: "no time/fee; starts with $0",
         tradeoff: exactLegacy.profiles[0]!.tradeoff,
       },
       consequence:

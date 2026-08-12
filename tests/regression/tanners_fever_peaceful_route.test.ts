@@ -116,6 +116,7 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
       "go_north",
       "go_west",
       "examine_sick_edric",
+      "examine_npc_godwin",
       "look_around",
       "inventory",
     ]);
@@ -165,6 +166,7 @@ describe("bug_0506 - Tanner's Fever makes its peaceful route player-legible", ()
       "drop_godwin_notes",
       "examine_meadowsweet",
       "drop_meadowsweet",
+      "examine_npc_godwin",
       "look_around",
       "inventory",
     ]);

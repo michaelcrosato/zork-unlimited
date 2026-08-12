@@ -115,7 +115,7 @@ describe("authenticated Albany preparation dispatch forecast", () => {
     const compact = compactJourneyStoryChoiceComparison(full);
     expect(compact.options.every((option) => !("dispatchForecast" in option))).toBe(true);
     expect(JSON.stringify(compact)).not.toContain("proofHash");
-    expect(JSON.stringify(compact).length).toBeLessThanOrEqual(1_700);
+    expect(JSON.stringify(compact).length).toBeLessThanOrEqual(2_200);
     const drover = full.options.find((option) => option.id === "albany:prep_drover_route")!;
     const stagedDetail = compactJourneyStoryChoiceComparison(full, drover.id).inspectedOption;
     expect(stagedDetail.dispatchForecast?.line).toBe(drover.dispatchForecast?.line);

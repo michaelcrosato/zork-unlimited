@@ -2,7 +2,6 @@ import type {
   JourneyRegistrationStoryChoiceOptions,
   JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
-import { presentOpeningChoiceOption } from "./opening_choice_receipt.js";
 import { parseOpeningRegistration, type OpeningRegistration } from "./opening_registration.js";
 
 function labeledPreviewFact(preview: string, label: string): string | null {
@@ -27,35 +26,32 @@ function registrationDefDistinction(consequence: string): string {
   return "No additional starting-DEF distinction is stated on this role.";
 }
 
+function registrationExactConsequence(profile: OpeningRegistration["profiles"][number]): string {
+  const fieldTrigger = profile.trigger_category?.replace(/\.$/u, "");
+  return [
+    profile.summary,
+    profile.preview,
+    ...(fieldTrigger ? [`Field trigger: ${fieldTrigger}.`] : []),
+    profile.consequence,
+  ].join(" ");
+}
+
 /** Project the manifest scene onto the existing generic journey-choice surface. */
 export function presentOpeningRegistration(
   registration: OpeningRegistration,
 ): JourneyStoryChoicePrompt {
   const parsed = parseOpeningRegistration(registration);
   const profileOptions = parsed.profiles.map((profile) => {
-    const triggerCategory = profile.trigger_category;
     const immediateCost = `no time/fee; starts with $${String(profile.character.money)}`;
-    const baseOption =
-      triggerCategory === undefined
-        ? Object.freeze({
-            id: profile.id,
-            label: profile.title,
-            summary: Object.freeze({
-              commitment: profile.summary,
-              fieldTrigger: profile.preview,
-              immediateCost,
-              tradeoff: profile.tradeoff,
-            }),
-            consequence: `${profile.summary} ${profile.preview} ${profile.consequence}`,
-          })
-        : presentOpeningChoiceOption({
-            id: profile.id,
-            label: profile.title,
-            commitment: profile.summary,
-            exactBenefit: triggerCategory,
-            immediateCost,
-            giveUp: profile.tradeoff,
-          });
+    const baseOption = Object.freeze({
+      id: profile.id,
+      label: profile.title,
+      summary: Object.freeze({
+        commitment: profile.summary,
+        immediateCost,
+        tradeoff: profile.tradeoff,
+      }),
+    });
     const skillEdge = labeledPreviewFact(profile.preview, "Skill edge");
     const kit = labeledPreviewFact(profile.preview, "Kit");
     const obligation = labeledPreviewFact(profile.preview, "Obligation");
@@ -66,7 +62,7 @@ export function presentOpeningRegistration(
     );
     return Object.freeze({
       ...baseOption,
-      consequence: `${profile.summary} ${profile.preview} ${profile.consequence}`,
+      consequence: registrationExactConsequence(profile),
       summary: Object.freeze({
         ...baseOption.summary,
         fieldTrigger: starterPackage,

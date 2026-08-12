@@ -153,7 +153,7 @@ describe("Station dispatch impact cards", () => {
     const compact = compactJourneyStoryChoiceComparison(full);
     expect(compact.options.every((option) => !("dispatchImpact" in option))).toBe(true);
     expect(JSON.stringify(compact)).not.toContain("proofHash");
-    expect(JSON.stringify(compact).length).toBeLessThanOrEqual(1_850);
+    expect(JSON.stringify(compact).length).toBeLessThanOrEqual(2_400);
     const rendered = renderTerminalStoryChoiceComparison(full);
     expect(rendered).not.toContain("Dispatch: +5m delay → 65m committed (delayed).");
     expect(rendered).toContain(

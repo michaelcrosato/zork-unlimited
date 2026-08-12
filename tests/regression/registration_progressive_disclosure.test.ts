@@ -101,7 +101,7 @@ describe("Albany registration progressive disclosure", () => {
     const detail = compactJourneyStoryChoiceComparison(canonical, selected.id);
 
     expect(detail.inspectedOption.consequence).toBe(
-      `${selected.summary} ${selected.preview} ${selected.consequence}`,
+      `${selected.summary} ${selected.preview} Field trigger: ${selected.trigger_category} ${selected.consequence}`,
     );
     const detailJson = JSON.stringify(detail);
     for (const sibling of REGISTRATION.profiles.filter((profile) => profile.id !== selected.id)) {
@@ -133,7 +133,7 @@ describe("Albany registration progressive disclosure", () => {
       option_id: selected.id,
     });
     expect(exact.story.inspectedOption?.consequence).toBe(
-      `${selected.summary} ${selected.preview} ${selected.consequence}`,
+      `${selected.summary} ${selected.preview} Field trigger: ${selected.trigger_category} ${selected.consequence}`,
     );
     expect(api.export_overworld_session({ session_id: inspected.session_id })).toEqual(
       beforeInspection,

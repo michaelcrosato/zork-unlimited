@@ -22,6 +22,8 @@ import { makeStep } from "../../src/core/engine.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import type { Action } from "../../src/api/types.js";
 import type { GameState } from "../../src/core/state.js";
+import { campaignCharacterImportPlayerStateContract } from "../../src/rpg/campaign_character_import.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
@@ -29,6 +31,11 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
+const wolfCampaignImports = loadOverworldManifest(process.cwd()).quests.find(
+  (quest) => quest.id === "wolf_winter",
+)?.campaign_imports;
+if (!wolfCampaignImports) throw new Error("Wolf-Winter must declare campaign imports");
+const wolfImportContract = campaignCharacterImportPlayerStateContract(wolfCampaignImports);
 
 const options = (s: GameState) => enumerateRpgActions(index, s);
 const desc = (s: GameState): string => buildRpgObservation(index, s).description;
@@ -86,22 +93,9 @@ describe("bug_0399 — wolf_winter signposts the score-bearing day-book", () => 
     expect(s.vars.hp).toBe(before.vars.hp);
     expect(
       validateRpg(pack, {
-        extraSettableFlags: [
-          "jamie_market_testimony_certified",
-          "hayden_frost_report_certified",
-          "relief_oath_full_duty",
-          "relief_oath_limited_duty",
-          "relief_oath_unaffiliated_bond",
-          "works_fortification_prepared",
-          "drover_route_prepared",
-          "relief_protocol_prepared",
-          "june_pike_present",
-          "approach_exposed_ridge",
-          "approach_sheltered_stockway",
-          "relief_cade_fodder_allocated",
-          "relief_resident_shelter_allocated",
-          "relief_mobile_reserve_allocated",
-        ],
+        extraSettableFlags: wolfImportContract.settableFlagIds,
+        extraObtainable: wolfImportContract.obtainableObjectIds,
+        extraInitialVarRanges: wolfImportContract.initialVarRanges,
       }).findings.filter((finding) => finding.severity === "error"),
     ).toHaveLength(0);
     // June's route-specific presentations share one NPC identity, so the pack carries
