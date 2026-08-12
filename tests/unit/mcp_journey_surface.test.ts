@@ -817,9 +817,13 @@ describe("MCP journey surface", () => {
       (profile) => profile.id === "albany:ledger_advocate",
     );
     if (!ledgerProfile) throw new Error("expected the Ledger Advocate profile");
-    expect(fullAction.result.entry.text).toBe(fullAction.result.consequence);
+    const ledgerTrigger = ledgerProfile.trigger_category?.replace(/\.$/u, "");
+    if (!ledgerTrigger) throw new Error("expected the Ledger Advocate field trigger");
+    const ledgerJournalText = `${ledgerProfile.summary} ${ledgerProfile.preview} ${ledgerProfile.consequence}`;
+    expect(fullAction.result.entry.text).toBe(ledgerJournalText);
     expect(fullAction.result.consequence).toBe(
-      `${ledgerProfile.summary} ${ledgerProfile.preview} ${ledgerProfile.consequence}`,
+      `${ledgerProfile.summary} ${ledgerProfile.preview} ` +
+        `Field trigger: ${ledgerTrigger}. ${ledgerProfile.consequence}`,
     );
     expect(compactAction.result).toMatchObject({
       storyChoiceId: fullAction.result.storyChoiceId,
@@ -831,9 +835,9 @@ describe("MCP journey surface", () => {
         fullAction.result.entry.title,
         fullAction.result.entry.recordedAt,
       ],
+      entry_text: ledgerJournalText,
       journeyDecision: fullAction.result.journeyDecision,
     });
-    expect(compactAction.result).not.toHaveProperty("entry_text");
     const compactResultJson = JSON.stringify(compactAction.result);
     const firstConsequence = compactResultJson.indexOf(fullAction.result.consequence);
     expect(firstConsequence).toBeGreaterThanOrEqual(0);
