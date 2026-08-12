@@ -201,6 +201,18 @@ rooms:
           still on you, but your first cut found the blind side Cradoc's ground
           taught you: her left tusk is late now, her shoulder checked. The gully
           is back to the south.
+      - when:
+          - { not_flag: sow_slain }
+          - { not_flag: blind_side_struck }
+          - { has_flag: found_kill }
+          # No prior nonterminal Gallowmere beat deals HP damage, and every surviving
+          # sow counterattack deals at least 1, so hp <= 23 marks ordinary combat in
+          # every RNG regime from the exact 24 HP opening state.
+          - { var_lte: { name: hp, value: 23 } }
+        text: >
+          The Gallowmere hollow, black peat and broken reed churned by the fight.
+          The wounded sow is still on you; the clean first opening has passed into
+          the close exchange of tusk and knife. The gully is back to the south.
       - when: [{ has_flag: found_kill }]
         text: >
           A shallow bowl of black peat and broken reed, ringed by taller hags.
@@ -263,6 +275,17 @@ objects:
         text: >
           The blind side is marked now by your first cut: her shoulder checks whenever
           she turns, and the left tusk comes late.
+      - when:
+          - { not_flag: sow_slain }
+          - { not_flag: blind_side_struck }
+          - { has_flag: found_kill }
+          # The same proof-safe one-round boundary drives the room copy above: no
+          # earlier nonterminal beat costs HP, while every surviving reply costs 1+.
+          - { var_lte: { name: hp, value: 23 } }
+        text: >
+          The first exchange has spent the clean opening. The sow is wounded and still
+          fighting; now her blind side shifts with every tusk-swing instead of holding
+          as a first-cut angle.
       - when: [{ none_of: [{ has_flag: found_kill }] }]
         text: >
           The sow must have a blind side, but without the kill-site's charge angle you
@@ -286,6 +309,12 @@ objects:
           - { has_flag: read_wind }
           - { not_flag: blind_side_struck }
           - { not_flag: sow_slain }
+          # Gallowmere has no earlier nonterminal HP cost; from the exact 24 HP
+          # opening, every surviving ordinary counterattack crosses hp <= 23 even
+          # on the lowest roll. Negating that boundary keeps this first-cut tactic
+          # strictly precombat without reading hidden enemy state.
+          - none_of:
+              - { var_lte: { name: hp, value: 23 } }
         effects:
           - set_flag: blind_side_struck
           - inc_var: { name: attack, by: 2 }

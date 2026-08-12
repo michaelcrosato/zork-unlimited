@@ -1,0 +1,252 @@
+id: bug_0576
+title: "Gallowmere's clean blind-side opening survived an ordinary first combat exchange"
+pack: content/rpg/quests/gallowmere.yaml
+reported_by: "Cycle 37 Gallowmere maintenance rotation and two sealed pure raw witnesses"
+severity: S1
+
+evidence:
+  cycle_37:
+    assessment_run: 2026-08-11T22-43-28-809Z
+    baseline_commit: 0958d33656492bc85658fb91e80a7953a8ab3ec6
+    assessment_mode: maintenance rotation only
+    assessor_top_candidate: playtest-advocates_case
+    selected_candidate: playtest-gallowmere
+    selection_scope: >
+      `playtest-gallowmere` is an exact on-list 0.5 maintenance candidate in the
+      assessment, even though the equally scored alphabetical display leader is
+      `playtest-advocates_case`. The maintenance assessment explicitly makes no
+      strategic recommendation. Deterministic current-pack reproduction and the
+      sealed raw surfaces below supply defect authority.
+    feedback_status: "delta; 3 new verified reports, 3 actionable, 0 excluded mocks; compile ready"
+    compile_pointer_at_trace_authoring: null
+  failed_attempt:
+    run_id: 2026-08-11T22-17-33-623Z
+    launch_head: 88ba2ee886c540566d7380b21ad887490270f92b
+    cycle_start: 0958d33656492bc85658fb91e80a7953a8ab3ec6
+    failure: missing_exit_interview
+    provider_envelope: ai-runs/2026-08-11T22-17-33-623Z/playtest.json
+    provider_envelope_sha256: 6ab8de9d86bf1e19cf9cd915c6c7b6c11a57f103ea2713891d0767dd5aac451a
+    public_stream: ai-runs/2026-08-11T22-17-33-623Z/playtest.codex.jsonl
+    public_stream_sha256: a69e3a60c74989f3d039fc7d9f934e2e295356c8be583f645a9d98f5b8a25fa6
+    copied_rollout: ai-runs/2026-08-11T22-17-33-623Z/playtest.codex-rollout.jsonl
+    copied_rollout_sha256: 339a61a416fadd67efea9f459c784267aeb8ecf55aa1885f1601b9374519e101
+    capture: ai-runs/2026-08-11T22-17-33-623Z/playtest.codex-capture.json
+    capture_sha256: 2318274f688fd7c4b1eb5b170460181b187c731bd5c1fc06126db8ece07ba8cd
+    verifier_log: ai-runs/2026-08-11T22-17-33-623Z/playtest.verify.initial.log
+    verifier_log_sha256: 90efd0f7249852c594401fba9c265efef9ff75ac6cf8242b6c9d6255eaf4c936
+    receipt_bind_log: ai-runs/2026-08-11T22-17-33-623Z/playtest.receipt-bind.log
+    receipt_bind_log_sha256: bbe51c2344fbd929571579f9dda14b29f6d11ac4a9b092fa406432bb9dd1e576
+    strict_rejection_diagnostic: null
+    canonical: false
+    acceptance_eligible: false
+    stable_report_id: null
+    durable_build_attestation: null
+    provider_result_utf8_bytes: 2105
+    provider_result_sha256: e610e54051d2610e574d9f23e28e97c127d5f79261eacc54825aefbf43017afd
+    provider_exit_interview_fence_count: 0
+    completed_adventureforge_calls: 68
+    semantic_successes: 67
+    application_rejections: 1
+    transport_errors: 0
+    tool_errors: 0
+    rejected_call: item_24
+    refresh_call: item_25
+    recovered_retry_call: item_26
+    reset_head: 0958d33656492bc85658fb91e80a7953a8ab3ec6
+    launch_head_in_replacement_ancestry: false
+    absent_acceptance_artifacts:
+      - ai-runs/2026-08-11T22-17-33-623Z/playtest.md
+      - ai-runs/2026-08-11T22-17-33-623Z/playtest.evidence.jsonl
+      - ai-runs/2026-08-11T22-17-33-623Z/playtest.run.json
+      - ai-runs/2026-08-11T22-17-33-623Z/playtest.receipt-bind.json
+      - ai-runs/2026-08-11T22-17-33-623Z/playtest.initial-report.txt
+    boundary: >
+      The provider completed 68 AdventureForge MCP calls with no transport or
+      tool error: 67 calls were semantic successes and item_24's expected-snapshot
+      mismatch was a nonmutating application rejection followed by item_25's
+      refresh and item_26's successful retry.
+      Gameplay legally ended at decision 51, but the final provider prose omitted
+      the mandatory fenced `json exit-interview` block. The unchanged verifier
+      rejected the report, and deterministic receipt binding correctly refused
+      because the failure was not receipt-only. No canonical report, evidence,
+      sidecar, stable ID, feedback row, compile input, or seal authority exists.
+    changed_surface_limit: >
+      The player reached Gallowmere, saw the untouched opening, chose the special
+      blind-side action first, and later examined the existing post-kill copy. It
+      never chose ordinary ATTACK first; the new spent-opening room and object
+      strings never appeared. Even that launch-adjacent gameplay has no surviving
+      durable build attestation and remains noncanonical diagnostic history, not
+      causal proof or a retention canary.
+  accepted_compile_before_cycle_37:
+    manifest: ai-runs/feedback/20260811T160054Z/report-manifest.json
+    manifest_sha256: 1b4a1e18202d2e43e1ad38bff4f15096e9b5084bfd158ffc5eaa8a4617d9b0bc
+    hotspots: ai-runs/feedback/20260811T160054Z/hotspots.json
+    hotspots_sha256: e208e2e08214e16de0998597fabc3fecbd76179adab69c03985012af1c421e16
+    consumed_by_run_id: 2026-08-11T18-05-25-511Z
+  pending_before_cycle_37:
+    - run_id: 2026-08-11T15-38-06-965Z
+      tested_commit: 57713e49d638ce5800b6c8b2e43a509787ee5b02
+      report_id: pure:a5ff4d97d27e10c8ab7e9669d1ecdd1e99baec1cc6ce31237bf09ab731ae2848
+      report_sha256: 15da3580857bc2a75088bbc3b5165a5f79e8d89017a6ac177dbaadf49be50b30
+      evidence_sha256: d4fc750e0cde1cf0534b470caaf0f2c1d073873c43ab891606d2deb7b1bb9f9e
+      sidecar_sha256: ae5d4cbb1ac43e8c763be29114fe8e4a0b063f427242e5dc73f356134add7b10
+    - run_id: 2026-08-11T18-05-25-511Z
+      tested_commit: 937a39258c3ad8caad56176fe4ad24cc186cedf7
+      report_id: pure:a358a2cccd0e174a79b8381725b11af5075625ce2973a23dcaa2d48e5a07b697
+      report_sha256: 850f5f6ada0a7e6b45f7ef4ab24ef4169d483a3cd3bfee4ab35d22f72db45c2f
+      evidence_sha256: 8dee8485aac1310f4c8e996c65af7a6f9e418faa4a0a1ee4380b11bce88e9d0c
+      sidecar_sha256: fcff0086866abaac1aaaff5ae425dc57f0a292c8a893903bf51c38bb4d0f8a18
+    - run_id: 2026-08-11T20-38-10-393Z
+      tested_commit: 3f498eb7cb443a500fba2b4617279f9a3317bda3
+      report_id: pure:1359b4d213067939fe6ad7c8b2af913f648453ad88e26cf957778a30b6af5d5f
+      report_sha256: 3249a378b990580504ba2b960ff5d143b78826a5d1aa2696db2aaac5acdc6df6
+      evidence_sha256: 615051538d6477cbf49964262452e8c3349a5c408422aebda18485858e6c9048
+      sidecar_sha256: d49c00edcfb1bebbb828af1907d3bb7837d368d6348c16eccbdf2b89a729369f
+  raw_witnesses:
+    - run_id: 2026-08-11T15-38-06-965Z
+      tested_commit: 57713e49d638ce5800b6c8b2e43a509787ee5b02
+      raw: ai-runs/2026-08-11T15-38-06-965Z/playtest.codex.jsonl
+      raw_sha256: fcaa834e670110fb9fd34a1e6deaadef29d95977b00ac2775fc094304049f272
+      boundary: >
+        Item 44 enters the fully prepared hollow at player HP 24 and sow HP 15 and exposes the
+        pre-first-tusk room copy, `examine_sow_blind_side`, the one-shot
+        `use_hunting_knife_on_sow_blind_side`, and ordinary ATTACK. Item 45
+        examines the opening before combat. Item 46 chooses ordinary ATTACK;
+        the sow survives at HP 7 and its reply lowers the player to HP 18;
+        `sow_slain` and `blind_side_struck` remain absent, but state
+        075ccd83836a17a31e586b87 still exposes the same
+        pre-first-tusk room text plus EXAMINE and the special one-shot action.
+        Item 47's second ordinary ATTACK defeats the sow and advances to
+        772e20dc782168a4aa13ad39.
+      report_limit: >
+        The player rated clarity/enjoyment 4/4, was not stuck, would replay, and
+        reported bugs: []. The player did not invoke the stale special action or
+        re-examine it after item 46; the relevant evidence is the returned
+        post-attack legal-action and copy surface, not observed confusion or use.
+    - run_id: 2026-08-11T20-38-10-393Z
+      tested_commit: 3f498eb7cb443a500fba2b4617279f9a3317bda3
+      raw: ai-runs/2026-08-11T20-38-10-393Z/playtest.codex.jsonl
+      raw_sha256: f399af0a469d12205206bb05e80ff41dacdd18808a6c2b2ca9eb49d2ed20d266
+      boundary: >
+        Item 42 enters the fully prepared hollow at player HP 24 and sow HP 15 with the same
+        opening copy and actions. Item 43 immediately chooses ordinary ATTACK;
+        the sow survives at HP 6 and its reply lowers the player to HP 20;
+        neither lifecycle flag is set, and state fd9a281b13750b690cf4d9b7
+        again returns the pre-first-tusk room text, EXAMINE, and the special
+        one-shot action. Item 44's next ordinary ATTACK defeats the sow and
+        advances to 1fa0df046174e5251e796dc4.
+      report_limit: >
+        The player rated clarity/enjoyment 4/4, was not stuck, would replay, and
+        reported no confusion or bug. The player never examined the object and
+        never selected the stale special action. This independent route proves
+        repeated surface exposure after a surviving first exchange, not player
+        harm, severity, or a failed route.
+
+revision_liveness: >
+  Cycle 37 begins from the same compiled Gallowmere predecessor hash
+  67fa0f962ea27b5011aece91ef4e47037d3b4bd555bc84e0de4748bbe22f206e
+  exercised by the raw surface and preserved on main. The selected maintenance
+  target localizes a current pack lifecycle contradiction; no accepted hotspot is
+  treated as product authority for it.
+
+symptom: >
+  A fully prepared hunter could decline the learned blind-side knife action, make
+  an ordinary attack, take the sow's counterattack, and still receive both the
+  action and prose for a clean opening "before the first tusk-swing." The sow was
+  already wounded and the first exchange had happened, so the optional first-cut
+  opportunity and its room/object descriptions had outlived their authored moment.
+
+root_cause: >
+  The one-shot USE interaction gated knowledge, `blind_side_struck`, and
+  `sow_slain`, but had no predicate for whether ordinary combat had begun. This
+  pack enters the hollow at exactly player HP 24, no earlier nonterminal Gallowmere
+  beat deals HP damage, and every surviving sow counterattack deals at least 1 HP,
+  so player HP <= 23 is a complete pack-local proof that an ordinary exchange has
+  occurred. The room and object likewise had variants for a successful special
+  strike and sow defeat, but no learned-opening variant for that surviving ordinary
+  first exchange, so the earlier `found_kill` copy continued to project.
+
+fix: >
+  Keep the prepared blind-side tactic available only before the proven HP boundary
+  by adding `none_of: [{ var_lte: { name: hp, value: 23 } }]` to its existing
+  conditions. Add first-match room and object variants for the precise living,
+  learned, unspent, post-ordinary-attack state: not sow_slain, not
+  blind_side_struck, found_kill, and player HP <= 23. Those variants say that the
+  first exchange spent the clean opening while retaining ordinary combat and a
+  truthful EXAMINE surface. Requiring found_kill keeps the unprepared
+  counterfactual on its existing generic room and unreadable-angle object copy.
+
+settled_predicates:
+  special_use_added_condition: "none_of: [{ var_lte: { name: hp, value: 23 } }]"
+  spent_room_and_object_variant:
+    - "not_flag: sow_slain"
+    - "not_flag: blind_side_struck"
+    - "has_flag: found_kill"
+    - "var_lte: { name: hp, value: 23 }"
+  hp_boundary_proof: >
+    The exact Gallowmere opening state has player HP 24. No prior nonterminal
+    beat in this pack deals HP damage, and every surviving sow reply deals at
+    least 1 HP in every RNG regime. Therefore HP <= 23 identifies an ordinary
+    combat exchange without reading hidden enemy state.
+  precedence: >
+    The existing sow_slain and blind_side_struck variants remain first. The new
+    living survivor variant follows them and precedes found_kill/default copy.
+    The existing none_of(found_kill) object variant remains the unprepared truth.
+
+settled_copy:
+  precombat_room: >-
+    A shallow bowl of black peat and broken reed, ringed by taller hags. It smells of old musk and blood. The Gallowmere sow is here — a great grey animal, heavy across the shoulders, her tusks yellowed and her eyes small and still. The charge angle you read at the kill-site shows you the blind-side opening before the first tusk-swing. The gully is back to the south.
+  post_ordinary_attack_room: >-
+    The Gallowmere hollow, black peat and broken reed churned by the fight. The wounded sow is still on you; the clean first opening has passed into the close exchange of tusk and knife. The gully is back to the south.
+  precombat_object: >-
+    The fighting angle Cradoc's ground described: the sow rolls right as she charges, lifting her left tusk late and showing a narrow blind-side opening to a hunter who has read both ground and wind.
+  post_ordinary_attack_object: >-
+    The first exchange has spent the clean opening. The sow is wounded and still fighting; now her blind side shifts with every tusk-swing instead of holding as a first-cut angle.
+
+source_hash_boundary:
+  predecessor_content_hash: 67fa0f962ea27b5011aece91ef4e47037d3b4bd555bc84e0de4748bbe22f206e
+  replacement_content_hash: 2602dad9a95cedc0e4a248f49d47026d8257cb4adbf728c6d36233a80b59a660
+  predecessor_git_blob: 4ffcf31d60898c9e0cd7c9c2fd7cb0cdcb8e7261
+  replacement_git_blob: 1845f07a1ca06c1d0bc5920004f5862734021385
+  replacement_file_sha256: 1049eaf0222a4a663b2c057e5cb6b4c57007c5d89dde01a7d6e3200134ee3433
+
+deterministic_witnesses:
+  - "before combat, player HP is exactly 24, full/compact copy is the exact opening text, and prepared hunters expose special USE, ordinary ATTACK, and EXAMINE"
+  - "a deterministic ordinary first attack leaves the player at HP 17 and the living sow at HP 5 with neither sow_slain nor blind_side_struck, retires special USE, and preserves ATTACK plus EXAMINE"
+  - "that learned survivor state projects the exact spent-opening room text in full and compact observations and the exact spent-opening object text through EXAMINE"
+  - "full/compact projection and EXAMINE do not mutate the input state; EXAMINE advances only the returned state's ordinary step counter"
+  - "the wind-only counterfactual starts at player HP 24, ends its ordinary exchange at player HP 17 and sow HP 7, leaves found_kill absent, never exposes special USE, preserves ATTACK plus EXAMINE, and retains the exact existing unlearned room/object copy rather than inventing the learned spent-opening variant"
+  - "the exact compiled source hash advances from 67fa0f962ea27b5011aece91ef4e47037d3b4bd555bc84e0de4748bbe22f206e to 2602dad9a95cedc0e4a248f49d47026d8257cb4adbf728c6d36233a80b59a660"
+
+selection_and_compile_semantics:
+  - "Cycle 37 freezes exact on-list selected_recommendation_id playtest-gallowmere for replacement assessment run 2026-08-11T22-43-28-809Z; it is not a null/off-list choice and does not consume the already-consumed accepted compile."
+  - "The three rows already sealed before Cycle 37 are the sole reason feedback status is 3/3 compile ready. They authorize a prompted compile step, not this product edit."
+  - "Protocol order remains freeze/provisional commit, then one fresh exact-clean pure run, then feedback status and compile. The new Cycle 37 pure cannot enter that compile because it is unsealed until every outer gate passes."
+  - "A successful compile after the fresh pure consumes only the three pre-existing pending identities. After the outer gates, the seal promotes that provisional compile as accepted with consumed_by_run_id null, clears its three-report cohort, appends only the current exact-build pure as pending, and removes the frozen selection marker."
+  - "If the pure or any outer gate fails, neither the provisional compile nor the implementation is promoted; trace authoring itself does not compile, seal, edit acceptance authority, or count the current unsealed run."
+
+nonclaims:
+  - "The rejected 2026-08-11T22-17-33-623Z prefix and provisional 88ba2ee8 commit are quarantined outside replacement ancestry. Missing exit-interview structure cannot be synthesized from its prose or receipt, and the prefix supplies no canonical pure, causal, retention, feedback, compile, pending-row, outer-gate, or seal authority."
+  - "Neither raw player reported this bug, became stuck, expressed confusion about the opening, or selected the stale post-exchange action. The defect claim is bounded to the legal-action and copy returned after their first surviving ordinary attacks."
+  - "Items 47 and 44 establish only the defeat boundary. After sow_slain, special USE is already absent while EXAMINE intentionally remains and its existing variant truthfully says the opening has done its work; post-kill object presence and copy are unchanged and out of scope."
+  - "This does not force the special tactic, change the ordinary attack, or remove EXAMINE. A prepared player may still use the one-shot opening before combat or knowingly forfeit it by beginning with ordinary ATTACK."
+  - "This does not change sow or player stats, damage, defense, checks, RNG, flags, effects, score, journal, quest stage, room topology, exits, ridge closure, win condition, ending, foldback, decision accounting, or checkpoint behavior."
+  - "This adds no flag, hidden-state dependency, or engine behavior. It reads the existing public player HP variable using existing condition semantics and relies only on the pinned Gallowmere-local 24-to-23 first-exchange boundary; sow_slain continues to own defeat truth."
+  - "The existing blind_side_struck branch, its +2 attack and score-neutral effect, the wind-only no-tactic route, and the sow-slain room/object branches remain intact. The new found_kill predicate deliberately prevents learned-opening prose from leaking into the unprepared route."
+  - "This does not preserve the predecessor content hash. Exact 67fa0f96 content-hash-bound saves, replays, or evidence intentionally differ from 2602dad9 under the unchanged source-integrity policy."
+  - "The two predecessor raw runs are noncausal evidence for the old surface. A future Cycle 37 pure will test the exact provisional build only as a broad integration canary; the deterministic regressions are the causal proof."
+  - "Compile-ready status neither authorizes the content change nor admits the current unsealed report into its own cohort, and this trace does not hand-edit the machine-owned feedback acceptance marker."
+
+production:
+  - content/rpg/quests/gallowmere.yaml
+tests:
+  - path: tests/regression/gallowmere_blind_side_tactic.test.ts
+    cases:
+      - "spends the clean blind-side opening when an ordinary strike starts the fight"
+      - "does not invent a learned opening after an unprepared ordinary strike"
+verification:
+  - npx vitest run tests/regression/gallowmere_blind_side_tactic.test.ts
+  - npm run validate -- gallowmere
+  - npm run verify:bug-traces
+  - npx prettier --check traces/bugs/bug_0576_gallowmere_blind_side_opening_lifecycle.yaml
+  - git diff --check
