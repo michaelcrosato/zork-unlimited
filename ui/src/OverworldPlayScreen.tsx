@@ -48,7 +48,7 @@ type OverworldPlayScreenProps = {
   prioritySectionIds: readonly string[];
   panel: NightWatchPanel;
   error: string | null;
-  opportunityExplanation: JourneyOpportunityExplanation | null;
+  opportunityExplanation?: JourneyOpportunityExplanation | null;
   onExplainOpportunity?: (kind: JourneyOpportunityKind, id: string) => void;
   onPanelChange: (panel: NightWatchPanel) => void;
   onNewJourney: () => void;
@@ -253,7 +253,7 @@ export function OverworldPlayScreen({
   prioritySectionIds,
   panel,
   error,
-  opportunityExplanation,
+  opportunityExplanation = null,
   onExplainOpportunity,
   onPanelChange,
   onNewJourney,
