@@ -427,6 +427,23 @@ describe("compact journey projection", () => {
       const compact = compactJourneyStoryChoicePrompt(full);
       for (const sourceOption of sourceOptions) {
         const option = compact.options.find((candidate) => candidate.id === sourceOption.id);
+        if (full.kind === "registration") {
+          expect(option?.summary).toMatchObject({
+            commitment: sourceOption.summary,
+            fieldTriggerScope: "starter",
+            highlights: expect.arrayContaining([
+              { label: "Permanent role", value: sourceOption.title },
+              { label: "Role experience", value: sourceOption.summary },
+            ]),
+            immediateCost: expect.any(String),
+            tradeoff: sourceOption.tradeoff,
+          });
+          expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+          const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
+          expect(detail.consequence).toContain(sourceOption.preview);
+          expect(detail.consequence).toContain(sourceOption.consequence);
+          continue;
+        }
         expectRoleplayReceipt(full, {
           id: sourceOption.id,
           commitment: sourceOption.summary,

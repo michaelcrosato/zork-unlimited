@@ -122,6 +122,12 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
     expect(option.summary?.commitment.length).toBeGreaterThan(0);
     expect(option.summary?.immediateCost.length).toBeGreaterThan(0);
     expect(option.summary?.tradeoff.length).toBeGreaterThan(0);
+    if (option.summary?.fieldTriggerScope === "starter") {
+      expect(option.summary.fieldTrigger).toEqual(expect.any(String));
+      expect(option.summary.highlights?.length).toBeGreaterThan(0);
+      expect(option.consequence.length).toBeGreaterThan(0);
+      continue;
+    }
     expect(option.summary).not.toHaveProperty("fieldTrigger");
     expect(option.consequence).toContain("Benefit:");
     expect(option.consequence).toContain(`Cost: ${option.summary!.immediateCost}.`);

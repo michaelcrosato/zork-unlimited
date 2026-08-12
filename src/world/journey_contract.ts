@@ -174,6 +174,11 @@ export type JourneyChoicePrompt = Readonly<{
  * Optional so historic two-option aftermath cards and persisted saves remain
  * compatible with the original journey presentation.
  */
+export type JourneyStoryChoiceHighlight = Readonly<{
+  label: string;
+  value: string;
+}>;
+
 export type JourneyStoryChoiceSummary = Readonly<{
   commitment: string;
   /**
@@ -181,10 +186,12 @@ export type JourneyStoryChoiceSummary = Readonly<{
    * Shipped roleplay-first receipts omit it until the field actually consumes it.
    */
   fieldTrigger?: string;
-  /** Present only when fieldTrigger is a broad comparison category, not exact terms. */
-  fieldTriggerScope?: "category";
+  /** Present when fieldTrigger is a broad category or a starter-package comparison. */
+  fieldTriggerScope?: "category" | "starter";
   /** Character-relative skill modifier and DC for a preparation's eventual field check. */
   checkFit?: string;
+  /** Authored facts that must remain visible before committing to this option. */
+  highlights?: readonly [JourneyStoryChoiceHighlight, ...JourneyStoryChoiceHighlight[]];
   immediateCost: string;
   tradeoff: string;
 }>;
@@ -1258,11 +1265,28 @@ function freezeStoryChoice(
     }
     if (
       option.summary?.fieldTriggerScope !== undefined &&
-      (option.summary.fieldTrigger === undefined || option.summary.fieldTriggerScope !== "category")
+      (option.summary.fieldTrigger === undefined ||
+        (option.summary.fieldTriggerScope !== "category" &&
+          option.summary.fieldTriggerScope !== "starter"))
     ) {
       throw new Error(
         `Journey story choice field-trigger scope "${String(option.summary.fieldTriggerScope)}" is invalid.`,
       );
+    }
+    if (option.summary?.highlights) {
+      if (option.summary.highlights.length === 0) {
+        throw new Error("Journey story choice summary highlights cannot be empty.");
+      }
+      const highlightLabels = new Set<string>();
+      for (const highlight of option.summary.highlights) {
+        if (highlight.label.trim().length === 0 || highlight.value.trim().length === 0) {
+          throw new Error("Journey story choice summary highlights cannot be blank.");
+        }
+        if (highlightLabels.has(highlight.label)) {
+          throw new Error("Journey story choice summary highlight labels must be unique.");
+        }
+        highlightLabels.add(highlight.label);
+      }
     }
     if (optionIds.has(option.id)) {
       throw new Error("Journey story choice option ids must be unique.");
@@ -1270,7 +1294,20 @@ function freezeStoryChoice(
     optionIds.add(option.id);
     return Object.freeze({
       ...option,
-      ...(option.summary ? { summary: Object.freeze({ ...option.summary }) } : {}),
+      ...(option.summary
+        ? {
+            summary: Object.freeze({
+              ...option.summary,
+              ...(option.summary.highlights
+                ? {
+                    highlights: Object.freeze(
+                      option.summary.highlights.map((highlight) => Object.freeze({ ...highlight })),
+                    ) as JourneyStoryChoiceSummary["highlights"],
+                  }
+                : {}),
+            }),
+          }
+        : {}),
     });
   });
   const frozenOptions = Object.freeze(options);
