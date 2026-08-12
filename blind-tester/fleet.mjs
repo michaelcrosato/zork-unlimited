@@ -62,6 +62,7 @@ import { parseJsonRejectingDuplicateKeys } from "./strict-json.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GAME_DIR = resolve(HERE, "..");
 const RUN_SH = join(HERE, "run.sh");
+const PROCESS_TREE_ANCHOR = join(HERE, "codex-process-anchor.mjs");
 const CODEX_PREFLIGHT_EXIT = 42;
 const CODEX_PREFLIGHT_PROCESS_TIMEOUT_MS = 15_000;
 const CODEX_PREFLIGHT_PROCESS_MAX_OUTPUT_BYTES = 64 * 1024;
@@ -953,33 +954,572 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function spawnAsync(cmd, args, opts) {
-  return new Promise((resolvePromise) => {
-    let child;
+export function createFleetChildTracker({ terminationGraceMs = 2_000 } = {}) {
+  const active = new Map();
+  let shuttingDown = false;
+  let terminationPromise = null;
+
+  const finish = (entry) => {
+    if (entry.finished) return;
+    entry.finished = true;
+    if (entry.groupPoll !== null) clearTimeout(entry.groupPoll);
+    active.delete(entry.child);
+    entry.settle();
+  };
+
+  const failVerification = (entry, error) => {
+    if (entry.verificationFailure !== null) return;
+    entry.verificationFailure = error;
+    if (entry.groupPoll !== null) clearTimeout(entry.groupPoll);
+    entry.settle();
+  };
+
+  const processGroupAlive = (pid) => {
     try {
-      child = spawn(cmd, args, opts);
+      process.kill(-pid, 0);
+      return true;
+    } catch (error) {
+      if (error && typeof error === "object" && error.code === "ESRCH") return false;
+      if (error && typeof error === "object" && error.code === "EPERM") return true;
+      throw error;
+    }
+  };
+
+  const inspectPosixGroup = (entry) => {
+    if (entry.finished || entry.verificationFailure !== null || !entry.rootClosed) return;
+    if (entry.child.pid === undefined) {
+      finish(entry);
+      return;
+    }
+    try {
+      if (!processGroupAlive(entry.child.pid)) {
+        entry.groupGone = true;
+        finish(entry);
+        return;
+      }
+      entry.groupPoll = setTimeout(() => {
+        entry.groupPoll = null;
+        inspectPosixGroup(entry);
+      }, 25);
+    } catch (error) {
+      failVerification(
+        entry,
+        new Error(`fleet: could not prove child process group ${entry.child.pid} settled`, {
+          cause: error,
+        }),
+      );
+    }
+  };
+
+  const killEntry = (entry, force) => {
+    const { child, tree } = entry;
+    if (child.pid === undefined) return;
+    if (entry.terminate !== null) {
+      try {
+        if (entry.terminate(force) === true) return;
+        throw new Error("custody controller rejected termination");
+      } catch (error) {
+        failVerification(
+          entry,
+          new Error(`fleet: could not terminate the proven child tree ${child.pid}`, {
+            cause: error,
+          }),
+        );
+        return;
+      }
+    }
+    if (tree && process.platform === "win32") {
+      if (entry.windowsTreeTerminationConfirmed) return;
+      try {
+        execFileSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+          windowsHide: true,
+          timeout: 5_000,
+          stdio: "ignore",
+        });
+        entry.windowsTreeTerminationConfirmed = true;
+        if (entry.rootClosed) finish(entry);
+        return;
+      } catch (error) {
+        if (entry.rootClosed || child.exitCode !== null || child.signalCode !== null) {
+          failVerification(
+            entry,
+            new Error(
+              `fleet: taskkill could not prove Windows child tree ${child.pid} settled after its root exited`,
+              { cause: error },
+            ),
+          );
+          return;
+        }
+      }
+    }
+    if (tree && process.platform !== "win32") {
+      if (!processGroupAlive(child.pid)) {
+        entry.groupGone = true;
+        if (entry.rootClosed) finish(entry);
+        return;
+      }
+      process.kill(-child.pid, force ? "SIGKILL" : "SIGTERM");
+      if (entry.rootClosed) inspectPosixGroup(entry);
+      return;
+    }
+    if (child.exitCode === null && child.signalCode === null && !entry.rootClosed) {
+      child.kill(force ? "SIGKILL" : "SIGTERM");
+    }
+  };
+
+  const track = (child, { tree = false, terminate = null, closeProof = null } = {}) => {
+    if (shuttingDown) {
+      try {
+        if (terminate !== null) {
+          terminate(true);
+        } else if (child.pid !== undefined && tree && process.platform !== "win32") {
+          process.kill(-child.pid, "SIGKILL");
+        } else {
+          child.kill("SIGKILL");
+        }
+      } catch {
+        // The launch is rejected either way; the owning spawn reports failure.
+      }
+      throw new Error("fleet: child launch rejected after shutdown began");
+    }
+    let settle;
+    const closed = new Promise((resolvePromise) => {
+      settle = resolvePromise;
+    });
+    const entry = {
+      child,
+      tree,
+      closed,
+      settle,
+      finished: false,
+      rootClosed: false,
+      groupGone: false,
+      groupPoll: null,
+      windowsTreeTerminationConfirmed: false,
+      verificationFailure: null,
+      lastProcessError: null,
+      terminate,
+      closeProof,
+    };
+    active.set(child, entry);
+    child.once("close", () => {
+      entry.rootClosed = true;
+      if (child.pid === undefined) {
+        finish(entry);
+        return;
+      }
+      if (closeProof !== null) {
+        try {
+          if (closeProof()) {
+            finish(entry);
+          } else {
+            failVerification(
+              entry,
+              new Error(`fleet: child custody proof failed after process ${child.pid} closed`),
+            );
+          }
+        } catch (error) {
+          failVerification(
+            entry,
+            new Error(`fleet: child custody proof could not be verified for process ${child.pid}`, {
+              cause: error,
+            }),
+          );
+        }
+        return;
+      }
+      if (!tree) {
+        finish(entry);
+      } else if (process.platform === "win32") {
+        if (entry.windowsTreeTerminationConfirmed) {
+          finish(entry);
+        } else {
+          failVerification(
+            entry,
+            new Error(
+              `fleet: Windows child tree ${child.pid} closed without a Job Object or taskkill termination proof`,
+            ),
+          );
+        }
+      } else {
+        inspectPosixGroup(entry);
+      }
+    });
+    child.on("error", (error) => {
+      // An error can precede close; it is diagnostic, never custody proof.
+      entry.lastProcessError = error;
+    });
+    return child;
+  };
+
+  const waitForChild = async (child) => {
+    const entry = active.get(child);
+    if (entry === undefined) return;
+    await entry.closed;
+    if (entry.verificationFailure !== null) throw entry.verificationFailure;
+  };
+
+  const waitForIdle = async () => {
+    while (active.size > 0) {
+      const entries = [...active.values()];
+      const failed = entries.find((entry) => entry.verificationFailure !== null);
+      if (failed !== undefined) throw failed.verificationFailure;
+      await Promise.race(entries.map((entry) => entry.closed));
+    }
+  };
+
+  const terminateAndWait = () => {
+    if (terminationPromise !== null) return terminationPromise;
+    shuttingDown = true;
+    terminationPromise = (async () => {
+      const firstWave = [...active.values()];
+      for (const entry of firstWave) killEntry(entry, false);
+      if (active.size > 0) {
+        let graceTimer;
+        try {
+          await Promise.race([
+            waitForIdle(),
+            new Promise((resolvePromise) => {
+              graceTimer = setTimeout(resolvePromise, terminationGraceMs);
+            }),
+          ]);
+        } finally {
+          if (graceTimer !== undefined) clearTimeout(graceTimer);
+        }
+      }
+      for (const entry of [...active.values()]) killEntry(entry, true);
+      await waitForIdle();
+    })();
+    return terminationPromise;
+  };
+
+  return {
+    track,
+    waitForChild,
+    waitForIdle,
+    terminateAndWait,
+    terminateChild: (child, force = false) => {
+      const entry = active.get(child);
+      if (entry !== undefined) killEntry(entry, force);
+    },
+    canStart: () => !shuttingDown,
+    activeCount: () => active.size,
+  };
+}
+
+export async function settleFleetChildrenBeforeCleanup(
+  childTracker,
+  cleanup,
+  { terminate = false } = {},
+) {
+  if (terminate) {
+    await childTracker.terminateAndWait();
+  } else {
+    await childTracker.waitForIdle();
+  }
+  cleanup();
+}
+
+export function createFleetTerminationController({ fleetControl, childTracker }) {
+  let signalExitCode = null;
+  let shutdownPromise = null;
+  const requestTermination = (exitCode, signalName) => {
+    signalExitCode ??= exitCode;
+    fleetControl.abortFailure ??= new Error(
+      `fleet: ${signalName} requested; no later fleet slot or retry may start`,
+    );
+    shutdownPromise ??= childTracker.terminateAndWait();
+    void shutdownPromise.catch(() => {
+      // Main awaits this same promise and retains locks if custody cannot settle.
+    });
+  };
+  return {
+    requestTermination,
+    get signalExitCode() {
+      return signalExitCode;
+    },
+    get shutdownPromise() {
+      return shutdownPromise;
+    },
+  };
+}
+
+export function installFleetSignalHandlers(requestTermination, signalTarget = process) {
+  const onInterrupt = () => requestTermination(130, "SIGINT");
+  const onTerminate = () => requestTermination(143, "SIGTERM");
+  signalTarget.on("SIGINT", onInterrupt);
+  signalTarget.on("SIGTERM", onTerminate);
+  let installed = true;
+  return () => {
+    if (!installed) return;
+    installed = false;
+    signalTarget.off("SIGINT", onInterrupt);
+    signalTarget.off("SIGTERM", onTerminate);
+  };
+}
+
+export function spawnFleetChild(cmd, args, opts, { tree = false, deferWindowsStart = false } = {}) {
+  if (!(tree && process.platform === "win32")) {
+    const child = spawn(cmd, args, {
+      ...opts,
+      ...(tree ? { detached: true } : {}),
+    });
+    return {
+      child,
+      trackerOptions: { tree },
+      statusForClose: (code) => code ?? 1,
+      readiness: Promise.resolve(),
+      started: Promise.resolve(),
+      resume: null,
+      terminate: null,
+    };
+  }
+
+  const anchorArgs = [PROCESS_TREE_ANCHOR, "--binary", cmd];
+  if (deferWindowsStart) anchorArgs.push("--deferred-resume");
+  anchorArgs.push("--", ...args);
+  const child = spawn(process.execPath, anchorArgs, {
+    ...opts,
+    detached: true,
+    stdio: ["ignore", "pipe", "pipe", "ipc"],
+    windowsHide: true,
+  });
+  const state = {
+    ready: false,
+    started: false,
+    providerExit: null,
+    launcherError: null,
+    terminationRequested: false,
+    controlError: null,
+  };
+  let resolveReady;
+  let rejectReady;
+  const readiness = new Promise((resolvePromise, rejectPromise) => {
+    resolveReady = resolvePromise;
+    rejectReady = rejectPromise;
+  });
+  let resolveStarted;
+  let rejectStarted;
+  const started = new Promise((resolvePromise, rejectPromise) => {
+    resolveStarted = resolvePromise;
+    rejectStarted = rejectPromise;
+  });
+  void readiness.catch(() => {});
+  void started.catch(() => {});
+  const terminate = (force = false) => {
+    if (force) {
+      if (child.exitCode !== null || child.signalCode !== null) return true;
+      const forced = new Error(
+        "fleet: Windows Job Object anchor exceeded its proof grace and required forced cleanup",
+      );
+      state.controlError ??= forced;
+      try {
+        execFileSync("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], {
+          stdio: "ignore",
+          windowsHide: true,
+          timeout: 5_000,
+        });
+        return true;
+      } catch (error) {
+        throw new Error("fleet: Windows Job Object anchor could not be force-terminated", {
+          cause: error,
+        });
+      }
+    }
+    if (state.terminationRequested) return true;
+    state.terminationRequested = true;
+    if (!child.connected) return false;
+    try {
+      child.send({ type: "terminate_owned_tree" }, (error) => {
+        if (error) state.controlError ??= error;
+      });
+      return true;
+    } catch (error) {
+      state.controlError ??= error;
+      return false;
+    }
+  };
+  const resume = () => {
+    if (!deferWindowsStart || state.started) return true;
+    if (!state.ready || state.terminationRequested || !child.connected) return false;
+    try {
+      child.send({ type: "resume_owned_tree" }, (error) => {
+        if (error) {
+          state.controlError ??= error;
+          rejectStarted(error);
+        }
+      });
+      return true;
+    } catch (error) {
+      state.controlError ??= error;
+      rejectStarted(error);
+      return false;
+    }
+  };
+  child.on("message", (message) => {
+    if (message?.type === "custody_ready" && !state.ready) {
+      state.ready = true;
+      resolveReady();
+    } else if (message?.type === "provider_started" && state.ready && !state.started) {
+      state.started = true;
+      resolveStarted();
+    } else if (message?.type === "provider_exit" && state.started && state.providerExit === null) {
+      state.providerExit = { code: message.code, signal: message.signal ?? null };
+      terminate();
+    } else if (
+      (message?.type === "provider_spawn_error" || message?.type === "anchor_error") &&
+      typeof message.message === "string"
+    ) {
+      state.launcherError ??= new Error(message.message);
+      rejectReady(state.launcherError);
+      rejectStarted(state.launcherError);
+      terminate();
+    }
+  });
+  child.once("error", (error) => {
+    rejectReady(error);
+    rejectStarted(error);
+  });
+  child.once("close", () => {
+    if (!state.ready) rejectReady(new Error("Windows Job Object anchor closed before custody"));
+    if (!state.started && !state.terminationRequested) {
+      rejectStarted(new Error("Windows Job Object anchor closed before provider start"));
+    }
+  });
+  return {
+    child,
+    trackerOptions: {
+      tree: false,
+      terminate,
+      closeProof: () =>
+        child.exitCode === 0 &&
+        child.signalCode === null &&
+        state.terminationRequested &&
+        state.controlError === null &&
+        state.launcherError === null,
+    },
+    statusForClose: () => {
+      if (state.launcherError !== null || state.providerExit === null) return 1;
+      return Number.isInteger(state.providerExit.code) ? state.providerExit.code : 1;
+    },
+    readiness,
+    started,
+    resume: deferWindowsStart ? resume : null,
+    terminate,
+  };
+}
+
+function spawnAsync(
+  cmd,
+  args,
+  opts,
+  childTracker = null,
+  { tree = false, deferWindowsStart = false } = {},
+) {
+  let resolveLaunchReady;
+  let rejectLaunchReady;
+  const launchReady = new Promise((resolvePromise, rejectPromise) => {
+    resolveLaunchReady = resolvePromise;
+    rejectLaunchReady = rejectPromise;
+  });
+  let resolveLaunchStarted;
+  let rejectLaunchStarted;
+  const launchStarted = new Promise((resolvePromise, rejectPromise) => {
+    resolveLaunchStarted = resolvePromise;
+    rejectLaunchStarted = rejectPromise;
+  });
+  void launchReady.catch(() => {});
+  void launchStarted.catch(() => {});
+  let resumeLaunch = null;
+  let abortLaunch = null;
+  const resultPromise = new Promise((resolvePromise) => {
+    if (childTracker !== null && !childTracker.canStart()) {
+      const error = new Error("fleet: child launch rejected after shutdown began");
+      rejectLaunchReady(error);
+      rejectLaunchStarted(error);
+      resolvePromise({ status: 1, stdout: "", stderr: error.message });
+      return;
+    }
+    let child;
+    let launch;
+    try {
+      launch = spawnFleetChild(cmd, args, opts, { tree, deferWindowsStart });
+      child = launch.child;
+      resumeLaunch = launch.resume;
+      abortLaunch = launch.terminate;
+      void launch.readiness.then(resolveLaunchReady, rejectLaunchReady);
+      void launch.started.then(resolveLaunchStarted, rejectLaunchStarted);
+      if (childTracker !== null) childTracker.track(child, launch.trackerOptions);
     } catch (err) {
+      rejectLaunchReady(err);
+      rejectLaunchStarted(err);
       resolvePromise({ status: 1, stdout: "", stderr: String(err) });
       return;
     }
     let stdout = "";
     let stderr = "";
+    let settled = false;
+    let processError = null;
+    const finish = (status, error = null) => {
+      if (settled) return;
+      settled = true;
+      resolvePromise({
+        status,
+        stdout,
+        stderr: error === null ? stderr : `${stderr}${stderr ? "\n" : ""}${String(error)}`,
+      });
+    };
     child.stdout?.on("data", (d) => {
       stdout += d;
     });
     child.stderr?.on("data", (d) => {
       stderr += d;
     });
-    child.on("close", (code) => resolvePromise({ status: code ?? 1, stdout, stderr }));
-    child.on("error", (err) => resolvePromise({ status: 1, stdout, stderr: String(err) }));
+    child.on("close", (code) => {
+      void (async () => {
+        try {
+          if (childTracker !== null) await childTracker.waitForChild(child);
+          finish(processError === null ? launch.statusForClose(code) : 1, processError);
+        } catch (error) {
+          finish(1, error);
+        }
+      })();
+    });
+    child.on("error", (error) => {
+      processError = error;
+    });
   });
+  resultPromise.launchReady = launchReady;
+  resultPromise.launchStarted = launchStarted;
+  resultPromise.hasDeferredStart = resumeLaunch !== null;
+  resultPromise.resumeLaunch = () => (resumeLaunch === null ? true : resumeLaunch());
+  resultPromise.abortLaunch = () => (abortLaunch === null ? false : abortLaunch(false));
+  return resultPromise;
 }
 
-function spawnBoundedAsync(cmd, args, opts, { timeoutMs, maxOutputBytes }) {
+function spawnBoundedAsync(
+  cmd,
+  args,
+  opts,
+  { timeoutMs, maxOutputBytes, childTracker = null, tree = false },
+) {
   return new Promise((resolvePromise) => {
+    if (childTracker !== null && !childTracker.canStart()) {
+      resolvePromise({
+        status: CODEX_PREFLIGHT_EXIT,
+        stdout: "",
+        stderr: "fleet: child launch rejected after shutdown began",
+        timedOut: false,
+        outputExceeded: false,
+      });
+      return;
+    }
     let child;
+    let launch;
     try {
-      child = spawn(cmd, args, opts);
+      launch = spawnFleetChild(cmd, args, opts, { tree });
+      child = launch.child;
+      if (childTracker !== null) childTracker.track(child, launch.trackerOptions);
     } catch (error) {
       resolvePromise({
         status: CODEX_PREFLIGHT_EXIT,
@@ -998,6 +1538,7 @@ function spawnBoundedAsync(cmd, args, opts, { timeoutMs, maxOutputBytes }) {
     let timer;
     let killTimer;
     let stopReason = null;
+    let processError = null;
     const captured = (chunks, currentBytes, chunk) => {
       const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       const remaining = Math.max(0, maxOutputBytes - currentBytes);
@@ -1023,9 +1564,11 @@ function spawnBoundedAsync(cmd, args, opts, { timeoutMs, maxOutputBytes }) {
     const requestStop = (reason) => {
       if (stopReason !== null) return;
       stopReason = reason;
-      child.kill();
+      if (childTracker !== null) childTracker.terminateChild(child);
+      else child.kill();
       killTimer = setTimeout(() => {
-        child.kill("SIGKILL");
+        if (childTracker !== null) childTracker.terminateChild(child, true);
+        else child.kill("SIGKILL");
       }, 1_000);
     };
     child.stdout?.on("data", (chunk) => {
@@ -1038,11 +1581,26 @@ function spawnBoundedAsync(cmd, args, opts, { timeoutMs, maxOutputBytes }) {
       stderrBytes = result.bytes;
       if (result.exceeded) requestStop("output");
     });
-    child.on("close", (code) => finish(code ?? 1));
+    child.on("close", (code) => {
+      void (async () => {
+        try {
+          if (childTracker !== null) await childTracker.waitForChild(child);
+          if (processError !== null) {
+            const message = String(processError);
+            stderrChunks.push(Buffer.from(message));
+            stderrBytes += Buffer.byteLength(message);
+          }
+          finish(processError === null ? launch.statusForClose(code) : 1);
+        } catch (error) {
+          const message = String(error);
+          stderrChunks.push(Buffer.from(message));
+          stderrBytes += Buffer.byteLength(message);
+          finish(1);
+        }
+      })();
+    });
     child.on("error", (error) => {
-      stderrChunks.push(Buffer.from(String(error)));
-      stderrBytes += Buffer.byteLength(String(error));
-      finish(1);
+      processError = error;
     });
     timer = setTimeout(() => {
       requestStop("timeout");
@@ -1532,7 +2090,12 @@ function isExactPureFleetRunArtifactFacts(facts) {
   );
 }
 
-async function validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir) {
+async function validatePureFleetRunArtifacts(
+  reportMdPath,
+  expected,
+  reportsDir,
+  childTracker = null,
+) {
   const expectedProvider = expected.provider ?? "claude";
   const paths = pureFleetRunArtifactPathsFor(reportMdPath);
   for (const [label, path] of [
@@ -1629,6 +2192,7 @@ async function validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir)
       expected.build.world_hash,
     ],
     { cwd: GAME_DIR, env: { ...process.env } },
+    childTracker,
   );
   let parsed;
   try {
@@ -1851,8 +2415,14 @@ export async function writeFreshPureFleetAttestation(
   run,
   expected,
   reportsDir = dirname(reportMdPath),
+  childTracker = null,
 ) {
-  const validation = await validatePureFleetRunArtifacts(reportMdPath, expected, reportsDir);
+  const validation = await validatePureFleetRunArtifacts(
+    reportMdPath,
+    expected,
+    reportsDir,
+    childTracker,
+  );
   if (!validation.ok) throw new Error(validation.reason);
   const attestation = buildPureFleetAttestation(run, expected, validation.facts);
   writeFileSync(
@@ -1895,6 +2465,7 @@ async function verifyReportEvidence(
   requiredMode,
   expectedPure = null,
   reportsDir = dirname(reportMdPath),
+  childTracker = null,
 ) {
   const runSidecarPath = runSidecarPathFor(reportMdPath);
   if (
@@ -1923,6 +2494,7 @@ async function verifyReportEvidence(
       "--json",
     ],
     { cwd: GAME_DIR, env: { ...process.env } },
+    childTracker,
   );
   let run = null;
   if (result.status === 0) {
@@ -1955,8 +2527,15 @@ export async function verifyReportForResume(
   requiredMode,
   expectedPure = null,
   reportsDir = dirname(reportMdPath),
+  childTracker = null,
 ) {
-  const verified = await verifyReportEvidence(reportMdPath, requiredMode, expectedPure, reportsDir);
+  const verified = await verifyReportEvidence(
+    reportMdPath,
+    requiredMode,
+    expectedPure,
+    reportsDir,
+    childTracker,
+  );
   if (!verified.ok || requiredMode !== "pure") {
     return { ...verified, attestation: null };
   }
@@ -1999,6 +2578,7 @@ export async function verifyReportForResume(
     reportMdPath,
     expectedPure,
     reportsDir,
+    childTracker,
   );
   if (!artifactValidation.ok) {
     return {
@@ -2020,13 +2600,18 @@ export async function verifyReportForResume(
   return { ...verified, attestation: parsed.attestation };
 }
 
-async function captureExpectedPureFleetBuild() {
+async function captureExpectedPureFleetBuild(childTracker = null) {
   const tsxCli = join(GAME_DIR, "node_modules", "tsx", "dist", "cli.mjs");
   const script = join(GAME_DIR, "scripts", "print-pure-fleet-build.ts");
-  const result = await spawnAsync(process.execPath, [tsxCli, script, GAME_DIR], {
-    cwd: GAME_DIR,
-    env: { ...process.env },
-  });
+  const result = await spawnAsync(
+    process.execPath,
+    [tsxCli, script, GAME_DIR],
+    {
+      cwd: GAME_DIR,
+      env: { ...process.env },
+    },
+    childTracker,
+  );
   if (result.status !== 0) {
     throw new Error(
       `fleet: pure build preflight failed: ${firstErrorLine(result.stderr || result.stdout)}`,
@@ -2042,6 +2627,100 @@ async function captureExpectedPureFleetBuild() {
     throw new Error("fleet: pure build preflight returned an invalid or dirty build identity");
   }
   return build;
+}
+
+export function createFleetLaunchControl({ captureBuild, childTracker = null } = {}) {
+  if (typeof captureBuild !== "function") {
+    throw new Error("fleet: launch control requires an exact-build capture function");
+  }
+  return {
+    abortFailure: null,
+    captureBuild,
+    childTracker,
+    launchGateTail: Promise.resolve(),
+  };
+}
+
+async function withSerializedFleetLaunchGate(control, operation) {
+  const predecessor = control.launchGateTail;
+  let releaseGate;
+  control.launchGateTail = new Promise((resolvePromise) => {
+    releaseGate = resolvePromise;
+  });
+  await predecessor;
+  try {
+    if (control.abortFailure !== null) throw control.abortFailure;
+    return await operation();
+  } finally {
+    releaseGate();
+  }
+}
+
+async function captureFleetBuildOrAbort(control, boundary) {
+  if (control.abortFailure !== null) throw control.abortFailure;
+  try {
+    return await control.captureBuild();
+  } catch (cause) {
+    const error = new Error(
+      `fleet: exact build capture failed at ${boundary}; no later fleet slot or retry may spend tokens`,
+      { cause },
+    );
+    control.abortFailure ??= error;
+    throw control.abortFailure;
+  }
+}
+
+export async function assertExactBuildAtFleetBoundary(control, expectedBuild, boundary) {
+  return withSerializedFleetLaunchGate(control, async () => {
+    const actualBuild = await captureFleetBuildOrAbort(control, boundary);
+    if (!samePureFleetBuild(actualBuild, expectedBuild)) {
+      const error = new Error(
+        `fleet: exact build drift detected at ${boundary}; no later fleet slot or retry may spend tokens`,
+      );
+      control.abortFailure ??= error;
+      throw error;
+    }
+    return actualBuild;
+  });
+}
+
+export async function launchAfterExactBuildGate(control, expectedBuild, boundary, launch) {
+  let launchedPromise = null;
+  await withSerializedFleetLaunchGate(control, async () => {
+    const actualBuild = await captureFleetBuildOrAbort(control, boundary);
+    if (!samePureFleetBuild(actualBuild, expectedBuild)) {
+      const error = new Error(
+        `fleet: exact build drift detected at ${boundary}; no later fleet slot or retry may spend tokens`,
+      );
+      control.abortFailure ??= error;
+      throw error;
+    }
+    if (control.abortFailure !== null) throw control.abortFailure;
+    launchedPromise = launch();
+    if (launchedPromise?.hasDeferredStart === true) {
+      try {
+        await launchedPromise.launchReady;
+        const preResumeBuild = await captureFleetBuildOrAbort(control, `${boundary} pre-resume`);
+        if (!samePureFleetBuild(preResumeBuild, expectedBuild)) {
+          const error = new Error(
+            `fleet: exact build drift detected at ${boundary} pre-resume; no later fleet slot or retry may spend tokens`,
+          );
+          control.abortFailure ??= error;
+          throw error;
+        }
+        if (control.abortFailure !== null) throw control.abortFailure;
+        if (launchedPromise.resumeLaunch() !== true) {
+          throw new Error(`fleet: Windows launcher could not resume at ${boundary}`);
+        }
+        await launchedPromise.launchStarted;
+      } catch (error) {
+        launchedPromise.abortLaunch();
+        await launchedPromise;
+        throw error;
+      }
+    }
+  });
+  return launchedPromise;
 }
 
 /** Pure matcher (exported for tests): which `readdirSync` entries are resume
@@ -2745,12 +3424,22 @@ export async function executeRun(
     };
   }
 
+  if (!opts.mock) {
+    await assertExactBuildAtFleetBoundary(fleetControl, fleetBuild, `pre-slot seed ${run.seed}`);
+  }
+
   // Check ALL stamp-agnostic candidates, newest-stamp-first, stopping at the
   // first that re-verifies — a stale FAILED report must never shadow a later
   // VERIFIED one produced by a prior fleet invocation.
   if (opts.resume) {
     for (const candidate of findExistingReport(reportsDir, target, run.seed)) {
-      const verify = await verifyReportForResume(candidate, requiredMode, expectedPure, reportsDir);
+      const verify = await verifyReportForResume(
+        candidate,
+        requiredMode,
+        expectedPure,
+        reportsDir,
+        fleetControl.childTracker,
+      );
       if (verify.ok) {
         const reportRecovered =
           requiredMode === "pure" ? verify.attestation.report_recovered : false;
@@ -2780,9 +3469,7 @@ export async function executeRun(
   let lastLogPath = null;
   const attemptHistory = [];
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (fleetControl.clientPreflightFailure) {
-      throw fleetControl.clientPreflightFailure;
-    }
+    if (fleetControl.abortFailure !== null) throw fleetControl.abortFailure;
     const args = [
       "--seed",
       String(run.seed),
@@ -2798,23 +3485,44 @@ export async function executeRun(
     args.push(...(questId ? ["--quest", questId] : ["--overworld"]));
     if (opts.mock) args.push("--mock");
 
-    const bashResult = await spawnRun(bashPath, [RUN_SH, ...args], {
-      cwd: GAME_DIR,
-      env: opts.mock ? { ...process.env } : codexFleetMemberEnv(process.env, fleetClient),
-    });
+    const launch = () =>
+      spawnRun(
+        bashPath,
+        [RUN_SH, ...args],
+        {
+          cwd: GAME_DIR,
+          env: opts.mock ? { ...process.env } : codexFleetMemberEnv(process.env, fleetClient),
+        },
+        fleetControl.childTracker,
+        { tree: true, deferWindowsStart: !opts.mock },
+      );
+    const bashResult = opts.mock
+      ? await launch()
+      : await launchAfterExactBuildGate(
+          fleetControl,
+          fleetBuild,
+          `pre-attempt seed ${run.seed} attempt ${attempt + 1}`,
+          launch,
+        );
     lastExit = bashResult.status ?? 1;
     if (!opts.mock && bashResult.status === CODEX_PREFLIGHT_EXIT) {
       const detail = firstErrorLine(bashResult.stderr || bashResult.stdout);
       const error = new Error(
         `fleet: Codex client preflight changed after the shared gate; seed ${run.seed} was not played and no retry will be attempted${detail ? `: ${detail}` : ""}`,
       );
-      fleetControl.clientPreflightFailure = error;
+      fleetControl.abortFailure ??= error;
       throw error;
     }
     let verifyResult = null;
 
     if (lastExit === 0) {
-      verifyResult = await verifyReportEvidence(reportMd, requiredMode, expectedPure, reportsDir);
+      verifyResult = await verifyReportEvidence(
+        reportMd,
+        requiredMode,
+        expectedPure,
+        reportsDir,
+        fleetControl.childTracker,
+      );
       if (verifyResult.ok) {
         let attestation = null;
         if (!opts.mock) {
@@ -2824,6 +3532,7 @@ export async function executeRun(
               verifyResult.run,
               expectedPure,
               reportsDir,
+              fleetControl.childTracker,
             );
           } catch (error) {
             verifyResult = {
@@ -3202,7 +3911,7 @@ function resolveFleetBashPath() {
   return bashPath;
 }
 
-async function preflightPureCodexClient(bashPath, run) {
+async function preflightPureCodexClient(bashPath, run, childTracker) {
   const result = await spawnBoundedAsync(
     bashPath,
     [
@@ -3224,6 +3933,8 @@ async function preflightPureCodexClient(bashPath, run) {
     {
       timeoutMs: CODEX_PREFLIGHT_PROCESS_TIMEOUT_MS,
       maxOutputBytes: CODEX_PREFLIGHT_PROCESS_MAX_OUTPUT_BYTES,
+      childTracker,
+      tree: true,
     },
   );
   if (result.status === 0) {
@@ -3293,81 +4004,95 @@ async function main() {
   // label directory. A missing runtime must leave no misleading fleet shell.
   const bashPath = resolveFleetBashPath();
 
-  // One shared executable gate pins and validates the exact client outside the
-  // per-player retry pool. Structural mock fleets do not use Codex.
-  const fleetClient = opts.mock ? null : await preflightPureCodexClient(bashPath, runs[0]);
-
-  // One fail-closed build identity is captured before any live launcher can
-  // spend tokens. Structural mocks retain their historical no-provenance path.
-  const fleetBuild = opts.mock ? null : await captureExpectedPureFleetBuild();
-  const transportFingerprint = opts.mock
-    ? null
-    : createFleetTransportFingerprint({ provider: opts.provider, model: opts.model });
-  if (sparkMassAdmissionRequired(opts)) {
-    requireSparkMassAdmissionReceipt({
-      receiptPath: resolve(GAME_DIR, normalizeShellPathForNode(String(opts.admissionReceipt))),
-      build: fleetBuild,
-      transportFingerprint,
-      client: fleetClient,
-      model: opts.model,
-    });
-  }
-  const cohort = opts.mock
-    ? null
-    : createFleetCohort(runs, fleetBuild, fleetClient, PURE_SESSION_CONTRACT_VERSION);
-
-  let reportLock;
+  const childTracker = createFleetChildTracker();
+  const fleetControl = createFleetLaunchControl({
+    captureBuild: () => captureExpectedPureFleetBuild(childTracker),
+    childTracker,
+  });
+  let reportLock = null;
   let liveCohortStartup = null;
-  if (opts.mock) {
-    // Structural mocks retain their existing report and local-label semantics;
-    // only live pure cohorts participate in the cross-worktree ledger.
-    mkdirSync(reportsDir, { recursive: true });
-    reportLock = acquireFleetReportLock(reportsDir, stamp, runs);
-    try {
-      mkdirSync(dirname(fleetDir), { recursive: true });
-      mkdirSync(fleetDir, { recursive: true });
-    } catch (error) {
-      releaseFleetReportLock(reportLock);
-      throw error;
+  let locksReleased = false;
+  const cleanupLocks = () => {
+    if (locksReleased) return;
+    locksReleased = true;
+    if (liveCohortStartup !== null) liveCohortStartup.release();
+    else if (reportLock !== null) releaseFleetReportLock(reportLock);
+  };
+  const termination = createFleetTerminationController({ fleetControl, childTracker });
+  // Keep handlers installed across bootstrap, reservation, child shutdown, and
+  // lock cleanup. Repeated signals share the same idempotent shutdown request.
+  const uninstallSignalHandlers = installFleetSignalHandlers(termination.requestTermination);
+  try {
+    const fleetClient = opts.mock
+      ? null
+      : await preflightPureCodexClient(bashPath, runs[0], childTracker);
+    const fleetBuild = opts.mock ? null : await captureExpectedPureFleetBuild(childTracker);
+    const transportFingerprint = opts.mock
+      ? null
+      : createFleetTransportFingerprint({ provider: opts.provider, model: opts.model });
+    if (sparkMassAdmissionRequired(opts)) {
+      requireSparkMassAdmissionReceipt({
+        receiptPath: resolve(GAME_DIR, normalizeShellPathForNode(String(opts.admissionReceipt))),
+        build: fleetBuild,
+        transportFingerprint,
+        client: fleetClient,
+        model: opts.model,
+      });
     }
-  } else {
-    liveCohortStartup = beginLiveFleetCohortStartup({
-      cohort,
-      intentAudit: {
-        stamp,
-        label,
-        canonicalWorktree: realpathSync.native(GAME_DIR),
-      },
-      allowDuplicateCohort: opts.allowDuplicateCohort,
-      createReportsDirectory: () => mkdirSync(reportsDir, { recursive: true }),
-      acquireReportLock: () => acquireFleetReportLock(reportsDir, stamp, runs),
-      releaseReportLock: releaseFleetReportLock,
-      validateLocalFleetLabel: () => {
+    const cohort = opts.mock
+      ? null
+      : createFleetCohort(runs, fleetBuild, fleetClient, PURE_SESSION_CONTRACT_VERSION);
+
+    if (opts.mock) {
+      // Structural mocks retain their existing report and local-label semantics;
+      // only live pure cohorts participate in the cross-worktree ledger.
+      mkdirSync(reportsDir, { recursive: true });
+      reportLock = acquireFleetReportLock(reportsDir, stamp, runs);
+      try {
         mkdirSync(dirname(fleetDir), { recursive: true });
-        if (existsSync(fleetDir)) {
-          throw new Error(
-            `fleet: label directory already exists; choose a fresh label: ${fleetDir}`,
-          );
-        }
-      },
-      createLocalFleetDirectory: () => {
-        try {
-          mkdirSync(fleetDir);
-        } catch (error) {
-          if (error && typeof error === "object" && error.code === "EEXIST") {
+        mkdirSync(fleetDir, { recursive: true });
+      } catch (error) {
+        releaseFleetReportLock(reportLock);
+        reportLock = null;
+        throw error;
+      }
+    } else {
+      liveCohortStartup = beginLiveFleetCohortStartup({
+        cohort,
+        intentAudit: {
+          stamp,
+          label,
+          canonicalWorktree: realpathSync.native(GAME_DIR),
+        },
+        allowDuplicateCohort: opts.allowDuplicateCohort,
+        createReportsDirectory: () => mkdirSync(reportsDir, { recursive: true }),
+        acquireReportLock: () => acquireFleetReportLock(reportsDir, stamp, runs),
+        releaseReportLock: releaseFleetReportLock,
+        validateLocalFleetLabel: () => {
+          mkdirSync(dirname(fleetDir), { recursive: true });
+          if (existsSync(fleetDir)) {
             throw new Error(
               `fleet: label directory already exists; choose a fresh label: ${fleetDir}`,
-              { cause: error },
             );
           }
-          throw error;
-        }
-        return fleetDir;
-      },
-    });
-    reportLock = liveCohortStartup.reportLock;
-  }
-  try {
+        },
+        createLocalFleetDirectory: () => {
+          try {
+            mkdirSync(fleetDir);
+          } catch (error) {
+            if (error && typeof error === "object" && error.code === "EEXIST") {
+              throw new Error(
+                `fleet: label directory already exists; choose a fresh label: ${fleetDir}`,
+                { cause: error },
+              );
+            }
+            throw error;
+          }
+          return fleetDir;
+        },
+      });
+      reportLock = liveCohortStartup.reportLock;
+    }
     const codexClientProof = opts.mock
       ? null
       : writePrivateCodexClientAuthorityProof(fleetDir, fleetClient);
@@ -3375,12 +4100,9 @@ async function main() {
     const summaryPath = join(fleetDir, "summary.json");
     const counts = { verified: 0, "skipped-resume": 0, failed: 0, suppressed: 0 };
     const rows = new Array(runs.length);
-    const fleetControl = {
-      clientPreflightFailure: null,
-      admissionFailure: false,
-      transportFingerprint,
-      strictRejectedTransportFingerprints: new Set(),
-    };
+    fleetControl.admissionFailure = false;
+    fleetControl.transportFingerprint = transportFingerprint;
+    fleetControl.strictRejectedTransportFingerprints = new Set();
 
     await runPool(runs, Math.max(1, opts.concurrency), async (run, plannedIndex) => {
       const result = await executeRun(run, {
@@ -3506,10 +4228,15 @@ async function main() {
     );
     console.log(`Manifest: ${manifestPath}`);
     process.exitCode = ok ? 0 : 1;
+  } catch (error) {
+    if (termination.signalExitCode === null) throw error;
   } finally {
-    if (liveCohortStartup !== null) liveCohortStartup.release();
-    else releaseFleetReportLock(reportLock);
+    await settleFleetChildrenBeforeCleanup(childTracker, cleanupLocks, {
+      terminate: termination.shutdownPromise !== null,
+    });
+    uninstallSignalHandlers();
   }
+  if (termination.signalExitCode !== null) process.exitCode = termination.signalExitCode;
 }
 
 // Entry guard so tests can import the pure planning functions without

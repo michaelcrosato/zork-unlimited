@@ -76,18 +76,44 @@ function startWindowsProvider(executable, args) {
     tmpdir(),
     `adventureforge-codex-stop-${process.pid}-${randomBytes(16).toString("hex")}`,
   );
+  const resumePath = join(
+    tmpdir(),
+    `adventureforge-codex-resume-${process.pid}-${randomBytes(16).toString("hex")}`,
+  );
   let keeper = null;
   let connection = null;
   let ready = false;
+  let started = false;
   let treeTerminated = false;
   let terminationRequested = false;
   let terminationSent = false;
+  let resumeRequested = false;
+  let resumeSent = false;
   let complete;
   let fail;
   const completion = new Promise((resolve, reject) => {
     complete = resolve;
     fail = reject;
   });
+  let completeReady;
+  let failReady;
+  const readiness = new Promise((resolve, reject) => {
+    completeReady = resolve;
+    failReady = reject;
+  });
+  let completeStarted;
+  let failStarted;
+  const providerStarted = new Promise((resolve, reject) => {
+    completeStarted = resolve;
+    failStarted = reject;
+  });
+  void readiness.catch(() => {});
+  void providerStarted.catch(() => {});
+  const failController = (error) => {
+    fail(error);
+    failReady(error);
+    failStarted(error);
+  };
   const signalTermination = () => {
     if (connection === null || !ready || terminationSent) return false;
     terminationSent = true;
@@ -99,10 +125,21 @@ function startWindowsProvider(executable, args) {
     }
     return true;
   };
+  const signalResume = () => {
+    if (connection === null || !ready || resumeSent || terminationRequested) return false;
+    resumeSent = true;
+    try {
+      const descriptor = openSync(resumePath, "wx", 0o600);
+      closeSync(descriptor);
+    } catch (error) {
+      if (error?.code !== "EEXIST") failController(error);
+    }
+    return true;
+  };
   const server = createServer((socket) => {
     if (connection !== null) {
       socket.destroy();
-      fail(new Error("Windows process-job control pipe accepted a second client"));
+      failController(new Error("Windows process-job control pipe accepted a second client"));
       return;
     }
     connection = socket;
@@ -111,7 +148,7 @@ function startWindowsProvider(executable, args) {
     socket.on("data", (chunk) => {
       pending += chunk;
       if (pending.length > 16_384) {
-        fail(new Error("Windows process-job control receipt exceeded its byte ceiling"));
+        failController(new Error("Windows process-job control receipt exceeded its byte ceiling"));
         return;
       }
       let newline = pending.indexOf("\n");
@@ -122,13 +159,18 @@ function startWindowsProvider(executable, args) {
         try {
           message = JSON.parse(line);
         } catch {
-          fail(new Error("Windows process-job control receipt was not valid JSONL"));
+          failController(new Error("Windows process-job control receipt was not valid JSONL"));
           return;
         }
         if (message?.type === "custody_ready" && !ready) {
           ready = true;
+          completeReady();
           if (terminationRequested) signalTermination();
-        } else if (message?.type === "provider_exit" && ready) {
+          else if (resumeRequested) signalResume();
+        } else if (message?.type === "provider_started" && ready && !started) {
+          started = true;
+          completeStarted();
+        } else if (message?.type === "provider_exit" && started) {
           send({
             type: "provider_exit",
             code: message.code,
@@ -136,24 +178,29 @@ function startWindowsProvider(executable, args) {
           });
         } else if (message?.type === "tree_terminated" && ready) {
           treeTerminated = true;
+          if (!started) {
+            failStarted(new Error("Windows process job terminated before provider start"));
+          }
           complete();
         } else if (message?.type === "anchor_error" && typeof message.message === "string") {
-          fail(new Error(message.message));
+          failController(new Error(message.message));
         } else {
-          fail(new Error("Windows process-job control receipt was out of order"));
+          failController(new Error("Windows process-job control receipt was out of order"));
           return;
         }
         newline = pending.indexOf("\n");
       }
     });
-    socket.once("error", (error) => fail(error));
+    socket.once("error", (error) => failController(error));
     socket.once("close", () => {
       if (!treeTerminated) {
-        fail(new Error("Windows process-job control pipe closed before tree termination"));
+        failController(
+          new Error("Windows process-job control pipe closed before tree termination"),
+        );
       }
     });
   });
-  server.once("error", (error) => fail(error));
+  server.once("error", (error) => failController(error));
   server.listen(pipePath, () => {
     keeper = spawn(
       "powershell.exe",
@@ -175,6 +222,8 @@ function startWindowsProvider(executable, args) {
         pipeName,
         "-TerminationFileBase64",
         Buffer.from(terminationPath, "utf8").toString("base64"),
+        "-ResumeFileBase64",
+        Buffer.from(resumePath, "utf8").toString("base64"),
       ],
       {
         cwd: process.cwd(),
@@ -183,10 +232,10 @@ function startWindowsProvider(executable, args) {
         windowsHide: true,
       },
     );
-    keeper.once("error", (error) => fail(error));
+    keeper.once("error", (error) => failController(error));
     keeper.once("exit", (code) => {
       if (!treeTerminated) {
-        fail(
+        failController(
           new Error(
             `Windows process-job keeper exited before verified termination (${String(code)})`,
           ),
@@ -196,11 +245,18 @@ function startWindowsProvider(executable, args) {
   });
 
   return {
+    readiness,
+    providerStarted,
     completion: completion.finally(() => {
       connection?.destroy();
       server.close();
       rmSync(terminationPath, { force: true });
+      rmSync(resumePath, { force: true });
     }),
+    resume() {
+      resumeRequested = true;
+      return signalResume();
+    },
     terminate() {
       terminationRequested = true;
       return signalTermination();
@@ -242,6 +298,7 @@ async function main() {
   const providerArgs = argv.slice(separator + 1);
   const binary = option(options, "--binary");
   const testShell = option(options, "--test-shell") ?? null;
+  const deferredResume = options.includes("--deferred-resume");
   if (!binary || providerArgs.length === 0) {
     throw new Error("codex process anchor requires --binary and provider arguments");
   }
@@ -250,17 +307,32 @@ async function main() {
   const args = testShell === null ? providerArgs : [binary, ...providerArgs];
   if (process.platform === "win32") {
     let terminationRequested = false;
+    let resumeRequested = !deferredResume;
     let controller;
     const requestTermination = () => {
       terminationRequested = true;
       controller?.terminate();
     };
+    const requestResume = () => {
+      resumeRequested = true;
+      controller?.resume();
+    };
     process.on("message", (message) => {
       if (message?.type === "terminate_owned_tree") requestTermination();
+      else if (message?.type === "resume_owned_tree") requestResume();
     });
     process.once("disconnect", requestTermination);
     controller = startWindowsProvider(executable, args);
     if (terminationRequested) controller.terminate();
+    await controller.readiness;
+    send({ type: "custody_ready" });
+    if (resumeRequested && !terminationRequested) controller.resume();
+    try {
+      await controller.providerStarted;
+      send({ type: "provider_started" });
+    } catch (error) {
+      if (!terminationRequested) throw error;
+    }
     await controller.completion;
     if (process.connected) process.disconnect();
     return;
