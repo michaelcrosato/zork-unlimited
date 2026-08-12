@@ -18,7 +18,12 @@ import {
   presentOverworldContact,
   type OverworldContactPresentation,
 } from "./session_contact_presentation.js";
-import { journalSourceId, type OverworldJournalTimelineIndex } from "./session_journal_timeline.js";
+import {
+  journalSourceId,
+  overworldJournalEntryPrecedes,
+  resolveOverworldContactJournalPresentation,
+  type OverworldJournalTimelineIndex,
+} from "./session_journal_timeline.js";
 import type { OverworldJournalEntry } from "./session_snapshot.js";
 import { indexedList } from "./session_collections.js";
 import type { CampaignCharacterState } from "./campaign_character_state.js";
@@ -87,6 +92,7 @@ type OverworldLocalJournalSource = {
 };
 
 export type OverworldLocalActionJournalReplayEntry = {
+  countsTowardDiscovery: boolean;
   entry: OverworldJournalEntry;
   source: OverworldLocalJournalSource;
   recordedAt: number;
@@ -183,9 +189,12 @@ function localJournalActionDuration(
       return area?.travel_minutes ?? null;
     }
     case "contact": {
-      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
-      return presentation
-        ? describeOverworldContactAction(presentation.contact, presentation.presentationId).minutes
+      const resolved = resolveOverworldContactJournalPresentation(entry, sources);
+      return resolved
+        ? describeOverworldContactAction(
+            resolved.presentation.contact,
+            resolved.presentation.presentationId,
+          ).minutes
         : null;
     }
     case "event": {
@@ -399,13 +408,13 @@ function localJournalSource(
       };
     }
     case "contact": {
-      const presentation = sources.contactPresentationsByJournalId.get(entry.id);
-      if (!presentation) return null;
+      const resolved = resolveOverworldContactJournalPresentation(entry, sources);
+      if (!resolved) return null;
       return {
         sourceLabel: "journal contact",
-        sourceId: presentation.character.id,
-        home: presentation.character.home,
-        area: presentation.character.area,
+        sourceId: resolved.presentation.character.id,
+        home: resolved.presentation.character.home,
+        area: resolved.presentation.character.area,
       };
     }
     case "event": {
@@ -494,28 +503,70 @@ export function assertSnapshotContactPresentationProofs(
   sources: OverworldLocalActionJournalReachabilityIndex,
   journalTimeline: OverworldJournalTimelineIndex,
   characterAt: (entry: OverworldJournalEntry, recordedAt: number) => CampaignCharacterState,
+  worldFactIdsAt?: (entry: OverworldJournalEntry, recordedAt: number) => ReadonlySet<string>,
+  eventOptionIdAt?: (
+    entry: OverworldJournalEntry,
+    recordedAt: number,
+    eventId: string,
+  ) => string | null,
+  verifyAuthoredCopy = true,
 ): void {
   for (const { entry, recordedAt } of journalTimeline.localActionEntries) {
     if (entry.kind !== "contact") continue;
-    const stored = sources.contactPresentationsByJournalId.get(entry.id);
-    if (!stored) continue; // The timeline source gate reports the precise unknown-id error.
+    const resolved = resolveOverworldContactJournalPresentation(entry, sources);
+    if (!resolved) continue; // The timeline source gate reports the precise unknown-id error.
+    const stored = resolved.presentation;
+    if (resolved.canonicalJournalId !== entry.id) {
+      const canonicalEntry = journalTimeline.localActionEntries.find(
+        (candidate) =>
+          candidate.entry.kind === "contact" && candidate.entry.id === resolved.canonicalJournalId,
+      )?.entry;
+      if (
+        !canonicalEntry ||
+        !overworldJournalEntryPrecedes(
+          journalTimeline.eventResolutionProofs.recordedAtById,
+          journalTimeline.journalIndexById,
+          canonicalEntry.id,
+          entry.id,
+        )
+      ) {
+        throw new Error(
+          `Overworld session snapshot repeated contact presentation "${entry.id}" has no earlier canonical occurrence "${resolved.canonicalJournalId}".`,
+        );
+      }
+    }
 
     const completedQuestIds = new Set<string>();
     for (const questId of sources.questsById.keys()) {
-      const completedAt = journalTimeline.eventResolutionProofs.recordedAtById.get(
-        `quest_done:${questId}`,
-      );
-      if (completedAt !== undefined && completedAt <= recordedAt) {
+      if (
+        overworldJournalEntryPrecedes(
+          journalTimeline.eventResolutionProofs.recordedAtById,
+          journalTimeline.journalIndexById,
+          `quest_done:${questId}`,
+          entry.id,
+        )
+      ) {
         completedQuestIds.add(questId);
       }
     }
     const expected = presentOverworldContact(stored.character, {
       character: characterAt(entry, recordedAt),
       completedQuestIds,
+      ...(worldFactIdsAt ? { worldFactIds: worldFactIdsAt(entry, recordedAt) } : {}),
+      ...(eventOptionIdAt
+        ? { eventOptionIdFor: (eventId: string) => eventOptionIdAt(entry, recordedAt, eventId) }
+        : {}),
     });
-    if (expected.journalId !== entry.id) {
+    if (expected.journalId !== resolved.canonicalJournalId) {
       throw new Error(
         `Overworld session snapshot contact presentation "${entry.id}" was not active at ${entry.recordedAt}.`,
+      );
+    }
+
+    const action = describeOverworldContactAction(expected.contact, expected.presentationId);
+    if (verifyAuthoredCopy && (entry.title !== action.title || entry.text !== action.text)) {
+      throw new Error(
+        `Overworld session snapshot contact presentation "${entry.id}" does not match its authored copy.`,
       );
     }
 
@@ -541,15 +592,21 @@ export function localActionJournalReplayIndex(
   journalTimeline.localActionEntries.forEach(({ entry, recordedAt }, newestFirstIndex) => {
     const source = localJournalSource(entry, sources);
     if (!source) return;
+    const resolvedContact =
+      entry.kind === "contact" ? resolveOverworldContactJournalPresentation(entry, sources) : null;
+    const isRepeatedContact =
+      resolvedContact !== null && resolvedContact.canonicalJournalId !== entry.id;
+    const countsTowardDiscovery = entry.kind !== "quest_done" && !isRepeatedContact;
     replayEntries.push({
+      countsTowardDiscovery,
       entry,
       source,
       recordedAt,
-      duration: localJournalActionDuration(entry, sources),
+      duration: isRepeatedContact ? null : localJournalActionDuration(entry, sources),
       acceptedDecisions: null,
       newestFirstIndex,
     });
-    if (entry.kind !== "quest_done") {
+    if (countsTowardDiscovery) {
       incrementCount(localActionCountByTown, source.home);
       incrementCount(localActionCountByArea, source.area);
     }
@@ -564,6 +621,7 @@ export function localActionJournalReplayIndex(
   );
   const usedDecisionOrdinals = new Set<number>();
   for (const replayEntry of replayEntries) {
+    if (!replayEntry.countsTowardDiscovery) continue;
     const expectation = localJournalDecisionExpectation(replayEntry.entry, replayEntry.source);
     if (!expectation || !sources.campaignDecisionProofsByOrdinal) continue;
     const storedBoundary =
@@ -710,7 +768,7 @@ function replayExactDiscoveredAreaIds(
   // Entries outside the replayable campaign suffix are authenticated by the
   // older local journal/town-visit proofs. They precede every campaign anchor.
   for (const replayEntry of localActionJournal.entries) {
-    if (replayEntry.entry.kind === "quest_done" || replayEntry.acceptedDecisions !== null) {
+    if (!replayEntry.countsTowardDiscovery || replayEntry.acceptedDecisions !== null) {
       continue;
     }
     processLocalAction(replayEntry);
@@ -724,7 +782,7 @@ function replayExactDiscoveredAreaIds(
   }
   const actionsByOrdinal = new Map<number, OverworldLocalActionJournalReplayEntry[]>();
   for (const replayEntry of localActionJournal.entries) {
-    if (replayEntry.entry.kind === "quest_done" || replayEntry.acceptedDecisions === null) {
+    if (!replayEntry.countsTowardDiscovery || replayEntry.acceptedDecisions === null) {
       continue;
     }
     const entries = actionsByOrdinal.get(replayEntry.acceptedDecisions) ?? [];
@@ -833,7 +891,8 @@ export function assertSnapshotLocalActionDiscoveryChronology(
       }
     }
 
-    for (const { source } of group) {
+    for (const { countsTowardDiscovery, source } of group) {
+      if (!countsTowardDiscovery) continue;
       priorLocalActionCountByTown.set(
         source.home,
         (priorLocalActionCountByTown.get(source.home) ?? 0) + 1,

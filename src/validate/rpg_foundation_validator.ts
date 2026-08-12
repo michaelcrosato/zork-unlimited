@@ -89,6 +89,12 @@ export type ValidateRpgFoundationOptions = {
   extraReadFlags?: string[];
   extraObtainable?: string[];
   /**
+   * Bounded values a trusted higher-level boundary may install before the first
+   * RPG turn. These widen only numeric gate feasibility; they are not runtime
+   * effects and do not weaken checks for variables absent from this map.
+   */
+  extraInitialVarRanges?: ReadonlyMap<string, Readonly<{ min: number; max: number }>>;
+  /**
    * Declared higher-layer effects whose targets and inventory dataflow must be
    * audited exactly like foundation-owned authored effects. Unlike
    * `extraFalsifierEffects`, these participate in reference, placement, and
@@ -580,8 +586,16 @@ export function validateRpgFoundation(
     DEFENSE_VAR,
     ...pack.enemies.map((e) => enemyHpVar(e.id)),
   ]);
-  const varRange = (name: string): { min: number; max: number } =>
-    varReachableRange(pack.meta.vars_init[name] ?? 0, varWrites.get(name));
+  const varRange = (name: string): { min: number; max: number } => {
+    const authored = varReachableRange(pack.meta.vars_init[name] ?? 0, varWrites.get(name));
+    const imported = opts.extraInitialVarRanges?.get(name);
+    return imported === undefined
+      ? authored
+      : {
+          min: Math.min(authored.min, imported.min),
+          max: Math.max(authored.max, imported.max),
+        };
+  };
 
   // ── Feasibility of every gate (presence, exits, interactions/hints, topics, wins) ──
   const checkConds = (conds: Condition[], where: string[]): void => {
@@ -713,11 +727,29 @@ export function validateRpgFoundation(
     for (const [index, override] of (wc.ending_overrides ?? []).entries())
       checkConds(override.conditions, [`win:${wc.id}`, `ending_override:${index}`]);
   }
+  for (const ending of pack.endings) {
+    for (const [kind, variants] of [
+      ["variant", ending.variants],
+      ["append_variant", ending.append_variants],
+    ] as const) {
+      for (const [index, variant] of (variants ?? []).entries()) {
+        checkConds(variant.when, [`ending:${ending.id}`, `${kind}:${index}`]);
+      }
+    }
+  }
   for (const npc of pack.npcs) {
     checkConds(npc.conditions ?? [], [`npc:${npc.id}`]);
     for (const [index, variant] of (npc.variants ?? []).entries())
       checkConds(variant.when, [`npc:${npc.id}`, `variant:${index}`]);
     for (const node of npc.dialogue.nodes) {
+      for (const [kind, variants] of [
+        ["variant", node.variants],
+        ["append_variant", node.append_variants],
+      ] as const) {
+        for (const [index, variant] of (variants ?? []).entries()) {
+          checkConds(variant.when, [`npc:${npc.id}`, `node:${node.id}`, `${kind}:${index}`]);
+        }
+      }
       for (const t of node.topics) {
         checkConds(t.conditions ?? [], [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
       }
@@ -800,13 +832,22 @@ export function validateRpgFoundation(
       for (const id of itemReqs(maneuver.conditions)) noteHeld(id, consumes.has(id));
     }
   }
+  for (const ending of pack.endings) {
+    for (const variant of [...(ending.variants ?? []), ...(ending.append_variants ?? [])]) {
+      for (const id of itemReqs(variant.when)) noteHeld(id, false);
+    }
+  }
   for (const npc of pack.npcs) {
     for (const id of itemReqs(npc.conditions ?? [])) noteHeld(id, false);
     for (const variant of npc.variants ?? [])
       for (const id of itemReqs(variant.when)) noteHeld(id, false);
-    for (const node of npc.dialogue.nodes)
+    for (const node of npc.dialogue.nodes) {
+      for (const variant of [...(node.variants ?? []), ...(node.append_variants ?? [])]) {
+        for (const id of itemReqs(variant.when)) noteHeld(id, false);
+      }
       for (const t of node.topics)
         for (const id of itemReqs(t.conditions ?? [])) noteHeld(id, false);
+    }
   }
   // Strong connectivity over reachable, non-terminal rooms: a droppable item can
   // always be retrieved iff you can return to any room you can leave.
@@ -895,6 +936,15 @@ export function validateRpgFoundation(
           node.variants?.[i]?.when,
           [`npc:${npc.id}`, `node:${node.id}`, `variant:${i}`],
           `npc "${npc.id}" node "${node.id}" variant #${i + 1}`,
+          findings,
+        );
+      // Additive fragments deliberately overlap: every matching note is live.
+      // Contradictory guards are still dead content and remain an error.
+      for (let i = 0; i < (node.append_variants?.length ?? 0); i++)
+        checkUnsatisfiable(
+          node.append_variants?.[i]?.when,
+          [`npc:${npc.id}`, `node:${node.id}`, `append_variant:${i}`],
+          `npc "${npc.id}" node "${node.id}" append variant #${i + 1}`,
           findings,
         );
       const outs = new Set<string>();
@@ -1183,6 +1233,13 @@ export function validateRpgFoundation(
         e.variants?.[i]?.when,
         [`ending:${e.id}`, `variant:${i}`],
         `ending "${e.id}" variant #${i + 1}`,
+        findings,
+      );
+    for (let i = 0; i < (e.append_variants?.length ?? 0); i++)
+      checkUnsatisfiable(
+        e.append_variants?.[i]?.when,
+        [`ending:${e.id}`, `append_variant:${i}`],
+        `ending "${e.id}" append variant #${i + 1}`,
         findings,
       );
   }
@@ -1957,7 +2014,9 @@ function checkDialogueRootRegreet(
   nodes: Map<string, RpgPack["npcs"][number]["dialogue"]["nodes"][number]>,
   findings: Finding[],
 ): void {
-  const rootRegreetFlags = hasFlagReads(root.variants?.flatMap((variant) => variant.when) ?? []);
+  const rootRegreetFlags = hasFlagReads(
+    [...(root.variants ?? []), ...(root.append_variants ?? [])].flatMap((variant) => variant.when),
+  );
   for (const topic of root.topics) {
     if (topic.goto === undefined) continue;
     const target = nodes.get(topic.goto);
@@ -2115,12 +2174,13 @@ function collectFlagReads(pack: RpgPack): Set<string> {
     walkAll(wc.conditions);
     for (const override of wc.ending_overrides ?? []) walkAll(override.conditions);
   }
-  for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when); // reactive epilogue guards
+  for (const e of pack.endings)
+    for (const v of [...(e.variants ?? []), ...(e.append_variants ?? [])]) walkAll(v.when);
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);
     for (const variant of npc.variants ?? []) walkAll(variant.when);
     for (const node of npc.dialogue.nodes) {
-      for (const v of node.variants ?? []) walkAll(v.when); // reactive NPC-line guards (bug_0246)
+      for (const v of [...(node.variants ?? []), ...(node.append_variants ?? [])]) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
     }
   }
@@ -2185,16 +2245,25 @@ function collectVarReads(pack: RpgPack): Map<string, string[]> {
     for (const [index, override] of (wc.ending_overrides ?? []).entries())
       walkAll(override.conditions, [`win:${wc.id}`, `ending_override:${index}`]);
   }
-  for (const e of pack.endings)
-    for (const [index, v] of (e.variants ?? []).entries())
-      walkAll(v.when, [`ending:${e.id}`, `variant:${index}`]);
+  for (const e of pack.endings) {
+    for (const [kind, variants] of [
+      ["variant", e.variants],
+      ["append_variant", e.append_variants],
+    ] as const)
+      for (const [index, v] of (variants ?? []).entries())
+        walkAll(v.when, [`ending:${e.id}`, `${kind}:${index}`]);
+  }
   for (const npc of pack.npcs) {
     walkAll(npc.conditions, [`npc:${npc.id}`]);
     for (const [index, variant] of (npc.variants ?? []).entries())
       walkAll(variant.when, [`npc:${npc.id}`, `variant:${index}`]);
     for (const node of npc.dialogue.nodes) {
-      for (const [index, v] of (node.variants ?? []).entries())
-        walkAll(v.when, [`npc:${npc.id}`, `node:${node.id}`, `variant:${index}`]);
+      for (const [kind, variants] of [
+        ["variant", node.variants],
+        ["append_variant", node.append_variants],
+      ] as const)
+        for (const [index, v] of (variants ?? []).entries())
+          walkAll(v.when, [`npc:${npc.id}`, `node:${node.id}`, `${kind}:${index}`]);
       for (const t of node.topics)
         walkAll(t.conditions, [`npc:${npc.id}`, `node:${node.id}`, `topic:${t.id}`]);
     }
@@ -2242,12 +2311,13 @@ function collectObjectStateReads(pack: RpgPack): { open: Set<string>; unlocked: 
     walkAll(wc.conditions);
     for (const override of wc.ending_overrides ?? []) walkAll(override.conditions);
   }
-  for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
+  for (const e of pack.endings)
+    for (const v of [...(e.variants ?? []), ...(e.append_variants ?? [])]) walkAll(v.when);
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);
     for (const variant of npc.variants ?? []) walkAll(variant.when);
     for (const node of npc.dialogue.nodes) {
-      for (const v of node.variants ?? []) walkAll(v.when);
+      for (const v of [...(node.variants ?? []), ...(node.append_variants ?? [])]) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
     }
   }
@@ -2296,12 +2366,13 @@ function collectRoomRefs(pack: RpgPack, extraEffects: readonly Effect[] = []): S
     walkAll(wc.conditions);
     for (const override of wc.ending_overrides ?? []) walkAll(override.conditions);
   }
-  for (const e of pack.endings) for (const v of e.variants ?? []) walkAll(v.when);
+  for (const e of pack.endings)
+    for (const v of [...(e.variants ?? []), ...(e.append_variants ?? [])]) walkAll(v.when);
   for (const npc of pack.npcs) {
     walkAll(npc.conditions);
     for (const variant of npc.variants ?? []) walkAll(variant.when);
     for (const node of npc.dialogue.nodes) {
-      for (const v of node.variants ?? []) walkAll(v.when);
+      for (const v of [...(node.variants ?? []), ...(node.append_variants ?? [])]) walkAll(v.when);
       for (const t of node.topics) walkAll(t.conditions);
     }
   }

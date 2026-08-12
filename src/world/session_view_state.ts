@@ -295,6 +295,10 @@ export function buildOverworldSessionViewModelState(
       presentOverworldContact(character, {
         character: source.character,
         completedQuestIds: source.completedQuestIds,
+        worldFactIds: source.campaignWorldFactIds,
+        eventOptionIdFor: (eventId) =>
+          source.journalEntries.find((entry) => entry.id === `resolve:${eventId}`)?.localSceneProof
+            ?.optionId ?? null,
       }).contact,
   );
   const routeOptions = cachedOverworldSessionDiscoveredRouteOptions({

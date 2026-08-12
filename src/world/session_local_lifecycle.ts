@@ -118,6 +118,8 @@ export type OverworldSessionContactTalkPlanState = {
   characterId: string;
   charactersById: ReadonlyMap<string, OverworldCharacter>;
   completedQuestIds: ReadonlySet<string>;
+  campaignWorldFactIds?: ReadonlySet<string>;
+  eventOptionIdFor?: (eventId: string) => string | null;
   currentTownId: string;
   currentAreaId: () => string;
 };
@@ -256,6 +258,8 @@ export function planOverworldSessionContactTalk(
   const presentation = presentOverworldContact(character, {
     character: state.character,
     completedQuestIds: state.completedQuestIds,
+    ...(state.campaignWorldFactIds ? { worldFactIds: state.campaignWorldFactIds } : {}),
+    ...(state.eventOptionIdFor ? { eventOptionIdFor: state.eventOptionIdFor } : {}),
   });
   return {
     action: describeOverworldContactAction(presentation.contact, presentation.presentationId),

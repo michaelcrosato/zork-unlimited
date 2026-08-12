@@ -13,11 +13,15 @@ export type OverworldContactPresentation = Readonly<{
   journalId: string;
   afterQuestIds: readonly string[];
   afterRelationshipMemoryIds: readonly string[];
+  afterWorldFactIds: readonly string[];
+  afterEventOptions: readonly Readonly<{ eventId: string; optionId: string }>[];
 }>;
 
 export type OverworldContactPresentationState = Readonly<{
   character: CampaignCharacterState;
   completedQuestIds: ReadonlySet<string>;
+  worldFactIds?: ReadonlySet<string>;
+  eventOptionIdFor?: (eventId: string) => string | null;
 }>;
 
 function contactView(
@@ -44,6 +48,12 @@ function presentation(
     journalId: overworldContactTalkJournalId(character.id, presentationId),
     afterQuestIds: Object.freeze([...(variant?.after_quests ?? [])]),
     afterRelationshipMemoryIds: Object.freeze([...(variant?.after_relationship_memories ?? [])]),
+    afterWorldFactIds: Object.freeze([...(variant?.after_world_facts ?? [])]),
+    afterEventOptions: Object.freeze(
+      (variant?.after_event_options ?? []).map(({ event_id: eventId, option_id: optionId }) =>
+        Object.freeze({ eventId, optionId }),
+      ),
+    ),
   });
 }
 
@@ -58,18 +68,24 @@ function relationshipMemoryIdsForContact(
   return new Set(relationship?.memories ?? []);
 }
 
-/** Resolve the first authored contact variant whose monotonic campaign proof is satisfied. */
+/** Resolve the first authored contact variant whose campaign proof is satisfied. */
 export function presentOverworldContact(
   character: OverworldCharacter,
   state: OverworldContactPresentationState,
 ): OverworldContactPresentation {
   const relationshipMemoryIds = relationshipMemoryIdsForContact(character, state.character);
+  const worldFactIds = state.worldFactIds ?? new Set<string>();
+  const eventOptionIdFor = state.eventOptionIdFor ?? (() => null);
   const variant =
     character.variants?.find(
       (candidate) =>
         (candidate.after_quests ?? []).every((questId) => state.completedQuestIds.has(questId)) &&
         (candidate.after_relationship_memories ?? []).every((memoryId) =>
           relationshipMemoryIds.has(memoryId),
+        ) &&
+        (candidate.after_world_facts ?? []).every((factId) => worldFactIds.has(factId)) &&
+        (candidate.after_event_options ?? []).every(
+          ({ event_id: eventId, option_id: optionId }) => eventOptionIdFor(eventId) === optionId,
         ),
     ) ?? null;
   return presentation(character, variant);

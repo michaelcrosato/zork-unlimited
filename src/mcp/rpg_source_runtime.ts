@@ -6,6 +6,7 @@ import { compileRpgSource, type CompiledRpgSource } from "../rpg/source.js";
 import { indexRpgPack, initStateForRpgPack } from "../rpg/runner.js";
 import {
   CampaignCharacterImportsSchema,
+  campaignCharacterImportPlayerStateContract,
   campaignCharacterImportTargetIssues,
   type CampaignCharacterImports,
 } from "../rpg/campaign_character_import.js";
@@ -214,25 +215,6 @@ function campaignImportTargetFindings(
   );
 }
 
-function importedFlagTargets(source: RpgWorldQuestSource): string[] {
-  return (source.campaignImports?.rules ?? [])
-    .flatMap((rule) =>
-      rule.type === "background_to_flag" ||
-      rule.type === "ability_to_flag" ||
-      rule.type === "knowledge_to_flag" ||
-      rule.type === "companion_to_flag"
-        ? [rule.target_flag]
-        : [],
-    )
-    .sort();
-}
-
-function importedItemTargets(source: RpgWorldQuestSource): string[] {
-  return (source.campaignImports?.rules ?? [])
-    .flatMap((rule) => (rule.type === "equipment_to_item" ? [rule.target_object] : []))
-    .sort();
-}
-
 function sameFinding(left: Finding, right: Finding): boolean {
   return (
     left.severity === right.severity &&
@@ -248,15 +230,10 @@ function campaignImportDirectStartFindings(
   compiled: CompiledRpgSource,
 ): Finding[] {
   if (source.campaignImports === undefined) return [];
-  const importedFlags = new Set(importedFlagTargets(source));
-  const importedItems = new Set(importedItemTargets(source));
-  const importedVars = new Set(
-    source.campaignImports.rules.flatMap((rule) =>
-      rule.type === "health_current_to_var" || rule.type === "skill_rank_to_var"
-        ? [rule.target_var]
-        : [],
-    ),
-  );
+  const importContract = campaignCharacterImportPlayerStateContract(source.campaignImports);
+  const importedFlags = new Set(importContract.settableFlagIds);
+  const importedItems = new Set(importContract.obtainableObjectIds);
+  const importedVars = new Set(importContract.initialVarRanges.keys());
   const defaultStartState = initStateForRpgPack(indexRpgPack(compiled.pack), 1);
   const conditionImportRefs = (condition: unknown): Set<string> => {
     const refs = new Set<string>();
@@ -357,14 +334,17 @@ function withCampaignCatalogParity(
   result: RpgLoadResult,
 ): RpgLoadResult {
   if (!result.ok) return result;
-  const importFlags = importedFlagTargets(source);
-  const importItems = importedItemTargets(source);
+  const importContract = campaignCharacterImportPlayerStateContract(source.campaignImports);
+  const importFlags = importContract.settableFlagIds;
+  const importItems = importContract.obtainableObjectIds;
+  const importVarRanges = importContract.initialVarRanges;
   const importAwareReport =
-    importFlags.length === 0 && importItems.length === 0
+    importFlags.length === 0 && importItems.length === 0 && importVarRanges.size === 0
       ? result.report
       : validateRpg(result.compiled.pack, {
           extraSettableFlags: importFlags,
           extraObtainable: importItems,
+          extraInitialVarRanges: importVarRanges,
         });
   const findings = [...importAwareReport.findings];
   // An embedded import may make an additional route possible, but public/direct
@@ -382,7 +362,12 @@ function withCampaignCatalogParity(
     ...campaignImportDirectStartFindings(source, result.compiled),
     ...campaignImportCombatGuaranteeFindings(source, result.compiled),
   ];
-  if (parityFindings.length === 0 && importFlags.length === 0 && importItems.length === 0) {
+  if (
+    parityFindings.length === 0 &&
+    importFlags.length === 0 &&
+    importItems.length === 0 &&
+    importVarRanges.size === 0
+  ) {
     return result;
   }
   return freezeLoadResult({

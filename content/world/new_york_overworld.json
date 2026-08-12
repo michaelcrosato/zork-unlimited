@@ -25330,7 +25330,61 @@
       "role": "field archivist",
       "faction": "Survey College",
       "summary": "Blair Drake cross-indexes winter road marks, clinic testimony, and field reports at Albany Campus Row, where a confident warning can save hours and a false certainty can misroute the next relief crew.",
-      "agenda": "After Wolf-Winter, Blair wants one honest operational record: either a fast warning labelled by confidence or a slower audit-ready archive preserving provenance, uncertainty, and route marks. Blair refuses to present either as a Civic legal finding or let one traveler claim both rewards."
+      "agenda": "After Wolf-Winter, Blair wants one honest operational record: either a fast warning labelled by confidence or a slower audit-ready archive preserving provenance, uncertainty, and route marks. Blair refuses to present either as a Civic legal finding or let one traveler claim both rewards.",
+      "variants": [
+        {
+          "id": "winter_return_clinic_thresholds_byre_held",
+          "after_quests": ["wolf_winter"],
+          "after_world_facts": ["fact:wolf_winter_byre_held"],
+          "after_event_options": [
+            {
+              "event_id": "albany_city__campus__event",
+              "option_id": "prioritize_clinic_exposure_thresholds"
+            }
+          ],
+          "summary": "Blair has the truthful held-byre return beside the selected clinic frost-exposure mandate, with its uncertainty notes still attached.",
+          "agenda": "Blair can turn that exact mandate into the bounded clinic threshold card and recovery cot; the route digest remains unavailable, and none of it is a Civic legal finding."
+        },
+        {
+          "id": "winter_return_clinic_thresholds_evacuated",
+          "after_quests": ["wolf_winter"],
+          "after_world_facts": ["fact:wolf_winter_steading_evacuated"],
+          "after_event_options": [
+            {
+              "event_id": "albany_city__campus__event",
+              "option_id": "prioritize_clinic_exposure_thresholds"
+            }
+          ],
+          "summary": "Blair has the truthful evacuation return beside the selected clinic frost-exposure mandate, with its uncertainty notes still attached.",
+          "agenda": "Blair can turn that exact mandate into the bounded clinic threshold card and recovery cot; the route digest remains unavailable, and none of it is a Civic legal finding."
+        },
+        {
+          "id": "winter_return_route_provenance_byre_held",
+          "after_quests": ["wolf_winter"],
+          "after_world_facts": ["fact:wolf_winter_byre_held"],
+          "after_event_options": [
+            {
+              "event_id": "albany_city__campus__event",
+              "option_id": "preserve_traceable_route_provenance"
+            }
+          ],
+          "summary": "Blair has the truthful held-byre return beside the selected traceable-route mandate, with custody gaps and uncertainty preserved.",
+          "agenda": "Blair can turn that exact mandate into the bounded route digest and field cache; the clinic threshold card remains unavailable, and none of it is a Civic legal finding."
+        },
+        {
+          "id": "winter_return_route_provenance_evacuated",
+          "after_quests": ["wolf_winter"],
+          "after_world_facts": ["fact:wolf_winter_steading_evacuated"],
+          "after_event_options": [
+            {
+              "event_id": "albany_city__campus__event",
+              "option_id": "preserve_traceable_route_provenance"
+            }
+          ],
+          "summary": "Blair has the truthful evacuation return beside the selected traceable-route mandate, with custody gaps and uncertainty preserved.",
+          "agenda": "Blair can turn that exact mandate into the bounded route digest and field cache; the clinic threshold card remains unavailable, and none of it is a Civic legal finding."
+        }
+      ]
     },
     {
       "id": "greenburgh_town__civic_core__contact",

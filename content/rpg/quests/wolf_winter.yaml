@@ -4072,9 +4072,59 @@ npcs:
                 - { not_flag: strategy_fortify_committed }
                 - { not_visited: paling_gap }
               goto: cade_fortify
+            - id: current_support
+              aliases: [compare_support, ask_current_support]
+              prompt: "Review how this dispatch's Fieldcraft, oath, June, and Works support affect the four plans; this chooses nothing."
+              conditions:
+                - any_of:
+                    - { var_gte: { name: fieldcraft, value: 4 } }
+                    - { has_flag: relief_oath_limited_duty }
+                    - { has_flag: relief_oath_full_duty }
+                    - { has_flag: june_pike_present }
+                    - { has_flag: works_fortification_prepared }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_current_support
             - id: leave
               aliases: [leave_cade]
               prompt: "Leave Cade."
+              end: true
+        # These notes describe independent imported facts. They deliberately compose instead
+        # of replacing the four-plan scorecard or competing in a combinatorial variant table.
+        - id: cade_current_support
+          npc_text: "Current dispatch support; nothing in this ledger chooses or changes a plan."
+          append_variants:
+            - when: [{ var_gte: { name: fieldcraft, value: 4 } }]
+              text: >
+                Fieldcraft 4 sets starting DEF to 4 and supplies the DRIVE/LURE checks;
+                FORTIFY still rolls Repair.
+            - when: [{ has_flag: relief_oath_limited_duty }]
+              text: >
+                Aid-only adds no DRIVE/HUNT benefit; its clean LURE skips the final ordinary
+                +1 alarm, while household FORTIFY fits and Albany authority bends the promise.
+            - when: [{ has_flag: june_pike_present }]
+              text: >
+                June holds a separate cattle line: HUNT releases her at first blood, LURE can
+                lower a recovered foul, DRIVE keeps its front Crisis cost, and FORTIFY gains
+                her paid brace only on an unstabilized pressure-3 line.
+            - when: [{ has_flag: relief_oath_full_duty }]
+              text: >
+                Full Compact lowers the first Albany-authority FORTIFY seat by 2; other plan
+                checks are unchanged.
+            - when: [{ has_flag: works_fortification_prepared }]
+              text: >
+                Works makes Cade's first FORTIFY seat DC 12 and Albany's DC 12, or DC 10 with
+                Full Compact. At the LURE/HUNT rail it replaces the wedge with Repair DC 12;
+                a miss exposes the marked no-roll splice and raises alarm when set.
+          topics:
+            - id: current_support_back
+              prompt: "Close the current-support ledger and return to Cade's four plans."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave Cade without choosing a plan."
               end: true
         - id: cade_wolves
           # The combat_guaranteed promise spoken aloud — and TRUE, because the validator
@@ -5462,6 +5512,13 @@ endings:
       the slats; the pack is going, and the steading will see spring. June had already
       taken the cattle-first return to Albany with your agreement intact and no field aid.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when:
           - { has_flag: cattle_gate_barred_with_split_guard }
@@ -5526,6 +5583,13 @@ endings:
       the fighting now holds one last line against the dark byre. Cade sees the choice at
       the slats; the pack is going, and the steading will see spring.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when:
           - { has_flag: cattle_gate_barred_with_split_guard }
@@ -5585,6 +5649,13 @@ endings:
       repair at the breach. Cade sees tomorrow's work already saved. June had already
       taken the cattle-first return to Albany with your agreement intact and no field aid.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when:
           - { has_item: split_rail_guard }
@@ -5649,6 +5720,13 @@ endings:
       chose another line for old grey and carried this cross-piece through for daylight
       repair at the breach. Cade sees tomorrow's work already saved.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when:
           - { has_item: split_rail_guard }
@@ -5704,10 +5782,17 @@ endings:
     title: "The Byre Held — June Released"
     text: >
       Grey dawn finds you among warm, whole cattle; the broken pack is silent in the high
-      wood. With only the spear, you held the line between wolves and winter. Cade sees
+      wood. With the spear, you held the line between wolves and winter. Cade sees
       you below and knows. The steading faces a hard spring, not its last. June had already
       taken the cattle-first return to Albany with your agreement intact and no field aid.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when: [{ has_flag: leader_split_guard_set }]
         text: >
@@ -5801,9 +5886,16 @@ endings:
     title: "The Byre Held"
     text: >
       Grey dawn finds you among warm, whole cattle; the broken pack is silent in the high
-      wood. With only the spear, you held the line between wolves and winter. Cade sees
+      wood. With the spear, you held the line between wolves and winter. Cade sees
       you below and knows. The steading faces a hard spring, not its last.
       *** You have won. ***
+    append_variants:
+      - when: [{ has_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin still worn over your coat."
+      - when: [{ has_item: byre_jerkin }, { not_flag: jerkin_donned }]
+        text: "Cade sees the padded byre-jerkin carried in your hands, never donned."
+      - when: [{ not_item: byre_jerkin }]
+        text: "Cade sees that the padded byre-jerkin never left its store peg."
     variants:
       - when: [{ has_flag: leader_split_guard_set }]
         text: >

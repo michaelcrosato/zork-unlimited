@@ -1078,6 +1078,9 @@ describe("New York overworld graph", () => {
       (event) => event.id === "albany_city__campus__event",
     );
     const campusJob = world.local_jobs.find((job) => job.id === "albany_city__campus__job");
+    const blair = world.characters.find(
+      (character) => character.id === "albany_city__campus__contact",
+    );
     const eventScene = campusEvent?.authored_scene;
     const jobScene = campusJob?.authored_scene;
 
@@ -1091,6 +1094,37 @@ describe("New York overworld graph", () => {
     expect(eventScene?.options.map((option) => [option.id, option.terms])).toEqual([
       ["prioritize_clinic_exposure_thresholds", { minutes: 20, renown: 1 }],
       ["preserve_traceable_route_provenance", { minutes: 20, renown: 1 }],
+    ]);
+    expect(blair?.variants).toEqual([
+      expect.objectContaining({
+        id: "winter_return_clinic_thresholds_byre_held",
+        after_quests: ["wolf_winter"],
+        after_world_facts: ["fact:wolf_winter_byre_held"],
+        after_event_options: [
+          {
+            event_id: "albany_city__campus__event",
+            option_id: "prioritize_clinic_exposure_thresholds",
+          },
+        ],
+      }),
+      expect.objectContaining({
+        id: "winter_return_clinic_thresholds_evacuated",
+        after_world_facts: ["fact:wolf_winter_steading_evacuated"],
+      }),
+      expect.objectContaining({
+        id: "winter_return_route_provenance_byre_held",
+        after_world_facts: ["fact:wolf_winter_byre_held"],
+        after_event_options: [
+          {
+            event_id: "albany_city__campus__event",
+            option_id: "preserve_traceable_route_provenance",
+          },
+        ],
+      }),
+      expect.objectContaining({
+        id: "winter_return_route_provenance_evacuated",
+        after_world_facts: ["fact:wolf_winter_steading_evacuated"],
+      }),
     ]);
     expect(jobScene?.options).toHaveLength(4);
     expect(jobScene?.options).toEqual(
@@ -1124,6 +1158,30 @@ describe("New York overworld graph", () => {
           ],
         }),
       ]),
+    );
+  });
+
+  it("rejects contact proofs outside authored quest exports and authored event options", () => {
+    const blairId = "albany_city__campus__contact";
+
+    const missingFact = structuredClone(world);
+    missingFact.characters.find(
+      (character) => character.id === blairId,
+    )!.variants![0]!.after_world_facts![0] = "fact:not_exported_by_any_ending";
+    expect(() => assertOverworldIntegrity(missingFact)).toThrow(/references missing world fact/);
+
+    const missingEvent = structuredClone(world);
+    missingEvent.characters.find(
+      (character) => character.id === blairId,
+    )!.variants![0]!.after_event_options![0]!.event_id = "missing_event";
+    expect(() => assertOverworldIntegrity(missingEvent)).toThrow(/references missing event/);
+
+    const missingOption = structuredClone(world);
+    missingOption.characters.find(
+      (character) => character.id === blairId,
+    )!.variants![0]!.after_event_options![0]!.option_id = "missing_option";
+    expect(() => assertOverworldIntegrity(missingOption)).toThrow(
+      /references missing event option/,
     );
   });
 
@@ -1302,9 +1360,7 @@ describe("New York overworld graph", () => {
     noCondition.characters
       .find((character) => character.id === haydenId)!
       .variants!.find((variant) => variant.id === "wolf_winter_closed")!.after_quests = [];
-    expect(() => assertOverworldIntegrity(noCondition)).toThrow(
-      /has no quest or relationship-memory condition/,
-    );
+    expect(() => assertOverworldIntegrity(noCondition)).toThrow(/has no campaign condition/);
 
     const unboundMemory = structuredClone(world);
     const unboundHayden = unboundMemory.characters.find((character) => character.id === haydenId)!;

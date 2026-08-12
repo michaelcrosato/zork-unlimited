@@ -14,6 +14,7 @@ import {
 } from "./campaign_character_state.js";
 import {
   applyCampaignConsequences,
+  deriveCampaignWorldFactIds,
   type CampaignConsequenceEffect,
 } from "./campaign_consequences.js";
 import { campaignServiceLocalJobOptionKey } from "./campaign_service_rules.js";
@@ -36,7 +37,10 @@ import {
   assertSnapshotEventResolutionProofs,
   assertSnapshotRegionalArcCompletionProofs,
 } from "./session_event_resolution.js";
-import { assertSnapshotTimeline } from "./session_journal_timeline.js";
+import {
+  assertSnapshotTimeline,
+  overworldJournalEntryPrecedes,
+} from "./session_journal_timeline.js";
 import { replaceOverworldJournalEntries } from "./session_journal_store.js";
 import {
   assertSnapshotDiscoveredAreaCountReplay,
@@ -108,6 +112,7 @@ import {
   type OverworldCampaignBoundaryReplayProof,
 } from "./session_resource_replay.js";
 import { restoreOverworldPendingRoadEncounter } from "./session_road_encounters.js";
+import { questCampaignEffectGroupsForOutcomes } from "./session_quests.js";
 import {
   type OverworldJournalEntry,
   type OverworldJournalDecisionBoundary,
@@ -1916,6 +1921,41 @@ export function planOverworldSessionSnapshotRestore(args: {
     localActionJournalSources,
     journalTimeline,
     campaignReplay.characterAt,
+    (entry) => {
+      const completedOutcomesAtContact = new Map(
+        [...questOutcomeIds].filter(([questId]) =>
+          overworldJournalEntryPrecedes(
+            journalTimeline.eventResolutionProofs.recordedAtById,
+            journalTimeline.journalIndexById,
+            `quest_done:${questId}`,
+            entry.id,
+          ),
+        ),
+      );
+      return new Set(
+        deriveCampaignWorldFactIds(
+          questCampaignEffectGroupsForOutcomes(indexes.questsById, completedOutcomesAtContact),
+        ),
+      );
+    },
+    (entry, _recordedAt, eventId) => {
+      const proofId = `resolve:${eventId}`;
+      if (
+        !overworldJournalEntryPrecedes(
+          journalTimeline.eventResolutionProofs.recordedAtById,
+          journalTimeline.journalIndexById,
+          proofId,
+          entry.id,
+        )
+      ) {
+        return null;
+      }
+      return (
+        snapshot.journalEntries.find((candidate) => candidate.id === proofId)?.localSceneProof
+          ?.optionId ?? null
+      );
+    },
+    snapshot.worldHash === worldHash,
   );
   assertSnapshotEventResolutionProofs(
     resolvedEventIds,

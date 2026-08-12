@@ -13,6 +13,8 @@ import type { RpgAction } from "../../src/api/types.js";
 import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import { compactRpgObservation } from "../../src/mcp/compact_rpg_observation.js";
 import { createToolApi } from "../../src/mcp/tools.js";
+import { campaignCharacterImportPlayerStateContract } from "../../src/rpg/campaign_character_import.js";
+import { endingText } from "../../src/rpg/model.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
   buildRpgRules,
@@ -23,6 +25,7 @@ import {
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { classifyRpgJourneyDecision } from "../../src/world/journey_decision.js";
+import { loadOverworldManifest } from "../../src/world/source.js";
 import { relabelRpgPack } from "./support/relabel_rpg.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
@@ -31,6 +34,11 @@ const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
 const rules = buildRpgRules(index);
 const step = makeStep(rules);
+const wolfCampaignImports = loadOverworldManifest(process.cwd()).quests.find(
+  (quest) => quest.id === "wolf_winter",
+)?.campaign_imports;
+if (!wolfCampaignImports) throw new Error("Wolf-Winter must declare campaign imports");
+const wolfImportContract = campaignCharacterImportPlayerStateContract(wolfCampaignImports);
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 const CADE_LURE_ROOT_LABEL =
@@ -93,25 +101,124 @@ function playerConsequenceState(state: GameState): Omit<GameState, "step"> {
 describe("Wolf-Winter dialogue surface", () => {
   it("the pack still validates green", () => {
     const report = validateRpg(pack, {
-      extraSettableFlags: [
-        "jamie_market_testimony_certified",
-        "hayden_frost_report_certified",
-        "relief_oath_full_duty",
-        "relief_oath_limited_duty",
-        "relief_oath_unaffiliated_bond",
-        "works_fortification_prepared",
-        "drover_route_prepared",
-        "relief_protocol_prepared",
-        "june_pike_present",
-        "approach_exposed_ridge",
-        "approach_sheltered_stockway",
-        "relief_cade_fodder_allocated",
-        "relief_resident_shelter_allocated",
-        "relief_mobile_reserve_allocated",
-      ],
+      extraSettableFlags: wolfImportContract.settableFlagIds,
+      extraObtainable: wolfImportContract.obtainableObjectIds,
+      extraInitialVarRanges: wolfImportContract.initialVarRanges,
     });
     expect(report.ok).toBe(true);
     expect(report.findings.filter((finding) => finding.severity === "error")).toEqual([]);
+  });
+
+  it("composes every current dispatch support note without changing plan authority", () => {
+    const currentSupport = pack.npcs
+      .find((npc) => npc.id === "houndsman")
+      ?.dialogue.nodes.find((node) => node.id === "cade_current_support");
+    expect(currentSupport?.variants).toBeUndefined();
+    expect(currentSupport?.append_variants?.map((fragment) => fragment.when)).toEqual([
+      [{ var_gte: { name: "fieldcraft", value: 4 } }],
+      [{ has_flag: "relief_oath_limited_duty" }],
+      [{ has_flag: "june_pike_present" }],
+      [{ has_flag: "relief_oath_full_duty" }],
+      [{ has_flag: "works_fortification_prepared" }],
+    ]);
+
+    let state = startCadeDialogue();
+    state = {
+      ...state,
+      vars: { ...state.vars, fieldcraft: 4 },
+      flags: {
+        ...state.flags,
+        relief_oath_limited_duty: true,
+        june_pike_present: true,
+        works_fortification_prepared: true,
+      },
+    };
+    const before = playerConsequenceState(state);
+    const support = step(state, { type: "ASK", npc: "houndsman", topic: "current_support" });
+    expect(support.ok).toBe(true);
+    if (!support.ok) throw new Error("unreachable");
+    state = support.state;
+    const text = narrations(support.events).join("\n");
+    expect(text).toContain("Fieldcraft 4 sets starting DEF to 4");
+    expect(text).toContain("Aid-only adds no DRIVE/HUNT benefit");
+    expect(text).toContain("June holds a separate cattle line");
+    expect(text).toContain("Works makes Cade's first FORTIFY seat DC 12");
+    expect(text).not.toContain("Full Compact lowers");
+    expect(text.indexOf("Fieldcraft 4")).toBeLessThan(text.indexOf("Aid-only"));
+    expect(text.indexOf("Aid-only")).toBeLessThan(text.indexOf("June"));
+    expect(text.indexOf("June")).toBeLessThan(text.indexOf("Works"));
+    expect(playerConsequenceState(state)).toEqual(before);
+    expect(state.flags.strategy_lure_committed).not.toBe(true);
+    expect(state.flags.strategy_drive_committed).not.toBe(true);
+    expect(state.flags.strategy_fortify_committed).not.toBe(true);
+
+    let fullCompactState = startCadeDialogue();
+    fullCompactState = {
+      ...fullCompactState,
+      flags: {
+        ...fullCompactState.flags,
+        relief_oath_full_duty: true,
+        works_fortification_prepared: true,
+      },
+    };
+    const fullCompactBefore = playerConsequenceState(fullCompactState);
+    const fullCompactSupport = step(fullCompactState, {
+      type: "ASK",
+      npc: "houndsman",
+      topic: "current_support",
+    });
+    expect(fullCompactSupport.ok).toBe(true);
+    if (!fullCompactSupport.ok) throw new Error("unreachable");
+    fullCompactState = fullCompactSupport.state;
+    const fullCompactText = narrations(fullCompactSupport.events).join("\n");
+    expect(fullCompactText).toContain("Full Compact lowers");
+    expect(fullCompactText).toContain("Works makes Cade's first FORTIFY seat DC 12");
+    expect(fullCompactText.indexOf("Full Compact")).toBeLessThan(fullCompactText.indexOf("Works"));
+    expect(fullCompactText).not.toContain("Aid-only adds");
+    expect(playerConsequenceState(fullCompactState)).toEqual(fullCompactBefore);
+  });
+
+  it("composes worn, carried, and absent jerkin truth onto every held-byre ending", () => {
+    const base = initStateForRpgPack(index, 541);
+    const endingIds = [
+      "ending_held_gate_barred_june_released",
+      "ending_held_gate_barred",
+      "ending_held_timber_saved_june_released",
+      "ending_held_timber_saved",
+      "ending_held_june_released",
+      "ending_held",
+    ];
+
+    for (const endingId of endingIds) {
+      const ending = pack.endings.find((candidate) => candidate.id === endingId)!;
+      const absent = endingText(ending, base);
+      const carried = endingText(ending, {
+        ...base,
+        inventory: [...base.inventory, "byre_jerkin"],
+      });
+      const worn = endingText(ending, {
+        ...base,
+        flags: { ...base.flags, jerkin_donned: true },
+        inventory: [...base.inventory, "byre_jerkin"],
+      });
+
+      expect(absent).toContain("byre-jerkin never left its store peg");
+      expect(absent).not.toContain("still worn over your coat");
+      expect(absent).not.toContain("carried in your hands");
+      expect(carried).toContain("byre-jerkin carried in your hands, never donned");
+      expect(carried).not.toContain("still worn over your coat");
+      expect(worn).toContain("byre-jerkin still worn over your coat");
+      expect(worn).not.toContain("carried in your hands");
+    }
+
+    const held = pack.endings.find((candidate) => candidate.id === "ending_held")!;
+    const patientWorn = endingText(held, {
+      ...base,
+      flags: { ...base.flags, jerkin_donned: true, leader_waited_out: true },
+      inventory: [...base.inventory, "byre_jerkin"],
+    });
+    expect(patientWorn).toContain("You won by the patient line");
+    expect(patientWorn).toContain("byre-jerkin still worn over your coat");
   });
 
   it("uses authored topic ids instead of doubled ask_ask ids", () => {

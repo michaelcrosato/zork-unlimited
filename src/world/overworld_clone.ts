@@ -63,6 +63,14 @@ export function cloneOverworldCharacter(character: OverworldCharacter): Overworl
                   after_relationship_memories: [...variant.after_relationship_memories],
                 }
               : {}),
+            ...(variant.after_world_facts
+              ? { after_world_facts: [...variant.after_world_facts] }
+              : {}),
+            ...(variant.after_event_options
+              ? {
+                  after_event_options: variant.after_event_options.map((option) => ({ ...option })),
+                }
+              : {}),
           })),
         }
       : {}),

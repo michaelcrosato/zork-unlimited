@@ -16,7 +16,7 @@ import {
   type ObjectLocation,
 } from "../core/object_locations.js";
 import { evalConditions } from "../core/conditions.js";
-import { reactiveName, reactiveText } from "../core/reactive_text.js";
+import { appendMatchingText, reactiveName, reactiveText } from "../core/reactive_text.js";
 import type { GameState } from "../core/state.js";
 import type { DialogueNode, Ending, GameObject, Npc, Room, RpgPack } from "./schema.js";
 import { initRuntimeState } from "./state_init.js";
@@ -121,7 +121,11 @@ export function objectName(object: GameObject, state: GameState): string {
 }
 
 export function nodeText(node: DialogueNode, state: GameState): string {
-  return reactiveText(node.npc_text, node.variants, state);
+  return appendMatchingText(
+    reactiveText(node.npc_text, node.variants, state),
+    node.append_variants,
+    state,
+  );
 }
 
 /** Resolve the first matching NPC presentation variant without changing identity. */
@@ -151,7 +155,11 @@ export function npcsInRoom(index: RpgModelIndex, state: GameState, room: string)
 }
 
 export function endingText(ending: Ending, state: GameState): string {
-  return reactiveText(ending.text, ending.variants, state);
+  return appendMatchingText(
+    reactiveText(ending.text, ending.variants, state),
+    ending.append_variants,
+    state,
+  );
 }
 
 export function isLocked(index: RpgModelIndex, state: GameState, id: string): boolean {

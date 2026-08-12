@@ -74,6 +74,8 @@ const BYRE_MOUTH_ROUTE_GUIDANCE_SOURCE_HASH =
   "95a441318c374dd0c8f45bf42f7529c11643259c0b5364ab3b3260980af6e261";
 const LURE_ROOT_COMMIT_CUE_SOURCE_HASH =
   "7008beadde22a9f7b69ffeb4a21bbe358e6a98ff95e82f6d04b18fefc14dba6d";
+const REACTIVE_TRUTH_SOURCE_HASH =
+  "f3519e0655912f26e3eed58a6a23ca68b493574595d52763ae9fbb92c34ae42d";
 const YEARLING_DEFEAT_JOURNAL =
   "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 const CADE_HUNT_EXIT_LABEL =
@@ -268,6 +270,10 @@ describe("Wolf-Winter compact authored prose", () => {
       ...(node.variants ?? []).map((variant, ordinal) => ({
         label: `node:${node.id}.variant[${ordinal}]`,
         text: variant.text,
+      })),
+      ...(node.append_variants ?? []).map((fragment, ordinal) => ({
+        label: `node:${node.id}.append_variant[${ordinal}]`,
+        text: fragment.text,
       })),
     ]);
     for (const { label, text } of lines) {
@@ -477,8 +483,9 @@ describe("Wolf-Winter compact authored prose", () => {
     },
   );
 
-  it("keeps each copy-only revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(LURE_ROOT_COMMIT_CUE_SOURCE_HASH);
+  it("keeps each revision distinct at the gauntlet and source-hash boundaries", () => {
+    expect(loaded.compiled.contentHash).toBe(REACTIVE_TRUTH_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(LURE_ROOT_COMMIT_CUE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(BYRE_MOUTH_ROUTE_GUIDANCE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(FODDER_LOFT_PENDING_COPY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(COMMITTED_LURE_YARD_GUIDANCE_SOURCE_HASH);
@@ -548,6 +555,10 @@ describe("Wolf-Winter compact authored prose", () => {
         ...(ending.variants ?? []).map((variant, ordinal) => ({
           label: `ending:${ending.id}.variant[${ordinal}]`,
           text: variant.text,
+        })),
+        ...(ending.append_variants ?? []).map((fragment, ordinal) => ({
+          label: `ending:${ending.id}.append_variant[${ordinal}]`,
+          text: fragment.text,
         })),
       ];
       for (const { label, text } of texts) {

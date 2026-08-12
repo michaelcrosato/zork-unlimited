@@ -3520,6 +3520,9 @@ export class OverworldSession {
       characterId,
       charactersById: this.charactersById,
       completedQuestIds: this.completedQuestIds,
+      campaignWorldFactIds: new Set(this.campaignWorldFactIds()),
+      eventOptionIdFor: (eventId) =>
+        this.journalEntriesById.get(`resolve:${eventId}`)?.localSceneProof?.optionId ?? null,
       currentTownId: this.currentId,
       currentAreaId: () => this.currentAreaIdOrThrow(),
       currentTownName: current.name,

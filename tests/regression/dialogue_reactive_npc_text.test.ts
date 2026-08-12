@@ -32,6 +32,7 @@ import {
   enumerateRpgActions,
 } from "../../src/rpg/runner.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
+import { nodeText } from "../../src/rpg/model.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
@@ -142,5 +143,49 @@ describe("bug_0246 — dead-reactive-content guards cover dialogue node variants
     ]);
     const codes = validateRpg(bad).findings.map((f) => f.code);
     expect(codes).toContain("UNSATISFIABLE_CONDITION");
+  });
+});
+
+describe("additive reactive text composes independent current facts", () => {
+  it("appends every matching dialogue fragment in declaration order", () => {
+    const clone: RpgPack = structuredClone(pack);
+    const root = clone.npcs[0]!.dialogue.nodes.find((node) => node.id === "pell_root")!;
+    root.npc_text = "Base terms.";
+    root.variants = [{ when: [{ has_flag: "heard_walk" }], text: "Selected terms." }];
+    root.append_variants = [
+      { when: [{ has_flag: "heard_walk" }], text: "Walk proof." },
+      { when: [{ has_flag: "heard_plan" }], text: "Plan proof." },
+    ];
+    const cloneIndex = indexRpgPack(clone);
+    const state = {
+      ...initStateForRpgPack(cloneIndex, 11),
+      flags: { heard_walk: true, heard_plan: true },
+    };
+    const cloneRoot = cloneIndex.npcs
+      .get("pell")!
+      .dialogue.nodes.find((node) => node.id === "pell_root")!;
+    // Exercise the same resolver used by both observations and dialogue narration.
+    expect(nodeText(cloneRoot, state)).toBe("Selected terms. Walk proof. Plan proof.");
+  });
+
+  it("rejects contradictory additive guards without treating lawful overlap as shadowing", () => {
+    const clone: RpgPack = structuredClone(pack);
+    const root = clone.npcs[0]!.dialogue.nodes.find((node) => node.id === "pell_root")!;
+    root.append_variants = [
+      { when: [{ has_flag: "heard_walk" }], text: "first" },
+      { when: [{ has_flag: "heard_walk" }], text: "lawful overlap" },
+    ];
+    expect(validateRpg(clone).findings.map((finding) => finding.code)).not.toContain(
+      "UNREACHABLE_VARIANT",
+    );
+    root.append_variants = [
+      {
+        when: [{ has_flag: "heard_walk" }, { not_flag: "heard_walk" }],
+        text: "impossible",
+      },
+    ];
+    expect(validateRpg(clone).findings.map((finding) => finding.code)).toContain(
+      "UNSATISFIABLE_CONDITION",
+    );
   });
 });

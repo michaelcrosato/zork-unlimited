@@ -416,6 +416,16 @@ function serializedRpgProseResponse(pack: RpgPack): number {
           text: `${npc.name}: "${variant.text}"`,
         });
       }
+      for (const fragment of node.append_variants ?? []) {
+        dialogues.push({
+          label: `npc:${npc.id}.${node.id}.append_variant`,
+          text: fragment.text.trimEnd(),
+        });
+        narrations.push({
+          label: `npc:${npc.id}.${node.id}.append_variant`,
+          text: `${npc.name}: "${fragment.text}"`,
+        });
+      }
     }
   }
   for (const enemy of pack.enemies) {
@@ -425,7 +435,11 @@ function serializedRpgProseResponse(pack: RpgPack): number {
   }
   const scoreSuffix = `\n\nFinal score: ${pack.meta.max_score} of ${pack.meta.max_score}.`;
   for (const ending of pack.endings) {
-    const variants = [ending.text, ...(ending.variants ?? []).map((variant) => variant.text)];
+    const variants = [
+      ending.text,
+      ...(ending.variants ?? []).map((variant) => variant.text),
+      ...(ending.append_variants ?? []).map((fragment) => fragment.text),
+    ];
     for (const text of variants) {
       const nested = text.trimEnd();
       endings.push({ label: `ending:${ending.id}`, text: nested });
@@ -644,7 +658,11 @@ describe("shipped compact prose fidelity", () => {
 
     for (const npc of pack.npcs) {
       for (const node of npc.dialogue.nodes) {
-        const dialogue = [node.npc_text, ...(node.variants ?? []).map((variant) => variant.text)];
+        const dialogue = [
+          node.npc_text,
+          ...(node.variants ?? []).map((variant) => variant.text),
+          ...(node.append_variants ?? []).map((fragment) => fragment.text),
+        ];
         for (const text of dialogue) {
           expectExact(
             `npc:${npc.id}.node:${node.id}`,
@@ -669,7 +687,11 @@ describe("shipped compact prose fidelity", () => {
 
     const scoreSuffix = `\n\nFinal score: ${pack.meta.max_score} of ${pack.meta.max_score}.`;
     for (const ending of pack.endings) {
-      const texts = [ending.text, ...(ending.variants ?? []).map((variant) => variant.text)];
+      const texts = [
+        ending.text,
+        ...(ending.variants ?? []).map((variant) => variant.text),
+        ...(ending.append_variants ?? []).map((fragment) => fragment.text),
+      ];
       for (const text of texts) {
         const nested = text.trimEnd();
         expectExact(

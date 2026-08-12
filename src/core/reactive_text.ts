@@ -3,7 +3,8 @@
  *
  * Rooms, objects, dialogue nodes, scenes, and endings all use the same rule:
  * scan authored variants in order, use the first whose conditions hold, else
- * fall back to the base string.
+ * fall back to the base string. Surfaces that opt into additive fragments may
+ * then append every independently matching authored note in declaration order.
  */
 import { evalConditions, type Condition } from "./conditions.js";
 import type { GameState } from "./state.js";
@@ -28,6 +29,27 @@ export function reactiveText(
   state: GameState,
 ): string {
   return firstMatchingVariant(variants, state)?.text ?? base;
+}
+
+/**
+ * Append every matching authored fragment without turning independent facts
+ * into a first-match competition. Authored whitespace is preserved; one space
+ * is inserted only when neither adjoining boundary provides one.
+ */
+export function appendMatchingText(
+  base: string,
+  fragments: readonly TextVariant[] | undefined,
+  state: GameState,
+): string {
+  let composed = base;
+  for (const fragment of fragments ?? []) {
+    if (!evalConditions(fragment.when, state)) continue;
+    if (composed.length > 0 && !/\s$/.test(composed) && !/^\s/.test(fragment.text)) {
+      composed += " ";
+    }
+    composed += fragment.text;
+  }
+  return composed;
 }
 
 export function reactiveName(

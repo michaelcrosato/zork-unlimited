@@ -275,6 +275,7 @@ export const DialogueNodeSchema = z
     id: z.string().min(1),
     npc_text: z.string().min(1),
     variants: z.array(DialogueNodeVariantSchema).optional(),
+    append_variants: z.array(DialogueNodeVariantSchema).min(1).optional(),
     effects: z.array(EffectSchema).default([]),
     topics: z.array(DialogueTopicSchema).default([]),
   })
@@ -347,6 +348,7 @@ export const EndingSchema = z
     title: z.string().min(1),
     text: z.string().min(1),
     variants: z.array(EndingVariantSchema).optional(),
+    append_variants: z.array(EndingVariantSchema).min(1).optional(),
     death: z.boolean().default(false),
   })
   .strict();
