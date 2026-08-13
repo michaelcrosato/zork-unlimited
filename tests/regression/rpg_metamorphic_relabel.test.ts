@@ -34,7 +34,8 @@
  *      `death_ending` / `on_defeat` effects) is rewritten to an opaque `mx_<n>` token by
  *      one consistent bijection, while all prose, command vocabulary, and the reserved
  *      vars `{score, hp, attack, defense}` are left byte-identical (see relabel_rpg.ts);
- *   3. recomputes the same three artefacts on the twin (with the SAME best/worst bracket);
+ *   3. recomputes the same three artefacts on the twin (with the SAME best/worst bracket
+ *      and any trusted external validator context carried through the bijection);
  *   4. asserts the metamorphic relation: the twin's reached-ending set equals the
  *      original's mapped through the bijection; the distinct-state counts are EQUAL (a
  *      graph isomorphism — including the synthesised `__enemy_hp_<id>` vars, which follow
@@ -55,6 +56,7 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { wolfWinterDispatchOverlayFlagForPack } from "../../src/core/embedded_launch_overlay_receipt.js";
 import type { GameState } from "../../src/core/state.js";
 import type { Rng } from "../../src/core/rng.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
@@ -63,6 +65,11 @@ import { RpgPackSchema, type RpgPack } from "../../src/rpg/schema.js";
 import { validateRpg } from "../../src/validate/rpg_validator.js";
 import { exhaustiveEndingsMulti, type ExhaustiveResult } from "./support/exhaustive_endings.js";
 import { relabelRpgPack } from "./support/relabel_rpg.js";
+import {
+  seededOpeningRelabelTransferSupportForPacks,
+  seededOpeningTransferFailureMessage,
+  seededOpeningTransferSupportForPack,
+} from "./support/seeded_opening_transfer.js";
 
 const PACK_DIR = "content/rpg/quests";
 const packFiles = readdirSync(PACK_DIR)
@@ -111,8 +118,8 @@ function census(pack: RpgPack): ExhaustiveResult {
   return exhaustiveEndingsMulti(ruleSets, start, MAX_STATES);
 }
 
-const sortedCodes = (pack: RpgPack): string[] =>
-  validateRpg(pack)
+const sortedCodes = (pack: RpgPack, extraSettableFlags: readonly string[] = []): string[] =>
+  validateRpg(pack, { extraSettableFlags })
     .findings.map((f) => f.code)
     .sort();
 
@@ -130,6 +137,11 @@ describe("bug_0212 — RPG pack behaviour is invariant under a consistent identi
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const original = loaded.compiled.pack;
+        const originalSeededOpeningSupport = seededOpeningTransferSupportForPack(original);
+        expect(
+          originalSeededOpeningSupport.unsupported,
+          seededOpeningTransferFailureMessage(file, originalSeededOpeningSupport),
+        ).toBe(false);
 
         // --- Original artefacts (ground truth) ---
         const orig = census(original);
@@ -139,6 +151,16 @@ describe("bug_0212 — RPG pack behaviour is invariant under a consistent identi
 
         // --- Relabel into a structurally isomorphic twin ---
         const { pack: twin, relabeler } = relabelRpgPack(original);
+        const mapId = (id: string): string => relabeler.map.get(id) ?? id;
+        const twinSeededOpeningSupport = seededOpeningRelabelTransferSupportForPacks(
+          original,
+          twin,
+          mapId,
+        );
+        expect(
+          twinSeededOpeningSupport.unsupported,
+          seededOpeningTransferFailureMessage(`${file} relabeled twin`, twinSeededOpeningSupport),
+        ).toBe(false);
 
         // The twin must still be a schema-valid RPG pack (a malformed relabel — a dropped
         // key, or an extra key under the .strict() schema — fails loudly here).
@@ -156,7 +178,15 @@ describe("bug_0212 — RPG pack behaviour is invariant under a consistent identi
         // --- Twin artefacts (same best/worst bracket) ---
         const twinResult = census(twin);
         expect(twinResult.cappedOut, `twin census hit the ${MAX_STATES} cap`).toBe(false);
-        const twinCodes = sortedCodes(twin);
+        // Validation parity consistently relabels trusted external context too. The
+        // opaque twin does not claim the literal production launch overlay; validateRpg's
+        // documented extraSettableFlags boundary supplies the mapped pre-turn capability.
+        // This changes validator context only, never the pack/hash or reachable graph.
+        const launchOverlayFlag = wolfWinterDispatchOverlayFlagForPack(original.meta.id);
+        const twinCodes = sortedCodes(
+          twin,
+          launchOverlayFlag === undefined ? [] : [mapId(launchOverlayFlag)],
+        );
 
         // --- The metamorphic relation ---
         // (1) Reachability is preserved exactly: the twin reaches precisely the original's

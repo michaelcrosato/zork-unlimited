@@ -174,3 +174,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `b096b4e4` chose Road-Warden setup, sheltered approach, and FORTIFY; it held through dawn, continued at goal one, completed Gallowmere, then ended at goal two on decision 38. Clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
 - Self-critique/next: FORTIFY is encouraging legitimate plurality, but one Spark report is not Terra certification and ratings remain 4/4. Before spending the reserved pilot, close the audited seeded-opening coverage gap in the older ending/menu/score/soft-lock/metamorphic proofs, then consume compiled recommendation `3d254abc` and reduce preparation-versus-commitment density.
 - Feedback/guard: fresh 11-report compile `20260813T182238Z` recommends `3d254abc`; smoke crawl (6,000 steps), deep crawl (1,536,000 steps), exact health (458 files/4,063 tests), UI typecheck, all 12 packs, cycle-start integrity, and pure provenance are green.
+## AFK Cycle 2026-08-13T20-49-14-883Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-13T20-49-14-883Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-3d254abc (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

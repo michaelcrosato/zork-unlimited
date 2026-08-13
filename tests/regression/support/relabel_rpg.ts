@@ -160,6 +160,14 @@ function relabelSkillCheck(
     ...(s.stakes ? { stakes: s.stakes } : {}),
     on_success: s.on_success.map((e) => relabelEffect(e, r, rv)),
     on_failure: s.on_failure.map((e) => relabelEffect(e, r, rv)),
+    ...(s.on_failure_when
+      ? {
+          on_failure_when: s.on_failure_when.map((branch) => ({
+            conditions: branch.conditions.map((condition) => relabelCondition(condition, r, rv)),
+            effects: branch.effects.map((effect) => relabelEffect(effect, r, rv)),
+          })),
+        }
+      : {}),
   };
 }
 

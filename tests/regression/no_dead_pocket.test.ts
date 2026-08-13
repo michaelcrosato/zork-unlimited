@@ -62,6 +62,10 @@ import { indexRpgPack, buildRpgRules, initStateForRpgPack } from "../../src/rpg/
 import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 import type { RpgAction } from "../../src/api/types.js";
 import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
+import {
+  seededOpeningTransferFailureMessage,
+  seededOpeningTransferSupportForPack,
+} from "./support/seeded_opening_transfer.js";
 
 // Same backstop as the ending suites. The route-rich Wolf-Winter progress graph
 // exhausts at 315,100 states (measured 2026-07-14). The cap keeps bounded headroom while a
@@ -223,6 +227,11 @@ describe("bug_0150 — every progress-reachable state of every shipped pack is L
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const pack = loaded.compiled.pack;
+        const seededOpeningSupport = seededOpeningTransferSupportForPack(pack);
+        expect(
+          seededOpeningSupport.unsupported,
+          seededOpeningTransferFailureMessage(file, seededOpeningSupport),
+        ).toBe(false);
         // Load-bearing assumption guard: only a monotone, safely crossed player-HP upper
         // bound is supported. Every other raw HP route still fails loudly.
         const hpSupport = hpConditionSupportForPack(pack);

@@ -24,6 +24,10 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
 import {
+  seededOpeningTransferFailureMessage,
+  seededOpeningTransferSupportForPack,
+} from "./support/seeded_opening_transfer.js";
+import {
   isWolfReleasedHuntSolverAction,
   replayRpgCampaignSeed,
   WOLF_JUNE_RELEASE_SEED,
@@ -119,6 +123,11 @@ describe("every declared RPG ending is reachable and renders cleanly", () => {
         expect(loaded.ok).toBe(true);
         if (!loaded.ok) return;
         const pack = loaded.compiled.pack;
+        const seededOpeningSupport = seededOpeningTransferSupportForPack(pack);
+        expect(
+          seededOpeningSupport.unsupported,
+          seededOpeningTransferFailureMessage(file, seededOpeningSupport),
+        ).toBe(false);
         const declared = new Set(pack.endings.map((ending) => ending.id));
         expect(declared.size).toBeGreaterThan(0);
 
