@@ -180,3 +180,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Authority: 70/70 native calls, zero wrappers/search/compaction, disabled collaboration, exact CLI 0.146/xhigh/hash 3000, empty reasoning summaries, and report/receipt/build binding verified.
 - Self-critique/next: transport is proven for one run, not yet fleet-certified; address dense Albany plan comparison, compact tuples, and in-quest checkpoint interruption before the required fresh 10-player pilot.
 - Feedback/guard: compiled 9 actionable reports into `20260813T082609Z` (10 hot spots); both crawls, 454 files/3,997 tests, UI typecheck, 12 packs, pure provenance, and final seal are green.
+## AFK Cycle 2026-08-13T08-57-33-104Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-13T08-57-33-104Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-ebb6e090 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

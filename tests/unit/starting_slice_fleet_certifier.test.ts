@@ -634,6 +634,7 @@ function currentDeathReceipt() {
 function reportText(receipt: unknown): string {
   const interview = {
     schema_version: 2,
+    issue_consistency_version: 1,
     play_mode: "pure",
     start_surface: "fresh_overworld",
     retention_eligible: true,
@@ -658,6 +659,10 @@ Played the opening naturally to its checkpoint.
 ## Understandable & fun?
 
 Clarity 5/5 and enjoyment 5/5.
+
+## Bugs or design flaws
+
+None found.
 
 ## Verdict
 
@@ -2760,9 +2765,21 @@ describe("closed fleet filesystem integrity", () => {
 
 I played naturally until the game offered its checkpoint and then ended.
 
+## Did it work mechanically?
+
+Yes. The game tools and state transitions worked throughout.
+
 ## Understandable & fun?
 
 Clarity 5/5 and enjoyment 5/5.
+
+## Confusion / friction points
+
+None.
+
+## Bugs or design flaws
+
+None found.
 
 ## Verdict
 

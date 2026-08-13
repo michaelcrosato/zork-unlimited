@@ -2331,6 +2331,11 @@ function validateAuthenticatedStartingSliceCohort(
         provider: rowProvider,
         model: row.model,
         build: { ...summary.build, tracked_worktree_clean: true },
+        // Recovery is independently forbidden for pilot/authority cohorts. Let
+        // the artifact path authenticate it fully so the certifier reports that
+        // stronger existing rejection instead of short-circuiting on a marker
+        // that historical recovery could not have emitted.
+        requireStructuredIssueConsistency: row.report_recovered !== true,
       },
     );
     if (!artifactValidation.ok) {
@@ -2568,6 +2573,7 @@ function validateAuthenticatedStartingSliceCohort(
 
     const verification = verifyBlindReportText(reportText, {
       requiredPlayMode: "pure",
+      requireStructuredIssueConsistency: row.report_recovered !== true,
       runSidecar: sidecar,
     });
     if (!verification.ok) {

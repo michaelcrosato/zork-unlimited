@@ -1243,6 +1243,7 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner).toContain("--play-mode");
     expect(runner).toContain("--run-evidence");
     expect(runner).toContain("--require-mode pure");
+    expect(runner.match(/--require-issue-consistency/g)).toHaveLength(3);
     expect(runner).not.toContain(`--permission-mode ${RETIRED_PERMISSION_MODE}`);
     // Structural flags survive PowerShell's `--` stripping via launcher recovery.
     expect(launcher).toContain('"--overworld"');
@@ -1833,6 +1834,7 @@ exit 93
     expect(runner).toContain("assert_launch_provenance_unchanged");
     expect(runner).not.toContain('--write-run-sidecar "$RUN_SIDECAR_ARG"');
     expect(runner.match(/--write-run-sidecar "\$PRIVATE_RUN_SIDECAR_ARG"/g)).toHaveLength(2);
+    expect(runner.match(/--require-issue-consistency/g)).toHaveLength(3);
 
     const privateVerification = runner.indexOf('--write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG"');
     const evidencePublication = runner.indexOf('--destination "$DURABLE_RUN_EVIDENCE_ARG"');

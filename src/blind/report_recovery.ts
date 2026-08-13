@@ -189,7 +189,7 @@ Do not call any tool. Do not continue, replay, revise, or invent gameplay. Retur
 
 The report's unique prose ratings are binding: clarity must be ${ratings.clarity} and enjoyment must be ${ratings.enjoyment}.
 
-Required fields: clarity, enjoyment, goal_understood, got_stuck, confusions, bugs, best_moment, worst_moment, would_replay, verdict. Each bug must contain exactly where, severity (S0-S4), and note.
+Required fields: clarity, enjoyment, goal_understood, got_stuck, confusions, bugs, best_moment, worst_moment, would_replay, verdict. Each bug must contain exactly where, severity (S0-S4), and note. Every severity-tagged finding anywhere in the original report prose must be covered by a bugs entry with the same severity and recognizable place or concern identity. Distinct concerns need distinct entries; repeated mentions of the same concern share one entry.
 `;
 }
 
@@ -416,6 +416,7 @@ export function extractRecoveredReport(input: ExtractRecoveredReportInput): Reco
   } as const;
   const interview = {
     schema_version: 2,
+    issue_consistency_version: 1,
     play_mode: "pure",
     start_surface: "fresh_overworld",
     retention_eligible: true,
@@ -428,6 +429,18 @@ export function extractRecoveredReport(input: ExtractRecoveredReportInput): Reco
       ? "\n"
       : "\n\n";
   const appended = `${separator}<!-- adventureforge-report-recovery ${JSON.stringify(provenance)} -->\n\n## Exit interview\n\n\`\`\`json exit-interview\n${JSON.stringify(interview, null, 2)}\n\`\`\`\n`;
+  const recoveredReportText = `${originalReportText.text}${appended}`;
+  const recoveredVerification = verifyBlindReportText(recoveredReportText, {
+    requiredPlayMode: "pure",
+    runEvidenceText: runEvidenceText.text,
+    requireStructuredIssueConsistency: true,
+  });
+  if (!recoveredVerification.ok) {
+    return {
+      ok: false,
+      reason: `recovered report fails forward verification: ${recoveredVerification.reason}`,
+    };
+  }
   return {
     ok: true,
     reportBytes: Buffer.concat([

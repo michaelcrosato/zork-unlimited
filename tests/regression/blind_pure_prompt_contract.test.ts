@@ -280,6 +280,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("same `end` choice");
     expect(prompt).toContain("`retryable: false`");
     expect(prompt).toContain('"journey_exit_receipt": {}');
+    expect(prompt).toContain('"issue_consistency_version": 1');
+    expect(prompt).toContain("Every severity-tagged finding anywhere in the report");
+    expect(prompt).toMatch(/Do not leave a severity-bearing concern only in\s+prose/u);
+    expect(prompt).toContain("Distinct concerns need distinct objects");
     expect(prompt).not.toMatch(/"journey_exit_receipt"\s*:\s*"/);
 
     expect(prompt).not.toMatch(/30\s*[–-]\s*45|30\s+to\s+45/i);
@@ -332,6 +336,10 @@ describe("pure blind prompt + runner contract", () => {
     expect(sparkPrompt.trimEnd().endsWith("```")).toBe(true);
     expect(sparkPrompt.match(/^```json exit-interview\r?$/gmu)).toHaveLength(1);
     expect(sparkPrompt).toContain('"schema_version":2');
+    expect(sparkPrompt).toContain('"issue_consistency_version":1');
+    expect(sparkPrompt).toContain("Every severity-tagged finding anywhere in the report");
+    expect(sparkPrompt).toContain("Distinct concerns need distinct objects");
+    expect(sparkPrompt).toContain("Never leave a severity concern only in prose");
     expect(sparkPrompt).toContain('"play_mode":"pure"');
     expect(sparkPrompt).toContain('"start_surface":"fresh_overworld"');
     expect(sparkPrompt).toContain('"journey_exit_receipt":{}');
@@ -416,6 +424,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(runner).toContain("--play-mode");
     expect(runner).toContain("--run-evidence");
     expect(runner).toContain("--require-mode pure");
+    expect(runner.match(/--require-issue-consistency/g)).toHaveLength(3);
     expect(runner).toContain('rm -f "$PRIVATE_RUN_SIDECAR"');
     expect(runner).toContain("PURE_PUBLICATION_COMPLETE=1");
     for (const persona of ["breaker", "casual", "explorer", "lore-reader", "speedrunner"]) {

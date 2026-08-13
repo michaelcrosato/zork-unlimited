@@ -197,6 +197,13 @@ to the matching JSON boolean; do not copy the placeholder.
 
 Before you send your report, check every item:
 
+- Every severity-tagged finding anywhere in the report must be covered by an
+  object in `bugs`, with the same severity and a recognizable matching place or
+  concern. Distinct concerns need distinct objects; repeated mentions of the
+  same concern share one object. Do not leave a severity-bearing concern only in
+  prose. If there are no findings, write that plainly without using an S0-S4
+  label and use `"bugs": []`.
+
 - Do not write any part of the report until a game response contains
   `exitReceipt` and does not request the one exact evidence retry above.
   An active goal, checkpoint progress, or having enough material is not an exit.
@@ -226,6 +233,7 @@ content.
 ```json exit-interview
 {
   "schema_version": 2,
+  "issue_consistency_version": 1,
   "play_mode": "pure",
   "start_surface": "fresh_overworld",
   "retention_eligible": true,

@@ -465,6 +465,7 @@ schema V2 and includes:
 ```json
 {
   "schema_version": 2,
+  "issue_consistency_version": 1,
   "play_mode": "pure",
   "start_surface": "fresh_overworld",
   "retention_eligible": true,
@@ -481,6 +482,13 @@ schema V2 and includes:
   "verdict": "one paragraph"
 }
 ```
+
+Current pure, cycle, and certification reports must declare
+`issue_consistency_version: 1`. Every explicit S0-S4 finding anywhere in the
+report prose must be mirrored by a same-severity `bugs[]` entry with a
+recognizable place or concern identity; distinct concerns require distinct
+entries. Marker-absent historical V2 reports remain readable by generic
+historical readers.
 
 The player copies `journey_exit_receipt` verbatim from the confirmed end
 response. The verifier cross-checks it against server-authored evidence and

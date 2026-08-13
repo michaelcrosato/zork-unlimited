@@ -8,6 +8,7 @@ import {
   MISSING_EXIT_INTERVIEW_REASON,
   type ExitInterview,
 } from "./exit_interview.js";
+import { verifyStructuredIssueConsistency } from "./report_issue_consistency.js";
 import {
   parseRunEvidenceJsonl,
   type BlindRunSidecar,
@@ -19,6 +20,8 @@ export type RequiredBlindPlayMode = "pure" | "structural";
 
 export interface BlindReportVerificationOptions {
   requiredPlayMode?: RequiredBlindPlayMode;
+  /** Require the forward issue-consistency contract used by certification cohorts. */
+  requireStructuredIssueConsistency?: boolean;
   /** Raw private JSONL emitted by the MCP server for this run. */
   runEvidenceText?: string;
   /** Previously verified durable sidecar, used by fleet resume/re-verification. */
@@ -162,6 +165,19 @@ export function verifyBlindReportText(
   }
   if (!interview.ok) {
     return { ok: false, reason: interview.reason };
+  }
+  const declaresIssueConsistency =
+    "issue_consistency_version" in interview.interview &&
+    interview.interview.issue_consistency_version === 1;
+  if (options.requireStructuredIssueConsistency === true && !declaresIssueConsistency) {
+    return {
+      ok: false,
+      reason: "certification report requires issue_consistency_version 1",
+    };
+  }
+  if (declaresIssueConsistency) {
+    const consistency = verifyStructuredIssueConsistency(text, interview.interview.bugs);
+    if (!consistency.ok) return consistency;
   }
   if (options.requiredPlayMode === "pure") {
     return verifyPureRun(interview.interview, options);

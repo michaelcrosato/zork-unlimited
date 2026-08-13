@@ -40,6 +40,7 @@ function fixture(expectedCommit = EXPECTED_COMMIT): {
   const receipt = { ...receiptPayload, receiptHash: hashState(receiptPayload) };
   const interview = {
     schema_version: 2,
+    issue_consistency_version: 1,
     play_mode: "pure",
     start_surface: "fresh_overworld",
     retention_eligible: true,
@@ -62,6 +63,10 @@ function fixture(expectedCommit = EXPECTED_COMMIT): {
 I followed the fresh-overworld goal until the journey checkpoint, then chose to end.
 
 Clarity: 4/5. Enjoyment: 4/5.
+
+## Bugs or design flaws
+
+None found.
 
 ## Verdict
 
@@ -266,6 +271,19 @@ describe("cycle playtest gate", () => {
       const result = verify(root);
       expect(result).toMatchObject({ ok: false });
       if (!result.ok) expect(result.reason).toMatch(/receipt|interview/);
+    });
+  });
+
+  it("rejects current cycle evidence that omits the forward issue-consistency contract", () => {
+    withCycle(({ root, report, evidence, sidecar }) => {
+      const valid = fixture();
+      writeFileSync(report, valid.report.replace(/^\s*"issue_consistency_version": 1,\r?\n/mu, ""));
+      writeFileSync(evidence, valid.evidence);
+      writeFileSync(sidecar, valid.sidecar);
+
+      const result = verify(root);
+      expect(result).toMatchObject({ ok: false });
+      if (!result.ok) expect(result.reason).toContain("issue_consistency_version 1");
     });
   });
 });

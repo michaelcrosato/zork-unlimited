@@ -25,10 +25,15 @@ the JSON `}`: your response is invalid unless its final line is the closing
 three-backtick fence. In that JSON, each confusion is a string; each bug is
 exactly an object with `where`, `severity` (`S0`-`S4`), and `note`. Use `[]`
 when there are none: never put `"none"`, `"none observed"`, or any other string
-in `bugs`. The closing fence below MUST be your final non-whitespace content.
+in `bugs`. Every severity-tagged finding anywhere in the report must be covered
+by a matching `bugs` object with the same severity and recognizable place or
+concern. Distinct concerns need distinct objects; repeated mentions of the same
+concern share one object. Never leave a severity concern only in prose. The
+closing fence below MUST be your final non-whitespace content.
 
 ```json exit-interview
 {"schema_version":2,
+"issue_consistency_version":1,
 "play_mode":"pure",
 "start_surface":"fresh_overworld",
 "retention_eligible":true,

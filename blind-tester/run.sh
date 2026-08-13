@@ -1182,6 +1182,7 @@ INITIAL_VERIFY_LOG="$OUT.verify.initial.log"
 set +e
 ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
   --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" \
+  --require-issue-consistency \
   --write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG" ) \
   >"$INITIAL_VERIFY_LOG" 2>&1
 VERIFY_STATUS=$?
@@ -1248,6 +1249,7 @@ if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts \
     "$RECEIPT_BIND_CANDIDATE_ARG" --require-mode pure \
     --run-evidence "$RUN_EVIDENCE_ARG" \
+    --require-issue-consistency \
     --write-run-sidecar "$RECEIPT_BIND_CANDIDATE_SIDECAR_ARG" ) \
     >"$OUT.verify.receipt-bind-candidate.log" 2>&1
   RECEIPT_BIND_CANDIDATE_VERIFY_STATUS=$?
@@ -1263,6 +1265,7 @@ if [[ "$VERIFY_STATUS" -ne 0 ]]; then
   set +e
   ( cd "$GAME_DIR" && npm --silent exec tsx -- scripts/verify-blind-report.ts "$REPORT_MD" \
     --require-mode pure --run-evidence "$RUN_EVIDENCE_ARG" \
+    --require-issue-consistency \
     --write-run-sidecar "$PRIVATE_RUN_SIDECAR_ARG" ) \
     >"$OUT.verify.receipt-bind-canonical.log" 2>&1
   RECEIPT_BIND_VERIFY_STATUS=$?

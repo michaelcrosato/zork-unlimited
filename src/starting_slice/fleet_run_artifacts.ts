@@ -141,6 +141,8 @@ export interface PureFleetRunArtifactExpectation {
   provider: PureFleetProvider;
   model: CertifiedFleetModel;
   build: z.infer<typeof PureRunBuildSchema> & { tracked_worktree_clean: true };
+  /** Forward-only report contract; omitted for historical artifact readability. */
+  requireStructuredIssueConsistency?: boolean;
 }
 
 export interface PureFleetRunArtifactHashes {
@@ -832,6 +834,7 @@ export function validatePureFleetRunArtifactBytes(
 
   const reportVerification = verifyBlindReportText(decoded.report.text, {
     requiredPlayMode: "pure",
+    requireStructuredIssueConsistency: expected.requireStructuredIssueConsistency === true,
     runSidecar: run,
   });
   if (!reportVerification.ok) {

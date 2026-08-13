@@ -637,6 +637,7 @@ The journey felt reactive and worth replaying.
 \`\`\`json exit-interview
 ${JSON.stringify({
   schema_version: 2,
+  issue_consistency_version: 1,
   play_mode: "pure",
   start_surface: "fresh_overworld",
   retention_eligible: true,
@@ -1339,6 +1340,37 @@ describe("Codex certified fleet rollout authority", () => {
         model: "gpt-5.6-terra",
       }),
     ).toMatchObject({ ok: false, reason: expect.stringMatching(/requested model differs/i) });
+  });
+
+  it("keeps historical fleet artifacts readable while current certification opts into issue consistency", () => {
+    const fixture = unboundVerifiedArtifactFixture();
+    const historicalReport = fixture.artifacts.report
+      .toString("utf8")
+      .replace(/\s*"issue_consistency_version"\s*:\s*1\s*,/u, "");
+    const primaryEnvelope = JSON.parse(
+      fixture.artifacts.primaryEnvelope.toString("utf8"),
+    ) as Record<string, unknown>;
+    primaryEnvelope.result = historicalReport;
+    const rolloutRows = rollout(historicalReport);
+    const historicalArtifacts = {
+      ...fixture.artifacts,
+      report: Buffer.from(historicalReport),
+      primaryEnvelope: Buffer.from(`${JSON.stringify(primaryEnvelope)}\n`),
+      providerEvents: Buffer.from(jsonl(publicEvents(historicalReport))),
+      providerRollout: Buffer.from(jsonl(rolloutRows)),
+      providerCapture: Buffer.from(captureReceipt(rolloutRows)),
+    };
+
+    expect(validatePureFleetRunArtifactBytes(historicalArtifacts, fixture.expected).ok).toBe(true);
+    expect(
+      validatePureFleetRunArtifactBytes(historicalArtifacts, {
+        ...fixture.expected,
+        requireStructuredIssueConsistency: true,
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/issue_consistency_version 1/u),
+    });
   });
 
   it("authenticates exact terminal Spark report bytes through current v2 fleet artifacts", () => {

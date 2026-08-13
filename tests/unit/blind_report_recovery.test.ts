@@ -176,6 +176,7 @@ describe("pure blind report-only recovery gate", () => {
     });
     expect(decision.prompt).toContain("Do not call any tool");
     expect(decision.prompt).toContain("clarity must be 4 and enjoyment must be 5");
+    expect(decision.prompt).toContain("Every severity-tagged finding anywhere");
     expect(decision.prompt).not.toContain("receiptHash");
   });
 
@@ -285,8 +286,67 @@ describe("pure blind recovered interview renderer", () => {
       verifyBlindReportText(report, {
         requiredPlayMode: "pure",
         runEvidenceText,
+        requireStructuredIssueConsistency: true,
       }).ok,
     ).toBe(true);
+    expect(report).toContain('"issue_consistency_version": 1');
+  });
+
+  it("recovers severity findings only when bugs[] mirrors them", () => {
+    const issueReport = REPORT.replace(
+      "None found.",
+      "S1: The Station support map remained hard to scan.",
+    );
+    const decision = prepare({
+      reportBytes: bytes(issueReport),
+      claudeEnvelopeBytes: bytes(primaryEnvelope({ result: issueReport })),
+    });
+    expect(decision.ok).toBe(true);
+    if (!decision.ok) return;
+    const base = {
+      primaryEnvelopeBytes: bytes(primaryEnvelope({ result: issueReport })),
+      originalReportBytes: bytes(issueReport),
+      runEvidenceBytes: bytes(evidence()),
+      metadata: decision.metadata,
+    };
+    const mirrored = {
+      ...SUBJECTIVE,
+      bugs: [
+        {
+          where: "Station support",
+          severity: "S1",
+          note: "The map remained hard to scan.",
+        },
+      ],
+    };
+    const recovered = extractRecoveredReport({
+      ...base,
+      recoveryEnvelopeBytes: bytes(
+        recoveryEnvelope({
+          result: JSON.stringify(mirrored),
+          structured_output: mirrored,
+        }),
+      ),
+    });
+    expect(recovered.ok, recovered.ok ? undefined : recovered.reason).toBe(true);
+    if (recovered.ok) {
+      expect(
+        verifyBlindReportText(Buffer.from(recovered.reportBytes).toString("utf8"), {
+          requiredPlayMode: "pure",
+          runEvidenceText: evidence(),
+          requireStructuredIssueConsistency: true,
+        }).ok,
+      ).toBe(true);
+    }
+
+    const undercounted = extractRecoveredReport({
+      ...base,
+      recoveryEnvelopeBytes: bytes(recoveryEnvelope()),
+    });
+    expect(undercounted.ok).toBe(false);
+    if (!undercounted.ok) {
+      expect(undercounted.reason).toContain("severity-bearing prose finding");
+    }
   });
 
   it("rejects changed evidence, prose ratings, session, model, and non-structured output", () => {

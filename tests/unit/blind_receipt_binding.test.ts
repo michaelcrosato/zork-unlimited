@@ -119,9 +119,13 @@ function evidence(rows: "valid" | "no-exit" | "duplicate-exit" = "valid"): strin
 function reportWith(
   journeyReceipt: unknown = MALFORMED_RECEIPT,
   subjective: Record<string, unknown> = SUBJECTIVE,
+  issueConsistencyVersion?: number,
 ): string {
   const interview = {
     schema_version: 2,
+    ...(issueConsistencyVersion === undefined
+      ? {}
+      : { issue_consistency_version: issueConsistencyVersion }),
     play_mode: "pure",
     start_surface: "fresh_overworld",
     retention_eligible: true,
@@ -214,6 +218,48 @@ describe("pure Codex receipt binding", () => {
       initial_failure: "receipt_invalid",
       ratings: { clarity: 4, enjoyment: 5 },
       receipt_hash: receipt().receiptHash,
+    });
+  });
+
+  it("preserves the forward issue marker, retains marker-absent compatibility, and rejects others", () => {
+    const forward = reportWith(MALFORMED_RECEIPT, SUBJECTIVE, 1);
+    const boundForward = bind({
+      primaryEnvelopeBytes: bytes(envelope(forward)),
+      reportBytes: bytes(forward),
+    });
+    expect(boundForward.ok, boundForward.ok ? undefined : boundForward.reason).toBe(true);
+    if (!boundForward.ok) return;
+    const forwardText = Buffer.from(boundForward.reportBytes).toString("utf8");
+    expect(forwardText).toContain('"issue_consistency_version":1');
+    expect(
+      verifyBlindReportText(forwardText, {
+        requiredPlayMode: "pure",
+        requireStructuredIssueConsistency: true,
+        runEvidenceText: evidence(),
+      }).ok,
+    ).toBe(true);
+
+    const historical = reportWith();
+    const boundHistorical = bind({
+      primaryEnvelopeBytes: bytes(envelope(historical)),
+      reportBytes: bytes(historical),
+    });
+    expect(boundHistorical.ok).toBe(true);
+    if (boundHistorical.ok) {
+      expect(Buffer.from(boundHistorical.reportBytes).toString("utf8")).not.toContain(
+        "issue_consistency_version",
+      );
+    }
+
+    const unsupported = reportWith(MALFORMED_RECEIPT, SUBJECTIVE, 2);
+    expect(
+      bind({
+        primaryEnvelopeBytes: bytes(envelope(unsupported)),
+        reportBytes: bytes(unsupported),
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/issue_consistency_version.*expected 1/u),
     });
   });
 

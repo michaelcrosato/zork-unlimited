@@ -23,7 +23,7 @@ function main(): void {
   const reportPath = argv[0]?.startsWith("--") === false ? argv[0] : undefined;
   if (!reportPath) {
     console.error(
-      "Usage: tsx scripts/verify-blind-report.ts <report.md> [--require-mode pure|structural] [--run-evidence events.jsonl | --run-sidecar report.run.json] [--write-run-sidecar report.run.json] [--json]",
+      "Usage: tsx scripts/verify-blind-report.ts <report.md> [--require-mode pure|structural] [--require-issue-consistency] [--run-evidence events.jsonl | --run-sidecar report.run.json] [--write-run-sidecar report.run.json] [--json]",
     );
     process.exit(2);
   }
@@ -43,6 +43,9 @@ function main(): void {
   const options: BlindReportVerificationOptions = {};
   if (requiredMode !== undefined) {
     options.requiredPlayMode = requiredMode as RequiredBlindPlayMode;
+  }
+  if (argv.includes("--require-issue-consistency")) {
+    options.requireStructuredIssueConsistency = true;
   }
   if (evidencePath !== undefined) {
     options.runEvidenceText = readFileSync(evidencePath, "utf8");
