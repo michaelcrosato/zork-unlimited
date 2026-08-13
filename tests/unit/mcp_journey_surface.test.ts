@@ -2115,15 +2115,13 @@ describe("MCP journey surface", () => {
     if (!resumed) throw new Error("expected compact Continue to resume the embedded quest");
     expectTypeOf(resumed.journey).toEqualTypeOf<EmbeddedJourneyFocus>();
     expect(resumed.state_hash).toBe(continuedRun.checkpoint.state_hash);
-    expect(resumed.context.actions).toEqual([
-      "go_north",
-      "go_south",
-      "examine_paling_rail",
-      "examine_relief_spear",
-      "set_paling_rail",
-      "look_around",
-      "inventory",
-    ]);
+    const fullReread = continuedRun.a.get_observation({
+      session_id: continuedRun.rpgSessionId,
+      compact_observation: false,
+    });
+    expect(resumed.context.actions).toEqual(
+      fullReread.observation.available_actions.map((action) => action.id),
+    );
     const compactReread = continuedRun.a.get_observation({
       session_id: continuedRun.rpgSessionId,
       compact_observation: true,

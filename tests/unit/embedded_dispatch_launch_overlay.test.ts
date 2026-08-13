@@ -5,6 +5,8 @@ import { WOLF_WINTER_DISPATCH_DELAY_FLAG } from "../../src/core/embedded_launch_
 import { startOverworldQuestThroughRpg } from "../../src/mcp/overworld_quest_bridge.js";
 import { SaveIntegrityError, load, save } from "../../src/persist/save_load.js";
 import { indexRpgPack, initStateForRpgPack } from "../../src/rpg/runner.js";
+import { seededOpeningFlagForSeed } from "../../src/rpg/seeded_opening.js";
+import { RpgPackSchema } from "../../src/rpg/schema.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 import { createInitialCampaignCharacterState } from "../../src/world/campaign_character_state.js";
@@ -140,6 +142,40 @@ function questSession(window: unknown) {
 }
 
 describe("embedded dispatch opening overlay", () => {
+  it("carries the exact embedded numeric seed into seeded opening selection before overlay", () => {
+    const openingFlags = ["embedded_opening_alpha", "embedded_opening_bravo"];
+    const seededPack = RpgPackSchema.parse({
+      ...wolf.compiled.pack,
+      meta: { ...wolf.compiled.pack.meta, seeded_opening_flags: openingFlags },
+    });
+    const seededIndex = indexRpgPack(seededPack);
+    const session = delayedDispatchSession();
+    const seed = 42;
+
+    startOverworldQuestThroughRpg({
+      session,
+      overworldSessionId: "ow-seeded-opening",
+      questId: WOLF.id,
+      approachId: WOLF.launch!.options[0]!.id,
+      startOptions: { seed },
+      startEmbeddedWorldQuest: (startArgs, context) => {
+        expect(startArgs.seed).toBe(seed);
+        const state = initStateForRpgPack(
+          seededIndex,
+          startArgs.seed!,
+          undefined,
+          context.launchOverlay,
+        );
+        const selected = seededOpeningFlagForSeed(openingFlags, seed);
+        expect(openingFlags.filter((flag) => state.flags[flag] === true)).toEqual([selected]);
+        expect(state.flags[WOLF_WINTER_DISPATCH_DELAY_FLAG]).toBe(true);
+        expect(state.embeddedLaunchOverlayReceipt?.overworld_session_id).toBe("ow-seeded-opening");
+        assertRpgStateReferences(seededIndex, state);
+        return { session_id: "r-seeded-opening" };
+      },
+    });
+  });
+
   it("applies only a proven current delayed Wolf-Winter window and persists its local receipt", () => {
     const session = delayedDispatchSession();
     const window = session.prepareQuestStart(WOLF.id, WOLF.launch!.options[0]!.id).dispatchWindow;

@@ -75,6 +75,7 @@ import {
   enumerateRpgActions,
   type RpgIndex,
 } from "../../src/rpg/runner.js";
+import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
 import { visibleObjectIds } from "../../src/rpg/model.js";
 import { isAuthoredInspectAction } from "../../src/rpg/legal_actions.js";
 import { evalConditions } from "../../src/core/conditions.js";
@@ -83,9 +84,11 @@ import type { Rng } from "../../src/core/rng.js";
 import type { RoomVariant, ObjectVariant, EndingVariant } from "../../src/rpg/schema.js";
 import type { Action } from "../../src/api/types.js";
 import { makeStep } from "../../src/core/engine.js";
+import { buildCampaignCharacterState } from "../../src/world/campaign_character_state.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { exhaustiveEndingsMulti } from "./support/exhaustive_endings.js";
 import { hpConditionSupportForPack } from "./support/rpg_hp_condition_support.js";
+import { seedForSeededOpeningFlag } from "./support/seeded_opening.js";
 import {
   isWolfReleasedHuntSolverAction,
   replayRpgCampaignSeed,
@@ -246,6 +249,20 @@ type WitnessAction = string | readonly [id: string, rolls: "best" | "worst"];
 
 type VariantWitness = { displayed: Set<string>; present: Set<string> };
 
+function freshSeededOpeningState(index: RpgIndex, expectedFlag: string): GameState {
+  const openingFlags = index.pack.meta.seeded_opening_flags;
+  const seed = seedForSeededOpeningFlag(openingFlags, expectedFlag);
+  const state = initStateForRpgPack(index, seed);
+  const selected = (openingFlags ?? []).filter((flag) => state.flags[flag] === true);
+  if (selected.length !== 1 || selected[0] !== expectedFlag) {
+    throw new Error(
+      `Seeded-opening witness expected only "${expectedFlag}"; selected ${selected.join(", ") || "none"}.`,
+    );
+  }
+  assertRpgStateReferences(index, state);
+  return state;
+}
+
 // This module loads Wolf-Winter twice: once for its focused import witness and once for the
 // auto-discovered corpus proof. The prepared release replay and its bounded HUNT crawl are
 // deterministic over that same source, so retain that concrete witness once without sharing
@@ -333,8 +350,14 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
 } {
   const displayed = new Set<string>();
   const present = new Set<string>();
-  const run = (flags: readonly string[], actions: readonly WitnessAction[]): GameState => {
-    const initial = initStateForRpgPack(index, 7);
+  const run = (
+    flags: readonly string[],
+    actions: readonly WitnessAction[],
+    openingFlag?: string,
+  ): GameState => {
+    const initial = openingFlag
+      ? freshSeededOpeningState(index, openingFlag)
+      : freshSeededOpeningState(index, "opening_condition_open_ash_lane");
     for (const flag of flags) initial.flags[flag] = true;
     const witness = replayConcreteWitness(index, initial, actions);
     for (const key of witness.displayed) displayed.add(key);
@@ -466,6 +489,7 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
       "use_drive_signal_rope_kit_on_drive_threshold_line",
       "go_north",
     ],
+    "opening_condition_steady_scent_channel",
   );
   if (
     driveOverrun.current !== "byre_mouth" ||
@@ -597,6 +621,177 @@ function wolfJuneCampaignWitnesses(index: RpgIndex): {
 }
 
 /**
+ * Credit every seed-selected Wolf-Winter opening from a genuine runtime root. The main
+ * exhaustive crawl uses one ordinary test seed; these short legal prefixes cover the
+ * other mutually exclusive field facts without multiplying the 800k-state graph by four.
+ */
+function wolfSeededOpeningWitnesses(index: RpgIndex): VariantWitness {
+  const displayed = new Set<string>();
+  const present = new Set<string>();
+  const record = (witness: VariantWitness): void => {
+    for (const key of witness.displayed) displayed.add(key);
+    for (const key of witness.present) present.add(key);
+  };
+  const run = (openingFlag: string, actions: readonly WitnessAction[]): GameState => {
+    const initial = freshSeededOpeningState(index, openingFlag);
+    const witness = replayConcreteWitness(index, initial, actions);
+    record(witness);
+    return witness.final;
+  };
+
+  const firm = "opening_condition_firm_frozen_rail";
+  const scent = "opening_condition_steady_scent_channel";
+  const ash = "opening_condition_open_ash_lane";
+  const frame = "opening_condition_sound_lower_frame";
+
+  // The combined firm/Hayden view starts through the production campaign-import boundary,
+  // so its receipt and immutable opening flag are both save-valid runtime evidence.
+  const wolfQuest = WORLD.quests.find((quest) => quest.id === "wolf_winter");
+  if (!wolfQuest?.campaign_imports) {
+    throw new Error("Wolf-Winter seeded-opening witnesses require campaign imports.");
+  }
+  const firmSeed = seedForSeededOpeningFlag(index.pack.meta.seeded_opening_flags, firm);
+  const firmHayden = initStateForRpgPack(index, firmSeed, {
+    character: buildCampaignCharacterState({
+      knowledge: ["albany:knowledge_wolf_frost_report"],
+    }),
+    imports: wolfQuest.campaign_imports,
+  });
+  if (
+    firmHayden.flags[firm] !== true ||
+    firmHayden.campaignImportReceipt?.applied_rules.join(",") !== "import:wolf_winter_frost_report"
+  ) {
+    throw new Error("Firm/Hayden witness did not apply its exact runtime imports.");
+  }
+  assertRpgStateReferences(index, firmHayden);
+  record(replayConcreteWitness(index, firmHayden, ["go_north"]));
+
+  // Firm rail also exposes its uncommitted HUNT rail views.
+  run(firm, ["go_north", "go_north"]);
+
+  run(scent, [
+    "go_north",
+    "talk_houndsman",
+    "ask_lure",
+    "ask_commit_lure",
+    "ask_leave",
+    "go_west",
+    "take_winter_feed_sack",
+    "go_east",
+    "go_north",
+  ]);
+
+  run(ash, [
+    "go_north",
+    "talk_houndsman",
+    "ask_drive",
+    "ask_commit_drive",
+    "ask_leave",
+    "take_drive_signal_rope_kit",
+    "go_north",
+  ]);
+
+  run(frame, [
+    "go_north",
+    "talk_houndsman",
+    "ask_fortify",
+    "ask_commit_cade_terms",
+    "ask_leave",
+    "take_cade_household_shutters",
+    "go_north",
+  ]);
+  run(ash, [
+    "go_north",
+    "talk_houndsman",
+    "ask_fortify",
+    "ask_commit_cade_terms",
+    "ask_leave",
+    "take_cade_household_shutters",
+    "go_north",
+  ]);
+  run(ash, [
+    "go_north",
+    "talk_houndsman",
+    "ask_fortify",
+    "ask_commit_albany_authority",
+    "ask_leave",
+    "take_albany_relief_seals",
+    "go_north",
+  ]);
+
+  // The ordinary failed-DRIVE branch is shadowed only on open ash. A real firm root
+  // proves the miss, hurdle recovery, and downstream route remain live.
+  run(firm, [
+    "go_north",
+    "talk_houndsman",
+    "ask_drive",
+    "ask_commit_drive",
+    "ask_leave",
+    "take_drive_signal_rope_kit",
+    "go_north",
+    ["use_drive_signal_rope_kit_on_drive_breach_signal", "worst"],
+    "use_drive_hurdle_recovery",
+    "go_north",
+    "use_drive_signal_rope_kit_on_drive_threshold_line",
+    "go_north",
+  ]);
+  run(frame, [
+    "go_north",
+    "talk_houndsman",
+    "ask_fortify",
+    "ask_commit_albany_authority",
+    "ask_leave",
+    "take_albany_relief_seals",
+    "go_north",
+  ]);
+
+  const openingFlags = new Set(index.pack.meta.seeded_opening_flags ?? []);
+  const requiresSeededOpening = (value: unknown): boolean => {
+    if (Array.isArray(value)) return value.some(requiresSeededOpening);
+    if (value === null || typeof value !== "object") return false;
+    const object = value as Record<string, unknown>;
+    return (
+      (typeof object.has_flag === "string" && openingFlags.has(object.has_flag)) ||
+      (typeof object.not_flag === "string" && openingFlags.has(object.not_flag)) ||
+      Object.values(object).some(requiresSeededOpening)
+    );
+  };
+  const required: string[] = [];
+  for (const room of index.pack.rooms) {
+    (room.variants ?? []).forEach((variant, variantIndex) => {
+      if (requiresSeededOpening(variant.when)) {
+        required.push(`room:${room.id}#${variantIndex}`);
+      }
+    });
+  }
+  for (const object of index.pack.objects) {
+    (object.variants ?? []).forEach((variant, variantIndex) => {
+      if (requiresSeededOpening(variant.when)) {
+        required.push(`object:${object.id}#${variantIndex}`);
+      }
+    });
+  }
+  required.push(
+    semanticVariantKeyByText(
+      index,
+      "room",
+      "paling_gap",
+      "ordinary failed DRIVE recovery",
+      "dropping the loose hurdle behind the yearling",
+    ),
+    "object:drive_hurdle_recovery@present",
+  );
+  if (required.length <= openingFlags.size) {
+    throw new Error("Seeded-opening witness declaration census is unexpectedly shallow.");
+  }
+  const missing = required.filter((key) => !displayed.has(key) && !present.has(key));
+  if (missing.length > 0) {
+    throw new Error(`Seeded-opening routes did not display: ${missing.join(", ")}`);
+  }
+  return { displayed, present };
+}
+
+/**
  * Wolf-Winter's campaign imports have compact constructive routes. Replaying those
  * routes is both stronger evidence and dramatically cheaper than crawling another
  * 200k-state graph for every persistent import flag: each credited view is reached
@@ -635,12 +830,16 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     for (const key of witness.displayed) displayed.add(key);
     for (const key of witness.present) present.add(key);
   };
+  record(wolfSeededOpeningWitnesses(index));
   const run = (
     flags: string | readonly string[],
     actions: readonly WitnessAction[],
     importedVars: Readonly<Record<string, number>> = {},
+    openingFlag?: string,
   ): GameState => {
-    const initial = initStateForRpgPack(index, 7);
+    const initial = openingFlag
+      ? freshSeededOpeningState(index, openingFlag)
+      : freshSeededOpeningState(index, "opening_condition_open_ash_lane");
     for (const flag of typeof flags === "string" ? [flags] : flags) {
       initial.flags[flag] = true;
     }
@@ -696,16 +895,21 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
     creditViewedState(index, { ...limitedDutyPostDiversion, current: room }, displayed, present);
   }
   record(replayConcreteWitness(index, limitedDutyPostDiversion, ["go_north"]));
-  run("relief_oath_unaffiliated_bond", [
-    "go_north",
-    "talk_houndsman",
-    "ask_drive",
-    "ask_commit_drive",
-    "ask_leave",
-    "take_drive_signal_rope_kit",
-    "go_north",
-    ["use_drive_signal_rope_kit_on_drive_breach_signal", "best"],
-  ]);
+  run(
+    "relief_oath_unaffiliated_bond",
+    [
+      "go_north",
+      "talk_houndsman",
+      "ask_drive",
+      "ask_commit_drive",
+      "ask_leave",
+      "take_drive_signal_rope_kit",
+      "go_north",
+      ["use_drive_signal_rope_kit_on_drive_breach_signal", "best"],
+    ],
+    {},
+    "opening_condition_firm_frozen_rail",
+  );
 
   // These dispatch comparisons exist only before strategy commitment and combine campaign
   // imports. Credit the exact one-step player view instead of inventing a broad multi-import
@@ -767,16 +971,21 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
   run([], [...startFouled, ["wedge_paling_rail", "best"], "turn_paling_rail"]);
   run([], [...startFouled, ["maneuver_yearling_wolf_commit_hybrid_strike", "worst"]]);
   run("drover_route_prepared", startFouled);
-  run("drover_route_prepared", [
-    "go_north",
-    "talk_houndsman",
-    "ask_drive",
-    "ask_commit_drive",
-    "ask_leave",
-    "take_drive_signal_rope_kit",
-    "go_north",
-    ["use_drive_signal_rope_kit_on_drive_breach_signal", "worst"],
-  ]);
+  run(
+    "drover_route_prepared",
+    [
+      "go_north",
+      "talk_houndsman",
+      "ask_drive",
+      "ask_commit_drive",
+      "ask_leave",
+      "take_drive_signal_rope_kit",
+      "go_north",
+      ["use_drive_signal_rope_kit_on_drive_breach_signal", "worst"],
+    ],
+    {},
+    "opening_condition_firm_frozen_rail",
+  );
   run("relief_protocol_prepared", [
     ...startFouled,
     ["wedge_paling_rail", "worst"],
@@ -831,10 +1040,28 @@ function wolfCampaignImportWitnesses(index: RpgIndex): {
   for (const key of june.present) present.add(key);
 
   const required = [
-    "object:fortify_outer_seal#0",
-    "object:fortify_outer_seal#1",
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "fortify_outer_seal",
+      "full-duty Works fortification import",
+      "Rowan's full-duty boundary annex and Reese's Works marks",
+    ),
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "fortify_outer_seal",
+      "full-duty fortification import",
+      "Rowan's full-duty boundary annex matches the registered lower peg",
+    ),
     "object:outer_scent_gate#2",
-    "object:drive_breach_signal#0",
+    semanticVariantKeyByText(
+      index,
+      "object",
+      "drive_breach_signal",
+      "unaffiliated personal-bond first signal",
+      "Your unaffiliated bond opened Emery's unmarked service-cut insert",
+    ),
     semanticVariantKeyByText(
       index,
       "object",

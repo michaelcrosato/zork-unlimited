@@ -48782,15 +48782,15 @@
       "launch": {
         "version": 1,
         "id": "albany:wolf_hill_approach",
-        "prompt": "Hayden's dispatch names two last-mile roads to Cade's hill steading. Choose which cost and field condition you will carry into the Wolf-Winter watch.",
+        "prompt": "Hayden's dispatch names two last-mile roads to Cade's hill steading. Choose an approach tradeoff; tonight's independent ground condition is disclosed after arrival.",
         "options": [
           {
             "id": "albany:wolf_approach_exposed_ridge",
             "title": "Take the Exposed Ridge Road",
-            "summary": "Reach Cade quickly across the open crest, accepting a harder cattle arrival for a clearer first feed cast.",
-            "preview": "Costs 30 minutes, 1 supply, and 25 fatigue. The open crest exposes the smoke plume, wolf breath, and crosswind, lowering the first downwind feed cast to DC 10, but the visible descent raises cattle alarm by 1 before the watch. A clean three-cast lure line therefore reaches alarm 4 (Breaking) and scatters cattle.",
-            "consequence": "You spend 30 minutes, 1 supply, and 25 fatigue on the exposed crest. The plume and crosswind are legible for the first cast, but the herd sees the descent and begins the watch at cattle alarm 1.",
-            "return_summary": "You reached Cade by the exposed ridge: faster and better sighted for the first lure cast, with the cattle already alarmed by the visible descent.",
+            "summary": "Reach Cade quickly across the open crest, trading a visible, more tiring arrival for clear sight of the byre and its weather.",
+            "preview": "Costs 30 minutes, 1 supply, and 25 fatigue. This road chooses no strategy: inspect all four at Cade. The open crest reveals the byre and weather, but the herd sees the descent and begins at cattle alarm 1. Cade discloses tonight's independent ground fact before commitment; it can supersede one matching first beat. Other route mechanics are unchanged.",
+            "consequence": "You spend 30 minutes, 1 supply, and 25 fatigue on the exposed crest. The whole byre line is visible on arrival, but the herd sees the descent and begins the watch at cattle alarm 1.",
+            "return_summary": "You reached Cade by the exposed ridge: faster and better sighted across the whole byre, with the cattle already alarmed by the visible descent.",
             "terms": {
               "minutes": 30,
               "supplies": 1,
@@ -48811,10 +48811,10 @@
           {
             "id": "albany:wolf_approach_sheltered_stockway",
             "title": "Take the Sheltered Stockway",
-            "summary": "Spend longer under the lee to keep the herd calm, accepting a concealed crosswind at the first feed cast.",
-            "preview": "Costs 75 minutes, 2 supplies, and 10 fatigue. The sheltered stockway keeps the herd calm at arrival but conceals the crosswind, leaving the first downwind feed cast at DC 12. A clean three-cast lure line reaches alarm 3 (Restless), keeps the whole herd, and remains below Breaking.",
-            "consequence": "You spend 75 minutes, 2 supplies, and 10 fatigue under the lee. The cattle do not see the approach and begin steady, while the hidden crosswind leaves the first feed cast at DC 12.",
-            "return_summary": "You reached Cade by the sheltered stockway: slower and less tiring, with the herd calm but the first lure crosswind concealed.",
+            "summary": "Spend longer under the lee to arrive less tired and keep the herd calm, trading away the exposed ridge's clear view.",
+            "preview": "Costs 75 minutes, 2 supplies, and 10 fatigue. This road chooses no strategy: inspect all four at Cade. The lee keeps the herd at alarm 0 and reduces fatigue, but hedges conceal the byre's weather and sight lines. Cade discloses tonight's independent ground fact before commitment; it can supersede one matching first beat. Other route mechanics are unchanged.",
+            "consequence": "You spend 75 minutes, 2 supplies, and 10 fatigue under the lee. The cattle do not see the approach and begin steady, while hedges conceal the byre's broader weather and sight lines.",
+            "return_summary": "You reached Cade by the sheltered stockway: slower and less tiring, with the herd calm and the byre's weather and sight lines concealed.",
             "terms": {
               "minutes": 75,
               "supplies": 2,

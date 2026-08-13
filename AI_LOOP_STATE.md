@@ -167,3 +167,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat/next: LURE never exposed the FORTIFY-specific Reese copy, so causal proof remains the matrix/trace; the exact-current committed-LURE yard fallback still tells players to compare all four now-closed plans and is the strongest bounded follow-up to the broader density feedback.
 - Feedback: the exact prior three-report delta `20260810T194910Z` recommends `ed51aa6f` and excludes this run; seal promotes it unconsumed, clears that cohort, and leaves this pure report as the sole pending row.
 - Guard: 45 focused tests, 555 traces, both 6,000-step crawls, exact health (448 files/3,886 tests), UI typecheck, all 12 packs, cycle-start integrity, pure provenance, and deterministic compile rebuild are green.
+## AFK Cycle 2026-08-13T18-19-06-816Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-13T18-19-06-816Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-4be406ce (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

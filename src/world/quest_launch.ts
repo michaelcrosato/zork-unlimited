@@ -237,7 +237,7 @@ export function presentOverworldQuestLaunch(
       id: option.id,
       title: option.title,
       summary: option.summary,
-      preview: routePresentation?.previewOverride ?? option.preview,
+      preview: option.preview,
       consequence: option.consequence,
       ...(routePresentation ? { tradeoffSummary: routePresentation.tradeoffSummary } : {}),
       terms: { ...option.terms },

@@ -93,32 +93,36 @@ describe("bug_0256 — The Wolf-Winter: the braced breach has a legible, stat-ne
     expect(base).toContain("hungry young wolf");
     expect(base).toContain("combat funnel");
     expect(base).not.toContain("wedged");
+    expect(base).not.toContain("set hard");
 
-    // (3) braced before the kill → the wolf still holds the gap, but the breach is wedged.
-    expect(bracedOnly).toContain("wedged hard across it");
+    // (3) braced before the kill → the wolf still holds the gap, but the rail is set.
+    expect(bracedOnly).toContain("set hard across it");
+    expect(bracedOnly).not.toContain("wedged");
     expect(bracedOnly).toContain("still holds"); // wolf alive
     expect(bracedOnly).not.toContain("dead in the snow");
 
-    // (2) killed without wedging → the existing dead-wolf text, no wedge mentioned.
+    // (2) killed without bracing → the existing dead-wolf text, no set rail mentioned.
     expect(deadOnly).toContain("dead in the snow");
-    expect(deadOnly).not.toContain("wedged");
+    expect(deadOnly).not.toContain("set hard");
 
-    // (1) both → the most-specific variant wins (ordered first): dead wolf AND wedged rail.
+    // (1) both → the most-specific variant wins (ordered first): dead wolf AND set rail.
     expect(both).toContain("dead in the snow");
-    expect(both).toContain("wedged hard across the breach");
+    expect(both).toContain("set hard across the breach");
+    expect(both).not.toContain("wedged");
 
     // All four render DISTINCT text — no variant shadows another (liveness, bug_0147).
     expect(new Set([base, bracedOnly, deadOnly, both]).size).toBe(4);
   });
 
-  it("the rail's examine reactively flips to the wedged twin once braced", () => {
+  it("the rail's examine reactively flips to the neutral set twin once braced", () => {
     const pack = loadPack();
     const rail = palingRail(pack);
     const loose = objectDescription(rail, stateWithFlags(pack, []));
-    const wedged = objectDescription(rail, stateWithFlags(pack, ["breach_braced"]));
-    expect(loose).not.toContain("wedged");
-    expect(wedged).toContain("wedged hard across the breach");
-    expect(loose).not.toBe(wedged);
+    const braced = objectDescription(rail, stateWithFlags(pack, ["breach_braced"]));
+    expect(loose).not.toContain("set hard");
+    expect(braced).toContain("set hard across the breach");
+    expect(braced).not.toContain("wedged");
+    expect(loose).not.toBe(braced);
   });
 
   it("wedging is STAT-NEUTRAL: a winning roll sets breach_braced and inc_vars NOTHING (guarantee/economy byte-unchanged)", () => {
@@ -135,8 +139,8 @@ describe("bug_0256 — The Wolf-Winter: the braced breach has a legible, stat-ne
     // fair-gauntlet tuning and the prep-weighted economy stay exactly as bug_0189/0239 pin.
     expect(keys).not.toContain("inc_var");
     // And the prose the win unlocks is genuinely reachable as displayed text.
-    expect(roomDescription(palingGap(pack), stateWithFlags(pack, ["breach_braced"]))).toContain(
-      "wedged",
-    );
+    const bracedRoom = roomDescription(palingGap(pack), stateWithFlags(pack, ["breach_braced"]));
+    expect(bracedRoom).toContain("set hard across it");
+    expect(bracedRoom).not.toContain("wedged");
   });
 });

@@ -75,14 +75,14 @@ const BYRE_MOUTH_ROUTE_GUIDANCE_SOURCE_HASH =
 const LURE_ROOT_COMMIT_CUE_SOURCE_HASH =
   "7008beadde22a9f7b69ffeb4a21bbe358e6a98ff95e82f6d04b18fefc14dba6d";
 const REACTIVE_TRUTH_SOURCE_HASH =
-  "f3519e0655912f26e3eed58a6a23ca68b493574595d52763ae9fbb92c34ae42d";
+  "a38c3bfd994b8c72cda38e90292e38376eca82d70b598858b59ddc516ab3d7b2";
 const YEARLING_DEFEAT_JOURNAL =
   "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
-const CADE_HUNT_EXIT_LABEL =
-  "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
-const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
+const CADE_HUNT_INSPECT_LABEL =
+  "Inspect HUNT — Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing commits and closes LURE/DRIVE/FORTIFY.";
+const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const CADE_LURE_ROOT_LABEL =
-  "LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; a foul risks two cattle. Open or reopen the separate Commit LURE choice.";
+  "Inspect LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; an ordinary first-cast foul risks two cattle.";
 const JUNE_HUNT_ACKNOWLEDGEMENT_LABEL =
   "HUNT / keep June — Hold ground; June stays cattle-first. First wolf death breaks agreement. North commits; closes other plans.";
 
@@ -180,6 +180,12 @@ function compactWithActions(state: GameState) {
   return compactRpgObservation(buildRpgObservation(index, state), actions, {
     includeActions: true,
   });
+}
+
+function gameplayVars(state: GameState): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(state.vars).filter(([name]) => !name.startsWith("__dlg_")),
+  );
 }
 
 describe("Wolf-Winter compact authored prose", () => {
@@ -320,6 +326,10 @@ describe("Wolf-Winter compact authored prose", () => {
     const cade = pack.npcs.find((npc) => npc.id === "houndsman");
     const root = cade?.dialogue.nodes.find((node) => node.id === cade.dialogue.root);
     if (!root) throw new Error("expected Cade's root node");
+    expect(root.npc_text.trimEnd().length).toBeLessThanOrEqual(360);
+    expect(root.npc_text).toMatch(
+      /Every plan can finish[^]*four peer plan cards[^]*Questions choose nothing[^]*HUNT commits on north crossing[^]*other three commit in their branches/i,
+    );
 
     const rules = buildRpgRules(index);
     const directStep = makeStep(rules);
@@ -348,24 +358,24 @@ describe("Wolf-Winter compact authored prose", () => {
 
     expect(talked.context.choices).toEqual(expectedChoices);
     expect(dialogueChoices(ordinary)).toEqual(expectedChoices);
-    const exactHuntChoice = ["ask_commit_hunt_and_hold", CADE_HUNT_EXIT_LABEL] as const;
+    const exactHuntChoice = ["ask_hunt", CADE_HUNT_INSPECT_LABEL] as const;
     expect(talked.context.choices).toContainEqual(exactHuntChoice);
     expect(dialogueChoices(ordinary)).toContainEqual(exactHuntChoice);
     expect(compactWithActions(ordinary).choices).toContainEqual(exactHuntChoice);
     const fullHuntAction = buildRpgObservation(index, ordinary).available_actions.find(
-      (action) => action.id === "ask_commit_hunt_and_hold",
+      (action) => action.id === "ask_hunt",
     );
-    expect(fullHuntAction?.command).toBe(CADE_HUNT_EXIT_COMMAND);
-    expect(CADE_HUNT_EXIT_COMMAND.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
-    expect(compactMcpActionLabel(CADE_HUNT_EXIT_COMMAND)).toBe(CADE_HUNT_EXIT_COMMAND);
-    expect(CADE_HUNT_EXIT_COMMAND).not.toMatch(TRUNCATION_MARKER);
+    expect(fullHuntAction?.command).toBe(CADE_HUNT_INSPECT_COMMAND);
+    expect(CADE_HUNT_INSPECT_COMMAND.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(compactMcpActionLabel(CADE_HUNT_INSPECT_COMMAND)).toBe(CADE_HUNT_INSPECT_COMMAND);
+    expect(CADE_HUNT_INSPECT_COMMAND).not.toMatch(TRUNCATION_MARKER);
     expect(expectedChoices.map(([id]) => id)).toEqual([
-      "ask_wolves",
-      "ask_byre",
-      "ask_commit_hunt_and_hold",
+      "ask_hunt",
       "ask_lure",
       "ask_drive",
       "ask_fortify",
+      "ask_wolves",
+      "ask_byre",
       "ask_leave",
     ]);
     expect(talked.context.actions).toEqual(
@@ -373,20 +383,43 @@ describe("Wolf-Winter compact authored prose", () => {
     );
     expect(talked.context.choices).toEqual(
       expect.arrayContaining([
-        expect.arrayContaining(["ask_wolves", expect.stringMatching(/^HUNT —/)]),
-        expect.arrayContaining(["ask_lure", expect.stringMatching(/^LURE —/)]),
-        expect.arrayContaining(["ask_drive", expect.stringMatching(/^DRIVE —/)]),
-        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^FORTIFY —/)]),
+        expect.arrayContaining(["ask_hunt", expect.stringMatching(/^Inspect HUNT —/)]),
+        expect.arrayContaining(["ask_lure", expect.stringMatching(/^Inspect LURE —/)]),
+        expect.arrayContaining(["ask_drive", expect.stringMatching(/^Inspect DRIVE —/)]),
+        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^Inspect FORTIFY —/)]),
       ]),
     );
     expect(talked.context.choices?.some(([id]) => id === "go_west")).toBe(false);
+
+    const inspectedHunt = act(structuredClone(ordinary), "ask_hunt");
+    expect(inspectedHunt).toMatchObject({
+      current: ordinary.current,
+      flags: ordinary.flags,
+      inventory: ordinary.inventory,
+      journal: ordinary.journal,
+    });
+    expect(gameplayVars(inspectedHunt)).toEqual(gameplayVars(ordinary));
+    expect(dialogueChoices(inspectedHunt).map(([id]) => id)).toEqual([
+      "ask_prepare_hunt",
+      "ask_hunt_back",
+      "ask_leave",
+    ]);
+    const preparedHunt = act(inspectedHunt, "ask_prepare_hunt");
+    expect(preparedHunt).toMatchObject({
+      current: ordinary.current,
+      flags: ordinary.flags,
+      inventory: ordinary.inventory,
+      journal: ordinary.journal,
+    });
+    expect(gameplayVars(preparedHunt)).toEqual(gameplayVars(ordinary));
+    expect(buildRpgObservation(index, preparedHunt).dialogue).toBeNull();
 
     const june = pack.npcs.find((npc) => npc.id === "june_pike");
     const juneHuntAcknowledgement = june?.dialogue.nodes
       .flatMap((node) => node.topics)
       .find((topic) => topic.id === "commit_hunt_and_hold");
     expect(juneHuntAcknowledgement?.prompt).toBe(JUNE_HUNT_ACKNOWLEDGEMENT_LABEL);
-    expect(juneHuntAcknowledgement?.prompt).not.toBe(CADE_HUNT_EXIT_LABEL);
+    expect(juneHuntAcknowledgement?.prompt).not.toBe(CADE_HUNT_INSPECT_LABEL);
 
     let released = initStateForRpgPack(index, 9822);
     released = act(released, "go_north");
@@ -433,7 +466,10 @@ describe("Wolf-Winter compact authored prose", () => {
             "ask_quick_lesson",
             "Take Cade's optional quick lesson (+2 attack; +5 final tally). It returns to the plan menu; choose LURE again to commit.",
           ],
-          ["ask_commit_lure", "Commit to the finite feed-and-hounds line now."],
+          [
+            "ask_commit_lure",
+            "Commit LURE now: spend Cade's finite feed on the three-cast living-pack line and close HUNT/DRIVE/FORTIFY.",
+          ],
         ]),
       );
 
@@ -452,19 +488,15 @@ describe("Wolf-Winter compact authored prose", () => {
       expect(returned.dialogue?.[1]).toMatch(/quick spear-hand/i);
       expect(returned.choices).toContainEqual(["ask_lure", CADE_LURE_ROOT_LABEL]);
       expect(returned.actions).toEqual(
-        expect.arrayContaining([
-          "ask_commit_hunt_and_hold",
-          "ask_lure",
-          "ask_drive",
-          "ask_fortify",
-        ]),
+        expect.arrayContaining(["ask_hunt", "ask_lure", "ask_drive", "ask_fortify"]),
       );
       expect(returned.actions).not.toContain("ask_quick_lesson");
       expect(returned.actions).not.toContain("ask_commit_lure");
 
       // Reconsideration is real: HUNT remains legal from the returned root and
       // crossing north does not smuggle in a LURE commitment.
-      let huntPivot = actById(structuredClone(state), "ask_commit_hunt_and_hold");
+      let huntPivot = actById(structuredClone(state), "ask_hunt");
+      huntPivot = actById(huntPivot, "ask_prepare_hunt");
       huntPivot = actById(huntPivot, "go_north");
       expect(huntPivot.current).toBe("paling_gap");
       expect(huntPivot.flags.strategy_lure_committed).not.toBe(true);
@@ -641,8 +673,9 @@ describe("Wolf-Winter compact authored prose", () => {
     expect(counselJournal).toMatch(/close[^]*drive/i);
     const planJournal = journalForNode("cade_byre");
     expect(planJournal).toMatch(/guarded\/patient/i);
-    expect(planJournal).toMatch(/wedge[^]*rail/i);
-    expect(planJournal).toMatch(/split[^]*bind/i);
+    expect(planJournal).toMatch(/set the rail[^]*tonight's ground/i);
+    expect(planJournal).toMatch(/bind only an ordinary split/i);
+    expect(planJournal).not.toMatch(/\bwedge\b/i);
     expect(planJournal).toMatch(/wait[^]*true rush/i);
   });
 });

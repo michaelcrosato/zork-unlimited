@@ -18,12 +18,19 @@ import type { OverworldManifest } from "../../src/world/overworld.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const WOLF = WORLD.quests.find((quest) => quest.id === "wolf_winter")!;
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
-const index = indexRpgPack(loaded.compiled.pack);
+const pack = loaded.compiled.pack;
+const index = indexRpgPack(pack);
+const ORDINARY_HUNT_FLAG = "opening_condition_steady_scent_channel";
+const ORDINARY_HUNT_SEED = seedForSeededOpeningFlag(
+  pack.meta.seeded_opening_flags,
+  ORDINARY_HUNT_FLAG,
+);
 
 const JUNE = "albany:june_pike";
 const PROMISE = "albany:promise_june_cattle_first";
@@ -121,7 +128,8 @@ function actWorst(state: GameState, id: string): GameState {
 }
 
 function atJuneBoundary(prepared = false): GameState {
-  let state = initStateForRpgPack(index, 611);
+  let state = initStateForRpgPack(index, ORDINARY_HUNT_SEED);
+  expect(state.flags[ORDINARY_HUNT_FLAG]).toBe(true);
   state.flags.june_pike_present = true;
   state = act(state, "go_north");
   if (!prepared) return state;
@@ -186,7 +194,8 @@ function ordinaryHeld(state: GameState): GameState {
 }
 
 function reachBloodiedEvacuation(release: boolean): GameState {
-  let state = initStateForRpgPack(index, 611);
+  let state = initStateForRpgPack(index, ORDINARY_HUNT_SEED);
+  expect(state.flags[ORDINARY_HUNT_FLAG]).toBe(true);
   state.flags.june_pike_present = true;
   for (const id of ["go_north", "talk_houndsman", "ask_wolves", "ask_leave"]) {
     state = act(state, id);
@@ -363,7 +372,10 @@ describe("June's pre-HUNT release counterfactual", () => {
       /HUNT is committed now[^]*LURE, DRIVE, and FORTIFY are closed[^]*north gate is open[^]*ordinary lessons[^]*store gear[^]*backtracking remain/i,
     );
     const api = createToolApi({ root: process.cwd() });
-    const launched = api.start_world_quest({ world_quest_id: "wolf_winter", seed: 611 });
+    const launched = api.start_world_quest({
+      world_quest_id: "wolf_winter",
+      seed: ORDINARY_HUNT_SEED,
+    });
     api.sessions.update(launched.session_id, released);
     expect(
       api.get_observation({

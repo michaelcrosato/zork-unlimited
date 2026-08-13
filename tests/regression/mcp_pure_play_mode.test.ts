@@ -43,9 +43,9 @@ const TSX = join(ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 const MCP_SERVER = join(ROOT, "src", "mcp", "server.ts");
 const TEST_RUN_SEED = 2731;
 const TEST_BUILD_COMMIT = "b".repeat(40);
-const CADE_HUNT_EXIT_LABEL =
-  "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
-const CADE_HUNT_EXIT_COMMAND = `ask: ${CADE_HUNT_EXIT_LABEL}`;
+const CADE_HUNT_INSPECT_LABEL =
+  "Inspect HUNT — Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing commits and closes LURE/DRIVE/FORTIFY.";
+const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
   "Inspect journey.storyChoice, Station ['inspect', story_choice_id], or legacy departure_interactions by calling with session_id set to the exact current parent overworld_session_id and story_choice_id set to that exact visible id. Merge visible revealOption/reviewOption arguments into that call; they do not replace session_id, and option_id/reveal_id are mutually exclusive. Compact returns comparison + an unchanged journey receipt without board/world repetition. option_id returns one visible option detail; reveal_id expands and records a durable session receipt that survives export/restore. Detail may include selected terms. compact_result:false returns full story and preserves reveals.";
@@ -2941,19 +2941,17 @@ describe("MCP pure play mode", () => {
         expect(talked.ok).toBe(true);
         const talkContext = talked.context as RpgCompactContext;
         const talkActions = talkContext.actions;
-        expect(talkContext.dialogue?.[1]).toBe(
-          "Albany sent you. Choose what must stand at dawn. Every plan can finish Wolf-Winter; none saves everything, and I name no best answer.\n\nHUNT — Outcome: hold Cade's ground, herd, and relief stores with prepared combat. Cost: wolves may die; failure can lose cattle or the line. Albany: bloodshed changes Greenway work; damage remains.\nLURE — Outcome: relocate the pack beyond the breach and keep the herd. Cost: last feed, broken paling, two cattle risked on a first-cast foul. Albany: broken boundary or scattered cattle change Station response.\nDRIVE — Outcome: evacuate people and herd; force the pack clear. Cost: abandon the outer steading; Crisis takes a wound, two cattle, or rig. Albany: the line and chosen loss remain.\nFORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost: no retreat; expose property for Cade's aid or spend public seals without it. Albany: terms remain; a no-loss hold opens no Cade repair dispatch.\n\nQuestions teach; they do not commit. HUNT commits on uncommitted north crossing; other plans commit in branches. Any commitment closes the other three.",
+        expect(talkContext.dialogue?.[1]).toMatch(
+          /Every plan can finish; I name no best answer[^]*Inspect the four peer plan cards[^]*Questions choose nothing[^]*HUNT commits on north crossing[^]*TONIGHT'S GROUND —/i,
         );
+        expect(talkContext.dialogue?.[1].length).toBeLessThanOrEqual(360);
         expect(talkActions).toEqual(
           expect.arrayContaining(["ask_wolves", "ask_byre", "ask_leave"]),
         );
-        expect(talkContext.choices).toContainEqual([
-          "ask_commit_hunt_and_hold",
-          CADE_HUNT_EXIT_LABEL,
-        ]);
-        expect(
-          talkContext.choices?.find(([id]) => id === "ask_commit_hunt_and_hold")?.[1],
-        ).not.toMatch(ACTION_TRUNCATION_MARKER);
+        expect(talkContext.choices).toContainEqual(["ask_hunt", CADE_HUNT_INSPECT_LABEL]);
+        expect(talkContext.choices?.find(([id]) => id === "ask_hunt")?.[1]).not.toMatch(
+          ACTION_TRUNCATION_MARKER,
+        );
         expect(talkActions?.length).toBeLessThanOrEqual(24);
 
         const currentRead = textPayload(
@@ -2993,17 +2991,15 @@ describe("MCP pure play mode", () => {
           Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
         ).toMatchObject({
           ask_wolves:
-            "ask: HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits.",
+            "ask: Inspect HUNT support — Hold ground/stores in prepared combat. Risk wolf deaths and cattle/line; this lesson grants +2 attack/+5 tally.",
           ask_byre:
-            "ask: HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
-          ask_commit_hunt_and_hold: CADE_HUNT_EXIT_COMMAND,
+            "ask: Inspect HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
+          ask_hunt: CADE_HUNT_INSPECT_COMMAND,
           ask_leave: "ask: Leave Cade.",
         });
-        const huntAction = labeledActions.find(
-          (action) => action.id === "ask_commit_hunt_and_hold",
-        );
+        const huntAction = labeledActions.find((action) => action.id === "ask_hunt");
         expect(MCP_ACTION_LABEL_CHAR_LIMIT).toBe(160);
-        expect(huntAction?.command).toBe(CADE_HUNT_EXIT_COMMAND);
+        expect(huntAction?.command).toBe(CADE_HUNT_INSPECT_COMMAND);
         expect(huntAction?.command?.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
         expect(huntAction?.command).not.toMatch(ACTION_TRUNCATION_MARKER);
         expect(labeledMenu).toMatchObject({
@@ -3017,12 +3013,7 @@ describe("MCP pure play mode", () => {
           }),
         );
         expect(compactMenu.actions).toEqual(
-          expect.arrayContaining([
-            "ask_wolves",
-            "ask_byre",
-            "ask_commit_hunt_and_hold",
-            "ask_leave",
-          ]),
+          expect.arrayContaining(["ask_wolves", "ask_byre", "ask_hunt", "ask_leave"]),
         );
 
         // The action menu carried by TALK is immediately executable; a player does

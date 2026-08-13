@@ -7,6 +7,7 @@ import { maneuverChildren, maneuverParent, rootManeuvers } from "./maneuver_sequ
 import { campaignImportReceiptTargetIssues } from "./campaign_character_import.js";
 import { wolfWinterDispatchOverlayFlagForPack } from "../core/embedded_launch_overlay_receipt.js";
 import { npcForState } from "./model.js";
+import { seededOpeningFlagForSeed } from "./seeded_opening.js";
 
 /**
  * Collect item ids that can legitimately enter inventory through authored effects.
@@ -348,6 +349,9 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
     addBooleanRuntimeTarget(flags, packOverlayFlag, true);
   }
   for (const id of index.pack.meta.flags_init) addBooleanRuntimeTarget(flags, id, true);
+  for (const id of index.pack.meta.seeded_opening_flags ?? []) {
+    addBooleanRuntimeTarget(flags, id, true);
+  }
   // Built-in OPEN/UNLOCK actions write sparse runtime state; static defaults do not.
   for (const object of index.pack.objects) {
     if (object.takeable || object.held) items.add(object.id);
@@ -430,6 +434,30 @@ export function assertRpgStateReferences(index: RpgIndex, state: GameState): voi
   for (const id of index.pack.meta.flags_init) {
     if (state.flags[id] === undefined) {
       throw new SaveIntegrityError(`Save is missing initialized flag "${id}".`);
+    }
+  }
+  const seededOpeningFlags = index.pack.meta.seeded_opening_flags;
+  if (seededOpeningFlags !== undefined) {
+    const selected = seededOpeningFlagForSeed(seededOpeningFlags, state.seed);
+    if (!Object.prototype.hasOwnProperty.call(state.flags, selected)) {
+      throw new SaveIntegrityError(
+        `Save is missing selected seeded opening flag "${selected}" for seed ${String(state.seed)}.`,
+      );
+    }
+    if (state.flags[selected] !== true) {
+      throw new SaveIntegrityError(
+        `Save references invalid selected seeded opening flag state "${selected}" (${String(state.flags[selected])}).`,
+      );
+    }
+    for (const alternative of seededOpeningFlags) {
+      if (
+        alternative !== selected &&
+        Object.prototype.hasOwnProperty.call(state.flags, alternative)
+      ) {
+        throw new SaveIntegrityError(
+          `Save includes unselected seeded opening flag "${alternative}"; seed ${String(state.seed)} selects "${selected}".`,
+        );
+      }
     }
   }
   for (const [id, value] of Object.entries(state.flags)) {

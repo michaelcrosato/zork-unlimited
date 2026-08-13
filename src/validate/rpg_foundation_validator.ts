@@ -24,7 +24,8 @@
  */
 import { type Effect } from "../core/effects.js";
 import { evalConditions, type Condition } from "../core/conditions.js";
-import { indexRpgModel, initStateForRpgModel } from "../rpg/model.js";
+import { indexRpgModel, initStatesForRpgModelOpeningAlternatives } from "../rpg/model.js";
+import { wolfWinterDispatchOverlayFlagForPack } from "../core/embedded_launch_overlay_receipt.js";
 import {
   type RpgPack,
   type GameObject,
@@ -150,6 +151,72 @@ export function validateRpgFoundation(
   const roomIds = new Set(pack.rooms.map((r) => r.id));
   const objById = new Map(pack.objects.map((o) => [o.id, o]));
   const effects = [...allEffects(pack), ...(opts.extraEffects ?? [])];
+  const seededOpeningFlags = pack.meta.seeded_opening_flags ?? [];
+  const checkUnsatisfiable = (
+    conditions: Condition[] | undefined,
+    where: string[],
+    label: string,
+    targetFindings: Finding[],
+  ): void => {
+    checkUnsatisfiableConditions(conditions, where, label, targetFindings, seededOpeningFlags);
+  };
+
+  // A seeded opening flag has exactly one writer: deterministic fresh-state
+  // selection. If any ordinary initializer, authored effect, runtime mechanic,
+  // import-like boundary, or launch overlay can also write it, save replay can no
+  // longer prove which alternative the numeric seed selected.
+  const seededOpeningWriterSources = new Map<string, Set<string>>();
+  const knownRuntimeSeededOpeningWriters = new Set<string>();
+  const noteSeededOpeningWriter = (flag: string, source: string): void => {
+    if (!seededOpeningFlags.includes(flag)) return;
+    const sources = seededOpeningWriterSources.get(flag) ?? new Set<string>();
+    sources.add(source);
+    seededOpeningWriterSources.set(flag, sources);
+  };
+  const noteSeededOpeningEffectWriter = (effect: Effect, source: string): void => {
+    if ("set_flag" in effect) noteSeededOpeningWriter(effect.set_flag, `${source} set_flag`);
+    if ("clear_flag" in effect) noteSeededOpeningWriter(effect.clear_flag, `${source} clear_flag`);
+  };
+  for (const flag of pack.meta.flags_init) noteSeededOpeningWriter(flag, "meta.flags_init");
+  for (const effect of effects) {
+    noteSeededOpeningEffectWriter(effect, "an authored");
+  }
+  for (const enemy of pack.enemies) {
+    for (const effect of enemy.on_defeat) {
+      if ("set_flag" in effect) knownRuntimeSeededOpeningWriters.add(effect.set_flag);
+      if ("clear_flag" in effect) knownRuntimeSeededOpeningWriters.add(effect.clear_flag);
+      noteSeededOpeningEffectWriter(effect, `enemy "${enemy.id}" on_defeat`);
+    }
+    if (enemy.defeat_flag !== undefined) knownRuntimeSeededOpeningWriters.add(enemy.defeat_flag);
+    if (enemy.defeat_flag !== undefined)
+      noteSeededOpeningWriter(enemy.defeat_flag, `enemy "${enemy.id}" defeat_flag`);
+    for (const maneuver of enemy.maneuvers ?? []) {
+      knownRuntimeSeededOpeningWriters.add(maneuver.result_flag);
+      noteSeededOpeningWriter(
+        maneuver.result_flag,
+        `enemy "${enemy.id}" maneuver "${maneuver.id}" result_flag`,
+      );
+    }
+  }
+  const launchOverlayFlag = wolfWinterDispatchOverlayFlagForPack(pack.meta.id);
+  if (launchOverlayFlag !== undefined) {
+    knownRuntimeSeededOpeningWriters.add(launchOverlayFlag);
+    noteSeededOpeningWriter(launchOverlayFlag, "the embedded launch overlay");
+  }
+  for (const flag of opts.extraSettableFlags ?? []) {
+    if (!knownRuntimeSeededOpeningWriters.has(flag)) {
+      noteSeededOpeningWriter(flag, "a higher-level runtime boundary");
+    }
+  }
+  for (const [flag, sources] of seededOpeningWriterSources) {
+    findings.push(
+      err(
+        "SEEDED_OPENING_FLAG_NOT_IMMUTABLE",
+        `seeded opening flag "${flag}" is reserved for deterministic fresh-state selection but is also written by ${[...sources].join(", ")}; seeded opening alternatives must remain immutable.`,
+        ["meta:seeded_opening_flags", `flag:${flag}`],
+      ),
+    );
+  }
 
   // ── Duplicate ids ──────────────────────────────────────────────────────────
   dupCheck(
@@ -464,7 +531,7 @@ export function validateRpgFoundation(
     // soft-lock-graph pollution the win-condition guard comment below warns of
     // (bug_0092). Skip the room-adding for a provably-dead win (but still run the
     // ENDING_UNDECLARED reference check, which is independent of firability).
-    if (!isUnsatisfiable(whenProfile(wc.conditions))) {
+    if (!isUnsatisfiable(whenProfile(wc.conditions), seededOpeningFlags)) {
       for (const wr of winRoomReqs(wc.conditions)) winRooms.add(wr);
     }
     const endingTargets = [
@@ -514,7 +581,11 @@ export function validateRpgFoundation(
   for (const it of opts.extraObtainable ?? []) obtainable.add(it);
 
   // ── Settable flags (provided by some effect or flags_init) ───────────────────
-  const settable = new Set<string>([...pack.meta.flags_init, ...(opts.extraSettableFlags ?? [])]);
+  const settable = new Set<string>([
+    ...pack.meta.flags_init,
+    ...seededOpeningFlags,
+    ...(opts.extraSettableFlags ?? []),
+  ]);
   for (const e of effects) {
     if ("set_flag" in e) settable.add(e.set_flag);
   }
@@ -1286,6 +1357,7 @@ export function validateRpgFoundation(
   for (const flag of opts.extraReadFlags ?? []) flagReads.add(flag);
   const writtenFlags = new Set<string>([
     ...pack.meta.flags_init,
+    ...seededOpeningFlags,
     ...(opts.extraSettableFlags ?? []),
   ]);
   for (const e of effects) if ("set_flag" in e) writtenFlags.add(e.set_flag);
@@ -1395,8 +1467,11 @@ export function validateRpgFoundation(
 }
 
 /**
- * Flag a `win_condition` that ALREADY HOLDS in the initial state and can never be
- * falsified — so it fires on the player's FIRST action on every path. The engine's
+ * Flag a `win_condition` that ALREADY HOLDS in an authored initial state and can
+ * never be falsified — so it fires on the player's FIRST action for that opening.
+ * Legacy packs have one initial state; seeded-opening packs are checked across
+ * every finite authored alternative rather than whichever option seed 0 selects.
+ * The engine's
  * §8.4.5 `checkWin` runs against the POST-action state (src/core/engine.ts), never
  * at game start, so such a win ends the game at turn 1 on whatever the player does
  * first: no room past the start is ever played and the goal is granted for nothing.
@@ -1406,8 +1481,8 @@ export function validateRpgFoundation(
  * already guard the OPPOSITE degeneracy (a win that can never fire); this brackets
  * the other end.
  *
- * Sound & conservative (no false positives): the initial state is the engine's own
- * (`initStateForRpgModel`, start `on_enter` applied, start room marked visited),
+ * Sound & conservative (no false positives): each initial state uses the engine's
+ * fresh-state construction (start `on_enter` applied, start room marked visited),
  * evaluated by the engine's own `evalConditions`; and un-falsifiability is proven
  * only for a flat conjunction of monotone-stable atoms (incl. `is_open`, which no
  * effect can close, and `is_explicitly_unlocked` when nothing can relock it) — any
@@ -1424,23 +1499,29 @@ function checkWinFiresAtStart(
 ): void {
   if (pack.win_conditions.length === 0) return;
   const index = indexRpgModel(pack);
-  const initial = initStateForRpgModel(index, 0);
+  const initialAlternatives = initStatesForRpgModelOpeningAlternatives(index);
   const falsifiers = collectFalsifiers(pack, extraFalsifierEffects);
   const volatile = new Set(volatileVars);
   for (const wc of pack.win_conditions) {
-    if (!evalConditions(wc.conditions, initial)) continue; // healthy: not met at start
-    if (!winStaysTrueForever(wc.conditions, falsifiers, volatile)) continue; // first move can escape
-    findings.push(
-      err(
-        "WIN_FIRES_AT_START",
-        `win_condition "${wc.id}" already holds in the initial state and no effect can falsify it, ` +
-          "so it fires on the player's first action on every path (engine §8.4.5 runs the win check " +
-          "post-action, never at game start) — the game is won at turn 1 with no room past the start " +
-          "ever played. Gate it behind a flag/item/room the player must first reach, or fix the " +
-          "condition's threshold or initial value.",
-        [`win:${wc.id}`],
-      ),
+    const firingAlternatives = initialAlternatives.filter(({ state }) =>
+      evalConditions(wc.conditions, state),
     );
+    if (firingAlternatives.length === 0) continue; // healthy: not met at any authored start
+    if (!winStaysTrueForever(wc.conditions, falsifiers, volatile)) continue; // first move can escape
+    for (const alternative of firingAlternatives) {
+      const seededFlag = alternative.seededOpeningFlag;
+      findings.push(
+        err(
+          "WIN_FIRES_AT_START",
+          `win_condition "${wc.id}" already holds in the initial state${seededFlag === null ? "" : ` for seeded opening alternative "${seededFlag}"`} and no effect can falsify it, ` +
+            `so it fires on the player's first action ${seededFlag === null ? "on every path" : "for that seeded start"} (engine §8.4.5 runs the win check ` +
+            "post-action, never at game start) — the game is won at turn 1 with no room past the start " +
+            "ever played. Gate it behind a flag/item/room the player must first reach, or fix the " +
+            "condition's threshold or initial value.",
+          [`win:${wc.id}`, ...(seededFlag === null ? [] : [`seeded_opening_flag:${seededFlag}`])],
+        ),
+      );
+    }
   }
 }
 
@@ -1946,8 +2027,26 @@ function entails(j: WhenProfile, i: WhenProfile): boolean {
  *  is irrelevant — a contradiction among the conjunctive atoms makes the whole top-level
  *  AND unsatisfiable regardless of any disjunction sibling (which can only further
  *  constrain, never rescue, an already-false conjunction). */
-function isUnsatisfiable(p: WhenProfile): boolean {
+type ExactOneConflict = "multiple_required" | "all_forbidden";
+
+function exactOneConflict(
+  p: WhenProfile,
+  exclusiveFlags: readonly string[],
+): ExactOneConflict | null {
+  if (exclusiveFlags.length === 0) return null;
+  let required = 0;
+  let forbidden = 0;
+  for (const flag of exclusiveFlags) {
+    if (p.pos.has(`flag:${flag}`)) required += 1;
+    if (p.neg.has(`flag:${flag}`)) forbidden += 1;
+    if (required > 1) return "multiple_required";
+  }
+  return forbidden === exclusiveFlags.length ? "all_forbidden" : null;
+}
+
+function isUnsatisfiable(p: WhenProfile, exclusiveFlags: readonly string[] = []): boolean {
   for (const k of p.pos) if (p.neg.has(k)) return true;
+  if (exactOneConflict(p, exclusiveFlags) !== null) return true;
   for (const [name, lo] of p.lower) {
     const hi = p.upper.get(name);
     if (hi !== undefined && lo > hi) return true;
@@ -1988,20 +2087,25 @@ function checkVariantShadowing(
  *  never hold: its conjunction is internally contradictory, so the variant never
  *  displays / the gate is never offered — silently-dead content the blind playtest
  *  can't see. */
-function checkUnsatisfiable(
+function checkUnsatisfiableConditions(
   conditions: Condition[] | undefined,
   where: string[],
   label: string,
   findings: Finding[],
+  exclusiveFlags: readonly string[] = [],
 ): void {
   if (!conditions || conditions.length === 0) return;
-  if (isUnsatisfiable(whenProfile(conditions))) {
+  const profile = whenProfile(conditions);
+  if (isUnsatisfiable(profile, exclusiveFlags)) {
+    const openingConflict = exactOneConflict(profile, exclusiveFlags);
     findings.push(
       warn(
         "UNSATISFIABLE_CONDITION",
-        `${label} has a guard that can never hold (it pins a flag/item/visited both ` +
-          `true and false, or sets crossed var bounds), so it is dead — it can never ` +
-          `display/fire. Fix or remove the contradictory condition.`,
+        openingConflict !== null
+          ? `${label} has a guard that can never hold (it ${openingConflict === "multiple_required" ? "requires multiple mutually exclusive" : "forbids every"} seeded opening ${openingConflict === "multiple_required" ? "flags" : "alternative"}), so it is dead — it can never display/fire. Respect the opening group's exact-one invariant.`
+          : `${label} has a guard that can never hold (it pins a flag/item/visited both ` +
+              `true and false, or sets crossed var bounds), so it is dead — it can never ` +
+              `display/fire. Fix or remove the contradictory condition.`,
         where,
       ),
     );

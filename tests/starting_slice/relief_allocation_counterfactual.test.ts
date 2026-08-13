@@ -23,6 +23,7 @@ import {
   planOverworldSessionTownResupply,
 } from "../../src/world/session_service_lifecycle.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const WOLF =
@@ -43,7 +44,13 @@ const ALBANY =
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
-const index = indexRpgPack(loaded.compiled.pack);
+const pack = loaded.compiled.pack;
+const index = indexRpgPack(pack);
+const ORDINARY_FORTIFY_FLAG = "opening_condition_steady_scent_channel";
+const ORDINARY_FORTIFY_SEED = seedForSeededOpeningFlag(
+  pack.meta.seeded_opening_flags,
+  ORDINARY_FORTIFY_FLAG,
+);
 
 type Roll = "best" | "worst";
 type Stance = "cade" | "authority";
@@ -150,7 +157,8 @@ function finishCleanLure(state: GameState): GameState {
 
 function recoveredFortify(stance: Stance): GameState {
   const contract = STANCES[stance];
-  let state = allocatedState("mobile", 1606);
+  let state = allocatedState("mobile", ORDINARY_FORTIFY_SEED);
+  expect(state.flags[ORDINARY_FORTIFY_FLAG]).toBe(true);
   state = act(state, "go_north");
   state = act(state, "talk_houndsman");
   state = act(state, "ask_fortify");

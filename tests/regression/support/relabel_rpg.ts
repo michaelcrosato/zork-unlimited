@@ -408,6 +408,9 @@ export function relabelRpgPack(pack: RpgPack): {
           Object.entries(pack.meta.vars_init).map(([k, v]) => [rvar(k), v]),
         ),
         flags_init: pack.meta.flags_init.map((f) => r(f)),
+        ...(pack.meta.seeded_opening_flags !== undefined
+          ? { seeded_opening_flags: pack.meta.seeded_opening_flags.map((f) => r(f)) }
+          : {}),
         max_score: pack.meta.max_score,
         ...(pack.meta.combat_guaranteed !== undefined
           ? { combat_guaranteed: pack.meta.combat_guaranteed }

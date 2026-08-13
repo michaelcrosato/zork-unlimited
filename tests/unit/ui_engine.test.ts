@@ -226,7 +226,8 @@ describe("GameSession — RPG-only structured play", () => {
       npc: "old Cade the houndsman",
       text: mcpRead.observation.dialogue?.npc_text,
     });
-    expect(uiView.dialogue?.text).toContain("Choose what must stand at dawn");
+    expect(uiView.dialogue?.text).toContain("Inspect the four peer plan cards below");
+    expect(uiView.dialogue?.text).toContain("HUNT commits on north crossing");
     expect(talkNarration).toEqual([`old Cade the houndsman: "${uiView.dialogue?.text}"`]);
     expect(talkNarration.join(" ")).not.toContain("Save/cost—HUNT");
     expect(uiView.choices.map((choice) => choice.id)).toEqual(

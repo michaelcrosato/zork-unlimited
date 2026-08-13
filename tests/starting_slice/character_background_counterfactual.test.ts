@@ -17,6 +17,7 @@ import { OVERWORLD_SESSION_PREVIOUS_SAVE_VERSION } from "../../src/world/session
 import { OVERWORLD_CONTENT_HASH_MISMATCH_WARNING } from "../../src/world/session_snapshot_restore.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
 const openingRegistration = WORLD.opening_registration;
@@ -39,7 +40,13 @@ const PREPARATION = openingPreparation;
 
 const loadedWolf = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loadedWolf.ok) throw new Error("Wolf-Winter must compile.");
-const wolfIndex = indexRpgPack(loadedWolf.compiled.pack);
+const wolfPack = loadedWolf.compiled.pack;
+const wolfIndex = indexRpgPack(wolfPack);
+const ORDINARY_HUNT_FLAG = "opening_condition_steady_scent_channel";
+const ORDINARY_HUNT_SEED = seedForSeededOpeningFlag(
+  wolfPack.meta.seeded_opening_flags,
+  ORDINARY_HUNT_FLAG,
+);
 
 const FULL_OVERWORLD = { compact_context: false, compact_result: false } as const;
 const ROWAN_ID = "albany_city__civic_core__contact";
@@ -281,11 +288,13 @@ function launchRegisteredWolf(profileId: string): {
     session_id: restored.session_id,
     quest_id: quest.id,
     approach_id: "albany:wolf_approach_sheltered_stockway",
-    seed: 505,
+    seed: ORDINARY_HUNT_SEED,
   });
+  const state = structuredClone(api.sessions.get(launched.rpg_session_id).state);
+  expect(state.flags[ORDINARY_HUNT_FLAG]).toBe(true);
   return {
     api,
-    state: structuredClone(api.sessions.get(launched.rpg_session_id).state),
+    state,
     registeredSnapshot,
     rowanJournalId: rowan.result.entry.id,
     haydenJournalId,
@@ -626,7 +635,10 @@ describe("SS-F01 — Albany character background counterfactual", () => {
     expect(advocateNext).toContain("bind_paling_rail");
     expect(wardenNext).not.toEqual(advocateNext);
 
-    const direct = warden.api.start_world_quest({ world_quest_id: "wolf_winter", seed: 505 });
+    const direct = warden.api.start_world_quest({
+      world_quest_id: "wolf_winter",
+      seed: ORDINARY_HUNT_SEED,
+    });
     const directState = warden.api.sessions.get(direct.session_id).state;
     expect(directState.vars.defense).toBe(3);
     expect(directState.campaignImportReceipt).toBeUndefined();

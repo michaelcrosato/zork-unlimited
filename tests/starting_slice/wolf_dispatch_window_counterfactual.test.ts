@@ -10,10 +10,22 @@ import {
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
-const index = indexRpgPack(loaded.compiled.pack);
+const pack = loaded.compiled.pack;
+const index = indexRpgPack(pack);
+const NON_LURE_DISPATCH_FLAG = "opening_condition_open_ash_lane";
+const NON_LURE_DISPATCH_SEED = seedForSeededOpeningFlag(
+  pack.meta.seeded_opening_flags,
+  NON_LURE_DISPATCH_FLAG,
+);
+const OTHER_ORDINARY_DISPATCH_FLAG = "opening_condition_steady_scent_channel";
+const OTHER_ORDINARY_DISPATCH_SEED = seedForSeededOpeningFlag(
+  pack.meta.seeded_opening_flags,
+  OTHER_ORDINARY_DISPATCH_FLAG,
+);
 
 function worstRng(): Rng {
   return { next: () => 0, int: (min) => min };
@@ -41,7 +53,11 @@ function atByre(
   inventory: string[] = [],
   vars: Record<string, number> = {},
 ): GameState {
-  const state = initStateForRpgPack(index, 4001);
+  const [seed, openingFlag] = flags.strategy_lure_committed
+    ? [NON_LURE_DISPATCH_SEED, NON_LURE_DISPATCH_FLAG]
+    : [OTHER_ORDINARY_DISPATCH_SEED, OTHER_ORDINARY_DISPATCH_FLAG];
+  const state = initStateForRpgPack(index, seed);
+  expect(state.flags[openingFlag]).toBe(true);
   state.current = "paling_gap";
   Object.assign(state.flags, flags);
   state.inventory.push(...inventory);

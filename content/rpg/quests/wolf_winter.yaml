@@ -63,6 +63,11 @@ meta:
   start_room: steading_yard
   vars_init: { hp: 30, attack: 5, defense: 3, fieldcraft: 0, repair: 0, streetwise: 0, mediation: 0, cattle_alarm: 0, pack_drive: 0, drive_kit_charges: 0, fortification_pressure: 0 }
   flags_init: []
+  seeded_opening_flags:
+    - opening_condition_firm_frozen_rail
+    - opening_condition_steady_scent_channel
+    - opening_condition_open_ash_lane
+    - opening_condition_sound_lower_frame
   # The opt-in fairness promise (bug_0114). With this set the validator proves the
   # per-fight UPPER bound for every wolf AND the cumulative-HP bound across the whole
   # three-fight gauntlet (bug_0172): with the hunter's BEST reachable stats (init + the
@@ -172,8 +177,9 @@ rooms:
           - { not_visited: byre_yard }
         text: >
           The exposed ridge brings you and June Pike quickly to Cade's yard lip. Open
-          snow makes plume, wolf-breath, and crosswind plain, easing the first feed
-          cast. The cattle saw both riders crest and bawl against the slats. June checks
+          snow makes plume, wolf-breath, and crosswind plain, ordinarily easing LURE's
+          first feed cast; Cade's tonight-ground fact can supersede that first beat. The
+          cattle saw both riders crest and bawl against the slats. June checks
           her rope; the ridge descent waits.
       - when:
           - { has_flag: approach_exposed_ridge }
@@ -182,8 +188,9 @@ rooms:
           - { not_visited: byre_yard }
         text: >
           The exposed ridge brings you quickly to Cade's yard lip. Open snow makes
-          plume, wolf-breath, and crosswind plain, easing the first feed cast. The cattle
-          saw you crest and bawl against the slats; the ridge descent waits.
+          plume, wolf-breath, and crosswind plain, ordinarily easing LURE's first feed
+          cast; Cade's tonight-ground fact can supersede that first beat. The cattle saw
+          you crest and bawl against the slats; the ridge descent waits.
       - when:
           - { has_flag: approach_sheltered_stockway }
           - { not_flag: approach_exposed_ridge }
@@ -192,7 +199,8 @@ rooms:
         text: >
           The sheltered stockway brings you and June Pike unseen under the lee to
           Cade's yard. Hedges keep the herd calm and June's rope quiet. The shelter
-          conceals the smoke plume and crosswind that would ease the first feed cast.
+          conceals the smoke plume and crosswind that would ordinarily ease LURE's first
+          feed cast; Cade's tonight-ground fact can supersede that first beat.
           The screened stock gate waits.
       - when:
           - { has_flag: approach_sheltered_stockway }
@@ -202,14 +210,15 @@ rooms:
         text: >
           The sheltered stockway brings you unseen under the lee to Cade's yard. Hedges
           keep the herd calm. The shelter conceals the smoke plume and crosswind that
-          would ease the first feed cast. The screened stock gate waits.
+          would ordinarily ease LURE's first feed cast; Cade's tonight-ground fact can
+          supersede that first beat. The screened stock gate waits.
       - when: [{ has_flag: june_pike_present }, { not_visited: byre_yard }]
         text: >
           The Albany packet brought you and Road Warden June Pike down the hill road.
           June checks her cattle rope, then takes the lower stock path: cattle-first
           authority, no place on the wolf line, and no agreement after a wolf dies. The
           byre-yard lies north; hold the cattle till dawn.
-    objects: [exposed_ridge_last_mile, sheltered_stockway_last_mile]
+    objects: [steading_field_condition, exposed_ridge_last_mile, sheltered_stockway_last_mile]
     exits:
       - direction: north
         to: byre_yard
@@ -235,6 +244,7 @@ rooms:
         drive_signal_rope_kit,
         cade_household_shutters,
         albany_relief_seals,
+        byre_field_condition,
       ]
     # Progress variants are ordered from the deepest completed fight back to the opening
     # clue state. Re-entering this hub must describe the wolves actually left alive; visit
@@ -322,6 +332,19 @@ rooms:
           the store-shed is west. North, the yearling lies dead in the broken paling, but
           the flank-wolf holds the byre door and the grey leader waits deeper in. The yard
           gate is south.
+      - when:
+          - { has_flag: opening_condition_firm_frozen_rail }
+          - { has_flag: hayden_frost_report_certified }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+          - { not_visited: paling_gap }
+        text: >
+          Tonight's firm frozen rail gives HUNT one clean first brace north; Works does not
+          replace or remove it. Because that brace cannot split, Hayden's separate later
+          byre-jamb route—which requires an ordinary failed wedge—cannot open on this ground.
+          Cross north to commit HUNT, or inspect all four plans with Cade first. Ask June too
+          if she is holding the gate. Store west; gate south.
       - when:
           - { has_flag: hayden_frost_report_certified }
           - { has_flag: works_fortification_prepared }
@@ -574,7 +597,7 @@ rooms:
               - { has_flag: strategy_lure_committed }
           - { not_flag: flank_wolf_down }
           - { not_flag: flank_redirected }
-        locked_msg: "Before the flank-wolf falls, settle the yearling. Then take the crawlboard named by certified testimony or Cade's committed plan, or bind a split rail; leave the sound rail wedged."
+        locked_msg: "Before the flank-wolf falls, settle the yearling. Then take the crawlboard named by certified testimony or Cade's committed plan, or bind a split rail; leave the sound rail set."
 
   - id: fodder_loft
     name: "The Fodder-Loft"
@@ -643,6 +666,17 @@ rooms:
           The broken paling no longer holds a living wolf. Cade's final scent drew the
           remaining pack into the high wood. Continue north through the empty threshold
           and byre mouth to stand among the cattle; the yard south is closed.
+      - when:
+          - { has_flag: opening_condition_firm_frozen_rail }
+          - { not_flag: rail_attempted }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+        text: >
+          A hungry young wolf bunches to rush at the broken paling. Tonight's firm frozen
+          rail is locked into a sound seat: brace it once without a roll as a combat funnel.
+          It does not turn the wolf alive. Set the Albany spear, then drive. The byre-yard
+          is south.
       - when:
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_yearling_turned }
@@ -801,7 +835,7 @@ rooms:
           back wall. The byre runs north; the yard is south.
       - when: [{ has_flag: yearling_down }, { has_flag: breach_braced }]
         text: >
-          The yearling lies dead in the snow at the broken paling, the rail wedged hard
+          The yearling lies dead in the snow at the broken paling, the rail set hard
           across the breach. The half-shut gap forces what follows singly and slow—the
           guarded funnel Cade promised. The byre runs north; the yard is south.
       - when:
@@ -862,7 +896,7 @@ rooms:
           stands, one last thrust will finish what the set spear began.
       - when: [{ has_flag: yearling_spear_set }, { has_flag: breach_braced }]
         text: >
-          The gap is half-shut by the wedged rail, and the yearling recoils alive from
+          The gap is half-shut by the braced rail, and the yearling recoils alive from
           the Albany spear you planted in its rush. Snow packs the spear-butt and the
           wolf cannot turn aside. Drive the set point through while its weight is still
           committed along the shaft.
@@ -899,7 +933,7 @@ rooms:
           a second rush; the byre-yard is back to the south.
       - when: [{ has_flag: breach_braced }]
         text: >
-          The fallen rail is wedged hard across it: the broken paling is half-shut. The
+          The fallen rail is set hard across it: the broken paling is half-shut. The
           yearling still holds the narrowed gap, snarling, but must rush singly and slow.
           Outside a committed fouled lure this is a combat funnel, not a living turn: set
           the spear against it. The yard is south.
@@ -954,8 +988,25 @@ rooms:
           outside it. Winter siege is visible and rising. Carry the remaining public band
           north to seal the threshold; the committed yard stays closed behind you.
       - when:
+          - { has_flag: opening_condition_sound_lower_frame }
           - { has_flag: fortify_cade_terms_accepted }
           - { not_flag: fortify_outer_seal_attempted }
+        text: >
+          All three wolves test the open paling from outside. Tonight's sound lower frame
+          takes Cade's first household shutter without a Repair roll. His property remains
+          exposed, public seals stay preserved, and the threshold and dawn costs remain.
+      - when:
+          - { has_flag: opening_condition_sound_lower_frame }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: fortify_outer_seal_attempted }
+        text: >
+          All three wolves test the open paling from outside. Tonight's sound lower frame
+          takes Albany's first relief seal without a Repair roll. Cade's property remains
+          covered, public stock still pays, and the threshold and dawn costs remain.
+      - when:
+          - { has_flag: fortify_cade_terms_accepted }
+          - { not_flag: fortify_outer_seal_attempted }
+          - { not_flag: opening_condition_sound_lower_frame }
         text: >
           All three wolves test the open paling from outside. Seat Cade's first household
           shutter here once. Reese's Works marks lower the shown Repair difficulty only if
@@ -964,6 +1015,7 @@ rooms:
       - when:
           - { has_flag: fortify_albany_authority_invoked }
           - { not_flag: fortify_outer_seal_attempted }
+          - { not_flag: opening_condition_sound_lower_frame }
         text: >
           All three wolves test the open paling from outside. Seat Albany's first relief
           seal here once. Reese's Works marks lower the shown Repair difficulty only if
@@ -1090,7 +1142,7 @@ rooms:
         text: >
           The flank-wolf lies pinned across the byre threshold where the braced funnel
           held it for the finishing thrust. The byre runs north into the dark; the
-          wedged paling is back to the south.
+          braced paling is back to the south.
       - when: [{ has_flag: flank_wolf_down }, { has_flag: flank_turned_through_return }]
         text: >
           The flank-wolf lies twisted across the byre threshold, beaten by the return
@@ -1107,7 +1159,7 @@ rooms:
           threshold. The byre runs back north into the dark; the paling is back to the south.
       - when: [{ has_flag: flank_pinned_at_rail }]
         text: >
-          The flank-wolf is alive but pinned hard against the wedged rail by your second
+          The flank-wolf is alive but pinned hard against the braced rail by your second
           thrust. Its circle and guarded return are spent; if it still stands, its open
           shoulder wants one last thrust. The dark byre is north; the paling is south.
       - when: [{ has_flag: flank_hooked_over_guard }]
@@ -1571,6 +1623,47 @@ rooms:
       - { direction: south, to: byre_mouth }
 
 objects:
+  # One seed-selected physical fact is visible before any plan choice. These two
+  # read-only scenery records repeat the same fact on each side of the last-mile
+  # approach. They permit LOOK/EXAMINE but provide no custom plan action, resource,
+  # or recommendation. The matching strategy's first execution beat consumes no
+  # roll, while every later cost remains authored.
+  - id: steading_field_condition
+    name: "approach field condition"
+    aliases: [approach ground sign, night approach condition]
+    description: "One physical fact of this particular winter night. Cade can set it against all four plans without choosing for you."
+    variants:
+      - when: [{ has_flag: opening_condition_firm_frozen_rail }]
+        name: "firm frozen rail — HUNT braces its first rail without a roll"
+        text: "Deep frost has locked the public paling rail into a firm seat. HUNT can brace that first breach rail without a roll; LURE, DRIVE, and FORTIFY gain no check change, and the wolves and later combat remain."
+      - when: [{ has_flag: opening_condition_steady_scent_channel }]
+        name: "steady scent channel — LURE's first cast runs clean without a roll"
+        text: "Steam and scent hold one steady channel across the broken paling. LURE's first feed cast runs clean without a roll; its last-feed and ordinary cattle-alarm costs remain, and HUNT, DRIVE, and FORTIFY gain no check change."
+      - when: [{ has_flag: opening_condition_open_ash_lane }]
+        name: "open ash lane — DRIVE's first signal runs clean without a roll"
+        text: "Wind has swept Cade's outside ash lane open behind the yearling. DRIVE's first shutter signal runs clean without a roll; its second charge and Crisis choice remain, and HUNT, LURE, and FORTIFY gain no check change."
+      - when: [{ has_flag: opening_condition_sound_lower_frame }]
+        name: "sound lower frame — FORTIFY's first seal seats without a roll"
+        text: "The paling's lower pegged frame is sound beneath the frost. FORTIFY's first committed seal seats without a roll; stance, threshold, and dawn costs remain, and HUNT, LURE, and DRIVE gain no check change."
+
+  - id: byre_field_condition
+    name: "byre field condition"
+    aliases: [byre ground sign, night byre condition]
+    description: "The same physical fact visible at the byre. It changes only the named plan's first execution beat."
+    variants:
+      - when: [{ has_flag: opening_condition_firm_frozen_rail }]
+        name: "firm frozen rail — HUNT braces its first rail without a roll"
+        text: "Deep frost has locked the public paling rail into a firm seat. HUNT can brace that first breach rail without a roll; LURE, DRIVE, and FORTIFY gain no check change, and the wolves and later combat remain."
+      - when: [{ has_flag: opening_condition_steady_scent_channel }]
+        name: "steady scent channel — LURE's first cast runs clean without a roll"
+        text: "Steam and scent hold one steady channel across the broken paling. LURE's first feed cast runs clean without a roll; its last-feed and ordinary cattle-alarm costs remain, and HUNT, DRIVE, and FORTIFY gain no check change."
+      - when: [{ has_flag: opening_condition_open_ash_lane }]
+        name: "open ash lane — DRIVE's first signal runs clean without a roll"
+        text: "Wind has swept Cade's outside ash lane open behind the yearling. DRIVE's first shutter signal runs clean without a roll; its second charge and Crisis choice remain, and HUNT, LURE, and FORTIFY gain no check change."
+      - when: [{ has_flag: opening_condition_sound_lower_frame }]
+        name: "sound lower frame — FORTIFY's first seal seats without a roll"
+        text: "The paling's lower pegged frame is sound beneath the frost. FORTIFY's first committed seal seats without a roll; stance, threshold, and dawn costs remain, and HUNT, LURE, and DRIVE gain no check change."
+
   # Imported overworld approach knowledge becomes exactly one visible last-mile action.
   # Visit history retires both objects as soon as either action reaches the byre, and the
   # ordinary north exit remains the unchanged direct-start path when neither import exists.
@@ -1773,6 +1866,14 @@ objects:
       begins to move. A folded call cannot be fired again tonight.
     variants:
       - when:
+          - { has_flag: opening_condition_open_ash_lane }
+          - { not_flag: drive_opening_fouled }
+          - { not_flag: drive_yearling_turned }
+        text: >
+          Tonight's open ash lane lies clean behind the yearling. The first committed
+          DRIVE shutter turns it alive without a roll, spends one charge, and raises
+          pack drive once. The second charge and the same final Crisis choice remain.
+      - when:
           - { has_flag: relief_oath_unaffiliated_bond }
           - { not_flag: drive_opening_fouled }
           - { not_flag: drive_yearling_turned }
@@ -1800,6 +1901,34 @@ objects:
           - { has_item: drive_signal_rope_kit }
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_combat_withheld }
+          - { has_flag: opening_condition_open_ash_lane }
+          - { var_gte: { name: drive_kit_charges, value: 2 } }
+          - { not_flag: drive_opening_fouled }
+          - { not_flag: june_blood_condition_broken }
+          - { not_flag: yearling_down }
+          - { not_flag: drive_yearling_turned }
+        effects:
+          - dec_var: { name: drive_kit_charges, by: 1 }
+          - inc_var: { name: pack_drive, by: 1 }
+          - set_flag: drive_yearling_turned
+          - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+          - add_journal: "The open ash lane carries the one-shot shutter cleanly without a roll. The yearling turns alive; one charge and the Crisis cost remain."
+          - narrate: >
+              The swept ash lane is still open behind the yearling. You fire the shutter
+              once; its crack lands exactly outside the wolf's shoulder and turns it alive
+              as the herd begins to move. One charge remains for the door, and the drive's
+              final Crisis choice is unchanged.
+
+      - verb: USE
+        item: drive_signal_rope_kit
+        target: drive_breach_signal
+        command_verb: fire
+        command_template: "fire {target} with {item}"
+        conditions:
+          - { has_item: drive_signal_rope_kit }
+          - { has_flag: strategy_drive_committed }
+          - { has_flag: drive_combat_withheld }
+          - { not_flag: opening_condition_open_ash_lane }
           - { has_flag: relief_oath_unaffiliated_bond }
           - { var_gte: { name: drive_kit_charges, value: 2 } }
           - { not_flag: drive_opening_fouled }
@@ -1847,6 +1976,7 @@ objects:
           - { has_item: drive_signal_rope_kit }
           - { has_flag: strategy_drive_committed }
           - { has_flag: drive_combat_withheld }
+          - { not_flag: opening_condition_open_ash_lane }
           - { not_flag: relief_oath_unaffiliated_bond }
           - { var_gte: { name: drive_kit_charges, value: 2 } }
           - { not_flag: drive_opening_fouled }
@@ -2288,6 +2418,13 @@ objects:
       winter-siege pressure and cannot be retried; only the disclosed stance recovery remains.
     variants:
       - when:
+          - { has_flag: opening_condition_sound_lower_frame }
+          - { not_flag: fortify_outer_seal_attempted }
+        text: >
+          Tonight's sound lower frame takes the first committed household shutter or
+          public band without a roll. The selected stance still decides property, seals,
+          and Cade's aid; threshold pressure and the dawn watch remain unchanged.
+      - when:
           - { has_flag: relief_oath_full_duty }
           - { has_flag: fortify_albany_authority_invoked }
           - { has_flag: works_fortification_prepared }
@@ -2318,6 +2455,49 @@ objects:
         conditions:
           - { has_item: cade_household_shutters }
           - { has_flag: fortify_cade_terms_accepted }
+          - { has_flag: opening_condition_sound_lower_frame }
+          - { not_flag: fortify_outer_seal_attempted }
+        effects:
+          - set_flag: fortify_outer_seal_attempted
+          - inc_var: { name: fortification_pressure, by: 1 }
+          - set_flag: fortify_outer_sealed
+          - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+          - add_journal: "The sound lower frame seats Cade's first shutter without a roll. Household terms and the remaining threshold-and-dawn costs still stand."
+          - narrate: >
+              The lower frame takes both pegs exactly as the frost line promised. Cade's
+              first shutter seats cleanly without a Repair roll. One household shutter
+              remains for the threshold; his exposed-property terms and the dawn watch
+              are unchanged.
+
+      - verb: USE
+        item: albany_relief_seals
+        target: fortify_outer_seal
+        command_verb: seat
+        conditions:
+          - { has_item: albany_relief_seals }
+          - { has_flag: fortify_albany_authority_invoked }
+          - { has_flag: opening_condition_sound_lower_frame }
+          - { not_flag: fortify_outer_seal_attempted }
+        effects:
+          - set_flag: fortify_outer_seal_attempted
+          - inc_var: { name: fortification_pressure, by: 1 }
+          - set_flag: fortify_outer_sealed
+          - set_quest_stage: { quest: the_watch, stage: outer_sealed }
+          - add_journal: "The sound lower frame seats Albany's first public band without a roll. Authority terms and the remaining threshold-and-dawn costs still stand."
+          - narrate: >
+              The lower frame takes Albany's first band exactly as the frost line
+              promised. It seats cleanly without a Repair roll. The remaining public
+              seal goes north; spent-seal authority, Cade's refusal, and the dawn watch
+              are unchanged.
+
+      - verb: USE
+        item: cade_household_shutters
+        target: fortify_outer_seal
+        command_verb: seat
+        conditions:
+          - { has_item: cade_household_shutters }
+          - { has_flag: fortify_cade_terms_accepted }
+          - { not_flag: opening_condition_sound_lower_frame }
           - { has_flag: works_fortification_prepared }
           - { not_flag: fortify_outer_seal_attempted }
         effects:
@@ -2358,6 +2538,7 @@ objects:
         conditions:
           - { has_item: cade_household_shutters }
           - { has_flag: fortify_cade_terms_accepted }
+          - { not_flag: opening_condition_sound_lower_frame }
           - { not_flag: works_fortification_prepared }
           - { not_flag: fortify_outer_seal_attempted }
         effects:
@@ -2398,6 +2579,7 @@ objects:
         conditions:
           - { has_item: albany_relief_seals }
           - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: opening_condition_sound_lower_frame }
           - { has_flag: relief_oath_full_duty }
           - { has_flag: works_fortification_prepared }
           - { not_flag: fortify_outer_seal_attempted }
@@ -2439,6 +2621,7 @@ objects:
         conditions:
           - { has_item: albany_relief_seals }
           - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: opening_condition_sound_lower_frame }
           - { has_flag: relief_oath_full_duty }
           - { not_flag: works_fortification_prepared }
           - { not_flag: fortify_outer_seal_attempted }
@@ -2480,6 +2663,7 @@ objects:
         conditions:
           - { has_item: albany_relief_seals }
           - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: opening_condition_sound_lower_frame }
           - { not_flag: relief_oath_full_duty }
           - { has_flag: works_fortification_prepared }
           - { not_flag: fortify_outer_seal_attempted }
@@ -2521,6 +2705,7 @@ objects:
         conditions:
           - { has_item: albany_relief_seals }
           - { has_flag: fortify_albany_authority_invoked }
+          - { not_flag: opening_condition_sound_lower_frame }
           - { not_flag: relief_oath_full_duty }
           - { not_flag: works_fortification_prepared }
           - { not_flag: fortify_outer_seal_attempted }
@@ -2897,6 +3082,15 @@ objects:
       and cannot be rolled again.
     visible_when: [{ has_flag: strategy_lure_committed }]
     variants:
+      - when:
+          - { has_flag: opening_condition_steady_scent_channel }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        text: >
+          Tonight's steady scent channel carries the first committed feed cast cleanly
+          without a roll. Cade's last sack still serves all three casts; the ordinary
+          arrival-alarm cost remains unless Albany's exposed-ridge fodder absorbs it.
       - when: [{ has_flag: yearling_redirected }]
         text: "The clean oat-and-tallow line runs through the broken paling into the high wood; the living yearling's tracks follow it away from the byre."
       - when: [{ has_flag: yearling_down }]
@@ -2911,6 +3105,116 @@ objects:
           - { not_flag: yearling_down }
         text: "Oats and tallow smear the churned snow where the first cast fouled. There is no second sack; a bound split rail can pen the yearling onto what remains, or combat can clear the breach."
     interactions:
+      # The steady scent channel changes only the first cast's uncertainty. Four
+      # mutually exclusive rows preserve the authored approach/fodder alarm costs.
+      - verb: USE
+        item: winter_feed_sack
+        target: downwind_feed_line
+        command_verb: lay
+        command_template: "lay {target} with {item}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: opening_condition_steady_scent_channel }
+          - { has_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
+          - { has_flag: relief_cade_fodder_allocated }
+          - { not_flag: relief_resident_shelter_allocated }
+          - { not_flag: relief_mobile_reserve_allocated }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - set_flag: yearling_redirected
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+          - add_journal: "The steady scent channel carries the first cast cleanly without a roll. Albany's ridge fodder absorbs its ordinary alarm; the finite sack continues north."
+          - narrate: >
+              The night's steady channel takes the oats and tallow straight across the
+              yearling's nose. It follows alive into the high wood without a check. Emery's
+              pre-fed herd spends its steadied beat, so alarm does not rise; the same finite
+              sack still has to carry the loft and leader casts.
+
+      - verb: USE
+        item: winter_feed_sack
+        target: downwind_feed_line
+        command_verb: lay
+        command_template: "lay {target} with {item}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: opening_condition_steady_scent_channel }
+          - { has_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
+          - { not_flag: relief_cade_fodder_allocated }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - inc_var: { name: cattle_alarm, by: 1 }
+          - set_flag: yearling_redirected
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+          - add_journal: "The steady scent channel carries the first cast cleanly without a roll. Its ordinary cast adds 1 cattle alarm beyond the exposed arrival's prior 1, for alarm 2; the finite sack continues north."
+          - narrate: >
+              The night's steady channel takes the oats and tallow straight across the
+              yearling's nose. It follows alive into the high wood without a check. The
+              exposed arrival already stirred the herd once; this clean cast adds its ordinary
+              second alarm beat. Cattle alarm is now 2, and the same finite sack still has to
+              carry the loft and leader casts.
+
+      - verb: USE
+        item: winter_feed_sack
+        target: downwind_feed_line
+        command_verb: lay
+        command_template: "lay {target} with {item}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: opening_condition_steady_scent_channel }
+          - { has_flag: approach_sheltered_stockway }
+          - { not_flag: approach_exposed_ridge }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - inc_var: { name: cattle_alarm, by: 1 }
+          - set_flag: yearling_redirected
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+          - add_journal: "The steady scent channel carries the first cast cleanly without a roll. The ordinary cast raises cattle alarm by 1; the finite sack continues north."
+          - narrate: >
+              The night's steady channel holds even under the lee. Oats and tallow cross
+              the yearling's nose and it follows alive without a check. The herd shifts
+              once behind the slats, and the same finite sack still has to carry the loft
+              and leader casts.
+
+      - verb: USE
+        item: winter_feed_sack
+        target: downwind_feed_line
+        command_verb: lay
+        command_template: "lay {target} with {item}"
+        conditions:
+          - { has_item: winter_feed_sack }
+          - { has_flag: strategy_lure_committed }
+          - { has_flag: opening_condition_steady_scent_channel }
+          - { not_flag: approach_exposed_ridge }
+          - { not_flag: approach_sheltered_stockway }
+          - { not_flag: lure_trail_fouled }
+          - { not_flag: yearling_down }
+          - { not_flag: yearling_redirected }
+        effects:
+          - inc_var: { name: cattle_alarm, by: 1 }
+          - set_flag: yearling_redirected
+          - inc_var: { name: score, by: 10 }
+          - set_quest_stage: { quest: the_watch, stage: breach_redirected }
+          - add_journal: "The steady scent channel carries the first cast cleanly without a roll. The ordinary cast raises cattle alarm by 1; the finite sack continues north."
+          - narrate: >
+              The night's steady channel takes the oats and tallow straight across the
+              yearling's nose. It follows alive into the high wood without a check. The
+              herd shifts once behind the slats, and the same finite sack still has to
+              carry the loft and leader casts.
+
       # Emery's northbound fodder is a route-specific cattle buffer, not a retry or
       # a check bonus. On the exposed ridge only, a clean cast consumes the buffer
       # instead of adding the cast's ordinary alarm step. A fouled cast keeps the
@@ -2923,6 +3227,7 @@ objects:
         conditions:
           - { has_item: winter_feed_sack }
           - { has_flag: strategy_lure_committed }
+          - { not_flag: opening_condition_steady_scent_channel }
           - { has_flag: approach_exposed_ridge }
           - { not_flag: approach_sheltered_stockway }
           - { has_flag: relief_cade_fodder_allocated }
@@ -2971,6 +3276,7 @@ objects:
         conditions:
           - { has_item: winter_feed_sack }
           - { has_flag: strategy_lure_committed }
+          - { not_flag: opening_condition_steady_scent_channel }
           - { has_flag: approach_exposed_ridge }
           - { not_flag: approach_sheltered_stockway }
           - { not_flag: relief_cade_fodder_allocated }
@@ -3019,6 +3325,7 @@ objects:
         conditions:
           - { has_item: winter_feed_sack }
           - { has_flag: strategy_lure_committed }
+          - { not_flag: opening_condition_steady_scent_channel }
           - { has_flag: approach_sheltered_stockway }
           - { not_flag: approach_exposed_ridge }
           - { not_flag: lure_trail_fouled }
@@ -3066,6 +3373,7 @@ objects:
         conditions:
           - { has_item: winter_feed_sack }
           - { has_flag: strategy_lure_committed }
+          - { not_flag: opening_condition_steady_scent_channel }
           - { not_flag: approach_exposed_ridge }
           - { not_flag: approach_sheltered_stockway }
           - { not_flag: lure_trail_fouled }
@@ -3646,6 +3954,17 @@ objects:
       - { not_flag: strategy_fortify_committed }
     variants:
       - when:
+          - { has_flag: opening_condition_firm_frozen_rail }
+          - { not_flag: rail_attempted }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+        name: "firm-seated paling-rail"
+        text: >
+          Tonight's deep frost has locked this public rail into a firm seat. On HUNT,
+          brace it once to close the breach without a roll. It remains only a combat
+          funnel: the yearling and the two later wolves still have to be fought.
+      - when:
           - { has_flag: works_fortification_prepared }
           - { not_flag: rail_attempted }
           - { not_flag: strategy_fortify_committed }
@@ -3700,7 +4019,7 @@ objects:
           the remaining tallow. This spends no second roll and draws no blood.
       - when: [{ has_flag: breach_braced }]
         name: "braced paling-rail"
-        text: "The fallen paling-rail is wedged hard across the breach. Without an unbloodied fouled lure, it is a combat funnel: the half-shut gap makes each rush come singly and slow."
+        text: "The fallen paling-rail is set hard across the breach. Without an unbloodied fouled lure, it is a combat funnel: the half-shut gap makes each rush come singly and slow."
       - when:
           - { has_flag: hayden_frost_report_certified }
           - { not_flag: strategy_lure_committed }
@@ -3721,6 +4040,27 @@ objects:
           enough to bind across the spear as a splinter guard. Use the rail again to lash
           that recovery together before you go north.
     interactions:
+      - verb: USE
+        target: paling_rail
+        command_verb: brace
+        conditions:
+          - { has_flag: opening_condition_firm_frozen_rail }
+          - { not_flag: lure_hybrid_combat_entered }
+          - { not_flag: rail_attempted }
+          - { not_flag: breach_braced }
+          - { not_flag: strategy_lure_committed }
+          - { not_flag: strategy_drive_committed }
+          - { not_flag: strategy_fortify_committed }
+        effects:
+          - set_flag: rail_attempted
+          - set_flag: breach_braced
+          - add_journal: "The firm frozen rail braces the HUNT breach without a roll. It is a combat funnel only; all three wolves remain."
+          - narrate: >
+              Deep frost has already keyed the splintered end into a firm seat. You lever
+              the rail across the breach and it locks without a check. The gap is half-shut,
+              forcing the wolves through singly; it spares none of them and changes no
+              later fight.
+
       # Reese's allocation replaces the public wedge with one Repair check. A miss keeps
       # the honest split-rail consequence, then exposes a deterministic cold-set recovery
       # instead of a retry or the public carried-guard branch.
@@ -3733,8 +4073,12 @@ objects:
           - { not_flag: rail_attempted }
           - { not_flag: breach_braced }
           - any_of:
-              - { not_flag: strategy_lure_committed }
-              - { has_flag: lure_trail_fouled }
+              - all_of:
+                  - { not_flag: strategy_lure_committed }
+                  - { not_flag: opening_condition_firm_frozen_rail }
+              - all_of:
+                  - { has_flag: strategy_lure_committed }
+                  - { has_flag: lure_trail_fouled }
           - any_of:
               - { not_flag: strategy_drive_committed }
               - { has_flag: june_blood_condition_broken }
@@ -3785,8 +4129,12 @@ objects:
           - { not_flag: rail_attempted }
           - { not_flag: breach_braced }
           - any_of:
-              - { not_flag: strategy_lure_committed }
-              - { has_flag: lure_trail_fouled }
+              - all_of:
+                  - { not_flag: strategy_lure_committed }
+                  - { not_flag: opening_condition_firm_frozen_rail }
+              - all_of:
+                  - { has_flag: strategy_lure_committed }
+                  - { has_flag: lure_trail_fouled }
           - any_of:
               - { not_flag: strategy_drive_committed }
               - { has_flag: june_blood_condition_broken }
@@ -3922,15 +4270,44 @@ npcs:
       root: cade_root
       nodes:
         - id: cade_root
-          npc_text: |-
-            Albany sent you. Choose what must stand at dawn. Every plan can finish Wolf-Winter; none saves everything, and I name no best answer.
-
-            HUNT — Outcome: hold Cade's ground, herd, and relief stores with prepared combat. Cost: wolves may die; failure can lose cattle or the line. Albany: bloodshed changes Greenway work; damage remains.
-            LURE — Outcome: relocate the pack beyond the breach and keep the herd. Cost: last feed, broken paling, two cattle risked on a first-cast foul. Albany: broken boundary or scattered cattle change Station response.
-            DRIVE — Outcome: evacuate people and herd; force the pack clear. Cost: abandon the outer steading; Crisis takes a wound, two cattle, or rig. Albany: the line and chosen loss remain.
-            FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost: no retreat; expose property for Cade's aid or spend public seals without it. Albany: terms remain; a no-loss hold opens no Cade repair dispatch.
-
-            Questions teach; they do not commit. HUNT commits on uncommitted north crossing; other plans commit in branches. Any commitment closes the other three.
+          npc_text: >
+            Albany sent you. Every plan can finish; I name no best answer. Inspect the four
+            peer plan cards below for outcomes, costs, support, and commitment. Questions
+            choose nothing. HUNT commits on north crossing; the other three commit in their
+            branches.
+          append_variants:
+            - when:
+                - { has_flag: opening_condition_firm_frozen_rail }
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              text: "TONIGHT'S GROUND — firm frozen rail. HUNT braces its first rail without a roll; wolves and later combat remain."
+            - when:
+                - { has_flag: opening_condition_steady_scent_channel }
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              text: "TONIGHT'S GROUND — steady scent channel. LURE's first cast runs clean without a roll; feed and alarm remain."
+            - when:
+                - { has_flag: opening_condition_open_ash_lane }
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              text: "TONIGHT'S GROUND — open ash lane. DRIVE's first signal runs clean without a roll; charge two and Crisis remain."
+            - when:
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              text: "TONIGHT'S GROUND — sound lower frame. FORTIFY's first seal seats without a roll; stance and dawn remain."
           variants:
             - when: [{ has_flag: pack_diverted }]
               text: >
@@ -3946,6 +4323,15 @@ npcs:
                 I can still teach the quick or guarded spear line, and the store gear remains
                 ordinary preparation. North is open; backtracking does not reopen a strategy
                 or return June to the field.
+            - when:
+                - { has_flag: strategy_drive_committed }
+                - { has_flag: opening_condition_open_ash_lane }
+                - { not_visited: paling_gap }
+              text: >
+                Your two-charge drive is committed: tonight's open ash lane makes the first
+                call clean without a roll, so its ordinary hurdle recovery is not needed.
+                Shutter at the paling, rope-bell at the door, then pay the unchanged Crisis:
+                wound, two cattle, or the rig. Outer defense and other strategies stay closed.
             - when:
                 - { has_flag: strategy_drive_committed }
                 - { not_visited: paling_gap }
@@ -3968,16 +4354,43 @@ npcs:
                 no clean retry. Earlier combat lessons remain fallbacks, but Cade will
                 teach no new primary plan. Take the feed Cade released in the store-shed
                 west before entering the breach.
+            - when:
+                - { has_flag: fortify_cade_terms_accepted }
+                - { has_flag: opening_condition_sound_lower_frame }
+              text: >
+                Household terms stand. Take my two shutters north: paling, threshold, then
+                hold to dawn. Tonight's sound lower frame seats the first cleanly, so Cade
+                stays clear of that beat. My outer property stays exposed; Albany's
+                seals stay public. No retreat or strategy switch.
             - when: [{ has_flag: fortify_cade_terms_accepted }]
               text: >
                 Household terms stand. Take my two shutters north: paling, threshold, then
                 hold to dawn. My outer property stays exposed; Albany's seals stay public.
-                If the first seat slips, my shoulder is yours. No retreat or strategy switch.
+                On roll-required ground my shoulder covers one failed first seat; a sound
+                lower frame seats it cleanly. No retreat or strategy switch.
+            - when:
+                - { has_flag: fortify_albany_authority_invoked }
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { has_flag: relief_oath_full_duty }
+              text: >
+                Albany's order stands. Tonight's sound lower frame seats the first band cleanly
+                without a roll, surpassing Full Compact's ordinary lower-peg DC benefit; Cade's
+                refusal and the emergency strip do not enter that beat. Property stays covered,
+                relief stock pays, and threshold and dawn remain. No strategy switch.
+            - when:
+                - { has_flag: fortify_albany_authority_invoked }
+                - { has_flag: opening_condition_sound_lower_frame }
+              text: >
+                Albany's order stands. Take the public seals north: paling, threshold, then
+                hold to dawn. Tonight's sound lower frame seats the first cleanly, so neither
+                my refusal nor the emergency strip enters that beat. My property stays covered;
+                relief stock pays. No strategy switch.
             - when: [{ has_flag: fortify_albany_authority_invoked }]
               text: >
                 Albany's order stands. Take the public seals north: paling, threshold, then
-                hold to dawn. My property stays covered and relief stock pays. If the first
-                seat slips, I will not aid it; spend the emergency strip. No strategy switch.
+                hold to dawn. My property stays covered and relief stock pays. On roll-required
+                ground I refuse a failed first seat; a sound lower frame seats it cleanly.
+                No strategy switch.
             - when:
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
@@ -4003,9 +4416,49 @@ npcs:
                 yours to learn: set, wheel, and violent close. Ask for it—or leave and
                 accept that crossing without a LURE, DRIVE, or FORTIFY commitment means hunt-and-hold.
           topics:
+            - id: hunt
+              aliases: [commit_hunt_and_hold, choose_hunt_and_hold, commit_hunt, inspect_hunt]
+              prompt: "Inspect HUNT — Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing commits and closes LURE/DRIVE/FORTIFY."
+              conditions:
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_hunt
+            - id: lure
+              aliases: [ask_lure, ask_feed, ask_alive]
+              prompt: "Inspect LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; an ordinary first-cast foul risks two cattle."
+              conditions:
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_lure
+            - id: drive
+              aliases: [ask_drive, ask_evacuate, ask_signal]
+              prompt: "Inspect DRIVE — Evacuate people/herd; force pack clear. Cost: abandon outer steading; Crisis takes wound, two cattle, or rig."
+              conditions:
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_drive
+            - id: fortify
+              aliases: [ask_fortify, ask_outlast, ask_seal]
+              prompt: "Inspect FORTIFY — Keep household/herd/pack apart to dawn. Cost: no retreat; expose property/Cade aid or spend seals/no aid."
+              conditions:
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              goto: cade_fortify
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits."
+              prompt: "Inspect HUNT support — Hold ground/stores in prepared combat. Risk wolf deaths and cattle/line; this lesson grants +2 attack/+5 tally."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: june_hunt_released }
@@ -4025,53 +4478,13 @@ npcs:
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
-              prompt: "HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening."
+              prompt: "Inspect HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening."
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
                 - { not_flag: strategy_drive_committed }
                 - { not_flag: strategy_fortify_committed }
               goto: cade_byre
-            - id: commit_hunt_and_hold
-              aliases: [choose_hunt_and_hold, commit_hunt]
-              prompt: "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY."
-              conditions:
-                - { not_flag: june_hunt_released }
-                - { not_flag: strategy_lure_committed }
-                - { not_flag: strategy_drive_committed }
-                - { not_flag: strategy_fortify_committed }
-                - { not_visited: paling_gap }
-              end: true
-            - id: lure
-              aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; a foul risks two cattle. Open or reopen the separate Commit LURE choice."
-              conditions:
-                - { not_flag: june_hunt_released }
-                - { not_flag: strategy_lure_committed }
-                - { not_flag: strategy_drive_committed }
-                - { not_flag: strategy_fortify_committed }
-                - { not_visited: paling_gap }
-              goto: cade_lure
-            - id: drive
-              aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "DRIVE — Evacuate people/herd; force pack clear. Cost: abandon outer steading; Crisis takes wound, two cattle, or rig. Inspect."
-              conditions:
-                - { not_flag: june_hunt_released }
-                - { not_flag: strategy_lure_committed }
-                - { not_flag: strategy_drive_committed }
-                - { not_flag: strategy_fortify_committed }
-                - { not_visited: paling_gap }
-              goto: cade_drive
-            - id: fortify
-              aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "FORTIFY — Keep household/herd/pack apart to dawn. Cost: no retreat; expose property/Cade aid or spend seals/no aid. Inspect."
-              conditions:
-                - { not_flag: june_hunt_released }
-                - { not_flag: strategy_lure_committed }
-                - { not_flag: strategy_drive_committed }
-                - { not_flag: strategy_fortify_committed }
-                - { not_visited: paling_gap }
-              goto: cade_fortify
             - id: current_support
               aliases: [compare_support, ask_current_support]
               prompt: "Review how this dispatch's Fieldcraft, oath, June, and Works support affect the four plans; this chooses nothing."
@@ -4091,33 +4504,101 @@ npcs:
               aliases: [leave_cade]
               prompt: "Leave Cade."
               end: true
+        - id: cade_hunt
+          npc_text: >
+            HUNT holds Cade's ground, herd, and relief stores in combat. Wolves may die;
+            failure risks cattle or the line. Inspection and preparation choose nothing:
+            crossing north commits HUNT and closes LURE, DRIVE, and FORTIFY. Cade's quick
+            and guarded lessons remain separate support cards on the four-plan menu.
+          topics:
+            - id: prepare_hunt
+              aliases: [prepare_hunt_and_hold]
+              prompt: "Prepare HUNT; cross north to commit. Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing closes LURE/DRIVE/FORTIFY."
+              conditions:
+                - { not_flag: june_hunt_released }
+                - { not_flag: strategy_lure_committed }
+                - { not_flag: strategy_drive_committed }
+                - { not_flag: strategy_fortify_committed }
+                - { not_visited: paling_gap }
+              end: true
+            - id: hunt_back
+              prompt: "Return to the four plans; HUNT stays uncommitted until the north crossing."
+              goto: cade_root
+            - id: leave
+              aliases: [leave_cade]
+              prompt: "Leave Cade; HUNT stays uncommitted until the north crossing."
+              end: true
         # These notes describe independent imported facts. They deliberately compose instead
         # of replacing the four-plan scorecard or competing in a combinatorial variant table.
         - id: cade_current_support
           npc_text: "Current dispatch support; nothing in this ledger chooses or changes a plan."
           append_variants:
-            - when: [{ var_gte: { name: fieldcraft, value: 4 } }]
+            - when:
+                - { var_gte: { name: fieldcraft, value: 4 } }
+                - { has_flag: opening_condition_steady_scent_channel }
+              text: >
+                Fieldcraft 4 still sets starting DEF to 4 and supplies DRIVE checks;
+                tonight's steady scent channel removes LURE's first check. FORTIFY still
+                rolls Repair.
+            - when:
+                - { var_gte: { name: fieldcraft, value: 4 } }
+                - { has_flag: opening_condition_open_ash_lane }
+              text: >
+                Fieldcraft 4 still sets starting DEF to 4 and supplies LURE checks;
+                tonight's open ash lane removes DRIVE's first check. FORTIFY still rolls
+                Repair.
+            - when:
+                - { var_gte: { name: fieldcraft, value: 4 } }
+                - { not_flag: opening_condition_steady_scent_channel }
+                - { not_flag: opening_condition_open_ash_lane }
+                - { not_flag: opening_condition_sound_lower_frame }
               text: >
                 Fieldcraft 4 sets starting DEF to 4 and supplies the DRIVE/LURE checks;
                 FORTIFY still rolls Repair.
+            - when:
+                - { var_gte: { name: fieldcraft, value: 4 } }
+                - { has_flag: opening_condition_sound_lower_frame }
+              text: >
+                Fieldcraft 4 still sets starting DEF to 4 and supplies DRIVE/LURE checks;
+                tonight's sound lower frame removes FORTIFY's first Repair roll.
             - when: [{ has_flag: relief_oath_limited_duty }]
               text: >
                 Aid-only adds no DRIVE/HUNT benefit; its clean LURE skips the final ordinary
                 +1 alarm, while household FORTIFY fits and Albany authority bends the promise.
             - when: [{ has_flag: june_pike_present }]
               text: >
-                June holds a separate cattle line: HUNT releases her at first blood, LURE can
-                lower a recovered foul, DRIVE keeps its front Crisis cost, and FORTIFY gains
-                her paid brace only on an unstabilized pressure-3 line.
-            - when: [{ has_flag: relief_oath_full_duty }]
+                June holds a separate cattle line: HUNT releases her at first blood; LURE can
+                lower a recovered roll-required foul, while steady scent needs no recovery;
+                DRIVE keeps its front Crisis cost; FORTIFY gains her paid brace only on an
+                unstabilized roll-required pressure-3 line, while sound frame needs none.
+            - when:
+                - { has_flag: relief_oath_full_duty }
+                - { not_flag: opening_condition_sound_lower_frame }
               text: >
                 Full Compact lowers the first Albany-authority FORTIFY seat by 2; other plan
                 checks are unchanged.
-            - when: [{ has_flag: works_fortification_prepared }]
+            - when:
+                - { has_flag: relief_oath_full_duty }
+                - { has_flag: opening_condition_sound_lower_frame }
+              text: >
+                Full Compact's ordinary first-seat reduction is already surpassed tonight:
+                the sound lower frame seats FORTIFY's first Albany band without a roll.
+            - when:
+                - { has_flag: works_fortification_prepared }
+                - { not_flag: opening_condition_sound_lower_frame }
               text: >
                 Works makes Cade's first FORTIFY seat DC 12 and Albany's DC 12, or DC 10 with
-                Full Compact. At the LURE/HUNT rail it replaces the wedge with Repair DC 12;
-                a miss exposes the marked no-roll splice and raises alarm when set.
+                Full Compact. At the ordinary LURE/HUNT rail it replaces the wedge with Repair
+                DC 12; a miss exposes the marked no-roll splice and raises alarm when set.
+                If tonight's ground is the firm frozen rail, that named no-roll HUNT brace
+                applies instead.
+            - when:
+                - { has_flag: works_fortification_prepared }
+                - { has_flag: opening_condition_sound_lower_frame }
+              text: >
+                Tonight's sound lower frame replaces Works' usual first-seat check with a
+                no-roll FORTIFY seal. Works still replaces the ordinary LURE/HUNT wedge with
+                Repair DC 12; a miss exposes the marked no-roll splice and raises alarm when set.
           topics:
             - id: current_support_back
               prompt: "Close the current-support ledger and return to Cade's four plans."
@@ -4193,13 +4674,13 @@ npcs:
               end: true
         - id: cade_byre
           npc_text: >
-            Guarded spear line: wedge the rail to half-shut the breach as a combat funnel;
-            if it splits, bind a guard across your spear. Neither turns a wolf alive. At
-            old grey, wait out the feint and take the true rush—the patient alternative
-            to closing early.
+            Guarded spear line: set the rail to half-shut the breach as a combat funnel.
+            On ordinary ground, wedge it; if it splits, bind a guard. A firm frozen rail
+            braces directly. Neither turns a wolf alive. At old grey, wait out the feint
+            and take the true rush—the patient alternative to closing early.
           effects:
             - set_flag: heard_plan
-            - add_journal: "Cade's guarded/patient combat: wedge rail; if split, bind. Neither turns a wolf alive. Wait out grey; take true rush."
+            - add_journal: "Cade's guarded/patient combat: set the rail as tonight's ground allows; bind only an ordinary split. Neither turns a wolf alive. Wait out grey; take true rush."
           topics:
             - id: wolves
               aliases: [ask_wolves]
@@ -4251,8 +4732,15 @@ npcs:
           npc_text: >
             FEED LURE relocates pack beyond the breach while holding the herd at Cade's yard;
             spends last feed, leaves paling broken. Three casts;
-            first foul risks two cattle; no retry, rail recovery. Supports: Fieldcraft, fodder,
-            aid-only. Commit here. Cross uncommitted chooses HUNT, closing lure/drive/fortify.
+            on ordinary ground a first foul risks two cattle with no retry and rail recovery;
+            a steady scent channel instead makes that first cast clean without a roll.
+            Feed and alarm costs remain. Fieldcraft/fodder aid ordinary terms; aid-only still
+            changes final clean-line alarm. Commit here. Cross uncommitted chooses HUNT.
+          append_variants:
+            - when: [{ has_flag: opening_condition_steady_scent_channel }]
+              text: >
+                Tonight's steady scent channel is that exception: this first cast cannot foul
+                and needs no roll; the finite feed, alarm accounting, later casts, and ending remain.
           variants:
             - when:
                 - { has_flag: relief_oath_limited_duty }
@@ -4262,8 +4750,9 @@ npcs:
                 AID-ONLY LURE BENEFIT: If the first cast stays clean, the witnessed count skips
                 the final ordinary +1 alarm; a fouled opening keeps it. FEED LURE relocates pack
                 beyond the breach while holding the herd at Cade's yard; spends last feed, leaves
-                paling broken. Three casts; first foul risks two cattle;
-                no retry, rail recovery. Fieldcraft/fodder help. OPTIONAL QUICK LESSON: +2
+                paling broken. Three casts. On ordinary ground a first foul risks two cattle,
+                no retry, rail recovery; a steady scent channel makes that first cast clean
+                without a roll. Fieldcraft/fodder aid ordinary terms. OPTIONAL QUICK LESSON: +2
                 attack, +5 final tally; committing first closes it. The lesson returns to the
                 plan menu; choose LURE again to commit. Cross uncommitted chooses HUNT; other
                 plans close.
@@ -4273,8 +4762,10 @@ npcs:
               text: >
                 FEED LURE relocates pack beyond the breach while holding the herd at Cade's yard;
                 spends last feed, leaves paling broken. Three casts;
-                first foul risks two cattle; no retry, rail recovery. Supports: Fieldcraft,
-                fodder, aid-only. OPTIONAL QUICK LESSON: +2 attack, +5 final tally; committing
+                on ordinary ground a first foul risks two cattle with no retry and rail recovery;
+                a steady scent channel makes that first cast clean without a roll. Fieldcraft
+                and fodder aid ordinary terms; aid-only changes clean-line alarm. OPTIONAL QUICK
+                LESSON: +2 attack, +5 final tally; committing
                 first closes it. The lesson returns to the plan menu; choose LURE again to
                 commit. Cross uncommitted chooses HUNT, closing lure/drive/fortify.
             - when:
@@ -4284,8 +4775,9 @@ npcs:
                 AID-ONLY LURE BENEFIT: If the first cast stays clean, the witnessed count skips
                 the final ordinary +1 alarm; a fouled opening keeps it. FEED LURE relocates pack
                 beyond the breach while holding the herd at Cade's yard; spends last feed, leaves
-                paling broken. Three casts; first foul risks two cattle;
-                no retry, rail recovery. Fieldcraft/fodder help. Commit here. Cross uncommitted
+                paling broken. Three casts. On ordinary ground a first foul risks two cattle,
+                no retry, rail recovery; a steady scent channel makes that first cast clean
+                without a roll. Fieldcraft/fodder aid ordinary terms. Commit here. Cross uncommitted
                 chooses HUNT; other plans close.
           topics:
             - id: quick_lesson
@@ -4300,7 +4792,7 @@ npcs:
               goto: cade_wolves
             - id: commit_lure
               aliases: [commit_feed, commit_alive]
-              prompt: "Commit to the finite feed-and-hounds line now."
+              prompt: "Commit LURE now: spend Cade's finite feed on the three-cast living-pack line and close HUNT/DRIVE/FORTIFY."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4349,8 +4841,15 @@ npcs:
           npc_text: >
             Prepare/don gear first. SIGNAL DRIVE evacuates people/herd while forcing the pack clear;
             outer defense
-            always lost. Commit starts herd and closes lure/hunt/fortify. Two charges; miss:
-            no retry, hurdle recovery. Crisis costs wound, two cattle, or rig. Bond/June help.
+            always lost. Commit starts herd and closes lure/hunt/fortify. Two charges. On ordinary
+            ground a first miss has no retry and uses hurdle recovery; an open ash lane
+            makes that signal clean without a roll. Crisis still costs wound, two cattle, or rig.
+            Bond/June retain their other terms.
+          append_variants:
+            - when: [{ has_flag: opening_condition_open_ash_lane }]
+              text: >
+                Tonight's open ash lane is that exception: the first signal cannot miss and needs
+                no roll; both charges, the second signal, outer-line loss, and Crisis remain.
           variants:
             - when:
                 - { has_flag: relief_oath_unaffiliated_bond }
@@ -4359,8 +4858,9 @@ npcs:
               text: >
                 BOND+JUNE MATCH: DRIVE evacuates people/herd while forcing the pack clear; loses
                 outer defense. Commit starts
-                herd/closes alternatives. Unmarked cut aids first shutter; June holds gate.
-                Two charges; first miss: no retry, hurdle recovery. Crisis: wound/two
+                herd/closes alternatives. The unmarked cut aids an ordinary first shutter;
+                an open ash lane supersedes it with a clean no-roll signal. June holds
+                gate. Two charges; ordinary first miss: no retry, hurdle recovery. Crisis: wound/two
                 cattle/rig. Don gear first.
             - when:
                 - { has_flag: relief_oath_unaffiliated_bond }
@@ -4368,8 +4868,9 @@ npcs:
               text: >
                 BOND MATCH: DRIVE evacuates people/herd while forcing the pack clear; loses outer
                 defense. Commit starts
-                herd/closes alternatives. Unmarked cut lowers first shutter. Two charges;
-                first miss: no retry, hurdle recovery. Crisis: wound/two cattle/rig. June can
+                herd/closes alternatives. The unmarked cut lowers an ordinary first shutter;
+                an open ash lane supersedes it with a clean no-roll signal. Two charges;
+                ordinary first miss: no retry, hurdle recovery. Crisis: wound/two cattle/rig. June can
                 help. Don gear first.
             - when:
                 - { has_flag: june_pike_present }
@@ -4377,13 +4878,14 @@ npcs:
               text: >
                 JUNE MATCH: DRIVE evacuates people/herd while forcing the pack clear; loses outer
                 defense. Commit starts
-                herd/closes alternatives. June holds lower gate. Two charges; first miss: no
-                retry, hurdle recovery. Crisis: wound/two cattle/rig. Bond can help. Don gear
+                herd/closes alternatives. June holds lower gate. Two charges; an open ash lane
+                makes the first signal clean without a roll. An ordinary first miss has no
+                retry and hurdle recovery. Crisis: wound/two cattle/rig. Bond can help. Don gear
                 first.
           topics:
             - id: commit_drive
               aliases: [commit_evacuate, commit_signal]
-              prompt: "Commit to the finite drive-and-evacuate line now; start the herd, close preparation and retreat, and forfeit the outer steading defense line."
+              prompt: "Commit DRIVE now: start the herd, close preparation and retreat, forfeit the outer steading defense, and close HUNT/LURE/FORTIFY."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4401,8 +4903,14 @@ npcs:
         - id: cade_drive_committed
           npc_text: >
             Committed. Herd moves; outer defense, retreat, and strategy switches close. Take
-            the rig: two charges, shutter then bell. A failed first call has no retry—drop
-            the hurdle once. At Crisis choose wound, two lost cattle, or the rig.
+            the rig: two charges, shutter then bell. An open ash lane makes the first
+            call clean without a roll; on ordinary ground a failed first call has no retry and
+            drops the hurdle once. At Crisis choose wound, two lost cattle, or the rig.
+          append_variants:
+            - when: [{ has_flag: opening_condition_open_ash_lane }]
+              text: >
+                Tonight's open ash lane is the clean case: your first call cannot fail and the
+                hurdle is not needed there. The second charge and Crisis remain unchanged.
           effects:
             - set_flag: strategy_drive_committed
             - set_flag: drive_combat_withheld
@@ -4422,15 +4930,49 @@ npcs:
             FORTIFY keeps household/herd/pack apart through dawn; no retreat/switch. HOUSEHOLD
             TERMS: property risk,
             seals saved, Cade aid. ALBANY: property safe, seals spent, no Cade aid. Works eases
-            first DC; mobile stabilizes a recovered miss. If intact June rides, her paid line
+            a roll-required first DC; a sound lower frame seats it without a roll. Mobile
+            stabilizes a recovered miss. If intact June rides, her paid line
             prevents 2 HP only after an unstabilized failed seal reaches pressure 3+; solo or
             broken June pays it. Mobile-stabilized or pressure-2 dawn costs no HP. Till dawn.
           variants:
+            - when:
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { has_flag: relief_oath_full_duty }
+              text: >
+                SOUND-FRAME FORTIFY: first seal seats cleanly without a roll. HOUSEHOLD
+                exposes property, saves public seals, and leaves Cade's ordinary aid unused;
+                choosing it breaches full duty. ALBANY covers property, spends public seals,
+                and needs neither Cade nor its emergency strip on this beat; Full Compact's
+                ordinary lower-peg advantage is surpassed. No retreat/switch. Threshold and dawn remain.
+            - when:
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { has_flag: relief_oath_limited_duty }
+              text: >
+                SOUND-FRAME FORTIFY: first seal seats cleanly without a roll. HOUSEHOLD fits
+                aid-only duty, exposes property, and saves public seals; Cade's ordinary aid is
+                unused. ALBANY covers property and spends public seals but bends the promise;
+                neither Cade nor its emergency strip enters this beat. No retreat/switch.
+                Threshold and dawn remain.
+            - when:
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { has_flag: relief_oath_unaffiliated_bond }
+              text: >
+                SOUND-FRAME FORTIFY: first seal seats cleanly without a roll. HOUSEHOLD fits
+                the bond, exposes property, and saves public seals; Cade's ordinary aid is unused.
+                ALBANY covers property and spends public seals but breaks the bond; neither Cade
+                nor its emergency strip enters this beat. No retreat/switch. Threshold and dawn remain.
+            - when: [{ has_flag: opening_condition_sound_lower_frame }]
+              text: >
+                SOUND-FRAME FORTIFY: first seal seats cleanly without a roll. HOUSEHOLD exposes
+                property and saves public seals; Cade's ordinary aid is unused. ALBANY covers
+                property and spends public seals; neither Cade nor its emergency strip enters
+                this beat. No retreat/switch. Threshold and dawn remain.
             - when: [{ has_flag: relief_oath_full_duty }]
               text: >
                 Commit north; no retreat/lure/drive/combat switch. HOUSEHOLD exposes property,
                 saves seals, failed-seat aid; breach full duty. ALBANY covers property, spends
-                seals, no aid; first Albany Repair 2 easier. Mobile stabilizes a recovered miss.
+                seals, no aid; a roll-required first Albany Repair is 2 easier, while a sound
+                lower frame seats it without a roll. Mobile stabilizes a recovered miss.
                 If intact June rides, her paid line prevents 2 HP only after an unstabilized
                 failed seal reaches pressure 3+; solo or broken June pays it. Mobile-stabilized
                 or pressure-2 dawn costs no HP. Reach dawn.
@@ -4440,7 +4982,8 @@ npcs:
                 dawn; no retreat/switch.
                 HOUSEHOLD fits duty: exposes property, saves public seals, gains Cade aid. ALBANY
                 exceeds duty: saves property, spends seals, no Cade aid. Works/mobile support
-                first seam. If intact June rides, her paid line prevents 2 HP only after an
+                a roll-required first seam; a sound lower frame seats it without a roll. If
+                intact June rides, her paid line prevents 2 HP only after an
                 unstabilized failed seal reaches pressure 3+; solo or broken June pays it.
                 Mobile-stabilized or pressure-2 dawn costs no HP.
             - when: [{ has_flag: relief_oath_unaffiliated_bond }]
@@ -4449,13 +4992,14 @@ npcs:
                 retreat/switch. HOUSEHOLD fits
                 bond: exposes property, saves public seals, gains Cade aid. ALBANY breaks bond:
                 saves property, spends seals, no Cade aid. Works/mobile support first seam.
-                If intact June rides, her paid line prevents 2 HP only after an unstabilized
+                A sound lower frame instead seats that seam without a roll. If intact June
+                rides, her paid line prevents 2 HP only after an unstabilized
                 failed seal reaches pressure 3+; solo or broken June pays it. Mobile-stabilized
                 or pressure-2 dawn costs no HP.
           topics:
             - id: commit_cade_terms
               aliases: [accept_terms, accept_household_terms, take_shutters]
-              prompt: "Commit Cade's terms: no retreat; no strategy switch to lure, drive, or combat. Expose outer property; preserve public seals; gain one failed-seat aid."
+              prompt: "Commit FORTIFY under Cade's terms: no retreat or switch; expose outer property, preserve public seals, and gain aid for one roll-required failed seat."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4465,7 +5009,7 @@ npcs:
               goto: cade_fortify_cade_terms
             - id: commit_albany_authority
               aliases: [invoke_authority, order_public_seals, invoke_albany]
-              prompt: "Commit Albany authority: no retreat; no strategy switch to lure, drive, or combat. Preserve property; spend public seals; no aid after a failed seat."
+              prompt: "Commit FORTIFY under Albany authority: no retreat or switch; preserve property, spend public seals, and receive no aid after a roll-required failed seat."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4483,14 +5027,30 @@ npcs:
         - id: cade_fortify_cade_terms
           npc_text: >
             Terms accepted. Take two shutters north: paling, threshold, then dawn. My
-            smokehouse stays exposed; Albany's seals remain public. If the first seat
-            slips, I brace it once. No retreat, lure, drive, or spear switch.
+            smokehouse stays exposed; Albany's seals remain public. On roll-required ground
+            I brace one failed first seat; a sound lower frame seats it cleanly. No retreat,
+            lure, drive, or spear switch.
           variants:
+            - when:
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { has_flag: relief_oath_full_duty }
+              text: >
+                Household terms knowingly replace your full-duty public fortification, and
+                Rowan will record the breach. Tonight's sound lower frame seats the first
+                shutter cleanly; Cade's ordinary aid is unused. Outer property is exposed,
+                public seals remain, and threshold and dawn still bind you.
+            - when: [{ has_flag: opening_condition_sound_lower_frame }]
+              text: >
+                Terms accepted. Tonight's sound lower frame seats the first household shutter
+                cleanly, so Cade's ordinary aid is unused. His smokehouse stays exposed and
+                Albany's seals remain public. Take the second shutter through threshold to dawn;
+                no retreat or strategy switch.
             - when: [{ has_flag: relief_oath_full_duty }]
               text: >
                 Household terms knowingly replace your full-duty public fortification, and
                 Rowan will record the breach. The legal route exposes outer property,
-                preserves public seals, and gives my shoulder for one failed first seat.
+                preserves public seals, and gives my shoulder for one roll-required failed
+                first seat; a sound lower frame needs no such recovery.
           effects:
             - set_flag: strategy_fortify_committed
             - set_flag: fortify_combat_withheld
@@ -4498,7 +5058,7 @@ npcs:
             - set_flag: fortify_cade_terms_accepted
             - set_flag: fortify_outer_property_exposed
             - set_flag: fortify_public_seals_preserved
-            - add_journal: "Fortify—Cade terms: outer property exposed, public seals kept, his aid covers one failed first seat. Go north; no switch."
+            - add_journal: "Fortify—Cade terms: outer property exposed, public seals kept, Cade-aid terms recorded. A sound lower frame leaves that aid unused. Go north; no switch."
           topics:
             - id: fortify_back
               prompt: "Repeat the terms, then ask something else."
@@ -4510,14 +5070,46 @@ npcs:
         - id: cade_fortify_albany_authority
           npc_text: >
             Authority invoked. Take Albany's seals north: paling, threshold, dawn. My
-            property stays covered; public stock pays. If the first seat slips, I refuse
-            it—spend the emergency strip. No retreat, lure, drive, or spear switch.
+            property stays covered; public stock pays. On roll-required ground I refuse a
+            failed first seat and the emergency strip recovers it; a sound lower frame seats
+            it cleanly. No retreat, lure, drive, or spear switch.
           variants:
+            - when:
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { has_flag: relief_oath_full_duty }
+              text: >
+                Full duty invoked. Tonight's sound lower frame seats Albany's first band
+                cleanly, surpassing the ordinary lower-peg DC benefit. Cade's refusal and the
+                emergency strip do not enter this beat. His property stays covered; public
+                stock pays. Threshold and dawn remain.
+            - when:
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { has_flag: relief_oath_limited_duty }
+              text: >
+                Authority invoked beyond your aid-only limit; Rowan will record the bend.
+                Tonight's sound lower frame seats Albany's first band cleanly, so Cade's refusal
+                and the emergency strip do not enter this beat. His property stays covered,
+                public stock pays, and threshold and dawn remain.
+            - when:
+                - { has_flag: opening_condition_sound_lower_frame }
+                - { has_flag: relief_oath_unaffiliated_bond }
+              text: >
+                Authority invoked despite the personal-bond refusal; Rowan will record the
+                broken term. Tonight's sound lower frame seats Albany's first band cleanly, so
+                Cade's refusal and the emergency strip do not enter this beat. His property
+                stays covered, public stock pays, and threshold and dawn remain.
+            - when: [{ has_flag: opening_condition_sound_lower_frame }]
+              text: >
+                Authority invoked. Tonight's sound lower frame seats Albany's first band cleanly,
+                so Cade's refusal and the emergency strip do not enter this beat. His property
+                stays covered; public stock pays. Continue through threshold to dawn; no retreat
+                or strategy switch.
             - when: [{ has_flag: relief_oath_full_duty }]
               text: >
-                Full duty invoked. I will name the registered lower peg, lowering the first
-                public-seal Repair opening by 2, but I will not brace a failed order. My
-                property stays covered; public stock and its emergency strip pay.
+                Full duty invoked. The registered lower peg lowers a roll-required first
+                public-seal Repair opening by 2; a sound lower frame instead seats it without
+                a roll. I will not brace a failed order. My property stays covered; public
+                stock and its emergency strip pay when recovery is needed.
             - when: [{ has_flag: relief_oath_limited_duty }]
               text: >
                 Authority invoked beyond your aid-only limit. The lawful route remains open,
@@ -4535,7 +5127,7 @@ npcs:
             - set_flag: fortify_albany_authority_invoked
             - set_flag: fortify_outer_property_preserved
             - set_flag: fortify_cade_help_refused
-            - add_journal: "Fortify—Albany authority: Cade property covered, public seals committed, his aid refused; emergency strip recovers a miss."
+            - add_journal: "Fortify—Albany authority: Cade property covered, public seals committed, Cade-aid refusal recorded. A sound lower frame leaves the emergency strip unused."
           topics:
             - id: fortify_back
               prompt: "Repeat the order, then ask something else."
@@ -4652,12 +5244,13 @@ npcs:
               goto: june_cattle_terms_confirmed
         - id: june_combat_line_disclosed
           npc_text: >-
-            Exact: wedge or bind for safer combat, but HUNT still means a wolf can die. I hold
+            Exact: set the rail as tonight's ground allows—brace a firm rail, or wedge and
+            bind an ordinary split—for safer combat. HUNT still means a wolf can die. I hold
             cattle until that happens; then our agreement breaks and I return alone. Cade's
             three noncombat plans close when you cross.
           effects:
             - set_flag: june_combat_line_acknowledged
-            - add_journal: "June: ordinary rail means combat. Cross without a living plan and choose hunt-and-hold; first wolf death ends her agreement."
+            - add_journal: "June: the rail is only a combat funnel, whether firm-braced or ordinarily wedged and bound. Cross without a living plan and choose HUNT; first wolf death ends her agreement."
           topics:
             - id: leave_june_boundary
               aliases: [cross_to_paling, leave_june]
@@ -4942,7 +5535,7 @@ enemies:
         attack_bonus: -1
         defense_bonus: 3
         narration: >
-          You give the flank-wolf no open side at all. The wedged rail narrows its
+          You give the flank-wolf no open side at all. The braced rail narrows its
           circle to one throat; you keep the Albany spear level and make it come
           through the braced funnel where teeth have no room to turn your guard.
       - id: pin_at_rail
@@ -4954,7 +5547,7 @@ enemies:
         defense_bonus: 0
         narration: >
           The guarded thrust has spent the wolf's circle. You slide one hand down the
-          ash shaft and drive again, pinning shoulder and hide against the wedged rail
+          ash shaft and drive again, pinning shoulder and hide against the braced rail
           before it can turn out of the narrowed throat.
       - id: wrench_brace_stake
         command: "wrench the paling's brace-stake free behind the spear guard"

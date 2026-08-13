@@ -20,11 +20,17 @@ import {
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("Wolf-Winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const ORDINARY_DRIVE_FLAG = "opening_condition_sound_lower_frame";
+const ORDINARY_DRIVE_SEED = seedForSeededOpeningFlag(
+  pack.meta.seeded_opening_flags,
+  ORDINARY_DRIVE_FLAG,
+);
 
 type Roll = "best" | "worst";
 type Priority = "cattle" | "person" | "reserve";
@@ -67,7 +73,8 @@ function act(state: GameState, actionId: string, roll: Roll = "best"): GameState
 }
 
 function fresh(withJune = false): GameState {
-  const state = initStateForRpgPack(index, 1009);
+  const state = initStateForRpgPack(index, ORDINARY_DRIVE_SEED);
+  expect(state.flags[ORDINARY_DRIVE_FLAG]).toBe(true);
   if (withJune) state.flags.june_pike_present = true;
   return state;
 }
@@ -91,11 +98,11 @@ function commitDrive(withJune = false, withDrover = false): GameState {
   );
   expect(driveBrief).toMatch(/(?:prepare\/don gear|don gear)[^]*first/i);
   expect(driveBrief).toMatch(/miss[^]*no retry[^]*hurdle recovery/i);
-  expect(driveBrief).toMatch(/crisis(?: costs|:)[^]*wound[^]*two cattle[^]*rig/i);
+  expect(driveBrief).toMatch(/crisis(?::|(?: still)? costs)[^]*wound[^]*two cattle[^]*rig/i);
   expect(
     enumerateRpgActions(index, state).find((option) => option.id === "ask_commit_drive")?.command,
   ).toMatch(
-    /commit[^]*finite drive-and-evacuate[^]*start the herd[^]*close preparation and retreat[^]*forfeit the outer steading defense line/i,
+    /commit drive now[^]*start the herd[^]*close preparation and retreat[^]*forfeit the outer steading defense[^]*close hunt[/]lure[/]fortify/i,
   );
 
   state = act(state, "ask_commit_drive");

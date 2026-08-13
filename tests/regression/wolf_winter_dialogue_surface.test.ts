@@ -42,8 +42,12 @@ const wolfImportContract = campaignCharacterImportPlayerStateContract(wolfCampai
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 const CADE_LURE_ROOT_LABEL =
-  "LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; a foul risks two cattle. Open or reopen the separate Commit LURE choice.";
+  "Inspect LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; an ordinary first-cast foul risks two cattle.";
 const CADE_LURE_ROOT_COMMAND = `ask: ${CADE_LURE_ROOT_LABEL}`;
+const CADE_HUNT_ROOT_LABEL =
+  "Inspect HUNT — Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing commits and closes LURE/DRIVE/FORTIFY.";
+const CADE_HUNT_PREPARE_LABEL =
+  "Prepare HUNT; cross north to commit. Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing closes LURE/DRIVE/FORTIFY.";
 
 type StepResult = { ok: boolean };
 type LegalActionsResult = { actions: { id: string }[] };
@@ -115,11 +119,36 @@ describe("Wolf-Winter dialogue surface", () => {
       ?.dialogue.nodes.find((node) => node.id === "cade_current_support");
     expect(currentSupport?.variants).toBeUndefined();
     expect(currentSupport?.append_variants?.map((fragment) => fragment.when)).toEqual([
-      [{ var_gte: { name: "fieldcraft", value: 4 } }],
+      [
+        { var_gte: { name: "fieldcraft", value: 4 } },
+        { has_flag: "opening_condition_steady_scent_channel" },
+      ],
+      [
+        { var_gte: { name: "fieldcraft", value: 4 } },
+        { has_flag: "opening_condition_open_ash_lane" },
+      ],
+      [
+        { var_gte: { name: "fieldcraft", value: 4 } },
+        { not_flag: "opening_condition_steady_scent_channel" },
+        { not_flag: "opening_condition_open_ash_lane" },
+        { not_flag: "opening_condition_sound_lower_frame" },
+      ],
+      [
+        { var_gte: { name: "fieldcraft", value: 4 } },
+        { has_flag: "opening_condition_sound_lower_frame" },
+      ],
       [{ has_flag: "relief_oath_limited_duty" }],
       [{ has_flag: "june_pike_present" }],
-      [{ has_flag: "relief_oath_full_duty" }],
-      [{ has_flag: "works_fortification_prepared" }],
+      [{ has_flag: "relief_oath_full_duty" }, { not_flag: "opening_condition_sound_lower_frame" }],
+      [{ has_flag: "relief_oath_full_duty" }, { has_flag: "opening_condition_sound_lower_frame" }],
+      [
+        { has_flag: "works_fortification_prepared" },
+        { not_flag: "opening_condition_sound_lower_frame" },
+      ],
+      [
+        { has_flag: "works_fortification_prepared" },
+        { has_flag: "opening_condition_sound_lower_frame" },
+      ],
     ]);
 
     let state = startCadeDialogue();
@@ -139,7 +168,8 @@ describe("Wolf-Winter dialogue surface", () => {
     if (!support.ok) throw new Error("unreachable");
     state = support.state;
     const text = narrations(support.events).join("\n");
-    expect(text).toContain("Fieldcraft 4 sets starting DEF to 4");
+    expect(text).toContain("Fieldcraft 4 still sets starting DEF to 4 and supplies LURE checks");
+    expect(text).toContain("tonight's open ash lane removes DRIVE's first check");
     expect(text).toContain("Aid-only adds no DRIVE/HUNT benefit");
     expect(text).toContain("June holds a separate cattle line");
     expect(text).toContain("Works makes Cade's first FORTIFY seat DC 12");
@@ -245,40 +275,33 @@ describe("Wolf-Winter dialogue surface", () => {
     const observation = buildRpgObservation(index, state);
     const scorecard = observation.dialogue?.npc_text;
 
+    expect(scorecard).toContain("Every plan can finish; I name no best answer");
+    expect(scorecard).toContain("Inspect the four peer plan cards below");
+    expect(scorecard).toContain("Questions choose nothing");
+    expect(scorecard).toContain("HUNT commits on north crossing");
     expect(scorecard).toContain(
-      "Choose what must stand at dawn. Every plan can finish Wolf-Winter",
+      "TONIGHT'S GROUND — open ash lane. DRIVE's first signal runs clean without a roll; charge two and Crisis remain.",
     );
-    expect(scorecard).toContain("none saves everything");
-    expect(scorecard).toContain(
-      "HUNT — Outcome: hold Cade's ground, herd, and relief stores with prepared combat. Cost: wolves may die; failure can lose cattle or the line. Albany: bloodshed changes Greenway work; damage remains.",
-    );
-    expect(scorecard).toContain(
-      "LURE — Outcome: relocate the pack beyond the breach and keep the herd. Cost: last feed, broken paling, two cattle risked on a first-cast foul. Albany: broken boundary or scattered cattle change Station response.",
-    );
-    expect(scorecard).toContain(
-      "DRIVE — Outcome: evacuate people and herd; force the pack clear. Cost: abandon the outer steading; Crisis takes a wound, two cattle, or rig. Albany: the line and chosen loss remain.",
-    );
-    expect(scorecard).toContain(
-      "FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost: no retreat; expose property for Cade's aid or spend public seals without it. Albany: terms remain; a no-loss hold opens no Cade repair dispatch.",
-    );
-    expect(scorecard).toContain("Questions teach; they do not commit");
-    expect(scorecard).toContain("HUNT commits on uncommitted north crossing");
-    expect(scorecard).toContain("Any commitment closes the other three");
-    expect(scorecard!.indexOf("HUNT —")).toBeLessThan(scorecard!.indexOf("LURE —"));
-    expect(scorecard!.indexOf("LURE —")).toBeLessThan(scorecard!.indexOf("DRIVE —"));
-    expect(scorecard!.indexOf("DRIVE —")).toBeLessThan(scorecard!.indexOf("FORTIFY —"));
+    expect(scorecard!.length).toBeLessThanOrEqual(360);
     const commands = Object.fromEntries(
       observation.available_actions.map((action) => [action.id, action.command]),
     );
     expect(commands).toMatchObject({
+      ask_hunt: `ask: ${CADE_HUNT_ROOT_LABEL}`,
       ask_wolves:
-        "ask: HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits.",
+        "ask: Inspect HUNT support — Hold ground/stores in prepared combat. Risk wolf deaths and cattle/line; this lesson grants +2 attack/+5 tally.",
       ask_lure: CADE_LURE_ROOT_COMMAND,
       ask_drive:
-        "ask: DRIVE — Evacuate people/herd; force pack clear. Cost: abandon outer steading; Crisis takes wound, two cattle, or rig. Inspect.",
+        "ask: Inspect DRIVE — Evacuate people/herd; force pack clear. Cost: abandon outer steading; Crisis takes wound, two cattle, or rig.",
       ask_fortify:
-        "ask: FORTIFY — Keep household/herd/pack apart to dawn. Cost: no retreat; expose property/Cade aid or spend seals/no aid. Inspect.",
+        "ask: Inspect FORTIFY — Keep household/herd/pack apart to dawn. Cost: no retreat; expose property/Cade aid or spend seals/no aid.",
     });
+    expect(dialogueActionIds(idsBefore).slice(0, 4)).toEqual([
+      "ask_hunt",
+      "ask_lure",
+      "ask_drive",
+      "ask_fortify",
+    ]);
     expect(Object.values(commands).join("\n")).not.toMatch(
       /protects cattle and wolves|protects people and wolves|protects byre, cattle, and wolves/i,
     );
@@ -386,12 +409,12 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(stepAction("talk_houndsman").ok).toBe(true);
     expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
     expect(mcpDialogueIds()).toEqual([
-      "ask_wolves",
-      "ask_byre",
-      "ask_commit_hunt_and_hold",
+      "ask_hunt",
       "ask_lure",
       "ask_drive",
       "ask_fortify",
+      "ask_wolves",
+      "ask_byre",
       "ask_leave",
     ]);
 
@@ -399,11 +422,11 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(stepAction("ask_wolves").ok).toBe(true);
     expect(mcpDialogueIds()).toEqual(dialogueActionIds(legalActionIds(state)));
     expect(mcpDialogueIds()).toEqual([
-      "ask_byre",
-      "ask_commit_hunt_and_hold",
+      "ask_hunt",
       "ask_lure",
       "ask_drive",
       "ask_fortify",
+      "ask_byre",
       "ask_leave",
     ]);
 
@@ -435,29 +458,40 @@ describe("Wolf-Winter dialogue surface", () => {
     let state = startCadeDialogue();
     const root = buildRpgObservation(index, state);
     expect(root.available_actions.find((action) => action.id === "ask_wolves")?.command).toBe(
-      "ask: HUNT — Hold ground/stores in prepared combat. Risk: wolf deaths; failure risks cattle/line. +2 attack/+5 tally; north commits.",
+      "ask: Inspect HUNT support — Hold ground/stores in prepared combat. Risk wolf deaths and cattle/line; this lesson grants +2 attack/+5 tally.",
     );
     const beforeCommit = structuredClone(state);
-    const commitment = root.available_actions.find(
-      (action) => action.id === "ask_commit_hunt_and_hold",
-    );
-    if (!commitment) throw new Error("expected Cade's HUNT exit");
-    const huntExitPrompt =
-      "End talk; HUNT stays uncommitted. Prepared combat may kill wolves; failure risks cattle/line. Cross north to commit and close LURE/DRIVE/FORTIFY.";
-    expect(commitment).toMatchObject({
-      command: `ask: ${huntExitPrompt}`,
-      action: { type: "ASK", npc: "houndsman", topic: "commit_hunt_and_hold" },
+    const inspection = root.available_actions.find((action) => action.id === "ask_hunt");
+    if (!inspection) throw new Error("expected Cade's HUNT inspection");
+    expect(inspection).toMatchObject({
+      command: `ask: ${CADE_HUNT_ROOT_LABEL}`,
+      action: { type: "ASK", npc: "houndsman", topic: "hunt" },
     });
-    expect(huntExitPrompt).toHaveLength(145);
-    expect(commitment.command).toHaveLength(150);
-    expect(commitment.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
+    expect(inspection.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
     const compactRoot = compactRpgObservation(root, root.available_actions, {
       includeActions: true,
     });
-    expect(compactRoot.actions).toContain("ask_commit_hunt_and_hold");
-    expect(compactRoot.choices).toContainEqual(["ask_commit_hunt_and_hold", huntExitPrompt]);
+    expect(compactRoot.actions).toContain("ask_hunt");
+    expect(compactRoot.choices).toContainEqual(["ask_hunt", CADE_HUNT_ROOT_LABEL]);
 
-    const closed = step(state, commitment.action);
+    const inspected = step(state, inspection.action);
+    expect(inspected.ok).toBe(true);
+    if (!inspected.ok) throw new Error("expected Cade's HUNT inspection");
+    expect(playerConsequenceState(inspected.state)).toEqual(playerConsequenceState(beforeCommit));
+    expect(buildRpgObservation(index, inspected.state).dialogue?.npc_text).toMatch(
+      /inspection and preparation choose nothing[^]*crossing north commits HUNT/i,
+    );
+    const commitment = enumerateRpgActions(index, inspected.state).find(
+      (action) => action.id === "ask_prepare_hunt",
+    );
+    expect(commitment).toMatchObject({
+      command: `ask: ${CADE_HUNT_PREPARE_LABEL}`,
+      action: { type: "ASK", npc: "houndsman", topic: "prepare_hunt" },
+    });
+    if (!commitment) throw new Error("expected Cade's HUNT preparation exit");
+    expect(commitment.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
+
+    const closed = step(inspected.state, commitment.action);
     expect(closed.ok).toBe(true);
     if (!closed.ok) throw new Error("expected Cade's HUNT exit to close dialogue");
     expect(closed.events).toContainEqual({
@@ -474,7 +508,7 @@ describe("Wolf-Winter dialogue surface", () => {
       }),
     ).toEqual({ countsTowardJourney: false, reason: "dialogue_closure" });
     expect(playerConsequenceState(closed.state)).toEqual(playerConsequenceState(beforeCommit));
-    expect(closed.state.step).toBe(beforeCommit.step + 1);
+    expect(closed.state.step).toBe(beforeCommit.step + 2);
     expect(beforeCommit.vars[dlgVar("houndsman")]).toBeGreaterThan(0);
     expect(closed.state.vars[dlgVar("houndsman")]).toBe(0);
     state = closed.state;
@@ -491,6 +525,35 @@ describe("Wolf-Winter dialogue surface", () => {
     const postCrossingIds = legalActionIds(state);
     for (const retired of ["ask_lure", "ask_drive", "ask_fortify"])
       expect(postCrossingIds).not.toContain(retired);
+  });
+
+  it("keeps Cade's legacy HUNT action alias as a non-mutating inspection only", () => {
+    const api = createToolApi({ root: process.cwd() });
+    const started = api.start_world_quest({ world_quest_id: "wolf_winter", seed: 541 });
+    const sessionId = started.session_id;
+    expect(api.step_action({ session_id: sessionId, action_id: "go_north" }).ok).toBe(true);
+    expect(api.step_action({ session_id: sessionId, action_id: "talk_houndsman" }).ok).toBe(true);
+    const before = api.sessions.get(sessionId).state;
+    const listed = api.list_legal_actions({
+      session_id: sessionId,
+      compact_actions: false,
+    }) as unknown as LegalActionsResult;
+    expect(listed.actions.map((candidate) => candidate.id)).toContain("ask_hunt");
+    expect(listed.actions.map((candidate) => candidate.id)).not.toContain(
+      "ask_commit_hunt_and_hold",
+    );
+
+    const legacy = api.step_action({
+      session_id: sessionId,
+      action_id: "ask_commit_hunt_and_hold",
+    });
+    expect(legacy.ok).toBe(true);
+    const after = api.sessions.get(sessionId).state;
+    expect(playerConsequenceState(after)).toEqual(playerConsequenceState(before));
+    expect(legalActionIds(after)).toContain("ask_prepare_hunt");
+    expect(after.flags.strategy_lure_committed).not.toBe(true);
+    expect(after.flags.strategy_drive_committed).not.toBe(true);
+    expect(after.flags.strategy_fortify_committed).not.toBe(true);
   });
 
   it("uses June's explicit HUNT commitment to disclose the wolf-death consequence", () => {
@@ -635,7 +698,7 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(observation.dialogue?.npc_text).toMatch(
       /optional quick lesson[^]*\+2 attack[^]*\+5 final(?:-| )tally[^]*committing first closes it[^]*lesson returns to the plan menu[^]*choose LURE again to commit/i,
     );
-    expect(unheardCommit?.command).toMatch(/commit[^]*finite feed-and-hounds line/i);
+    expect(unheardCommit?.command).toMatch(/commit LURE[^]*finite feed[^]*three-cast living-pack/i);
     expect(directQuick).toMatchObject({
       id: "ask_quick_lesson",
       command:
@@ -669,7 +732,7 @@ describe("Wolf-Winter dialogue surface", () => {
       action: { type: "ASK", npc: "houndsman", topic: "lure" },
     });
     expect(postLessonIds).toEqual(
-      expect.arrayContaining(["ask_commit_hunt_and_hold", "ask_lure", "ask_drive", "ask_fortify"]),
+      expect.arrayContaining(["ask_hunt", "ask_lure", "ask_drive", "ask_fortify"]),
     );
     for (const unavailable of ["ask_wolves", "ask_quick_lesson", "ask_commit_lure"])
       expect(postLessonIds).not.toContain(unavailable);
@@ -677,11 +740,16 @@ describe("Wolf-Winter dialogue surface", () => {
     const huntPivot = act(structuredClone(unheard), {
       type: "ASK",
       npc: "houndsman",
-      topic: "commit_hunt_and_hold",
+      topic: "hunt",
     });
     expect(huntPivot.flags.strategy_lure_committed).not.toBe(true);
     expect(huntPivot.flags.heard_counsel).toBe(true);
-    expect(legalActionIds(huntPivot)).toContain("go_north");
+    const preparedHunt = act(huntPivot, {
+      type: "ASK",
+      npc: "houndsman",
+      topic: "prepare_hunt",
+    });
+    expect(legalActionIds(preparedHunt)).toContain("go_north");
 
     unheard = act(unheard, { type: "ASK", npc: "houndsman", topic: "lure" });
     observation = buildRpgObservation(index, unheard);

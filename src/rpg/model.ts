@@ -25,6 +25,7 @@ import {
   wolfWinterDispatchOverlayFlagForPack,
   type EmbeddedLaunchOverlay,
 } from "../core/embedded_launch_overlay_receipt.js";
+import { seededOpeningFlagForSeed } from "./seeded_opening.js";
 
 export type RpgModelIndex = {
   pack: RpgPack;
@@ -202,9 +203,10 @@ export function activeDialogue(
   return null;
 }
 
-export function initStateForRpgModel(
+function initStateForRpgModelWithOpeningFlag(
   index: RpgModelIndex,
   seed: number,
+  seededOpeningFlag: string | undefined,
   campaignImport?: CampaignCharacterImportInput,
   launchOverlay?: EmbeddedLaunchOverlay,
 ): GameState {
@@ -220,7 +222,8 @@ export function initStateForRpgModel(
     seed,
     start: meta.start_room,
     varsInit: meta.vars_init,
-    flagsInit: meta.flags_init,
+    flagsInit:
+      seededOpeningFlag === undefined ? meta.flags_init : [...meta.flags_init, seededOpeningFlag],
     heldItems: index.pack.objects.filter((o) => o.held).map((o) => o.id),
     onEnter: startRoom?.on_enter,
     ...(campaignImport !== undefined
@@ -228,4 +231,45 @@ export function initStateForRpgModel(
       : {}),
     ...(launchOverlay !== undefined ? { launchOverlay } : {}),
   });
+}
+
+export function initStateForRpgModel(
+  index: RpgModelIndex,
+  seed: number,
+  campaignImport?: CampaignCharacterImportInput,
+  launchOverlay?: EmbeddedLaunchOverlay,
+): GameState {
+  const seededOpeningFlags = index.pack.meta.seeded_opening_flags;
+  const selected =
+    seededOpeningFlags === undefined
+      ? undefined
+      : seededOpeningFlagForSeed(seededOpeningFlags, seed);
+  return initStateForRpgModelWithOpeningFlag(index, seed, selected, campaignImport, launchOverlay);
+}
+
+export type RpgOpeningInitialState = Readonly<{
+  /** Null for a legacy pack with no seeded opening alternatives. */
+  seededOpeningFlag: string | null;
+  state: GameState;
+}>;
+
+/**
+ * Construct each authored fresh-state alternative for static validation.
+ *
+ * This is not a runtime override: live games always use `initStateForRpgModel`
+ * and its seed selector. Enumerating the finite authored alternatives lets the
+ * validator reason soundly about every possible fresh start without searching
+ * for representative seeds.
+ */
+export function initStatesForRpgModelOpeningAlternatives(
+  index: RpgModelIndex,
+): RpgOpeningInitialState[] {
+  const alternatives = index.pack.meta.seeded_opening_flags;
+  if (alternatives === undefined) {
+    return [{ seededOpeningFlag: null, state: initStateForRpgModel(index, 0) }];
+  }
+  return alternatives.map((flag) => ({
+    seededOpeningFlag: flag,
+    state: initStateForRpgModelWithOpeningFlag(index, 0, flag),
+  }));
 }

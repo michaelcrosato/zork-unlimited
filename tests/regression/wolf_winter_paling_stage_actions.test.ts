@@ -14,6 +14,7 @@ import {
   indexRpgPack,
   initStateForRpgPack,
 } from "../../src/rpg/runner.js";
+import { seededOpeningFlagForSeed } from "../../src/rpg/seeded_opening.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { recordTrace } from "../../src/trace/record.js";
 import { replayTrace } from "../../src/trace/replay.js";
@@ -21,12 +22,27 @@ import { GameSession } from "../../ui/src/engine.js";
 
 const SOURCE_PATH = "content/rpg/quests/wolf_winter.yaml";
 const PREDECESSOR_SOURCE_HASH = "76b7bdc3fdb661c4964bc1ee71caf3c67de99e65fda3cd8761aa1477052bfeb0";
-const SOURCE_HASH = "f3519e0655912f26e3eed58a6a23ca68b493574595d52763ae9fbb92c34ae42d";
+const SOURCE_HASH = "a38c3bfd994b8c72cda38e90292e38376eca82d70b598858b59ddc516ab3d7b2";
 const PALING_NORTH_GUIDANCE =
   "Settle the yearling or finish the outer seal first. On LURE, only then return south, west, and up for the loft cast.";
 const loaded = loadRpgSourceFile(SOURCE_PATH);
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const index = indexRpgPack(loaded.compiled.pack);
+const ORDINARY_WEDGE_OPENING_FLAG = "opening_condition_steady_scent_channel";
+const openingFlags = loaded.compiled.pack.meta.seeded_opening_flags;
+if (!openingFlags?.includes(ORDINARY_WEDGE_OPENING_FLAG)) {
+  throw new Error("wolf_winter must include the ordinary-wedge scent-channel opening");
+}
+const ORDINARY_WEDGE_SEED = (() => {
+  const seed = Array.from({ length: 1_000 }, (_, index) => index + 1).find(
+    (candidate) =>
+      seededOpeningFlagForSeed(openingFlags, candidate) === ORDINARY_WEDGE_OPENING_FLAG,
+  );
+  if (seed === undefined) {
+    throw new Error("expected a small generic seed for the ordinary-wedge opening");
+  }
+  return seed;
+})();
 
 function rng(face: "best" | "worst"): Rng {
   return {
@@ -45,7 +61,9 @@ function choose(state: GameState, id: string, face: "best" | "worst" = "best"): 
 }
 
 function atPaling(): GameState {
-  let state = initStateForRpgPack(index, 503);
+  let state = initStateForRpgPack(index, ORDINARY_WEDGE_SEED);
+  expect(state.flags[ORDINARY_WEDGE_OPENING_FLAG]).toBe(true);
+  expect(state.flags.opening_condition_firm_frozen_rail).not.toBe(true);
   for (const id of [
     "go_north",
     "talk_houndsman",
@@ -187,7 +205,10 @@ describe("Wolf-Winter paling stage action identities", () => {
 
   it("accepts the legacy MCP and UI input while recording the canonical opening id", () => {
     const api = createToolApi({ root: process.cwd() });
-    const launched = api.start_world_quest({ world_quest_id: "wolf_winter", seed: 503 });
+    const launched = api.start_world_quest({
+      world_quest_id: "wolf_winter",
+      seed: ORDINARY_WEDGE_SEED,
+    });
     const session = api.sessions.get(launched.session_id);
     for (const id of [
       "go_north",
@@ -217,7 +238,7 @@ describe("Wolf-Winter paling stage action identities", () => {
     expect(stepped).toMatchObject({ ok: true, journeyActionId: "wedge_paling_rail" });
     expect(api.sessions.get(session.id).transcript.at(-1)?.action_id).toBe("wedge_paling_rail");
 
-    const ui = GameSession.start(readFileSync(SOURCE_PATH, "utf8"), 503);
+    const ui = GameSession.start(readFileSync(SOURCE_PATH, "utf8"), ORDINARY_WEDGE_SEED);
     for (const id of [
       "go_north",
       "talk_houndsman",

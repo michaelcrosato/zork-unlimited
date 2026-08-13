@@ -637,6 +637,12 @@ const err = (code: string, message: string, where: string[]): Finding => ({
   where,
 });
 
+function flagMayBeInitializedAtOpening(pack: RpgPack, flag: string): boolean {
+  return (
+    pack.meta.flags_init.includes(flag) || (pack.meta.seeded_opening_flags?.includes(flag) ?? false)
+  );
+}
+
 function enemyRuntimeEffects(pack: RpgPack): Effect[] {
   const out: Effect[] = [];
   for (const e of pack.enemies) out.push(...e.on_defeat);
@@ -1063,7 +1069,7 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
           ),
         );
       }
-      if (pack.meta.flags_init.includes(maneuver.result_flag)) {
+      if (flagMayBeInitializedAtOpening(pack, maneuver.result_flag)) {
         findings.push(
           err(
             "MANEUVER_RESULT_FLAG_INITIALIZED",
@@ -1142,7 +1148,7 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
       return (
         owners.length === 1 &&
         !authoredSetFlags.has(maneuver.result_flag) &&
-        !pack.meta.flags_init.includes(maneuver.result_flag) &&
+        !flagMayBeInitializedAtOpening(pack, maneuver.result_flag) &&
         !clearedFlags.has(maneuver.result_flag) &&
         !defeatFlagOwners.has(maneuver.result_flag)
       );
@@ -1154,7 +1160,7 @@ export function validateRpg(pack: RpgPack, opts: ValidateRpgOptions = {}): Valid
       defeatOwners.length === 1 &&
       defeatOwners[0] === enemy.id &&
       !authoredSetFlags.has(enemy.defeat_flag) &&
-      !pack.meta.flags_init.includes(enemy.defeat_flag) &&
+      !flagMayBeInitializedAtOpening(pack, enemy.defeat_flag) &&
       !maneuverResultFlagOwners.has(enemy.defeat_flag);
     const encounterAnalysis = hasSequence
       ? null

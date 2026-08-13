@@ -22,11 +22,17 @@ import {
 } from "../../src/rpg/runner.js";
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import type { GameState } from "../../src/core/state.js";
+import { seedForSeededOpeningFlag } from "../regression/support/seeded_opening.js";
 
 const loaded = loadRpgSourceFile("content/rpg/quests/wolf_winter.yaml");
 if (!loaded.ok) throw new Error("wolf_winter must compile");
 const pack = loaded.compiled.pack;
 const index = indexRpgPack(pack);
+const ORDINARY_LURE_FLAG = "opening_condition_open_ash_lane";
+const ORDINARY_LURE_SEED = seedForSeededOpeningFlag(
+  pack.meta.seeded_opening_flags,
+  ORDINARY_LURE_FLAG,
+);
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 const PALING_NORTH_GUIDANCE =
@@ -142,16 +148,8 @@ function lureRoute(
   preparation: "none" | "missing_counsel" | "complete" = "none",
   reliefProtocolPrepared = false,
 ): Route {
-  let state = initStateForRpgPack(
-    index,
-    opening === "clean"
-      ? 901
-      : opening === "fouled"
-        ? 902
-        : opening === "fouled_braced"
-          ? 904
-          : 903,
-  );
+  let state = initStateForRpgPack(index, ORDINARY_LURE_SEED);
+  expect(state.flags[ORDINARY_LURE_FLAG]).toBe(true);
   if (reliefProtocolPrepared) state.flags.relief_protocol_prepared = true;
   const actions: string[] = [];
   const observations = [buildRpgObservation(index, state)];
@@ -196,7 +194,9 @@ function lureRoute(
   const commitment = enumerateRpgActions(index, state).find(
     (option) => option.id === "ask_commit_lure",
   );
-  expect(commitment?.command).toMatch(/commit[^]*finite feed-and-hounds line/i);
+  expect(commitment?.command).toMatch(
+    /commit lure now[^]*finite feed[^]*three-cast living-pack line[^]*close hunt[/]drive[/]fortify/i,
+  );
   act("ask_commit_lure");
   expect(state.flags.strategy_lure_committed).toBe(true);
   act("ask_leave");
@@ -526,7 +526,8 @@ describe("SS-F09 — pressure-backed Wolf-Winter strategy counterfactual", () =>
       pack_diverted: true,
     });
 
-    let open = initStateForRpgPack(index, 905);
+    let open = initStateForRpgPack(index, ORDINARY_LURE_SEED);
+    expect(open.flags[ORDINARY_LURE_FLAG]).toBe(true);
     open = stepById(open, "go_north");
     const openBefore = structuredClone(open);
     const openFull = buildRpgObservation(index, open);

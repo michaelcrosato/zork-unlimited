@@ -1,0 +1,26 @@
+# MUST FAIL: SEEDED_OPENING_FLAG_NOT_IMMUTABLE
+# A seeded opening alternative is also forced through flags_init, giving that flag
+# a second writer and violating the seed-verifiable exact-one opening contract.
+meta:
+  id: bad_seeded_opening_writer
+  title: "Bad Seeded Opening Writer"
+  start_room: a
+  vars_init: { hp: 10, attack: 2, defense: 1 }
+  flags_init: [opening_alpha]
+  seeded_opening_flags: [opening_alpha, opening_bravo]
+rooms:
+  - id: a
+    name: "A"
+    description: "Room A."
+    variants:
+      - when: [{ has_flag: opening_alpha }]
+        text: "The alpha opening is visible."
+      - when: [{ has_flag: opening_bravo }]
+        text: "The bravo opening is visible."
+    exits: [{ direction: north, to: b }]
+  - id: b
+    name: "B"
+    description: "Room B."
+    exits: [{ direction: south, to: a }]
+win_conditions: [{ id: w, conditions: [{ visited: b }], ending: e }]
+endings: [{ id: e, title: "End", text: "Done." }]
