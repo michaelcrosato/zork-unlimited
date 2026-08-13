@@ -55,6 +55,9 @@ const ACTION_PREFIX: Partial<Record<ViewChoice["kind"], RegExp>> = {
   GIVE: /^give(?:\s+|$)/i,
 };
 
+const AUTHORED_DECISION_STAGE =
+  /^(?:COMPARE|PREPARE(?: SUPPORT)?|REVIEW SUPPORT|FINAL COMMITMENT|BACK|LEAVE)\b/i;
+
 /** Player copy only: choice id and engine command remain untouched. */
 export function playerActionLabel(choice: Pick<ViewChoice, "kind" | "title">): string {
   const verb = ACTION_LANGUAGE[choice.kind].button;
@@ -62,6 +65,7 @@ export function playerActionLabel(choice: Pick<ViewChoice, "kind" | "title">): s
     .trim()
     .replace(ACTION_PREFIX[choice.kind] ?? /$^/, "")
     .trim();
+  if (choice.kind === "ASK" && AUTHORED_DECISION_STAGE.test(subject)) return subject;
   return subject.length > 0 ? `${verb} ${subject}` : verb;
 }
 

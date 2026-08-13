@@ -311,6 +311,103 @@ describe("Night Watch stage navigation", () => {
     });
   });
 
+  it("renders authored Wolf-Winter stages verbatim instead of prefixing them as generic questions", async () => {
+    await withRenderedUi(async ({ act, container, react, root, server }) => {
+      const questModule = (await server.ssrLoadModule("/src/QuestPlayScreen.tsx")) as {
+        QuestPlayScreen: unknown;
+      };
+      const worldSession = new OverworldSession(WORLD);
+      const noOp = () => undefined;
+      const quest = {
+        id: "wolf_winter",
+        title: "The Wolf-Winter",
+        discovery: "Reach Cade's steading and answer the winter pressure.",
+      };
+      const baseView = {
+        mode: "rpg",
+        location: "byre_yard",
+        title: "The Byre-Yard",
+        text: "Cade's four peer plan cards wait beside the day-book.",
+        dialogue: { npc: "old Cade the houndsman", text: "Compare before you commit." },
+        unavailableChoices: [],
+        inventory: [],
+        stats: { hp: 30, attack: 5, defense: 3 },
+        score: 0,
+        maxScore: 100,
+        pressureTracks: [],
+        visibleObjects: [],
+        npcs: [],
+        exits: [],
+        blockedExits: [],
+        enemies: [],
+        publicState: { flags: [], vars: {}, journal: [] },
+        stateHash: "wolf-stage-labels",
+        ended: false,
+        endingId: null,
+        ending: null,
+      };
+      const props = {
+        quest,
+        world: worldSession.view(),
+        journey: worldSession.journey(),
+        latestConsequence: "Cade opens the plan ledger.",
+        error: null,
+        log: [] as string[],
+        panel: "scene",
+        saveStatus: "saved",
+        onPanelChange: noOp,
+        onChoose: noOp,
+        canLeave: false,
+        onLeave: noOp,
+        initialStageScrollTop: 0,
+        restoreDecisionFocus: false,
+        onStageRestore: noOp,
+        onStageScrollTopChange: noOp,
+      };
+      const renderChoice = async (id: string, title: string): Promise<void> => {
+        await act(async () =>
+          root.render(
+            react.createElement(questModule.QuestPlayScreen, {
+              ...props,
+              view: {
+                ...baseView,
+                stateHash: `${baseView.stateHash}:${id}`,
+                choices: [{ id, kind: "ASK", title, label: title }],
+              },
+            }),
+          ),
+        );
+      };
+
+      await renderChoice(
+        "ask_hunt",
+        "ask: COMPARE — HUNT (read-only): FINAL COMMITMENT is cross north or RELEASE JUNE if offered.",
+      );
+      expect(container.querySelector(".nw-action-card h2")?.textContent).toBe(
+        "COMPARE — HUNT (read-only): FINAL COMMITMENT is cross north or RELEASE JUNE if offered.",
+      );
+      expect(container.textContent).not.toContain("Ask COMPARE");
+
+      await renderChoice(
+        "ask_byre",
+        "ask: PREPARE SUPPORT — HUNT guarded/patient tactic; no plan commitment.",
+      );
+      expect(container.querySelector(".nw-action-card h2")?.textContent).toBe(
+        "PREPARE SUPPORT — HUNT guarded/patient tactic; no plan commitment.",
+      );
+      expect(container.textContent).not.toContain("Ask PREPARE SUPPORT");
+
+      await renderChoice(
+        "ask_commit_lure",
+        "ask: FINAL COMMITMENT — LURE: spend finite feed; irreversible.",
+      );
+      expect(container.querySelector(".nw-action-card h2")?.textContent).toBe(
+        "FINAL COMMITMENT — LURE: spend finite feed; irreversible.",
+      );
+      expect(container.textContent).not.toContain("Ask FINAL COMMITMENT");
+    });
+  });
+
   it("restores quest scroll and decision focus after checkpoint Continue remounts the screen", async () => {
     await withRenderedUi(async ({ act, container, document, react, root, server }) => {
       const questModule = (await server.ssrLoadModule("/src/QuestPlayScreen.tsx")) as {

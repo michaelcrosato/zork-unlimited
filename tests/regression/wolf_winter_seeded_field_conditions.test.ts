@@ -331,7 +331,7 @@ describe("Wolf-Winter seeded field conditions", () => {
 
     let hunt = act(structuredClone(root), "ask_hunt");
     expect(action(hunt, "ask_prepare_hunt").command).toMatch(
-      /^ask: Prepare HUNT; cross north to commit\./,
+      /^ask: PREPARE — HUNT:[^]*no commitment yet[^]*FINAL COMMITMENT[^]*cross north[^]*RELEASE JUNE if offered/i,
     );
     hunt = act(hunt, "ask_prepare_hunt");
     expect(actionIds(hunt)).toContain("go_north");

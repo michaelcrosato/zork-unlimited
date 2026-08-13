@@ -82,6 +82,7 @@ function stationBeforeOptionalSupport(): OverworldSession {
 function preparedWolf(
   seed = 1,
   preparation = "albany:prep_works_fortification",
+  ally?: "albany:ally_june_cattle_first",
 ): {
   parent: OverworldSession;
   child: GameSession;
@@ -98,6 +99,11 @@ function preparedWolf(
   moveToArea(parent, world.opening_preparation!.area);
   parent.chooseJourneyStory(preparation);
   parent.chooseJourneyStory("albany:relief_resident_shelter");
+  if (ally) {
+    moveToArea(parent, world.opening_ally!.area);
+    parent.talkToCharacter(world.opening_ally!.contact);
+    parent.chooseJourneyStory(ally);
+  }
   moveToArea(parent, wolf.area);
 
   const preQuestWorld = parent.snapshot();
@@ -402,6 +408,103 @@ describe("player-facing action presentation", () => {
     expect(playerActionLabel({ kind: "INVENTORY", title: "inventory" })).toBe("Review");
     expect(playerActionLabel({ kind: "MOVE", title: "go" })).toBe("Move");
     expect(playerActionLabel({ kind: "ASK", title: "  " })).toBe("Ask");
+  });
+
+  it("renders Wolf-Winter's authored decision stages without inventing a browser-only label", () => {
+    const prepared = preparedWolf();
+    for (const actionId of ["use_sheltered_stockway_last_mile", "talk_houndsman"] as const) {
+      const result = prepared.child.choose(actionId);
+      expect(result.ok, `${actionId}: ${result.rejection ?? "rejected"}`).toBe(true);
+    }
+
+    const root = prepared.child.view();
+    const planCards = root.choices.filter((choice) =>
+      ["ask_hunt", "ask_lure", "ask_drive", "ask_fortify"].includes(choice.id),
+    );
+    expect(planCards.map((choice) => choice.id)).toEqual([
+      "ask_hunt",
+      "ask_lure",
+      "ask_drive",
+      "ask_fortify",
+    ]);
+    for (const choice of planCards) {
+      const authored = choice.title.replace(/^ask:\s*/i, "");
+      expect(authored).toMatch(/^COMPARE — \w+ \(read-only\):/);
+      expect(playerActionLabel(choice)).toBe(authored);
+    }
+    expect(root.publicState.flags).not.toEqual(
+      expect.arrayContaining([
+        "strategy_lure_committed",
+        "strategy_drive_committed",
+        "strategy_fortify_committed",
+      ]),
+    );
+
+    const inspected = prepared.child.choose("ask_lure");
+    expect(inspected.ok, inspected.rejection ?? "LURE comparison rejected").toBe(true);
+    const comparison = prepared.child.view();
+    expect(comparison.publicState.flags).not.toContain("strategy_lure_committed");
+    const finalCommitment = comparison.choices.find((choice) => choice.id === "ask_commit_lure");
+    expect(finalCommitment).toBeDefined();
+    if (!finalCommitment) throw new Error("Expected LURE final commitment.");
+    const authoredCommitment = finalCommitment.title.replace(/^ask:\s*/i, "");
+    expect(authoredCommitment).toMatch(
+      /^FINAL COMMITMENT — LURE:[^]*finite feed[^]*broken[^]*Irreversible\.$/i,
+    );
+    expect(playerActionLabel(finalCommitment)).toBe(authoredCommitment);
+
+    const committed = prepared.child.choose(finalCommitment.id);
+    expect(committed.ok, committed.rejection ?? "LURE commitment rejected").toBe(true);
+    expect(prepared.child.view().publicState.flags).toContain("strategy_lure_committed");
+  });
+
+  it("keeps June's two HUNT boundaries and guarded support state truthful in the browser view", () => {
+    const prepared = preparedWolf(
+      2,
+      "albany:prep_works_fortification",
+      "albany:ally_june_cattle_first",
+    );
+    for (const actionId of ["use_sheltered_stockway_last_mile", "talk_houndsman"] as const) {
+      const result = prepared.child.choose(actionId);
+      expect(result.ok, `${actionId}: ${result.rejection ?? "rejected"}`).toBe(true);
+    }
+
+    const comparison = prepared.child.view();
+    expect(comparison.dialogue?.text).toMatch(
+      /HUNT commits on a north crossing or RELEASE JUNE if offered/i,
+    );
+    const hunt = comparison.choices.find((choice) => choice.id === "ask_hunt");
+    expect(hunt?.title).toMatch(/FINAL COMMITMENT[^]*cross north or RELEASE JUNE if offered/i);
+
+    const guarded = prepared.child.choose("ask_byre");
+    expect(guarded.ok, guarded.rejection ?? "guarded support rejected").toBe(true);
+    const supported = prepared.child.view();
+    expect(supported.dialogue?.text).toMatch(
+      /PREPARE SUPPORT[^]*gain the guarded\/patient HUNT tactic[^]*without committing a plan/i,
+    );
+    expect(supported.publicState.flags).toContain("heard_plan");
+    expect(supported.publicState.flags).not.toEqual(
+      expect.arrayContaining([
+        "strategy_lure_committed",
+        "strategy_drive_committed",
+        "strategy_fortify_committed",
+      ]),
+    );
+
+    expect(prepared.child.choose("ask_leave").ok).toBe(true);
+    expect(prepared.child.choose("talk_june_pike").ok).toBe(true);
+    const june = prepared.child.view();
+    expect(june.choices.find((choice) => choice.id === "ask_release_june_for_hunt")?.title).toMatch(
+      /FINAL COMMITMENT[^]*HUNT \/ RELEASE JUNE/i,
+    );
+    const released = prepared.child.choose("ask_release_june_for_hunt");
+    expect(released.ok, released.rejection ?? "June release rejected").toBe(true);
+    const committed = prepared.child.view();
+    expect(committed.publicState.flags).toContain("june_hunt_released");
+    expect(committed.publicState.flags).not.toContain("june_pike_present");
+    expect(committed.choices.map((choice) => choice.id)).not.toEqual(
+      expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify"]),
+    );
   });
 
   it("surfaces the goal-relevant Station route ahead of incidental local movement", () => {

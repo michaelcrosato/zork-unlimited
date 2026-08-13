@@ -122,7 +122,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
 
     expect(root?.npc_text.trimEnd().length).toBeLessThanOrEqual(360);
     expect(root?.npc_text).toMatch(
-      /Albany sent you[^]*Every plan can finish[^]*name no best answer[^]*four peer plan cards[^]*Questions choose nothing[^]*HUNT commits on north crossing[^]*other three commit in their branches/i,
+      /Albany sent you[^]*Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*PREPARE SUPPORT grants tactics, not a plan[^]*HUNT commits on a north crossing or RELEASE JUNE if offered/i,
     );
     expect(root?.topics.slice(0, 4).map((topic) => topic.id)).toEqual([
       "hunt",
@@ -131,22 +131,22 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       "fortify",
     ]);
     expect(rootPrompt("hunt")).toMatch(
-      /^Inspect HUNT[^]*hold ground\/stores in combat[^]*wolves may die[^]*failure risks cattle\/line[^]*Crossing commits[^]*closes LURE\/DRIVE\/FORTIFY/i,
+      /^COMPARE[^]*HUNT[^]*read-only[^]*hold ground[^]*wolves may die[^]*risk cattle\/line[^]*FINAL COMMITMENT[^]*cross north or RELEASE JUNE if offered[^]*closes other plans/i,
     );
     expect(rootPrompt("lure")).toMatch(
-      /^Inspect LURE[^]*keep herd[^]*move pack beyond breach[^]*last feed[^]*broken paling[^]*ordinary first-cast foul risks two cattle/i,
+      /^COMPARE[^]*LURE[^]*read-only[^]*keep herd[^]*move pack past breach[^]*FINAL COMMITMENT[^]*last feed spent[^]*paling broken[^]*ordinary first-cast foul risks two cattle/i,
     );
     expect(rootPrompt("drive")).toMatch(
-      /^Inspect DRIVE[^]*evacuate people\/herd[^]*force pack clear[^]*abandon outer steading[^]*crisis takes wound, two cattle, or rig/i,
+      /^COMPARE[^]*DRIVE[^]*read-only[^]*evacuate people\/herd[^]*clear pack[^]*FINAL COMMITMENT[^]*abandons outer defense[^]*crisis costs wound, two cattle, or rig/i,
     );
     expect(rootPrompt("fortify")).toMatch(
-      /^Inspect FORTIFY[^]*keep household\/herd\/pack apart to dawn[^]*no retreat[^]*expose property\/Cade aid[^]*spend seals\/no aid/i,
+      /^COMPARE[^]*FORTIFY[^]*read-only[^]*household\/herd\/pack apart to dawn[^]*FINAL COMMITMENT[^]*no retreat[^]*expose property\/gain aid[^]*spend seals\/no aid/i,
     );
     expect(rootPrompt("wolves")).toMatch(
-      /^Inspect HUNT support[^]*hold ground\/stores in prepared combat[^]*wolf deaths[^]*cattle\/line[^]*\+2 attack\/\+5 tally/i,
+      /^PREPARE SUPPORT[^]*HUNT quick line[^]*\+2 attack\/\+5 tally[^]*tactics only[^]*no plan commitment/i,
     );
     expect(rootPrompt("byre")).toMatch(
-      /hunt support[^]*guarded\/patient[^]*same stakes[^]*safer combat opening/i,
+      /PREPARE SUPPORT[^]*HUNT guarded\/patient[^]*grants the safer combat tactic[^]*no plan commitment/i,
     );
     expect(rootSurface).not.toMatch(
       /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b/i,
@@ -162,7 +162,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     expect(quick).not.toMatch(/wait[^]*true rush|wedge[^]*rail/i);
 
     expect(guarded).toMatch(
-      /Guarded spear line[^]*rail[^]*combat funnel[^]*ordinary ground[^]*wedge[^]*splits[^]*bind/i,
+      /Guarded spear line[^]*rail[^]*combat funnel[^]*ordinary ground[^]*wedge[^]*(?:splits[^]*bind|bind[^]*split)/i,
     );
     expect(guarded).toMatch(/firm frozen rail[^]*braces directly/i);
     expect(guarded).toMatch(/wait[^]*true rush[^]*patient alternative[^]*closing early/i);
@@ -230,7 +230,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*four peer plan cards[^]*HUNT commits[^]*north crossing[^]*other three commit in their branches/i,
+      /Albany sent you[^]*Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*HUNT commits on a north crossing or RELEASE JUNE if offered[^]*other plans commit only at labeled actions/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_hunt",

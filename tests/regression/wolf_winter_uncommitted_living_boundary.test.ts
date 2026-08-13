@@ -24,9 +24,9 @@ const FULL = { compact_context: false, compact_result: false } as const;
 const LIVING_BOUNDARY =
   /(?:name hunt[^]*cross uncommitted|cross (?:north )?uncommitted[^]*hunt|hunt commits[^]*north crossing)[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast|closes[^]*(?:other plans|other three))/i;
 const ROOT_COMMITMENT_MODEL =
-  /Every plan can finish[^]*four peer plan cards[^]*Questions choose nothing[^]*HUNT commits on north crossing[^]*other three commit in their branches/i;
+  /Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*PREPARE SUPPORT grants tactics, not a plan[^]*HUNT commits on a north crossing or RELEASE JUNE if offered[^]*other plans commit only at labeled actions/i;
 const HUNT_BOUNDARY =
-  /Inspect HUNT[^]*hold ground\/stores in combat[^]*wolves may die[^]*failure risks cattle\/line[^]*Crossing commits[^]*closes LURE\/DRIVE\/FORTIFY/i;
+  /COMPARE[^]*HUNT[^]*read-only[^]*hold ground[^]*wolves may die[^]*risk cattle\/line[^]*FINAL COMMITMENT[^]*cross north or RELEASE JUNE if offered[^]*closes other plans/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string, forcedRoll?: number): GameState {
@@ -159,13 +159,13 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootCommands = rootPlanActions.map((action) => action.command).join("\n");
     expect(rootCommands).toMatch(HUNT_BOUNDARY);
     expect(rootCommands).toMatch(
-      /Inspect LURE[^]*keep herd[^]*move pack beyond breach[^]*last feed[^]*broken paling[^]*ordinary first-cast foul risks two cattle/i,
+      /COMPARE[^]*LURE[^]*read-only[^]*keep herd[^]*move pack past breach[^]*FINAL COMMITMENT[^]*last feed spent[^]*paling broken[^]*ordinary first-cast foul risks two cattle/i,
     );
     expect(rootCommands).toMatch(
-      /Inspect DRIVE[^]*evacuate people\/herd[^]*force pack clear[^]*abandon outer steading[^]*crisis takes wound, two cattle, or rig/i,
+      /COMPARE[^]*DRIVE[^]*read-only[^]*evacuate people\/herd[^]*clear pack[^]*FINAL COMMITMENT[^]*abandons outer defense[^]*crisis costs wound, two cattle, or rig/i,
     );
     expect(rootCommands).toMatch(
-      /Inspect FORTIFY[^]*household\/herd\/pack apart[^]*no retreat[^]*property\/Cade aid[^]*spend seals\/no aid/i,
+      /COMPARE[^]*FORTIFY[^]*read-only[^]*household\/herd\/pack apart[^]*FINAL COMMITMENT[^]*no retreat[^]*expose property\/gain aid[^]*spend seals\/no aid/i,
     );
     expect(`${rootDialogue.dialogue?.npc_text}\n${rootCommands}`).not.toMatch(
       /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b|\bDC\s*\d/i,
@@ -217,7 +217,9 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     );
     expect(
       lureDialogue.available_actions.find((action) => action.id === "ask_lure_back")?.command,
-    ).toMatch(/crossing uncommitted[^]*HUNT[^]*permanently retires LURE, DRIVE, and FORTIFY/i);
+    ).toMatch(
+      /BACK[^]*LURE stays open[^]*North crossing commits HUNT[^]*retires LURE\/DRIVE\/FORTIFY/i,
+    );
 
     uncommitted = act(uncommitted, "ask_lure_back");
     const afterLureBack = observation(uncommitted);
@@ -264,7 +266,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     expect(
       afterUncommittedCrossing.available_actions.find((action) => action.id === "ask_leave")
         ?.command,
-    ).toBe("ask: Leave Cade.");
+    ).toBe("ask: LEAVE — Exit Cade's plan review; this action commits nothing.");
     expect(enumerateRpgActions(index, uncommitted).map((action) => action.id)).not.toEqual(
       expect.arrayContaining(["ask_lure", "ask_drive", "ask_fortify", "ask_commit_lure"]),
     );
@@ -285,7 +287,7 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     expect(
       beforeCommittedCrossing.available_actions.find((action) => action.id === "ask_leave")
         ?.command,
-    ).toMatch(/take the committed feed from the store-shed west/i);
+    ).toMatch(/LEAVE[^]*Begin committed LURE[^]*finite feed west/i);
     committed = act(committed, "ask_leave");
     const committedPickup = observation(committed);
     expect(committedPickup.description).toMatch(
@@ -365,6 +367,6 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     );
     expect(
       afterCommittedCrossing.available_actions.find((action) => action.id === "ask_leave")?.command,
-    ).toBe("ask: Leave Cade.");
+    ).toBe("ask: LEAVE — Exit Cade's plan review; this action commits nothing.");
   });
 });

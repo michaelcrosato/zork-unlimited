@@ -313,10 +313,10 @@ describe("June's pre-HUNT release counterfactual", () => {
       (option) => option.id === "ask_commit_hunt_and_hold",
     );
     expect(release?.command).toMatch(
-      /release June[^]*hold ground alone[^]*preserve agreement[^]*lose June's field aid[^]*commits HUNT[^]*closes LURE\/DRIVE\/FORTIFY/i,
+      /FINAL COMMITMENT[^]*HUNT \/ RELEASE JUNE[^]*preserve agreement[^]*lose all June field aid[^]*close LURE\/DRIVE\/FORTIFY[^]*Irreversible/i,
     );
     expect(retain?.command).toMatch(
-      /keep June[^]*June stays cattle-first[^]*first wolf death breaks agreement[^]*north commits[^]*closes other plans/i,
+      /PREPARE[^]*HUNT \/ KEEP JUNE[^]*keep cattle-first aid[^]*first wolf death breaks agreement[^]*North crossing is FINAL COMMITMENT[^]*closes other plans/i,
     );
 
     const preChoiceSave = save(boundary, loaded.compiled.contentHash, SAVE_MODE, {
@@ -402,7 +402,7 @@ describe("June's pre-HUNT release counterfactual", () => {
         (action) => action.id === "ask_wolves_after_june_release",
       )?.command,
     ).toBe(
-      "ask: HUNT support — Learn Cade's quick spear line (+2 attack/+5 tally). This teaches tactics only; it does not choose or reopen a strategy.",
+      "ask: PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; HUNT is already committed and other plans stay closed.",
     );
     expect(rpgActionOptionForInputId(enumerateRpgActions(index, released), "ask_wolves")?.id).toBe(
       "ask_wolves_after_june_release",

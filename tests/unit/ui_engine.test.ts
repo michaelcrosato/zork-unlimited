@@ -226,8 +226,14 @@ describe("GameSession — RPG-only structured play", () => {
       npc: "old Cade the houndsman",
       text: mcpRead.observation.dialogue?.npc_text,
     });
-    expect(uiView.dialogue?.text).toContain("Inspect the four peer plan cards below");
-    expect(uiView.dialogue?.text).toContain("HUNT commits on north crossing");
+    expect(uiView.dialogue?.text).toContain(
+      "Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT",
+    );
+    expect(uiView.dialogue?.text).toContain("PREPARE SUPPORT grants tactics, not a plan");
+    expect(uiView.dialogue?.text).toContain(
+      "HUNT commits on a north crossing or RELEASE JUNE if offered",
+    );
+    expect(uiView.dialogue?.text).toContain("other plans commit only at labeled actions");
     expect(talkNarration).toEqual([`old Cade the houndsman: "${uiView.dialogue?.text}"`]);
     expect(talkNarration.join(" ")).not.toContain("Save/cost—HUNT");
     expect(uiView.choices.map((choice) => choice.id)).toEqual(

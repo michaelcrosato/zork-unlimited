@@ -102,7 +102,7 @@ function commitDrive(withJune = false, withDrover = false): GameState {
   expect(
     enumerateRpgActions(index, state).find((option) => option.id === "ask_commit_drive")?.command,
   ).toMatch(
-    /commit drive now[^]*start the herd[^]*close preparation and retreat[^]*forfeit the outer steading defense[^]*close hunt[/]lure[/]fortify/i,
+    /FINAL COMMITMENT[^]*DRIVE[^]*start herd[^]*forfeit outer defense[/]retreat[^]*Crisis costs wound[^]*two cattle[^]*rig[^]*close HUNT[/]LURE[/]FORTIFY/i,
   );
 
   state = act(state, "ask_commit_drive");

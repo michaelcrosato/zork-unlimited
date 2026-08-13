@@ -4271,10 +4271,9 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            Albany sent you. Every plan can finish; I name no best answer. Inspect the four
-            peer plan cards below for outcomes, costs, support, and commitment. Questions
-            choose nothing. HUNT commits on north crossing; the other three commit in their
-            branches.
+            Albany sent you. Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT.
+            PREPARE SUPPORT grants tactics, not a plan. HUNT commits on a north crossing or
+            RELEASE JUNE if offered; other plans commit only at labeled actions.
           append_variants:
             - when:
                 - { has_flag: opening_condition_firm_frozen_rail }
@@ -4418,7 +4417,7 @@ npcs:
           topics:
             - id: hunt
               aliases: [commit_hunt_and_hold, choose_hunt_and_hold, commit_hunt, inspect_hunt]
-              prompt: "Inspect HUNT — Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing commits and closes LURE/DRIVE/FORTIFY."
+              prompt: "COMPARE — HUNT (read-only): hold ground; wolves may die; risk cattle/line. FINAL COMMITMENT: cross north or RELEASE JUNE if offered; closes other plans."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4428,7 +4427,7 @@ npcs:
               goto: cade_hunt
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "Inspect LURE — Keep herd; move pack beyond breach. Costs last feed and broken paling; an ordinary first-cast foul risks two cattle."
+              prompt: "COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4438,7 +4437,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "Inspect DRIVE — Evacuate people/herd; force pack clear. Cost: abandon outer steading; Crisis takes wound, two cattle, or rig."
+              prompt: "COMPARE — DRIVE (read-only): evacuate people/herd; clear pack. FINAL COMMITMENT abandons outer defense; Crisis costs wound, two cattle, or rig."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4448,7 +4447,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "Inspect FORTIFY — Keep household/herd/pack apart to dawn. Cost: no retreat; expose property/Cade aid or spend seals/no aid."
+              prompt: "COMPARE — FORTIFY (read-only): keep household/herd/pack apart to dawn. FINAL COMMITMENT means no retreat; expose property/gain aid or spend seals/no aid."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4458,7 +4457,7 @@ npcs:
               goto: cade_fortify
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "Inspect HUNT support — Hold ground/stores in prepared combat. Risk wolf deaths and cattle/line; this lesson grants +2 attack/+5 tally."
+              prompt: "PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; tactics only, no plan commitment."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: june_hunt_released }
@@ -4468,7 +4467,7 @@ npcs:
               goto: cade_wolves
             - id: wolves_after_june_release
               aliases: [ask_wolves, ask_hunt_support]
-              prompt: "HUNT support — Learn Cade's quick spear line (+2 attack/+5 tally). This teaches tactics only; it does not choose or reopen a strategy."
+              prompt: "PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; HUNT is already committed and other plans stay closed."
               conditions:
                 - { not_flag: heard_counsel }
                 - { has_flag: june_hunt_released }
@@ -4478,7 +4477,7 @@ npcs:
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
-              prompt: "Inspect HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening."
+              prompt: "PREPARE SUPPORT — HUNT guarded/patient line: grants the safer combat tactic; no plan commitment."
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
@@ -4487,7 +4486,7 @@ npcs:
               goto: cade_byre
             - id: current_support
               aliases: [compare_support, ask_current_support]
-              prompt: "Review how this dispatch's Fieldcraft, oath, June, and Works support affect the four plans; this chooses nothing."
+              prompt: "REVIEW SUPPORT (read-only) — Compare Fieldcraft, oath, June, and Works effects; no plan commitment."
               conditions:
                 - any_of:
                     - { var_gte: { name: fieldcraft, value: 4 } }
@@ -4502,18 +4501,18 @@ npcs:
               goto: cade_current_support
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade."
+              prompt: "LEAVE — Exit Cade's plan review; this action commits nothing."
               end: true
         - id: cade_hunt
           npc_text: >
-            HUNT holds Cade's ground, herd, and relief stores in combat. Wolves may die;
-            failure risks cattle or the line. Inspection and preparation choose nothing:
-            crossing north commits HUNT and closes LURE, DRIVE, and FORTIFY. Cade's quick
-            and guarded lessons remain separate support cards on the four-plan menu.
+            COMPARE — HUNT holds Cade's ground, herd, and relief stores in combat. Wolves
+            may die; failure risks cattle or the line. Inspection chooses nothing; PREPARE
+            SUPPORT grants tactics without committing a plan. FINAL COMMITMENT happens on the
+            north crossing, or at RELEASE JUNE if offered, and closes LURE, DRIVE, and FORTIFY.
           topics:
             - id: prepare_hunt
               aliases: [prepare_hunt_and_hold]
-              prompt: "Prepare HUNT; cross north to commit. Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing closes LURE/DRIVE/FORTIFY."
+              prompt: "PREPARE — HUNT: leave Cade ready; no commitment yet. FINAL COMMITMENT: cross north, or RELEASE JUNE if offered; wolves may die and other plans close."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4522,16 +4521,16 @@ npcs:
                 - { not_visited: paling_gap }
               end: true
             - id: hunt_back
-              prompt: "Return to the four plans; HUNT stays uncommitted until the north crossing."
+              prompt: "BACK — Compare all four plans; HUNT stays uncommitted until north crossing or RELEASE JUNE if offered."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade; HUNT stays uncommitted until the north crossing."
+              prompt: "LEAVE — HUNT stays uncommitted until north crossing or RELEASE JUNE if offered."
               end: true
         # These notes describe independent imported facts. They deliberately compose instead
         # of replacing the four-plan scorecard or competing in a combinatorial variant table.
         - id: cade_current_support
-          npc_text: "Current dispatch support; nothing in this ledger chooses or changes a plan."
+          npc_text: "REVIEW SUPPORT — Current dispatch effects; this read-only ledger chooses and changes nothing."
           append_variants:
             - when:
                 - { var_gte: { name: fieldcraft, value: 4 } }
@@ -4601,11 +4600,11 @@ npcs:
                 Repair DC 12; a miss exposes the marked no-roll splice and raises alarm when set.
           topics:
             - id: current_support_back
-              prompt: "Close the current-support ledger and return to Cade's four plans."
+              prompt: "BACK — Close support and compare Cade's four plans."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade without choosing a plan."
+              prompt: "LEAVE — Exit support review without committing."
               end: true
         - id: cade_wolves
           # The combat_guaranteed promise spoken aloud — and TRUE, because the validator
@@ -4628,7 +4627,7 @@ npcs:
           topics:
             - id: byre
               aliases: [ask_byre]
-              prompt: "Ask next for Cade's guarded spear-fighting plan."
+              prompt: "PREPARE SUPPORT — HUNT guarded/patient line: grants the safer combat tactic; no plan commitment."
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
@@ -4637,7 +4636,7 @@ npcs:
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "Ask how Cade could relocate the pack beyond the breach with feed."
+              prompt: "COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4647,7 +4646,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "Ask how the two-charge signal drive works."
+              prompt: "COMPARE — DRIVE (read-only): evacuate people/herd; clear pack. FINAL COMMITMENT abandons outer defense; Crisis costs wound, two cattle, or rig."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4657,7 +4656,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "Ask how the seal-and-outlast line works."
+              prompt: "COMPARE — FORTIFY (read-only): keep household/herd/pack apart to dawn. FINAL COMMITMENT means no retreat; expose property/gain aid or spend seals/no aid."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4666,25 +4665,26 @@ npcs:
                 - { not_visited: paling_gap }
               goto: cade_fortify
             - id: wolves_back
-              prompt: "Nod, and ask something else."
+              prompt: "BACK — Return to Cade's four plan cards."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade."
+              prompt: "LEAVE — Exit Cade's plan review; this action commits nothing."
               end: true
         - id: cade_byre
           npc_text: >
-            Guarded spear line: set the rail to half-shut the breach as a combat funnel.
-            On ordinary ground, wedge it; if it splits, bind a guard. A firm frozen rail
-            braces directly. Neither turns a wolf alive. At old grey, wait out the feint
-            and take the true rush—the patient alternative to closing early.
+            PREPARE SUPPORT — You gain the guarded/patient HUNT tactic without committing a plan.
+            Guarded spear line: half-shut the breach with a rail as a combat funnel. On ordinary
+            ground, wedge it; bind a split. A firm frozen rail braces directly. Neither turns a
+            wolf alive. At grey, wait out the feint and take the true rush—the patient alternative
+            to closing early.
           effects:
             - set_flag: heard_plan
             - add_journal: "Cade's guarded/patient combat: set the rail as tonight's ground allows; bind only an ordinary split. Neither turns a wolf alive. Wait out grey; take true rush."
           topics:
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "Ask next for Cade's quick spear-hand lesson."
+              prompt: "PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; tactics only, no plan commitment."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
@@ -4693,7 +4693,7 @@ npcs:
               goto: cade_wolves
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "Ask how Cade could relocate the pack beyond the breach with feed."
+              prompt: "COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4703,7 +4703,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "Ask how the two-charge signal drive works."
+              prompt: "COMPARE — DRIVE (read-only): evacuate people/herd; clear pack. FINAL COMMITMENT abandons outer defense; Crisis costs wound, two cattle, or rig."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4713,7 +4713,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "Ask how the seal-and-outlast line works."
+              prompt: "COMPARE — FORTIFY (read-only): keep household/herd/pack apart to dawn. FINAL COMMITMENT means no retreat; expose property/gain aid or spend seals/no aid."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4722,11 +4722,11 @@ npcs:
                 - { not_visited: paling_gap }
               goto: cade_fortify
             - id: byre_back
-              prompt: "Thank him, and ask something else."
+              prompt: "BACK — Return to Cade's four plan cards."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade."
+              prompt: "LEAVE — Exit Cade's plan review; this action commits nothing."
               end: true
         - id: cade_lure
           npc_text: >
@@ -4782,7 +4782,7 @@ npcs:
           topics:
             - id: quick_lesson
               aliases: [wolves, ask_wolves]
-              prompt: "Take Cade's optional quick lesson (+2 attack; +5 final tally). It returns to the plan menu; choose LURE again to commit."
+              prompt: "PREPARE SUPPORT — Learn quick spear line (+2 attack/+5 tally); returns to comparison and does not commit LURE."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
@@ -4792,7 +4792,7 @@ npcs:
               goto: cade_wolves
             - id: commit_lure
               aliases: [commit_feed, commit_alive]
-              prompt: "Commit LURE now: spend Cade's finite feed on the three-cast living-pack line and close HUNT/DRIVE/FORTIFY."
+              prompt: "FINAL COMMITMENT — LURE: spend Cade's finite feed on three casts; leave paling broken; close HUNT/DRIVE/FORTIFY. Irreversible."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4801,11 +4801,11 @@ npcs:
                 - { not_visited: paling_gap }
               goto: cade_lure_committed
             - id: lure_back
-              prompt: "Decline for now; crossing uncommitted chooses HUNT and permanently retires LURE, DRIVE, and FORTIFY."
+              prompt: "BACK — Compare all four plans; LURE stays open. North crossing commits HUNT and retires LURE/DRIVE/FORTIFY."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave old Cade without committing the feed."
+              prompt: "LEAVE — No LURE commitment; north crossing would commit HUNT."
               end: true
         - id: cade_lure_committed
           npc_text: >
@@ -4818,24 +4818,24 @@ npcs:
           topics:
             - id: wolves
               aliases: [ask_wolves]
-              prompt: "Ask next for Cade's quick spear-hand lesson."
+              prompt: "PREPARE SUPPORT — Review quick spear line; LURE remains committed."
               conditions:
                 - { not_flag: heard_counsel }
                 - { not_flag: strategy_lure_committed }
               goto: cade_wolves
             - id: byre
               aliases: [ask_byre]
-              prompt: "Ask next for Cade's guarded byre plan."
+              prompt: "REVIEW SUPPORT — Review guarded HUNT line; LURE remains committed."
               conditions:
                 - { not_flag: heard_plan }
                 - { not_flag: strategy_lure_committed }
               goto: cade_byre
             - id: lure_back
-              prompt: "Repeat the risks, then ask something else."
+              prompt: "BACK — Review the committed LURE route."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade and take the committed feed from the store-shed west."
+              prompt: "LEAVE — Begin committed LURE; take the finite feed west."
               end: true
         - id: cade_drive
           npc_text: >
@@ -4885,7 +4885,7 @@ npcs:
           topics:
             - id: commit_drive
               aliases: [commit_evacuate, commit_signal]
-              prompt: "Commit DRIVE now: start the herd, close preparation and retreat, forfeit the outer steading defense, and close HUNT/LURE/FORTIFY."
+              prompt: "FINAL COMMITMENT — DRIVE: start herd; forfeit outer defense/retreat; Crisis costs wound, two cattle, or rig; close HUNT/LURE/FORTIFY."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4894,11 +4894,11 @@ npcs:
                 - { not_visited: paling_gap }
               goto: cade_drive_committed
             - id: drive_back
-              prompt: "Decline for now, and ask something else."
+              prompt: "BACK — Compare all four plans; DRIVE remains uncommitted."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave old Cade without committing the drive."
+              prompt: "LEAVE — Exit without committing DRIVE."
               end: true
         - id: cade_drive_committed
           npc_text: >
@@ -4919,11 +4919,11 @@ npcs:
             - add_journal: "Drive committed: herd starts; preparation/retreat close. Outer defense is forfeit. Take two-charge rig; no lure/combat switch."
           topics:
             - id: drive_back
-              prompt: "Repeat the route, then ask something else."
+              prompt: "BACK — Review the committed DRIVE route."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave old Cade and begin the committed drive."
+              prompt: "LEAVE — Begin committed DRIVE with the two-charge rig."
               end: true
         - id: cade_fortify
           npc_text: >
@@ -4999,7 +4999,7 @@ npcs:
           topics:
             - id: commit_cade_terms
               aliases: [accept_terms, accept_household_terms, take_shutters]
-              prompt: "Commit FORTIFY under Cade's terms: no retreat or switch; expose outer property, preserve public seals, and gain aid for one roll-required failed seat."
+              prompt: "FINAL COMMITMENT — FORTIFY / CADE: no retreat/switch; expose property, save public seals; Cade aids one roll-required failed seat. Irreversible."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -5009,7 +5009,7 @@ npcs:
               goto: cade_fortify_cade_terms
             - id: commit_albany_authority
               aliases: [invoke_authority, order_public_seals, invoke_albany]
-              prompt: "Commit FORTIFY under Albany authority: no retreat or switch; preserve property, spend public seals, and receive no aid after a roll-required failed seat."
+              prompt: "FINAL COMMITMENT — FORTIFY / ALBANY: no retreat/switch; preserve property, spend public seals; no aid after a roll-required failed seat. Irreversible."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -5018,11 +5018,11 @@ npcs:
                 - { not_visited: paling_gap }
               goto: cade_fortify_albany_authority
             - id: fortify_back
-              prompt: "Decline for now, and ask something else."
+              prompt: "BACK — Compare all four plans; FORTIFY remains uncommitted."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave old Cade without committing the fortification."
+              prompt: "LEAVE — Exit without committing FORTIFY."
               end: true
         - id: cade_fortify_cade_terms
           npc_text: >
@@ -5061,11 +5061,11 @@ npcs:
             - add_journal: "Fortify—Cade terms: outer property exposed, public seals kept, Cade-aid terms recorded. A sound lower frame leaves that aid unused. Go north; no switch."
           topics:
             - id: fortify_back
-              prompt: "Repeat the terms, then ask something else."
+              prompt: "BACK — Review committed FORTIFY / CADE TERMS."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade and begin the committed household fortification."
+              prompt: "LEAVE — Begin committed FORTIFY under Cade's terms."
               end: true
         - id: cade_fortify_albany_authority
           npc_text: >
@@ -5130,11 +5130,11 @@ npcs:
             - add_journal: "Fortify—Albany authority: Cade property covered, public seals committed, Cade-aid refusal recorded. A sound lower frame leaves the emergency strip unused."
           topics:
             - id: fortify_back
-              prompt: "Repeat the order, then ask something else."
+              prompt: "BACK — Review committed FORTIFY / ALBANY authority."
               goto: cade_root
             - id: leave
               aliases: [leave_cade]
-              prompt: "Leave Cade and begin the committed public fortification."
+              prompt: "LEAVE — Begin committed FORTIFY under Albany authority."
               end: true
 
   # June has one stable identity. Conditional presentation variants move her between
@@ -5224,23 +5224,22 @@ npcs:
       nodes:
         - id: june_wolf_line_boundary
           npc_text: >-
-            Choose by outcome. HUNT holds Cade's ground through prepared combat; LURE relocates
-            the pack; DRIVE evacuates the outer line; FORTIFY keeps household, herd, and pack
-            apart until dawn. Cade commits the three noncombat plans before you cross. For HUNT,
-            release me now to preserve our agreement without field aid, or keep me on cattle and
-            accept that the first wolf death breaks it. Crossing north commits HUNT.
+            Choose by outcome. Cade's four cards are comparisons; his support cards do not
+            commit. He makes LURE, DRIVE, or FORTIFY final before the breach. HUNT is separate:
+            release me now and HUNT commits immediately, preserving our agreement but losing my
+            field aid; keep me on cattle and HUNT stays uncommitted until you cross north.
           topics:
             - id: release_june_for_hunt
               aliases: [release_june, preserve_june_agreement, choose_hunt_without_june]
-              prompt: "HUNT / release June — Hold ground alone; preserve agreement; lose June's field aid. Commits HUNT; closes LURE/DRIVE/FORTIFY."
+              prompt: "FINAL COMMITMENT — HUNT / RELEASE JUNE: preserve agreement, lose all June field aid; close LURE/DRIVE/FORTIFY. Irreversible."
               goto: june_released_before_hunt
             - id: commit_hunt_and_hold
               aliases: [accept_wolf_line, choose_hunt_and_hold, acknowledge_combat_line]
-              prompt: "HUNT / keep June — Hold ground; June stays cattle-first. First wolf death breaks agreement. North commits; closes other plans."
+              prompt: "PREPARE — HUNT / KEEP JUNE: keep cattle-first aid; first wolf death breaks agreement. North crossing is FINAL COMMITMENT; closes other plans."
               goto: june_combat_line_disclosed
             - id: keep_cattle_terms
               aliases: [choose_living_plan, ask_cade]
-              prompt: "Choose a noncombat plan — Ask Cade to commit LURE relocation, DRIVE evacuation, or FORTIFY until dawn."
+              prompt: "BACK — Return to June's cattle terms; then BACK to Cade's LURE/DRIVE/FORTIFY comparisons. No plan committed."
               goto: june_cattle_terms_confirmed
         - id: june_combat_line_disclosed
           npc_text: >-
@@ -5254,7 +5253,7 @@ npcs:
           topics:
             - id: leave_june_boundary
               aliases: [cross_to_paling, leave_june]
-              prompt: "End exchange; north is open. Cade's LURE, DRIVE, and FORTIFY commitments remain until you cross."
+              prompt: "LEAVE — No HUNT commitment yet. North crossing is FINAL COMMITMENT; Cade's other plans stay open until then."
               end: true
         - id: june_cattle_terms_confirmed
           npc_text: >-
@@ -5264,7 +5263,7 @@ npcs:
           topics:
             - id: return_to_cade
               aliases: [leave_june_boundary, ask_cade]
-              prompt: "End exchange; return to Cade; LURE, DRIVE, and FORTIFY remain open, and north remains closed."
+              prompt: "BACK — Return to Cade; no plan committed and north remains closed."
               end: true
         - id: june_released_before_hunt
           npc_text: >-
@@ -5281,7 +5280,7 @@ npcs:
           topics:
             - id: leave_after_june_release
               aliases: [cross_to_paling, leave_june]
-              prompt: "End exchange; HUNT is committed and north is open. Yard prep remains; June, LURE, DRIVE, and FORTIFY do not reopen."
+              prompt: "LEAVE — HUNT is committed; north is open. Yard prep remains, but June and other plans do not reopen."
               end: true
 
         # LURE: June independently takes the cattle line after the living recovery.

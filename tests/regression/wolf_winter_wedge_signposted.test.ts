@@ -101,8 +101,7 @@ describe("bug_0258 — The Wolf-Winter: the optional wedge is signposted and dis
     expect(text).toContain("guarded spear line");
     expect(text).toContain("combat funnel");
     expect(text).toContain("neither turns a wolf alive");
-    expect(text).toContain("splits");
-    expect(text).toContain("bind");
+    expect(text).toContain("bind a split");
   });
 
   it("PROSE-ONLY: cade_byre's effects are still exactly {set_flag heard_plan, add_journal}", () => {

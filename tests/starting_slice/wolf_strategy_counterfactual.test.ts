@@ -195,7 +195,7 @@ function lureRoute(
     (option) => option.id === "ask_commit_lure",
   );
   expect(commitment?.command).toMatch(
-    /commit lure now[^]*finite feed[^]*three-cast living-pack line[^]*close hunt[/]drive[/]fortify/i,
+    /FINAL COMMITMENT[^]*LURE[^]*spend Cade's finite feed[^]*three casts[^]*leave paling broken[^]*close HUNT[/]DRIVE[/]FORTIFY[^]*Irreversible/i,
   );
   act("ask_commit_lure");
   expect(state.flags.strategy_lure_committed).toBe(true);

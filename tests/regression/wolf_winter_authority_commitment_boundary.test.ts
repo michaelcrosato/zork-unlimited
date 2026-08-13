@@ -353,7 +353,7 @@ describe("Wolf-Winter authority commitment boundary", () => {
       (action) => action.id === "ask_commit_albany_authority",
     );
     expect(authority?.command).toMatch(
-      /^ask: Commit FORTIFY under Albany authority:[^]*no retreat or switch[^]*preserve property[^]*spend public seals[^]*no aid after a roll-required failed seat/i,
+      /^ask: FINAL COMMITMENT — FORTIFY \/ ALBANY:[^]*no retreat\/switch[^]*preserve property[^]*spend public seals[^]*no aid after a roll-required failed seat[^]*Irreversible/i,
     );
     expect(authority?.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
 

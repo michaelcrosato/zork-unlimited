@@ -44,7 +44,7 @@ const MCP_SERVER = join(ROOT, "src", "mcp", "server.ts");
 const TEST_RUN_SEED = 2731;
 const TEST_BUILD_COMMIT = "b".repeat(40);
 const CADE_HUNT_INSPECT_LABEL =
-  "Inspect HUNT — Hold ground/stores in combat; wolves may die and failure risks cattle/line. Crossing commits and closes LURE/DRIVE/FORTIFY.";
+  "COMPARE — HUNT (read-only): hold ground; wolves may die; risk cattle/line. FINAL COMMITMENT: cross north or RELEASE JUNE if offered; closes other plans.";
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
@@ -1961,6 +1961,7 @@ describe("MCP pure play mode", () => {
       exits: { direction: string; to?: string }[];
       available_actions: { id: string; command?: string }[];
       dialogue: { npc: string; npc_text: string } | null;
+      state: { flags: string[]; vars: Record<string, number>; journal: string[] };
     };
     type RpgCompactContext = {
       actions?: string[];
@@ -2942,7 +2943,7 @@ describe("MCP pure play mode", () => {
         const talkContext = talked.context as RpgCompactContext;
         const talkActions = talkContext.actions;
         expect(talkContext.dialogue?.[1]).toMatch(
-          /Every plan can finish; I name no best answer[^]*Inspect the four peer plan cards[^]*Questions choose nothing[^]*HUNT commits on north crossing[^]*TONIGHT'S GROUND —/i,
+          /Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*PREPARE SUPPORT grants tactics, not a plan[^]*HUNT commits on a north crossing or RELEASE JUNE if offered[^]*TONIGHT'S GROUND —/i,
         );
         expect(talkContext.dialogue?.[1].length).toBeLessThanOrEqual(360);
         expect(talkActions).toEqual(
@@ -2991,11 +2992,11 @@ describe("MCP pure play mode", () => {
           Object.fromEntries(labeledActions.map((action) => [action.id, action.command])),
         ).toMatchObject({
           ask_wolves:
-            "ask: Inspect HUNT support — Hold ground/stores in prepared combat. Risk wolf deaths and cattle/line; this lesson grants +2 attack/+5 tally.",
+            "ask: PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; tactics only, no plan commitment.",
           ask_byre:
-            "ask: Inspect HUNT support — Learn Cade's guarded/patient tactic; same stakes, but a safer combat opening.",
+            "ask: PREPARE SUPPORT — HUNT guarded/patient line: grants the safer combat tactic; no plan commitment.",
           ask_hunt: CADE_HUNT_INSPECT_COMMAND,
-          ask_leave: "ask: Leave Cade.",
+          ask_leave: "ask: LEAVE — Exit Cade's plan review; this action commits nothing.",
         });
         const huntAction = labeledActions.find((action) => action.id === "ask_hunt");
         expect(MCP_ACTION_LABEL_CHAR_LIMIT).toBe(160);
@@ -3035,6 +3036,14 @@ describe("MCP pure play mode", () => {
         expect(askedObservation.exits.length).toBeGreaterThan(0);
         expect(askedObservation.exits.every((exit) => exit.to === undefined)).toBe(true);
         expect(askedObservation.available_actions.length).toBeGreaterThan(0);
+        expect(askedObservation.state.flags).toContain("heard_plan");
+        expect(askedObservation.state.flags).not.toEqual(
+          expect.arrayContaining([
+            "strategy_lure_committed",
+            "strategy_drive_committed",
+            "strategy_fortify_committed",
+          ]),
+        );
         expect(
           askedObservation.available_actions.every(
             (action) => typeof action.command === "string" && action.command.length > 0,

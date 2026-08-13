@@ -182,3 +182,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback/next: pre-seal status is 1/3 with no compile. The verified report still finds compact state/session transitions dense and Station support consequential, while the accepted `3d254abc` preparation-versus-commitment hotspot remains the next bounded product change before the frozen Terra pilot.
 - Transport caveat: stock Codex 0.146 exposes core MCP resource helpers whenever any server exists; the earlier Spark probe was correctly rejected and is not reused. This cycle uses the already authenticated Terra game-direct surface; no retry, malformed evidence acceptance, or verifier weakening was introduced.
 - Guard: 53 focused tests; exact health (460 files/4,074 tests); both 6,000-step crawls; deep crawl 1,536,000 steps; UI typechecks; all 12 packs; cycle-start integrity; and exact Terra pure provenance are green.
+## AFK Cycle 2026-08-13T22-50-24-164Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-13T22-50-24-164Z","selected_recommendation_id":"hotspot-3d254abc"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-3d254abc (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
