@@ -1,7 +1,7 @@
 # AI Loop State
 
 <!-- historical_cycle_count: 775 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260813T124503Z/hotspots.json","hotspots_sha256":"b4840d80b1fcae13aec37522b4da82a89478ff80aeb6da58450799bd42466c9f","manifest_path":"ai-runs/feedback/20260813T124503Z/report-manifest.json","manifest_sha256":"a92ee948d93121e3a7a78e10417eafdc41019ae090f88d133f599678e570d4bf"},"pending_cycle_reports":[{"evidence_sha256":"475f21838e91e2188e699161cfb62fc6ea25d9efc18eee3d6f3c291dec027539","report_id":"pure:b47405fcb1b89f56739e9a285084f4001cdd7d7d59547c32da50d4ff388e1593","report_sha256":"9c4e56c826bb3c1a0a660a868be7ae2df9476c95320bcad040d1d69810abcef4","run_id":"2026-08-13T12-22-34-462Z","sidecar_sha256":"b7aceea3f717a47499e13e4c09dc86281eae4d82dcc687b8681c0fe209b833ea","tested_commit":"50a33d03703b18e69d89356ac2b01a65c6271826"}],"schema_version":1} -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260813T182238Z/hotspots.json","hotspots_sha256":"59dd6f880db0b77e031234537191bb87727c21af5c63a83f386b9d759f1caa21","manifest_path":"ai-runs/feedback/20260813T182238Z/report-manifest.json","manifest_sha256":"bfe7a08f4006755e89893ca4bfa9981c3ff6edd41667d398d4b92060a2e9a4a8"},"pending_cycle_reports":[{"evidence_sha256":"03b6fdf135da2fe48bd71c235657c3870662af849521bdc2304abcffd6ca3654","report_id":"pure:98a7a5a7da1764fc284dba53b8a6919968e81962b7527d40d6f54fcb2dd8693e","report_sha256":"7535d4a3cb40c8357bc9d1dbb3c2b4278545323961af4be9774c04498c90cff4","run_id":"2026-08-13T18-19-06-816Z","sidecar_sha256":"cafd5028468e1ef81c653dcf277c027f054ab232186fa117e0b3818e3ac3b8f4","tested_commit":"b096b4e4919c7414c95adf6387faf5bbda764712"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -168,8 +168,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback: the exact prior three-report delta `20260810T194910Z` recommends `ed51aa6f` and excludes this run; seal promotes it unconsumed, clears that cohort, and leaves this pure report as the sole pending row.
 - Guard: 45 focused tests, 555 traces, both 6,000-step crawls, exact health (448 files/3,886 tests), UI typecheck, all 12 packs, cycle-start integrity, pure provenance, and deterministic compile rebuild are green.
 ## AFK Cycle 2026-08-13T18-19-06-816Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-13T18-19-06-816Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-4be406ce (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
+- Evidence choice: the exact start-ref Terra pilot was mechanically clean at 10/10 but failed clarity/enjoyment 4.0, continuation 5/10, and strategy plurality at LURE 10/10; this off-list response to that cohort outranked the assessor's checkpoint item, so selection remains honestly null.
+- Surface/effect: Wolf-Winter now discloses one immutable SHA-selected HUNT/LURE/DRIVE/FORTIFY ground advantage and four peer plan inspections; route cards no longer pre-sell LURE. Only the matching plan's first beat loses uncertainty; all commitments, later costs, endings, and Albany consequences remain authoritative.
+- Counterfactual: exact-one/save/import integrity, all three nonmatching conditions per plan, composed support truth, canonical actions, route neutrality, and full/compact/MCP/UI projections are pinned. Variant liveness now starts from authentic representatives of every opening and preserves the exhaustive declaration census.
+- Pure evidence: exact-clean Spark seed 7 on `b096b4e4` chose Road-Warden setup, sheltered approach, and FORTIFY; it held through dawn, continued at goal one, completed Gallowmere, then ended at goal two on decision 38. Clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
+- Self-critique/next: FORTIFY is encouraging legitimate plurality, but one Spark report is not Terra certification and ratings remain 4/4. Before spending the reserved pilot, close the audited seeded-opening coverage gap in the older ending/menu/score/soft-lock/metamorphic proofs, then consume compiled recommendation `3d254abc` and reduce preparation-versus-commitment density.
+- Feedback/guard: fresh 11-report compile `20260813T182238Z` recommends `3d254abc`; smoke crawl (6,000 steps), deep crawl (1,536,000 steps), exact health (458 files/4,063 tests), UI typecheck, all 12 packs, cycle-start integrity, and pure provenance are green.
