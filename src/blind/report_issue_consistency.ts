@@ -11,7 +11,7 @@ type ProseFinding = Readonly<{
 export type ReportIssueConsistencyResult = { ok: true } | { ok: false; reason: string };
 
 const BUGS_HEADING =
-  /^\s*(?:#{1,6}\s*)?(?:5[.)]\s*)?(?:\*\*)?Bugs or design flaws(?:\*\*)?(?:\s*[.:\-\u2014]\s*(.*))?\s*$/iu;
+  /^\s*(?:#{1,6}\s*)?(?:5[.)]\s*)?(?:\*\*)?Bugs or design flaws(?:\*\*)?(?:\s*[,.:\-\u2014]\s*(.*))?\s*$/iu;
 const EXIT_INTERVIEW_OPENING = /^\s*```json exit-interview\b/imu;
 const FENCED_PROSE_BLOCK = /^```[^\r\n]*\r?\n[\s\S]*?^```[^\S\r\n]*$/gmu;
 const SEVERITY = /\bS[0-4]\b/giu;

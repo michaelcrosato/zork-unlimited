@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef, type RefObject } from "react";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { ChatsCircle } from "@phosphor-icons/react/ChatsCircle";
 import { Crosshair } from "@phosphor-icons/react/Crosshair";
@@ -14,6 +14,7 @@ import type { View, ViewChoice } from "./engine.js";
 import { NightWatchDock, NightWatchMasthead, type NightWatchPanel } from "./NightWatchChrome.js";
 import type { OverworldView } from "./overworld.js";
 import { QuestCharacterContinuityPanel } from "./QuestCharacterContinuityPanel.js";
+import { useBrowserLayoutEffect, useStagePanelNavigation } from "./stageNavigation.js";
 
 type QuestPlayScreenProps = {
   view: View;
@@ -24,11 +25,45 @@ type QuestPlayScreenProps = {
   error: string | null;
   log: readonly string[];
   panel: NightWatchPanel;
+  saveStatus: "pending" | "saved" | "unavailable";
   onPanelChange: (panel: NightWatchPanel) => void;
   onChoose: (id: string, label: string) => void;
   canLeave: boolean;
   onLeave: () => void;
+  initialStageScrollTop: number;
+  restoreDecisionFocus: boolean;
+  onStageRestore: () => void;
+  onStageScrollTopChange: (scrollTop: number) => void;
 };
+
+const ACTION_PREFIX: Partial<Record<ViewChoice["kind"], RegExp>> = {
+  LOOK: /^(?:look(?:\s+at)?|inspect|examine)(?:\s+|$)/i,
+  INSPECT: /^(?:look(?:\s+at)?|inspect|examine)(?:\s+|$)/i,
+  READ: /^read(?:\s+|$)/i,
+  INVENTORY: /^(?:inventory|review)\s*/i,
+  TALK: /^(?:talk(?:\s+to)?|speak(?:\s+to)?)(?:\s+|$)/i,
+  ASK: /^ask(?:\s+ask)?\s*:?\s*/i,
+  MOVE: /^(?:move|go)(?:\s+|$)/i,
+  ATTACK: /^(?:attack|strike)(?:\s+|$)/i,
+  MANEUVER: /^(?:maneuver|commit)(?:\s+|$)/i,
+  TAKE: /^(?:take(?:\s+|$)){1,2}/i,
+  DROP: /^drop(?:\s+|$)/i,
+  OPEN: /^open(?:\s+|$)/i,
+  CLOSE: /^close(?:\s+|$)/i,
+  UNLOCK: /^unlock(?:\s+|$)/i,
+  USE: /^use(?:\s+|$)/i,
+  GIVE: /^give(?:\s+|$)/i,
+};
+
+/** Player copy only: choice id and engine command remain untouched. */
+export function playerActionLabel(choice: Pick<ViewChoice, "kind" | "title">): string {
+  const verb = ACTION_LANGUAGE[choice.kind].button;
+  const subject = choice.title
+    .trim()
+    .replace(ACTION_PREFIX[choice.kind] ?? /$^/, "")
+    .trim();
+  return subject.length > 0 ? `${verb} ${subject}` : verb;
+}
 
 const ACTION_LANGUAGE: Record<
   ViewChoice["kind"],
@@ -120,6 +155,7 @@ function PressureTrack({
 
 function QuestUtility({
   panel,
+  saveStatus,
   view,
   quest,
   world,
@@ -128,10 +164,11 @@ function QuestUtility({
   canLeave,
   onLeave,
   onClose,
+  headingRef,
 }: Pick<
   QuestPlayScreenProps,
-  "panel" | "view" | "quest" | "world" | "journey" | "log" | "canLeave" | "onLeave"
-> & { onClose: () => void }): JSX.Element | null {
+  "panel" | "saveStatus" | "view" | "quest" | "world" | "journey" | "log" | "canLeave" | "onLeave"
+> & { headingRef: RefObject<HTMLHeadingElement>; onClose: () => void }): JSX.Element | null {
   if (panel === "scene") return null;
 
   return (
@@ -139,7 +176,9 @@ function QuestUtility({
       <header>
         <div>
           <p className="nw-kicker">Field reference</p>
-          <h2>{panel === "terms" ? "Exact terms" : panel}</h2>
+          <h2 ref={headingRef} tabIndex={-1}>
+            {panel === "terms" ? "Exact terms" : panel}
+          </h2>
         </div>
         <button className="nw-text-button" type="button" onClick={onClose}>
           Return to scene
@@ -328,10 +367,19 @@ function QuestUtility({
                 {!canLeave && <p>Campaign foldback must succeed before returning to the road.</p>}
               </>
             ) : (
-              <p>
-                This quest is active. Return to the scene and reach an engine-projected ending or
-                journey pause before going back to the road.
-              </p>
+              <>
+                <p>
+                  This quest is active. Return to the scene and reach an engine-projected ending or
+                  journey pause before going back to the road.
+                </p>
+                <p>
+                  {saveStatus === "saved"
+                    ? "Quest progress is saved in this browser and will be verified when you return."
+                    : saveStatus === "pending"
+                      ? "Quest progress is being saved in this browser."
+                      : "Browser saving is unavailable. Keep this tab open to preserve current quest progress."}
+                </p>
+              </>
             )}
           </article>
           <article className="nw-reference-card">
@@ -357,21 +405,47 @@ export function QuestPlayScreen({
   error,
   log,
   panel,
+  saveStatus,
   onPanelChange,
   onChoose,
   canLeave,
   onLeave,
+  initialStageScrollTop,
+  restoreDecisionFocus,
+  onStageRestore,
+  onStageScrollTopChange,
 }: QuestPlayScreenProps): JSX.Element {
-  const stageRef = useRef<HTMLDivElement>(null);
+  const decisionRef = useRef<HTMLElement>(null);
+  const restoreHandledRef = useRef(false);
+  const sceneIdentity = `${quest.id}:${view.location}:${view.title}`;
+  const { sceneHeadingRef, stageRef, utilityHeadingRef } = useStagePanelNavigation(
+    panel,
+    sceneIdentity,
+  );
   const inventoryLabel = view.inventory.length > 0 ? view.inventory.join(" · ") : "No quest gear";
   const denseChoices =
     view.choices.length + view.unavailableChoices.length > 4 ||
     view.choices.some((choice) => choice.title.length > 72) ||
     view.unavailableChoices.some((choice) => choice.label.length > 72);
 
-  useEffect(() => {
-    stageRef.current?.scrollTo({ top: 0 });
-  }, [panel, view.stateHash]);
+  useBrowserLayoutEffect(() => {
+    if (restoreHandledRef.current) return;
+    restoreHandledRef.current = true;
+    if (stageRef.current) {
+      stageRef.current.scrollTop = restoreDecisionFocus ? initialStageScrollTop : 0;
+    }
+    if (restoreDecisionFocus) {
+      decisionRef.current?.focus({ preventScroll: true });
+      onStageRestore();
+    }
+  }, [initialStageScrollTop, onStageRestore, restoreDecisionFocus, stageRef]);
+
+  useBrowserLayoutEffect(
+    () => () => {
+      if (stageRef.current) onStageScrollTopChange(stageRef.current.scrollTop);
+    },
+    [onStageScrollTopChange, stageRef],
+  );
 
   return (
     <main className="nw-app nw-quest-app">
@@ -379,16 +453,27 @@ export function QuestPlayScreen({
         context={quest.title}
         location={view.title}
         time={world.timeLabel}
-        sessionStatus="Quest tab-only · road save held"
+        sessionStatus={
+          saveStatus === "saved"
+            ? "Quest progress saved"
+            : saveStatus === "pending"
+              ? "Saving quest progress…"
+              : "Save unavailable · keep this tab open"
+        }
         health={`${view.stats.hp}`}
         supplies={`${world.supplies}`}
         fatigue={`${world.fatigue}`}
         onScene={() => onPanelChange("scene")}
       />
 
-      <div className="nw-stage" ref={stageRef}>
+      <div
+        className="nw-stage"
+        ref={stageRef}
+        onScroll={(event) => onStageScrollTopChange(event.currentTarget.scrollTop)}
+      >
         <QuestUtility
           panel={panel}
+          saveStatus={saveStatus}
           view={view}
           quest={quest}
           world={world}
@@ -397,6 +482,7 @@ export function QuestPlayScreen({
           canLeave={canLeave}
           onLeave={onLeave}
           onClose={() => onPanelChange("scene")}
+          headingRef={utilityHeadingRef}
         />
 
         {panel === "scene" && (
@@ -406,7 +492,9 @@ export function QuestPlayScreen({
                 <p className="nw-kicker">
                   {quest.title} · {view.location}
                 </p>
-                <h1>{view.title}</h1>
+                <h1 ref={sceneHeadingRef} tabIndex={-1}>
+                  {view.title}
+                </h1>
                 <SceneProse text={view.text} />
                 {view.dialogue && (
                   <blockquote className="nw-dialogue">
@@ -462,6 +550,16 @@ export function QuestPlayScreen({
               <span>{error ? `Could not continue: ${error}` : latestConsequence}</span>
             </section>
 
+            {!view.ended && (
+              <button
+                className="nw-decision-shortcut"
+                type="button"
+                onClick={() => decisionRef.current?.scrollIntoView({ behavior: "smooth" })}
+              >
+                Next decision <ArrowRight aria-hidden="true" />
+              </button>
+            )}
+
             {view.ended ? (
               <section className="nw-ending-deck">
                 <p className="nw-kicker">Quest complete</p>
@@ -481,29 +579,30 @@ export function QuestPlayScreen({
               <section
                 className={`nw-decision-deck${denseChoices ? " is-dense" : ""}`}
                 aria-label="Available actions"
+                ref={decisionRef}
+                tabIndex={-1}
               >
                 {view.choices.map((choice) => {
                   const language = ACTION_LANGUAGE[choice.kind];
                   const Icon = language.icon;
                   const terms = actionTerms(choice);
+                  const label = playerActionLabel(choice);
                   return (
                     <article className={`nw-action-card tone-${language.tone}`} key={choice.id}>
                       <p className="nw-action-kind">
                         <Icon aria-hidden="true" /> {language.group}
                       </p>
-                      <h2>{choice.title}</h2>
+                      <h2>{label}</h2>
                       <div className={`nw-action-terms${terms.length === 0 ? " is-default" : ""}`}>
                         <strong>{terms.length > 0 ? "Terms" : "Available now"}</strong>
                         <p>{terms.join(" · ") || "Projected legal by the game engine."}</p>
                       </div>
                       <button
                         type="button"
-                        aria-label={`${language.button} ${choice.title}`}
+                        aria-label={label}
                         onClick={() => onChoose(choice.id, choice.title)}
                       >
-                        <span>
-                          {language.button} <small>{choice.title}</small>
-                        </span>
+                        <span>{label}</span>
                         <ArrowRight aria-hidden="true" />
                       </button>
                     </article>

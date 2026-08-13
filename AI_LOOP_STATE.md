@@ -189,3 +189,13 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Player finding/next: setup remains staged, LURE requires backtracking, and ridge forecast precedes displayed alarm by one action; simplify the bounded decision compass without changing mechanics.
 - Feedback: status is 1 new actionable report of 3, so compilation remains correctly closed.
 - Guard: both post-change crawls, 454 files/4,017 tests, UI typecheck, 12 packs, cycle-start integrity, exact pure provenance, and final ledger seal are green.
+## AFK Cycle 2026-08-13T10-26-22-617Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-13T10-26-22-617Z","selected_recommendation_id":null} -->
+- Evidence choice: the off-list browser usability seam was independent of the compact/MCP Station hot spot, so that recommendation remains unconsumed for the next content cycle.
+- Change: active quests now persist and replay across refresh; checkpoint Continue restores exact quest position; same-scene actions preserve scroll while room/panel changes reset and focus; Station keeps departures primary and folds optional support behind purpose-first details.
+- Browser proof: desktop/mobile Albany→Wolf LURE→Albany→Gallowmere checkpoint 40 passed with zero console errors; refresh restored mid-quest, post-ending, and post-checkpoint state; mobile had no horizontal overflow or dock/shortcut collision.
+- Red-gate correction: full health caught one stale source-string assertion for the now goal-aware Local route/Next for current goal grouping. After that correction, a fresh report used the prompt-prescribed comma-qualified Bugs heading, exposing that issue-consistency recognized only other separators; the heading parser and adversarial regression now align with the prompt without weakening severity-to-`bugs[]` matching. Both superseded runs remain diagnostic only.
+- Pure evidence: pending a fresh exact-clean Terra run on the corrected candidate.
+- Open S1/next: MCP Station support still appears as abstract null-action slots before a separate detail view; consume `hotspot-ebb6e090` with the approved compact decision-compass content change.
+- Feedback: status is 2 new actionable reports of 3, so compilation remains correctly closed.
+- Guard pending: post-change crawl, full health, cycle-start integrity, and final ledger seal.

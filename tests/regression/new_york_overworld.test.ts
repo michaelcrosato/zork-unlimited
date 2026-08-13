@@ -1542,7 +1542,7 @@ describe("New York overworld graph", () => {
     expect(app).toContain("Handled road encounter");
     expect(app).toMatch(/Handled road encounter:[\s\S]{0,300}result\.entry\.text/);
     expect(app).toContain('title: "Local movement"');
-    expect(app).toContain('group: "Local route"');
+    expect(app).toContain('group: goalRelevant ? "Next for current goal" : "Local route"');
     expect(app).toContain("moveArea");
     expect(app).toContain('buttonLabel: "Explore area"');
     expect(app).toContain("unmapped local");

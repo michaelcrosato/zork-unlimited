@@ -601,7 +601,8 @@ describe("OverworldSession", () => {
     expect(app).toContain("for (const interaction of worldView.departureInteractions)");
     expect(app).toContain("worldSession.inspectJourneyStory(storyChoiceId)");
     expect(app).toContain("onChoose: () => inspectDepartureStory(interaction.id)");
-    expect(app).toContain('terms: "Inspect before committing"');
+    expect(app).toContain('support?.terms ?? "Inspect before committing"');
+    expect(app).toContain("stationSupportPresentation(worldView.stationDispatchBoard");
     expect(app).toContain("sections={worldActionSections}");
     expect(overworldScreen).toContain('panel === "terms"');
     expect(overworldScreen).toContain("section.actions.map((action)");

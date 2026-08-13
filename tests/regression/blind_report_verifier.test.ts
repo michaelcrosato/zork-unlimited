@@ -304,6 +304,28 @@ ${bad}`);
     );
   });
 
+  it("accepts the comma-qualified Bugs heading prescribed by the player prompt", () => {
+    const heading =
+      "## Bugs or design flaws, each with the player-visible place/scene and severity S0 (cosmetic) through S4 (blocking)";
+    const report = issueReport("None found.", consistencyInterview([])).replace(
+      "## Bugs or design flaws",
+      heading,
+    );
+    expect(verifyBlindReportText(report, { requireStructuredIssueConsistency: true }).ok).toBe(
+      true,
+    );
+
+    const unstructuredFinding = report.replace(
+      "None found.",
+      "Station departure board — S1: support purpose was hard to scan.",
+    );
+    const mismatch = verifyBlindReportText(unstructuredFinding, {
+      requireStructuredIssueConsistency: true,
+    });
+    expect(mismatch.ok).toBe(false);
+    if (!mismatch.ok) expect(mismatch.reason).toContain("severity-bearing prose finding");
+  });
+
   it.each([
     "Not mechanically blocking, but S1: the Station board is opaque.",
     "No crash occurred, but this is an S2 clarity defect at Station.",

@@ -20,5 +20,5 @@
     "rootDir": "."
   },
   "include": ["src", "bin", "tests", "agents", "scripts"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "tests/unit/ui_*.test.ts"]
 }

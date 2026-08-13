@@ -61,7 +61,7 @@
     "loop:failures": "tsx scripts/loop-failure-ledger.ts",
     "loop:status": "bash scripts/loop-status.sh",
     "loop:stop": "bash scripts/loop-stop.sh",
-    "ui:typecheck": "tsc -p ui/tsconfig.json --noEmit"
+    "ui:typecheck": "tsc -p ui/tsconfig.json --noEmit && tsc -p ui/tsconfig.tests.json --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

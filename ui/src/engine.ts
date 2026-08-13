@@ -12,7 +12,7 @@
  */
 import { makeStep, actionEquals, type Rules } from "../../src/core/engine.js";
 import { hashState } from "../../src/core/hash.js";
-import type { GameState } from "../../src/core/state.js";
+import { cloneGameState, type GameState } from "../../src/core/state.js";
 import type { RpgAction } from "../../src/api/types.js";
 import type { GameEvent } from "../../src/core/events.js";
 
@@ -39,8 +39,12 @@ import { buildRpgObservation, type RpgObservation } from "../../src/rpg/observat
 import {
   buildEmbeddedQuestCharacterContinuity,
   projectEmbeddedQuestCharacterContinuity,
+  cloneEmbeddedQuestCharacterContinuity,
   type EmbeddedQuestCharacterContinuity,
 } from "../../src/rpg/embedded_quest_character_continuity.js";
+import { assertRpgStateReferences } from "../../src/rpg/state_integrity.js";
+import { SAVE_MODE, SaveIntegrityError, load, save } from "../../src/persist/save_load.js";
+import { assertCampaignImportReceiptCatalogCompatibility } from "../../src/persist/campaign_import_integrity.js";
 import {
   classifyRpgJourneyDecision,
   excludedJourneyDecision,
@@ -112,6 +116,12 @@ export type StepOutcome = {
   journeyActionId: string | null;
 };
 
+export type ReplayedEmbeddedQuestDecision = {
+  actionId: string;
+  classification: JourneyDecisionClassification;
+  checkpointSafeBoundary: boolean;
+};
+
 /** Fast shape predicate for catalog filtering and tests. */
 export function isRpgSource(source: string): boolean {
   try {
@@ -141,6 +151,8 @@ export class GameSession {
     index: RpgIndex;
     fresh: () => GameState;
     campaignCharacter?: CampaignCharacterState;
+    initialState?: GameState;
+    characterContinuity?: EmbeddedQuestCharacterContinuity;
   }) {
     this.packId = opts.packId;
     this.title = opts.title;
@@ -148,14 +160,16 @@ export class GameSession {
     this.rules = opts.rules;
     this.index = opts.index;
     this.fresh = opts.fresh;
-    this.state = opts.fresh();
-    this.characterContinuity = opts.campaignCharacter
-      ? buildEmbeddedQuestCharacterContinuity({
-          character: opts.campaignCharacter,
-          pack: opts.index.pack,
-          state: this.state,
-        })
-      : undefined;
+    this.state = opts.initialState ? cloneGameState(opts.initialState) : opts.fresh();
+    this.characterContinuity = opts.characterContinuity
+      ? cloneEmbeddedQuestCharacterContinuity(opts.characterContinuity)
+      : opts.campaignCharacter
+        ? buildEmbeddedQuestCharacterContinuity({
+            character: opts.campaignCharacter,
+            pack: opts.index.pack,
+            state: this.state,
+          })
+        : undefined;
   }
 
   /** Compile an RPG pack source and start a session (throws on schema failure, §10). */
@@ -202,6 +216,107 @@ export class GameSession {
               imports: importsSnapshot,
             }),
       campaignCharacter: characterSnapshot,
+    });
+  }
+
+  /**
+   * Restore a browser quest only after deterministic replay proves the saved
+   * state belongs to this exact pack, campaign launch, and accepted action trail.
+   */
+  static restoreEmbedded(
+    source: string,
+    worldQuestId: string,
+    character: CampaignCharacterState,
+    imports: CampaignCharacterImports | undefined,
+    expectedSeed: number,
+    actionIds: readonly string[],
+    savedQuest: string,
+  ): { session: GameSession; decisions: ReplayedEmbeddedQuestDecision[] } {
+    const c = compileRpgSource(source);
+    const index = indexRpgPack(c.pack);
+    const characterSnapshot = parseCampaignCharacterState(character);
+    const importsSnapshot =
+      imports === undefined ? undefined : CampaignCharacterImportsSchema.parse(imports);
+    const bundle = load(savedQuest, c.contentHash, SAVE_MODE);
+    if (bundle.source_ref[0] !== "wq" || bundle.source_ref[1] !== worldQuestId) {
+      throw new SaveIntegrityError(
+        `Saved quest source does not match world quest ${JSON.stringify(worldQuestId)}.`,
+      );
+    }
+    if (bundle.state.seed !== expectedSeed) {
+      throw new SaveIntegrityError(
+        `Saved quest seed does not match the campaign launch seed ${expectedSeed}.`,
+      );
+    }
+    assertRpgStateReferences(index, bundle.state);
+    assertCampaignImportReceiptCatalogCompatibility(bundle.state, importsSnapshot);
+
+    const fresh = () =>
+      importsSnapshot === undefined
+        ? initStateForRpgPack(index, expectedSeed)
+        : initStateForRpgPack(index, expectedSeed, {
+            character: characterSnapshot,
+            imports: importsSnapshot,
+          });
+    const launchState = fresh();
+    const expectedContinuity = buildEmbeddedQuestCharacterContinuity({
+      character: characterSnapshot,
+      pack: index.pack,
+      state: launchState,
+    });
+    const savedContinuity = bundle.embedded_character_continuity?.character_continuity;
+    if (!savedContinuity) {
+      throw new SaveIntegrityError("Saved embedded quest is missing campaign continuity.");
+    }
+    if (hashState(savedContinuity) !== hashState(expectedContinuity)) {
+      throw new SaveIntegrityError(
+        "Saved embedded quest continuity does not match its campaign launch.",
+      );
+    }
+
+    const session = new GameSession({
+      packId: c.pack.meta.id,
+      title: c.pack.meta.title,
+      contentHash: c.contentHash,
+      rules: buildRpgRules(index),
+      index,
+      fresh,
+      initialState: launchState,
+      characterContinuity: expectedContinuity,
+    });
+    const decisions: ReplayedEmbeddedQuestDecision[] = [];
+    for (const actionId of actionIds) {
+      if (typeof actionId !== "string" || actionId.length === 0) {
+        throw new SaveIntegrityError("Saved quest action trail contains an invalid action id.");
+      }
+      const outcome = session.choose(actionId);
+      if (!outcome.ok || outcome.journeyActionId !== actionId) {
+        throw new SaveIntegrityError(
+          `Saved quest action ${JSON.stringify(actionId)} is not legal during deterministic replay.`,
+        );
+      }
+      decisions.push({
+        actionId,
+        classification: outcome.journeyDecision,
+        checkpointSafeBoundary: session.isCheckpointSafeBoundary(),
+      });
+    }
+    if (session.view().stateHash !== bundle.stateHash) {
+      throw new SaveIntegrityError(
+        "Saved quest state does not match its deterministic action-trail replay.",
+      );
+    }
+    return { session, decisions };
+  }
+
+  /** Canonical, content-bound bytes for the current embedded quest state. */
+  saveEmbedded(worldQuestId: string): string {
+    if (!this.characterContinuity) {
+      throw new SaveIntegrityError("Only a campaign-embedded quest can be saved as active play.");
+    }
+    return save(this.state, this.contentHash, SAVE_MODE, {
+      worldQuestId,
+      embeddedCharacterContinuity: this.characterContinuity,
     });
   }
 

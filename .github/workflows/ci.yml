@@ -74,7 +74,7 @@ jobs:
       - name: Validate every shipped quest
         run: npm run validate
       - name: Typecheck UI
-        run: npx tsc -p ui/tsconfig.json --noEmit
+        run: npm run ui:typecheck
       - name: Build UI (catch UI rot)
         run: npm run ui:build
 
