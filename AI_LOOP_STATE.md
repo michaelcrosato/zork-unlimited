@@ -1,7 +1,7 @@
 # AI Loop State
 
 <!-- historical_cycle_count: 774 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260813T082609Z/hotspots.json","hotspots_sha256":"26900eacd12566c05572ca6b53c47ca2448a9b3829e4bc3d3a383ee0f9004336","manifest_path":"ai-runs/feedback/20260813T082609Z/report-manifest.json","manifest_sha256":"522946fb42ac9f6e599fa1799057f6db2fdb53bffd36b31cbb6c60ee2f853cdf"},"pending_cycle_reports":[{"evidence_sha256":"42db376d5cd930aaa45174f8373dcb62592bb6dda41cb53183591777349d4121","report_id":"pure:37ee64873159999c939b97f2e59f581f47b121bca83592c7b7e77c68b6161963","report_sha256":"b6e4829fa4a2b7492ffdde8044b659394b80de9b1344ebbec5ab441491dc8bec","run_id":"2026-08-13T08-16-26-310Z","sidecar_sha256":"5ac53bf36b448673a7af17f3775c67decb7fa8ab813c8653ccd206f49349c94e","tested_commit":"a6d98762fa1a155795131a6983cc4183aaf078e4"}],"schema_version":1} -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260813T082609Z/hotspots.json","hotspots_sha256":"26900eacd12566c05572ca6b53c47ca2448a9b3829e4bc3d3a383ee0f9004336","manifest_path":"ai-runs/feedback/20260813T082609Z/report-manifest.json","manifest_sha256":"522946fb42ac9f6e599fa1799057f6db2fdb53bffd36b31cbb6c60ee2f853cdf"},"pending_cycle_reports":[{"evidence_sha256":"42db376d5cd930aaa45174f8373dcb62592bb6dda41cb53183591777349d4121","report_id":"pure:37ee64873159999c939b97f2e59f581f47b121bca83592c7b7e77c68b6161963","report_sha256":"b6e4829fa4a2b7492ffdde8044b659394b80de9b1344ebbec5ab441491dc8bec","run_id":"2026-08-13T08-16-26-310Z","sidecar_sha256":"5ac53bf36b448673a7af17f3775c67decb7fa8ab813c8653ccd206f49349c94e","tested_commit":"a6d98762fa1a155795131a6983cc4183aaf078e4"},{"evidence_sha256":"d1245779dc74c29c4c2a336e75bb2fa7fe86f719f87c0f56ac715356ea59276d","report_id":"pure:b27be165006da3294edc9e0eb2ac6bc9df73aed27f2294efcdda19fb4ce0e56e","report_sha256":"3ede32c36a1caddbe89d6903a41587a3e1c74902f395cd726a3ffab99cf40188","run_id":"2026-08-13T08-57-33-104Z","sidecar_sha256":"1152c6c5a893ee51b1d48e17f0efa505706e1239ad67b9be73b29dc212fac4f7","tested_commit":"7b5a54841d3cb4abaf278c80cb60e4e77ef61f95"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -181,8 +181,11 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique/next: transport is proven for one run, not yet fleet-certified; address dense Albany plan comparison, compact tuples, and in-quest checkpoint interruption before the required fresh 10-player pilot.
 - Feedback/guard: compiled 9 actionable reports into `20260813T082609Z` (10 hot spots); both crawls, 454 files/3,997 tests, UI typecheck, 12 packs, pure provenance, and final seal are green.
 ## AFK Cycle 2026-08-13T08-57-33-104Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-13T08-57-33-104Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-ebb6e090 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
+- Evidence choice: live reports could name an S0-S4 defect in prose while leaving structured `bugs[]` empty, so this off-list evidence-integrity defect outranked the unrelated Station-content recommendation.
+- Change: current pure/cycle/certification reports declare issue-consistency v1 and fail closed unless every explicit prose severity finding has a distinct, severity-exact structured match; historical marker-absent V2 reports remain readable.
+- Red-gate correction: full health caught two forward-current seal/gate fixtures without the marker/mandatory Bugs section; those fixtures were repaired, the candidate was rebuilt as `7b5a5484`, and prior evidence was rejected and archived.
+- Pure evidence: fresh exact-clean Terra seed 2026081316 completed Wolf-Winter LURE at decision 27, rated clarity/enjoyment 4/4, replay yes, bugs `[]`, and was not stuck.
+- Contract proof: current prompts, recovery, receipt binding, cycle gate, and v9 fleet certification require the same rule; exact report/receipt/build verification passes on `7b5a5484`.
+- Player finding/next: setup remains staged, LURE requires backtracking, and ridge forecast precedes displayed alarm by one action; simplify the bounded decision compass without changing mechanics.
+- Feedback: status is 1 new actionable report of 3, so compilation remains correctly closed.
+- Guard: both post-change crawls, 454 files/4,017 tests, UI typecheck, 12 packs, cycle-start integrity, exact pure provenance, and final ledger seal are green.
