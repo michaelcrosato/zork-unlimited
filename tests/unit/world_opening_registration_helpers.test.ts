@@ -168,8 +168,9 @@ describe("opening registration presentation", () => {
             value: "No active return obligation is included in this role.",
           },
           {
-            label: "Quest DEF",
-            value: "No additional starting-DEF distinction is stated on this role.",
+            label: "Wolf-Winter fit",
+            value:
+              "No additional starting-DEF distinction is stated on this role. All four field plans remain open.",
           },
         ],
         immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
@@ -214,8 +215,9 @@ describe("opening registration presentation", () => {
             value: "No active return obligation is included in this role.",
           },
           {
-            label: "Quest DEF",
-            value: "No additional starting-DEF distinction is stated on this role.",
+            label: "Wolf-Winter fit",
+            value:
+              "No additional starting-DEF distinction is stated on this role. All four field plans remain open.",
           },
         ],
         immediateCost: "no time/fee; starts with $0",

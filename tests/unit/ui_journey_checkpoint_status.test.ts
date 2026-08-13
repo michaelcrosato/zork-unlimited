@@ -3,18 +3,18 @@ import { describe, expect, it } from "vitest";
 import { journeyNextPauseText } from "../../ui/src/journeyCheckpointStatus.js";
 
 describe("human journey checkpoint status", () => {
-  it("describes an upcoming checkpoint as a threshold followed by its first safe break", () => {
+  it("describes an upcoming choice as a safe journey break after an exact decision", () => {
     expect(
       journeyNextPauseText({
         status: "active",
         acceptedDecisions: 39,
         nextCheckpoint: 40,
       }),
-    ).toBe("Checkpoint threshold 40; choice appears at the first safe break at or after it.");
+    ).toBe("First safe journey break on or after decision 40.");
   });
 
   it.each([40, 45])(
-    "marks checkpoint 40 due without promising an interruption at active decision %i",
+    "marks decision 40 passed without promising an interruption at active decision %i",
     (acceptedDecisions) => {
       expect(
         journeyNextPauseText({
@@ -22,7 +22,7 @@ describe("human journey checkpoint status", () => {
           acceptedDecisions,
           nextCheckpoint: 40,
         }),
-      ).toBe("Checkpoint 40 is due; choice appears at the first safe break.");
+      ).toBe("Decision 40 has passed; the choice appears at the next safe journey break.");
     },
   );
 
@@ -46,7 +46,7 @@ describe("human journey checkpoint status", () => {
           acceptedDecisions,
           nextCheckpoint,
         }),
-      ).toBe("A choice is ready now.");
+      ).toBe("A journey choice is ready now.");
     },
   );
 
@@ -57,6 +57,6 @@ describe("human journey checkpoint status", () => {
         acceptedDecisions: 40,
         nextCheckpoint: null,
       }),
-    ).toBe("No further checkpoint");
+    ).toBe("No further journey pause");
   });
 });

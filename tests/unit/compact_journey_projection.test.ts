@@ -632,12 +632,13 @@ describe("compact journey projection", () => {
         id: "continue",
         label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
         consequence:
-          "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+          "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
       },
       {
         id: "end",
-        label: "End this journey",
-        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+        label: "End here",
+        consequence:
+          "Close this journey here and keep its read-only record; this journey cannot resume.",
       },
     ]);
   });
@@ -661,9 +662,9 @@ describe("compact journey projection", () => {
     expect(compact).toBe(full);
     expect(compact.pendingChoice?.options[0]).toEqual({
       id: "continue",
-      label: "Continue toward checkpoint 80",
+      label: "Continue from this exact state",
       consequence:
-        "Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 80, whichever comes first.",
+        "Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 80, whichever comes first.",
     });
   });
 });

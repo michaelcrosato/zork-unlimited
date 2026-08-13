@@ -142,7 +142,7 @@ export function renderTerminalStoryChoiceComparison(
     "\n! Story choice comparison",
     `  ${comparison.message}`,
     requiresComparisonFirst
-      ? "  Open the read-only outcome compass before choosing a duty or role shortcut:"
+      ? "  Open the read-only outcome compass before choosing a duty or quick setup:"
       : "  Compare the cards, then use one exact command shown below:",
   ];
   const renderOption = (option: (typeof comparison.options)[number], index: number): void => {
@@ -362,7 +362,7 @@ export async function runTerminalStoryChoiceController(args: {
         if (progressiveDisclosure && hiddenOption(selector)) {
           args.reject(
             requiresComparisonFirst
-              ? "Use `compare` to open the outcome compass before inspecting a duty or role shortcut."
+              ? "Use `compare` to open the outcome compass before inspecting a duty or quick setup."
               : "Use `customize` to reveal the individual duties before inspecting that card.",
           );
           continue;
@@ -385,7 +385,7 @@ export async function runTerminalStoryChoiceController(args: {
         if (progressiveDisclosure && hiddenOption(selector)) {
           args.reject(
             requiresComparisonFirst
-              ? "Use `compare` to open the outcome compass before choosing a duty or role shortcut."
+              ? "Use `compare` to open the outcome compass before choosing a duty or quick setup."
               : "Use `customize` to reveal the individual duties before choosing that card.",
           );
           continue;

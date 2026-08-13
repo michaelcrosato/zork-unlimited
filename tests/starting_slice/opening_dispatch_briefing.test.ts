@@ -36,7 +36,8 @@ const ALLY_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIE
 const JUNE_TOTAL_TIMING =
   "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.";
 const PURPOSES = Object.freeze({
-  registration: "Purpose: choose your permanent background and promise.",
+  registration:
+    "Purpose: choose your role and promise. Order is neutral; HUNT, LURE, DRIVE, and FORTIFY stay open.",
   relief_oath: "Purpose: choose duty; every field plan stays open.",
   lead_source: "Purpose: choose evidence; every field plan stays open.",
   preparation:
@@ -46,13 +47,13 @@ const PURPOSES = Object.freeze({
   ally: "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
 });
 const STANDARD_PACKET_PURPOSE =
-  "Purpose: finish matched duty and evidence, or customize; every field plan stays open.";
+  "Purpose: bind duty and evidence or customize; every field plan stays open.";
 const WOLF_CRISIS_PREVIEW =
   "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather.";
 const REGISTRATION_MESSAGE =
-  "The Wolf-Winter Civic docket · role. Purpose: choose your permanent background and promise. Mission preview — A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. In one next choice, a matched role may finish duty and evidence, or customize. Enter Albany's Relief Compact. Compare starting resources, first field edge, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter Civic docket · role. Purpose: choose your role and promise. Order is neutral; HUNT, LURE, DRIVE, and FORTIFY stay open. Mission preview — A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. Next, bind duty and evidence or customize. Enter Albany's Relief Compact. Compare starting resources, first field edge, exact cost, and tradeoff. Field checks surface with their action before resolution.";
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: finish matched duty and evidence, or customize; every field plan stays open. A custom duty leaves one evidence choice next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: bind duty and evidence or customize; every field plan stays open. Quick setup binds both; custom duty leaves evidence next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
 const CUSTOM_DUTY_MESSAGE =
   "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
 const SOURCE_MESSAGE =
@@ -280,9 +281,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(registration.message).toContain(`${REGISTRATION.title}. ${REGISTRATION_HEADER}`);
     expect(registration.message).not.toContain(REGISTRATION.message);
     expect(registration.message).toContain(`Mission preview — ${WOLF_CRISIS_PREVIEW}`);
-    expect(registration.message).toContain(
-      "In one next choice, a matched role may finish duty and evidence, or customize.",
-    );
+    expect(registration.message).toContain("Next, bind duty and evidence or customize.");
     expect(registration.message).not.toContain(WOLF.discovery);
     expect(registration.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(registration.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
@@ -316,7 +315,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const standardPacket = REGISTRATION.doctrines!.find(
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
-    expect(oath.message).toContain("A custom duty leaves one evidence choice next.");
+    expect(oath.message).toContain("custom duty leaves evidence next.");
     expect(oath.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(oath.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
     expectBoundedPurpose(oath, STANDARD_PACKET_PURPOSE);
@@ -331,10 +330,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     const roadWardenPacket = oath.options.find((option) => option.id === standardPacket.id)!;
     expect(roadWardenPacket.label).toBe(
-      "Role shortcut — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "Quick setup — Take the Road-Warden Aid Route: Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
     );
     expect(roadWardenPacket.summary?.commitment).toBe(
-      "Skips the separate evidence choice; no field plan is chosen. Support: Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
+      "Applies the matched duty and evidence together; no field plan is chosen. Support: Fieldcraft 4 sets DEF 4 and supplies DRIVE/LURE checks; Aid-Only skips clean LURE's last alarm and fits Cade's FORTIFY terms; after a public wedge splits, Hayden can brace HUNT. All four plans remain legal.",
     );
     expect(roadWardenPacket.summary?.tradeoff).toBe(
       "Other duty/evidence pairs close; every field plan stays open.",
@@ -342,8 +341,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(roadWardenPacket.consequence).toContain(
       "Benefit: Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
     );
-    expect(roadWardenPacket.summary?.commitment).not.toContain("DEF");
-    expect(roadWardenPacket.summary?.commitment).not.toContain("split-rail");
+    expect(roadWardenPacket.summary?.commitment).toContain("sets DEF 4");
+    expect(roadWardenPacket.summary?.commitment).toContain("supplies DRIVE/LURE checks");
+    expect(roadWardenPacket.summary?.commitment).toContain("Hayden can brace HUNT");
+    expect(roadWardenPacket.summary?.commitment).toContain("fits Cade's FORTIFY terms");
+    expect(roadWardenPacket.summary?.commitment).toContain("All four plans remain legal");
     expect(roadWardenPacket.summary?.commitment).not.toContain(standardPacket.summary);
     expect(
       compactJourneyStoryChoiceComparison(
@@ -361,15 +363,16 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       },
     });
     const oathCompass = oath.progressiveDisclosure!.reveal.description;
-    expect(oathCompass).toMatch(/HUNT[^]*defends herd and relief stores[^]*wolves may die/i);
-    expect(oathCompass).toMatch(/LURE[^]*keep herd and pack alive[^]*spends Cade's last feed/i);
+    expect(oathCompass).toMatch(/HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die/i);
+    expect(oathCompass).toMatch(/LURE[^]*Outcome:[^]*pack beyond the breach[^]*Cade's last feed/i);
     expect(oathCompass).toMatch(
-      /DRIVE[^]*moves people and the living pack clear[^]*abandons the outer line/i,
+      /DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading/i,
     );
     expect(oathCompass).toMatch(
-      /FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals/i,
+      /FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals/i,
     );
     expect(oathCompass).toMatch(/No plan is recommended or committed/i);
+    expect(oathCompass).toContain("This comparison changes no state");
     expect(journeyStoryChoiceOptionsForPresentation(oath).map((option) => option.id)).toEqual([
       standardPacket.id,
     ]);

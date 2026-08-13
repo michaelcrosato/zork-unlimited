@@ -1066,20 +1066,21 @@ function pendingChoiceMessage(state: JourneyContractSnapshot): string {
     return `Your character died before completing the current goal after ${pending.atDecision} meaningful decisions. This run cannot continue; end the journey to preserve its truthful unfinished-goal receipt.`;
   }
   const continueTo = continuationCheckpoint(state, pending);
-  const continueBoundary = `the first safe break at or after checkpoint threshold ${String(continueTo)}`;
+  const goalBoundary = goal ? "another goal completes" : "the current goal completes";
+  const continueBoundary = `${goalBoundary} or the first safe journey break at or after decision ${String(continueTo)}, whichever comes first`;
   if (checkpoint && goal) {
     if (pending.atDecision !== pending.checkpoint) {
-      return `At the first safe break after checkpoint threshold ${String(pending.checkpoint)}, with ${pending.atDecision} meaningful decisions, you completed your current goal and the overdue checkpoint choice is ready. Continue until another goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
+      return `At the first safe journey break after decision ${String(pending.checkpoint)}, now at decision ${String(pending.atDecision)}, you completed your current goal. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
     }
-    return `You completed your current goal at the first safe break for checkpoint threshold ${String(pending.checkpoint)}. Continue until another goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
+    return `You completed your current goal at safe journey break ${String(pending.checkpoint)}. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
   }
   if (checkpoint) {
     if (pending.atDecision !== pending.checkpoint) {
-      return `At the first safe break after checkpoint threshold ${String(pending.checkpoint)}, with ${pending.atDecision} meaningful decisions, the overdue checkpoint choice is ready. Continue until the current goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
+      return `At the first safe journey break after decision ${String(pending.checkpoint)}, now at decision ${String(pending.atDecision)}, this journey choice is ready. Any active quest is paused exactly where it stands. Continue resumes this exact state; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
     }
-    return `You reached checkpoint threshold ${String(pending.checkpoint)} at a safe break. Continue until the current goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
+    return `You reached safe journey break ${String(pending.checkpoint)}. Any active quest is paused exactly where it stands. Continue resumes this exact state; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
   }
-  return `You completed your current goal after ${pending.atDecision} meaningful decisions. Continue until another goal is completed or ${continueBoundary}, whichever comes first, or end this journey?`;
+  return `You completed your current goal after decision ${String(pending.atDecision)}. Continue carries this exact state forward; End closes the journey here. If you continue, the next choice appears when ${continueBoundary}.`;
 }
 
 function affix(base: string, prefix: string | undefined, suffix: string | undefined): string {
@@ -1127,17 +1128,18 @@ function pendingChoicePresentation(
         return Object.freeze([
           Object.freeze({
             id: "continue" as const,
-            label: goalContext?.continueLabel ?? `Continue toward checkpoint ${String(continueTo)}`,
+            label: goalContext?.continueLabel ?? "Continue from this exact state",
             consequence: affix(
-              `Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold ${String(continueTo)}, whichever comes first.`,
+              `Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision ${String(continueTo)}, whichever comes first.`,
               goalContext?.continueConsequencePrefix,
               goalContext?.continueConsequenceSuffix,
             ),
           }),
           Object.freeze({
             id: "end" as const,
-            label: "End this journey",
-            consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+            label: "End here",
+            consequence:
+              "Close this journey here and keep its read-only record; this journey cannot resume.",
           }),
         ]);
       })();

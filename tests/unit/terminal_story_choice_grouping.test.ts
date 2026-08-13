@@ -121,24 +121,24 @@ function progressiveReliefOathPrompt(): JourneyStoryChoicePrompt {
 }
 
 describe("terminal registration story-choice groups", () => {
-  it("offers the role shortcut immediately and keeps custom duty comparison read-only", async () => {
+  it("offers the quick setup immediately and keeps custom duty comparison read-only", async () => {
     const prompt = roadWardenReliefOathPrompt();
     const initial = renderTerminalStoryChoiceComparison(prompt);
 
     expect(initial).toContain(
       "Customize: `customize` — Customize duty and evidence — compare all four field outcomes.",
     );
-    expect(initial).toMatch(/HUNT[^]*defends herd and relief stores[^]*wolves may die/i);
-    expect(initial).toMatch(/LURE[^]*keep herd and pack alive[^]*spends Cade's last feed/i);
+    expect(initial).toMatch(/HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die/i);
+    expect(initial).toMatch(/LURE[^]*Outcome:[^]*pack beyond the breach[^]*Cade's last feed/i);
     expect(initial).toMatch(
-      /DRIVE[^]*moves people and the living pack clear[^]*abandons the outer line/i,
+      /DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading/i,
     );
     expect(initial).toMatch(
-      /FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals/i,
+      /FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals/i,
     );
     expect(initial).toContain("No plan is recommended or committed");
     expect(initial).toContain(
-      "1. Role shortcut — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "1. Quick setup — Take the Road-Warden Aid Route: Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
     );
     expect(initial).not.toContain("Take Full Compact Duty");
     expect(initial).not.toContain("Negotiate Aid-Only Duty\n");
@@ -148,14 +148,14 @@ describe("terminal registration story-choice groups", () => {
       revealId: prompt.progressiveDisclosure!.reveal.id,
     });
     expect(revealed).toContain(
-      "1. Role shortcut — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "1. Quick setup — Take the Road-Warden Aid Route: Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
     );
     expect(revealed).toContain("2. Take Full Compact Duty");
     expect(revealed).toContain("3. Negotiate Aid-Only Duty");
     expect(revealed).toContain("4. Remain an Unaffiliated Helper");
     expect(revealed).not.toContain("Customize: `customize`");
     expect(revealed.match(/^ {4}\d+\. /gm)).toHaveLength(4);
-    expect(revealed.indexOf("Role shortcut —")).toBeLessThan(
+    expect(revealed.indexOf("Quick setup —")).toBeLessThan(
       revealed.indexOf("Take Full Compact Duty"),
     );
 

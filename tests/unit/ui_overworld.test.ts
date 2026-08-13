@@ -446,18 +446,19 @@ describe("OverworldSession", () => {
         id: "continue",
         label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
         consequence:
-          "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+          "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
       },
       {
         id: "end",
-        label: "End this journey",
-        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+        label: "End here",
+        consequence:
+          "Close this journey here and keep its read-only record; this journey cannot resume.",
       },
     ]);
     expect(pendingJourney.pendingChoice?.continuationPreview).toEqual({
       id: "albany_dawn_dispatch",
       message:
-        "Hayden Hale can send Albany's only dawn relief wagon back to Cade or north with the wardens. Where should it go?",
+        "Wolf-Winter is complete. First choose where Albany's only dawn relief wagon goes: back to Cade or north with the wardens. After this choice, the displayed goal is to reach Hedrick Cradoc in Queensbury and see The Gallowmere through.",
       options: [
         {
           id: "send_wagon_to_cade",
@@ -550,9 +551,9 @@ describe("OverworldSession", () => {
         "Continue: decide the dawn wagon, then take the Gallowmere lead",
       );
       expect(pendingMarkup).toContain(
-        "Choose where Albany&#x27;s only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through.",
+        "First choose where Albany&#x27;s only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through.",
       );
-      expect(pendingMarkup).toContain("End this journey");
+      expect(pendingMarkup).toContain("End here");
       expect(pendingMarkup).toContain("After Continue: dawn relief dispatch");
       expect(pendingMarkup).toContain("locked for review");
       expect(pendingMarkup.match(/<button/g)).toHaveLength(2);

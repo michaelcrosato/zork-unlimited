@@ -52,11 +52,11 @@ export const ALBANY_DAWN_DISPATCH_CHOICE_IDS = Object.freeze([
 export type AlbanyDawnDispatchChoiceId = (typeof ALBANY_DAWN_DISPATCH_CHOICE_IDS)[number];
 
 export const ALBANY_DAWN_DISPATCH_TEASER =
-  "At Albany Station Quarter, Hayden Hale has one dawn relief wagon and another live packet: Hedrick Cradoc's father was killed that morning by an old grey sow above Queensbury. Continue, and you will decide whether the wagon returns to Cade or runs north with the wardens before you carry Hedrick's lead onward." as const;
+  "At Albany Station Quarter, Hayden Hale has one dawn relief wagon and another live packet: Hedrick Cradoc's father was killed that morning by an old grey sow above Queensbury. Continue to first decide where the wagon goes, then carry Hedrick's Gallowmere lead north." as const;
 export const ALBANY_DAWN_DISPATCH_CONTINUE_LABEL =
   "Continue: decide the dawn wagon, then take the Gallowmere lead" as const;
 export const ALBANY_DAWN_DISPATCH_CONTINUE_CONSEQUENCE_PREFIX =
-  "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through." as const;
+  "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through." as const;
 
 export const ALBANY_DAWN_DISPATCH_GOALS = Object.freeze({
   send_wagon_to_cade: campaignGoal(
@@ -514,7 +514,7 @@ export function albanyDawnDispatchStoryChoice(
   return Object.freeze({
     id: ALBANY_DAWN_DISPATCH_ID,
     message:
-      "Hayden Hale can send Albany's only dawn relief wagon back to Cade or north with the wardens. Where should it go?",
+      "Wolf-Winter is complete. First choose where Albany's only dawn relief wagon goes: back to Cade or north with the wardens. After this choice, the displayed goal is to reach Hedrick Cradoc in Queensbury and see The Gallowmere through.",
     options: Object.freeze([
       Object.freeze({
         id: "send_wagon_to_cade" as const,

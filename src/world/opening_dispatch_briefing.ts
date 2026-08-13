@@ -25,7 +25,8 @@ export function openingDispatchCrisisPreview(discovery: string): string | null {
 const OPENING_DISPATCH_PURPOSE: Readonly<
   Record<NonNullable<JourneyStoryChoicePrompt["kind"]>, string>
 > = Object.freeze({
-  registration: "Purpose: choose your permanent background and promise.",
+  registration:
+    "Purpose: choose your role and promise. Order is neutral; HUNT, LURE, DRIVE, and FORTIFY stay open.",
   relief_oath: "Purpose: choose duty; every field plan stays open.",
   lead_source: "Purpose: choose evidence; every field plan stays open.",
   preparation:
@@ -216,7 +217,7 @@ export function withOpeningDispatchBriefing(
                 ? `${ally.title}. ${ALLY_COMPARISON_HEADER}`
                 : prompt.message;
   const purpose = offersStandardPacket
-    ? "Purpose: finish matched duty and evidence, or customize; every field plan stays open."
+    ? "Purpose: bind duty and evidence or customize; every field plan stays open."
     : OPENING_DISPATCH_PURPOSE[prompt.kind];
   if (civicStageIndex >= 0) {
     const stage = plan.civicStages[civicStageIndex]!;
@@ -228,9 +229,9 @@ export function withOpeningDispatchBriefing(
           : `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
     const planningContext =
       civicStageIndex === 0
-        ? `Mission preview — ${plan.questCrisisPreview} In one next choice, a matched role may finish duty and evidence, or customize.`
+        ? `Mission preview — ${plan.questCrisisPreview} Next, bind duty and evidence or customize.`
         : civicStageIndex === 1 && offersStandardPacket
-          ? "A custom duty leaves one evidence choice next."
+          ? "Quick setup binds both; custom duty leaves evidence next."
           : civicStageIndex === 2
             ? "Hayden's Station launch board follows."
             : "Evidence follows.";

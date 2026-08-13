@@ -49,7 +49,7 @@ function presentedSession(): OverworldSession {
 }
 
 describe("Albany registration progressive disclosure", () => {
-  it("projects permanent identity, starter package, obligation, and quest DEF before choice", () => {
+  it("projects permanent identity, starter package, obligation, and Wolf-Winter fit before choice", () => {
     const canonical = presentedSession().journey().storyChoice;
     if (!canonical) throw new Error("Expected the canonical registration prompt.");
     const compact = compactJourneyStoryChoicePrompt(canonical);
@@ -70,7 +70,10 @@ describe("Albany registration progressive disclosure", () => {
           { label: "Permanent role", value: profile.title },
           { label: "Role experience", value: profile.summary },
           { label: "Return obligation — ACTIVE", value: expected.obligation },
-          { label: "Quest DEF", value: expected.def },
+          {
+            label: "Wolf-Winter fit",
+            value: `${expected.def} All four field plans remain open.`,
+          },
         ],
         immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
         tradeoff: profile.tradeoff,
@@ -89,7 +92,7 @@ describe("Albany registration progressive disclosure", () => {
       "Starter package / field edge: Fieldcraft 4; weatherproof field kit",
     );
     expect(terminal).toContain("Return obligation — ACTIVE:");
-    expect(terminal).toContain("Quest DEF: Starting DEF 3 → 4");
+    expect(terminal).toContain("Wolf-Winter fit: Starting DEF 3 → 4");
   });
 
   it("reveals only one selected profile's exact authored terms without changing state", () => {

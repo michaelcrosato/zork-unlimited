@@ -56,7 +56,7 @@ describe("Station dispatch board", () => {
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
-        "Cade's herd is under pressure. Depart now for fastest arrival, or review one field kit, Albany's last relief wagon, and June, a cattle-first second rider. Support changes dispatch cost/aftermath; every Wolf-Winter strategy stays legal.",
+        "Cade's herd is under pressure. Depart now, or review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.",
     });
     expect(board.guidance.length).toBeLessThanOrEqual(STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT);
     expect(board.support.map((entry) => [entry.slot, entry.status, entry.selectedTitle])).toEqual(
@@ -276,7 +276,7 @@ describe("Station dispatch board", () => {
     });
     expect(waiting?.launch.approaches.every((approach) => !approach.availableNow)).toBe(true);
     expect(waiting?.guidance).toBe(
-      "Cade's herd is under pressure. No departure road is open yet. Review one field kit, Albany's last relief wagon, and June, a cattle-first second rider. Support changes dispatch cost/aftermath; every Wolf-Winter strategy stays legal.",
+      "Cade's herd is under pressure. No road is open. Review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.",
     );
     expect(waiting?.guidance.length).toBeLessThanOrEqual(
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,

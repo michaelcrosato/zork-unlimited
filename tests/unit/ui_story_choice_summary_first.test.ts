@@ -10,7 +10,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 const WORLD = loadOverworldManifest(process.cwd());
 const requireFromRoot = createRequire(import.meta.url);
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: finish matched duty and evidence, or customize; every field plan stays open. A custom duty leaves one evidence choice next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: bind duty and evidence or customize; every field plan stays open. Quick setup binds both; custom duty leaves evidence next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
 const CUSTOM_DUTY_MESSAGE =
   "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
 const SOURCE_MESSAGE =
@@ -271,7 +271,7 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(choiceButtonText).toContain("Starter package / field edge:");
       expect(choiceButtonText).toContain("Permanent role:");
       expect(choiceButtonText).toContain("Return obligation — ACTIVE:");
-      expect(choiceButtonText).toContain("Quest DEF:");
+      expect(choiceButtonText).toContain("Wolf-Winter fit:");
       expect(choiceButtonText).toContain("Immediate cost:");
       expect(choiceButtonText).toContain("Tradeoff:");
       expect(choiceButtonText).toContain(registrationOption.summary!.commitment);
@@ -438,9 +438,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       );
       expect(standardPacketButtons).toHaveLength(1);
       const roleShortcut = standardPacketChoice.options.find((option) =>
-        option.label.startsWith("Role shortcut —"),
+        option.label.startsWith("Quick setup —"),
       );
-      if (!roleShortcut) throw new Error("Expected the Road-Warden role shortcut before reveal.");
+      if (!roleShortcut) throw new Error("Expected the Road-Warden quick setup before reveal.");
       expect(standardPacketButtons[0]?.textContent).toContain(roleShortcut.label);
       const dutySurfaceOrder = Array.from(
         rootElement.querySelectorAll(
@@ -453,9 +453,9 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const quickSetupHeading = rootElement.querySelector("h1") as {
         textContent: string | null;
       } | null;
-      expect(quickSetupHeading?.textContent).toBe("Choose a role shortcut or compare duties");
+      expect(quickSetupHeading?.textContent).toBe("Choose a quick setup or compare duties");
       expect(rootElement.textContent).toContain(
-        "The role-shortcut card binds duty and evidence together; the duty comparison is read-only.",
+        "The quick-setup card binds duty and evidence together; the duty comparison is read-only.",
       );
       expect(rootElement.textContent?.toLowerCase()).not.toContain("standard packet");
       const customize = rootElement.querySelector(

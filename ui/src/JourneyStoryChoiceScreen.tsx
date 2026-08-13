@@ -81,9 +81,9 @@ export function JourneyStoryChoiceScreen({
   const currentObjectiveGuidance = registrationGroups
     ? "A doctrine commits your role, oath, and source; a custom role continues step-by-step."
     : requiresOutcomeComparison
-      ? "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a duty or role shortcut."
+      ? "The outcome compass is read-only. It recommends and commits no field plan; compare it before choosing a duty or quick setup."
       : hasRoleShortcut
-        ? "The role-shortcut card binds duty and evidence together; the duty comparison is read-only."
+        ? "The quick-setup card binds duty and evidence together; the duty comparison is read-only."
         : usesRoleplayReceipts
           ? "Choose the promise or priority you want to carry. Each card shows its exact cost and what you give up; field mechanics appear before they resolve."
           : isRegistration
@@ -222,7 +222,7 @@ export function JourneyStoryChoiceScreen({
                       ? requiresOutcomeComparison
                         ? "Compare what must stand at dawn"
                         : hasRoleShortcut
-                          ? "Choose a role shortcut or compare duties"
+                          ? "Choose a quick setup or compare duties"
                           : "Choose one binding term"
                       : "Choose what follows"}
         </h1>

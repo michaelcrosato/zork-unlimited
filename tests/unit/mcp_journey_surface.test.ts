@@ -699,12 +699,13 @@ describe("MCP journey surface", () => {
         id: "continue",
         label: "Continue: decide the dawn wagon, then take the Gallowmere lead",
         consequence:
-          "Choose where Albany's only dawn relief wagon goes, then head north to Hedrick in Queensbury and see The Gallowmere through. Play remains open; you may end again when an active goal completes or at the first safe break at or after checkpoint threshold 40, whichever comes first.",
+          "First choose where Albany's only dawn relief wagon goes. Then head north to Hedrick in Queensbury and see The Gallowmere through. Resume this exact state. The next Continue-or-End choice appears when an active goal completes or at the first safe journey break at or after decision 40, whichever comes first.",
       },
       {
         id: "end",
-        label: "End this journey",
-        consequence: "This journey becomes read-only and its exit receipt is ready for review.",
+        label: "End here",
+        consequence:
+          "Close this journey here and keep its read-only record; this journey cannot resume.",
       },
     ] as const;
     const sourceJourney = source.journey();
@@ -895,7 +896,7 @@ describe("MCP journey surface", () => {
             highlights: expect.arrayContaining([
               expect.objectContaining({ label: "Permanent role" }),
               expect.objectContaining({ label: "Return obligation — ACTIVE" }),
-              expect.objectContaining({ label: "Quest DEF" }),
+              expect.objectContaining({ label: "Wolf-Winter fit" }),
             ]),
           });
         } else {
@@ -1353,7 +1354,7 @@ describe("MCP journey surface", () => {
     expect(inspectedChoice.result).toEqual(directChoice.result);
   });
 
-  it("offers the role shortcut immediately and expands custom duties read-only without leaking oath cards", () => {
+  it("offers the quick setup immediately and expands custom duties read-only without leaking oath cards", () => {
     const a = api();
     const registration = WORLD.opening_registration;
     const oath = WORLD.opening_relief_oath;
@@ -1383,7 +1384,7 @@ describe("MCP journey surface", () => {
       id: "customize_duty_and_evidence",
       label: expect.stringContaining("Customize duty and evidence"),
       description: expect.stringMatching(
-        /HUNT[^]*defends herd and relief stores[^]*wolves may die[^]*LURE[^]*keep herd and pack alive[^]*spends Cade's last feed[^]*DRIVE[^]*moves people and the living pack clear[^]*abandons the outer line[^]*FORTIFY[^]*keeps home, herd, and pack[^]*property or spends public seals[^]*No plan is recommended or committed/i,
+        /HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die[^]*LURE[^]*Outcome:[^]*pack beyond the breach[^]*Cade's last feed[^]*DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading[^]*FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals[^]*No plan is recommended or committed/i,
       ),
     });
     const canonical = a.inspect_overworld_session_story({
@@ -1441,7 +1442,7 @@ describe("MCP journey surface", () => {
     expect(initial.story.options).toHaveLength(1);
     expect(initial.story.options[0]).toMatchObject({
       id: shortcutId,
-      label: expect.stringContaining("Role shortcut"),
+      label: expect.stringContaining("Quick setup"),
     });
     const initialJson = JSON.stringify(initial.story);
     expect(initialJson.indexOf('"revealOption"')).toBeLessThan(initialJson.indexOf('"options"'));

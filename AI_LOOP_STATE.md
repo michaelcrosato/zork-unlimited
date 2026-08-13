@@ -1,6 +1,6 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 774 -->
+<!-- historical_cycle_count: 775 -->
 <!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260813T082609Z/hotspots.json","hotspots_sha256":"26900eacd12566c05572ca6b53c47ca2448a9b3829e4bc3d3a383ee0f9004336","manifest_path":"ai-runs/feedback/20260813T082609Z/report-manifest.json","manifest_sha256":"522946fb42ac9f6e599fa1799057f6db2fdb53bffd36b31cbb6c60ee2f853cdf"},"pending_cycle_reports":[{"evidence_sha256":"42db376d5cd930aaa45174f8373dcb62592bb6dda41cb53183591777349d4121","report_id":"pure:37ee64873159999c939b97f2e59f581f47b121bca83592c7b7e77c68b6161963","report_sha256":"b6e4829fa4a2b7492ffdde8044b659394b80de9b1344ebbec5ab441491dc8bec","run_id":"2026-08-13T08-16-26-310Z","sidecar_sha256":"5ac53bf36b448673a7af17f3775c67decb7fa8ab813c8653ccd206f49349c94e","tested_commit":"a6d98762fa1a155795131a6983cc4183aaf078e4"},{"evidence_sha256":"d1245779dc74c29c4c2a336e75bb2fa7fe86f719f87c0f56ac715356ea59276d","report_id":"pure:b27be165006da3294edc9e0eb2ac6bc9df73aed27f2294efcdda19fb4ce0e56e","report_sha256":"3ede32c36a1caddbe89d6903a41587a3e1c74902f395cd726a3ffab99cf40188","run_id":"2026-08-13T08-57-33-104Z","sidecar_sha256":"1152c6c5a893ee51b1d48e17f0efa505706e1239ad67b9be73b29dc212fac4f7","tested_commit":"7b5a54841d3cb4abaf278c80cb60e4e77ef61f95"},{"evidence_sha256":"bf5e8e6c060c7409848e026bb841e437524dfa3ace75746d3a46608b7cbe2cc7","report_id":"pure:8d41a6c251e8da624049e45a720229d839358bb93a8effc8dfa696d115c7afb0","report_sha256":"ae2e8cfd66a168c47c61dbcc7a253734a9dc79f839cbdc7e40486058a78f91b0","run_id":"2026-08-13T10-26-22-617Z","sidecar_sha256":"a79bc840bded318e495b9e0baf135a4af7daea32213a7214a896a9ab4ca48197","tested_commit":"f35fec901c0d8537bededa28fc8f644be82522b6"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
@@ -17,6 +17,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The feedback_acceptance marker is machine-owned by the post-gate seal; never hand-edit, remove, or summarize it.
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
+
+<!-- feedback_cycle_selection: {"run_id":"2026-08-12T01-29-11-314Z","selected_recommendation_id":null} -->
+
+### Cycle result - albany_starting_slice_decision_compass
+<!-- feedback_cycle_selection: {"run_id":"2026-08-13T12-22-34-462Z","selected_recommendation_id":"hotspot-ebb6e090"} -->
+
+- Evidence choice: three exact current Terra players repeated dense staged Albany setup, and the accepted S1 specifically found Station support purposes hidden behind a separate compact detail view; exact `hotspot-ebb6e090` is selected.
+- Change pending: make the bounded Albany role/duty/Station/strategy/checkpoint compass consequence-first without adding, removing, reordering, or rebalancing any choice or mechanic.
+- Pure evidence: pending a fresh exact-clean Terra run on the provisional content commit.
+- Feedback/guard: three sealed reports are ready to compile after the pure run; pre-change crawl is green.
 
 ### Cycle result - gallowmere_blind_side_opening_lifecycle
 
@@ -157,44 +167,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat/next: LURE never exposed the FORTIFY-specific Reese copy, so causal proof remains the matrix/trace; the exact-current committed-LURE yard fallback still tells players to compare all four now-closed plans and is the strongest bounded follow-up to the broader density feedback.
 - Feedback: the exact prior three-report delta `20260810T194910Z` recommends `ed51aa6f` and excludes this run; seal promotes it unconsumed, clears that cohort, and leaves this pure report as the sole pending row.
 - Guard: 45 focused tests, 555 traces, both 6,000-step crawls, exact health (448 files/3,886 tests), UI typecheck, all 12 packs, cycle-start integrity, pure provenance, and deterministic compile rebuild are green.
-
-### Cycle result - wolf_yearling_defeat_route_truth
-
-- Evidence choice: two sealed LURE players saw the shared yearling defeat journal say the byre ran north while their live route blocked north and required south→west→up; on-list `playtest-wolf_winter` was selected, while accepted `d6a6cd0a` was already consumed.
-- Surface/effect: the shared defeat journal is now a 92-character route-neutral sentence; flags, stage, +10 score, exits, actions, checks, and endings are unchanged, with Wolf hash `c9b82ed5…` → `e8e29d0e…`.
-- Counterfactual: real full/compact LURE hybrid defeat pins south legal/north blocked and the neutral journal/event, while ordinary/HUNT pins the same journal with north still legal.
-- Pure evidence: exact-clean Spark seed 7 on `dd353d9e` took Ledger/Aid-Only/Rowan through Exposed-Ridge Cade FORTIFY to `ending_fortified_cade_terms`, 40/60, whole herd/all wolves safe, then ended at the goal-completion choice on decision 17; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
-- Canary caveat/next: FORTIFY withheld combat, so the journal was not directly exposed; 23/25 calls succeeded and two read-only story inspections failed input validation before exact recovery. `Reese's Works` was again falsely credited without preparation at DC 14 and is the strongest next truth seam.
-- Feedback: pre-seal status is 2 actionable reports of 3 and no compile; sealing this run appends the third pending report while preserving the already-consumed accepted bundle.
-- Guard: 35 focused tests, 554 traces, both 6,000-step crawls, exact health (448 files/3,878 tests), UI typecheck, all 12 packs, cycle-start integrity, and pure provenance are green.
-## AFK Cycle 2026-08-12T01-29-11-314Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-12T01-29-11-314Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-4e42fc3a (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
-## AFK Cycle 2026-08-13T08-16-26-310Z
-- Evidence choice: the exact-build Terra pilot lost 2/10 before gameplay to freeform wrappers, so the off-list transport defect outranked an unrelated one-report content hot spot.
-- Change: Terra now uses a fingerprinted game-only static catalog and typed native MCP lifecycle; v9 authority fails closed on model/client/profile/call drift while immutable v8 evidence stays readable but noncurrent.
-- Pure evidence: exact-clean Terra seed 2026081314 on `a6d98762` completed Wolf-Winter LURE and Gallowmere, ended at goal decision 51, rated clarity 4/5 and enjoyment 5/5, replay yes, bugs `[]`, not stuck.
-- Authority: 70/70 native calls, zero wrappers/search/compaction, disabled collaboration, exact CLI 0.146/xhigh/hash 3000, empty reasoning summaries, and report/receipt/build binding verified.
-- Self-critique/next: transport is proven for one run, not yet fleet-certified; address dense Albany plan comparison, compact tuples, and in-quest checkpoint interruption before the required fresh 10-player pilot.
-- Feedback/guard: compiled 9 actionable reports into `20260813T082609Z` (10 hot spots); both crawls, 454 files/3,997 tests, UI typecheck, 12 packs, pure provenance, and final seal are green.
-## AFK Cycle 2026-08-13T08-57-33-104Z
-- Evidence choice: live reports could name an S0-S4 defect in prose while leaving structured `bugs[]` empty, so this off-list evidence-integrity defect outranked the unrelated Station-content recommendation.
-- Change: current pure/cycle/certification reports declare issue-consistency v1 and fail closed unless every explicit prose severity finding has a distinct, severity-exact structured match; historical marker-absent V2 reports remain readable.
-- Red-gate correction: full health caught two forward-current seal/gate fixtures without the marker/mandatory Bugs section; those fixtures were repaired, the candidate was rebuilt as `7b5a5484`, and prior evidence was rejected and archived.
-- Pure evidence: fresh exact-clean Terra seed 2026081316 completed Wolf-Winter LURE at decision 27, rated clarity/enjoyment 4/4, replay yes, bugs `[]`, and was not stuck.
-- Contract proof: current prompts, recovery, receipt binding, cycle gate, and v9 fleet certification require the same rule; exact report/receipt/build verification passes on `7b5a5484`.
-- Player finding/next: setup remains staged, LURE requires backtracking, and ridge forecast precedes displayed alarm by one action; simplify the bounded decision compass without changing mechanics.
-- Feedback: status is 1 new actionable report of 3, so compilation remains correctly closed.
-- Guard: both post-change crawls, 454 files/4,017 tests, UI typecheck, 12 packs, cycle-start integrity, exact pure provenance, and final ledger seal are green.
-## AFK Cycle 2026-08-13T10-26-22-617Z
-- Evidence choice: the off-list browser usability seam was independent of the compact/MCP Station hot spot, so that recommendation remains unconsumed for the next content cycle.
-- Change: active quests now persist and replay across refresh; checkpoint Continue restores exact quest position; same-scene actions preserve scroll while room/panel changes reset and focus; Station keeps departures primary and folds optional support behind purpose-first details.
-- Browser proof: desktop/mobile Albany→Wolf LURE→Albany→Gallowmere checkpoint 40 passed with zero console errors; refresh restored mid-quest, post-ending, and post-checkpoint state; mobile had no horizontal overflow or dock/shortcut collision.
-- Red-gate correction: full health caught one stale source-string assertion for the now goal-aware Local route/Next for current goal grouping. After that correction, a fresh report used the prompt-prescribed comma-qualified Bugs heading, exposing that issue-consistency recognized only other separators; the heading parser and adversarial regression now align with the prompt without weakening severity-to-`bugs[]` matching. Both superseded runs remain diagnostic only.
-- Pure evidence: fresh exact-clean Terra seed 2026081319 on `f35fec90` completed Wolf-Winter LURE through a failed-cast/braced-rail recovery, continued through checkpoint 40, completed Gallowmere, and ended at decision 49; clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
-- Open S1/next: MCP Station support still appears as abstract null-action slots before a separate detail view; consume `hotspot-ebb6e090` with the approved compact decision-compass content change.
-- Feedback: status is 2 new actionable reports of 3, so compilation remains correctly closed.
-- Guard: post-crawl covered 12/12 quests and 247/247 overworld nodes; full health passed 456 files/4,034 tests, both UI TypeScript projects, all 12 packs, exact pure provenance, and cycle-start integrity.

@@ -2226,9 +2226,9 @@ describe("MCP pure play mode", () => {
         expect(defaultCivicMessages).not.toMatch(/Civic order/i);
         expect(defaultCivicMessages).not.toMatch(/role\s*→\s*duty\s*→\s*evidence/i);
         expect(defaultCivicMessages).not.toMatch(/June Pike|second field seat/i);
-        expect(oathChoice?.message).toMatch(/matched duty(?:\/| and )evidence/i);
-        expect(oathChoice?.message).toMatch(/finish matched duty(?:\/| and )evidence/i);
-        expect(oathChoice?.message).toMatch(/custom duty[^.]*evidence choice next/i);
+        expect(oathChoice?.message).toMatch(/matched duty(?:\/| \+ | and )evidence/i);
+        expect(oathChoice?.message).toMatch(/bind duty(?:\/| and )evidence/i);
+        expect(oathChoice?.message).toMatch(/custom duty[^.]*leaves evidence next/i);
         expect(oathChoice?.message).toMatch(/customize/i);
         expect(
           oathChoice?.options?.every(
@@ -2242,7 +2242,7 @@ describe("MCP pure play mode", () => {
         ]);
         expect(JSON.stringify(oathChoice)).not.toContain("albany:oath_limited_aid_only");
         const matchedShortcut = oathChoice?.options?.[0];
-        if (!matchedShortcut) throw new Error("expected the sole matched role shortcut");
+        if (!matchedShortcut) throw new Error("expected the sole matched quick setup");
         const matchedShortcutInspection = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2390,7 +2390,7 @@ describe("MCP pure play mode", () => {
         const stationedGuidance = stationedBoard?.[2];
         expect(stationedGuidance).toMatch(/field kit/i);
         expect(stationedGuidance).toMatch(/last (?:relief )?wagon/i);
-        expect(stationedGuidance).toMatch(/June[^.]*second rider|second rider[^.]*June/i);
+        expect(stationedGuidance).toMatch(/June[^.]*one cattle line[^.]*never combat/i);
         expect(stationedBoard?.[4]).toEqual(
           expect.arrayContaining([
             ["preparation", "open_optional", null, null, null],

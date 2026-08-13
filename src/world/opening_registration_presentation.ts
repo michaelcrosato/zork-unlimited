@@ -79,8 +79,8 @@ export function presentOpeningRegistration(
                 : "No active return obligation is included in this role."),
           }),
           Object.freeze({
-            label: "Quest DEF",
-            value: registrationDefDistinction(profile.consequence),
+            label: "Wolf-Winter fit",
+            value: `${registrationDefDistinction(profile.consequence)} All four field plans remain open.`,
           }),
         ]),
       }),
@@ -91,7 +91,7 @@ export function presentOpeningRegistration(
     kind: "registration" as const,
     message:
       (parsed.doctrines?.length ?? 0) > 0
-        ? `${parsed.title}. Choose your role now; Wolf-Winter duty and evidence follow. A role with an authored quick setup may bind both together at the next step. ${parsed.message}`
+        ? `${parsed.title}. Choose a role now; option order is neutral, and every role keeps HUNT, LURE, DRIVE, and FORTIFY open. Duty and evidence follow. An authored quick setup can bind those next choices, but never chooses a field plan. ${parsed.message}`
         : `${parsed.title}. ${parsed.message}`,
     options: Object.freeze(profileOptions) as JourneyRegistrationStoryChoiceOptions,
   });

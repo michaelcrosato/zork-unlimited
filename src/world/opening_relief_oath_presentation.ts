@@ -35,7 +35,7 @@ const STANDARD_PACKET_SUPPORT_COPY: Readonly<
     expectedTriggerCategory:
       "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
     support:
-      "Fieldcraft 4; a bloodless LURE skips one alarm; after an unbound rail split, HUNT may use Hayden's brace.",
+      "Fieldcraft 4 sets DEF 4 and supplies DRIVE/LURE checks; Aid-Only skips clean LURE's last alarm and fits Cade's FORTIFY terms; after a public wedge splits, Hayden can brace HUNT. All four plans remain legal.",
   }),
   "albany:doctrine_independent_drive": Object.freeze({
     expectedTriggerCategory: "Streetwise 4; first shutter-signal check drops from DC 12 to DC 10.",
@@ -75,8 +75,8 @@ export function presentOpeningReliefOath(
     ? Object.freeze({
         ...presentOpeningChoiceOption({
           id: doctrine.id,
-          label: `Role shortcut — ${doctrineOath!.title} + ${doctrineSource!.title}`,
-          commitment: `Skips the separate evidence choice; no field plan is chosen. Support: ${summarizeStartingDoctrineSupport(doctrine)}`,
+          label: `Quick setup — ${doctrine.title}: ${doctrineOath!.title} + ${doctrineSource!.title}`,
+          commitment: `Applies the matched duty and evidence together; no field plan is chosen. Support: ${summarizeStartingDoctrineSupport(doctrine)}`,
           exactBenefit: doctrine.trigger_category,
           immediateCost: doctrine.immediate_cost,
           giveUp: "Other duty/evidence pairs close; every field plan stays open.",
@@ -127,7 +127,7 @@ export function presentOpeningReliefOath(
             id: "customize_duty_and_evidence",
             label: "Customize duty and evidence — compare all four field outcomes",
             description:
-              "HUNT defends herd and relief stores, but wolves may die and a failed hold can lose cattle or the line. LURE aims to keep herd and pack alive, but spends Cade's last feed and risks the paling and cattle. DRIVE moves people and the living pack clear, but abandons the outer line and its Crisis costs a wound, cattle, or the rig. FORTIFY keeps home, herd, and pack through dawn, but exposes Cade's property or spends public seals. No plan is recommended or committed. After this read-only comparison, choose one duty or the role shortcut; evidence follows unless the shortcut binds it.",
+              "HUNT — Outcome: hold Cade's ground, herd, and relief stores through prepared combat. Cost: wolves may die; failure can lose cattle or the line. Later: bloodshed changes Greenway work and damage remains. LURE — Outcome: move the pack beyond the breach and keep the herd. Cost: Cade's last feed, broken paling, and two cattle risked on a first-cast foul. Later: broken boundary or scattered cattle change Station response. DRIVE — Outcome: move people and herd clear while forcing the living pack away. Cost: abandon the outer steading; if the drive reaches its crisis, take a wound, lose two cattle, or lose the rig. Later: the line and chosen loss remain. FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost: no retreat; expose property for Cade's help or spend public seals without it. Later: the terms remain, and a no-loss hold opens no Cade repair dispatch. No plan is recommended or committed. This comparison changes no state; choose one duty or the quick setup afterward, and evidence follows unless the setup binds it.",
             optionIds,
           }),
         });
@@ -138,7 +138,7 @@ export function presentOpeningReliefOath(
     id: parsed.id,
     kind: "relief_oath" as const,
     message: standardPacket
-      ? `${parsed.title}. Your role shortcut can bind its matched duty and evidence now without choosing a field plan. Customize only if you want a different duty or source. ${parsed.message}`
+      ? `${parsed.title}. Your quick setup binds matched duty and evidence, not a field plan. Customize only for a different duty or source. HUNT, LURE, DRIVE, and FORTIFY remain open. ${parsed.message}`
       : `${parsed.title}. ${parsed.message}`,
     options,
     ...(progressiveDisclosure ? { progressiveDisclosure } : {}),
