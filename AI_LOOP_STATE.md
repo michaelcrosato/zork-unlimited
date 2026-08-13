@@ -1,7 +1,7 @@
 # AI Loop State
 
 <!-- historical_cycle_count: 775 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260813T082609Z/hotspots.json","hotspots_sha256":"26900eacd12566c05572ca6b53c47ca2448a9b3829e4bc3d3a383ee0f9004336","manifest_path":"ai-runs/feedback/20260813T082609Z/report-manifest.json","manifest_sha256":"522946fb42ac9f6e599fa1799057f6db2fdb53bffd36b31cbb6c60ee2f853cdf"},"pending_cycle_reports":[{"evidence_sha256":"42db376d5cd930aaa45174f8373dcb62592bb6dda41cb53183591777349d4121","report_id":"pure:37ee64873159999c939b97f2e59f581f47b121bca83592c7b7e77c68b6161963","report_sha256":"b6e4829fa4a2b7492ffdde8044b659394b80de9b1344ebbec5ab441491dc8bec","run_id":"2026-08-13T08-16-26-310Z","sidecar_sha256":"5ac53bf36b448673a7af17f3775c67decb7fa8ab813c8653ccd206f49349c94e","tested_commit":"a6d98762fa1a155795131a6983cc4183aaf078e4"},{"evidence_sha256":"d1245779dc74c29c4c2a336e75bb2fa7fe86f719f87c0f56ac715356ea59276d","report_id":"pure:b27be165006da3294edc9e0eb2ac6bc9df73aed27f2294efcdda19fb4ce0e56e","report_sha256":"3ede32c36a1caddbe89d6903a41587a3e1c74902f395cd726a3ffab99cf40188","run_id":"2026-08-13T08-57-33-104Z","sidecar_sha256":"1152c6c5a893ee51b1d48e17f0efa505706e1239ad67b9be73b29dc212fac4f7","tested_commit":"7b5a54841d3cb4abaf278c80cb60e4e77ef61f95"},{"evidence_sha256":"bf5e8e6c060c7409848e026bb841e437524dfa3ace75746d3a46608b7cbe2cc7","report_id":"pure:8d41a6c251e8da624049e45a720229d839358bb93a8effc8dfa696d115c7afb0","report_sha256":"ae2e8cfd66a168c47c61dbcc7a253734a9dc79f839cbdc7e40486058a78f91b0","run_id":"2026-08-13T10-26-22-617Z","sidecar_sha256":"a79bc840bded318e495b9e0baf135a4af7daea32213a7214a896a9ab4ca48197","tested_commit":"f35fec901c0d8537bededa28fc8f644be82522b6"}],"schema_version":1} -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260813T124503Z/hotspots.json","hotspots_sha256":"b4840d80b1fcae13aec37522b4da82a89478ff80aeb6da58450799bd42466c9f","manifest_path":"ai-runs/feedback/20260813T124503Z/report-manifest.json","manifest_sha256":"a92ee948d93121e3a7a78e10417eafdc41019ae090f88d133f599678e570d4bf"},"pending_cycle_reports":[{"evidence_sha256":"475f21838e91e2188e699161cfb62fc6ea25d9efc18eee3d6f3c291dec027539","report_id":"pure:b47405fcb1b89f56739e9a285084f4001cdd7d7d59547c32da50d4ff388e1593","report_sha256":"9c4e56c826bb3c1a0a660a868be7ae2df9476c95320bcad040d1d69810abcef4","run_id":"2026-08-13T12-22-34-462Z","sidecar_sha256":"b7aceea3f717a47499e13e4c09dc86281eae4d82dcc687b8681c0fe209b833ea","tested_commit":"50a33d03703b18e69d89356ac2b01a65c6271826"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -21,12 +21,12 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 <!-- feedback_cycle_selection: {"run_id":"2026-08-12T01-29-11-314Z","selected_recommendation_id":null} -->
 
 ### Cycle result - albany_starting_slice_decision_compass
-<!-- feedback_cycle_selection: {"run_id":"2026-08-13T12-22-34-462Z","selected_recommendation_id":"hotspot-ebb6e090"} -->
 
 - Evidence choice: three exact current Terra players repeated dense staged Albany setup, and the accepted S1 specifically found Station support purposes hidden behind a separate compact detail view; exact `hotspot-ebb6e090` is selected.
-- Change pending: make the bounded Albany role/duty/Station/strategy/checkpoint compass consequence-first without adding, removing, reordering, or rebalancing any choice or mechanic.
-- Pure evidence: pending a fresh exact-clean Terra run on the provisional content commit.
-- Feedback/guard: three sealed reports are ready to compile after the pure run; pre-change crawl is green.
+- Surface/effect: Albany role/duty/Station guidance now states neutral plan availability and immediate support purpose; HUNT/LURE/DRIVE/FORTIFY compare outcome, cost, and later consequence; journey Continue/End names exact state and next safe break. IDs, order, availability, checks, costs, scores, and outcomes are unchanged.
+- Pure evidence: exact-clean Terra seed 2026081320 on `50a33d03` chose Ledger/Full Compact/Jamie, completed Wolf-Winter FORTIFY under Albany authority with herd/household/wolves safe, continued through checkpoint 40, completed Gallowmere, and ended at decision 41; 4/4, replay yes, bugs `[]`, not stuck.
+- Feedback/next: compiled the prior three sealed reports into `20260813T124503Z` (9 S1 hot spots); immediate Station-purpose S1 did not recur, while broader compact density and checkpoint-context displacement remain. This pure is excluded from that compile and becomes pending only after seal.
+- Guard: post-crawl covered 12/12 quests and 247/247 overworld nodes; full health passed 456 files/4,034 tests, both UI TypeScript projects, all 12 packs, exact compile/pure provenance, and cycle-start integrity.
 
 ### Cycle result - gallowmere_blind_side_opening_lifecycle
 
