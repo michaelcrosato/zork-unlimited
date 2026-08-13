@@ -556,6 +556,7 @@ describe("fill-prompt", () => {
     for (const p of [
       "blind-tester/prompt-transports/strict-code-mode-v2.md",
       "blind-tester/prompt-transports/spark-direct-mcp-v1.md",
+      "blind-tester/prompt-transports/game-direct-mcp-v1.md",
     ]) {
       const fragment = readFileSync(p, "utf8");
       expect(fragment.trim().length).toBeGreaterThan(0);
@@ -1697,6 +1698,10 @@ describe("fleet attempt evidence", () => {
       prompt_template: "8".repeat(64),
       transport_fragment: "9".repeat(64),
     };
+    const terraHashes = {
+      ...strictHashes,
+      player_catalog: "6".repeat(64),
+    };
     const first = createFleetTransportFingerprint({
       provider: "codex",
       model: "gpt-5.3-codex-spark",
@@ -1750,7 +1755,17 @@ describe("fleet attempt evidence", () => {
     const terra = createFleetTransportFingerprint({
       provider: "codex",
       model: "gpt-5.6-terra",
-      componentHashes: strictHashes,
+      componentHashes: terraHashes,
+    });
+    const changedTerraFragment = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.6-terra",
+      componentHashes: { ...terraHashes, transport_fragment: "0".repeat(64) },
+    });
+    const changedTerraCatalog = createFleetTransportFingerprint({
+      provider: "codex",
+      model: "gpt-5.6-terra",
+      componentHashes: { ...terraHashes, player_catalog: "0".repeat(64) },
     });
     expect(first).toMatch(/^[0-9a-f]{64}$/);
     expect(reordered).toBe(first);
@@ -1761,6 +1776,8 @@ describe("fleet attempt evidence", () => {
     expect(changedRolloutCapture).not.toBe(first);
     expect(changedProcessAnchor).not.toBe(first);
     expect(terra).not.toBe(first);
+    expect(changedTerraFragment).not.toBe(terra);
+    expect(changedTerraCatalog).not.toBe(terra);
     expect(fleetTransportProfile("gpt-5.3-codex-spark")).toEqual({
       transportContract: "spark-direct-mcp-v1",
       componentPaths: {
@@ -1776,23 +1793,46 @@ describe("fleet attempt evidence", () => {
       },
     });
     expect(fleetTransportProfile("gpt-5.6-terra")).toEqual({
-      transportContract: "strict-code-mode-v2",
+      transportContract: "game-direct-mcp-v1",
       componentPaths: {
         envelope_audit: "codex-pure-envelope.mjs",
+        player_catalog: "codex-model-catalog-terra-v1.json",
         prompt_filler: "fill-prompt.mjs",
         prompt_template: "prompt-overworld.md",
         process_anchor: "codex-process-anchor.mjs",
         rollout_capture: "codex-rollout.mjs",
         runner: "run.sh",
         strict_stream_guard: "codex-strict-stream.mjs",
-        transport_fragment: "prompt-transports/strict-code-mode-v2.md",
+        transport_fragment: "prompt-transports/game-direct-mcp-v1.md",
       },
     });
+    for (const strictModel of ["gpt-5.6-sol", "gpt-5.6-luna"] as const) {
+      expect(fleetTransportProfile(strictModel)).toEqual({
+        transportContract: "strict-code-mode-v2",
+        componentPaths: {
+          envelope_audit: "codex-pure-envelope.mjs",
+          prompt_filler: "fill-prompt.mjs",
+          prompt_template: "prompt-overworld.md",
+          process_anchor: "codex-process-anchor.mjs",
+          rollout_capture: "codex-rollout.mjs",
+          runner: "run.sh",
+          strict_stream_guard: "codex-strict-stream.mjs",
+          transport_fragment: "prompt-transports/strict-code-mode-v2.md",
+        },
+      });
+    }
     expect(() =>
       createFleetTransportFingerprint({
         provider: "codex",
         model: "gpt-5.6-terra",
-        componentHashes: { ...strictHashes, player_catalog: sparkHashes.player_catalog },
+        componentHashes: strictHashes,
+      }),
+    ).toThrow(/component digest set/i);
+    expect(() =>
+      createFleetTransportFingerprint({
+        provider: "codex",
+        model: "gpt-5.6-sol",
+        componentHashes: { ...strictHashes, player_catalog: terraHashes.player_catalog },
       }),
     ).toThrow(/component digest set/i);
     expect(() =>
@@ -2167,7 +2207,7 @@ describe("fleet attempt evidence", () => {
     }
   });
 
-  it("projects v8 live summary usage without leaking Codex authority or paths", () => {
+  it("projects v9 live summary usage without leaking Codex authority or paths", () => {
     const resolved = resolveCodexClientBinary(process.execPath);
     const client = codexClientAuthorityRecord(resolved.identity_token, "0.144.1");
     const summary = pureFleetSummaryAccounting(

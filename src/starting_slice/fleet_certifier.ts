@@ -28,8 +28,10 @@ import {
 import type { CanonicalLocation } from "../feedback/schema.js";
 import {
   HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION,
+  HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION,
   PURE_FLEET_CODE_MODE_CONTRACT,
   PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+  PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION,
   PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION,
   parsePureFleetAttestation,
   PureFleetAttestationSchema,
@@ -38,6 +40,7 @@ import {
 import { capturePureFleetBuild } from "./fleet_build.js";
 import {
   pureFleetRunArtifactPaths,
+  GAME_DIRECT_MCP_TRANSPORT_CONTRACT,
   SPARK_DIRECT_MCP_MODEL,
   SPARK_DIRECT_MCP_TRANSPORT_CONTRACT,
   validatePureFleetRunArtifactBytes,
@@ -635,78 +638,83 @@ const FleetSummarySchema = z
     }
   });
 
-/** Current live cohorts use v8: usage is audited and the client is redacted. */
-const FleetSummaryV8Schema = z
-  .object({
-    schema_version: z.literal(8),
-    label: z.string().refine(isSafeFleetLabel, "unsafe or reserved fleet label"),
-    stamp: z.string().regex(/^\d{8}T\d{6}Z$/),
-    count: z.number().int().positive(),
-    concurrency: z.number().int().positive(),
-    reportsDir: z.string().min(1),
-    report_schema_version: z.literal(2),
-    play_mode: z.literal("pure"),
-    start_surface: z.literal("fresh_overworld"),
-    retention_contract_eligible: z.literal(true),
-    retention_eligible_verified_runs: z.number().int().nonnegative(),
-    retention_ineligible_or_unverified_runs: z.number().int().nonnegative(),
-    session_contract_version: z.literal(3),
-    baseline_decisions: z.literal(40),
-    verified: z.number().int().nonnegative(),
-    "skipped-resume": z.number().int().nonnegative(),
-    failed: z.number().int().nonnegative(),
-    total_attempts: z.number().int().nonnegative(),
-    failed_attempts: z.number().int().nonnegative(),
-    technical_timeouts: z.number().int().nonnegative(),
-    report_recovered_runs: z.number().int().nonnegative(),
-    receipt_bound_runs: z.number().int().nonnegative().optional(),
-    seed_base: z.number().int().safe(),
-    provider: z.enum(["claude", "codex"]).optional(),
-    model: z.enum([
-      "sonnet",
-      "gpt-5.6-sol",
-      "gpt-5.6-terra",
-      "gpt-5.6-luna",
-      "gpt-5.3-codex-spark",
-    ]),
-    personas: z.literal("default"),
-    target: z.literal("overworld"),
-    resume_enabled: z.boolean(),
-    evidence_schema_version: z.literal(2),
-    model_attestation_schema_version: z.union([
-      z.literal(2),
-      z.literal(3),
-      z.literal(4),
-      z.literal(5),
-      z.literal(6),
-      z.literal(7),
-      z.literal(8),
-    ]),
-    build: PureRunBuildSchema,
-    codex_client: CodexClientSummarySchema.optional(),
-    codex_client_proof: CodexClientAuthorityProofSchema,
-    usage: FleetUsageSummarySchema,
-  })
-  .strict()
-  .superRefine((summary, context) => {
-    const provider = summary.provider ?? "claude";
-    if (
-      provider !== "codex" ||
-      summary.model_attestation_schema_version !== PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["model_attestation_schema_version"],
-        message: `v8 live certification requires current Codex attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`,
-      });
-    }
-    if (summary.codex_client === undefined)
-      context.addIssue({
-        code: "custom",
-        path: ["codex_client"],
-        message: "v8 requires one safe Codex client projection",
-      });
-  });
+function auditedFleetSummarySchema<
+  const SummaryVersion extends 8 | 9,
+  const AttestationVersion extends 8 | 9,
+>(summaryVersion: SummaryVersion, attestationVersion: AttestationVersion) {
+  return z
+    .object({
+      schema_version: z.literal(summaryVersion),
+      label: z.string().refine(isSafeFleetLabel, "unsafe or reserved fleet label"),
+      stamp: z.string().regex(/^\d{8}T\d{6}Z$/),
+      count: z.number().int().positive(),
+      concurrency: z.number().int().positive(),
+      reportsDir: z.string().min(1),
+      report_schema_version: z.literal(2),
+      play_mode: z.literal("pure"),
+      start_surface: z.literal("fresh_overworld"),
+      retention_contract_eligible: z.literal(true),
+      retention_eligible_verified_runs: z.number().int().nonnegative(),
+      retention_ineligible_or_unverified_runs: z.number().int().nonnegative(),
+      session_contract_version: z.literal(3),
+      baseline_decisions: z.literal(40),
+      verified: z.number().int().nonnegative(),
+      "skipped-resume": z.number().int().nonnegative(),
+      failed: z.number().int().nonnegative(),
+      total_attempts: z.number().int().nonnegative(),
+      failed_attempts: z.number().int().nonnegative(),
+      technical_timeouts: z.number().int().nonnegative(),
+      report_recovered_runs: z.number().int().nonnegative(),
+      receipt_bound_runs: z.number().int().nonnegative().optional(),
+      seed_base: z.number().int().safe(),
+      provider: z.enum(["claude", "codex"]).optional(),
+      model: z.enum([
+        "sonnet",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
+        "gpt-5.3-codex-spark",
+      ]),
+      personas: z.literal("default"),
+      target: z.literal("overworld"),
+      resume_enabled: z.boolean(),
+      evidence_schema_version: z.literal(2),
+      model_attestation_schema_version: z.literal(attestationVersion),
+      build: PureRunBuildSchema,
+      codex_client: CodexClientSummarySchema.optional(),
+      codex_client_proof: CodexClientAuthorityProofSchema,
+      usage: FleetUsageSummarySchema,
+    })
+    .strict()
+    .superRefine((summary, context) => {
+      const provider = summary.provider ?? "claude";
+      if (provider !== "codex") {
+        context.addIssue({
+          code: "custom",
+          path: ["model_attestation_schema_version"],
+          message: `v${summaryVersion} live certification requires Codex attestation v${attestationVersion}`,
+        });
+      }
+      if (summary.codex_client === undefined)
+        context.addIssue({
+          code: "custom",
+          path: ["codex_client"],
+          message: `v${summaryVersion} requires one safe Codex client projection`,
+        });
+    });
+}
+
+/** Historical v8 cohorts remain readable with their immutable strict/Spark authority contract. */
+const FleetSummaryV8Schema = auditedFleetSummarySchema(
+  8,
+  HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION,
+);
+
+/** Current v9 cohorts audit usage and require the exact model-specific transport contract. */
+const FleetSummaryV9Schema = auditedFleetSummarySchema(
+  9,
+  PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+);
 
 const FleetAttemptArtifactSchema = z
   .object({
@@ -803,7 +811,7 @@ const FleetManifestRowSchema = z
   })
   .strict();
 
-/** V8 preserves failed slots instead of treating their absence as evidence. */
+/** Audited v8/v9 summaries preserve failed slots instead of erasing them. */
 const FleetManifestRowV8Schema = FleetManifestRowSchema.extend({
   status: z.enum(["verified", "skipped-resume", "failed"]),
   resume_usage: FleetUsageRecordSchema.nullable(),
@@ -830,12 +838,25 @@ const FleetManifestRowV8Schema = FleetManifestRowSchema.extend({
   failure_reason: z.string().nullable(),
 });
 
-type FleetSummary = z.infer<typeof FleetSummarySchema> | z.infer<typeof FleetSummaryV8Schema>;
+type FleetSummary =
+  | z.infer<typeof FleetSummarySchema>
+  | z.infer<typeof FleetSummaryV8Schema>
+  | z.infer<typeof FleetSummaryV9Schema>;
 type FleetManifestRow = z.infer<typeof FleetManifestRowSchema>;
 type FleetAttempt = z.infer<typeof FleetAttemptSchema>;
 
 function isFleetSummaryV8(summary: FleetSummary): summary is z.infer<typeof FleetSummaryV8Schema> {
   return "schema_version" in summary && summary.schema_version === 8;
+}
+
+function isFleetSummaryV9(summary: FleetSummary): summary is z.infer<typeof FleetSummaryV9Schema> {
+  return "schema_version" in summary && summary.schema_version === 9;
+}
+
+function isAuditedFleetSummary(
+  summary: FleetSummary,
+): summary is z.infer<typeof FleetSummaryV8Schema> | z.infer<typeof FleetSummaryV9Schema> {
+  return isFleetSummaryV8(summary) || isFleetSummaryV9(summary);
 }
 
 const STRATEGIES: readonly WolfStrategy[] = [
@@ -1567,13 +1588,16 @@ function validateAuthenticatedStartingSliceCohort(
   let summary: FleetSummary;
   try {
     const rawSummary = parseJsonFile(summaryPath, "summary.json") as unknown;
+    const rawSummaryVersion =
+      rawSummary !== null && typeof rawSummary === "object" && !Array.isArray(rawSummary)
+        ? (rawSummary as Record<string, unknown>).schema_version
+        : undefined;
     const parsed =
-      rawSummary !== null &&
-      typeof rawSummary === "object" &&
-      !Array.isArray(rawSummary) &&
-      (rawSummary as Record<string, unknown>).schema_version === 8
-        ? FleetSummaryV8Schema.safeParse(rawSummary)
-        : FleetSummarySchema.safeParse(rawSummary);
+      rawSummaryVersion === 9
+        ? FleetSummaryV9Schema.safeParse(rawSummary)
+        : rawSummaryVersion === 8
+          ? FleetSummaryV8Schema.safeParse(rawSummary)
+          : FleetSummarySchema.safeParse(rawSummary);
     if (!parsed.success) {
       return invalidFilesystemResult(root, options.expectedCount, [
         `summary.json invalid: ${firstSchemaIssue(parsed.error)}`,
@@ -1591,21 +1615,22 @@ function validateAuthenticatedStartingSliceCohort(
     : resolve(root, summary.reportsDir);
   const expectedProvider = summary.provider ?? "claude";
   const errors = wolfStrategyMappingDrift(root);
-  const v8Summary = isFleetSummaryV8(summary) ? summary : null;
-  const isV8 = v8Summary !== null;
+  const auditedSummary = isAuditedFleetSummary(summary) ? summary : null;
+  const isAudited = auditedSummary !== null;
+  const isV9 = isFleetSummaryV9(summary);
   let authenticatedCodexClient: z.infer<typeof CodexClientAuthoritySchema> | null = null;
-  if (v8Summary !== null) {
+  if (auditedSummary !== null) {
     try {
       const proofPath = requireContainedRegularFile(
-        resolve(fleetDir, v8Summary.codex_client_proof.name),
+        resolve(fleetDir, auditedSummary.codex_client_proof.name),
         fleetRootReal,
         "private Codex client authority proof",
         artifacts,
       );
       const proofBytes = readFileSync(proofPath);
       if (
-        proofBytes.byteLength !== v8Summary.codex_client_proof.bytes ||
-        sha256(proofBytes) !== v8Summary.codex_client_proof.sha256
+        proofBytes.byteLength !== auditedSummary.codex_client_proof.bytes ||
+        sha256(proofBytes) !== auditedSummary.codex_client_proof.sha256
       ) {
         errors.push("private Codex client authority proof bytes differ from summary digest index");
       } else {
@@ -1624,9 +1649,9 @@ function validateAuthenticatedStartingSliceCohort(
           } else {
             authenticatedCodexClient = parsedProof.data;
             if (
-              v8Summary.codex_client === undefined ||
+              auditedSummary.codex_client === undefined ||
               !isDeepStrictEqual(
-                v8Summary.codex_client,
+                auditedSummary.codex_client,
                 codexClientSummaryProjection(authenticatedCodexClient),
               )
             ) {
@@ -1651,17 +1676,20 @@ function validateAuthenticatedStartingSliceCohort(
       `current Codex ${options.cohortKind} certification requires attestation v${PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION}`,
     );
   }
-  if (expectedProvider === "codex" && !isV8) {
-    errors.push(`current Codex ${options.cohortKind} certification requires fleet summary v8`);
+  if (expectedProvider === "codex" && !isV9) {
+    errors.push(`current Codex ${options.cohortKind} certification requires fleet summary v9`);
   }
   if (
     expectedProvider === "codex" &&
-    summary.model === SPARK_DIRECT_MCP_MODEL &&
+    (summary.model === SPARK_DIRECT_MCP_MODEL || summary.model === "gpt-5.6-terra") &&
     authenticatedCodexClient !== null &&
-    authenticatedCodexClient.cli_version !== PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION
+    authenticatedCodexClient.cli_version !==
+      (summary.model === SPARK_DIRECT_MCP_MODEL
+        ? PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION
+        : PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION)
   ) {
     errors.push(
-      `current Spark certification requires exact Codex CLI ${PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION}`,
+      `current direct-MCP certification requires exact Codex CLI ${PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION}`,
     );
   }
   const fleetBasename = basename(fleetDir);
@@ -1789,19 +1817,21 @@ function validateAuthenticatedStartingSliceCohort(
       errors.push(raw.reason);
       continue;
     }
-    const parsed = (isV8 ? FleetManifestRowV8Schema : FleetManifestRowSchema).safeParse(raw.value);
+    const parsed = (isAudited ? FleetManifestRowV8Schema : FleetManifestRowSchema).safeParse(
+      raw.value,
+    );
     if (!parsed.success) {
       errors.push(`manifest row ${index + 1} invalid: ${firstSchemaIssue(parsed.error)}`);
       continue;
     }
     const row = parsed.data as FleetManifestRow;
-    if (isV8) {
+    if (isAudited) {
       if (!("resume_usage" in row)) {
-        errors.push(`manifest row ${index + 1} invalid: v8 row is missing resume_usage`);
+        errors.push(`manifest row ${index + 1} invalid: audited row is missing resume_usage`);
         continue;
       }
       if (row.attempt_history.some((attempt) => !("usage" in attempt))) {
-        errors.push(`manifest row ${index + 1} invalid: v8 attempt is missing usage`);
+        errors.push(`manifest row ${index + 1} invalid: audited attempt is missing usage`);
         continue;
       }
     }
@@ -1871,9 +1901,14 @@ function validateAuthenticatedStartingSliceCohort(
     if (row.report_receipt_bound === true) {
       manifestReceiptBoundRuns += 1;
       if (
-        ![4, 5, 6, 7, PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION].includes(
-          summary.model_attestation_schema_version,
-        )
+        ![
+          4,
+          5,
+          6,
+          7,
+          HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION,
+          PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION,
+        ].includes(summary.model_attestation_schema_version)
       ) {
         errors.push(
           `seed ${seed}: receipt-bound row requires a receipt-aware Codex attestation schema`,
@@ -1885,10 +1920,10 @@ function validateAuthenticatedStartingSliceCohort(
         `seed ${seed}: attempts ${row.attempts} != attempt_history length ${row.attempt_history.length}`,
       );
     }
-    if (isV8) {
+    if (isAudited) {
       if (row.status === "skipped-resume") {
         if (row.resume_usage === undefined || row.resume_usage === null) {
-          errors.push(`seed ${seed}: v8 skipped-resume row is missing resume_usage`);
+          errors.push(`seed ${seed}: audited skipped-resume row is missing resume_usage`);
         } else {
           const expectedUsage = skippedResumeUsageRecord();
           if (!isDeepStrictEqual(row.resume_usage, expectedUsage)) {
@@ -1897,7 +1932,7 @@ function validateAuthenticatedStartingSliceCohort(
           recomputedUsageRecords.push(expectedUsage);
         }
       } else if (row.resume_usage !== null) {
-        errors.push(`seed ${seed}: v8 launched row must use null resume_usage`);
+        errors.push(`seed ${seed}: audited launched row must use null resume_usage`);
       }
     }
     if (row.status === "skipped-resume") {
@@ -1928,8 +1963,8 @@ function validateAuthenticatedStartingSliceCohort(
         );
       }
       if (attempt.classification === "verified") {
-        if (isV8 && attempt.usage === undefined) {
-          errors.push(`seed ${seed} attempt ${attempt.attempt}: v8 attempt is missing usage`);
+        if (isAudited && attempt.usage === undefined) {
+          errors.push(`seed ${seed} attempt ${attempt.attempt}: audited attempt is missing usage`);
         }
         if (attempt.exit !== 0) {
           errors.push(`seed ${seed} attempt ${attempt.attempt}: verified attempt must exit 0`);
@@ -1987,15 +2022,17 @@ function validateAuthenticatedStartingSliceCohort(
             errors,
             referencedArchiveDirectories,
           );
-          if (isV8) {
+          if (isAudited) {
             if (attempt.usage === undefined) {
-              errors.push(`seed ${seed} attempt ${attempt.attempt}: v8 attempt is missing usage`);
+              errors.push(
+                `seed ${seed} attempt ${attempt.attempt}: audited attempt is missing usage`,
+              );
             }
             const names = attempt.archive.usage_artifacts;
             const prefix = basename(row.report, ".md");
             if (names === undefined) {
               errors.push(
-                `seed ${seed} attempt ${attempt.attempt}: v8 archive is missing usage_artifacts`,
+                `seed ${seed} attempt ${attempt.attempt}: audited archive is missing usage_artifacts`,
               );
             } else if (
               (names.primary_envelope !== null && names.primary_envelope !== `${prefix}.json`) ||
@@ -2013,7 +2050,7 @@ function validateAuthenticatedStartingSliceCohort(
                 ))
             ) {
               errors.push(
-                `seed ${seed} attempt ${attempt.attempt}: v8 usage_artifacts do not bind canonical archived evidence`,
+                `seed ${seed} attempt ${attempt.attempt}: audited usage_artifacts do not bind canonical archived evidence`,
               );
             } else {
               const expectedUsage = usageRecordFromFailedAttempt({
@@ -2039,7 +2076,7 @@ function validateAuthenticatedStartingSliceCohort(
     }
     const rowStatus = (row as unknown as { status: "verified" | "skipped-resume" | "failed" })
       .status;
-    if (isV8 && rowStatus === "failed") {
+    if (isAudited && rowStatus === "failed") {
       failedRows += 1;
       errors.push(`seed ${seed}: ${options.cohortKind} cohort contains a failed slot`);
       continue;
@@ -2303,7 +2340,7 @@ function validateAuthenticatedStartingSliceCohort(
       continue;
     }
     const artifactFacts = artifactValidation.facts;
-    if (isV8 && row.status === "verified") {
+    if (isAudited && row.status === "verified") {
       const terminalAttempt = row.attempt_history.at(-1);
       const expectedUsage = usageRecordFromVerifiedPrimaryEnvelope(
         primaryEnvelopeBytes.toString("utf8"),
@@ -2350,18 +2387,54 @@ function validateAuthenticatedStartingSliceCohort(
             `seed ${seed}: current Spark attestation lacks exact ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} evidence`,
           );
         }
+      } else if (row.model === "gpt-5.6-terra") {
+        if (
+          artifactFacts.code_mode_contract !== null ||
+          artifactFacts.transport_contract !== GAME_DIRECT_MCP_TRANSPORT_CONTRACT ||
+          attestationRecord.transport_contract !== GAME_DIRECT_MCP_TRANSPORT_CONTRACT ||
+          Object.hasOwn(attestationRecord, "code_mode_contract")
+        ) {
+          errors.push(
+            `seed ${seed}: current Terra attestation lacks exact ${GAME_DIRECT_MCP_TRANSPORT_CONTRACT} evidence`,
+          );
+        }
       } else if (
         artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
         artifactFacts.transport_contract !== null ||
         attestationRecord.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
         Object.hasOwn(attestationRecord, "transport_contract")
       ) {
-        errors.push(`seed ${seed}: current Codex attestation lacks strict code-mode evidence`);
+        errors.push(
+          `seed ${seed}: current ${row.model} attestation lacks exact ${PURE_FLEET_CODE_MODE_CONTRACT} evidence`,
+        );
+      }
+    } else if (
+      summary.model_attestation_schema_version ===
+      HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION
+    ) {
+      if (row.model === SPARK_DIRECT_MCP_MODEL) {
+        if (
+          artifactFacts.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+          artifactFacts.code_mode_contract !== null ||
+          attestationRecord.transport_contract !== SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+          Object.hasOwn(attestationRecord, "code_mode_contract")
+        ) {
+          errors.push(
+            `seed ${seed}: historical v8 Spark attestation lacks exact ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} evidence`,
+          );
+        }
+      } else if (
+        artifactFacts.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+        artifactFacts.transport_contract !== null ||
+        attestationRecord.code_mode_contract !== PURE_FLEET_CODE_MODE_CONTRACT ||
+        Object.hasOwn(attestationRecord, "transport_contract")
+      ) {
+        errors.push(
+          `seed ${seed}: historical v8 ${row.model} attestation lacks exact ${PURE_FLEET_CODE_MODE_CONTRACT} evidence`,
+        );
       }
     } else if (artifactFacts.transport_contract !== null) {
-      errors.push(
-        `seed ${seed}: ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} evidence requires the current Codex attestation schema`,
-      );
+      errors.push(`seed ${seed}: direct-MCP evidence requires attestation v8 or current v9`);
     }
     if (attestation.schema_version !== summary.model_attestation_schema_version) {
       errors.push(
@@ -2410,7 +2483,8 @@ function validateAuthenticatedStartingSliceCohort(
       errors.push(`seed ${seed}: model attestation Codex rollout facts differ`);
     }
     if (
-      attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION &&
+      (attestation.schema_version === HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION ||
+        attestation.schema_version === PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION) &&
       (authenticatedCodexClient === null ||
         attestation.codex_cli_version !== authenticatedCodexClient.cli_version ||
         attestation.codex_client_authority_sha256 !== authenticatedCodexClient.authority_sha256)
@@ -2555,37 +2629,39 @@ function validateAuthenticatedStartingSliceCohort(
       `manifest receipt-bound runs ${manifestReceiptBoundRuns} != summary ${summary.receipt_bound_runs ?? 0}`,
     );
   }
-  if (isV8) {
-    const v8Summary = summary as z.infer<typeof FleetSummaryV8Schema>;
+  if (isAudited) {
+    const audited = summary as
+      | z.infer<typeof FleetSummaryV8Schema>
+      | z.infer<typeof FleetSummaryV9Schema>;
     let recomputedUsage: unknown;
     try {
       recomputedUsage = summarizeFleetUsage(recomputedUsageRecords);
-      if (!isDeepStrictEqual(v8Summary.usage, recomputedUsage)) {
+      if (!isDeepStrictEqual(audited.usage, recomputedUsage)) {
         errors.push("summary usage differs from independently recomputed attempt usage");
       }
     } catch (error) {
       errors.push(
-        `could not summarize v8 usage: ${error instanceof Error ? error.message : String(error)}`,
+        `could not summarize audited usage: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
     if (
-      v8Summary.usage.attempt_count !== v8Summary.total_attempts + v8Summary["skipped-resume"] ||
-      v8Summary.usage.launched_attempt_count !== v8Summary.total_attempts ||
-      v8Summary.usage.skipped_resume_count !== v8Summary["skipped-resume"] ||
-      v8Summary.usage.measured_attempt_count + v8Summary.usage.unrecoverable_attempt_count !==
-        v8Summary.total_attempts ||
-      v8Summary.usage.complete !== (v8Summary.usage.unrecoverable_attempt_count === 0)
+      audited.usage.attempt_count !== audited.total_attempts + audited["skipped-resume"] ||
+      audited.usage.launched_attempt_count !== audited.total_attempts ||
+      audited.usage.skipped_resume_count !== audited["skipped-resume"] ||
+      audited.usage.measured_attempt_count + audited.usage.unrecoverable_attempt_count !==
+        audited.total_attempts ||
+      audited.usage.complete !== (audited.usage.unrecoverable_attempt_count === 0)
     ) {
-      errors.push("summary v8 usage count arithmetic is inconsistent");
+      errors.push("audited summary usage count arithmetic is inconsistent");
     }
     if (
-      !v8Summary.usage.complete ||
-      v8Summary.usage.measured_attempt_count !== options.expectedCount ||
-      v8Summary.usage.unrecoverable_attempt_count !== 0 ||
-      v8Summary.usage.skipped_resume_count !== 0
+      !audited.usage.complete ||
+      audited.usage.measured_attempt_count !== options.expectedCount ||
+      audited.usage.unrecoverable_attempt_count !== 0 ||
+      audited.usage.skipped_resume_count !== 0
     ) {
       errors.push(
-        `current ${options.cohortKind} cohort requires complete measured no-resume v8 usage`,
+        `current ${options.cohortKind} cohort requires complete measured no-resume audited usage`,
       );
     }
   }

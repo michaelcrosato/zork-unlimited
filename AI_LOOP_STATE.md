@@ -173,3 +173,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Rec: hotspot-4e42fc3a (content_fix/M; score=2.5).
 - Playtest: overworld.
 - Guard: blind report + health + verify:integrity before commit.
+## AFK Cycle 2026-08-13T08-16-26-310Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-13T08-16-26-310Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-4e42fc3a (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

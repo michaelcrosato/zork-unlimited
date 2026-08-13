@@ -542,9 +542,36 @@ describe("thread-bound Codex rollout capture", () => {
     });
   });
 
+  it("writes a distinct v5 receipt for an exact Terra game-direct capture", () => {
+    const root = temporaryRoot("af-codex-game-direct-capture-");
+    const home = join(root, "existing-home");
+    const player = join(root, "player");
+    const paths = capturePaths(root);
+    mkdirSync(home);
+    mkdirSync(player);
+    writeFileSync(paths.events, providerEvents());
+    const expected = cwdRollout(player, THREAD_ID, "gpt-5.6-terra");
+    writeRollout(home, THREAD_ID, expected);
+
+    capture(home, paths, player, "game-direct-mcp-v1");
+
+    expect(readFileSync(paths.destination, "utf8")).toBe(expected);
+    expect(JSON.parse(readFileSync(paths.receipt, "utf8"))).toMatchObject({
+      schema_version: 5,
+      binding: "runner_work_player",
+      transport_contract: "game-direct-mcp-v1",
+      recorded_session_cwd: player,
+      recorded_turn_cwd: player,
+      copied_rollout_sha256: createHash("sha256").update(expected).digest("hex"),
+    });
+  });
+
   it("rejects direct-MCP cross-labeling before publishing rollout evidence", () => {
     for (const [model, contract, reason] of [
       ["gpt-5.6-terra", "spark-direct-mcp-v1", /requires exact model gpt-5\.3-codex-spark/i],
+      ["gpt-5.3-codex-spark", "game-direct-mcp-v1", /requires exact model gpt-5\.6-terra/i],
+      ["gpt-5.6-sol", "game-direct-mcp-v1", /requires exact model gpt-5\.6-terra/i],
+      ["gpt-5.6-luna", "game-direct-mcp-v1", /requires exact model gpt-5\.6-terra/i],
       ["gpt-5.3-codex-spark", "direct", /transport contract must be exactly/i],
     ] as const) {
       const root = temporaryRoot("af-codex-direct-cross-label-");

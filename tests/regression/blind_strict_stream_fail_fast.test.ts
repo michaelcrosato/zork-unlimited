@@ -59,7 +59,7 @@ function bashPath(path: string): string {
 function installFakeCodex(
   root: string,
   body: string,
-  cliVersion = "0.144.1",
+  cliVersion = "0.146.0",
 ): { home: string; selected: string } {
   const home = join(root, "home");
   const selected = join(root, "fake-codex");
@@ -201,6 +201,7 @@ describe("Codex strict streaming fail-fast", () => {
     const out = join(root, "reports", "attempt");
     const survived = join(root, "provider-descendant-survived");
     const threadId = "55555555-5555-4555-8555-555555555555";
+    const turnId = "65555555-5555-4555-8555-555555555555";
     const fixture = installFakeCodex(
       root,
       `home="\${CODEX_HOME}"
@@ -213,7 +214,7 @@ rollout_dir="\${home}/sessions/2026/07/26"
 mkdir -p "\${rollout_dir}"
 rollout="\${rollout_dir}/rollout-2026-07-26T12-01-00-${threadId}.jsonl"
 printf '{"type":"session_meta","payload":{"id":"%s","cwd":"%s"}}\\n' "${threadId}" "\${cwd}" > "\${rollout}"
-printf '{"type":"turn_context","payload":{"cwd":"%s","model":"gpt-5.6-terra"}}\\n' "\${cwd}" >> "\${rollout}"
+printf '{"type":"turn_context","payload":{"turn_id":"${turnId}","cwd":"%s","model":"gpt-5.6-terra"}}\\n' "\${cwd}" >> "\${rollout}"
 printf '%s\\n' '{"type":"response_item","payload":{"type":"custom_tool_call","id":"wrapper-item-1","status":"completed","call_id":"call-wrapper-1","name":"exec","input":"// @exec: {\\"yield_time_ms\\":120000}\\ntext(await tools.mcp__adventureforge__start_overworld({}));\\n"}}' >> "\${rollout}"
 (
   sleep 2
@@ -231,7 +232,7 @@ while :; do sleep 1; done
       expect(result.error, output).toBeUndefined();
       expect(result.status, output).toBe(43);
       expect(output).toMatch(/strict stream rejected/i);
-      expect(output).toMatch(/forbidden wrapper program/i);
+      expect(output).toMatch(/forbidden private response item/i);
       expectNoPublishedEvidence(out);
       const diagnosticPath = `${out}.strict-rejection.json`;
       const rawWrapper = "text(await tools.mcp__adventureforge__start_overworld({}));";
@@ -242,24 +243,85 @@ while :; do sleep 1; done
       expect(diagnostic).not.toContain("call-wrapper-1");
       expect(diagnostic).not.toMatch(/reasoning|token|cwd|path|result/i);
       expect(JSON.parse(diagnostic)).toMatchObject({
+        schema_version: 2,
         acceptance_eligible: false,
         canonical: false,
-        code_mode_contract: "strict-code-mode-v2",
         ignored: true,
-        kind: "strict_wrapper_rejection_diagnostic",
+        kind: "strict_stream_rejection_diagnostic",
         surface: "private_rollout",
+        transport_contract: "game-direct-mcp-v1",
         binding: {
           thread_id: threadId,
-          wrapper_item_id_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
-          wrapper_call_id_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+          row_projection_bytes: expect.any(Number),
+          row_projection_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
         },
-        wrapper: {
-          failure: "strict_yield_pragma_not_exact",
-          input_bytes: expect.any(Number),
-          input_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
-        },
+        rejection: { failure: "forbidden_response_item" },
       });
       if (process.platform !== "win32") expect(statSync(diagnosticPath).mode & 0o777).toBe(0o600);
+      await delay(2_500);
+      expect(existsSync(survived)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("terminates Terra's owned provider tree when the fresh start completes with an error", async () => {
+    const root = mkdtempSync(join(tmpdir(), "af-direct-failed-start-"));
+    const out = join(root, "reports", "attempt");
+    const survived = join(root, "provider-descendant-survived");
+    const threadId = "75757575-7575-4757-8757-757575757575";
+    const turnId = "85757575-7575-4757-8757-757575757575";
+    const fixture = installFakeCodex(
+      root,
+      `home="\${CODEX_HOME}"
+cwd="\${PWD}"
+if command -v cygpath >/dev/null 2>&1; then
+  home="$(cygpath -u "\${home}")"
+  cwd="$(cygpath -m "\${cwd}")"
+fi
+rollout_dir="\${home}/sessions/2026/08/12"
+mkdir -p "\${rollout_dir}"
+rollout="\${rollout_dir}/rollout-2026-08-12T12-00-00-${threadId}.jsonl"
+printf '{"type":"session_meta","payload":{"id":"%s","cwd":"%s"}}\\n' "${threadId}" "\${cwd}" > "\${rollout}"
+printf '{"type":"turn_context","payload":{"turn_id":"${turnId}","cwd":"%s","model":"gpt-5.6-terra"}}\\n' "\${cwd}" >> "\${rollout}"
+printf '%s\\n' '{"type":"response_item","payload":{"type":"function_call","id":"fresh-start-item","call_id":"fresh-start-call","name":"start_overworld","namespace":"mcp__adventureforge","arguments":"{}","internal_chat_message_metadata_passthrough":{"turn_id":"${turnId}"}}}' >> "\${rollout}"
+printf '%s\\n' '{"type":"event_msg","payload":{"type":"mcp_tool_call_end","call_id":"fresh-start-call","invocation":{"server":"adventureforge","tool":"start_overworld","arguments":{}},"result":{"Ok":{"content":[{"type":"text","text":"SECRET_FAILED_START_OUTPUT"}],"isError":true}}}}' >> "\${rollout}"
+(
+  sleep 2
+  printf 'escaped\\n' > "\${FAKE_MCP_SURVIVED}"
+) &
+printf '%s\\n' '{"type":"thread.started","thread_id":"${threadId}"}'
+while :; do sleep 1; done
+`,
+    );
+    try {
+      const result = launchFakeCodex(cleanGit, fixture, out, "73658", {
+        FAKE_MCP_SURVIVED: bashPath(survived),
+      });
+      const output = combinedOutput(result);
+      expect(result.error, output).toBeUndefined();
+      expect(result.status, output).toBe(43);
+      expect(output).toMatch(/strict stream rejected/i);
+      expect(output).toMatch(/fresh start completed with an error/i);
+      expect(output).not.toContain("SECRET_FAILED_START_OUTPUT");
+      expectNoPublishedEvidence(out);
+
+      const diagnostic = readFileSync(`${out}.strict-rejection.json`, "utf8");
+      expect(diagnostic).not.toContain("SECRET_FAILED_START_OUTPUT");
+      expect(diagnostic).not.toContain("fresh-start-call");
+      expect(JSON.parse(diagnostic)).toMatchObject({
+        schema_version: 2,
+        acceptance_eligible: false,
+        canonical: false,
+        ignored: true,
+        kind: "strict_stream_rejection_diagnostic",
+        surface: "private_rollout",
+        transport_contract: "game-direct-mcp-v1",
+        binding: { thread_id: threadId, row_ordinal: 4 },
+        rejection: { failure: "direct_failed_fresh_start" },
+        usage_lower_bound: null,
+      });
+
       await delay(2_500);
       expect(existsSync(survived)).toBe(false);
     } finally {
@@ -593,7 +655,7 @@ exit 0
       selected,
       `#!/usr/bin/env bash
 if [[ "\${1:-}" == "--version" ]]; then
-  printf 'codex-cli 0.144.1\\n'
+  printf 'codex-cli 0.146.0\\n'
   exit 0
 fi
 home="\${CODEX_HOME}"
@@ -612,7 +674,6 @@ printf '{"type":"turn_context","payload":{"cwd":"%s","model":"gpt-5.6-terra"}}\\
   printf 'fake MCP escaped its provider tree\\n' > "\${FAKE_MCP_SURVIVED}"
 ) &
 printf '%s\\n' '{"type":"thread.started","thread_id":"${threadId}"}'
-printf '%s\\n' '{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Under-development features enabled: code_mode_only. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set \u0060suppress_unstable_features_warning = true\u0060 in /tmp/config.toml."}}'
 printf '%s\\n' '{"type":"turn.started"}'
 printf '%s\\n' '{"type":"item.started","item":{"id":"item_2","type":"mcp_tool_call","server":"codex","tool":"read_thread","arguments":{},"result":null,"error":null,"status":"in_progress"}}'
 while :; do sleep 1; done

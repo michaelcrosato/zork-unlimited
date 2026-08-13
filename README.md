@@ -217,11 +217,16 @@ Full reference: [`docs/testing_pyramid.md`](./docs/testing_pyramid.md).
   retention evidence. Milestone fleets run 100 seed/model variants of the same
   neutral player contract; `fleet:mock` is a zero-token structural CI stand-in.
   Current Codex runs authenticate the selected model-specific transport. Spark
-  uses a direct-MCP capture receipt v4 (`spark-direct-mcp-v1`); Sol, Terra, and
-  Luna use a strict code-mode receipt v3 (`strict-code-mode-v2`). Fleet
-  attestation v8 binds the exact provider, model, transport, CLI, rollout, and
-  receipt. Older receipt and attestation schemas remain historical readers only
-  and cannot satisfy a current run or resume.
+  uses direct-MCP capture receipt v4 (`spark-direct-mcp-v1`) and Terra uses
+  game-direct capture receipt v5 (`game-direct-mcp-v1`); each direct model is
+  launched through its own tracked game-only model catalog. Terra direct pins a
+  disabled multi-agent topology and API-request reasoning-summary mode `none`;
+  its exact 0.146 rollout records the compatibility-only `summary: "auto"`
+  sentinel. Historical strict Terra remains v2. Sol and Luna use strict
+  code-mode receipt v3 (`strict-code-mode-v2`). Fleet attestation v9 binds the
+  exact provider, model, transport, CLI, rollout, and receipt. Older receipt and
+  attestation schemas, including immutable v8 strict-Terra evidence, remain
+  historical readers only and cannot satisfy a current run or resume.
 - **Tier 3 — feedback compiler** (`src/feedback/`): clusters and ranks Tier-1
   findings and verified Tier-2 reports into `hotspots.{json,md}`
   (`npm run feedback:compile`), writes a separate `retention.json` that admits

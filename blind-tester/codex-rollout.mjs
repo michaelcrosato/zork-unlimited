@@ -1095,14 +1095,20 @@ function sha256(bytes) {
 
 const STRICT_CODE_MODE_CONTRACT = "strict-code-mode-v2";
 export const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1";
+export const GAME_DIRECT_MCP_TRANSPORT_CONTRACT = "game-direct-mcp-v1";
 const SPARK_DIRECT_MCP_MODEL = "gpt-5.3-codex-spark";
+const GAME_DIRECT_MCP_MODEL = "gpt-5.6-terra";
 
 function exactCaptureTransportContract(value) {
-  if (value === STRICT_CODE_MODE_CONTRACT || value === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT) {
+  if (
+    value === STRICT_CODE_MODE_CONTRACT ||
+    value === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ||
+    value === GAME_DIRECT_MCP_TRANSPORT_CONTRACT
+  ) {
     return value;
   }
   fail(
-    `Codex capture transport contract must be exactly ${STRICT_CODE_MODE_CONTRACT} or ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT}`,
+    `Codex capture transport contract must be exactly ${STRICT_CODE_MODE_CONTRACT}, ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT}, or ${GAME_DIRECT_MCP_TRANSPORT_CONTRACT}`,
   );
 }
 
@@ -1382,6 +1388,14 @@ export function captureThreadBoundCodexRollout(
       `Codex ${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} capture requires exact model ${SPARK_DIRECT_MCP_MODEL}`,
     );
   }
+  if (
+    exactTransportContract === GAME_DIRECT_MCP_TRANSPORT_CONTRACT &&
+    recorded.turnModel !== GAME_DIRECT_MCP_MODEL
+  ) {
+    fail(
+      `Codex ${GAME_DIRECT_MCP_TRANSPORT_CONTRACT} capture requires exact model ${GAME_DIRECT_MCP_MODEL}`,
+    );
+  }
   const expectedAuthority = canonicalExistingDirectory(expectedCwd, "Codex expected player cwd");
   const sessionAuthority = canonicalExistingDirectory(
     recorded.sessionCwd,
@@ -1399,10 +1413,15 @@ export function captureThreadBoundCodexRollout(
   }
 
   const receiptBody = {
-    schema_version: exactTransportContract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT ? 4 : 3,
+    schema_version:
+      exactTransportContract === GAME_DIRECT_MCP_TRANSPORT_CONTRACT
+        ? 5
+        : exactTransportContract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
+          ? 4
+          : 3,
     binding: "runner_work_player",
-    ...(exactTransportContract === SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
-      ? { transport_contract: SPARK_DIRECT_MCP_TRANSPORT_CONTRACT }
+    ...(exactTransportContract !== STRICT_CODE_MODE_CONTRACT
+      ? { transport_contract: exactTransportContract }
       : { code_mode_contract: STRICT_CODE_MODE_CONTRACT }),
     recorded_session_cwd: recorded.sessionCwd,
     recorded_turn_cwd: recorded.turnCwd,

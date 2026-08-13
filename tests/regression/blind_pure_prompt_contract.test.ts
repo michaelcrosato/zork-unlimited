@@ -21,6 +21,10 @@ const directTransport = readFileSync(
   join(ROOT, "blind-tester", "prompt-transports", "spark-direct-mcp-v1.md"),
   "utf8",
 );
+const gameDirectTransport = readFileSync(
+  join(ROOT, "blind-tester", "prompt-transports", "game-direct-mcp-v1.md"),
+  "utf8",
+);
 const prompt = fillPrompt(promptTemplate, {
   startInstruction: "start",
   seed: 1,
@@ -33,8 +37,17 @@ const sparkPrompt = fillPrompt(sparkPromptTemplate, {
   persona: "",
   transport: directTransport,
 });
+const terraPrompt = fillPrompt(promptTemplate, {
+  startInstruction: "start",
+  seed: 1,
+  persona: "",
+  transport: gameDirectTransport,
+});
 const protocol = readFileSync(join(ROOT, "docs", "blind_playtest_protocol.md"), "utf8");
 const readme = readFileSync(join(ROOT, "blind-tester", "README.md"), "utf8");
+const rootReadme = readFileSync(join(ROOT, "README.md"), "utf8");
+const startingSlice = readFileSync(join(ROOT, "docs", "STARTING_SLICE.md"), "utf8");
+const testingPyramid = readFileSync(join(ROOT, "docs", "testing_pyramid.md"), "utf8");
 const runner = readFileSync(join(ROOT, "blind-tester", "run.sh"), "utf8");
 const mockAgent = readFileSync(join(ROOT, "blind-tester", "mock-agent.mjs"), "utf8");
 const CODEX_EXEC_YIELD_PRAGMA = '// @exec: {"yield_time_ms": 120000}';
@@ -58,6 +71,49 @@ function protocolParagraph(marker: string): string {
 }
 
 describe("pure blind prompt + runner contract", () => {
+  it("documents the exact Terra-direct v9 boundary without rewriting historical v8", () => {
+    expect(rootReadme).toContain("game-direct capture receipt v5 (`game-direct-mcp-v1`)");
+    expect(rootReadme).toContain(
+      "each direct model is\n  launched through its own tracked game-only model catalog",
+    );
+    expect(rootReadme).toContain("Fleet attestation v9 binds");
+    expect(readme).toContain("Terra's live prompt, catalog,\n  and game-direct fragment");
+    expect(readme).toContain("`codex-model-catalog-terra-v1.json`");
+    expect(readme).toContain("ambient cache contents do not choose shell\nor tool mode");
+    expect(readme).toContain("current Codex v9 binds");
+    expect(protocol).toContain("Terra-only `game-direct-mcp-v1`");
+    expect(protocol).toContain("Current fleet publication uses Codex attestation v9");
+    expect(protocol).toContain("Terra's catalog and model-scoped launch record the");
+    expect(protocol).toContain('`multi_agent_version: "disabled"`, no\n`multi_agent_mode`');
+    expect(protocol).toContain('compatibility-only rollout sentinel `summary: "auto"`');
+    expect(protocol).toContain(
+      "Responses request omits `reasoning.summary` when that value is `none`",
+    );
+    expect(protocol).toContain(
+      "The verifier also requires every private\nreasoning response item to retain an empty summary array",
+    );
+    expect(protocol).toMatch(/Strict Terra keeps its\s+v2 team\/mode profile/u);
+    expect(protocol).toContain('`comp_hash: "3000"`');
+    expect(protocol).toContain(
+      "Both direct transports reject every\ninterim assistant message before the one final interview",
+    );
+    expect(protocol).toContain(
+      "fresh live reduced-profile game-direct\ncanary must still confirm the repo-owned override before fleet spend",
+    );
+    expect(protocol).toContain("Spark's and Terra's tracked player catalogs preload");
+    expect(protocol).toContain("There is no cache-derived transport\nfallback");
+    expect(protocol).not.toContain("Sol and Terra use the\nv2 `explicitRequestOnly` profile");
+    expect(startingSlice).toContain("Current Codex v9 is model-discriminated");
+    expect(testingPyramid).toContain("Terra game-direct\ncapture schema v5");
+
+    for (const currentContract of [rootReadme, readme, protocol, startingSlice, testingPyramid]) {
+      expect(currentContract).not.toMatch(/current Codex v8/i);
+      expect(currentContract).not.toMatch(/Sol, Terra, and\s+Luna use\s+(?:a )?strict/i);
+    }
+    expect(protocol).toContain("Codex attestations v3-v8\nremain readable historical evidence");
+    expect(startingSlice).toContain("transport-bound v8");
+  });
+
   it("pins one non-yielding Codex exec lifecycle without weakening historical evidence", () => {
     const transport = promptBullet(
       "- For every Codex `functions.exec` AdventureForge gameplay wrapper",
@@ -289,6 +345,12 @@ describe("pure blind prompt + runner contract", () => {
     expect(sparkPrompt).not.toContain("text(await tools.");
     expect(sparkPrompt).not.toContain("{{TRANSPORT_INSTRUCTIONS}}");
     expect(sparkPrompt).not.toContain("{{PERSONA}}");
+    expect(terraPrompt).toContain("`mcp__adventureforge__start_overworld({})` exactly once");
+    expect(terraPrompt).toContain("Before any words or other action");
+    expect(terraPrompt).toContain("Never use any other tool");
+    expect(terraPrompt).not.toContain("functions.exec");
+    expect(terraPrompt).not.toContain(CODEX_EXEC_YIELD_PRAGMA);
+    expect(terraPrompt).not.toContain("{{TRANSPORT_INSTRUCTIONS}}");
     expect(prompt).not.toContain("{{TRANSPORT_INSTRUCTIONS}}");
     expect(prompt).toContain('Never put `"none"`,\n  `"none observed"`');
     expect(prompt.trimEnd().endsWith("```")).toBe(true);

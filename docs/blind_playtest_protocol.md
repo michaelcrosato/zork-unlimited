@@ -179,16 +179,21 @@ JavaScript launchers fail closed. The effective target must return one
 `codex-cli <semver>` line for `--version`; the probe has a fixed five-second
 timeout, one-second forced-kill grace, and 1,024-byte capture ceiling.
 
-`spark-direct-mcp-v1` is audited only for exact `codex-cli 0.146.0`. A different
-version fails the initial client gate with exit 42 before provider launch and an
-actionable `BLIND_CODEX_BIN` diagnostic. This compatibility restriction does not
-change the existing version-pinning policy for strict Sol, Terra, or Luna runs.
+`spark-direct-mcp-v1` and Terra-only `game-direct-mcp-v1` are audited only for
+exact `codex-cli 0.146.0`. A different version fails the initial client gate
+with exit 42 before provider launch and an actionable `BLIND_CODEX_BIN`
+diagnostic. This compatibility restriction does not change the existing
+version-pinning policy for strict Sol or Luna runs.
 
 The preflight does not read or interpret `CODEX_HOME/models_cache.json`. Cache
 version eligibility, remote refresh, and persistence are selected-client
 behavior; a cache written by a different Codex version is an ordinary cache miss,
 not a runner compatibility or authentication failure. Repository code never
 repairs or deletes that client-owned cache and never inspects login data.
+Direct-player launch supplies the exact tracked model-specific
+`model_catalog_json`, selecting the CLI's static catalog manager so ambient cache
+contents cannot choose shell or tool mode. There is no cache-derived transport
+fallback.
 `--preflight-only`, used by the shared fleet gate, does not resolve, read, or
 enumerate `CODEX_HOME` and creates no report or player artifacts. Fleets perform
 that shared 15-second and output-bounded check before directory or lock creation,
@@ -209,12 +214,19 @@ thread and the isolated player directory, so unrelated concurrent Codex sessions
 cannot be substituted. Transport is selected by the exact requested model. Exact
 `gpt-5.3-codex-spark` uses the audited native `spark-direct-mcp-v1` transport:
 code mode and native tool search are disabled, and the exact pure AdventureForge
-tool set is preloaded through the tracked game-only player catalog. That catalog
-removes shell/patch surfaces, while Spark-only runner flags remove optional
-instruction injectors; both are bound by the required clean build commit. Exact
-`gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` retain
-`strict-code-mode-v2`, with `--enable code_mode_only`. A run cannot silently
-fall back or cross a transport boundary.
+tool set is preloaded through the tracked game-only player catalog. Spark and
+Terra each have one exact model-specific catalog that removes shell, patch,
+search, skills, and model-message surfaces; selects native direct tool mode; and
+applies the exact game-only base instructions. The same runner flags remove
+optional instruction injectors, and the required clean build commit binds the
+selected catalog and launch configuration. Terra retains its bundled
+10,000-token truncation policy and 272,000-token context capacity; it does not
+inherit Spark's 16 KiB byte policy. Exact `gpt-5.6-terra` uses Terra-only
+`game-direct-mcp-v1` with the same reduced, game-only native lifecycle and no
+code mode or freeform wrapper. Exact
+`gpt-5.6-sol` and `gpt-5.6-luna` retain `strict-code-mode-v2`, with
+`--enable code_mode_only`. A run cannot silently fall back or cross a
+model-specific transport boundary.
 
 All current pure Codex transports fail closed on any `compacted` or
 `context_compacted` lifecycle and on any second `world_state` or
@@ -225,7 +237,7 @@ headroom; it does not establish that compaction is disabled. A journey that
 crosses that boundary is useful diagnostic evidence only and cannot publish a
 verified pure report.
 
-Spark begins by calling the preloaded `start_overworld({})` function directly.
+Spark and Terra begin by calling the preloaded `start_overworld({})` function directly.
 Tool search, resource/template discovery, planning/task tools, another MCP
 server, non-game tools, or any other unexpected lifecycle event reject the run.
 After the start, each native function must remain in the build-attested pure
@@ -265,20 +277,35 @@ the legacy direct-result/content-block renderers; strict v1 requires the exact
 historical declaration/emitter and remains subject to the full topology audit.
 
 The private rollout has one finite task/input/context topology, a byte-bound
-text-only prompt, and the model-specific prelude profile. Sol and Terra use the
-v2 `explicitRequestOnly` profile; Luna uses its native v1 profile. Their strict
-code-mode transport permits progress commentary only when each private assistant
-message is immediately paired to the CLI's exact `agent_message` event, appears
-either once after the authenticated prompt and before the first game call or
-after one visible game result and before the next game call, and cross-binds in
-text and order to the public event stream. Exactly one paired `final_answer`
-must follow the last visible game result. Current Spark direct play disables
-optional context injectors and has one exact global-AGENTS input before the
-bound world, turn, prompt, and user-message rows; its turn context records
-`multi_agent_version: "disabled"`. The session's exact game-only base
-instructions and catalog compatibility hash are authenticated as applied, and
-Spark still rejects every interim assistant message before its one final
-interview.
+text-only prompt, and the model-specific prelude profile. Strict Sol uses the v2
+`explicitRequestOnly` profile; strict Luna uses its native v1 profile. Their
+strict code-mode transport permits progress commentary only when each private
+assistant message is immediately paired to the CLI's exact `agent_message`
+event, appears either once after the authenticated prompt and before the first
+game call or after one visible game result and before the next game call, and
+cross-binds in text and order to the public event stream. Exactly one paired
+`final_answer` must follow the last visible game result. Native-direct Spark and
+Terra instead disable optional context injectors and admit one exact
+global-AGENTS input before the bound world, turn, prompt, and user-message rows.
+Spark records `multi_agent_version: "disabled"` and `comp_hash: "2911"` under
+its custom game-only catalog. Terra's catalog and model-scoped launch record the
+reduced Codex 0.146 profile: `multi_agent_version: "disabled"`, no
+`multi_agent_mode`, the compatibility-only rollout sentinel `summary: "auto"`,
+the exact game-only base instructions, and `comp_hash: "3000"`. Codex 0.146
+hard-codes that serialized summary sentinel; its effective turn configuration
+instead resolves the explicit runner setting before the catalog default, and the
+Responses request omits `reasoning.summary` when that value is `none`. The catalog
+and runner both pin that actual request setting to `none`; the catalog additionally
+declares the summary parameter unsupported so the request builder cannot send it
+even if the setting drifts. The catalog uses a null multi-agent version and the
+runner pins `agents.enabled=false`. The verifier also requires every private
+reasoning response item to retain an empty summary array. Strict Terra keeps its
+v2 team/mode profile. Both direct transports reject every
+interim assistant message before the one final interview.
+The Terra hash matches the CLI's exact bundled Terra metadata and a retained
+exact-0.146 strict-profile capture. A fresh live reduced-profile game-direct
+canary must still confirm the repo-owned override before fleet spend; any
+mismatch rejects rather than falling back.
 Injected permissions, skills,
 environment, apps, or collaboration-mode messages reject that profile. These
 profiles do not authorize a different transport.
@@ -311,13 +338,14 @@ provenance bound to the artifact, not a provider-signed snapshot proving which
 remote backend served the turn. The primary envelope's requested model and
 synthesized `modelUsage` are never model authority.
 Current Spark capture receipts use schema v4 with
-`transport_contract: "spark-direct-mcp-v1"`; current strict receipts retain
-schema v3 with `code_mode_contract: "strict-code-mode-v2"`. Receipt schemas
-v1-v3 remain readable for history, but do not establish current Spark transport
-eligibility. Current fleet publication uses Codex attestation v8, binding the
+`transport_contract: "spark-direct-mcp-v1"`; Terra game-direct receipts use
+schema v5 with `transport_contract: "game-direct-mcp-v1"`; Sol/Luna strict
+receipts retain schema v3 with `code_mode_contract: "strict-code-mode-v2"`.
+Receipt schemas v1-v4 remain readable for history, but do not establish the
+current Terra transport. Current fleet publication uses Codex attestation v9, binding the
 selected model-specific transport, frozen effective-client authority and CLI
 version, public/private cross-binding, rollout, capture receipt, and provider
-facts. Current resume and certification require v8. Codex attestations v3-v7
+facts. Current resume and certification require v9. Codex attestations v3-v8
 remain readable historical evidence but cannot be mixed into a new current
 cohort.
 The receipt is a trusted local runner assertion made while the isolated directory
@@ -328,7 +356,8 @@ it is neither cryptographic nor provider-signed attestation.
 
 ## Pure prompt boundary
 
-`blind-tester/prompt-overworld.md` is the locked strict-code live prompt;
+`blind-tester/prompt-overworld.md` is the locked live template used with either
+the strict fragment or the Terra game-direct fragment;
 `blind-tester/prompt-overworld-spark.md` is the compact locked Spark-direct
 equivalent. Either may tell the agent how to call the player MCP tools, retain
 the initial compact legend and
@@ -382,8 +411,8 @@ exactly `follow_overworld_session_goal` with the parent `session_id` and latest
 differently named goal tool. This binding adds no route advice: the game owns
 the passage and stops it at the objective, a road choice, or a resource boundary.
 
-Spark's tracked player catalog preloads the complete pure tool descriptor set,
-removes coding surfaces, and selects direct native function calls. The audit
+Spark's and Terra's tracked player catalogs preload the complete pure tool
+descriptor set, remove coding surfaces, and select direct native function calls. The audit
 requires the first call to be exact `start_overworld({})` and every later call to
 remain inside that build-attested set; a legal tool does not have to be named in
 the preceding result because its descriptor was already visible at start. The
@@ -400,11 +429,11 @@ commit binds that server, regression, catalog, and runner at launch. The copied
 Codex rollout does not contain the preloaded descriptor catalogue, so catalogue
 authority is explicitly build-bound rather than provider-signed runtime proof.
 
-Spark admission fingerprints hash the Spark-specific prompt template, model
+Direct-model fingerprints hash the selected model's prompt template, model
 catalog, transport fragment, runner, filler, and audits. Strict-model
-fingerprints instead hash the strict prompt/fragment and never inherit the Spark
-catalog. This makes either profile input drift invalidate admission before a
-cohort spends model tokens.
+fingerprints instead hash the strict prompt/fragment and never inherit a direct
+catalog. This makes any profile-input drift invalidate admission before a cohort
+spends model tokens.
 
 A non-death terminal quest step folds its result back automatically and stops
 echoing the child. A death ending does not complete that quest or resurrect the
@@ -627,13 +656,14 @@ outcomes, and journey result rather than relying on a filename or summary count.
 An adjacent runner-owned attestation binds each live member to its planned
 provider/model, selected model-specific transport, exact singleton model
 provenance, unique provider session, completed clean primary envelope, game
-session, and artifact hashes. Current Codex v8 additionally binds actual
+session, and artifact hashes. Current Codex v9 additionally binds actual
 provider, reasoning effort, turn id, working directory, public provider events,
 copied rollout JSONL, cross-bound capture receipt, receipt-binding provenance,
 exact CLI version, and fleet-wide effective-client authority. Diagnostic resume
-can reparse historical evidence; current resume and certification require v8 and
+can reparse historical evidence; current resume and certification require v9 and
 reject reuse, links, path escape, model recovery, or a transport mismatch.
-Historical Claude v2 and Codex v3-v7 attestations remain readable only.
+Historical Claude v2 and Codex v3-v8 attestations remain readable only; v8
+retains its original Spark-direct/strict-Sol-Terra-Luna meaning.
 
 ### Starting-slice certification
 

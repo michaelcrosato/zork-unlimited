@@ -34,20 +34,36 @@ const SPARK_PLAYER_INSTRUCTIONS =
   "Follow the user play request. Use only preloaded AdventureForge gameplay functions and " +
   "exact current player-visible values. Never use coding, planning, search, or MCP resource tools.";
 
-interface SparkModelCatalog {
+interface DirectModelCatalog {
   models: Array<{
     slug: string;
+    display_name: string;
+    description: string;
+    default_reasoning_level: string;
+    supported_reasoning_levels: Array<{ effort: string; description: string }>;
     shell_type: string;
+    visibility: string;
+    supported_in_api: boolean;
+    priority: number;
+    availability_nux: null;
+    upgrade: null;
     base_instructions: string;
+    model_messages: null;
     include_skills_usage_instructions: boolean;
+    support_verbosity: boolean;
+    default_verbosity: string | null;
     apply_patch_tool_type: null;
     truncation_policy: { mode: string; limit: number };
     supports_parallel_tool_calls: boolean;
+    supports_image_detail_original: boolean;
     context_window: number;
     auto_compact_token_limit: number | null;
+    comp_hash: string;
     experimental_supported_tools: unknown[];
     supports_search_tool: boolean;
+    use_responses_lite: boolean;
     tool_mode: string;
+    multi_agent_version: string | null;
   }>;
 }
 
@@ -468,7 +484,7 @@ exit 0
     }
   }, 30_000);
 
-  it("requires exact CLI compatibility only for Spark direct transport", () => {
+  it("requires exact CLI compatibility for every native direct transport", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-spark-cli-compatibility-"));
     const home = join(dir, "home");
     const selected = join(dir, "selected-codex");
@@ -512,7 +528,7 @@ exit 93
       expect(readFileSync(capture, "utf8")).toBe("version\n");
       expectNoOutputArtifacts(out);
 
-      const strictResult = spawnSync(
+      const terraResult = spawnSync(
         process.execPath,
         [
           "blind-tester/blind-launch.mjs",
@@ -537,11 +553,9 @@ exit 93
           timeout: 30_000,
         },
       );
-      const strictOutput = `${strictResult.stdout ?? ""}\n${strictResult.stderr ?? ""}\n${strictResult.error?.message ?? ""}`;
-      expect(strictResult.status, strictOutput).toBe(0);
-      expect(JSON.parse(strictResult.stdout ?? "")).toMatchObject({
-        cli_version: "0.144.1",
-      });
+      const terraOutput = `${terraResult.stdout ?? ""}\n${terraResult.stderr ?? ""}\n${terraResult.error?.message ?? ""}`;
+      expect(terraResult.status, terraOutput).toBe(42);
+      expect(terraOutput).toContain("game-direct-mcp-v1 requires exact codex-cli 0.146.0");
       expect(readFileSync(capture, "utf8")).toBe("version\nversion\n");
       expectNoOutputArtifacts(out);
     } finally {
@@ -1306,9 +1320,11 @@ printf 'codex-cli 0.144.1\\n'
     expect(codexLaunch).toContain("--disable tool_suggest");
     expect(codexLaunch).not.toContain("--enable tool_suggest");
     expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="spark-direct-mcp-v1"');
+    expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="game-direct-mcp-v1"');
     expect(runner).toContain('CODEX_TRANSPORT_CONTRACT="strict-code-mode-v2"');
     expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"');
     expect(runner).toContain("prompt-transports/spark-direct-mcp-v1.md");
+    expect(runner).toContain("prompt-transports/game-direct-mcp-v1.md");
     expect(runner).toContain("prompt-transports/strict-code-mode-v2.md");
     expect(codexLaunch).toContain("--disable apps");
     expect(codexLaunch).toContain("--disable browser_use");
@@ -1342,10 +1358,20 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner.indexOf("PURE_PUBLICATION_COMPLETE=1")).toBeGreaterThan(launchEnd);
   });
 
-  it("pins only Spark to the compact prompt and repo-owned game-only model catalog", () => {
+  it("pins Spark and Terra to exact repo-owned game-only direct catalogs", () => {
     const runner = readFileSync(join(process.cwd(), "blind-tester", "run.sh"), "utf8");
-    const catalogPath = join(process.cwd(), "blind-tester", "codex-model-catalog-spark-v1.json");
-    const catalog = JSON.parse(readFileSync(catalogPath, "utf8")) as SparkModelCatalog;
+    const sparkCatalogPath = join(
+      process.cwd(),
+      "blind-tester",
+      "codex-model-catalog-spark-v1.json",
+    );
+    const terraCatalogPath = join(
+      process.cwd(),
+      "blind-tester",
+      "codex-model-catalog-terra-v1.json",
+    );
+    const sparkCatalog = JSON.parse(readFileSync(sparkCatalogPath, "utf8")) as DirectModelCatalog;
+    const terraCatalog = JSON.parse(readFileSync(terraCatalogPath, "utf8")) as DirectModelCatalog;
 
     const profileStart = runner.indexOf("  CODEX_PLAYER_PROFILE_ARGS=()");
     const profileEnd = runner.indexOf("\n  fi", profileStart);
@@ -1356,10 +1382,14 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner).toContain(
       'if [[ "$PLAY_MODE" == "pure" && "$MODEL" == "gpt-5.3-codex-spark" ]]',
     );
-    expect(sparkProfile).toContain('if [[ "$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" ]]');
+    expect(sparkProfile).toContain('"$CODEX_TRANSPORT_CONTRACT" == "spark-direct-mcp-v1" ||');
+    expect(sparkProfile).toContain('"$CODEX_TRANSPORT_CONTRACT" == "game-direct-mcp-v1"');
     expect(runner).toContain('PROMPT_FILE="$SCRIPT_DIR/prompt-overworld-spark.md"');
     expect(sparkProfile).toContain(
       '--config "model_catalog_json=\\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-spark-v1.json\\""',
+    );
+    expect(sparkProfile).toContain(
+      '--config "model_catalog_json=\\"$GAME_DIR_MCP/blind-tester/codex-model-catalog-terra-v1.json\\""',
     );
     expect(sparkProfile).toContain(`--config 'instructions="${SPARK_PLAYER_INSTRUCTIONS}"'`);
     for (const config of [
@@ -1377,29 +1407,90 @@ printf 'codex-cli 0.144.1\\n'
     expect(runner).toContain('"${CODEX_PLAYER_PROFILE_ARGS[@]}"');
     expect(runner.match(/CODEX_PLAYER_PROFILE_ARGS=/gu)).toHaveLength(2);
 
-    expect(catalog.models).toHaveLength(1);
-    expect(catalog.models[0]).toMatchObject({
+    expect(sparkCatalog.models).toHaveLength(1);
+    expect(sparkCatalog.models[0]).toEqual({
       slug: "gpt-5.3-codex-spark",
+      display_name: "GPT-5.3-Codex-Spark",
+      description: "AdventureForge blind player",
+      default_reasoning_level: "xhigh",
+      supported_reasoning_levels: [{ effort: "xhigh", description: "Blind gameplay reasoning" }],
       shell_type: "disabled",
+      visibility: "list",
+      supported_in_api: true,
+      priority: 1,
+      availability_nux: null,
+      upgrade: null,
       base_instructions: SPARK_PLAYER_INSTRUCTIONS,
+      model_messages: null,
       include_skills_usage_instructions: false,
+      support_verbosity: false,
+      default_verbosity: null,
       apply_patch_tool_type: null,
       truncation_policy: { mode: "bytes", limit: 16_384 },
       supports_parallel_tool_calls: false,
+      supports_image_detail_original: false,
       context_window: 272_000,
       auto_compact_token_limit: null,
+      comp_hash: "2911",
       experimental_supported_tools: [],
       supports_search_tool: false,
+      use_responses_lite: false,
       tool_mode: "direct",
+      multi_agent_version: null,
     });
+    expect(terraCatalog.models).toHaveLength(1);
+    expect(terraCatalog.models[0]).toEqual({
+      slug: "gpt-5.6-terra",
+      display_name: "GPT-5.6-Terra",
+      description: "AdventureForge blind player",
+      default_reasoning_level: "xhigh",
+      supported_reasoning_levels: [{ effort: "xhigh", description: "Blind gameplay reasoning" }],
+      shell_type: "disabled",
+      visibility: "list",
+      supported_in_api: true,
+      priority: 2,
+      availability_nux: null,
+      upgrade: null,
+      base_instructions: SPARK_PLAYER_INSTRUCTIONS,
+      model_messages: null,
+      include_skills_usage_instructions: false,
+      default_reasoning_summary: "none",
+      supports_reasoning_summary_parameter: false,
+      support_verbosity: false,
+      default_verbosity: null,
+      apply_patch_tool_type: null,
+      truncation_policy: { mode: "tokens", limit: 10_000 },
+      supports_parallel_tool_calls: false,
+      supports_image_detail_original: false,
+      context_window: 272_000,
+      max_context_window: 272_000,
+      auto_compact_token_limit: null,
+      comp_hash: "3000",
+      effective_context_window_percent: 95,
+      experimental_supported_tools: [],
+      input_modalities: ["text", "image"],
+      supports_search_tool: false,
+      use_responses_lite: false,
+      tool_mode: "direct",
+      multi_agent_version: null,
+    });
+    expect(terraCatalog.models[0]?.truncation_policy).not.toEqual({
+      mode: "bytes",
+      limit: 16_384,
+    });
+    expect(terraCatalog.models[0]).not.toHaveProperty("additional_speed_tiers");
+    expect(terraCatalog.models[0]).not.toHaveProperty("service_tiers");
+    expect(terraCatalog.models[0]).not.toHaveProperty("default_service_tier");
   });
 
-  it("passes the Spark player profile to Spark and not to Sol, Terra, or Luna", () => {
+  it("passes the game-only direct profile only to Spark and Terra", () => {
     const dir = mkdtempSync(join(tmpdir(), "af-spark-profile-scope-"));
     const home = join(dir, "home");
     const selected = join(dir, "selected-codex");
+    const malformedModelsCache = '{"models":[{"slug":"broken"}]}\n';
     try {
       mkdirSync(home);
+      writeFileSync(join(home, "models_cache.json"), malformedModelsCache);
       writeFileSync(
         selected,
         `#!/usr/bin/env bash
@@ -1414,11 +1505,11 @@ exit 93
       );
       chmodSync(selected, 0o755);
 
-      for (const [model, isSpark] of [
-        ["gpt-5.3-codex-spark", true],
-        ["gpt-5.6-sol", false],
-        ["gpt-5.6-terra", false],
-        ["gpt-5.6-luna", false],
+      for (const [model, catalogName, isDirect] of [
+        ["gpt-5.3-codex-spark", "codex-model-catalog-spark-v1.json", true],
+        ["gpt-5.6-sol", null, false],
+        ["gpt-5.6-terra", "codex-model-catalog-terra-v1.json", true],
+        ["gpt-5.6-luna", null, false],
       ] as const) {
         const capture = join(dir, `${model}.argv.txt`);
         const out = join(dir, "reports", model);
@@ -1443,17 +1534,30 @@ exit 93
         expect(result.status, `${model}: ${output}`).toBe(93);
         const args = readFileSync(capture, "utf8");
         expect(args).toContain("code_mode_only");
-        for (const sparkOnlyArg of [
-          "codex-model-catalog-spark-v1.json",
+        const sharedDirectArgs = [
           SPARK_PLAYER_INSTRUCTIONS,
           "tools.update_plan.enabled=false",
           "skills.include_instructions=false",
           "include_environment_context=false",
+        ];
+        for (const sharedDirectArg of sharedDirectArgs) {
+          if (isDirect) expect(args).toContain(sharedDirectArg);
+          else expect(args).not.toContain(sharedDirectArg);
+        }
+        for (const candidateCatalog of [
+          "codex-model-catalog-spark-v1.json",
+          "codex-model-catalog-terra-v1.json",
         ]) {
-          if (isSpark) expect(args).toContain(sparkOnlyArg);
-          else expect(args).not.toContain(sparkOnlyArg);
+          if (candidateCatalog === catalogName) expect(args).toContain(candidateCatalog);
+          else expect(args).not.toContain(candidateCatalog);
+        }
+        expect(args.match(/model_catalog_json=/gu) ?? []).toHaveLength(isDirect ? 1 : 0);
+        for (const terraOnlyArg of ["agents.enabled=false", 'model_reasoning_summary="none"']) {
+          if (model === "gpt-5.6-terra") expect(args).toContain(terraOnlyArg);
+          else expect(args).not.toContain(terraOnlyArg);
         }
       }
+      expect(readFileSync(join(home, "models_cache.json"), "utf8")).toBe(malformedModelsCache);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -171,7 +171,10 @@ export interface PureFleetRunArtifactFacts {
     | typeof CODEX_HISTORICAL_STRICT_CONTRACT
     | typeof CODEX_STRICT_CURRENT_CONTRACT
     | null;
-  transport_contract: typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT | null;
+  transport_contract:
+    | typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
+    | typeof GAME_DIRECT_MCP_TRANSPORT_CONTRACT
+    | null;
   report_recovered: boolean;
   report_receipt_bound: boolean;
   hashes: PureFleetRunArtifactHashes;
@@ -308,6 +311,7 @@ const CodexCaptureReceiptSchema = z
 export const CODEX_HISTORICAL_STRICT_CONTRACT = "strict-code-mode-v1" as const;
 export const CODEX_STRICT_CURRENT_CONTRACT = "strict-code-mode-v2" as const;
 export const SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1" as const;
+export const GAME_DIRECT_MCP_TRANSPORT_CONTRACT = "game-direct-mcp-v1" as const;
 export const SPARK_DIRECT_MCP_MODEL = "gpt-5.3-codex-spark" as const;
 
 const HistoricalStrictCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({
@@ -335,11 +339,21 @@ const SparkDirectMcpCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({
   })
   .strict();
 
+const GameDirectMcpCodexCaptureReceiptSchema = CodexCaptureReceiptSchema.omit({
+  schema_version: true,
+})
+  .extend({
+    schema_version: z.literal(5),
+    transport_contract: z.literal(GAME_DIRECT_MCP_TRANSPORT_CONTRACT),
+  })
+  .strict();
+
 const AnyCodexCaptureReceiptSchema = z.union([
   CodexCaptureReceiptSchema,
   HistoricalStrictCodexCaptureReceiptSchema,
   CurrentCodexCaptureReceiptSchema,
   SparkDirectMcpCodexCaptureReceiptSchema,
+  GameDirectMcpCodexCaptureReceiptSchema,
 ]);
 
 interface CodexAuthorityFacts {
@@ -351,7 +365,10 @@ interface CodexAuthorityFacts {
     | typeof CODEX_HISTORICAL_STRICT_CONTRACT
     | typeof CODEX_STRICT_CURRENT_CONTRACT
     | null;
-  transportContract: typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT | null;
+  transportContract:
+    | typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
+    | typeof GAME_DIRECT_MCP_TRANSPORT_CONTRACT
+    | null;
   usage: {
     input_tokens: number;
     cached_input_tokens: number;
@@ -455,7 +472,10 @@ function parseCodexCaptureReceipt(
         | typeof CODEX_HISTORICAL_STRICT_CONTRACT
         | typeof CODEX_STRICT_CURRENT_CONTRACT
         | null;
-      transportContract: typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT | null;
+      transportContract:
+        | typeof SPARK_DIRECT_MCP_TRANSPORT_CONTRACT
+        | typeof GAME_DIRECT_MCP_TRANSPORT_CONTRACT
+        | null;
     }
   | { ok: false; reason: string } {
   const raw = parseJsonRejectingDuplicateKeys(captureText, "Codex capture receipt");
@@ -494,7 +514,10 @@ function parseCodexCaptureReceipt(
       receipt.schema_version === 2 || receipt.schema_version === 3
         ? receipt.code_mode_contract
         : null,
-    transportContract: receipt.schema_version === 4 ? receipt.transport_contract : null,
+    transportContract:
+      receipt.schema_version === 4 || receipt.schema_version === 5
+        ? receipt.transport_contract
+        : null,
   };
 }
 
@@ -617,6 +640,15 @@ function parseCodexAuthority(
     return {
       ok: false,
       reason: `${SPARK_DIRECT_MCP_TRANSPORT_CONTRACT} requires exact model ${SPARK_DIRECT_MCP_MODEL}`,
+    };
+  }
+  if (
+    capture.transportContract === GAME_DIRECT_MCP_TRANSPORT_CONTRACT &&
+    expectedModel !== "gpt-5.6-terra"
+  ) {
+    return {
+      ok: false,
+      reason: `${GAME_DIRECT_MCP_TRANSPORT_CONTRACT} requires exact model gpt-5.6-terra`,
     };
   }
   const inspected:

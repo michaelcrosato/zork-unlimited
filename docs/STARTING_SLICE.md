@@ -1155,10 +1155,14 @@ primary prose and cannot participate in authoritative certification.
 
 Each live member has an adjacent runner-owned provider-discriminated attestation.
 Historical Claude v2 remains compatible, as do ordinary historical Codex v3,
-receipt-bound v4, strict-v1 v5, pre-client-pin strict-v2 v6, and client-bound
-v7. Current Codex v8 is model-discriminated: exact Spark binds
-`spark-direct-mcp-v1` with capture receipt v4, while Sol, Terra, and Luna bind
-`strict-code-mode-v2` with capture receipt v3. Both branches bind fleet-wide
+receipt-bound v4, strict-v1 v5, pre-client-pin strict-v2 v6, client-bound v7,
+and transport-bound v8. Current Codex v9 is model-discriminated: exact Spark
+binds `spark-direct-mcp-v1` with capture receipt v4 and its tracked player catalog,
+Terra binds `game-direct-mcp-v1` with capture receipt v5 and its distinct tracked
+player catalog, disabled multi-agent topology, API-request reasoning-summary mode
+`none`, and the exact 0.146 compatibility-only rollout sentinel `summary: "auto"`,
+while Sol/Luna bind
+`strict-code-mode-v2` with capture receipt v3. All branches bind fleet-wide
 frozen effective-client authority and exact CLI version, the exact CLI-recorded
 selected model, provider/session/turn, effort, isolated cwd, completed lifecycle,
 unique game session, and all artifact hashes. They may also declare deterministic
@@ -1167,7 +1171,7 @@ provider message, `.receipt-bind.json` hashes the envelope/report/raw evidence
 and one replaced field, and certification must reproduce the final report from
 those bytes. Because this starts no model turn and preserves every subjective
 field and all prose outside the receipt value, it is not report recovery and is
-eligible when every v8 check passes. The selected capture receipt binds the
+eligible when every v9 check passes. The selected capture receipt binds the
 copied rollout hash to the exact canonical expected/session/turn cwd and native
 filesystem identity; later validation reparses it and rejects abort/error
 history or any row after terminal `task_complete`.

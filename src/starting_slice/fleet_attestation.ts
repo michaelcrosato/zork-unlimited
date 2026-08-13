@@ -9,11 +9,14 @@ export const HISTORICAL_RECEIPT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 4;
 export const HISTORICAL_STRICT_CODEX_ATTESTATION_SCHEMA_VERSION = 5;
 export const HISTORICAL_CODE_MODE_CODEX_ATTESTATION_SCHEMA_VERSION = 6;
 export const HISTORICAL_CLIENT_BOUND_CODEX_ATTESTATION_SCHEMA_VERSION = 7;
-export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 8;
+export const HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION = 8;
+export const PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION = 9;
 export const HISTORICAL_PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v1" as const;
 export const PURE_FLEET_CODE_MODE_CONTRACT = "strict-code-mode-v2" as const;
 export const PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT = "spark-direct-mcp-v1" as const;
+export const PURE_FLEET_GAME_DIRECT_MCP_TRANSPORT_CONTRACT = "game-direct-mcp-v1" as const;
 export const PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0" as const;
+export const PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION = "0.146.0" as const;
 
 export const PureFleetClaudeAttestationSchema = z
   .object({
@@ -368,8 +371,7 @@ const HistoricalClientBoundPureFleetCodexAttestationSchema = z
     }
   });
 
-const CurrentCodexAttestationBaseFields = {
-  schema_version: z.literal(PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION),
+const CodexAttestationBaseFields = {
   provider: z.literal("codex"),
   codex_cli_version: z
     .string()
@@ -411,6 +413,16 @@ const CurrentCodexAttestationBaseFields = {
   recovery_envelope_sha256: z.null(),
 } as const;
 
+const HistoricalTransportCodexAttestationBaseFields = {
+  schema_version: z.literal(HISTORICAL_TRANSPORT_CODEX_ATTESTATION_SCHEMA_VERSION),
+  ...CodexAttestationBaseFields,
+} as const;
+
+const CurrentCodexAttestationBaseFields = {
+  schema_version: z.literal(PURE_FLEET_CODEX_ATTESTATION_SCHEMA_VERSION),
+  ...CodexAttestationBaseFields,
+} as const;
+
 function refineCurrentReceiptBinding(
   value: {
     report_receipt_bound: boolean;
@@ -448,9 +460,55 @@ const CurrentSparkDirectMcpAttestationSchema = z
   })
   .strict();
 
-function currentStrictCodeModeAttestationSchema<
+function historicalTransportStrictCodeModeAttestationSchema<
   const Model extends "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna",
 >(model: Model) {
+  return z
+    .object({
+      ...HistoricalTransportCodexAttestationBaseFields,
+      model: z.literal(model),
+      actual_model: z.literal(model),
+      code_mode_contract: z.literal(PURE_FLEET_CODE_MODE_CONTRACT),
+    })
+    .strict();
+}
+
+const HistoricalTransportSparkDirectMcpAttestationSchema = z
+  .object({
+    ...HistoricalTransportCodexAttestationBaseFields,
+    codex_cli_version: z.literal(PURE_FLEET_SPARK_DIRECT_MCP_CODEX_CLI_VERSION),
+    model: z.literal("gpt-5.3-codex-spark"),
+    actual_model: z.literal("gpt-5.3-codex-spark"),
+    transport_contract: z.literal(PURE_FLEET_SPARK_DIRECT_MCP_TRANSPORT_CONTRACT),
+  })
+  .strict();
+
+const HistoricalTransportPureFleetCodexAttestationSchema = z
+  .discriminatedUnion("model", [
+    HistoricalTransportSparkDirectMcpAttestationSchema,
+    historicalTransportStrictCodeModeAttestationSchema("gpt-5.6-sol"),
+    historicalTransportStrictCodeModeAttestationSchema("gpt-5.6-terra"),
+    historicalTransportStrictCodeModeAttestationSchema("gpt-5.6-luna"),
+  ])
+  .superRefine(refineCurrentReceiptBinding);
+
+function currentGameDirectMcpAttestationSchema<
+  const Model extends "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna",
+>(model: Model) {
+  return z
+    .object({
+      ...CurrentCodexAttestationBaseFields,
+      codex_cli_version: z.literal(PURE_FLEET_GAME_DIRECT_MCP_CODEX_CLI_VERSION),
+      model: z.literal(model),
+      actual_model: z.literal(model),
+      transport_contract: z.literal(PURE_FLEET_GAME_DIRECT_MCP_TRANSPORT_CONTRACT),
+    })
+    .strict();
+}
+
+function currentStrictCodeModeAttestationSchema<const Model extends "gpt-5.6-sol" | "gpt-5.6-luna">(
+  model: Model,
+) {
   return z
     .object({
       ...CurrentCodexAttestationBaseFields,
@@ -464,8 +522,8 @@ function currentStrictCodeModeAttestationSchema<
 const CurrentPureFleetCodexAttestationSchema = z
   .discriminatedUnion("model", [
     CurrentSparkDirectMcpAttestationSchema,
+    currentGameDirectMcpAttestationSchema("gpt-5.6-terra"),
     currentStrictCodeModeAttestationSchema("gpt-5.6-sol"),
-    currentStrictCodeModeAttestationSchema("gpt-5.6-terra"),
     currentStrictCodeModeAttestationSchema("gpt-5.6-luna"),
   ])
   .superRefine(refineCurrentReceiptBinding);
@@ -476,6 +534,7 @@ export const PureFleetCodexAttestationSchema = z.union([
   HistoricalStrictPureFleetCodexAttestationSchema,
   HistoricalCodeModePureFleetCodexAttestationSchema,
   HistoricalClientBoundPureFleetCodexAttestationSchema,
+  HistoricalTransportPureFleetCodexAttestationSchema,
   CurrentPureFleetCodexAttestationSchema,
 ]);
 
