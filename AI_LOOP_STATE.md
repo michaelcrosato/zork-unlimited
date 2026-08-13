@@ -1,7 +1,7 @@
 # AI Loop State
 
 <!-- historical_cycle_count: 774 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260811T225226Z/hotspots.json","hotspots_sha256":"e96ec941b7f4819211465719028a10ca98bfc9a470bbf9811c1961f73455c962","manifest_path":"ai-runs/feedback/20260811T225226Z/report-manifest.json","manifest_sha256":"836d4ea0a5591da571123d15cd928805a0c744afe718f0093937815085428c3c"},"pending_cycle_reports":[{"evidence_sha256":"bb95e5348639752767df00be804d7e3784b77495e5ca006c1bcc0e5e1f9e061b","report_id":"pure:286a3b70314c5b6540ee137d7b5a61ca0c67988eb3ba1fd01978f76b710b27e3","report_sha256":"063c9274c4002be1c9c1a4a79a195f070fab604149c196d81a445954e5982112","run_id":"2026-08-11T22-43-28-809Z","sidecar_sha256":"089dd424e9a9a4e0c6d9bdf7a5cfe5054c7605e1c1a249aee733c118f60b83f5","tested_commit":"b6fc45ce33d93c0458ed20840d1e1f4a45edace1"}],"schema_version":1} -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260813T082609Z/hotspots.json","hotspots_sha256":"26900eacd12566c05572ca6b53c47ca2448a9b3829e4bc3d3a383ee0f9004336","manifest_path":"ai-runs/feedback/20260813T082609Z/report-manifest.json","manifest_sha256":"522946fb42ac9f6e599fa1799057f6db2fdb53bffd36b31cbb6c60ee2f853cdf"},"pending_cycle_reports":[{"evidence_sha256":"42db376d5cd930aaa45174f8373dcb62592bb6dda41cb53183591777349d4121","report_id":"pure:37ee64873159999c939b97f2e59f581f47b121bca83592c7b7e77c68b6161963","report_sha256":"b6e4829fa4a2b7492ffdde8044b659394b80de9b1344ebbec5ab441491dc8bec","run_id":"2026-08-13T08-16-26-310Z","sidecar_sha256":"5ac53bf36b448673a7af17f3775c67decb7fa8ab813c8653ccd206f49349c94e","tested_commit":"a6d98762fa1a155795131a6983cc4183aaf078e4"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -174,8 +174,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Playtest: overworld.
 - Guard: blind report + health + verify:integrity before commit.
 ## AFK Cycle 2026-08-13T08-16-26-310Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-13T08-16-26-310Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-4e42fc3a (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
+- Evidence choice: the exact-build Terra pilot lost 2/10 before gameplay to freeform wrappers, so the off-list transport defect outranked an unrelated one-report content hot spot.
+- Change: Terra now uses a fingerprinted game-only static catalog and typed native MCP lifecycle; v9 authority fails closed on model/client/profile/call drift while immutable v8 evidence stays readable but noncurrent.
+- Pure evidence: exact-clean Terra seed 2026081314 on `a6d98762` completed Wolf-Winter LURE and Gallowmere, ended at goal decision 51, rated clarity 4/5 and enjoyment 5/5, replay yes, bugs `[]`, not stuck.
+- Authority: 70/70 native calls, zero wrappers/search/compaction, disabled collaboration, exact CLI 0.146/xhigh/hash 3000, empty reasoning summaries, and report/receipt/build binding verified.
+- Self-critique/next: transport is proven for one run, not yet fleet-certified; address dense Albany plan comparison, compact tuples, and in-quest checkpoint interruption before the required fresh 10-player pilot.
+- Feedback/guard: compiled 9 actionable reports into `20260813T082609Z` (10 hot spots); both crawls, 454 files/3,997 tests, UI typecheck, 12 packs, pure provenance, and final seal are green.
