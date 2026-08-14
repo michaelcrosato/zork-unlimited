@@ -1,0 +1,61 @@
+id: bug_0578
+title: "Station board required a second context read before support became actionable"
+pack: overworld (Wolf-Winter Station departure)
+reported_by: >
+  authenticated no-retry Terra pilot cert-pilot-albany-wolf-return-20260814T055626Z
+  on exact clean 39e2e0ee845e593f4da05caf445fd677e86293d8
+severity: S1
+evidence:
+  fleet_manifest_sha256: 824e8d3aaf24e8d6f50b9f6b9496ae10814728c48d67681e7d3387934147cd76
+  pilot_result_sha256: ff775c3d506895d32941b0dfd5d7df953b31a8bb93e7ba936f75953651a5aa4a
+  direct_report_sha256: d6fc12e361e2fd804fdc27c0db4052ea456a80a09997d9e98b6f69e86085d76e
+  direct_run_evidence_sha256: ff4b1885f61922b687c4fda6a047feacefd7eeb54c3c5334b4c37382e3c2e27b
+symptom: >
+  V3 showed three open optional support slots with null purpose and null action. Five of
+  ten authenticated pilot players made at least one extra support-detail context read;
+  the direct witness reported that the default board exposed open slots but required a
+  separate context read before the player could inspect or talk about one.
+root_cause: >
+  bug_0544 deliberately kept every V3 support row collapsed and moved all action authority
+  into station_dispatch_support. Fresher evidence shows that the generic shared guidance
+  did not replace a local reason and legal handle on the one row a player wanted. That
+  historical keep-V3 decision is superseded; its original evidence remains unchanged.
+fix: >
+  Emit Station board V4 in compact v46. Only a current open_optional row with a matching
+  authenticated full-board action receives one short purpose and that existing inspect or
+  talk tuple. Role, duty, evidence, selected support, blocked support, and null-action rows
+  emit null/null. Shorten shared guidance, make the CLI first view show one nonduplicated
+  line per live support, and let fresh pure play use the row directly. Keep the explicit
+  include_station_dispatch_support response backward compatible.
+deterministic_witnesses:
+  - "V4 board is 817 JSON characters and board plus legend is 1,231"
+  - "one V4 board object is 844 characters versus 1,161 for reconstructed V3 board plus explicit support"
+  - "role, duty, and evidence remain null/null through every support transition"
+  - "preparation, relief allocation, and field-team handles disappear independently when selected"
+  - "restored snapshots derive the same V4 rows because the board is not persisted"
+  - "direct MCP inspect and talk succeed from V4 row tuples without a support-detail read"
+  - "the legacy detail request preserves its key, rows, snapshot hash, and journey state"
+  - "CLI and the active UI remove selected support while leaving other open rows actionable"
+  - "no unselected option title, term, cost, outcome, route, or strategy leaks into the board"
+mechanics_unchanged:
+  - "dispatch minutes and timing"
+  - "quest starts, roads, costs, choices, outcomes, and checkpoints"
+  - "snapshot bytes, accepted decisions, RNG, and world content"
+tests:
+  - tests/starting_slice/station_dispatch_board.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/starting_slice/opening_departure_recap.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/overworld_optional_departure_interactions.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/ui_active_quest_persistence.test.ts
+  - tests/unit/ui_overworld.test.ts
+  - tests/unit/compact_legend.test.ts
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/starting_slice/station_dispatch_board.test.ts tests/regression/mcp_pure_play_mode.test.ts tests/regression/overworld_cli.test.ts tests/unit/mcp_journey_surface.test.ts tests/unit/ui_active_quest_persistence.test.ts

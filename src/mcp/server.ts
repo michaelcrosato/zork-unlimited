@@ -1278,7 +1278,9 @@ const S = {
   include_session_id: B("Echo the session id."),
 };
 const STATION_SUPPORT = {
-  include_station_dispatch_support: B("Optional Station support purposes and action handles."),
+  include_station_dispatch_support: B(
+    "Legacy V3 Station support detail; V4 already inlines current open support.",
+  ),
 };
 const OVERWORLD_READ_DETAILS = PLAY_MODE === "pure" ? {} : { ...S, ...W, ...IDS, ...ROUTES };
 const COMPACT_OVERWORLD_CONTEXT =

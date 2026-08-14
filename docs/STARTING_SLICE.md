@@ -209,14 +209,20 @@ it is **not yet milestone-certified**:
   removed;
 - the launch-first Station follow-up now keeps both legal hill roads ahead of
   optional support in terminal and browser clients. The authenticated full
-  board v3 carries the dispatch clock, all six selected/open plan rows, mapped
-  support actions, and launch card; compact v45 emits only
-  `[3, questId, guidance, dispatch|null, rows]` and retains canonical road
+  board v4 carries the dispatch clock, all six selected/open plan rows, mapped
+  support actions, and launch card; compact v46 emits
+  `[4, questId, guidance, dispatch|null, rows]` and retains canonical road
   detail in `quests` / `quest_starts`. It omits redundant compact
   `departure_recap`, `departure_interactions`, and `departure_contact_leads`
   only when every current action and status is exactly indexed; malformed or
-  unmapped sources fall back to the established surfaces. The exact Station
-  compact slice falls from 2,470 to 2,107 UTF-8 bytes (14.7%). Actions, terms,
+  unmapped sources fall back to the established surfaces. Each live optional
+  support row now carries one short purpose and its existing authenticated
+  inspect/talk handle; selected and non-actionable rows stay null. The exact
+  current Station compact slice therefore grows from v3's 1,989 to 2,158 UTF-8
+  bytes (+8.5%) while remaining 7.5% below the remeasured 2,333-byte fallback.
+  When support is
+  wanted, the board/detail objects contract from 1,161 bytes across v3's
+  board-plus-detail detour to 844 bytes in the single v4 board (-27.3%). Actions, terms,
   state, saves, hashes, RNG, outcomes, and accepted-decision counts are
   unchanged, with focused proof in `station_dispatch_board.test.ts`,
   `opening_dispatch_briefing.test.ts`, `opening_departure_recap.test.ts`,

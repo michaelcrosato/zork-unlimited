@@ -126,28 +126,25 @@ WHEN TO CONTINUE OR END
   substitute a differently named goal tool. The game, not the harness, decides
   where that passage stops.
 - At the Station, compact context consolidates optional planning into read-only
-  `station_dispatch_board`: `[3, quest_id, guidance, dispatch, rows]`.
+  `station_dispatch_board`: `[4, quest_id, guidance, dispatch, rows]`.
   `dispatch` is `[state, minutes, timing, remaining_optional_slots]`; each row is
   `[slot, status, selected_title|null, purpose|null, action|null]`. The live
   departure and its legal roads remain in `context.quests` plus
   `context.quest_starts` and come first. Treat optional support as one deliberate,
-  collapsed planning affordance: you may depart immediately. In the default v3
-  board, every optional support row has null `purpose` and `action`; that default
-  row does not authorize an inspect or talk call. Only when you actually want
-  support details, call `mcp__adventureforge__get_overworld_session_context` with
-  the current `session_id` and `include_station_dispatch_support: true`. Read its
-  `station_dispatch_support`: `[[slot, purpose, action], ...]`. Do not request it
-  merely to enumerate all three rows. Support rows are independent and optional;
-  they change dispatch cost and aftermath, not which quest strategy you may
-  choose after arriving. A non-null support-detail action
+  planning affordance: you may depart immediately. In the v4 board, role, duty,
+  and evidence always have null `purpose` and `action`. Only an `open_optional`
+  support row carries its concise purpose and existing authenticated action.
+  Support rows are independent and optional; they change dispatch cost and
+  aftermath, not which quest strategy you may choose after arriving. A non-null
+  row action
   `["inspect", story_choice_id]` authorizes
   `mcp__adventureforge__inspect_overworld_session_story`; an action
   `["talk", character_id, contact_name]` authorizes
   `mcp__adventureforge__talk_overworld_session_contact`. A null action is not
-  currently legal. Merely reading the default board or deferred support detail
-  changes no state or decision count.
-- You may depart without choosing support. After the explicit support-detail
-  response, inspect only the exact visible `story_choice_id` you want; the
+  currently legal. Use only the support row you actually want; do not enumerate
+  all three. Merely reading the board changes no state or decision count.
+- You may depart without choosing support. From the board, inspect only the exact
+  visible `story_choice_id` you want; the
   versioned comparison contains short option summaries. To compare one candidate,
   use its visible `reviewOption` with that option's exact `id` at the declared
   argument. It returns only that candidate's new consequence/timing and
@@ -157,12 +154,17 @@ WHEN TO CONTINUE OR END
   `id` as `choice`; pass the inspected `story_choice_id` only when needed to
   disambiguate a shared option id. A talk action alone can present the actual
   field-team choice.
-- If a malformed or older session cannot produce the v3 board, the compact
+- If a malformed or older session cannot produce the v4 board, the compact
   fallback may instead expose `departure_recap`, `departure_interactions`, and
   `departure_contact_leads`; those carry the same read-only plan, inspect, and
-  talk semantics rather than extra choices. A legacy v2 board can instead carry
-  non-null purpose/action directly in its rows; use only those visible non-null
-  actions as authorization.
+  talk semantics rather than extra choices. A legacy v3 board has null row
+  actions, which authorize nothing; only for that legacy response, an explicit
+  `mcp__adventureforge__get_overworld_session_context` call with
+  `include_station_dispatch_support: true` may return its separate
+  `station_dispatch_support`: `[[slot, purpose, action], ...]`; only a visible
+  non-null detail action authorizes its exact call. A legacy v2 board can instead
+  carry non-null purpose/action directly in its rows; use only those visible
+  non-null actions as authorization.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, normally

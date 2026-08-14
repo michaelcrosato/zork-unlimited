@@ -251,10 +251,13 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(terminal).not.toMatch(/market.*scout/i);
   });
 
-  it("keeps Station support behind one read-only review affordance without changing launch state", () => {
+  it("inlines each live Station support command and removes it as that row closes", () => {
     const preparation = WORLD.opening_preparation;
+    const allocation = WORLD.opening_relief_allocation;
     const ally = WORLD.opening_ally;
-    if (!preparation || !ally) throw new Error("Albany must retain its Station ally flow.");
+    if (!preparation || !allocation || !ally) {
+      throw new Error("Albany must retain its Station support flow.");
+    }
     const session = sessionAtOpeningStation();
     const beforeSnapshot = session.snapshot();
     const beforeDecisions = session.journey().acceptedDecisions;
@@ -268,12 +271,23 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     expect(readyBeforePreparation).toContain("The Wolf-Winter field briefing:");
     expect(readyBeforePreparation).toContain("Depart now:");
     expect(readyBeforePreparation).toContain(
-      "Optional support: field kit, relief wagon, or second rider — `review support`.",
+      "Optional support (independent; `review support` for detail):",
+    );
+    expect(readyBeforePreparation).toContain(
+      `Field kit: optionally choose one specialist kit for a named danger at Cade's steading. \`inspect ${preparation.id}\``,
+    );
+    expect(readyBeforePreparation).toContain(
+      `Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it. \`inspect ${allocation.id}\``,
+    );
+    expect(readyBeforePreparation).toContain(
+      `Second rider: optionally ask about cattle-first authority, or ride alone. \`talk ${initialFieldTeam.action.contactName}\``,
     );
     expect(readyBeforePreparation.indexOf("Depart now:")).toBeLessThan(
-      readyBeforePreparation.indexOf("Optional support:"),
+      readyBeforePreparation.indexOf("Optional support (independent"),
     );
-    expect(readyBeforePreparation).not.toContain("June Pike, second rider");
+    expect(readyBeforePreparation).not.toContain("One field kit: Field kit:");
+    expect(readyBeforePreparation).not.toContain("relief wagon: Relief wagon:");
+    expect(readyBeforePreparation).not.toContain("Second rider: Second rider:");
     const expandedBeforePreparation = renderStationDispatchBoard(session.view()).join("\n");
     expect(expandedBeforePreparation).toContain("June Pike, second rider");
     expect(expandedBeforePreparation).toContain(
@@ -295,14 +309,29 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
       throw new Error("Expected the ready Station board talk handle.");
     }
     const ready = render(session.view());
-    expect(ready).not.toContain(
-      `Talk to ${readyFieldTeam.action.contactName}: \`talk ${readyFieldTeam.action.contactName}\``,
-    );
+    expect(ready).not.toContain(`\`inspect ${preparation.id}\``);
+    expect(ready).toContain(`\`inspect ${allocation.id}\``);
+    expect(ready).toContain(`\`talk ${readyFieldTeam.action.contactName}\``);
     expect(renderStationDispatchBoard(session.view()).join("\n")).toContain(
       `Talk to ${readyFieldTeam.action.contactName}: \`talk ${readyFieldTeam.action.contactName}\``,
     );
     expect(session.snapshot()).toEqual(readySnapshot);
     expect(session.journey().acceptedDecisions).toBe(readyDecisions);
+
+    session.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
+    const allocated = render(session.view());
+    expect(allocated).not.toContain(`\`inspect ${preparation.id}\``);
+    expect(allocated).not.toContain(`\`inspect ${allocation.id}\``);
+    expect(allocated).toContain(`\`talk ${readyFieldTeam.action.contactName}\``);
+
+    session.talkToCharacter(ally.contact);
+    session.chooseJourneyStory(ally.options[0]!.id);
+    const allied = render(session.view());
+    expect(allied).not.toContain(`\`inspect ${preparation.id}\``);
+    expect(allied).not.toContain(`\`inspect ${allocation.id}\``);
+    expect(allied).not.toContain(`\`talk ${readyFieldTeam.action.contactName}\``);
+    expect(allied).not.toContain("Optional support (independent");
+    expect(allied).toContain("Current commitments: `review dispatch`.");
   });
 
   it("keeps the bounded dispatch recall behind the launch-first Station summary", () => {
@@ -314,9 +343,7 @@ describe("overworld_play render (pure, same session the UI/MCP drive)", () => {
     const rendered = render(session.view());
 
     expect(rendered).toContain("Depart now:");
-    expect(rendered).toContain(
-      "Optional support: field kit, relief wagon, or second rider — `review support`.",
-    );
+    expect(rendered).toContain("Optional support (independent; `review support` for detail):");
     expect(rendered).toContain("Current commitments: `review dispatch`.");
     expect(rendered).not.toContain(bounded);
     expect(bounded).toContain(`${recap.questTitle} dispatch recap:`);
@@ -666,7 +693,7 @@ describe("overworld_play CLI (scripted mode)", () => {
         "Start with `start The Wolf-Winter`; route selection follows before commitment.",
       );
       expect(run.output).toContain("The Wolf-Winter exact active terms and plan slots:");
-      expect(run.output).toContain("Optional support: field kit, relief wagon, or second rider");
+      expect(run.output).toContain("Optional support (independent; `review support` for detail):");
       expect(run.output).toContain("June Pike, second rider");
       expect(run.output).toContain("Talk to June Pike: `talk June Pike`");
       expect(run.output).toContain(

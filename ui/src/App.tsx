@@ -647,6 +647,7 @@ export function stationSupportPresentation(
   target: StationSupportTarget,
 ): { summary: string; terms: string } | null {
   const support = board?.support.find((candidate) => {
+    if (candidate.status !== "open_optional" || candidate.selectedTitle !== null) return false;
     const action = candidate.action;
     if (!action || action.kind !== target.kind) return false;
     if (action.kind === "inspect" && target.kind === "inspect") {

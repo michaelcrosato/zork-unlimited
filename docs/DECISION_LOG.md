@@ -1240,3 +1240,26 @@ zero-effect HUNT exit as leaving the review with no change and ensure no-June fi
 instructs the player to ask an absent June. Preserve all ids, conditions, effects, resources, decisions,
 progressive reveal authority, plan legality, outcomes, and save/runtime shape. A fresh exact-build pilot,
 not these deterministic checks, decides whether the 4.2 quality gates improve.
+
+### Ultraplan re-aim — 2026-08-14 (HEAD = 39e2e0ee; next move = Station board V4)
+
+**The prior V3-collapse decision is superseded by fresher authenticated evidence.** The valid,
+no-retry Terra pilot `cert-pilot-albany-wolf-return-20260814T055626Z` bound exact clean commit
+`39e2e0ee845e593f4da05caf445fd677e86293d8` and world hash `ef907fe6…`; its manifest SHA-256 is
+`824e8d3a…` and pilot-result SHA-256 is `ff775c3d…`. It completed Wolf-Winter 10/10 with no stuck
+run, but reached only 38/50 clarity, 40/50 enjoyment, and 6/10 continuation. Five players made the
+extra `include_station_dispatch_support` context read; the direct seed-2026081700 witness (report
+`d6fc12e3…`, evidence `ff4b1885…`) explicitly called the default board indirect because open rows
+had neither stakes nor handles. The earlier estimate that safe inlining necessarily added 458
+characters counted verbose detail rather than a short row purpose and therefore no longer governs.
+
+**Chosen move — authenticated, stale-safe V4 projection.** Compact v46 board V4 preserves its
+five-field tuple while giving only each current `open_optional` support row one short purpose and
+its already-authenticated inspect/talk tuple. Role, duty, evidence, selected support, blocked support,
+and any null-action state remain null/null. Guidance stops repeating all three purposes. The board is
+817 JSON characters and board plus legend is 1,231, close to V3's 648 + 515 = 1,163; when support is
+wanted, the one 844-character V4 board object replaces the 1,161-character V3 board-plus-detail
+objects and eliminates a repeated full-context hop. The legacy detail flag and response stay available
+unchanged. This is presentation and projection only: ids, mechanics, costs, roads, choices, outcomes,
+checkpoints, saves, hashes, decision counts, and support authority do not change. The failed pilot is
+diagnostic evidence, not certification; a fresh exact-build cohort must judge whether V4 helps.

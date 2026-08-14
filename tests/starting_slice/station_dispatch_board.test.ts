@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { Buffer } from "node:buffer";
 
-import { cloneOverworldCompactView, compactOverworldView } from "../../src/world/compact_view.js";
+import {
+  cloneOverworldCompactView,
+  compactOverworldView,
+  OVERWORLD_COMPACT_LEGEND,
+} from "../../src/world/compact_view.js";
 import {
   compactStationDispatchBoard,
   compactStationDispatchBoardSupport,
@@ -52,11 +57,11 @@ describe("Station dispatch board", () => {
     if (!board || !view.departureRecap) throw new Error("Expected the Station dispatch board.");
 
     expect(board).toMatchObject({
-      version: 3,
+      version: 4,
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
-        "Cade's herd is under pressure. Depart now, or review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.",
+        "Cade's herd is under pressure. Depart now, or use an open support row. Support changes cost and aftermath, not your Wolf-Winter plan.",
     });
     expect(board.guidance.length).toBeLessThanOrEqual(STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT);
     expect(board.support.map((entry) => [entry.slot, entry.status, entry.selectedTitle])).toEqual(
@@ -131,11 +136,16 @@ describe("Station dispatch board", () => {
     expect(cloneOverworldCompactView(compact).station_dispatch_board).toEqual(
       compact.station_dispatch_board,
     );
-    // V3 keeps the first compact Station view launch-first and defers optional
-    // support purposes and action handles to an explicit read-only context.
+    // V4 keeps the first compact Station view launch-first while putting one
+    // bounded purpose and an already-authenticated handle on each live support row.
+    expect(JSON.stringify(compact.station_dispatch_board).length).toBe(817);
     expect(JSON.stringify(compact.station_dispatch_board).length).toBeLessThanOrEqual(1_000);
+    expect(
+      JSON.stringify(compact.station_dispatch_board).length +
+        OVERWORLD_COMPACT_LEGEND.station_dispatch_board.length,
+    ).toBe(1_231);
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
-      3,
+      4,
       WOLF.id,
       board.guidance,
       [
@@ -149,9 +159,27 @@ describe("Station dispatch board", () => {
       ["role", "selected", REGISTRATION.profiles[0]!.title, null, null],
       ["duty", "selected", RELIEF_OATH.options[0]!.title, null, null],
       ["evidence", "selected", LEAD_SOURCE.options[0]!.title, null, null],
-      ["preparation", "open_optional", null, null, null],
-      ["relief_allocation", "open_optional", null, null, null],
-      ["field_team", "open_optional", null, null, null],
+      [
+        "preparation",
+        "open_optional",
+        null,
+        "Choose one specialist kit for a named danger.",
+        ["inspect", PREPARATION.id],
+      ],
+      [
+        "relief_allocation",
+        "open_optional",
+        null,
+        "Send Albany's last relief wagon to one crisis.",
+        ["inspect", RELIEF_ALLOCATION.id],
+      ],
+      [
+        "field_team",
+        "open_optional",
+        null,
+        "Ask about cattle-first help for one line, never combat.",
+        ["talk", ALLY.contact, "June Pike"],
+      ],
     ]);
     expect(compact.station_dispatch_support).toBeUndefined();
     expect(compactStationDispatchBoardSupport(board)).toEqual([
@@ -184,14 +212,117 @@ describe("Station dispatch board", () => {
       departure_interactions: compactOverworldDepartureInteractions(view.departureInteractions),
       departure_contact_leads: compactOverworldDepartureContactLeads(view.departureContactLeads),
     });
-    const v3StationBlock = JSON.stringify({
+    const v4StationBlock = JSON.stringify({
       station_dispatch_board: compact.station_dispatch_board,
     });
-    expect(v3StationBlock.length).toBeLessThan(legacyStationBlock.length);
+    expect(v4StationBlock.length).toBeLessThan(legacyStationBlock.length);
+    const v3StationBoard = [
+      3,
+      compact.station_dispatch_board![1],
+      "Cade's herd is under pressure. Depart now, or review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.",
+      compact.station_dispatch_board![3],
+      compact.station_dispatch_board![4].map(
+        ([slot, status, selectedTitle]) => [slot, status, selectedTitle, null, null] as const,
+      ),
+    ] as const;
+    const v3BoardAndExplicitSupport = JSON.stringify({
+      station_dispatch_board: v3StationBoard,
+      station_dispatch_support: compactStationDispatchBoardSupport(board),
+    });
+    expect(JSON.stringify(v3StationBoard).length).toBe(648);
+    expect(v3BoardAndExplicitSupport.length).toBe(1_161);
+    expect(v4StationBlock.length).toBe(844);
+    expect(v4StationBlock.length).toBeLessThan(v3BoardAndExplicitSupport.length);
+    const v4LaunchSlice = JSON.stringify({
+      quests: compact.quests,
+      quest_starts: compact.quest_starts,
+      station_dispatch_board: compact.station_dispatch_board,
+    });
+    const v3LaunchSlice = JSON.stringify({
+      quests: compact.quests,
+      quest_starts: compact.quest_starts,
+      station_dispatch_board: v3StationBoard,
+    });
+    const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });
+    const fallbackLaunchSlice = JSON.stringify({
+      quests: fallback.quests,
+      quest_starts: fallback.quest_starts,
+      departure_recap: fallback.departure_recap,
+      departure_interactions: fallback.departure_interactions,
+      departure_contact_leads: fallback.departure_contact_leads,
+    });
+    expect(Buffer.byteLength(v3LaunchSlice, "utf8")).toBe(1_989);
+    expect(Buffer.byteLength(v4LaunchSlice, "utf8")).toBe(2_158);
+    expect(Buffer.byteLength(fallbackLaunchSlice, "utf8")).toBe(2_333);
+
+    const clonedBoard = cloneOverworldCompactView(compact).station_dispatch_board;
+    const clonedAction = clonedBoard?.[4].find(([slot]) => slot === "preparation")?.[4];
+    if (!clonedAction) throw new Error("Expected a cloned preparation action.");
+    (clonedAction as [string, string])[1] = "forged:story";
+    expect(
+      compact.station_dispatch_board?.[4].find(([slot]) => slot === "preparation")?.[4],
+    ).toEqual(["inspect", PREPARATION.id]);
 
     expect(session.snapshot()).toEqual(before);
     expect(session.snapshotHash()).toBe(beforeHash);
     expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
+  });
+
+  it("removes each inline handle as its independent support row closes and re-derives V4 on restore", () => {
+    const session = stationedSession();
+    const row = (
+      slot: "role" | "duty" | "evidence" | "preparation" | "relief_allocation" | "field_team",
+    ) =>
+      session.compactView().station_dispatch_board?.[4].find(([candidate]) => candidate === slot);
+
+    for (const slot of ["role", "duty", "evidence"] as const) {
+      expect(row(slot)?.slice(3)).toEqual([null, null]);
+    }
+    expect(row("preparation")?.[4]).toEqual(["inspect", PREPARATION.id]);
+    expect(row("relief_allocation")?.[4]).toEqual(["inspect", RELIEF_ALLOCATION.id]);
+    expect(row("field_team")?.[4]).toEqual(["talk", ALLY.contact, "June Pike"]);
+
+    session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    expect(row("preparation")).toEqual([
+      "preparation",
+      "selected",
+      PREPARATION.profiles[0]!.title,
+      null,
+      null,
+    ]);
+    expect(row("relief_allocation")?.[4]).toEqual(["inspect", RELIEF_ALLOCATION.id]);
+    expect(row("field_team")?.[4]).toEqual(["talk", ALLY.contact, "June Pike"]);
+
+    session.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    expect(row("relief_allocation")).toEqual([
+      "relief_allocation",
+      "selected",
+      RELIEF_ALLOCATION.options[0]!.title,
+      null,
+      null,
+    ]);
+    expect(row("field_team")?.[4]).toEqual(["talk", ALLY.contact, "June Pike"]);
+
+    session.talkToCharacter(ALLY.contact);
+    session.chooseJourneyStory(ALLY.options[0]!.id);
+    expect(row("field_team")).toEqual([
+      "field_team",
+      "selected",
+      ALLY.options[0]!.title,
+      null,
+      null,
+    ]);
+    expect(
+      session.compactView().station_dispatch_board?.[4].filter((entry) => entry[4] !== null),
+    ).toEqual([]);
+
+    const snapshot = session.snapshot();
+    const restored = OverworldSession.restore(WORLD, snapshot);
+    expect(restored.compactView().station_dispatch_board).toEqual(
+      session.compactView().station_dispatch_board,
+    );
+    expect(restored.compactView().station_dispatch_board?.[0]).toBe(4);
+    expect(restored.snapshot()).toEqual(snapshot);
   });
 
   it("withholds malformed pairings and does not leak unselected support alternatives", () => {
@@ -266,6 +397,22 @@ describe("Station dispatch board", () => {
         departureContactLeads: view.departureContactLeads,
       }),
     ).toBeNull();
+    expect(
+      deriveStationDispatchBoard({
+        recap: {
+          ...recap,
+          entries: recap.entries.map((entry) =>
+            entry.slot === "preparation"
+              ? { ...entry, status: "open_optional", title: "forged selected kit" }
+              : entry,
+          ),
+        },
+        quests: view.quests,
+        questStarts: view.questStarts,
+        departureInteractions: view.departureInteractions,
+        departureContactLeads: view.departureContactLeads,
+      }),
+    ).toBeNull();
 
     const waiting = deriveStationDispatchBoard({
       recap,
@@ -276,7 +423,7 @@ describe("Station dispatch board", () => {
     });
     expect(waiting?.launch.approaches.every((approach) => !approach.availableNow)).toBe(true);
     expect(waiting?.guidance).toBe(
-      "Cade's herd is under pressure. No road is open. Review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.",
+      "Cade's herd is under pressure. No road is open. You may still use any open support row; support changes cost and aftermath, not which plan you can choose.",
     );
     expect(waiting?.guidance.length).toBeLessThanOrEqual(
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,

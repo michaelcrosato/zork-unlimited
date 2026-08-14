@@ -63,7 +63,9 @@ export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
 // v45: full-view direct exits carry detached travel estimates, preserving the v44 road
 // contract when a full view is spread, cloned, serialized, and compacted again. This also
 // makes direct-edge event fatigue part of the authenticated public projection.
-export const OVERWORLD_COMPACT_VIEW_VERSION = 45 as const;
+// v46: Station dispatch board V4 puts one bounded purpose and an existing authenticated
+// action on each open optional support row; closed and commitment rows remain null/null.
+export const OVERWORLD_COMPACT_VIEW_VERSION = 46 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -461,7 +463,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_recap_terms:
     "[version, quest_id, [[slot, active_field_term], ...]] exact authenticated terms for selected Station plan slots, returned by explicit read-only include_departure_recap_terms or a preparation, relief_allocation, or ally option detail; no alternatives, outcomes, or actions",
   station_dispatch_board:
-    "[3, quest_id, guidance, dispatch|null, [[plan_slot, status, selected_title|null, purpose|null, action|null], ...]]. Launch-first Station departure index: role, duty, and evidence rows have no optional action; optional support rows intentionally defer purpose/action to station_dispatch_support. dispatch=[state, authenticated_minutes, timing|null, [remaining_optional_slot, ...]]. Selected exact terms remain opt-in departure_recap_terms. Canonical quest title and launch approaches remain in quests + quest_starts.",
+    "[4,quest_id,guidance,dispatch|null,[[slot,status,selected_title|null,purpose|null,action|null],...]]. Only open_optional rows have purpose/action; null authorizes nothing. action=['inspect',story_choice_id]|['talk',character_id,contact_name]. Support optional; strategy access unchanged. dispatch=[state,minutes,timing|null,[remaining_optional_slot,...]]. Terms: departure_recap_terms; launch: quests+quest_starts.",
   station_dispatch_support:
     "[[support_slot, purpose, action|null], ...] explicit read-only Station support detail, returned only by get_overworld_session_context(include_station_dispatch_support:true). action is ['inspect', story_choice_id] for inspect_overworld_session_story or ['talk', character_id, contact_name] for talk_overworld_session_contact; inspect reveals legal story.options[*].id choices. Support remains optional and changes dispatch cost and aftermath, not which Wolf-Winter strategy is offered.",
   opportunity_guidance:

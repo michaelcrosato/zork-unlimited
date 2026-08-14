@@ -542,7 +542,8 @@ describe("player-facing action presentation", () => {
   });
 
   it("keeps Station departure primary while presenting authoritative optional-support purpose", () => {
-    const station = stationBeforeOptionalSupport().view();
+    const stationSession = stationBeforeOptionalSupport();
+    const station = stationSession.view();
     const board = station.stationDispatchBoard;
     if (!board) throw new Error("Expected the authored Station dispatch board.");
     const preparation = board.support.find((support) => support.slot === "preparation");
@@ -606,5 +607,67 @@ describe("player-facing action presentation", () => {
     expect(
       focusedOptionalSupportActions(sections, ["dispatch"]).map((action) => action.summary),
     ).toEqual(board.support.map((support) => support.purpose));
+
+    const allocation = board.support.find((support) => support.slot === "relief_allocation");
+    if (allocation?.action?.kind !== "inspect") {
+      throw new Error("Expected actionable Station relief allocation.");
+    }
+    stationSession.chooseJourneyStory(
+      world.opening_preparation!.profiles[0]!.id,
+      world.opening_preparation!.id,
+    );
+    let updated = stationSession.view();
+    expect(updated.departureInteractions.map((interaction) => interaction.id)).not.toContain(
+      preparation.action.storyChoiceId,
+    );
+    expect(
+      stationSupportPresentation(updated.stationDispatchBoard, {
+        kind: "inspect",
+        storyChoiceId: preparation.action.storyChoiceId,
+      }),
+    ).toBeNull();
+    expect(
+      stationSupportPresentation(updated.stationDispatchBoard, {
+        kind: "inspect",
+        storyChoiceId: allocation.action.storyChoiceId,
+      }),
+    ).toEqual({ summary: allocation.purpose, terms: allocation.detailHint });
+    expect(
+      stationSupportPresentation(updated.stationDispatchBoard, {
+        kind: "talk",
+        characterId: secondRider.action.characterId,
+      }),
+    ).toEqual({ summary: secondRider.purpose, terms: secondRider.detailHint });
+
+    stationSession.chooseJourneyStory(
+      world.opening_relief_allocation!.options[0]!.id,
+      world.opening_relief_allocation!.id,
+    );
+    updated = stationSession.view();
+    expect(updated.departureInteractions.map((interaction) => interaction.id)).not.toContain(
+      allocation.action.storyChoiceId,
+    );
+    expect(
+      stationSupportPresentation(updated.stationDispatchBoard, {
+        kind: "inspect",
+        storyChoiceId: allocation.action.storyChoiceId,
+      }),
+    ).toBeNull();
+    expect(updated.departureContactLeads.map((lead) => lead.contactId)).toContain(
+      secondRider.action.characterId,
+    );
+
+    stationSession.talkToCharacter(secondRider.action.characterId);
+    stationSession.chooseJourneyStory(world.opening_ally!.options[0]!.id);
+    updated = stationSession.view();
+    expect(updated.departureContactLeads.map((lead) => lead.contactId)).not.toContain(
+      secondRider.action.characterId,
+    );
+    expect(
+      stationSupportPresentation(updated.stationDispatchBoard, {
+        kind: "talk",
+        characterId: secondRider.action.characterId,
+      }),
+    ).toBeNull();
   });
 });

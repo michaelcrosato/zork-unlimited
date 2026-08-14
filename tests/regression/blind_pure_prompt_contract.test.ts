@@ -225,29 +225,34 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("context.quest_starts");
     expect(prompt).toContain("pass those values unchanged");
     expect(prompt).toContain("read-only\n  `station_dispatch_board`");
-    expect(prompt).toContain("`[3, quest_id, guidance, dispatch, rows]`");
+    expect(prompt).toContain("`[4, quest_id, guidance, dispatch, rows]`");
     expect(prompt).toContain("`[slot, status, selected_title|null, purpose|null, action|null]`");
     expect(prompt).toContain("The live\n  departure and its legal roads remain");
-    expect(prompt).toContain("one deliberate,\n  collapsed planning affordance");
-    expect(prompt).toContain("every optional support row has null `purpose` and `action`");
-    expect(prompt).toContain("does not authorize an inspect or talk call");
-    expect(prompt).toContain("mcp__adventureforge__get_overworld_session_context");
-    expect(prompt).toContain("`include_station_dispatch_support: true`");
-    expect(prompt).toContain("`station_dispatch_support`: `[[slot, purpose, action], ...]`");
-    expect(prompt).toContain("Do not request it\n  merely to enumerate all three rows");
+    expect(prompt).toContain("one deliberate,\n  planning affordance");
+    expect(prompt).toContain("role, duty,\n  and evidence always have null `purpose` and `action`");
+    expect(prompt).toContain("Only an `open_optional`\n  support row carries");
+    expect(prompt).toContain("existing authenticated action");
+    expect(prompt).toContain("Use only the support row you actually want");
+    expect(prompt).toContain("do not enumerate\n  all three");
     expect(prompt).toContain("Support rows are independent and optional");
     expect(prompt).toContain('`["inspect", story_choice_id]`');
     expect(prompt).toContain('`["talk", character_id, contact_name]`');
     expect(prompt).toContain("A null action is not");
     expect(prompt).toContain("mcp__adventureforge__talk_overworld_session_contact");
     expect(prompt).toContain("A talk action alone can present the actual");
-    expect(prompt).toContain("reading the default board or deferred support detail");
+    expect(prompt).toContain("reading the board changes no state");
     expect(prompt).toContain("or decision count");
     expect(prompt).toMatch(
-      /older session cannot produce the v3 board, the compact\s+fallback may instead expose `departure_recap`/,
+      /older session cannot produce the v4 board, the compact\s+fallback may instead expose `departure_recap`/,
     );
-    expect(prompt).toContain("A legacy v2 board can instead carry");
-    expect(prompt).toContain("use only those visible non-null\n  actions as authorization");
+    expect(prompt).toMatch(/legacy v3 board has null row\s+actions, which authorize nothing/);
+    expect(prompt).toContain("mcp__adventureforge__get_overworld_session_context");
+    expect(prompt).toContain("`include_station_dispatch_support: true`");
+    expect(prompt).toContain("`station_dispatch_support`: `[[slot, purpose, action], ...]`");
+    expect(prompt).toContain("only a visible\n  non-null detail action authorizes");
+    expect(prompt).toContain("only for that legacy response");
+    expect(prompt).toMatch(/A legacy v2 board can instead\s+carry/);
+    expect(prompt).toMatch(/use only those visible\s+non-null actions as authorization/);
     expect(prompt).toContain("`departure_interactions`, and");
     expect(prompt).toContain("`departure_contact_leads`");
     expect(prompt).toContain("context.job_scenes");

@@ -196,3 +196,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 2026081647 on `2b46c1e3` chose Road-Warden/Aid-Only/Hayden, sheltered FORTIFY under Cade's terms, kept household/herd/all wolves alive, continued at goal one (17) and checkpoint 40, completed Gallowmere, then ended at goal two (41). Fifty turns completed normally; clarity/enjoyment 4/4, replay yes, not stuck.
 - Feedback/next: the fresh report still records S1 density in Cade's plan terms and an optional-Gallowmere checkpoint interruption; 13 verified/actionable reports compiled freshly at `ai-runs/feedback/20260814T053920Z`. The next authority step remains a wholly fresh no-retry Terra pilot; 100 sessions remain forbidden unless every pilot gate passes.
 - Guard: 112 focused product/proof/UI checks plus both formerly red full suites; exact health 460 files/4,079 tests; both 6,000-step crawls; canonical deep 1,408,000 steps plus a dedicated 128,000-step/64-seed Wolf deep crawl; all 12 packs; UI typechecks; browser smoke; cycle-start integrity; and exact pure provenance are green.
+## AFK Cycle 2026-08-14T06-42-07-922Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-14T06-42-07-922Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-7c0cfd2e (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

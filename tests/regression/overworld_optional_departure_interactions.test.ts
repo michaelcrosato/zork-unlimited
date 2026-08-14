@@ -168,11 +168,17 @@ describe("optional Station departure interactions", () => {
     ]);
     const compact = session.compactView();
     expect(compact.departure_interactions).toBeUndefined();
-    expect(compact.station_dispatch_board?.[0]).toBe(3);
+    expect(compact.station_dispatch_board?.[0]).toBe(4);
     expect(compact.station_dispatch_board?.[4]).toEqual(
       expect.arrayContaining([
-        ["preparation", "open_optional", null, null, null],
-        ["relief_allocation", "open_optional", null, null, null],
+        ["preparation", "open_optional", null, expect.any(String), ["inspect", PREPARATION.id]],
+        [
+          "relief_allocation",
+          "open_optional",
+          null,
+          expect.any(String),
+          ["inspect", ALLOCATION.id],
+        ],
       ]),
     );
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toEqual(
@@ -238,7 +244,13 @@ describe("optional Station departure interactions", () => {
       session
         .compactView()
         .station_dispatch_board?.[4].find(([slot]) => slot === "relief_allocation"),
-    ).toEqual(["relief_allocation", "open_optional", null, null, null]);
+    ).toEqual([
+      "relief_allocation",
+      "open_optional",
+      null,
+      expect.any(String),
+      ["inspect", ALLOCATION.id],
+    ]);
 
     session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
     expect(session.view().departureInteractions).toEqual([]);
@@ -274,7 +286,13 @@ describe("optional Station departure interactions", () => {
     expect(session.compactView().departure_contact_leads).toBeUndefined();
     expect(
       session.compactView().station_dispatch_board?.[4].find(([slot]) => slot === "field_team"),
-    ).toEqual(["field_team", "open_optional", null, null, null]);
+    ).toEqual([
+      "field_team",
+      "open_optional",
+      null,
+      expect.any(String),
+      ["talk", june.id, june.name],
+    ]);
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toContainEqual(
       ["field_team", expect.any(String), ["talk", june.id, june.name]],
     );
@@ -299,7 +317,7 @@ describe("optional Station departure interactions", () => {
       session
         .compactView()
         .station_dispatch_board?.[4].find(([slot]) => slot === "field_team")?.[4],
-    ).toBeNull();
+    ).toEqual(["talk", june.id, june.name]);
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toContainEqual(
       ["field_team", expect.any(String), ["talk", june.id, june.name]],
     );

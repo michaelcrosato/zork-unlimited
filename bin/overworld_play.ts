@@ -257,8 +257,26 @@ export function renderStationDispatchBoard(view: OverworldView): string[] {
 export function renderStationSupportAffordance(view: OverworldView): string[] {
   const board = view.stationDispatchBoard;
   if (!board) return [];
+  const open = board.support.filter(
+    (support) =>
+      support.status === "open_optional" &&
+      support.selectedTitle === null &&
+      support.action !== null,
+  );
   return [
-    "Optional support: field kit, relief wagon, or second rider — `review support`.",
+    ...(open.length > 0
+      ? [
+          "Optional support (independent; `review support` for detail):",
+          ...open.map((support) => {
+            const action = support.action!;
+            const command =
+              action.kind === "inspect"
+                ? `inspect ${action.storyChoiceId}`
+                : `talk ${action.contactName}`;
+            return `  ${support.purpose} \`${command}\``;
+          }),
+        ]
+      : []),
     "  Current commitments: `review dispatch`.",
   ];
 }

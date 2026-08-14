@@ -11,7 +11,7 @@ import type {
 } from "./session_departure_interactions.js";
 
 /** A read-only, coverage-complete index of the current Station dispatch. */
-export const STATION_DISPATCH_BOARD_VERSION = 3 as const;
+export const STATION_DISPATCH_BOARD_VERSION = 4 as const;
 export const STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT = 240;
 export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
 
@@ -21,31 +21,34 @@ const PLAN_SLOTS = ["role", "duty", "evidence", ...SUPPORT_SLOTS] as const;
 type StationDispatchPlanSlot = (typeof PLAN_SLOTS)[number];
 
 const READY_GUIDANCE =
-  "Cade's herd is under pressure. Depart now, or review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.";
+  "Cade's herd is under pressure. Depart now, or use an open support row. Support changes cost and aftermath, not your Wolf-Winter plan.";
 const WAITING_GUIDANCE =
-  "Cade's herd is under pressure. No road is open. Review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.";
+  "Cade's herd is under pressure. No road is open. You may still use any open support row; support changes cost and aftermath, not which plan you can choose.";
 
 const SUPPORT_COPY: Readonly<
   Record<
     StationDispatchSupportSlot,
-    Readonly<{ label: string; purpose: string; detailHint: string }>
+    Readonly<{ label: string; purpose: string; inlinePurpose: string; detailHint: string }>
   >
 > = Object.freeze({
   preparation: {
     label: "One field kit",
     purpose:
       "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
+    inlinePurpose: "Choose one specialist kit for a named danger.",
     detailHint: "Compare kits only if you want their exact cost and field use.",
   },
   relief_allocation: {
     label: "Albany's last relief wagon",
     purpose:
       "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
+    inlinePurpose: "Send Albany's last relief wagon to one crisis.",
     detailHint: "Compare destinations only if you want to decide who is protected.",
   },
   field_team: {
     label: "Second rider",
     purpose: "Second rider: optionally ask about cattle-first authority, or ride alone.",
+    inlinePurpose: "Ask about cattle-first help for one line, never combat.",
     detailHint: "Talk only to compare exact terms; this adds no combat power.",
   },
 });
@@ -136,11 +139,7 @@ export type OpeningCompactStationDispatchBoard = readonly [
   rows: readonly OpeningCompactStationDispatchBoardPlanRow[],
 ];
 
-/**
- * Optional Station support is intentionally omitted from the first compact
- * board read. This bounded detail is returned only by an explicit read-only
- * context request, while retaining the same authenticated action handles.
- */
+/** Backward-compatible explicit detail for clients that request Station support separately. */
 export type OpeningCompactStationDispatchBoardSupport = readonly [
   slot: StationDispatchSupportSlot,
   purpose: string,
@@ -266,6 +265,7 @@ function hasExactPlanCoverage(recap: OpeningDepartureRecap): boolean {
 
 function actionMatchesStatus(entry: StationDispatchBoardSupport): boolean {
   const requiresAction = entry.status === "open_optional";
+  if (requiresAction && entry.selectedTitle !== null) return false;
   if (requiresAction !== (entry.action !== null)) return false;
   if (!entry.action) return true;
   return entry.slot === "field_team"
@@ -442,19 +442,29 @@ export function compactStationDispatchBoard(
           [...board.dispatch.remainingOptional],
         ]
       : null,
-    board.plan.map(
-      (entry) =>
-        [
-          entry.slot,
-          entry.status,
-          entry.selectedTitle,
-          // The first compact Station view is deliberately launch-first. Exact
-          // optional-support purposes and action handles are disclosed only by
-          // an explicit read-only context request.
-          null,
-          null,
-        ] as const,
-    ),
+    board.plan.map((entry) => {
+      const support = board.support.find((candidate) => candidate.slot === entry.slot);
+      const openSupport =
+        entry.status === "open_optional" &&
+        entry.selectedTitle === null &&
+        support?.status === entry.status &&
+        support.selectedTitle === entry.selectedTitle &&
+        support.action !== null
+          ? support
+          : null;
+      return [
+        entry.slot,
+        entry.status,
+        entry.selectedTitle,
+        openSupport
+          ? compactText(
+              SUPPORT_COPY[openSupport.slot].inlinePurpose,
+              STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT,
+            )
+          : null,
+        openSupport ? compactAction(openSupport.action) : null,
+      ] as const;
+    }),
   ];
 }
 

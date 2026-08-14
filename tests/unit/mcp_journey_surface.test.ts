@@ -1228,6 +1228,27 @@ describe("MCP journey surface", () => {
     source.chooseJourneyStory("albany:prep_works_fortification", PREPARATION_STORY_ID);
     assertMcpRecall(RELIEF_ALLOCATION_STORY_ID, "relief_allocation");
     source.chooseJourneyStory(RESIDENT_SHELTER_ALLOCATION_ID, RELIEF_ALLOCATION_STORY_ID);
+    const directTalkSession = a.restore_overworld_session({
+      compact_context: true,
+      snapshot: source.snapshot(),
+    });
+    const directTalkAction = directTalkSession.context.station_dispatch_board?.[4].find(
+      ([slot]) => slot === "field_team",
+    )?.[4];
+    if (directTalkAction?.[0] !== "talk") {
+      throw new Error("expected an authenticated V4 field-team action");
+    }
+    const directTalk = a.talk_overworld_session_contact({
+      session_id: directTalkSession.session_id,
+      character_id: directTalkAction[1],
+      compact_context: true,
+      compact_result: true,
+    });
+    expect(directTalk.journey.storyChoice).toMatchObject({
+      id: WORLD.opening_ally!.id,
+      kind: "ally",
+    });
+    expect(directTalk.context).not.toHaveProperty("station_dispatch_support");
     source.talkToCharacter(WORLD.opening_ally!.contact);
     expect(source.journey().storyChoice?.kind).toBe("ally");
     assertMcpRecall(WORLD.opening_ally!.id, "ally");

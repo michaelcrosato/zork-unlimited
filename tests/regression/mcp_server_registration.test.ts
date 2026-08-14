@@ -326,6 +326,7 @@ describe("MCP server registration", () => {
   });
 
   it("keeps overworld ToolSearch schema source terse", () => {
+    const serverSource = readFileSync("src/mcp/server.ts", "utf8");
     const overworldSchemaSource = OVERWORLD_SCHEMA_TOOLS.map((toolName) =>
       registeredToolBlock(toolName),
     ).join("\n");
@@ -336,6 +337,10 @@ describe("MCP server registration", () => {
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
+    expect(serverSource).toContain(
+      '"Legacy V3 Station support detail; V4 already inlines current open support."',
+    );
+    expect(serverSource).not.toContain("Optional Station support purposes and action handles.");
   });
 
   it("keeps public RPG utility ToolSearch schema source terse", () => {
