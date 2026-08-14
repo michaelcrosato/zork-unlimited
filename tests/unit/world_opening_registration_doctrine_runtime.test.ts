@@ -48,7 +48,7 @@ describe("Albany role-first standard packet runtime", () => {
       REGISTRATION.profiles.map((profile) => profile.id),
     );
     expect(registrationPrompt.options).toHaveLength(4);
-    expect(registrationPresentation.message).toContain("authored quick setup");
+    expect(registrationPresentation.message).toContain("quick setup");
     expect(registrationPresentation.message.toLowerCase()).not.toContain("standard packet");
     expect(registrationPrompt.options.every((option) => option.group === undefined)).toBe(true);
     expect(registrationPrompt.options.map((option) => option.id)).not.toEqual(
@@ -81,7 +81,7 @@ describe("Albany role-first standard packet runtime", () => {
           session.snapshot().character,
           { registration: REGISTRATION, leadSource: LEAD_SOURCE },
         );
-        expect(oathPresentation.message).toContain("quick setup");
+        expect(oathPresentation.message.toLowerCase()).toContain("quick setup");
         expect(oathPresentation.message.toLowerCase()).not.toContain("standard packet");
         expect(oathPrompt.progressiveDisclosure).toMatchObject({
           initialOptionIds: [matchedPacket.id],
@@ -97,7 +97,7 @@ describe("Albany role-first standard packet runtime", () => {
           (option) => option.id === matchedPacket.lead_source_option_id,
         )!;
         expect(packetOption.label).toBe(
-          `Quick setup — ${matchedPacket.title}: ${mappedOath.title} + ${mappedSource.title}`,
+          `Quick setup — ${mappedOath.title} + ${mappedSource.title}`,
         );
         const expectedSupport =
           matchedPacket.profile_id === "albany:ironhands_repairer"
@@ -105,12 +105,8 @@ describe("Albany role-first standard packet runtime", () => {
             : matchedPacket.profile_id === "albany:road_warden"
               ? "Fieldcraft 4 sets DEF 4 and supplies DRIVE/LURE checks; Aid-Only skips clean LURE's last alarm and fits Cade's FORTIFY terms; after a public wedge splits, Hayden can brace HUNT. All four plans remain legal."
               : "Streetwise 4; DRIVE's first shutter-signal check is 2 DC easier.";
-        expect(packetOption.summary?.commitment).toBe(
-          `Applies the matched duty and evidence together; no field plan is chosen. Support: ${expectedSupport}`,
-        );
-        expect(packetOption.summary?.tradeoff).toBe(
-          "Other duty/evidence pairs close; every field plan stays open.",
-        );
+        expect(packetOption.summary?.commitment).toBe(`Support: ${expectedSupport}`);
+        expect(packetOption.summary?.tradeoff).toBe("Other duty/evidence pairs close.");
         expect(packetOption.consequence).toContain(`Benefit: ${matchedPacket.trigger_category}`);
         expect(packetOption.summary?.commitment).not.toContain(matchedPacket.trigger_category);
         expect(packetOption.summary?.commitment).toContain(expectedSupport);
@@ -144,9 +140,7 @@ describe("Albany role-first standard packet runtime", () => {
       .journey()
       .storyChoice!.options.find((candidate) => candidate.id === revisedDoctrine.id)!;
 
-    expect(option.summary?.commitment).toBe(
-      `Applies the matched duty and evidence together; no field plan is chosen. Support: ${revisedCategory}`,
-    );
+    expect(option.summary?.commitment).toBe(`Support: ${revisedCategory}`);
     expect(option.summary?.commitment).not.toContain("a bloodless LURE skips one alarm");
     expect(option.consequence).toContain(`Benefit: ${revisedCategory}`);
   });

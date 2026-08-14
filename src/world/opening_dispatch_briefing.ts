@@ -3,9 +3,11 @@ import { openingAllyTotalTimingSummary } from "./opening_ally.js";
 import type { OverworldManifest } from "./overworld.js";
 
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
-const REGISTRATION_COMPARISON_HEADER = `Compare starting resources, first field edge, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const REGISTRATION_COMPARISON_HEADER =
+  "Compare funds, starter edge, obligation, and tradeoff. No fee; checks appear before resolution.";
 const RELIEF_OATH_COMPARISON_HEADER = `Compare promise, exact cost, and what each duty gives up. ${FIELD_CHECK_TIMING}`;
-const STANDARD_PACKET_RELIEF_OATH_COMPARISON_HEADER = `Compare promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const STANDARD_PACKET_RELIEF_OATH_COMPARISON_HEADER =
+  "Compare matched support, exact cost, and closed alternatives. Checks appear before resolution.";
 const LEAD_SOURCE_COMPARISON_HEADER = `Other accounts close. Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 const PREPARATION_COMPARISON_HEADER = `Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 const RELIEF_ALLOCATION_COMPARISON_HEADER = `Compare who is protected, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
@@ -25,8 +27,7 @@ export function openingDispatchCrisisPreview(discovery: string): string | null {
 const OPENING_DISPATCH_PURPOSE: Readonly<
   Record<NonNullable<JourneyStoryChoicePrompt["kind"]>, string>
 > = Object.freeze({
-  registration:
-    "Purpose: choose your role and promise. Order is neutral; HUNT, LURE, DRIVE, and FORTIFY stay open.",
+  registration: "Purpose: choose a role; HUNT, LURE, DRIVE, and FORTIFY stay open.",
   relief_oath: "Purpose: choose duty; every field plan stays open.",
   lead_source: "Purpose: choose evidence; every field plan stays open.",
   preparation:
@@ -217,21 +218,21 @@ export function withOpeningDispatchBriefing(
                 ? `${ally.title}. ${ALLY_COMPARISON_HEADER}`
                 : prompt.message;
   const purpose = offersStandardPacket
-    ? "Purpose: bind duty and evidence or customize; every field plan stays open."
+    ? "Purpose: quick setup or customize; every field plan stays open."
     : OPENING_DISPATCH_PURPOSE[prompt.kind];
   if (civicStageIndex >= 0) {
     const stage = plan.civicStages[civicStageIndex]!;
     const progress =
       civicStageIndex === 0
-        ? `${plan.questTitle} Civic docket · role.`
+        ? `${plan.questTitle} · role.`
         : offersStandardPacket
-          ? `${plan.questTitle} Civic docket · matched duty + evidence.`
+          ? `${plan.questTitle} · matched duty + evidence.`
           : `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
     const planningContext =
       civicStageIndex === 0
-        ? `Mission preview — ${plan.questCrisisPreview} Next, bind duty and evidence or customize.`
+        ? `Mission — ${plan.questCrisisPreview} Next, bind duty and evidence or customize.`
         : civicStageIndex === 1 && offersStandardPacket
-          ? "Quick setup binds both; custom duty leaves evidence next."
+          ? "Quick setup binds duty and evidence without choosing a field plan."
           : civicStageIndex === 2
             ? "Hayden's Station launch board follows."
             : "Evidence follows.";

@@ -75,11 +75,11 @@ export function presentOpeningReliefOath(
     ? Object.freeze({
         ...presentOpeningChoiceOption({
           id: doctrine.id,
-          label: `Quick setup — ${doctrine.title}: ${doctrineOath!.title} + ${doctrineSource!.title}`,
-          commitment: `Applies the matched duty and evidence together; no field plan is chosen. Support: ${summarizeStartingDoctrineSupport(doctrine)}`,
+          label: `Quick setup — ${doctrineOath!.title} + ${doctrineSource!.title}`,
+          commitment: `Support: ${summarizeStartingDoctrineSupport(doctrine)}`,
           exactBenefit: doctrine.trigger_category,
           immediateCost: doctrine.immediate_cost,
-          giveUp: "Other duty/evidence pairs close; every field plan stays open.",
+          giveUp: "Other duty/evidence pairs close.",
         }),
       })
     : null;
@@ -127,7 +127,7 @@ export function presentOpeningReliefOath(
             id: "customize_duty_and_evidence",
             label: "Customize duty and evidence — compare all four field outcomes",
             description:
-              "HUNT — Outcome: hold Cade's ground, herd, and relief stores through prepared combat. Cost: wolves may die; failure can lose cattle or the line. Later: bloodshed changes Greenway work and damage remains. LURE — Outcome: move the pack beyond the breach and keep the herd. Cost: Cade's last feed, broken paling, and two cattle risked on a first-cast foul. Later: broken boundary or scattered cattle change Station response. DRIVE — Outcome: move people and herd clear while forcing the living pack away. Cost: abandon the outer steading; if the drive reaches its crisis, take a wound, lose two cattle, or lose the rig. Later: the line and chosen loss remain. FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost: no retreat; expose property for Cade's help or spend public seals without it. Later: the terms remain, and a no-loss hold opens no Cade repair dispatch. No plan is recommended or committed. This comparison changes no state; choose one duty or the quick setup afterward, and evidence follows unless the setup binds it.",
+              "HUNT — Outcome: hold Cade's ground, herd, relief stores in combat. Cost or risk: wolves may die; failure risks cattle/line. Later: bloodshed alters Greenway work; damage remains. LURE — Outcome: move pack beyond breach; keep herd. Cost or risk: Cade's last feed, broken paling; first-cast foul risks two cattle. Later: broken boundary or scattered cattle alter Station response. DRIVE — Outcome: move people and herd clear; force the living pack away. Cost or risk: abandon the outer steading; crisis costs a wound, two cattle, or the rig. Later: the line and chosen loss remain. FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost or risk: no retreat; expose property for Cade's help or spend public seals without it. Later: terms remain; a no-loss hold opens no Cade repair dispatch. No plan is recommended or committed. This read-only comparison changes no state.",
             optionIds,
           }),
         });
@@ -138,7 +138,7 @@ export function presentOpeningReliefOath(
     id: parsed.id,
     kind: "relief_oath" as const,
     message: standardPacket
-      ? `${parsed.title}. Your quick setup binds matched duty and evidence, not a field plan. Customize only for a different duty or source. HUNT, LURE, DRIVE, and FORTIFY remain open. ${parsed.message}`
+      ? `${parsed.title}. Quick setup binds matched duty and evidence; customization separates them. Every field plan stays open. ${parsed.message}`
       : `${parsed.title}. ${parsed.message}`,
     options,
     ...(progressiveDisclosure ? { progressiveDisclosure } : {}),

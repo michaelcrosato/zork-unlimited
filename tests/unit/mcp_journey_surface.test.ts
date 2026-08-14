@@ -1384,7 +1384,7 @@ describe("MCP journey surface", () => {
       id: "customize_duty_and_evidence",
       label: expect.stringContaining("Customize duty and evidence"),
       description: expect.stringMatching(
-        /HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die[^]*LURE[^]*Outcome:[^]*pack beyond the breach[^]*Cade's last feed[^]*DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading[^]*FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals[^]*No plan is recommended or committed/i,
+        /HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die[^]*LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed[^]*DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading[^]*FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals[^]*No plan is recommended or committed/i,
       ),
     });
     const canonical = a.inspect_overworld_session_story({

@@ -745,11 +745,11 @@ describe("overworld_play CLI (scripted mode)", () => {
     expect(run.output).not.toMatch(/\b[12]\/3\b/);
     expect(run.output).not.toContain("Civic order:");
     expect(run.output).toContain(
-      "! Story choice detail — Quick setup — Take the Road-Warden Aid Route: Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "! Story choice detail — Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
     );
     expect(run.output).toContain("Choose: `choose albany:doctrine_road_warden_aid_route`");
     expect(run.output).toContain(
-      "Chosen: Quick setup — Take the Road-Warden Aid Route: Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report.",
+      "Chosen: Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report.",
     );
     expect(run.output).toMatch(/^[0-9a-f]{64}$/m);
     expect(run.output).not.toContain("A scripted command was rejected.");

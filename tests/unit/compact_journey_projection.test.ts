@@ -428,16 +428,49 @@ describe("compact journey projection", () => {
       for (const sourceOption of sourceOptions) {
         const option = compact.options.find((candidate) => candidate.id === sourceOption.id);
         if (full.kind === "registration") {
+          const profile = sourceOption as (typeof registration.profiles)[number];
+          const requiredPreviewFact = (label: string): string => {
+            const prefix = `${label}: `;
+            const fact = profile.preview
+              .split(". ")
+              .map((part) => part.replace(/\.$/u, ""))
+              .find((part) => part.startsWith(prefix));
+            if (!fact) throw new Error(`Registration preview must disclose ${label}.`);
+            return fact.slice(prefix.length);
+          };
+          const [, beforeDef, afterDef] =
+            profile.consequence.match(/starting DEF floor from (\d+) to (\d+)/u) ?? [];
+          const expectedWolfFit =
+            beforeDef !== undefined && afterDef !== undefined
+              ? `Starting DEF ${beforeDef} → ${afterDef} when the authored campaign import applies.`
+              : profile.consequence.includes(
+                    "does not receive the Road-Warden's current Fieldcraft DEF import",
+                  )
+                ? "No Road-Warden Fieldcraft import; the quest keeps its authored starting DEF."
+                : "No additional starting-DEF distinction is stated on this role.";
+          const highlights = option?.summary?.highlights ?? [];
           expect(option?.summary).toMatchObject({
-            commitment: sourceOption.summary,
+            commitment: profile.summary,
+            fieldTrigger: `${requiredPreviewFact("Skill edge")}; ${requiredPreviewFact("Kit")}`,
             fieldTriggerScope: "starter",
-            highlights: expect.arrayContaining([
-              { label: "Permanent role", value: sourceOption.title },
-              { label: "Role experience", value: sourceOption.summary },
-            ]),
-            immediateCost: expect.any(String),
-            tradeoff: sourceOption.tradeoff,
+            immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
+            tradeoff: profile.tradeoff,
           });
+          expect(highlights.filter((highlight) => highlight.label === "Permanent role")).toEqual([
+            { label: "Permanent role", value: "Persists after this dispatch." },
+          ]);
+          expect(
+            highlights.filter((highlight) => highlight.label === "Return obligation — ACTIVE"),
+          ).toEqual([
+            {
+              label: "Return obligation — ACTIVE",
+              value: requiredPreviewFact("Obligation"),
+            },
+          ]);
+          expect(highlights.filter((highlight) => highlight.label === "Wolf-Winter fit")).toEqual([
+            { label: "Wolf-Winter fit", value: expectedWolfFit },
+          ]);
+          expect(highlights.some((highlight) => highlight.label === "Role experience")).toBe(false);
           expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
           const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
           expect(detail.consequence).toContain(sourceOption.preview);

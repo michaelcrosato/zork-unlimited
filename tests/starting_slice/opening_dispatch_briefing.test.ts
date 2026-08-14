@@ -26,9 +26,11 @@ const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
 const ALLY_CONTACT = WORLD.characters.find((character) => character.id === ALLY.contact)!;
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
-const REGISTRATION_HEADER = `Compare starting resources, first field edge, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const REGISTRATION_HEADER =
+  "Compare funds, starter edge, obligation, and tradeoff. No fee; checks appear before resolution.";
 const OATH_HEADER = `Compare promise, exact cost, and what each duty gives up. ${FIELD_CHECK_TIMING}`;
-const STANDARD_PACKET_OATH_HEADER = `Compare promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const STANDARD_PACKET_OATH_HEADER =
+  "Compare matched support, exact cost, and closed alternatives. Checks appear before resolution.";
 const SOURCE_HEADER = `Other accounts close. Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 const PREPARATION_HEADER = `Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 const RELIEF_ALLOCATION_HEADER = `Compare who is protected, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
@@ -36,8 +38,7 @@ const ALLY_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIE
 const JUNE_TOTAL_TIMING =
   "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.";
 const PURPOSES = Object.freeze({
-  registration:
-    "Purpose: choose your role and promise. Order is neutral; HUNT, LURE, DRIVE, and FORTIFY stay open.",
+  registration: "Purpose: choose a role; HUNT, LURE, DRIVE, and FORTIFY stay open.",
   relief_oath: "Purpose: choose duty; every field plan stays open.",
   lead_source: "Purpose: choose evidence; every field plan stays open.",
   preparation:
@@ -46,14 +47,13 @@ const PURPOSES = Object.freeze({
     "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
   ally: "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
 });
-const STANDARD_PACKET_PURPOSE =
-  "Purpose: bind duty and evidence or customize; every field plan stays open.";
+const STANDARD_PACKET_PURPOSE = "Purpose: quick setup or customize; every field plan stays open.";
 const WOLF_CRISIS_PREVIEW =
   "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather.";
 const REGISTRATION_MESSAGE =
-  "The Wolf-Winter Civic docket · role. Purpose: choose your role and promise. Order is neutral; HUNT, LURE, DRIVE, and FORTIFY stay open. Mission preview — A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. Next, bind duty and evidence or customize. Enter Albany's Relief Compact. Compare starting resources, first field edge, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter · role. Purpose: choose a role; HUNT, LURE, DRIVE, and FORTIFY stay open. Mission — A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. Next, bind duty and evidence or customize. Enter Albany's Relief Compact. Compare funds, starter edge, obligation, and tradeoff. No fee; checks appear before resolution.";
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: bind duty and evidence or customize; every field plan stays open. Quick setup binds both; custom duty leaves evidence next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter · matched duty + evidence. Purpose: quick setup or customize; every field plan stays open. Quick setup binds duty and evidence without choosing a field plan. Set the Wolf-Winter Relief Terms. Compare matched support, exact cost, and closed alternatives. Checks appear before resolution.";
 const CUSTOM_DUTY_MESSAGE =
   "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
 const SOURCE_MESSAGE =
@@ -141,12 +141,13 @@ function wordCount(value: string): number {
 }
 
 function expectBoundedPurpose(storyChoice: JourneyStoryChoicePrompt, purpose: string): void {
+  const timingIndex = storyChoice.message.toLowerCase().includes(FIELD_CHECK_TIMING.toLowerCase())
+    ? storyChoice.message.toLowerCase().indexOf(FIELD_CHECK_TIMING.toLowerCase())
+    : storyChoice.message.toLowerCase().indexOf("checks appear before resolution");
   expect(purpose.length).toBeLessThanOrEqual(140);
   expect(storyChoice.message.match(/\bPurpose:/g) ?? []).toHaveLength(1);
   expect(storyChoice.message).toContain(purpose);
-  expect(storyChoice.message.indexOf(purpose)).toBeLessThan(
-    storyChoice.message.indexOf(FIELD_CHECK_TIMING),
-  );
+  expect(storyChoice.message.indexOf(purpose)).toBeLessThan(timingIndex);
   expect(purpose).not.toMatch(/\b(?:best|optimal|recommended)\b/i);
   if (purpose !== PURPOSES.relief_oath) {
     expect(purpose).not.toMatch(/\bmust\b/i);
@@ -154,10 +155,14 @@ function expectBoundedPurpose(storyChoice: JourneyStoryChoicePrompt, purpose: st
 }
 
 function expectRoleplayFirstFraming(storyChoice: JourneyStoryChoicePrompt): void {
-  expect(storyChoice.message).toMatch(/\b(?:promises?|priorit(?:y|ies))\b/i);
-  expect(storyChoice.message).toContain("exact cost");
-  expect(storyChoice.message).toMatch(/\b(?:gives up|remains exposed|tradeoffs?)\b/i);
-  expect(storyChoice.message).toContain(FIELD_CHECK_TIMING);
+  expect(storyChoice.message).toMatch(/\b(?:duty|obligation|promises?|priorit(?:y|ies))\b/i);
+  expect(storyChoice.message).toMatch(/\b(?:(?:exact )?cost|fee)\b/i);
+  expect(storyChoice.message).toMatch(
+    /\b(?:closed alternatives|gives up|remains exposed|tradeoffs?)\b/i,
+  );
+  expect(storyChoice.message).toMatch(
+    /Field checks surface with their action before resolution|checks appear before resolution/i,
+  );
   expect(storyChoice.message).not.toMatch(
     /broad field fit|trigger category|inspect a card|exact check|recovery chain/i,
   );
@@ -277,10 +282,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const registration = currentStoryChoice(session);
     expect(registration).toMatchObject({ id: REGISTRATION.id, kind: "registration" });
     expect(registration.message).toBe(REGISTRATION_MESSAGE);
-    expect(registration.message).toContain(`${WOLF.title} Civic docket · role.`);
+    expect(registration.message).toContain(`${WOLF.title} · role.`);
     expect(registration.message).toContain(`${REGISTRATION.title}. ${REGISTRATION_HEADER}`);
     expect(registration.message).not.toContain(REGISTRATION.message);
-    expect(registration.message).toContain(`Mission preview — ${WOLF_CRISIS_PREVIEW}`);
+    expect(registration.message).toContain(`Mission — ${WOLF_CRISIS_PREVIEW}`);
     expect(registration.message).toContain("Next, bind duty and evidence or customize.");
     expect(registration.message).not.toContain(WOLF.discovery);
     expect(registration.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
@@ -291,7 +296,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     );
     expect(registration.options.every((option) => option.group === undefined)).toBe(true);
     expectRoleplayFirstFraming(registration);
-    expect(wordCount(registration.message)).toBeLessThanOrEqual(90);
+    expect(wordCount(registration.message)).toBeLessThanOrEqual(72);
     expectSummaryFirstOptions(registration);
     expect(registration.options.every((option) => option.summary?.immediateCost)).toBe(true);
     expect(OverworldSession.restore(WORLD, session.snapshot()).journey().storyChoice).toEqual(
@@ -309,13 +314,13 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const oath = currentStoryChoice(session);
     expect(oath).toMatchObject({ id: RELIEF_OATH.id, kind: "relief_oath" });
     expect(oath.message).toBe(MATCHED_OATH_MESSAGE);
-    expect(oath.message).toContain(`${WOLF.title} Civic docket · matched duty + evidence.`);
+    expect(oath.message).toContain(`${WOLF.title} · matched duty + evidence.`);
     expect(oath.message).toContain(`${RELIEF_OATH.title}. ${STANDARD_PACKET_OATH_HEADER}`);
     expect(oath.message).not.toContain(RELIEF_OATH.message);
     const standardPacket = REGISTRATION.doctrines!.find(
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
-    expect(oath.message).toContain("custom duty leaves evidence next.");
+    expect(oath.message).toContain("without choosing a field plan.");
     expect(oath.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(oath.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
     expectBoundedPurpose(oath, STANDARD_PACKET_PURPOSE);
@@ -324,20 +329,18 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       ...RELIEF_OATH.options.map((option) => option.id),
     ]);
     expectRoleplayFirstFraming(oath);
-    expect(wordCount(oath.message)).toBeLessThanOrEqual(50);
-    expect(wordCount(registration.message) + wordCount(oath.message)).toBeLessThanOrEqual(135);
+    expect(wordCount(oath.message)).toBeLessThanOrEqual(45);
+    expect(wordCount(registration.message) + wordCount(oath.message)).toBeLessThanOrEqual(120);
     expectSummaryFirstOptions(oath);
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     const roadWardenPacket = oath.options.find((option) => option.id === standardPacket.id)!;
     expect(roadWardenPacket.label).toBe(
-      "Quick setup — Take the Road-Warden Aid Route: Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
     );
     expect(roadWardenPacket.summary?.commitment).toBe(
-      "Applies the matched duty and evidence together; no field plan is chosen. Support: Fieldcraft 4 sets DEF 4 and supplies DRIVE/LURE checks; Aid-Only skips clean LURE's last alarm and fits Cade's FORTIFY terms; after a public wedge splits, Hayden can brace HUNT. All four plans remain legal.",
+      "Support: Fieldcraft 4 sets DEF 4 and supplies DRIVE/LURE checks; Aid-Only skips clean LURE's last alarm and fits Cade's FORTIFY terms; after a public wedge splits, Hayden can brace HUNT. All four plans remain legal.",
     );
-    expect(roadWardenPacket.summary?.tradeoff).toBe(
-      "Other duty/evidence pairs close; every field plan stays open.",
-    );
+    expect(roadWardenPacket.summary?.tradeoff).toBe("Other duty/evidence pairs close.");
     expect(roadWardenPacket.consequence).toContain(
       "Benefit: Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
     );
@@ -364,7 +367,9 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
     const oathCompass = oath.progressiveDisclosure!.reveal.description;
     expect(oathCompass).toMatch(/HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die/i);
-    expect(oathCompass).toMatch(/LURE[^]*Outcome:[^]*pack beyond the breach[^]*Cade's last feed/i);
+    expect(oathCompass).toMatch(
+      /LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed/i,
+    );
     expect(oathCompass).toMatch(
       /DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading/i,
     );
@@ -372,7 +377,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       /FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals/i,
     );
     expect(oathCompass).toMatch(/No plan is recommended or committed/i);
-    expect(oathCompass).toContain("This comparison changes no state");
+    expect(oathCompass).toContain("comparison changes no state");
+    expect(oathCompass.match(/Outcome:/g)).toHaveLength(4);
+    expect(oathCompass.match(/Cost or risk:/g)).toHaveLength(4);
+    expect(oathCompass.match(/Later:/g)).toHaveLength(4);
+    expect(wordCount(oathCompass)).toBeLessThanOrEqual(145);
     expect(journeyStoryChoiceOptionsForPresentation(oath).map((option) => option.id)).toEqual([
       standardPacket.id,
     ]);
@@ -689,9 +698,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
 
     expect(talked.journey.storyChoice).toEqual(ui.journey().storyChoice);
-    expect(talked.journey.storyChoice?.message).toContain(
-      `Mission preview — ${WOLF_CRISIS_PREVIEW}`,
-    );
+    expect(talked.journey.storyChoice?.message).toContain(`Mission — ${WOLF_CRISIS_PREVIEW}`);
     expectSummaryFirstOptions(talked.journey.storyChoice!);
 
     const standardPacket = REGISTRATION.doctrines!.find(

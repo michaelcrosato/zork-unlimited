@@ -10,7 +10,7 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 const WORLD = loadOverworldManifest(process.cwd());
 const requireFromRoot = createRequire(import.meta.url);
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter Civic docket · matched duty + evidence. Purpose: bind duty and evidence or customize; every field plan stays open. Quick setup binds both; custom duty leaves evidence next. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter · matched duty + evidence. Purpose: quick setup or customize; every field plan stays open. Quick setup binds duty and evidence without choosing a field plan. Set the Wolf-Winter Relief Terms. Compare matched support, exact cost, and closed alternatives. Checks appear before resolution.";
 const CUSTOM_DUTY_MESSAGE =
   "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
 const SOURCE_MESSAGE =

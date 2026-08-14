@@ -78,6 +78,8 @@ const REACTIVE_TRUTH_SOURCE_HASH =
   "a38c3bfd994b8c72cda38e90292e38376eca82d70b598858b59ddc516ab3d7b2";
 const COMMITMENT_LABELS_SOURCE_HASH =
   "76e01d88be2d5268e11b349796740a4599d26995156fb566acd251f4ec2d1024";
+const OPENING_CLARITY_SOURCE_HASH =
+  "8981df5bb46a5173e1dcc43b4560f07042e4e9a338e885433a68089fec328038";
 const YEARLING_DEFEAT_JOURNAL =
   "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 const CADE_HUNT_INSPECT_LABEL =
@@ -554,7 +556,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(COMMITMENT_LABELS_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(OPENING_CLARITY_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(COMMITMENT_LABELS_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(REACTIVE_TRUTH_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(LURE_ROOT_COMMIT_CUE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(BYRE_MOUTH_ROUTE_GUIDANCE_SOURCE_HASH);

@@ -47,7 +47,7 @@ const CADE_LURE_ROOT_COMMAND = `ask: ${CADE_LURE_ROOT_LABEL}`;
 const CADE_HUNT_ROOT_LABEL =
   "COMPARE — HUNT (read-only): hold ground; wolves may die; risk cattle/line. FINAL COMMITMENT: cross north or RELEASE JUNE if offered; closes other plans.";
 const CADE_HUNT_PREPARE_LABEL =
-  "PREPARE — HUNT: leave Cade ready; no commitment yet. FINAL COMMITMENT: cross north, or RELEASE JUNE if offered; wolves may die and other plans close.";
+  "LEAVE REVIEW — HUNT: exit with no state change. FINAL COMMITMENT: cross north, or RELEASE JUNE if offered; wolves may die and other plans close.";
 
 type StepResult = { ok: boolean };
 type LegalActionsResult = { actions: { id: string; command?: string }[] };
@@ -524,12 +524,12 @@ describe("Wolf-Winter dialogue surface", () => {
       command: `ask: ${CADE_HUNT_PREPARE_LABEL}`,
       action: { type: "ASK", npc: "houndsman", topic: "prepare_hunt" },
     });
-    if (!commitment) throw new Error("expected Cade's HUNT preparation exit");
+    if (!commitment) throw new Error("expected Cade's HUNT review exit");
     expect(commitment.command.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
 
     const closed = step(inspected.state, commitment.action);
     expect(closed.ok).toBe(true);
-    if (!closed.ok) throw new Error("expected Cade's HUNT exit to close dialogue");
+    if (!closed.ok) throw new Error("expected Cade's HUNT review exit to close dialogue");
     expect(closed.events).toContainEqual({
       type: "narration",
       text: "(You end the conversation.)",

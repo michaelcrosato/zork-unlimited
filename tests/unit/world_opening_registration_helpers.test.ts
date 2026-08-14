@@ -161,16 +161,14 @@ describe("opening registration presentation", () => {
         fieldTrigger: profile.preview,
         fieldTriggerScope: "starter",
         highlights: [
-          { label: "Permanent role", value: profile.title },
-          { label: "Role experience", value: profile.summary },
+          { label: "Permanent role", value: "Persists after this dispatch." },
           {
             label: "Return obligation",
             value: "No active return obligation is included in this role.",
           },
           {
             label: "Wolf-Winter fit",
-            value:
-              "No additional starting-DEF distinction is stated on this role. All four field plans remain open.",
+            value: "No additional starting-DEF distinction is stated on this role.",
           },
         ],
         immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
@@ -208,16 +206,14 @@ describe("opening registration presentation", () => {
         fieldTrigger: exactLegacy.profiles[0]!.preview,
         fieldTriggerScope: "starter",
         highlights: [
-          { label: "Permanent role", value: exactLegacy.profiles[0]!.title },
-          { label: "Role experience", value: exactLegacy.profiles[0]!.summary },
+          { label: "Permanent role", value: "Persists after this dispatch." },
           {
             label: "Return obligation",
             value: "No active return obligation is included in this role.",
           },
           {
             label: "Wolf-Winter fit",
-            value:
-              "No additional starting-DEF distinction is stated on this role. All four field plans remain open.",
+            value: "No additional starting-DEF distinction is stated on this role.",
           },
         ],
         immediateCost: "no time/fee; starts with $0",

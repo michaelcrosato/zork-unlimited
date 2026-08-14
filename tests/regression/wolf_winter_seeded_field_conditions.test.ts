@@ -331,7 +331,7 @@ describe("Wolf-Winter seeded field conditions", () => {
 
     let hunt = act(structuredClone(root), "ask_hunt");
     expect(action(hunt, "ask_prepare_hunt").command).toMatch(
-      /^ask: PREPARE — HUNT:[^]*no commitment yet[^]*FINAL COMMITMENT[^]*cross north[^]*RELEASE JUNE if offered/i,
+      /^ask: LEAVE REVIEW — HUNT:[^]*no state change[^]*FINAL COMMITMENT[^]*cross north[^]*RELEASE JUNE if offered/i,
     );
     hunt = act(hunt, "ask_prepare_hunt");
     expect(actionIds(hunt)).toContain("go_north");
@@ -878,6 +878,10 @@ describe("Wolf-Winter seeded field conditions", () => {
       expect(yard.description).toMatch(/firm frozen rail[^]*one clean first brace/i);
       expect(yard.description).toMatch(/Works does not replace or remove it/i);
       expect(yard.description).toMatch(/Hayden's separate later byre-jamb route/i);
+      expect(yard.description).not.toMatch(/\bJune\b/i);
+      expect(yard.available_actions.map((candidate) => candidate.id)).not.toContain(
+        "talk_june_pike",
+      );
       expect(yard.description).not.toMatch(
         /attempt the public wedge|leave (?:its )?lengths unbound/i,
       );
@@ -972,6 +976,9 @@ describe("Wolf-Winter seeded field conditions", () => {
     let june = fresh("opening_condition_firm_frozen_rail");
     june = { ...june, flags: { ...june.flags, june_pike_present: true } };
     june = act(june, "go_north");
+    const juneYard = buildRpgObservation(index, june);
+    expect(juneYard.description).toMatch(/June holds the north gate/i);
+    expect(juneYard.available_actions.map((candidate) => candidate.id)).toContain("talk_june_pike");
     june = act(june, "talk_houndsman");
     june = act(june, "ask_leave");
     june = act(june, "talk_june_pike");

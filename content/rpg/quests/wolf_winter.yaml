@@ -343,8 +343,8 @@ rooms:
           Tonight's firm frozen rail gives HUNT one clean first brace north; Works does not
           replace or remove it. Because that brace cannot split, Hayden's separate later
           byre-jamb route—which requires an ordinary failed wedge—cannot open on this ground.
-          Cross north to commit HUNT, or inspect all four plans with Cade first. Ask June too
-          if she is holding the gate. Store west; gate south.
+          Cross north to commit HUNT, or inspect all four plans with Cade first. Store west;
+          gate south.
       - when:
           - { has_flag: hayden_frost_report_certified }
           - { has_flag: works_fortification_prepared }
@@ -4512,7 +4512,7 @@ npcs:
           topics:
             - id: prepare_hunt
               aliases: [prepare_hunt_and_hold]
-              prompt: "PREPARE — HUNT: leave Cade ready; no commitment yet. FINAL COMMITMENT: cross north, or RELEASE JUNE if offered; wolves may die and other plans close."
+              prompt: "LEAVE REVIEW — HUNT: exit with no state change. FINAL COMMITMENT: cross north, or RELEASE JUNE if offered; wolves may die and other plans close."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }

@@ -68,8 +68,10 @@ export function presentOpeningRegistration(
         fieldTrigger: starterPackage,
         fieldTriggerScope: "starter" as const,
         highlights: Object.freeze([
-          Object.freeze({ label: "Permanent role", value: profile.title }),
-          Object.freeze({ label: "Role experience", value: profile.summary }),
+          Object.freeze({
+            label: "Permanent role",
+            value: "Persists after this dispatch.",
+          }),
           Object.freeze({
             label: hasActiveObligation ? "Return obligation — ACTIVE" : "Return obligation",
             value:
@@ -80,7 +82,7 @@ export function presentOpeningRegistration(
           }),
           Object.freeze({
             label: "Wolf-Winter fit",
-            value: `${registrationDefDistinction(profile.consequence)} All four field plans remain open.`,
+            value: registrationDefDistinction(profile.consequence),
           }),
         ]),
       }),
@@ -91,7 +93,7 @@ export function presentOpeningRegistration(
     kind: "registration" as const,
     message:
       (parsed.doctrines?.length ?? 0) > 0
-        ? `${parsed.title}. Choose a role now; option order is neutral, and every role keeps HUNT, LURE, DRIVE, and FORTIFY open. Duty and evidence follow. An authored quick setup can bind those next choices, but never chooses a field plan. ${parsed.message}`
+        ? `${parsed.title}. Choose a role; order is neutral and every field plan stays open. Duty and evidence follow, together by quick setup or separately by customization. ${parsed.message}`
         : `${parsed.title}. ${parsed.message}`,
     options: Object.freeze(profileOptions) as JourneyRegistrationStoryChoiceOptions,
   });

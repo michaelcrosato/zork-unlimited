@@ -1207,3 +1207,36 @@ must remain 19 rows, 12 counted, `active_unproven`, with SS-F19 still uncounted;
 this is a rejection-only verifier repair with no content, mechanics, fleet,
 threshold, or certification-result change. The clean 19:37 pure report predates
 the uncommitted repair and is baseline evidence only, not causal validation.
+
+### Ultraplan re-aim — 2026-08-14 (HEAD = ceadd735; next move = pilot-backed opening clarity)
+
+**Confirmed CLOSED or rejected boundaries — do not re-nominate as this move:**
+
+- **Starting-slice structure and strategy plurality are not the current failure.** The authenticated
+  ten-player Terra pilot at `ceadd735` completed Wolf-Winter 10/10, continued 10/10, represented
+  HUNT/LURE/FORTIFY at 2/4/4, and had no stuck run. DRIVE remained legal; its sole matching-ground
+  player compared it and deliberately chose FORTIFY. No mechanics, seed selector, outcome, route,
+  or certification threshold changes belong in this cycle.
+- **Progressive Station support remains a deliberate bounded contract.** The compact board keeps
+  optional support behind its existing read-only detail affordance; inlining another 458 characters
+  would increase the density the cohort reported. This cycle does not change Station schema/version,
+  support authority, availability, or action handles.
+- **Post-Wolf checkpoint and Gallowmere continuity findings remain follow-up work.** They occur only
+  after the initial goal's authenticated Continue and do not explain the unanimous pre-field Albany
+  density report. They are retained as evidence rather than bundled into this starting-slice repair.
+- **The HUNT review action is intentionally nonmutating.** Its `end:true` topology and zero effects
+  preserve the north-crossing/June-release commitment boundary. The defect is the word PREPARE on a
+  no-change exit, not a missing buff or receipt; adding state would be a mechanics regression.
+
+**Chosen move — pilot-backed summary-first Albany handoff and truthful HUNT closure.**
+
+The valid pilot missed only clarity and enjoyment (40/50 each versus 42/50), while every one of its
+ten reports named Albany role/duty/evidence/dispatch density. Deduplicate the first registration and
+matched quick-setup projections without deleting any option or exact inspected term: option labels own
+role identity, commitments own experience, tradeoffs own obligations, and the prompt owns shared
+no-fee/no-plan language. Compress the read-only four-plan compass into parallel outcome/cost/later
+lines while retaining every irreversible boundary. In the same presentation-only handoff, rename the
+zero-effect HUNT exit as leaving the review with no change and ensure no-June firm-ground prose never
+instructs the player to ask an absent June. Preserve all ids, conditions, effects, resources, decisions,
+progressive reveal authority, plan legality, outcomes, and save/runtime shape. A fresh exact-build pilot,
+not these deterministic checks, decides whether the 4.2 quality gates improve.

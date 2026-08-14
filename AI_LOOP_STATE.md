@@ -189,3 +189,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Terra seed 2026081602 on `2d68fa34` chose sound-frame FORTIFY/Cade terms, kept herd/household/all wolves alive, continued at decision 16, completed Gallowmere, and ended at goal two on decision 38. Clarity/enjoyment 4/4, replay yes, not stuck; 47/47 native calls, no tool/provenance failures.
 - Issue/next: one honest S1 after the starting goal found compact ambiguity around an ambient Moor road sign; mechanics correctly offered no choice. Pre-seal feedback is 2/3, so no compile. The frozen no-retry Terra pilot remains the next gate; 100 sessions remain forbidden unless it passes every quality/diversity/severity check.
 - Guard: expanded 172-test commitment/proof/UI set; exact health 460 files/4,079 tests; both 6,000-step crawls; deep crawl 1,536,000 steps; both UI typechecks; all 12 packs; cycle-start integrity; and exact pure provenance are green.
+## AFK Cycle 2026-08-14T02-32-08-210Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-14T02-32-08-210Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=13.
+- Rec: playtest-advocates_case (content_fix/M; score=0.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

@@ -129,7 +129,7 @@ describe("terminal registration story-choice groups", () => {
       "Customize: `customize` — Customize duty and evidence — compare all four field outcomes.",
     );
     expect(initial).toMatch(/HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die/i);
-    expect(initial).toMatch(/LURE[^]*Outcome:[^]*pack beyond the breach[^]*Cade's last feed/i);
+    expect(initial).toMatch(/LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed/i);
     expect(initial).toMatch(
       /DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading/i,
     );
@@ -138,7 +138,7 @@ describe("terminal registration story-choice groups", () => {
     );
     expect(initial).toContain("No plan is recommended or committed");
     expect(initial).toContain(
-      "1. Quick setup — Take the Road-Warden Aid Route: Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "1. Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
     );
     expect(initial).not.toContain("Take Full Compact Duty");
     expect(initial).not.toContain("Negotiate Aid-Only Duty\n");
@@ -148,7 +148,7 @@ describe("terminal registration story-choice groups", () => {
       revealId: prompt.progressiveDisclosure!.reveal.id,
     });
     expect(revealed).toContain(
-      "1. Quick setup — Take the Road-Warden Aid Route: Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "1. Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
     );
     expect(revealed).toContain("2. Take Full Compact Duty");
     expect(revealed).toContain("3. Negotiate Aid-Only Duty");

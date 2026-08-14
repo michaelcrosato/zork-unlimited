@@ -2228,9 +2228,12 @@ describe("MCP pure play mode", () => {
         expect(defaultCivicMessages).not.toMatch(/role\s*→\s*duty\s*→\s*evidence/i);
         expect(defaultCivicMessages).not.toMatch(/June Pike|second field seat/i);
         expect(oathChoice?.message).toMatch(/matched duty(?:\/| \+ | and )evidence/i);
-        expect(oathChoice?.message).toMatch(/bind duty(?:\/| and )evidence/i);
-        expect(oathChoice?.message).toMatch(/custom duty[^.]*leaves evidence next/i);
-        expect(oathChoice?.message).toMatch(/customize/i);
+        expect(oathChoice?.message).toContain(
+          "Quick setup binds duty and evidence without choosing a field plan.",
+        );
+        expect(oathChoice?.message).toContain(
+          "Purpose: quick setup or customize; every field plan stays open.",
+        );
         expect(
           oathChoice?.options?.every(
             (option) =>
