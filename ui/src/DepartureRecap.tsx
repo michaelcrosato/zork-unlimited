@@ -7,9 +7,9 @@ type DepartureRecapOptionalSlot = NonNullable<
 >["remainingOptional"][number];
 
 const DEPARTURE_RECAP_SLOT_LABELS: Readonly<Record<DepartureRecapOptionalSlot, string>> = {
-  preparation: "preparation",
-  relief_allocation: "relief allocation",
-  field_team: "field team",
+  preparation: "field kit",
+  relief_allocation: "relief wagon",
+  field_team: "second rider",
 };
 
 function formatOptionalSlots(slots: readonly DepartureRecapOptionalSlot[]): string {
@@ -24,7 +24,7 @@ function departureRecapEntryValue(entry: DepartureRecapEntry): string {
     case "open_optional":
       return "Open (optional)";
     case "available_after_preparation":
-      return "Available after choosing preparation";
+      return "Available after choosing a field kit";
     case "solo_default":
       return "Solo departure";
     case "selected":
@@ -35,20 +35,26 @@ function departureRecapEntryValue(entry: DepartureRecapEntry): string {
 export function DepartureRecap({
   recap,
   headingLevel = 4,
+  entryScope = "all",
 }: {
   recap: DepartureRecapView;
   headingLevel?: 2 | 4;
+  entryScope?: "all" | "already_set";
 }): JSX.Element {
   const Heading = headingLevel === 2 ? "h2" : "h4";
-  const selectedTerms = recap.entries.filter(
+  const visibleEntries =
+    entryScope === "already_set"
+      ? recap.entries.filter((entry) => entry.status !== "open_optional")
+      : recap.entries;
+  const selectedTerms = visibleEntries.filter(
     (entry): entry is typeof entry & { activeFieldTerm: string } => entry.activeFieldTerm !== null,
   );
-  const selectedPlan = recap.entries
+  const selectedPlan = visibleEntries
     .flatMap((entry) => (entry.title === null ? [] : [`${entry.label}: ${entry.title}`]))
     .join(" · ");
   const entryList = (
     <dl className="departure-recap">
-      {recap.entries.map((entry) => (
+      {visibleEntries.map((entry) => (
         <div key={entry.slot}>
           <dt>{entry.label}</dt>
           <dd>
@@ -57,7 +63,7 @@ export function DepartureRecap({
               <>
                 <br />
                 <small className="departure-recap-field-term">
-                  Direct-launch default; field-team contact remains optional.
+                  Direct-launch default; a second rider remains optional.
                 </small>
               </>
             )}
@@ -69,7 +75,7 @@ export function DepartureRecap({
   return (
     <section aria-label={`${recap.questTitle} dispatch recap`}>
       <Heading>{recap.questTitle} dispatch recap</Heading>
-      {recap.dispatch && (
+      {recap.dispatch && entryScope === "all" && (
         <p className="departure-recap-dispatch">
           {recap.dispatch.state === "sealed" ? (
             <>
@@ -79,8 +85,8 @@ export function DepartureRecap({
           ) : recap.dispatch.state === "direct_launch" ? (
             <>
               Direct launch now: {recap.dispatch.minutes}m —{" "}
-              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}. Field-team contact
-              remains optional.
+              {recap.dispatch.timing === "on_time" ? "on time" : "delayed"}. A second rider remains
+              optional.
             </>
           ) : (
             <>
@@ -98,7 +104,11 @@ export function DepartureRecap({
       )}
       {recap.dispatch?.state === "committed" ? (
         <details className="departure-recap-slots">
-          <summary>Review selected and optional plan slots</summary>
+          <summary>
+            {entryScope === "already_set"
+              ? "Review what is already set"
+              : "Review what is set and still optional"}
+          </summary>
           {entryList}
         </details>
       ) : (

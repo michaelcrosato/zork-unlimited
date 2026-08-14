@@ -225,8 +225,15 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("context.quest_starts");
     expect(prompt).toContain("pass those values unchanged");
     expect(prompt).toContain("read-only\n  `station_dispatch_board`");
+    expect(prompt).toContain("compact context v47");
     expect(prompt).toContain("`[4, quest_id, guidance, dispatch, rows]`");
     expect(prompt).toContain("`[slot, status, selected_title|null, purpose|null, action|null]`");
+    expect(prompt).toContain("`role` is background");
+    expect(prompt).toContain("`duty` is\n  current-quest promise");
+    expect(prompt).toContain("`evidence` is report");
+    expect(prompt).toContain("`preparation` is field kit");
+    expect(prompt).toContain("`relief_allocation` is relief wagon");
+    expect(prompt).toContain("`field_team` is second rider");
     expect(prompt).toContain("The live\n  departure and its legal roads remain");
     expect(prompt).toContain("one deliberate,\n  planning affordance");
     expect(prompt).toContain("role, duty,\n  and evidence always have null `purpose` and `action`");
@@ -240,6 +247,7 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("A null action is not");
     expect(prompt).toContain("mcp__adventureforge__talk_overworld_session_contact");
     expect(prompt).toContain("A talk action alone can present the actual");
+    expect(prompt).toContain("second-rider choice (`field_team` slot)");
     expect(prompt).toContain("reading the board changes no state");
     expect(prompt).toContain("or decision count");
     expect(prompt).toMatch(
@@ -268,6 +276,9 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("option detail may");
     expect(prompt).not.toContain("never the exact active terms");
     expect(prompt).toContain("visible `revealOption`");
+    expect(prompt).toContain("result may include `displaySummary`");
+    expect(prompt).toContain("read that concise\n  player-language outcome first");
+    expect(prompt).toContain("`consequence` remains the exact\n  authoritative receipt");
     expect(prompt).toContain("`reveal_id`");
     expect(prompt).toContain("then choose only from the expanded visible");
     expect(prompt).toMatch(/do not expand every\s+option/);

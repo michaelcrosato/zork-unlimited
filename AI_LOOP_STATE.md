@@ -168,3 +168,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 on `95043953` took Ledger/Aid-Only/Rowan through sheltered LURE, directly rendered the new copy at item 23, and reached `ending_pack_diverted` 60/60 with herd and all wolves alive before End at decision 26; one premature RPG read failed closed, then all calls succeeded; 4/4, replay yes, bugs `[]`, not stuck.
 - Feedback/next: pre-seal status is 1/3 with no compile; exact selection consumes `ed51aa6f` and seal leaves two pending reports. The player encountered the narrowed rail but missed no LURE step; its failure concern was hypothetical on a clean route, so prefer routine rotation unless later evidence localizes a new state-truth defect.
 - Guard: 29 focused tests, 556 bug traces, exact `7beba188…` validation, hostile review, full health, outer crawl, start-ref integrity, and the exact-pure gate are green.
+## AFK Cycle 2026-08-14T12-30-08-695Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-14T12-30-08-695Z","selected_recommendation_id":"hotspot-9354ce47"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-9354ce47 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

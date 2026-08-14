@@ -1253,7 +1253,7 @@ extra `include_station_dispatch_support` context read; the direct seed-202608170
 had neither stakes nor handles. The earlier estimate that safe inlining necessarily added 458
 characters counted verbose detail rather than a short row purpose and therefore no longer governs.
 
-**Chosen move — authenticated, stale-safe V4 projection.** Compact v46 board V4 preserves its
+**Chosen move — authenticated, stale-safe V4 projection.** Compact v46 introduced board V4; compact v47 preserves its
 five-field tuple while giving only each current `open_optional` support row one short purpose and
 its already-authenticated inspect/talk tuple. Role, duty, evidence, selected support, blocked support,
 and any null-action state remain null/null. Guidance stops repeating all three purposes. The board is

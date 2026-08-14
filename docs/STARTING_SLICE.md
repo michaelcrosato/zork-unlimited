@@ -210,7 +210,7 @@ it is **not yet milestone-certified**:
 - the launch-first Station follow-up now keeps both legal hill roads ahead of
   optional support in terminal and browser clients. The authenticated full
   board v4 carries the dispatch clock, all six selected/open plan rows, mapped
-  support actions, and launch card; compact v46 emits
+  support actions, and launch card; compact v47 emits
   `[4, questId, guidance, dispatch|null, rows]` and retains canonical road
   detail in `quests` / `quest_starts`. It omits redundant compact
   `departure_recap`, `departure_interactions`, and `departure_contact_leads`

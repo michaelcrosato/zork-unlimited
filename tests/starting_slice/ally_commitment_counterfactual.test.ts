@@ -201,7 +201,7 @@ describe("SS-F04 — Albany ally commitment counterfactual", () => {
     const direct = reachAlly();
     // Rebuild without talking to June: start now is the explicitly disclosed solo default.
     const pending = direct.snapshot();
-    expect(() => direct.startQuest(WOLF.id, SHELTERED)).toThrow(/field-team commitment/i);
+    expect(() => direct.startQuest(WOLF.id, SHELTERED)).toThrow(/second rider/i);
 
     const solo = OverworldSession.restore(WORLD, pending);
     solo.chooseJourneyStory(SOLO);

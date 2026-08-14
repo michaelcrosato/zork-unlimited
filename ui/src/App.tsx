@@ -638,6 +638,30 @@ export function DepartureLaunchPanel({
 
 type StationDispatchBoardView = NonNullable<OverworldView["stationDispatchBoard"]>;
 
+const STATION_SUPPORT_SLOT_LABELS: Readonly<
+  Record<StationDispatchBoardView["support"][number]["slot"], string>
+> = {
+  preparation: "field kit",
+  relief_allocation: "relief wagon",
+  field_team: "second rider",
+};
+
+export function stationSupportActionTitle(
+  slot: StationDispatchBoardView["support"][number]["slot"],
+): string {
+  const label = STATION_SUPPORT_SLOT_LABELS[slot];
+  return `${label[0]!.toUpperCase()}${label.slice(1)}`;
+}
+
+function formatStationSupportLabels(
+  support: readonly StationDispatchBoardView["support"][number][],
+): string {
+  const labels = support.map((entry) => STATION_SUPPORT_SLOT_LABELS[entry.slot]);
+  if (labels.length === 1) return labels[0]!;
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, or ${labels.at(-1)!}`;
+}
+
 type StationSupportTarget =
   | { kind: "inspect"; storyChoiceId: string }
   | { kind: "talk"; characterId: string };
@@ -691,55 +715,89 @@ export function StationDispatchBoard({
   onTalk: (characterId: string) => void;
   children: ReactNode;
 }): JSX.Element {
+  const openSupport = board.support.filter(
+    (support) => support.status === "open_optional" && support.selectedTitle === null,
+  );
   return (
     <section className="station-dispatch-board" aria-label={`${board.questTitle} field briefing`}>
       <h3>{board.questTitle} field briefing</h3>
       <p>{board.guidance}</p>
       {children}
-      <details className="station-dispatch-support-details">
-        <summary>Review optional support — field kit, relief wagon, or second rider</summary>
-        <div className="station-dispatch-support">
-          {board.support.map((support) => {
-            const action = support.action;
-            return (
-              <article className="station-dispatch-support-row" key={support.slot}>
-                <h4>{support.label}</h4>
-                <p>
-                  <b>Status:</b> {stationDispatchStatus(support)}
-                </p>
-                <p>{support.purpose}</p>
-                <small>{support.detailHint}</small>
-                {action?.kind === "inspect" && (
-                  <button
-                    className="mini-command"
-                    type="button"
-                    onClick={() => onInspect(action.storyChoiceId)}
-                  >
-                    Inspect {action.title}
-                  </button>
-                )}
-                {action?.kind === "talk" && (
-                  <button
-                    className="mini-command"
-                    type="button"
-                    onClick={() => onTalk(action.characterId)}
-                  >
-                    Ask {action.contactName} about riding
-                  </button>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      </details>
+      {openSupport.length > 0 && (
+        <details className="station-dispatch-support-details">
+          <summary>Review optional support — {formatStationSupportLabels(openSupport)}</summary>
+          <div className="station-dispatch-support">
+            {openSupport.map((support) => {
+              const action = support.action;
+              return (
+                <article className="station-dispatch-support-row" key={support.slot}>
+                  <h4>{support.label}</h4>
+                  <p>
+                    <b>Status:</b> {stationDispatchStatus(support)}
+                  </p>
+                  <p>{support.purpose}</p>
+                  <small>{support.detailHint}</small>
+                  {action?.kind === "inspect" && (
+                    <button
+                      className="mini-command"
+                      type="button"
+                      onClick={() => onInspect(action.storyChoiceId)}
+                    >
+                      Review {STATION_SUPPORT_SLOT_LABELS[support.slot]}
+                    </button>
+                  )}
+                  {action?.kind === "talk" && (
+                    <button
+                      className="mini-command"
+                      type="button"
+                      onClick={() => onTalk(action.characterId)}
+                    >
+                      Ask {action.contactName} about riding
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </details>
+      )}
       {recap && (
         <details className="station-dispatch-recap">
-          <summary>Current commitments</summary>
-          <DepartureRecap recap={recap} />
+          <summary>What is already set</summary>
+          <DepartureRecap recap={recap} entryScope="already_set" />
         </details>
       )}
     </section>
   );
+}
+
+type JourneyStoryChoiceLogResult = ReturnType<OverworldSession["chooseJourneyStory"]>;
+
+export function journeyStoryChoiceLogEntries(
+  kind: JourneyStoryChoicePrompt["kind"] | undefined,
+  result: JourneyStoryChoiceLogResult,
+): string[] {
+  if (result.displaySummary) {
+    return [result.displaySummary, `Current goal: ${result.goal.text}`];
+  }
+  const prefix =
+    kind === "registration"
+      ? "Background chosen"
+      : kind === "lead_source"
+        ? "Report chosen"
+        : kind === "preparation"
+          ? "Field kit chosen"
+          : kind === "ally"
+            ? "Riding choice made"
+            : kind === "relief_allocation"
+              ? "Relief wagon choice made"
+              : kind === "relief_oath"
+                ? "Wolf-Winter promise chosen"
+                : "Story consequence";
+  return [
+    `${prefix}: ${result.consequence}`,
+    `${kind === undefined ? "New" : "Current"} goal: ${result.goal.text}`,
+  ];
 }
 
 export default function App(): JSX.Element {
@@ -1163,59 +1221,14 @@ export default function App(): JSX.Element {
 
   function chooseJourneyStory(choiceId: string): void {
     const storyChoice = inspectedDepartureStory ?? journey.storyChoice;
-    const isRegistration = storyChoice?.kind === "registration";
-    const isLeadSource = storyChoice?.kind === "lead_source";
-    const isPreparation = storyChoice?.kind === "preparation";
-    const isAlly = storyChoice?.kind === "ally";
-    const isReliefAllocation = storyChoice?.kind === "relief_allocation";
-    const isReliefOath = storyChoice?.kind === "relief_oath";
     try {
       const result = worldSession.chooseJourneyStory(choiceId, inspectedDepartureStory?.id);
       setWorldView(worldSession.view());
       setInspectedDepartureStory(null);
-      setLog((previous) =>
-        isRegistration
-          ? [
-              `Character registered: ${result.consequence}`,
-              `Current goal: ${result.goal.text}`,
-              ...previous,
-            ]
-          : isLeadSource
-            ? [
-                `Lead source certified: ${result.consequence}`,
-                `Current goal: ${result.goal.text}`,
-                ...previous,
-              ]
-            : isPreparation
-              ? [
-                  `Preparation committed: ${result.consequence}`,
-                  `Current goal: ${result.goal.text}`,
-                  ...previous,
-                ]
-              : isAlly
-                ? [
-                    `Field team committed: ${result.consequence}`,
-                    `Current goal: ${result.goal.text}`,
-                    ...previous,
-                  ]
-                : isReliefAllocation
-                  ? [
-                      `Relief capacity committed: ${result.consequence}`,
-                      `Current goal: ${result.goal.text}`,
-                      ...previous,
-                    ]
-                  : isReliefOath
-                    ? [
-                        `Relief terms bound: ${result.consequence}`,
-                        `Current goal: ${result.goal.text}`,
-                        ...previous,
-                      ]
-                    : [
-                        `Story consequence: ${result.consequence}`,
-                        `New goal: ${result.goal.text}`,
-                        ...previous,
-                      ],
-      );
+      setLog((previous) => [
+        ...journeyStoryChoiceLogEntries(storyChoice?.kind, result),
+        ...previous,
+      ]);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -1434,10 +1447,10 @@ export default function App(): JSX.Element {
     dispatchActions.push({
       id: `dispatch:${interaction.id}`,
       group: "Optional support",
-      title: interaction.title,
+      title: stationSupportActionTitle(interaction.kind),
       summary:
         support?.summary ??
-        `Review the ${interaction.kind.replaceAll("_", " ")} commitment before departure.`,
+        `Review the ${interaction.kind === "preparation" ? "field kit" : "relief wagon"} before departure.`,
       terms: support?.terms ?? "Inspect before committing",
       buttonLabel: "Review support",
       tone: "ice",
@@ -1455,7 +1468,7 @@ export default function App(): JSX.Element {
     dispatchActions.push({
       id: `dispatch:${lead.id}`,
       group: "Optional support",
-      title: lead.title,
+      title: stationSupportActionTitle("field_team"),
       summary: support?.summary ?? lead.guidance,
       terms:
         support?.terms ??

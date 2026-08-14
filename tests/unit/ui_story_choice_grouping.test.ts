@@ -48,14 +48,14 @@ describe("JourneyStoryChoiceScreen registration grouping", () => {
         }),
       );
 
-      expect(markup).toContain("Start with a doctrine");
-      expect(markup).toContain("Build a custom role");
+      expect(markup).toContain("Choose a ready-made background");
+      expect(markup).toContain("Build a custom background");
       expect(markup).toContain("Choose how to begin");
       expect(markup).toContain(
-        "A doctrine commits your role, oath, and source; a custom role continues step-by-step.",
+        "Choose a background. Next, choose a ready-made promise/report pair or customize it.",
       );
-      expect(markup.indexOf("Start with a doctrine")).toBeLessThan(
-        markup.indexOf("Build a custom role"),
+      expect(markup.indexOf("Choose a ready-made background")).toBeLessThan(
+        markup.indexOf("Build a custom background"),
       );
       expect(markup.indexOf("Doctrine")).toBeLessThan(markup.indexOf("Custom role"));
       expect(markup).toContain("journey-choice-option-groups");
@@ -107,7 +107,7 @@ describe("JourneyStoryChoiceScreen registration grouping", () => {
         }),
       );
 
-      expect(markup).toContain("Choose your lived background");
+      expect(markup).toContain("Choose your background");
       expect(markup).not.toContain("Choose how to begin");
       expect(markup).not.toContain("journey-choice-option-groups");
       expect(markup.match(/<button/g)).toHaveLength(2);

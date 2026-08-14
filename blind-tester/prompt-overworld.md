@@ -118,17 +118,23 @@ WHEN TO CONTINUE OR END
   Then call
   `mcp__adventureforge__choose_overworld_session_story` with the same overworld
   `session_id` and that option's visible `id`. This is a normal gameplay
-  decision that can set the next current goal; it is not a harness task.
+  decision that can set the next current goal; it is not a harness task. Its
+  result may include `displaySummary`; when present, read that concise
+  player-language outcome first. The separate `consequence` remains the exact
+  authoritative receipt rather than first-level guidance.
 - A non-null `journey.goalPassage` is a visible optional movement choice. If you
   choose its exact `id: follow_current_goal`, call
   `mcp__adventureforge__follow_overworld_session_goal` with the parent
   `session_id` and `expected_snapshot_hash: latest snapshot_hash`; do not invent, infer, or
   substitute a differently named goal tool. The game, not the harness, decides
   where that passage stops.
-- At the Station, compact context consolidates optional planning into read-only
+- At the Station, compact context v47 consolidates optional planning into read-only
   `station_dispatch_board`: `[4, quest_id, guidance, dispatch, rows]`.
   `dispatch` is `[state, minutes, timing, remaining_optional_slots]`; each row is
   `[slot, status, selected_title|null, purpose|null, action|null]`. The live
+  tuple keys map to player labels as follows: `role` is background, `duty` is
+  current-quest promise, `evidence` is report, `preparation` is field kit,
+  `relief_allocation` is relief wagon, and `field_team` is second rider. The live
   departure and its legal roads remain in `context.quests` plus
   `context.quest_starts` and come first. Treat optional support as one deliberate,
   planning affordance: you may depart immediately. In the v4 board, role, duty,
@@ -153,7 +159,7 @@ WHEN TO CONTINUE OR END
   `mcp__adventureforge__choose_overworld_session_story` with its visible option
   `id` as `choice`; pass the inspected `story_choice_id` only when needed to
   disambiguate a shared option id. A talk action alone can present the actual
-  field-team choice.
+  second-rider choice (`field_team` slot).
 - If a malformed or older session cannot produce the v4 board, the compact
   fallback may instead expose `departure_recap`, `departure_interactions`, and
   `departure_contact_leads`; those carry the same read-only plan, inspect, and

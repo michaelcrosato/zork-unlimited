@@ -383,6 +383,8 @@ export type OverworldJourneyGoalPassageResult =
 export type OverworldJourneyStoryChoiceResult = Readonly<{
   storyChoiceId: string;
   choiceId: string;
+  /** Optional player-first projection; consequence remains the exact authoritative receipt. */
+  displaySummary?: string;
   consequence: string;
   goal: JourneyGoalPresentation;
   entry: OverworldJournalEntry;
@@ -930,6 +932,19 @@ export class OverworldSession {
     );
   }
 
+  private openingStandardPacketPlayerSummary(args: {
+    profileTitle: string;
+    reliefOathTitle: string;
+    leadSourceTitle: string;
+  }): string {
+    const promiseTitle = args.reliefOathTitle.replace(/\bDuty\b/gu, "Promise");
+    return (
+      `Ready-made dispatch chosen — Background: ${args.profileTitle}; ` +
+      `Wolf-Winter promise: ${promiseTitle}; Report: ${args.leadSourceTitle}. ` +
+      "Optional field kit, relief wagon, second rider, and road remain open."
+    );
+  }
+
   private openingLeadSourceResolved(): boolean {
     return this.journalEntries.some((entry) => entry.kind === "lead_source");
   }
@@ -1108,7 +1123,7 @@ export class OverworldSession {
         overworldDepartureInteraction({
           id: preparation.id,
           kind: "preparation",
-          title: preparation.title,
+          title: "Field kit",
         }),
       );
     }
@@ -1118,7 +1133,7 @@ export class OverworldSession {
         overworldDepartureInteraction({
           id: allocation.id,
           kind: "relief_allocation",
-          title: allocation.title,
+          title: "Relief wagon",
         }),
       );
     }
@@ -1157,7 +1172,7 @@ export class OverworldSession {
     return [
       overworldDepartureContactLead({
         id: scene.id,
-        title: scene.title,
+        title: "Second rider",
         contactId: contact.id,
         contactName: contact.name,
         questId: quest.id,
@@ -1905,7 +1920,7 @@ export class OverworldSession {
     assertJourneyContractAcceptingDecision(this.journeyState);
     if (this.journey().storyChoice) {
       throw new Error(
-        "Choose the presented story consequence, character registration, relief oath, Albany lead source, preparation, relief allocation, or field-team commitment before taking another action.",
+        "Choose the presented story consequence, background, Wolf-Winter promise, report, field kit, relief wagon, or second rider before taking another action.",
       );
     }
   }
@@ -2065,7 +2080,7 @@ export class OverworldSession {
     if (storyChoice.kind === "registration") {
       const registration = this.openingRegistrationAvailable();
       if (!registration || storyChoice.id !== registration.id) {
-        throw new Error("The presented opening registration is no longer available.");
+        throw new Error("The presented background choice is no longer available.");
       }
       const characterAfter = applyOpeningRegistrationProfile({
         registration,
@@ -2114,7 +2129,7 @@ export class OverworldSession {
     if (storyChoice.kind === "relief_oath") {
       const scene = this.openingReliefOathAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening relief oath is no longer available.");
+        throw new Error("The presented Wolf-Winter promise is no longer available.");
       }
       const registration = this.world.opening_registration;
       const standardPacket = registration
@@ -2139,9 +2154,15 @@ export class OverworldSession {
           reliefOathTitle: standardPacket.reliefOathOption.title,
           leadSourceTitle: standardPacket.leadSourceOption.title,
         });
+        const playerSummary = this.openingStandardPacketPlayerSummary({
+          profileTitle: standardPacket.profile.title,
+          reliefOathTitle: standardPacket.reliefOathOption.title,
+          leadSourceTitle: standardPacket.leadSourceOption.title,
+        });
         return Object.freeze({
           storyChoiceId: storyChoice.id,
           choiceId,
+          displaySummary: playerSummary,
           consequence,
           goal: leadSourceSelection.goal,
           entry: Object.freeze({
@@ -2202,7 +2223,7 @@ export class OverworldSession {
     if (storyChoice.kind === "lead_source") {
       const scene = this.openingLeadSourceAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening lead source is no longer available.");
+        throw new Error("The presented report choice is no longer available.");
       }
       const application = applyOpeningLeadSourceOption({
         scene,
@@ -2260,7 +2281,7 @@ export class OverworldSession {
     if (storyChoice.kind === "preparation") {
       const scene = this.openingPreparationAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening preparation is no longer available.");
+        throw new Error("The presented field-kit choice is no longer available.");
       }
       const application = applyOpeningPreparationProfile({
         scene,
@@ -2315,7 +2336,7 @@ export class OverworldSession {
     if (storyChoice.kind === "relief_allocation") {
       const scene = this.openingReliefAllocationAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening relief allocation is no longer available.");
+        throw new Error("The presented relief-wagon choice is no longer available.");
       }
       const application = applyOpeningReliefAllocationOption({
         scene,
@@ -2362,7 +2383,7 @@ export class OverworldSession {
     if (storyChoice.kind === "ally") {
       const scene = this.openingAllyAvailable();
       if (!scene || storyChoice.id !== scene.id) {
-        throw new Error("The presented opening ally commitment is no longer available.");
+        throw new Error("The presented riding choice is no longer available.");
       }
       const application = applyOpeningAllyOption({
         scene,

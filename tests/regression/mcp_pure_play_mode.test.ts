@@ -2089,7 +2089,9 @@ describe("MCP pure play mode", () => {
           }
         ).storyChoice;
         expect(registrationChoice?.kind).toBe("registration");
-        expect(registrationChoice?.message).toContain("Enter Albany's Relief Compact");
+        expect(registrationChoice?.message).toContain(
+          "Choose a background. Compare background funds",
+        );
         expect(
           registrationChoice?.options?.every(
             (option) =>
@@ -2227,12 +2229,9 @@ describe("MCP pure play mode", () => {
         expect(defaultCivicMessages).not.toMatch(/Civic order/i);
         expect(defaultCivicMessages).not.toMatch(/role\s*→\s*duty\s*→\s*evidence/i);
         expect(defaultCivicMessages).not.toMatch(/June Pike|second field seat/i);
-        expect(oathChoice?.message).toMatch(/matched duty(?:\/| \+ | and )evidence/i);
+        expect(oathChoice?.message).toContain("The Wolf-Winter · ready-made dispatch.");
         expect(oathChoice?.message).toContain(
-          "Quick setup binds duty and evidence without choosing a field plan.",
-        );
-        expect(oathChoice?.message).toContain(
-          "Purpose: quick setup or customize; every field plan stays open.",
+          "Quick setup: choose the ready-made dispatch or customize it; one Wolf-Winter promise, one report, and all four field plans stay open.",
         );
         expect(
           oathChoice?.options?.every(
@@ -2246,7 +2245,7 @@ describe("MCP pure play mode", () => {
         ]);
         expect(JSON.stringify(oathChoice)).not.toContain("albany:oath_limited_aid_only");
         const matchedShortcut = oathChoice?.options?.[0];
-        if (!matchedShortcut) throw new Error("expected the sole matched quick setup");
+        if (!matchedShortcut) throw new Error("expected the sole ready-made dispatch");
         const matchedShortcutInspection = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2385,6 +2384,9 @@ describe("MCP pure play mode", () => {
         expect((stationed.legend_delta as Record<string, string>).station_dispatch_board).toMatch(
           /Only open_optional rows have purpose\/action.*null authorizes nothing/i,
         );
+        expect((stationed.legend_delta as Record<string, string>).station_dispatch_board).toContain(
+          "role=background; duty=Wolf-Winter promise; evidence=report; preparation=field kit; relief_allocation=relief wagon; field_team=second rider",
+        );
         expect(JSON.stringify(cumulativeLegend).length).toBeLessThanOrEqual(7_200);
         const stationedContext = stationed.context as CompactAreaContext;
         expect(stationedContext.departure_contact_leads).toBeUndefined();
@@ -2392,9 +2394,14 @@ describe("MCP pure play mode", () => {
         const stationedBoard = stationedContext.station_dispatch_board;
         expect(stationedBoard?.slice(0, 2)).toEqual([4, "wolf_winter"]);
         const stationedGuidance = stationedBoard?.[2];
-        expect(stationedGuidance).toMatch(/Depart now.*open support row/i);
+        expect(stationedGuidance).toMatch(
+          /Already set: background, Wolf-Winter promise, and report/i,
+        );
+        expect(stationedGuidance).toMatch(
+          /Optional before leaving: field kit, one relief wagon, or second rider/i,
+        );
+        expect(stationedGuidance).toMatch(/Depart now/i);
         expect(stationedGuidance).toMatch(/not your Wolf-Winter plan/i);
-        expect(stationedGuidance).not.toMatch(/field kit|relief wagon|June/i);
         expect(stationedBoard?.[4]).toEqual(
           expect.arrayContaining([
             [
@@ -2579,9 +2586,18 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        const readyFieldTeam = (
-          (prepared.context as CompactAreaContext).station_dispatch_board?.[4] ?? []
-        ).find(([slot]) => slot === "field_team")?.[4];
+        const preparedBoard = (prepared.context as CompactAreaContext).station_dispatch_board;
+        expect(preparedBoard?.[2]).toBe(
+          "Already set: background, Wolf-Winter promise, report, and field kit. Optional before leaving: one relief wagon or second rider. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.",
+        );
+        expect(
+          preparedBoard?.[4]
+            .filter(([, status]) => status === "open_optional")
+            .map(([slot]) => slot),
+        ).toEqual(["relief_allocation", "field_team"]);
+        const readyFieldTeam = (preparedBoard?.[4] ?? []).find(
+          ([slot]) => slot === "field_team",
+        )?.[4];
         expect(readyFieldTeam).toEqual([
           "talk",
           "albany_city__transport_hub__june_pike",
@@ -2700,6 +2716,11 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
+        const allocatedBoard = (allocated.context as CompactAreaContext).station_dispatch_board;
+        expect(allocatedBoard?.[2]).toBe(
+          "Already set: background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice. No optional support remains. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.",
+        );
+        expect(allocatedBoard?.[4].filter(([, status]) => status === "open_optional")).toEqual([]);
         expectJuneCattleFirst(allocated);
         view = areaView(allocated);
         const marketRoute = view.areaExits.find(

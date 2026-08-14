@@ -51,14 +51,23 @@ function canonicalWindow(session: OverworldSession) {
   });
 }
 
-function stationSession(roleIndex = 0): OverworldSession {
+function stationSession(roleIndex = 0, readyMade = false): OverworldSession {
   const session = new OverworldSession(WORLD);
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
-  session.chooseJourneyStory(REGISTRATION.profiles[roleIndex]!.id);
-  revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
-  session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
-  session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
+  const profile = REGISTRATION.profiles[roleIndex]!;
+  session.chooseJourneyStory(profile.id);
+  if (readyMade) {
+    const doctrine = REGISTRATION.doctrines?.find(
+      (candidate) => candidate.profile_id === profile.id,
+    );
+    if (!doctrine) throw new Error(`Expected a ready-made dispatch for "${profile.id}".`);
+    session.chooseJourneyStory(doctrine.id);
+  } else {
+    revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
+    session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
+    session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
+  }
   const stationRoute = session
     .view()
     .areaExits.find((candidate) => candidate.destination.id === PREPARATION.area);
@@ -79,6 +88,12 @@ function projectedFieldTerm(prompt: JourneyStoryChoicePrompt, optionId: string):
     : summary.tradeoff;
 }
 
+function projectedTitle(prompt: JourneyStoryChoicePrompt, optionId: string): string {
+  const option = prompt.options.find((candidate) => candidate.id === optionId);
+  if (!option) throw new Error(`Expected a canonical presentation for "${optionId}".`);
+  return option.label;
+}
+
 describe("Albany opening departure recap", () => {
   it("keeps every canonical selected term concise enough for cumulative recall", () => {
     const character = stationSession().snapshot().character;
@@ -95,6 +110,93 @@ describe("Albany opening departure recap", () => {
       expect(term.length).toBeGreaterThan(0);
       expect(term.length).toBeLessThanOrEqual(OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT);
     }
+  });
+
+  it("uses player-facing promise and solo titles in both full and compact authenticated recaps", () => {
+    const custom = stationSession();
+    const readyMade = stationSession(0, true);
+    const readyMadeDoctrine = REGISTRATION.doctrines?.find(
+      (candidate) => candidate.profile_id === REGISTRATION.profiles[0]!.id,
+    );
+    const readyMadePromise = RELIEF_OATH.options.find(
+      (option) => option.id === readyMadeDoctrine?.relief_oath_option_id,
+    );
+    if (!readyMadeDoctrine || !readyMadePromise) {
+      throw new Error("Expected the registered background's ready-made promise.");
+    }
+    const cases = [
+      { path: "custom", session: custom, rawPromise: RELIEF_OATH.options[0]! },
+      { path: "ready-made", session: readyMade, rawPromise: readyMadePromise },
+    ] as const;
+
+    for (const { path, session, rawPromise } of cases) {
+      const promisePresentation = presentOpeningReliefOath(
+        RELIEF_OATH,
+        session.snapshot().character,
+      );
+      const promiseTitle = projectedTitle(promisePresentation, rawPromise.id);
+      const promiseFieldTerm = projectedFieldTerm(promisePresentation, rawPromise.id);
+      const beforeSnapshot = session.snapshot();
+      const beforeHash = session.snapshotHash();
+      const fullDuty = session
+        .view()
+        .departureRecap?.entries.find((entry) => entry.slot === "duty");
+      const compactDuty = session
+        .compactView()
+        .station_dispatch_board?.[4].find(([slot]) => slot === "duty");
+      expect(fullDuty).toMatchObject({
+        status: "selected",
+        title: promiseTitle,
+        activeFieldTerm: promiseFieldTerm,
+      });
+      expect(compactDuty).toEqual(["duty", "selected", promiseTitle, null, null]);
+      expect(rawPromise.title, `${path} source title`).toContain("Duty");
+      expect(promiseTitle, `${path} projected title`).toBe(
+        rawPromise.title.replace(/\bDuty\b/gu, "Promise"),
+      );
+      expect(fullDuty?.title).not.toBe(rawPromise.title);
+      const terminalRecap = renderDepartureRecap(session.view().departureRecap!).join("\n");
+      expect(terminalRecap).toContain(`Wolf-Winter promise: ${promiseTitle}`);
+      expect(terminalRecap).not.toContain(rawPromise.title);
+      expect(session.snapshot()).toEqual(beforeSnapshot);
+      expect(session.snapshotHash()).toBe(beforeHash);
+    }
+
+    const solo = stationSession();
+    solo.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    solo.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+    solo.talkToCharacter(ALLY.contact);
+    const rawSolo = ALLY.options.find((option) => option.id === ALLY.solo_option_id);
+    if (!rawSolo) throw new Error("Expected the authored solo field-team option.");
+    const allyPresentation = presentOpeningAlly(ALLY, solo.snapshot().character);
+    const soloTitle = projectedTitle(allyPresentation, rawSolo.id);
+    const soloFieldTerm = projectedFieldTerm(allyPresentation, rawSolo.id);
+    solo.chooseJourneyStory(rawSolo.id);
+    const beforeSoloSnapshot = solo.snapshot();
+    const beforeSoloHash = solo.snapshotHash();
+    const fullSolo = solo
+      .view()
+      .departureRecap?.entries.find((entry) => entry.slot === "field_team");
+    const compactSolo = solo
+      .compactView()
+      .station_dispatch_board?.[4].find(([slot]) => slot === "field_team");
+
+    expect(rawSolo.title).toBe("Leave with a Solo Field Team");
+    expect(soloTitle).toBe("Ride alone");
+    expect(fullSolo).toMatchObject({
+      status: "selected",
+      title: soloTitle,
+      activeFieldTerm: soloFieldTerm,
+    });
+    expect(compactSolo).toEqual(["field_team", "selected", soloTitle, null, null]);
+    expect(renderDepartureRecap(solo.view().departureRecap!).join("\n")).toContain(
+      "Second rider: Ride alone",
+    );
+    expect(renderDepartureRecap(solo.view().departureRecap!).join("\n")).not.toContain(
+      rawSolo.title,
+    );
+    expect(solo.snapshot()).toEqual(beforeSoloSnapshot);
+    expect(solo.snapshotHash()).toBe(beforeSoloHash);
   });
 
   it("summarizes the accumulated current plan without exposing alternatives or changing play", () => {
@@ -120,42 +222,45 @@ describe("Albany opening departure recap", () => {
       entries: [
         {
           slot: "role",
-          label: "Role",
+          label: "Background",
           status: "selected",
           title: REGISTRATION.profiles[0]!.title,
           activeFieldTerm: REGISTRATION.profiles[0]!.tradeoff,
         },
         {
           slot: "duty",
-          label: "Duty",
+          label: "Wolf-Winter promise",
           status: "selected",
-          title: RELIEF_OATH.options[0]!.title,
+          title: projectedTitle(
+            presentOpeningReliefOath(RELIEF_OATH, beforeSnapshot.character),
+            RELIEF_OATH.options[0]!.id,
+          ),
           activeFieldTerm: dutyFieldTerm,
         },
         {
           slot: "evidence",
-          label: "Evidence",
+          label: "Report",
           status: "selected",
           title: LEAD_SOURCE.options[0]!.title,
           activeFieldTerm: evidenceFieldTerm,
         },
         {
           slot: "preparation",
-          label: "Preparation",
+          label: "Field kit",
           status: "open_optional",
           title: null,
           activeFieldTerm: null,
         },
         {
           slot: "relief_allocation",
-          label: "Relief allocation",
+          label: "Relief wagon",
           status: "open_optional",
           title: null,
           activeFieldTerm: null,
         },
         {
           slot: "field_team",
-          label: "Field team",
+          label: "Second rider",
           status: "open_optional",
           title: null,
           activeFieldTerm: null,
@@ -306,7 +411,9 @@ describe("Albany opening departure recap", () => {
       WOLF.launch!.options.map((option) => option.id),
     );
     const renderedBoard = renderStationDispatchBoard(session.view()).join("\n");
-    expect(renderedBoard).toContain("Optional dispatch support (independent):");
+    expect(renderedBoard).toContain(
+      "Optional dispatch support — field kit, relief wagon, or second rider:",
+    );
     for (const support of board.support) {
       expect(renderedBoard).toContain(`${support.label} —`);
       expect(renderedBoard).toContain(support.purpose);
@@ -318,18 +425,18 @@ describe("Albany opening departure recap", () => {
     expect(terminal).toContain(`${WOLF.title} field briefing:`);
     expect(terminal).toContain(board.guidance);
     expect(terminal).not.toContain(`${WOLF.title} dispatch recap:`);
-    expect(terminal).not.toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
-    expect(terminal).toContain("Current commitments: `review dispatch`.");
+    expect(terminal).not.toContain(`Background: ${REGISTRATION.profiles[0]!.title}`);
+    expect(terminal).toContain("Already set: `review dispatch`.");
     const boundedRecap = renderDepartureRecap(authenticatedRecap).join("\n");
     expect(boundedRecap).toContain(`${WOLF.title} dispatch recap:`);
-    expect(boundedRecap).toContain(`Role: ${REGISTRATION.profiles[0]!.title}`);
+    expect(boundedRecap).toContain(`Background: ${REGISTRATION.profiles[0]!.title}`);
     expect(boundedRecap).toContain("Plan slots and exact selected terms: `review dispatch`.");
     expect(boundedRecap).not.toContain(REGISTRATION.profiles[0]!.tradeoff);
     const reviewedTerms = renderDepartureRecapTerms(authenticatedRecap).join("\n");
     expect(reviewedTerms).toContain(`Active term: ${REGISTRATION.profiles[0]!.tradeoff}`);
     expect(reviewedTerms).toContain(`Active term: ${dutyFieldTerm}`);
     expect(reviewedTerms).toContain(`Active term: ${evidenceFieldTerm}`);
-    expect(reviewedTerms).toContain("Preparation: Open (optional)");
+    expect(reviewedTerms).toContain("Field kit: Open (optional)");
     expect(reviewedTerms).not.toContain(PREPARATION.profiles[0]!.tradeoff);
     expect(terminal.indexOf(`${WOLF.title} field briefing:`)).toBeLessThan(
       terminal.indexOf("Depart now:"),
@@ -338,7 +445,7 @@ describe("Albany opening departure recap", () => {
       terminal.indexOf("Optional support (independent"),
     );
     expect(terminal.indexOf("Optional support (independent")).toBeLessThan(
-      terminal.indexOf("Current commitments: `review dispatch`."),
+      terminal.indexOf("Already set: `review dispatch`."),
     );
     expect(terminal.indexOf("Take the Exposed Ridge Road")).toBeGreaterThan(
       terminal.indexOf(`${WOLF.title} field briefing:`),
@@ -417,7 +524,7 @@ describe("Albany opening departure recap", () => {
     });
     expect(first.view().departureRecap?.entries[5]).toEqual({
       slot: "field_team",
-      label: "Field team",
+      label: "Second rider",
       status: "open_optional",
       title: null,
       activeFieldTerm: null,
@@ -430,11 +537,11 @@ describe("Albany opening departure recap", () => {
       },
     ]);
     const openTerminal = render(first.view());
-    expect(openTerminal).not.toContain("Field team: Open (optional)");
+    expect(openTerminal).not.toContain("Second rider: Open (optional)");
     expect(openTerminal).toContain(
       `Dispatch ${String(openWindow.committedMinutes)}m committed; optional Station support remains`,
     );
-    expect(openTerminal).toContain("Current commitments: `review dispatch`.");
+    expect(openTerminal).toContain("Already set: `review dispatch`.");
     first.talkToCharacter(ALLY.contact);
     expect(first.journey().storyChoice?.kind).toBe("ally");
     expect(first.view().departureRecap?.dispatch).toEqual({
@@ -490,10 +597,10 @@ describe("Albany opening departure recap", () => {
     });
     expect(solo.view().departureRecap?.entries[5]).toMatchObject({
       status: "selected",
-      title: soloOption.title,
+      title: projectedTitle(presentOpeningAlly(ALLY, solo.snapshot().character), soloOption.id),
     });
     expect(render(solo.view())).not.toContain("Dispatch sealed:");
-    expect(render(solo.view())).toContain("Current commitments: `review dispatch`.");
+    expect(render(solo.view())).toContain("Already set: `review dispatch`.");
     expect(renderDepartureRecap(solo.view().departureRecap!).join("\n")).toContain(
       "Dispatch sealed:",
     );
@@ -737,7 +844,7 @@ describe("Albany opening departure recap", () => {
           recap.entries.map((entry) => [entry.slot, entry.status, entry.title]),
         );
         expect(stage.terminal).not.toContain(`${WOLF.title} dispatch recap:`);
-        expect(stage.terminal).toContain("Current commitments: `review dispatch`.");
+        expect(stage.terminal).toContain("Already set: `review dispatch`.");
       }
       const visible = JSON.stringify(recap);
       for (const alternative of [

@@ -67,8 +67,8 @@ describe("Albany registration progressive disclosure", () => {
         fieldTrigger: expected.starter,
         fieldTriggerScope: "starter",
         highlights: [
-          { label: "Permanent role", value: "Persists after this dispatch." },
-          { label: "Return obligation — ACTIVE", value: expected.obligation },
+          { label: "Permanent background", value: "Persists after this dispatch." },
+          { label: "Return promise — ACTIVE", value: expected.obligation },
           {
             label: "Wolf-Winter fit",
             value: expected.def,
@@ -79,8 +79,10 @@ describe("Albany registration progressive disclosure", () => {
       });
       expect(option.summary.commitment).toBe(profile.summary);
       expect(
-        option.summary.highlights?.filter((highlight) => highlight.label === "Permanent role"),
-      ).toEqual([{ label: "Permanent role", value: "Persists after this dispatch." }]);
+        option.summary.highlights?.filter(
+          (highlight) => highlight.label === "Permanent background",
+        ),
+      ).toEqual([{ label: "Permanent background", value: "Persists after this dispatch." }]);
       expect(
         option.summary.highlights?.some((highlight) => highlight.label === "Role experience"),
       ).toBe(false);
@@ -98,8 +100,8 @@ describe("Albany registration progressive disclosure", () => {
       "Starter package / field edge: Fieldcraft 4; weatherproof field kit",
     );
     expect(terminal).toContain(`Commitment: ${REGISTRATION.profiles[0]!.summary}`);
-    expect(terminal).toContain("Permanent role: Persists after this dispatch.");
-    expect(terminal).toContain("Return obligation — ACTIVE:");
+    expect(terminal).toContain("Permanent background: Persists after this dispatch.");
+    expect(terminal).toContain("Return promise — ACTIVE:");
     expect(terminal).toContain("Wolf-Winter fit: Starting DEF 3 → 4");
   });
 

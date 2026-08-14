@@ -126,7 +126,7 @@ describe("terminal registration story-choice groups", () => {
     const initial = renderTerminalStoryChoiceComparison(prompt);
 
     expect(initial).toContain(
-      "Customize: `customize` — Customize duty and evidence — compare all four field outcomes.",
+      "Customize: `customize` — Customize promise and report — compare all four field outcomes.",
     );
     expect(initial).toMatch(/HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die/i);
     expect(initial).toMatch(/LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed/i);
@@ -137,9 +137,9 @@ describe("terminal registration story-choice groups", () => {
       /FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals/i,
     );
     expect(initial).toContain("No plan is recommended or committed");
-    expect(initial).toContain(
-      "1. Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
-    );
+    expect(initial).toContain("1. Ready-made dispatch — Aid-Only promise + Hayden's frost report");
+    expect(initial).toContain("Ready-made dispatch: Support:");
+    expect(initial).not.toContain("Wolf-Winter promise:");
     expect(initial).not.toContain("Take Full Compact Duty");
     expect(initial).not.toContain("Negotiate Aid-Only Duty\n");
     expect(initial).not.toContain("Remain an Unaffiliated Helper");
@@ -147,16 +147,15 @@ describe("terminal registration story-choice groups", () => {
     const revealed = renderTerminalStoryChoiceComparison(prompt, {
       revealId: prompt.progressiveDisclosure!.reveal.id,
     });
-    expect(revealed).toContain(
-      "1. Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
-    );
-    expect(revealed).toContain("2. Take Full Compact Duty");
-    expect(revealed).toContain("3. Negotiate Aid-Only Duty");
+    expect(revealed).toContain("1. Ready-made dispatch — Aid-Only promise + Hayden's frost report");
+    expect(revealed).toContain("2. Take Full Compact Promise");
+    expect(revealed).toContain("3. Negotiate Aid-Only Promise");
     expect(revealed).toContain("4. Remain an Unaffiliated Helper");
+    expect(revealed).toContain("Wolf-Winter promise:");
     expect(revealed).not.toContain("Customize: `customize`");
     expect(revealed.match(/^ {4}\d+\. /gm)).toHaveLength(4);
-    expect(revealed.indexOf("Quick setup —")).toBeLessThan(
-      revealed.indexOf("Take Full Compact Duty"),
+    expect(revealed.indexOf("Ready-made dispatch —")).toBeLessThan(
+      revealed.indexOf("Take Full Compact Promise"),
     );
 
     const selected: string[] = [];
@@ -202,7 +201,7 @@ describe("terminal registration story-choice groups", () => {
       choose: (option) => customizedSelected.push(option.id),
     });
     expect(customizedRejected).toEqual([
-      "Use `customize` to reveal the individual duties before choosing that card.",
+      "Use `customize` to reveal the individual promises before choosing that card.",
       "Choose an exact option id, full option label, or number from the comparison.",
     ]);
     expect(customizedWritten).toEqual([initial, revealed]);
@@ -232,20 +231,23 @@ describe("terminal registration story-choice groups", () => {
   it("labels doctrine and custom-role cards without changing generic comparisons", async () => {
     const grouped = renderTerminalStoryChoiceComparison(prompt("registration"));
 
-    expect(grouped).toContain("  Start with a doctrine");
-    expect(grouped).toContain("  Build a custom role");
-    expect(grouped.indexOf("Start with a doctrine")).toBeLessThan(
-      grouped.indexOf("Build a custom role"),
+    expect(grouped).toContain("  Choose a ready-made background");
+    expect(grouped).toContain("  Build a custom background");
+    expect(grouped.indexOf("Choose a ready-made background")).toBeLessThan(
+      grouped.indexOf("Build a custom background"),
     );
     expect(grouped.match(/^ {4}\d+\. /gm)).toHaveLength(4);
     expect(grouped.indexOf("1. Keeper doctrine")).toBeLessThan(grouped.indexOf("3. Scout"));
     expect(grouped).toContain("4. Medic");
+    expect(grouped).toContain("Background: Keep faith.");
 
     const generic = renderTerminalStoryChoiceComparison(prompt("preparation"));
-    expect(generic).not.toContain("Start with a doctrine");
-    expect(generic).not.toContain("Build a custom role");
+    expect(generic).not.toContain("Choose a ready-made background");
+    expect(generic).not.toContain("Build a custom background");
     expect(generic.match(/^ {4}\d+\. /gm)).toHaveLength(4);
     expect(generic.indexOf("1. Scout")).toBeLessThan(generic.indexOf("2. Keeper doctrine"));
+    expect(generic).toContain("Field kit: Scout ahead.");
+    expect(generic).not.toContain("Promise / priority:");
 
     const selected: string[] = [];
     const result = await runTerminalStoryChoiceController({
@@ -299,7 +301,7 @@ describe("terminal registration story-choice groups", () => {
     });
 
     expect(rejected).toEqual([
-      "Use `customize` to reveal the individual duties before choosing that card.",
+      "Use `customize` to reveal the individual promises before choosing that card.",
     ]);
     expect(written).toHaveLength(3);
     expect(written[0]).toBe(initial);

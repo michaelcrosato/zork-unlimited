@@ -61,7 +61,7 @@ describe("Station dispatch board", () => {
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
-        "Cade's herd is under pressure. Depart now, or use an open support row. Support changes cost and aftermath, not your Wolf-Winter plan.",
+        "Already set: background, Wolf-Winter promise, and report. Optional before leaving: field kit, one relief wagon, or second rider. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.",
     });
     expect(board.guidance.length).toBeLessThanOrEqual(STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT);
     expect(board.support.map((entry) => [entry.slot, entry.status, entry.selectedTitle])).toEqual(
@@ -99,13 +99,13 @@ describe("Station dispatch board", () => {
         kind: "inspect",
         tool: "inspect_overworld_session_story",
         storyChoiceId: PREPARATION.id,
-        title: PREPARATION.title,
+        title: "Field kit",
       },
       {
         kind: "inspect",
         tool: "inspect_overworld_session_story",
         storyChoiceId: RELIEF_ALLOCATION.id,
-        title: RELIEF_ALLOCATION.title,
+        title: "Relief wagon",
       },
       {
         kind: "talk",
@@ -138,12 +138,12 @@ describe("Station dispatch board", () => {
     );
     // V4 keeps the first compact Station view launch-first while putting one
     // bounded purpose and an already-authenticated handle on each live support row.
-    expect(JSON.stringify(compact.station_dispatch_board).length).toBe(817);
+    expect(JSON.stringify(compact.station_dispatch_board).length).toBe(890);
     expect(JSON.stringify(compact.station_dispatch_board).length).toBeLessThanOrEqual(1_000);
     expect(
       JSON.stringify(compact.station_dispatch_board).length +
         OVERWORLD_COMPACT_LEGEND.station_dispatch_board.length,
-    ).toBe(1_231);
+    ).toBe(1_451);
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
       4,
       WOLF.id,
@@ -157,7 +157,13 @@ describe("Station dispatch board", () => {
     ]);
     expect(compact.station_dispatch_board?.[4]).toEqual([
       ["role", "selected", REGISTRATION.profiles[0]!.title, null, null],
-      ["duty", "selected", RELIEF_OATH.options[0]!.title, null, null],
+      [
+        "duty",
+        "selected",
+        RELIEF_OATH.options[0]!.title.replace(/\bDuty\b/gu, "Promise"),
+        null,
+        null,
+      ],
       ["evidence", "selected", LEAD_SOURCE.options[0]!.title, null, null],
       [
         "preparation",
@@ -222,7 +228,14 @@ describe("Station dispatch board", () => {
       "Cade's herd is under pressure. Depart now, or review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.",
       compact.station_dispatch_board![3],
       compact.station_dispatch_board![4].map(
-        ([slot, status, selectedTitle]) => [slot, status, selectedTitle, null, null] as const,
+        ([slot, status, selectedTitle]) =>
+          [
+            slot,
+            status,
+            slot === "duty" ? RELIEF_OATH.options[0]!.title : selectedTitle,
+            null,
+            null,
+          ] as const,
       ),
     ] as const;
     const v3BoardAndExplicitSupport = JSON.stringify({
@@ -231,7 +244,7 @@ describe("Station dispatch board", () => {
     });
     expect(JSON.stringify(v3StationBoard).length).toBe(648);
     expect(v3BoardAndExplicitSupport.length).toBe(1_161);
-    expect(v4StationBlock.length).toBe(844);
+    expect(v4StationBlock.length).toBe(917);
     expect(v4StationBlock.length).toBeLessThan(v3BoardAndExplicitSupport.length);
     const v4LaunchSlice = JSON.stringify({
       quests: compact.quests,
@@ -244,6 +257,11 @@ describe("Station dispatch board", () => {
       station_dispatch_board: v3StationBoard,
     });
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });
+    expect(fallback.departure_interactions).toEqual([
+      [PREPARATION.id, "preparation", "Field kit"],
+      [RELIEF_ALLOCATION.id, "relief_allocation", "Relief wagon"],
+    ]);
+    expect(fallback.departure_contact_leads?.[0]?.[2]).toBe("Second rider");
     const fallbackLaunchSlice = JSON.stringify({
       quests: fallback.quests,
       quest_starts: fallback.quest_starts,
@@ -252,8 +270,8 @@ describe("Station dispatch board", () => {
       departure_contact_leads: fallback.departure_contact_leads,
     });
     expect(Buffer.byteLength(v3LaunchSlice, "utf8")).toBe(1_989);
-    expect(Buffer.byteLength(v4LaunchSlice, "utf8")).toBe(2_158);
-    expect(Buffer.byteLength(fallbackLaunchSlice, "utf8")).toBe(2_333);
+    expect(Buffer.byteLength(v4LaunchSlice, "utf8")).toBe(2_231);
+    expect(Buffer.byteLength(fallbackLaunchSlice, "utf8")).toBe(2_247);
 
     const clonedBoard = cloneOverworldCompactView(compact).station_dispatch_board;
     const clonedAction = clonedBoard?.[4].find(([slot]) => slot === "preparation")?.[4];
@@ -283,6 +301,13 @@ describe("Station dispatch board", () => {
     expect(row("field_team")?.[4]).toEqual(["talk", ALLY.contact, "June Pike"]);
 
     session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+    const preparedGuidance =
+      "Already set: background, Wolf-Winter promise, report, and field kit. Optional before leaving: one relief wagon or second rider. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.";
+    expect(session.view().stationDispatchBoard?.guidance).toBe(preparedGuidance);
+    expect(session.compactView().station_dispatch_board?.[2]).toBe(preparedGuidance);
+    expect(JSON.stringify(session.compactView().station_dispatch_board).length).toBeLessThanOrEqual(
+      1_000,
+    );
     expect(row("preparation")).toEqual([
       "preparation",
       "selected",
@@ -315,6 +340,16 @@ describe("Station dispatch board", () => {
     expect(
       session.compactView().station_dispatch_board?.[4].filter((entry) => entry[4] !== null),
     ).toEqual([]);
+    const fullySetGuidance =
+      "Already set: background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice. No optional support remains. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.";
+    expect(session.view().stationDispatchBoard?.guidance).toBe(fullySetGuidance);
+    expect(session.compactView().station_dispatch_board?.[2]).toBe(fullySetGuidance);
+    expect(JSON.stringify(session.compactView().station_dispatch_board).length).toBeLessThanOrEqual(
+      1_000,
+    );
+    expect(
+      session.view().stationDispatchBoard?.plan.filter((entry) => entry.status === "open_optional"),
+    ).toEqual([]);
 
     const snapshot = session.snapshot();
     const restored = OverworldSession.restore(WORLD, snapshot);
@@ -323,6 +358,22 @@ describe("Station dispatch board", () => {
     );
     expect(restored.compactView().station_dispatch_board?.[0]).toBe(4);
     expect(restored.snapshot()).toEqual(snapshot);
+  });
+
+  it("keeps solo and refused-relay selections truthful in full and compact guidance", () => {
+    for (const optionId of ["albany:ally_june_relay_only", ALLY.solo_option_id]) {
+      const session = stationedSession();
+      session.talkToCharacter(ALLY.contact);
+      session.chooseJourneyStory(optionId);
+      const guidance =
+        "Already set: background, Wolf-Winter promise, report, and riding choice. Optional before leaving: field kit or one relief wagon. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.";
+
+      expect(session.view().stationDispatchBoard?.guidance).toBe(guidance);
+      expect(session.compactView().station_dispatch_board?.[2]).toBe(guidance);
+      expect(session.view().stationDispatchBoard?.guidance).not.toContain(
+        "Already set: background, Wolf-Winter promise, report, and second rider",
+      );
+    }
   });
 
   it("withholds malformed pairings and does not leak unselected support alternatives", () => {
@@ -402,6 +453,22 @@ describe("Station dispatch board", () => {
         recap: {
           ...recap,
           entries: recap.entries.map((entry) =>
+            ["role", "duty", "evidence"].includes(entry.slot)
+              ? { ...entry, status: "open_optional" as const, title: null }
+              : entry,
+          ),
+        },
+        quests: view.quests,
+        questStarts: view.questStarts,
+        departureInteractions: view.departureInteractions,
+        departureContactLeads: view.departureContactLeads,
+      }),
+    ).toBeNull();
+    expect(
+      deriveStationDispatchBoard({
+        recap: {
+          ...recap,
+          entries: recap.entries.map((entry) =>
             entry.slot === "preparation"
               ? { ...entry, status: "open_optional", title: "forged selected kit" }
               : entry,
@@ -423,7 +490,7 @@ describe("Station dispatch board", () => {
     });
     expect(waiting?.launch.approaches.every((approach) => !approach.availableNow)).toBe(true);
     expect(waiting?.guidance).toBe(
-      "Cade's herd is under pressure. No road is open. You may still use any open support row; support changes cost and aftermath, not which plan you can choose.",
+      "Already set: background, Wolf-Winter promise, and report. Optional before leaving: field kit, one relief wagon, or second rider. No road is open; support changes cost and aftermath, not your plan.",
     );
     expect(waiting?.guidance.length).toBeLessThanOrEqual(
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,

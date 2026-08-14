@@ -4,14 +4,14 @@ import type { OverworldManifest } from "./overworld.js";
 
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
 const REGISTRATION_COMPARISON_HEADER =
-  "Compare funds, starter edge, obligation, and tradeoff. No fee; checks appear before resolution.";
-const RELIEF_OATH_COMPARISON_HEADER = `Compare promise, exact cost, and what each duty gives up. ${FIELD_CHECK_TIMING}`;
+  "Compare background funds, starter edge, return promise, and tradeoff. No fee; checks appear before resolution.";
+const RELIEF_OATH_COMPARISON_HEADER = `Compare promise, exact cost, and what each promise gives up. ${FIELD_CHECK_TIMING}`;
 const STANDARD_PACKET_RELIEF_OATH_COMPARISON_HEADER =
-  "Compare matched support, exact cost, and closed alternatives. Checks appear before resolution.";
-const LEAD_SOURCE_COMPARISON_HEADER = `Other accounts close. Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const PREPARATION_COMPARISON_HEADER = `Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const RELIEF_ALLOCATION_COMPARISON_HEADER = `Compare who is protected, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
-const ALLY_COMPARISON_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+  "Compare its exact cost and which promise/report alternatives close. Checks appear before resolution.";
+const LEAD_SOURCE_COMPARISON_HEADER = `Other reports close. Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const PREPARATION_COMPARISON_HEADER = `Compare field use, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const RELIEF_ALLOCATION_COMPARISON_HEADER = `Compare who the relief wagon protects, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
+const ALLY_COMPARISON_HEADER = `Compare the second rider's promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 
 const OPENING_DISPATCH_SUPPORT_DISCOVERY_MARKER = " The live dispatch has ";
 
@@ -27,14 +27,14 @@ export function openingDispatchCrisisPreview(discovery: string): string | null {
 const OPENING_DISPATCH_PURPOSE: Readonly<
   Record<NonNullable<JourneyStoryChoicePrompt["kind"]>, string>
 > = Object.freeze({
-  registration: "Purpose: choose a role; HUNT, LURE, DRIVE, and FORTIFY stay open.",
-  relief_oath: "Purpose: choose duty; every field plan stays open.",
-  lead_source: "Purpose: choose evidence; every field plan stays open.",
+  registration: "Purpose: choose a background; all four field plans stay open.",
+  relief_oath: "Purpose: choose a Wolf-Winter promise; every field plan stays open.",
+  lead_source: "Purpose: choose a report; every field plan stays open.",
   preparation:
-    "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
+    "Purpose: optionally choose one field kit; the relief wagon and second rider stay separate.",
   relief_allocation:
-    "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
-  ally: "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
+    "Purpose: optionally send the relief wagon; the field kit and second rider stay separate.",
+  ally: "Purpose: choose a second rider or ride alone; every Wolf-Winter route stays available.",
 });
 
 type OpeningDispatchStage = Readonly<{
@@ -135,32 +135,32 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
       Object.freeze({
         id: registration.id,
         kind: "registration",
-        label: "role",
+        label: "background",
       }),
       Object.freeze({
         id: reliefOath.id,
         kind: "relief_oath",
-        label: "duty",
+        label: "Wolf-Winter promise",
       }),
-      Object.freeze({ id: leadSource.id, kind: "lead_source", label: "evidence" }),
+      Object.freeze({ id: leadSource.id, kind: "lead_source", label: "report" }),
     ]),
     departureChoices: Object.freeze([
       Object.freeze({
         id: preparation.id,
         kind: "preparation",
-        label: "preparation",
+        label: "field kit",
       }),
       Object.freeze({
         id: reliefAllocation.id,
         kind: "relief_allocation",
-        label: "relief allocation",
+        label: "relief wagon",
       }),
     ]),
     allyChoice: ally
       ? Object.freeze({
           id: ally.id,
           kind: "ally",
-          label: "field team",
+          label: "second rider",
         })
       : null,
   };
@@ -199,52 +199,52 @@ export function withOpeningDispatchBriefing(
       false);
   const displayMessage =
     registration && prompt.id === registration.id && prompt.kind === "registration"
-      ? `${registration.title}. ${REGISTRATION_COMPARISON_HEADER}`
+      ? `Choose a background. ${REGISTRATION_COMPARISON_HEADER}`
       : reliefOath && prompt.id === reliefOath.id && prompt.kind === "relief_oath"
-        ? `${reliefOath.title}. ${
+        ? `Choose a Wolf-Winter promise. ${
             offersStandardPacket
               ? STANDARD_PACKET_RELIEF_OATH_COMPARISON_HEADER
               : RELIEF_OATH_COMPARISON_HEADER
           }`
         : leadSource && prompt.id === leadSource.id && prompt.kind === "lead_source"
-          ? `${leadSource.title}. ${LEAD_SOURCE_COMPARISON_HEADER}`
+          ? `Choose the Wolf-Winter report. ${LEAD_SOURCE_COMPARISON_HEADER}`
           : preparation && prompt.id === preparation.id && prompt.kind === "preparation"
-            ? `${preparation.title}. ${PREPARATION_COMPARISON_HEADER}`
+            ? `Choose a field kit. ${PREPARATION_COMPARISON_HEADER}`
             : reliefAllocation &&
                 prompt.id === reliefAllocation.id &&
                 prompt.kind === "relief_allocation"
-              ? `${reliefAllocation.title}. ${RELIEF_ALLOCATION_COMPARISON_HEADER}`
+              ? `Send Albany's relief wagon. ${RELIEF_ALLOCATION_COMPARISON_HEADER}`
               : ally && prompt.id === ally.id && prompt.kind === "ally"
-                ? `${ally.title}. ${ALLY_COMPARISON_HEADER}`
+                ? `Choose a second rider or ride alone. ${ALLY_COMPARISON_HEADER}`
                 : prompt.message;
   const purpose = offersStandardPacket
-    ? "Purpose: quick setup or customize; every field plan stays open."
+    ? "Quick setup: choose the ready-made dispatch or customize it; one Wolf-Winter promise, one report, and all four field plans stay open."
     : OPENING_DISPATCH_PURPOSE[prompt.kind];
   if (civicStageIndex >= 0) {
     const stage = plan.civicStages[civicStageIndex]!;
     const progress =
       civicStageIndex === 0
-        ? `${plan.questTitle} · role.`
+        ? `${plan.questTitle} · background.`
         : offersStandardPacket
-          ? `${plan.questTitle} · matched duty + evidence.`
-          : `${plan.questTitle} Civic docket · ${civicStageIndex + 1}/${plan.civicStages.length} — ${stage.label}.`;
+          ? `${plan.questTitle} · ready-made dispatch.`
+          : `${plan.questTitle} · ${stage.label}.`;
     const planningContext =
       civicStageIndex === 0
-        ? `Mission — ${plan.questCrisisPreview} Next, bind duty and evidence or customize.`
+        ? `Mission — ${plan.questCrisisPreview} Next: ready-made promise/report pair or customize.`
         : civicStageIndex === 1 && offersStandardPacket
-          ? "Quick setup binds duty and evidence without choosing a field plan."
+          ? ""
           : civicStageIndex === 2
-            ? "Hayden's Station launch board follows."
-            : "Evidence follows.";
+            ? "Albany Station's launch board follows."
+            : "A report follows.";
     return {
       ...prompt,
-      message: `${progress} ${purpose} ${planningContext} ${displayMessage}`,
+      message: [progress, purpose, planningContext, displayMessage].filter(Boolean).join(" "),
     };
   }
   if (allyChoice) {
     const progress = `${plan.questTitle} · optional ${allyChoice.label}.`;
     const missionCard = `Route costs and tactics remain on ${plan.questTitle}'s launch card.`;
-    const planningContext = 'Choose "Leave with a Solo Field Team" to keep the one-rider launch.';
+    const planningContext = 'Choose "Ride alone" to keep the one-rider launch.';
     return {
       ...prompt,
       message: `${progress} ${purpose} ${missionCard} ${planningContext} ${displayMessage}`,
@@ -254,14 +254,14 @@ export function withOpeningDispatchBriefing(
   const progress =
     choice.kind === "preparation"
       ? `${plan.questTitle} · optional ${choice.label}.`
-      : `${plan.questTitle} · optional relief priority.`;
+      : `${plan.questTitle} · optional relief wagon.`;
   const planningContext =
     choice.kind === "preparation"
       ? plan.allyContactName
-        ? `${plan.allyContactName}'s field-team conversation is separate. ${plan.allyTimingSummary ?? ""}`
+        ? `${plan.allyContactName}'s second-rider conversation is separate. ${plan.allyTimingSummary ?? ""}`
         : ""
       : plan.allyContactName
-        ? `${plan.allyContactName}'s field-team conversation is separate; launching now keeps the solo route legal. ${plan.allyTimingSummary ?? ""}`
+        ? `${plan.allyContactName}'s second-rider conversation is separate; launching now keeps riding alone legal. ${plan.allyTimingSummary ?? ""}`
         : "";
   const missionCard = `Route costs and tactics remain on ${plan.questTitle}'s launch card.`;
   return {

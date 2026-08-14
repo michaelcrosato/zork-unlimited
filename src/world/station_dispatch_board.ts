@@ -17,13 +17,52 @@ export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
 
 const SUPPORT_SLOTS = ["preparation", "relief_allocation", "field_team"] as const;
 type StationDispatchSupportSlot = (typeof SUPPORT_SLOTS)[number];
-const PLAN_SLOTS = ["role", "duty", "evidence", ...SUPPORT_SLOTS] as const;
+const CORE_PLAN_SLOTS = ["role", "duty", "evidence"] as const;
+const PLAN_SLOTS = [...CORE_PLAN_SLOTS, ...SUPPORT_SLOTS] as const;
 type StationDispatchPlanSlot = (typeof PLAN_SLOTS)[number];
 
-const READY_GUIDANCE =
-  "Cade's herd is under pressure. Depart now, or use an open support row. Support changes cost and aftermath, not your Wolf-Winter plan.";
-const WAITING_GUIDANCE =
-  "Cade's herd is under pressure. No road is open. You may still use any open support row; support changes cost and aftermath, not which plan you can choose.";
+const GUIDANCE_LABELS: Readonly<Record<StationDispatchPlanSlot, string>> = Object.freeze({
+  role: "background",
+  duty: "Wolf-Winter promise",
+  evidence: "report",
+  preparation: "field kit",
+  relief_allocation: "relief wagon",
+  field_team: "riding choice",
+});
+
+const OPTIONAL_GUIDANCE_LABELS: Readonly<Record<StationDispatchSupportSlot, string>> =
+  Object.freeze({
+    preparation: "field kit",
+    relief_allocation: "one relief wagon",
+    field_team: "second rider",
+  });
+
+function formatGuidanceList(items: readonly string[], conjunction: "and" | "or"): string {
+  if (items.length === 1) return items[0]!;
+  if (items.length === 2) return `${items[0]} ${conjunction} ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, ${conjunction} ${items.at(-1)!}`;
+}
+
+function stationGuidance(recap: OpeningDepartureRecap, canDepart: boolean): string {
+  const setLabels = recap.entries
+    .filter((entry) => entry.status !== "open_optional")
+    .map((entry) => GUIDANCE_LABELS[entry.slot]);
+  const optionalLabels = recap.entries
+    .filter(
+      (entry): entry is typeof entry & { slot: StationDispatchSupportSlot } =>
+        entry.status === "open_optional" &&
+        SUPPORT_SLOTS.includes(entry.slot as StationDispatchSupportSlot),
+    )
+    .map((entry) => OPTIONAL_GUIDANCE_LABELS[entry.slot]);
+  const optional =
+    optionalLabels.length > 0
+      ? `Optional before leaving: ${formatGuidanceList(optionalLabels, "or")}.`
+      : "No optional support remains.";
+  const departure = canDepart
+    ? "Depart now; support changes cost and aftermath, not your Wolf-Winter plan."
+    : "No road is open; support changes cost and aftermath, not your plan.";
+  return `Already set: ${formatGuidanceList(setLabels, "and")}. ${optional} ${departure}`;
+}
 
 const SUPPORT_COPY: Readonly<
   Record<
@@ -263,6 +302,15 @@ function hasExactPlanCoverage(recap: OpeningDepartureRecap): boolean {
   );
 }
 
+function hasCoherentPlanRows(recap: OpeningDepartureRecap): boolean {
+  return recap.entries.every((entry) =>
+    CORE_PLAN_SLOTS.includes(entry.slot as (typeof CORE_PLAN_SLOTS)[number])
+      ? entry.status === "selected" && entry.title !== null
+      : (entry.status === "open_optional" && entry.title === null) ||
+        (entry.status === "selected" && entry.title !== null),
+  );
+}
+
 function actionMatchesStatus(entry: StationDispatchBoardSupport): boolean {
   const requiresAction = entry.status === "open_optional";
   if (requiresAction && entry.selectedTitle !== null) return false;
@@ -325,6 +373,7 @@ export function deriveStationDispatchBoard(args: {
   const recap = args.recap;
   if (!recap) return null;
   if (!hasExactPlanCoverage(recap)) return null;
+  if (!hasCoherentPlanRows(recap)) return null;
   const quest = args.quests.find((candidate) => candidate.id === recap.questId);
   if (!quest?.launch || quest.title !== recap.questTitle || quest.launch.options.length === 0) {
     return null;
@@ -376,7 +425,7 @@ export function deriveStationDispatchBoard(args: {
     questId: recap.questId,
     questTitle: recap.questTitle,
     guidance: bounded(
-      legalApproachIds.size > 0 ? READY_GUIDANCE : WAITING_GUIDANCE,
+      stationGuidance(recap, legalApproachIds.size > 0),
       "guidance",
       STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
     ),

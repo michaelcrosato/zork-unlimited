@@ -5,6 +5,7 @@ import type {
 } from "./journey_contract.js";
 import {
   formatOpeningAllyChoiceTiming,
+  openingAllyOptionDisplayLabel,
   parseOpeningAlly,
   type OpeningAlly,
 } from "./opening_ally.js";
@@ -49,7 +50,7 @@ export function presentOpeningAlly(
       parsed.options.map((option) =>
         presentOpeningChoiceOption({
           id: option.id,
-          label: option.title,
+          label: openingAllyOptionDisplayLabel(parsed, option),
           ...allySummary(parsed, option),
         }),
       ),

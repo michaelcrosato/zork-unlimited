@@ -23,7 +23,7 @@ function registrationDefDistinction(consequence: string): string {
   if (consequence.includes("does not receive the Road-Warden's current Fieldcraft DEF import")) {
     return "No Road-Warden Fieldcraft import; the quest keeps its authored starting DEF.";
   }
-  return "No additional starting-DEF distinction is stated on this role.";
+  return "No additional starting-DEF distinction is stated for this background.";
 }
 
 function registrationExactConsequence(profile: OpeningRegistration["profiles"][number]): string {
@@ -69,16 +69,16 @@ export function presentOpeningRegistration(
         fieldTriggerScope: "starter" as const,
         highlights: Object.freeze([
           Object.freeze({
-            label: "Permanent role",
+            label: "Permanent background",
             value: "Persists after this dispatch.",
           }),
           Object.freeze({
-            label: hasActiveObligation ? "Return obligation — ACTIVE" : "Return obligation",
+            label: hasActiveObligation ? "Return promise — ACTIVE" : "Return promise",
             value:
               obligation ??
               (hasActiveObligation
                 ? profile.tradeoff
-                : "No active return obligation is included in this role."),
+                : "No active return promise is included in this background."),
           }),
           Object.freeze({
             label: "Wolf-Winter fit",
@@ -93,7 +93,7 @@ export function presentOpeningRegistration(
     kind: "registration" as const,
     message:
       (parsed.doctrines?.length ?? 0) > 0
-        ? `${parsed.title}. Choose a role; order is neutral and every field plan stays open. Duty and evidence follow, together by quick setup or separately by customization. ${parsed.message}`
+        ? `${parsed.title}. Choose a background; order is neutral and every field plan stays open. A Wolf-Winter promise and report follow, together in a ready-made dispatch or separately when customized. ${parsed.message}`
         : `${parsed.title}. ${parsed.message}`,
     options: Object.freeze(profileOptions) as JourneyRegistrationStoryChoiceOptions,
   });

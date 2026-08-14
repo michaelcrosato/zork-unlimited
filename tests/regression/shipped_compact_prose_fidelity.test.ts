@@ -210,6 +210,34 @@ type OpeningSourceOption = Readonly<{
   consequence: string;
 }>;
 
+function openingStageDisplayTitle(kind: JourneyStoryChoicePrompt["kind"]): string {
+  switch (kind) {
+    case "registration":
+      return "Choose a background";
+    case "relief_oath":
+      return "Choose a Wolf-Winter promise";
+    case "lead_source":
+      return "Choose the Wolf-Winter report";
+    case "preparation":
+      return "Choose a field kit";
+    case "relief_allocation":
+      return "Send Albany's relief wagon";
+    case "ally":
+      return "Choose a second rider or ride alone";
+    case undefined:
+      throw new Error("Expected an opening story kind.");
+  }
+}
+
+function openingOptionDisplayLabel(
+  kind: JourneyStoryChoicePrompt["kind"],
+  sourceOption: OpeningSourceOption,
+): string {
+  if (kind === "relief_oath") return sourceOption.title.replace(/\bDuty\b/gu, "Promise");
+  if (kind === "ally" && sourceOption.id === "albany:ally_travel_solo") return "Ride alone";
+  return sourceOption.title;
+}
+
 function expectOpeningPromptExact(
   source: Readonly<{ id: string; title: string; message: string }>,
   sourceOptions: readonly OpeningSourceOption[],
@@ -220,7 +248,7 @@ function expectOpeningPromptExact(
   const projected = compactJourneyStoryChoicePrompt(prompt);
   const registrationDetail = prompt.kind === "registration";
   expectExact(`opening:${source.id}.prompt`, prompt.message, projected.message);
-  expect(projected.message).toContain(source.title);
+  expect(projected.message).toContain(openingStageDisplayTitle(prompt.kind));
   if (authoredMessageVisible) expect(projected.message).toContain(source.message);
   else expect(projected.message).not.toContain(source.message);
 
@@ -279,7 +307,8 @@ function expectOpeningPromptExact(
       comparisonOption,
       `opening:${source.id}.${sourceOption.id} must be available after staged expansion`,
     ).toBeDefined();
-    expect(comparisonOption!.label).toBe(sourceOption.title);
+    const expectedDisplayLabel = openingOptionDisplayLabel(prompt.kind, sourceOption);
+    expect(comparisonOption!.label).toBe(expectedDisplayLabel);
 
     const inspected = compactJourneyStoryChoiceComparison(prompt, sourceOption.id);
     const inspectedOption = inspected.inspectedOption;
@@ -287,7 +316,7 @@ function expectOpeningPromptExact(
       inspectedOption,
       `opening:${source.id}.${sourceOption.id} must be inspectable`,
     ).toBeDefined();
-    expect(inspectedOption!.label).toBe(sourceOption.title);
+    expect(inspectedOption!.label).toBe(expectedDisplayLabel);
     expect(inspectedOption!.consequence).toBe(canonicalOption!.consequence);
     if (canonicalOption!.summary?.checkFit === undefined) {
       expect(inspectedOption).not.toHaveProperty("checkFit");
@@ -607,11 +636,9 @@ describe("shipped compact prose fidelity", () => {
     session.talkToCharacter(ally.contact);
     const allyPrompt = currentStoryChoice(session);
     expect(allyPrompt.message).toContain(
-      "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
+      "Purpose: choose a second rider or ride alone; every Wolf-Winter route stays available.",
     );
-    expect(allyPrompt.message).toContain(
-      'Choose "Leave with a Solo Field Team" to keep the one-rider launch.',
-    );
+    expect(allyPrompt.message).toContain('Choose "Ride alone" to keep the one-rider launch.');
     choose(ally, ally.options, allyPrompt, false);
   });
 

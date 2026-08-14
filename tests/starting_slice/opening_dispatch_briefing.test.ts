@@ -27,37 +27,38 @@ const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)
 const ALLY_CONTACT = WORLD.characters.find((character) => character.id === ALLY.contact)!;
 const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
 const REGISTRATION_HEADER =
-  "Compare funds, starter edge, obligation, and tradeoff. No fee; checks appear before resolution.";
-const OATH_HEADER = `Compare promise, exact cost, and what each duty gives up. ${FIELD_CHECK_TIMING}`;
+  "Compare background funds, starter edge, return promise, and tradeoff. No fee; checks appear before resolution.";
+const OATH_HEADER = `Compare promise, exact cost, and what each promise gives up. ${FIELD_CHECK_TIMING}`;
 const STANDARD_PACKET_OATH_HEADER =
-  "Compare matched support, exact cost, and closed alternatives. Checks appear before resolution.";
-const SOURCE_HEADER = `Other accounts close. Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const PREPARATION_HEADER = `Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const RELIEF_ALLOCATION_HEADER = `Compare who is protected, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
-const ALLY_HEADER = `Compare field-team promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+  "Compare its exact cost and which promise/report alternatives close. Checks appear before resolution.";
+const SOURCE_HEADER = `Other reports close. Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const PREPARATION_HEADER = `Compare field use, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
+const RELIEF_ALLOCATION_HEADER = `Compare who the relief wagon protects, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
+const ALLY_HEADER = `Compare the second rider's promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 const JUNE_TOTAL_TIMING =
-  "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.";
+  "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.";
 const PURPOSES = Object.freeze({
-  registration: "Purpose: choose a role; HUNT, LURE, DRIVE, and FORTIFY stay open.",
-  relief_oath: "Purpose: choose duty; every field plan stays open.",
-  lead_source: "Purpose: choose evidence; every field plan stays open.",
+  registration: "Purpose: choose a background; all four field plans stay open.",
+  relief_oath: "Purpose: choose a Wolf-Winter promise; every field plan stays open.",
+  lead_source: "Purpose: choose a report; every field plan stays open.",
   preparation:
-    "Purpose: optionally choose one preparation; relief priority and field team stay separate.",
+    "Purpose: optionally choose one field kit; the relief wagon and second rider stay separate.",
   relief_allocation:
-    "Purpose: optionally choose one relief priority; preparation and field team stay separate.",
-  ally: "Purpose: choose June's field-team terms or the solo team; every Wolf-Winter route stays available.",
+    "Purpose: optionally send the relief wagon; the field kit and second rider stay separate.",
+  ally: "Purpose: choose a second rider or ride alone; every Wolf-Winter route stays available.",
 });
-const STANDARD_PACKET_PURPOSE = "Purpose: quick setup or customize; every field plan stays open.";
+const STANDARD_PACKET_PURPOSE =
+  "Quick setup: choose the ready-made dispatch or customize it; one Wolf-Winter promise, one report, and all four field plans stay open.";
 const WOLF_CRISIS_PREVIEW =
   "A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather.";
 const REGISTRATION_MESSAGE =
-  "The Wolf-Winter · role. Purpose: choose a role; HUNT, LURE, DRIVE, and FORTIFY stay open. Mission — A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. Next, bind duty and evidence or customize. Enter Albany's Relief Compact. Compare funds, starter edge, obligation, and tradeoff. No fee; checks appear before resolution.";
+  "The Wolf-Winter · background. Purpose: choose a background; all four field plans stay open. Mission — A winter-relief tag moves from Albany's civic records to the Albany Station Quarter route desk: Old Cade's hill steading, a cattle byre, and a wolf pack coming down with the weather. Next: ready-made promise/report pair or customize. Choose a background. Compare background funds, starter edge, return promise, and tradeoff. No fee; checks appear before resolution.";
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter · matched duty + evidence. Purpose: quick setup or customize; every field plan stays open. Quick setup binds duty and evidence without choosing a field plan. Set the Wolf-Winter Relief Terms. Compare matched support, exact cost, and closed alternatives. Checks appear before resolution.";
+  "The Wolf-Winter · ready-made dispatch. Quick setup: choose the ready-made dispatch or customize it; one Wolf-Winter promise, one report, and all four field plans stay open. Choose a Wolf-Winter promise. Compare its exact cost and which promise/report alternatives close. Checks appear before resolution.";
 const CUSTOM_DUTY_MESSAGE =
-  "The Wolf-Winter Civic docket · 2/3 — duty. Purpose: choose duty; every field plan stays open. Evidence follows. Set the Wolf-Winter Relief Terms. Compare promise, exact cost, and what each duty gives up. Field checks surface with their action before resolution.";
+  "The Wolf-Winter · Wolf-Winter promise. Purpose: choose a Wolf-Winter promise; every field plan stays open. A report follows. Choose a Wolf-Winter promise. Compare promise, exact cost, and what each promise gives up. Field checks surface with their action before resolution.";
 const SOURCE_MESSAGE =
-  "The Wolf-Winter Civic docket · 3/3 — evidence. Purpose: choose evidence; every field plan stays open. Hayden's Station launch board follows. Certify the Wolf-Winter Source Packet. Other accounts close. Compare field priority, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter · report. Purpose: choose a report; every field plan stays open. Albany Station's launch board follows. Choose the Wolf-Winter report. Other reports close. Compare field priority, exact cost, and tradeoff. Field checks surface with their action before resolution.";
 const STALE_DEFAULT_CIVIC_FRAMING = /\b(?:1\/3|2\/3|Civic order)\b|role\s*→\s*duty\s*→\s*evidence/i;
 const DEFERRED_STATION_SUPPORT_DETAILS =
   /Hayden|field kit|last relief wagon|June|second field seat|second rider|cattle-first/i;
@@ -82,21 +83,16 @@ function expectStage(
   args: {
     id: string;
     kind: NonNullable<JourneyStoryChoicePrompt["kind"]>;
-    phase: "Civic docket" | "Departure plan";
-    step: number;
-    total: number;
     label: string;
-    originalTitle: string;
+    displayTitle: string;
     originalMessage: string;
     presentedMessage: string;
   },
 ): JourneyStoryChoicePrompt {
   const storyChoice = currentStoryChoice(session);
   expect(storyChoice).toMatchObject({ id: args.id, kind: args.kind });
-  expect(storyChoice.message).toContain(
-    `${WOLF.title} ${args.phase} · ${args.step}/${args.total} — ${args.label}.`,
-  );
-  expect(storyChoice.message).toContain(`${args.originalTitle}. ${args.presentedMessage}`);
+  expect(storyChoice.message).toContain(`${WOLF.title} · ${args.label}.`);
+  expect(storyChoice.message).toContain(`${args.displayTitle}. ${args.presentedMessage}`);
   expect(storyChoice.message).not.toContain(args.originalMessage);
   return storyChoice;
 }
@@ -132,7 +128,11 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
     expect(option.summary).not.toHaveProperty("fieldTrigger");
     expect(option.consequence).toContain("Benefit:");
     expect(option.consequence).toContain(`Cost: ${option.summary!.immediateCost}.`);
-    expect(option.consequence).toContain(`Boundary: ${option.summary!.tradeoff}`);
+    const isReadyMadeDispatch =
+      REGISTRATION.doctrines?.some((doctrine) => doctrine.id === option.id) === true;
+    expect(option.consequence).toContain(
+      `Boundary: ${isReadyMadeDispatch ? "Other duty/evidence pairs close." : option.summary!.tradeoff}`,
+    );
   }
 }
 
@@ -145,7 +145,9 @@ function expectBoundedPurpose(storyChoice: JourneyStoryChoicePrompt, purpose: st
     ? storyChoice.message.toLowerCase().indexOf(FIELD_CHECK_TIMING.toLowerCase())
     : storyChoice.message.toLowerCase().indexOf("checks appear before resolution");
   expect(purpose.length).toBeLessThanOrEqual(140);
-  expect(storyChoice.message.match(/\bPurpose:/g) ?? []).toHaveLength(1);
+  expect(storyChoice.message.match(/\bPurpose:/g) ?? []).toHaveLength(
+    purpose === STANDARD_PACKET_PURPOSE ? 0 : 1,
+  );
   expect(storyChoice.message).toContain(purpose);
   expect(storyChoice.message.indexOf(purpose)).toBeLessThan(timingIndex);
   expect(purpose).not.toMatch(/\b(?:best|optimal|recommended)\b/i);
@@ -155,10 +157,12 @@ function expectBoundedPurpose(storyChoice: JourneyStoryChoicePrompt, purpose: st
 }
 
 function expectRoleplayFirstFraming(storyChoice: JourneyStoryChoicePrompt): void {
-  expect(storyChoice.message).toMatch(/\b(?:duty|obligation|promises?|priorit(?:y|ies))\b/i);
+  expect(storyChoice.message).toMatch(
+    /\b(?:duty|obligation|promises?|priorit(?:y|ies)|field use|protects)\b/i,
+  );
   expect(storyChoice.message).toMatch(/\b(?:(?:exact )?cost|fee)\b/i);
   expect(storyChoice.message).toMatch(
-    /\b(?:closed alternatives|gives up|remains exposed|tradeoffs?)\b/i,
+    /\b(?:closed alternatives|alternatives close|gives up|remains exposed|tradeoffs?)\b/i,
   );
   expect(storyChoice.message).toMatch(
     /Field checks surface with their action before resolution|checks appear before resolution/i,
@@ -282,11 +286,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const registration = currentStoryChoice(session);
     expect(registration).toMatchObject({ id: REGISTRATION.id, kind: "registration" });
     expect(registration.message).toBe(REGISTRATION_MESSAGE);
-    expect(registration.message).toContain(`${WOLF.title} · role.`);
-    expect(registration.message).toContain(`${REGISTRATION.title}. ${REGISTRATION_HEADER}`);
+    expect(registration.message).toContain(`${WOLF.title} · background.`);
+    expect(registration.message).toContain(`Choose a background. ${REGISTRATION_HEADER}`);
     expect(registration.message).not.toContain(REGISTRATION.message);
     expect(registration.message).toContain(`Mission — ${WOLF_CRISIS_PREVIEW}`);
-    expect(registration.message).toContain("Next, bind duty and evidence or customize.");
+    expect(registration.message).toContain("Next: ready-made promise/report pair or customize.");
     expect(registration.message).not.toContain(WOLF.discovery);
     expect(registration.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(registration.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
@@ -314,13 +318,13 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const oath = currentStoryChoice(session);
     expect(oath).toMatchObject({ id: RELIEF_OATH.id, kind: "relief_oath" });
     expect(oath.message).toBe(MATCHED_OATH_MESSAGE);
-    expect(oath.message).toContain(`${WOLF.title} · matched duty + evidence.`);
-    expect(oath.message).toContain(`${RELIEF_OATH.title}. ${STANDARD_PACKET_OATH_HEADER}`);
+    expect(oath.message).toContain(`${WOLF.title} · ready-made dispatch.`);
+    expect(oath.message).toContain(`Choose a Wolf-Winter promise. ${STANDARD_PACKET_OATH_HEADER}`);
     expect(oath.message).not.toContain(RELIEF_OATH.message);
     const standardPacket = REGISTRATION.doctrines!.find(
       (doctrine) => doctrine.profile_id === REGISTRATION.profiles[0]!.id,
     )!;
-    expect(oath.message).toContain("without choosing a field plan.");
+    expect(oath.message).toContain("all four field plans stay open.");
     expect(oath.message).not.toMatch(STALE_DEFAULT_CIVIC_FRAMING);
     expect(oath.message).not.toMatch(DEFERRED_STATION_SUPPORT_DETAILS);
     expectBoundedPurpose(oath, STANDARD_PACKET_PURPOSE);
@@ -335,12 +339,13 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(oath.options.every((option) => option.summary?.immediateCost)).toBe(true);
     const roadWardenPacket = oath.options.find((option) => option.id === standardPacket.id)!;
     expect(roadWardenPacket.label).toBe(
-      "Quick setup — Negotiate Aid-Only Duty + Take Hayden's Frost-Heave Report",
+      "Ready-made dispatch — Aid-Only promise + Hayden's frost report",
     );
     expect(roadWardenPacket.summary?.commitment).toBe(
       "Support: Fieldcraft 4 sets DEF 4 and supplies DRIVE/LURE checks; Aid-Only skips clean LURE's last alarm and fits Cade's FORTIFY terms; after a public wedge splits, Hayden can brace HUNT. All four plans remain legal.",
     );
-    expect(roadWardenPacket.summary?.tradeoff).toBe("Other duty/evidence pairs close.");
+    expect(roadWardenPacket.summary?.tradeoff).toBe("Other promise/report pairs close.");
+    expect(roadWardenPacket.consequence).toContain("Boundary: Other duty/evidence pairs close.");
     expect(roadWardenPacket.consequence).toContain(
       "Benefit: Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
     );
@@ -361,7 +366,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       initialOptionIds: [standardPacket.id],
       reveal: {
         id: "customize_duty_and_evidence",
-        label: expect.stringContaining("Customize duty and evidence"),
+        label: "Customize promise and report — compare all four field outcomes",
         optionIds: RELIEF_OATH.options.map((option) => option.id),
       },
     });
@@ -408,11 +413,8 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const ledgerOath = expectStage(ledgerSession, {
       id: RELIEF_OATH.id,
       kind: "relief_oath",
-      phase: "Civic docket",
-      step: 2,
-      total: 3,
-      label: "duty",
-      originalTitle: RELIEF_OATH.title,
+      label: "Wolf-Winter promise",
+      displayTitle: "Choose a Wolf-Winter promise",
       originalMessage: RELIEF_OATH.message,
       presentedMessage: OATH_HEADER,
     });
@@ -432,11 +434,8 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const ledgerSource = expectStage(ledgerSession, {
       id: LEAD_SOURCE.id,
       kind: "lead_source",
-      phase: "Civic docket",
-      step: 3,
-      total: 3,
-      label: "evidence",
-      originalTitle: LEAD_SOURCE.title,
+      label: "report",
+      displayTitle: "Choose the Wolf-Winter report",
       originalMessage: LEAD_SOURCE.message,
       presentedMessage: SOURCE_HEADER,
     });
@@ -456,17 +455,14 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     const source = expectStage(session, {
       id: LEAD_SOURCE.id,
       kind: "lead_source",
-      phase: "Civic docket",
-      step: 3,
-      total: 3,
-      label: "evidence",
-      originalTitle: LEAD_SOURCE.title,
+      label: "report",
+      displayTitle: "Choose the Wolf-Winter report",
       originalMessage: LEAD_SOURCE.message,
       presentedMessage: SOURCE_HEADER,
     });
     expect(source.message).toBe(SOURCE_MESSAGE);
-    expect(source.message).toContain("Hayden's Station launch board follows.");
-    expect(source.message).toContain(`Certify the Wolf-Winter Source Packet. ${SOURCE_HEADER}`);
+    expect(source.message).toContain("Albany Station's launch board follows.");
+    expect(source.message).toContain(`Choose the Wolf-Winter report. ${SOURCE_HEADER}`);
     expect(source.message).not.toContain(LEAD_SOURCE.message);
     expectBoundedPurpose(source, PURPOSES.lead_source);
     expectRoleplayFirstFraming(source);
@@ -497,12 +493,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     });
     const preparation = session.inspectJourneyStory(PREPARATION.id);
     expect(preparation).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
-    expect(preparation.message).toContain(`${WOLF.title} · optional preparation.`);
-    expect(preparation.message).toContain(`${PREPARATION.title}. ${PREPARATION_HEADER}`);
+    expect(preparation.message).toContain(`${WOLF.title} · optional field kit.`);
+    expect(preparation.message).toContain(`Choose a field kit. ${PREPARATION_HEADER}`);
     expect(preparation.message).not.toContain(PREPARATION.message);
     expect(preparation.message).not.toContain("relief-capacity choice");
     expect(preparation.message).toContain(
-      `${ALLY_CONTACT.name}'s field-team conversation is separate.`,
+      `${ALLY_CONTACT.name}'s second-rider conversation is separate.`,
     );
     expect(preparation.message).toContain(JUNE_TOTAL_TIMING);
     expectBoundedPurpose(preparation, PURPOSES.preparation);
@@ -540,14 +536,14 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       id: RELIEF_ALLOCATION.id,
       kind: "relief_allocation",
     });
-    expect(allocation.message).toContain(`${WOLF.title} · optional relief priority.`);
-    expect(allocation.message).toContain(`${RELIEF_ALLOCATION.title}. ${RELIEF_ALLOCATION_HEADER}`);
+    expect(allocation.message).toContain(`${WOLF.title} · optional relief wagon.`);
+    expect(allocation.message).toContain(`Send Albany's relief wagon. ${RELIEF_ALLOCATION_HEADER}`);
     expect(allocation.message).not.toContain(RELIEF_ALLOCATION.message);
     expect(allocation.message).not.toMatch(/Departure plan|2\/2|Still ahead|Chosen for departure/i);
     expect(allocation.message).not.toContain("Optional field-team choice follows");
     expect(allocation.message).not.toMatch(/\b(?:required|mandatory)\b/i);
     expect(allocation.message).toContain(
-      `${ALLY_CONTACT.name}'s field-team conversation is separate; launching now keeps the solo route legal.`,
+      `${ALLY_CONTACT.name}'s second-rider conversation is separate; launching now keeps riding alone legal.`,
     );
     expect(allocation.message).toContain(JUNE_TOTAL_TIMING);
     expectBoundedPurpose(allocation, PURPOSES.relief_allocation);
@@ -569,12 +565,10 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     session.talkToCharacter(ALLY.contact);
     const ally = currentStoryChoice(session);
     expect(ally).toMatchObject({ id: ALLY.id, kind: "ally" });
-    expect(ally.message).toContain(`${WOLF.title} · optional field team.`);
+    expect(ally.message).toContain(`${WOLF.title} · optional second rider.`);
     expectBoundedPurpose(ally, PURPOSES.ally);
-    expect(ally.message).toContain(
-      'Choose "Leave with a Solo Field Team" to keep the one-rider launch.',
-    );
-    expect(ally.message).toContain(`${ALLY.title}. ${ALLY_HEADER}`);
+    expect(ally.message).toContain('Choose "Ride alone" to keep the one-rider launch.');
+    expect(ally.message).toContain(`Choose a second rider or ride alone. ${ALLY_HEADER}`);
     expect(ally.message).not.toContain(ALLY.message);
     expectRoleplayFirstFraming(ally);
     expect(wordCount(ally.message)).toBeLessThanOrEqual(75);
@@ -599,7 +593,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       expect(disclosure.initialOptionIds).toEqual([doctrine.id]);
       expect(disclosure.reveal).toMatchObject({
         id: "customize_duty_and_evidence",
-        label: expect.stringContaining("Customize duty and evidence"),
+        label: "Customize promise and report — compare all four field outcomes",
       });
       expect(journeyStoryChoiceOptionsForPresentation(oath).map((option) => option.id)).toEqual([
         doctrine.id,

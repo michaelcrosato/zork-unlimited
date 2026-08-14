@@ -20,8 +20,8 @@ type StructuredJourneyStoryChoiceOption = JourneyStoryChoiceOption &
   Readonly<{ summary: JourneyStoryChoiceSummary }>;
 
 const REGISTRATION_OPTION_GROUPS = [
-  ["doctrine", "Start with a doctrine"],
-  ["custom_role", "Build a custom role"],
+  ["doctrine", "Choose a ready-made background"],
+  ["custom_role", "Build a custom background"],
 ] as const;
 
 type GroupedRegistrationOptions = readonly Readonly<{
@@ -74,12 +74,39 @@ export function isStructuredTerminalStoryChoice(prompt: JourneyStoryChoicePrompt
   return structuredOptions(prompt) !== null;
 }
 
-function summaryLabels(summary: JourneyStoryChoiceSummary): {
-  commitment: "Commitment" | "Purpose" | "Promise / priority";
+export function storyChoiceCommitmentLabel(
+  kind: JourneyStoryChoicePrompt["kind"] | undefined,
+  readyMadeDispatch = false,
+): string {
+  if (readyMadeDispatch) return "Ready-made dispatch";
+  switch (kind) {
+    case "registration":
+      return "Background";
+    case "relief_oath":
+      return "Wolf-Winter promise";
+    case "lead_source":
+      return "Report";
+    case "preparation":
+      return "Field kit";
+    case "relief_allocation":
+      return "Relief wagon";
+    case "ally":
+      return "Riding choice";
+    default:
+      return "Promise / priority";
+  }
+}
+
+function summaryLabels(
+  summary: JourneyStoryChoiceSummary,
+  kind: JourneyStoryChoicePrompt["kind"],
+  readyMadeDispatch = false,
+): {
+  commitment: string;
   trigger?: "Field trigger" | "Starter package / field edge" | "Trigger category";
 } {
   if (summary.fieldTrigger === undefined) {
-    return { commitment: "Promise / priority" };
+    return { commitment: storyChoiceCommitmentLabel(kind, readyMadeDispatch) };
   }
   if (summary.fieldTriggerScope === "category") {
     return { commitment: "Purpose", trigger: "Trigger category" };
@@ -91,8 +118,13 @@ function summaryLabels(summary: JourneyStoryChoiceSummary): {
   };
 }
 
-function renderSummaryLines(summary: JourneyStoryChoiceSummary, indent: string): string[] {
-  const labels = summaryLabels(summary);
+function renderSummaryLines(
+  summary: JourneyStoryChoiceSummary,
+  indent: string,
+  kind: JourneyStoryChoicePrompt["kind"],
+  readyMadeDispatch = false,
+): string[] {
+  const labels = summaryLabels(summary, kind, readyMadeDispatch);
   if (!labels.trigger || summary.fieldTrigger === undefined) {
     return [
       `${indent}${labels.commitment}: ${summary.commitment}`,
@@ -142,7 +174,7 @@ export function renderTerminalStoryChoiceComparison(
     "\n! Story choice comparison",
     `  ${comparison.message}`,
     requiresComparisonFirst
-      ? "  Open the read-only outcome compass before choosing a duty or quick setup:"
+      ? "  Open the read-only outcome compass before choosing a Wolf-Winter promise or ready-made dispatch:"
       : "  Compare the cards, then use one exact command shown below:",
   ];
   const renderOption = (option: (typeof comparison.options)[number], index: number): void => {
@@ -152,7 +184,14 @@ export function renderTerminalStoryChoiceComparison(
     lines.push(
       isRevealFirst ? `    - ${option.label}` : `    ${String(index + 1)}. ${option.label}`,
     );
-    lines.push(...renderSummaryLines(option.summary, "       "));
+    lines.push(
+      ...renderSummaryLines(
+        option.summary,
+        "       ",
+        prompt.kind,
+        progressiveDisclosure?.initialOptionIds.includes(option.id) === true,
+      ),
+    );
     lines.push(`       Inspect: \`inspect ${option.id}\``);
     lines.push(`       Choose: \`choose ${option.id}\``);
   };
@@ -207,12 +246,17 @@ export function renderTerminalStoryChoiceDetail(
   const lines = [`\n! Story choice detail — ${projected.label}`];
   if (option.summary) {
     if (option.summary.fieldTrigger === undefined) {
-      lines.push(`  Promise / priority: ${option.summary.commitment}`);
+      lines.push(
+        `  ${storyChoiceCommitmentLabel(
+          prompt.kind,
+          prompt.progressiveDisclosure?.initialOptionIds.includes(option.id) === true,
+        )}: ${option.summary.commitment}`,
+      );
       if (option.summary.checkFit !== undefined) {
         lines.push(`  Check fit: ${option.summary.checkFit}`);
       }
     } else {
-      lines.push(...renderSummaryLines(option.summary, "  "));
+      lines.push(...renderSummaryLines(option.summary, "  ", prompt.kind));
     }
     if (option.dispatchImpact) lines.push(`  ${option.dispatchImpact.line}`);
     if (option.dispatchForecast) lines.push(`  ${option.dispatchForecast.line}`);
@@ -342,7 +386,7 @@ export async function runTerminalStoryChoiceController(args: {
       activeRevealId() !== progressiveDisclosure.reveal.id
     ) {
       if (inspected) {
-        args.reject("Use `back` before comparing individual duties.");
+        args.reject("Use `back` before comparing individual promises.");
         continue;
       }
       args.reveal?.(progressiveDisclosure.reveal.id);
@@ -362,8 +406,8 @@ export async function runTerminalStoryChoiceController(args: {
         if (progressiveDisclosure && hiddenOption(selector)) {
           args.reject(
             requiresComparisonFirst
-              ? "Use `compare` to open the outcome compass before inspecting a duty or quick setup."
-              : "Use `customize` to reveal the individual duties before inspecting that card.",
+              ? "Use `compare` to open the outcome compass before inspecting a Wolf-Winter promise or ready-made dispatch."
+              : "Use `customize` to reveal the individual promises before inspecting that card.",
           );
           continue;
         }
@@ -385,8 +429,8 @@ export async function runTerminalStoryChoiceController(args: {
         if (progressiveDisclosure && hiddenOption(selector)) {
           args.reject(
             requiresComparisonFirst
-              ? "Use `compare` to open the outcome compass before choosing a duty or quick setup."
-              : "Use `customize` to reveal the individual duties before choosing that card.",
+              ? "Use `compare` to open the outcome compass before choosing a Wolf-Winter promise or ready-made dispatch."
+              : "Use `customize` to reveal the individual promises before choosing that card.",
           );
           continue;
         }

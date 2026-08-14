@@ -447,7 +447,7 @@ describe("compact journey projection", () => {
                     "does not receive the Road-Warden's current Fieldcraft DEF import",
                   )
                 ? "No Road-Warden Fieldcraft import; the quest keeps its authored starting DEF."
-                : "No additional starting-DEF distinction is stated on this role.";
+                : "No additional starting-DEF distinction is stated for this background.";
           const highlights = option?.summary?.highlights ?? [];
           expect(option?.summary).toMatchObject({
             commitment: profile.summary,
@@ -456,14 +456,14 @@ describe("compact journey projection", () => {
             immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
             tradeoff: profile.tradeoff,
           });
-          expect(highlights.filter((highlight) => highlight.label === "Permanent role")).toEqual([
-            { label: "Permanent role", value: "Persists after this dispatch." },
-          ]);
           expect(
-            highlights.filter((highlight) => highlight.label === "Return obligation — ACTIVE"),
+            highlights.filter((highlight) => highlight.label === "Permanent background"),
+          ).toEqual([{ label: "Permanent background", value: "Persists after this dispatch." }]);
+          expect(
+            highlights.filter((highlight) => highlight.label === "Return promise — ACTIVE"),
           ).toEqual([
             {
-              label: "Return obligation — ACTIVE",
+              label: "Return promise — ACTIVE",
               value: requiredPreviewFact("Obligation"),
             },
           ]);

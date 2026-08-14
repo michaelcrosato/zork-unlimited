@@ -32,6 +32,9 @@ describe("opening ally contract", () => {
     expect(prompt).toMatchObject({ id: ALLY.id, kind: "ally" });
     expect(prompt.message).toBe(`${ALLY.title}. ${ALLY.message}`);
     expect(prompt.options).toHaveLength(3);
+    expect(prompt.options.find((option) => option.id === ALLY.solo_option_id)?.label).toBe(
+      "Ride alone",
+    );
     prompt.options.forEach((option, index) => {
       const authored = ALLY.options[index]!;
       const cost = formatOpeningAllyChoiceTiming(authored.terms);
@@ -61,13 +64,13 @@ describe("opening ally contract", () => {
       "15 minutes additional after 15-minute talk; 30 minutes total",
     );
     expect(openingAllyContactTimingSummary(ALLY)).toBe(
-      "Talking takes 15 minutes. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.",
+      "Talking takes 15 minutes. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.",
     );
     expect(openingAllyContactTimingSummary(ALLY, true)).toBe(
-      "The 15-minute conversation is already recorded; reviewing it now adds no time. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.",
+      "The 15-minute conversation is already recorded; reviewing it now adds no time. Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.",
     );
     expect(openingAllyTotalTimingSummary(ALLY)).toBe(
-      "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Leave with a Solo Field Team: no added time, 15 minutes total.",
+      "Totals include the standard 15-minute conversation: Grant June Cattle-First Authority: 15 minutes additional, 30 minutes total; Negotiate for a Subordinate Relay: 5 minutes additional, 20 minutes total; Ride alone: no added time, 15 minutes total.",
     );
 
     const before = cloneCampaignCharacterState(CHARACTER);

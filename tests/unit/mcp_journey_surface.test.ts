@@ -894,8 +894,8 @@ describe("MCP journey surface", () => {
           expect(fullOption.summary).toMatchObject({
             fieldTriggerScope: "starter",
             highlights: expect.arrayContaining([
-              expect.objectContaining({ label: "Permanent role" }),
-              expect.objectContaining({ label: "Return obligation — ACTIVE" }),
+              expect.objectContaining({ label: "Permanent background" }),
+              expect.objectContaining({ label: "Return promise — ACTIVE" }),
               expect.objectContaining({ label: "Wolf-Winter fit" }),
             ]),
           });
@@ -907,7 +907,13 @@ describe("MCP journey surface", () => {
           ]);
           expect(fullOption.consequence).toMatch(/^Benefit: .+ Cost: .+\. Boundary: .+$/);
           expect(fullOption.consequence).toContain(`Cost: ${fullOption.summary.immediateCost}.`);
-          expect(fullOption.consequence).toContain(`Boundary: ${fullOption.summary.tradeoff}`);
+          const isReadyMadeDispatch =
+            WORLD.opening_registration?.doctrines?.some(
+              (doctrine) => doctrine.id === fullOption.id,
+            ) === true;
+          expect(fullOption.consequence).toContain(
+            `Boundary: ${isReadyMadeDispatch ? "Other duty/evidence pairs close." : fullOption.summary.tradeoff}`,
+          );
           expect(openingSelectionReceiptWordCount(fullOption.consequence)).toBeLessThanOrEqual(
             OPENING_SELECTION_RECEIPT_WORD_LIMIT,
           );
@@ -1375,7 +1381,7 @@ describe("MCP journey surface", () => {
     expect(inspectedChoice.result).toEqual(directChoice.result);
   });
 
-  it("offers the quick setup immediately and expands custom duties read-only without leaking oath cards", () => {
+  it("offers the ready-made dispatch immediately and expands custom promises read-only without leaking oath cards", () => {
     const a = api();
     const registration = WORLD.opening_registration;
     const oath = WORLD.opening_relief_oath;
@@ -1403,7 +1409,7 @@ describe("MCP journey surface", () => {
     >();
     expect(compactOath.revealOption).toMatchObject({
       id: "customize_duty_and_evidence",
-      label: expect.stringContaining("Customize duty and evidence"),
+      label: "Customize promise and report — compare all four field outcomes",
       description: expect.stringMatching(
         /HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die[^]*LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed[^]*DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading[^]*FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals[^]*No plan is recommended or committed/i,
       ),
@@ -1463,7 +1469,7 @@ describe("MCP journey surface", () => {
     expect(initial.story.options).toHaveLength(1);
     expect(initial.story.options[0]).toMatchObject({
       id: shortcutId,
-      label: expect.stringContaining("Quick setup"),
+      label: expect.stringContaining("Ready-made dispatch"),
     });
     const initialJson = JSON.stringify(initial.story);
     expect(initialJson.indexOf('"revealOption"')).toBeLessThan(initialJson.indexOf('"options"'));
@@ -1588,6 +1594,52 @@ describe("MCP journey surface", () => {
       story_choice_id: oath.id,
       choice: shortcutId,
     });
+    const profile = registration.profiles.find(
+      (candidate) => candidate.id === doctrine.profile_id,
+    )!;
+    const oathOption = oath.options.find(
+      (candidate) => candidate.id === doctrine.relief_oath_option_id,
+    )!;
+    const sourceOption = WORLD.opening_lead_source!.options.find(
+      (candidate) => candidate.id === doctrine.lead_source_option_id,
+    )!;
+    const exactReceipt =
+      `${doctrine.preview} Exact opening cost: ${doctrine.immediate_cost}. ` +
+      `${doctrine.consequence} Registered role — ${profile.title}. ` +
+      `Packet commitments: duty — ${oathOption.title}; source — ${sourceOption.title}.`;
+    expect(directShortcutChoice.result.consequence).toBe(exactReceipt);
+    expect(directShortcutChoice.result.displaySummary).toBe(
+      `Ready-made dispatch chosen — Background: ${profile.title}; ` +
+        `Wolf-Winter promise: ${oathOption.title.replace(/\bDuty\b/gu, "Promise")}; ` +
+        `Report: ${sourceOption.title}. Optional field kit, relief wagon, second rider, and road remain open.`,
+    );
+    expect(directShortcutChoice.result.displaySummary).not.toMatch(
+      /\b(role|duty|source|preparation|relief allocation|field-team)\b/iu,
+    );
+    const compactShortcutJson = JSON.stringify(directShortcutChoice.result);
+    expect(compactShortcutJson.indexOf('"displaySummary"')).toBeLessThan(
+      compactShortcutJson.indexOf('"consequence"'),
+    );
+    const fullShortcutBranch = a.restore_overworld_session({ snapshot: before.snapshot });
+    const fullShortcutChoice = a.choose_overworld_session_story({
+      session_id: fullShortcutBranch.session_id,
+      story_choice_id: oath.id,
+      choice: shortcutId,
+      ...FULL_OVERWORLD,
+    });
+    expect(fullShortcutChoice.result).toMatchObject({
+      consequence: exactReceipt,
+      displaySummary: directShortcutChoice.result.displaySummary,
+      entry: {
+        title: `Quick setup confirmed: ${doctrine.title}`,
+        text: exactReceipt,
+      },
+    });
+    const fullShortcutJson = JSON.stringify(fullShortcutChoice.result);
+    expect(fullShortcutJson.indexOf('"displaySummary"')).toBeLessThan(
+      fullShortcutJson.indexOf('"consequence"'),
+    );
+    expect(fullShortcutChoice.snapshot_hash).toBe(directShortcutChoice.snapshot_hash);
     a.inspect_overworld_session_story({
       session_id: expandedBranch.session_id,
       story_choice_id: oath.id,
