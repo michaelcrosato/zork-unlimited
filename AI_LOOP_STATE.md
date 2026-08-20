@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 776 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260814T083914Z/hotspots.json","hotspots_sha256":"007849fc97344615cb72fdf414899ef8f617aefc99189c694ba7f03eed096c00","manifest_path":"ai-runs/feedback/20260814T083914Z/report-manifest.json","manifest_sha256":"b3b9e78e1bc9fb1cd0c25193c98f369a48af3f34401c53dbab157e36ffc85e56"},"pending_cycle_reports":[{"evidence_sha256":"cfab7387d30f440b1e474deb13f996ceb0b9ef8fee13e88f8de64c35fc52b150","report_id":"pure:aec81ec578bf410eafebfc2d53d3f5d40878a22297aee279400f8d015395f946","report_sha256":"4ec7cf19d3a6e7ead6b560a052962d8d8e9e415fc175562dab099402f520b57e","run_id":"2026-08-14T06-42-07-922Z","sidecar_sha256":"505e605ba917c4bdab68c1a26eee42ac7dcde3b4379da6fe6dd5e4db8ecf8128","tested_commit":"198a88d24f7aea5201b8a391fb83c221f6e99580"}],"schema_version":1} -->
+<!-- historical_cycle_count: 777 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260820T145633Z/hotspots.json","hotspots_sha256":"1bf9c6ed82ae21130b086baf21adbdd760020b1e6056381bf59bc844415bffde","manifest_path":"ai-runs/feedback/20260820T145633Z/report-manifest.json","manifest_sha256":"d6f312dc022a259dac7e5b94211509cdee40dab36ccecda690c5225936a595b7"},"pending_cycle_reports":[{"evidence_sha256":"8c2e8dd8156d92b682677708b05940d89c49e0539c778ed03c9394b465eceba7","report_id":"pure:7da320017ffe72b87218ce4eb565638faa4fb21ed929eca320a24a736d2d76aa","report_sha256":"9dcf60b806a188954b589caef5ce373c3dc3f96d7dcabc6bdfdfe90fa1365596","run_id":"2026-08-14T12-30-08-695Z","sidecar_sha256":"cb4c7022d63e92fe158468d38902d6962a2716855603e0cf5bc9756353b24336","tested_commit":"a13e31ed779c03feb346a988ec69a3797ae264e9"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -169,8 +169,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Feedback/next: pre-seal status is 1/3 with no compile; exact selection consumes `ed51aa6f` and seal leaves two pending reports. The player encountered the narrowed rail but missed no LURE step; its failure concern was hypothetical on a clean route, so prefer routine rotation unless later evidence localizes a new state-truth defect.
 - Guard: 29 focused tests, 556 bug traces, exact `7beba188…` validation, hostile review, full health, outer crawl, start-ref integrity, and the exact-pure gate are green.
 ## AFK Cycle 2026-08-14T12-30-08-695Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-14T12-30-08-695Z","selected_recommendation_id":"hotspot-9354ce47"} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-9354ce47 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
