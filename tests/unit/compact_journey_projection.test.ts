@@ -50,6 +50,7 @@ function expectRoleplayReceipt(
     commitment: string;
     benefit: string;
     checkFit?: string;
+    highlights?: readonly Readonly<{ label: string; value: string }>[];
     immediateCost: string;
     giveUp: string;
   },
@@ -58,12 +59,14 @@ function expectRoleplayReceipt(
   expect(option?.summary).toEqual({
     commitment: args.commitment,
     ...(args.checkFit === undefined ? {} : { checkFit: args.checkFit }),
+    ...(args.highlights === undefined ? {} : { highlights: args.highlights }),
     immediateCost: args.immediateCost,
     tradeoff: args.giveUp,
   });
   expect(Object.keys(option?.summary ?? {}).sort()).toEqual([
     ...(args.checkFit === undefined ? [] : ["checkFit"]),
     "commitment",
+    ...(args.highlights === undefined ? [] : ["highlights"]),
     "immediateCost",
     "tradeoff",
   ]);
@@ -363,6 +366,17 @@ describe("compact journey projection", () => {
         immediateCost: fullOption.summary!.immediateCost,
         giveUp: profile.tradeoff,
       });
+      expect(option?.summary?.highlights).toEqual(
+        check
+          ? [
+              {
+                label: "Governing skill",
+                value: `${check.skill_label} ${signedModifier} vs DC ${String(check.difficulty)}`,
+              },
+            ]
+          : undefined,
+      );
+      expect(option?.summary).not.toHaveProperty("checkFit");
       expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
       const detail = compactJourneyStoryChoiceComparison(full, profile.id).inspectedOption;
       expect(detail.consequence).not.toContain(profile.preview);
@@ -438,39 +452,23 @@ describe("compact journey projection", () => {
             if (!fact) throw new Error(`Registration preview must disclose ${label}.`);
             return fact.slice(prefix.length);
           };
-          const [, beforeDef, afterDef] =
-            profile.consequence.match(/starting DEF floor from (\d+) to (\d+)/u) ?? [];
-          const expectedWolfFit =
-            beforeDef !== undefined && afterDef !== undefined
-              ? `Starting DEF ${beforeDef} → ${afterDef} when the authored campaign import applies.`
-              : profile.consequence.includes(
-                    "does not receive the Road-Warden's current Fieldcraft DEF import",
-                  )
-                ? "No Road-Warden Fieldcraft import; the quest keeps its authored starting DEF."
-                : "No additional starting-DEF distinction is stated for this background.";
           const highlights = option?.summary?.highlights ?? [];
           expect(option?.summary).toMatchObject({
-            commitment: profile.summary,
-            fieldTrigger: `${requiredPreviewFact("Skill edge")}; ${requiredPreviewFact("Kit")}`,
-            fieldTriggerScope: "starter",
-            immediateCost: `no time/fee; starts with $${String(profile.character.money)}`,
-            tradeoff: profile.tradeoff,
+            commitment: `Permanent background — ${profile.summary}`,
+            immediateCost: `no fee or delay; start with $${String(profile.character.money)}`,
+            tradeoff: requiredPreviewFact("Obligation").replace(/^./u, (value) =>
+              value.toUpperCase(),
+            ),
           });
-          expect(
-            highlights.filter((highlight) => highlight.label === "Permanent background"),
-          ).toEqual([{ label: "Permanent background", value: "Persists after this dispatch." }]);
-          expect(
-            highlights.filter((highlight) => highlight.label === "Return promise — ACTIVE"),
-          ).toEqual([
+          expect(option?.summary).not.toHaveProperty("fieldTrigger");
+          expect(option?.summary).not.toHaveProperty("fieldTriggerScope");
+          expect(highlights).toEqual([
             {
-              label: "Return promise — ACTIVE",
-              value: requiredPreviewFact("Obligation"),
+              label: "Starts with",
+              value: `${requiredPreviewFact("Skill edge")}; ${requiredPreviewFact("Kit")}`,
             },
           ]);
-          expect(highlights.filter((highlight) => highlight.label === "Wolf-Winter fit")).toEqual([
-            { label: "Wolf-Winter fit", value: expectedWolfFit },
-          ]);
-          expect(highlights.some((highlight) => highlight.label === "Role experience")).toBe(false);
+          expect(JSON.stringify(option?.summary)).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
           expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
           const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
           expect(detail.consequence).toContain(sourceOption.preview);

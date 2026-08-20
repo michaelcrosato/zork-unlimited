@@ -11,11 +11,11 @@ import { loadOverworldManifest } from "../../src/world/source.js";
 const WORLD = loadOverworldManifest(process.cwd());
 const requireFromRoot = createRequire(import.meta.url);
 const MATCHED_OATH_MESSAGE =
-  "The Wolf-Winter · ready-made dispatch. Quick setup: choose the ready-made dispatch or customize it; one Wolf-Winter promise, one report, and all four field plans stay open. Choose a Wolf-Winter promise. Compare its exact cost and which promise/report alternatives close. Checks appear before resolution.";
+  "The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open.";
 const CUSTOM_DUTY_MESSAGE =
-  "The Wolf-Winter · Wolf-Winter promise. Purpose: choose a Wolf-Winter promise; every field plan stays open. A report follows. Choose a Wolf-Winter promise. Compare promise, exact cost, and what each promise gives up. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: choose one promise; your report comes next, and every approach stays open.";
 const SOURCE_MESSAGE =
-  "The Wolf-Winter · report. Purpose: choose a report; every field plan stays open. Albany Station's launch board follows. Choose the Wolf-Winter report. Other reports close. Compare field priority, exact cost, and tradeoff. Field checks surface with their action before resolution.";
+  "The Wolf-Winter: choose one report; Albany Station comes next, and every approach stays open.";
 
 type DomWindow = {
   document: {
@@ -252,9 +252,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         querySelector: (selector: string) => unknown;
       } | null;
       if (!card) throw new Error("Expected a rendered summary-first choice card.");
-      expect(rootElement.textContent).toContain(
-        "Next: ready-made promise/report pair or customize.",
-      );
+      expect(rootElement.textContent).toContain("choose one permanent background");
+      expect(rootElement.textContent).toContain("ready-made promise/report pair or customize it");
       expect(rootElement.textContent).not.toContain(
         "A ready-made background also sets your Wolf-Winter promise and report",
       );
@@ -289,13 +288,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const registrationSource = WORLD.opening_registration!;
       const registrationDetailsText = (details as { textContent?: string | null }).textContent;
       const registrationOption = registration.options[0]!;
-      expect(choiceButtonText).toContain("Commitment:");
-      expect(choiceButtonText).toContain("Starter package / field edge:");
-      expect(choiceButtonText).toContain("Permanent background:");
-      expect(choiceButtonText).toContain("Return promise — ACTIVE:");
-      expect(choiceButtonText).toContain("Wolf-Winter fit:");
-      expect(choiceButtonText).toContain("Immediate cost:");
-      expect(choiceButtonText).toContain("Tradeoff:");
+      expect(choiceButtonText).toContain("Background:");
+      expect(choiceButtonText).toContain("Permanent background —");
+      expect(choiceButtonText).toContain("Starts with:");
+      expect(choiceButtonText).toContain("Cost:");
+      expect(choiceButtonText).toContain("Return obligation:");
+      expect(choiceButtonText).not.toContain("Starter package / field edge:");
+      expect(choiceButtonText).not.toContain("Wolf-Winter fit:");
+      expect(choiceButtonText).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
       expect(choiceButtonText).toContain(registrationOption.summary!.commitment);
       expect(choiceButtonText).toContain(registrationOption.summary!.immediateCost);
       expect(choiceButtonText).toContain(registrationOption.summary!.tradeoff);
@@ -348,19 +348,22 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         );
       });
       const stationCard = rootElement.querySelector(".journey-choice-card") as {
+        textContent: string | null;
         querySelector: (selector: string) => { textContent: string | null } | null;
       } | null;
       const stationButton = stationCard?.querySelector("button");
       const stationDetails = stationCard?.querySelector("details");
-      if (!stationButton || !stationDetails) {
+      if (!stationCard || !stationButton || !stationDetails) {
         throw new Error("Expected the Station preparation comparison and exact receipt.");
       }
       const stationOption = stationJourney.storyChoice!.options[0]!;
       expect(stationButton.textContent).toContain("Field kit:");
       expect(stationButton.textContent).not.toContain("Promise / priority:");
       expect(stationButton.textContent).not.toContain("Check fit:");
-      expect(stationButton.textContent).not.toContain(stationOption.summary!.checkFit!);
-      expect(stationButton.textContent).toContain("Cost / give up:");
+      expect(stationButton.textContent).toContain("Governing skill:");
+      expect(stationButton.textContent).toContain(stationOption.summary!.checkFit!);
+      expect(stationButton.textContent).toContain("Cost:");
+      expect(stationButton.textContent).toContain("Give up:");
       expect(stationButton.textContent).not.toContain("Purpose:");
       expect(stationButton.textContent).not.toContain("Trigger category:");
       expect(stationButton.textContent).toContain(stationPreparation.profiles[0]!.tradeoff);
@@ -370,10 +373,11 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(stationButton.textContent).not.toContain(forecastLine);
       expect(stationButton.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).toContain(stationOption.consequence);
-      expect(stationDetails.textContent).toContain(stationOption.summary!.checkFit!);
+      expect(stationDetails.textContent).not.toContain(stationOption.summary!.checkFit!);
       expect(stationDetails.textContent).toContain(forecastLine);
       expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.preview);
       expect(stationDetails.textContent).not.toContain(stationPreparation.profiles[0]!.consequence);
+      expect(stationCard.textContent?.split(stationOption.summary!.checkFit!)).toHaveLength(2);
       expect(objectiveGuidance()).toBe(
         "Your field kit changes later actions and the service Albany can release on your return; it does not replace this objective.",
       );
@@ -473,6 +477,11 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       if (!roleShortcut) throw new Error("Expected the Road-Warden quick setup before reveal.");
       expect(standardPacketButtons[0]?.textContent).toContain(roleShortcut.label);
       expect(standardPacketButtons[0]?.textContent).toContain("Ready-made dispatch:");
+      expect(standardPacketButtons[0]?.textContent).toContain("Cost:");
+      expect(standardPacketButtons[0]?.textContent).toContain("Give up:");
+      expect(standardPacketButtons[0]?.textContent).not.toMatch(
+        /\b(?:DEF|DC|import|fieldTrigger)\b/i,
+      );
       expect(standardPacketButtons[0]?.textContent).not.toContain("Wolf-Winter promise:");
       const dutySurfaceOrder = Array.from(
         rootElement.querySelectorAll(

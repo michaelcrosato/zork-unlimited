@@ -23,51 +23,74 @@ const STANDARD_PACKET_SUPPORT_COPY: Readonly<
     string,
     Readonly<{
       dispatchLabel: string;
+      expectedProfileId: string;
       expectedReliefOathOptionId: string;
       expectedReliefOathTitle: string;
       expectedLeadSourceOptionId: string;
       expectedLeadSourceTitle: string;
       expectedTriggerCategory: string;
-      support: string;
+      outcome: string;
     }>
   >
 > = Object.freeze({
   "albany:doctrine_fortify_breach": Object.freeze({
     dispatchLabel: "Ready-made dispatch — Full Compact promise + Rowan's civic report",
+    expectedProfileId: "albany:ironhands_repairer",
     expectedReliefOathOptionId: "albany:oath_full_compact_duty",
     expectedReliefOathTitle: "Take Full Compact Duty",
     expectedLeadSourceOptionId: "albany:source_rowan_civic_docket",
     expectedLeadSourceTitle: "Leave on Rowan's Civic Docket",
     expectedTriggerCategory: "Repair 4; first public-seal fortification check is 2 DC easier.",
-    support: "Repair 4; FORTIFY's first public-seal check is 2 DC easier.",
+    outcome: "Reinforce Cade's failing boundary under Albany's public promise.",
   }),
   "albany:doctrine_road_warden_aid_route": Object.freeze({
     dispatchLabel: "Ready-made dispatch — Aid-Only promise + Hayden's frost report",
+    expectedProfileId: "albany:road_warden",
     expectedReliefOathOptionId: "albany:oath_limited_aid_only",
     expectedReliefOathTitle: "Negotiate Aid-Only Duty",
     expectedLeadSourceOptionId: "albany:source_hayden_frost_report",
     expectedLeadSourceTitle: "Take Hayden's Frost-Heave Report",
     expectedTriggerCategory:
       "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
-    support:
-      "Fieldcraft 4 sets DEF 4 and supplies DRIVE/LURE checks; Aid-Only skips clean LURE's last alarm and fits Cade's FORTIFY terms; after a public wedge splits, Hayden can brace HUNT. All four plans remain legal.",
+    outcome: "Carry winter-road judgment and flexible, life-first aid to Cade's steading.",
   }),
   "albany:doctrine_independent_drive": Object.freeze({
     dispatchLabel: "Ready-made dispatch — personal bond + Rowan's civic report",
+    expectedProfileId: "albany:unaffiliated_courier",
     expectedReliefOathOptionId: "albany:oath_unaffiliated_personal_bond",
     expectedReliefOathTitle: "Remain an Unaffiliated Helper",
     expectedLeadSourceOptionId: "albany:source_rowan_civic_docket",
     expectedLeadSourceTitle: "Leave on Rowan's Civic Docket",
     expectedTriggerCategory: "Streetwise 4; first shutter-signal check drops from DC 12 to DC 10.",
-    support: "Streetwise 4; DRIVE's first shutter-signal check is 2 DC easier.",
+    outcome: "Keep the dispatch independent and work through back roads and shutter signals.",
   }),
 });
 
-function summarizeStartingDoctrineSupport(doctrine: OpeningStartingDoctrine): string {
+function matchesKnownStartingDoctrineMapping(
+  doctrine: OpeningStartingDoctrine,
+  oathTitle: string,
+  sourceTitle: string,
+): boolean {
   const copy = STANDARD_PACKET_SUPPORT_COPY[doctrine.id];
-  return copy?.expectedTriggerCategory === doctrine.trigger_category
-    ? copy.support
-    : doctrine.trigger_category;
+  return (
+    copy?.expectedProfileId === doctrine.profile_id &&
+    copy.expectedReliefOathOptionId === doctrine.relief_oath_option_id &&
+    copy.expectedReliefOathTitle === oathTitle &&
+    copy.expectedLeadSourceOptionId === doctrine.lead_source_option_id &&
+    copy.expectedLeadSourceTitle === sourceTitle
+  );
+}
+
+function summarizeStartingDoctrineOutcome(
+  doctrine: OpeningStartingDoctrine,
+  oathTitle: string,
+  sourceTitle: string,
+): string {
+  const copy = STANDARD_PACKET_SUPPORT_COPY[doctrine.id];
+  return matchesKnownStartingDoctrineMapping(doctrine, oathTitle, sourceTitle) &&
+    copy?.expectedTriggerCategory === doctrine.trigger_category
+    ? copy.outcome
+    : `Pairs ${reliefOathDisplayLabel(oathTitle)} with ${sourceTitle}.`;
 }
 
 function startingDoctrineDispatchLabel(
@@ -76,12 +99,8 @@ function startingDoctrineDispatchLabel(
   sourceTitle: string,
 ): string {
   const copy = STANDARD_PACKET_SUPPORT_COPY[doctrine.id];
-  const matchesKnownCopy =
-    copy?.expectedReliefOathOptionId === doctrine.relief_oath_option_id &&
-    copy.expectedReliefOathTitle === oathTitle &&
-    copy.expectedLeadSourceOptionId === doctrine.lead_source_option_id &&
-    copy.expectedLeadSourceTitle === sourceTitle;
-  return matchesKnownCopy
+  const matchesKnownCopy = matchesKnownStartingDoctrineMapping(doctrine, oathTitle, sourceTitle);
+  return matchesKnownCopy && copy
     ? copy.dispatchLabel
     : `Ready-made dispatch — ${oathTitle.replace(/\bDuty\b/u, "promise")} + ${sourceTitle}`;
 }
@@ -120,7 +139,11 @@ export function presentOpeningReliefOath(
             doctrineOath!.title,
             doctrineSource!.title,
           ),
-          commitment: `Support: ${summarizeStartingDoctrineSupport(doctrine)}`,
+          commitment: summarizeStartingDoctrineOutcome(
+            doctrine,
+            doctrineOath!.title,
+            doctrineSource!.title,
+          ),
           exactBenefit: doctrine.trigger_category,
           immediateCost: doctrine.immediate_cost,
           giveUp: "Other duty/evidence pairs close.",

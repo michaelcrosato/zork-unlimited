@@ -28,7 +28,7 @@ export type JourneyStoryChoiceComparisonOption = Readonly<{
   id: string;
   label: string;
   group?: JourneyStoryChoiceOption["group"];
-  /** Human stakes and cost only; check math is staged with the exact option detail. */
+  /** Human stakes and cost; preparation also carries its governing check as one highlight. */
   summary?: Omit<JourneyStoryChoiceSummary, "checkFit">;
 }>;
 
@@ -232,21 +232,27 @@ export function journeyStoryChoiceOptionById(
   return option;
 }
 
-/** Keep the first tier on human stakes; exact check arithmetic is read-only detail. */
+/** Keep the first tier on human stakes; preparation also names its governing check before purchase. */
 function compactJourneyStoryChoiceBriefSummary(
   summary: JourneyStoryChoiceSummary,
+  kind: JourneyStoryChoicePrompt["kind"],
 ): Omit<JourneyStoryChoiceSummary, "checkFit"> {
+  const highlights =
+    summary.highlights ??
+    (kind === "preparation" && summary.checkFit
+      ? ([Object.freeze({ label: "Governing skill", value: summary.checkFit })] as const)
+      : undefined);
   return Object.freeze({
     commitment: summary.commitment,
     ...(summary.fieldTrigger === undefined ? {} : { fieldTrigger: summary.fieldTrigger }),
     ...(summary.fieldTriggerScope === undefined
       ? {}
       : { fieldTriggerScope: summary.fieldTriggerScope }),
-    ...(summary.highlights === undefined
+    ...(highlights === undefined
       ? {}
       : {
           highlights: Object.freeze(
-            summary.highlights.map((highlight) => Object.freeze({ ...highlight })),
+            highlights.map((highlight) => Object.freeze({ ...highlight })),
           ) as NonNullable<JourneyStoryChoiceSummary["highlights"]>,
         }),
     immediateCost: summary.immediateCost,
@@ -263,7 +269,9 @@ export function compactJourneyStoryChoicePrompt(
       id: option.id,
       label: option.label,
       ...(option.group === undefined ? {} : { group: option.group }),
-      ...(option.summary ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary) } : {}),
+      ...(option.summary
+        ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary, prompt.kind) }
+        : {}),
       consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
     }),
   );
@@ -352,7 +360,9 @@ export function compactJourneyStoryChoiceComparison(
       id: option.id,
       label: option.label,
       ...(option.group === undefined ? {} : { group: option.group }),
-      ...(option.summary ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary) } : {}),
+      ...(option.summary
+        ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary, prompt.kind) }
+        : {}),
     }),
   );
   const revealOption =

@@ -138,7 +138,12 @@ describe("terminal registration story-choice groups", () => {
     );
     expect(initial).toContain("No plan is recommended or committed");
     expect(initial).toContain("1. Ready-made dispatch — Aid-Only promise + Hayden's frost report");
-    expect(initial).toContain("Ready-made dispatch: Support:");
+    expect(initial).toContain(
+      "Ready-made dispatch: Carry winter-road judgment and flexible, life-first aid to Cade's steading.",
+    );
+    expect(initial).toContain("Cost: 10 minutes and $0");
+    expect(initial).toContain("Give up: Other promise/report pairs close.");
+    expect(initial).not.toMatch(/\b(?:DEF|DC|import|fieldTrigger)\b/i);
     expect(initial).not.toContain("Wolf-Winter promise:");
     expect(initial).not.toContain("Take Full Compact Duty");
     expect(initial).not.toContain("Negotiate Aid-Only Duty\n");

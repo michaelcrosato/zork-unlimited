@@ -1,17 +1,5 @@
 import type { JourneyStoryChoicePrompt } from "./journey_contract.js";
-import { openingAllyTotalTimingSummary } from "./opening_ally.js";
 import type { OverworldManifest } from "./overworld.js";
-
-const FIELD_CHECK_TIMING = "Field checks surface with their action before resolution.";
-const REGISTRATION_COMPARISON_HEADER =
-  "Compare background funds, starter edge, return promise, and tradeoff. No fee; checks appear before resolution.";
-const RELIEF_OATH_COMPARISON_HEADER = `Compare promise, exact cost, and what each promise gives up. ${FIELD_CHECK_TIMING}`;
-const STANDARD_PACKET_RELIEF_OATH_COMPARISON_HEADER =
-  "Compare its exact cost and which promise/report alternatives close. Checks appear before resolution.";
-const LEAD_SOURCE_COMPARISON_HEADER = `Other reports close. Compare field priority, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const PREPARATION_COMPARISON_HEADER = `Compare field use, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
-const RELIEF_ALLOCATION_COMPARISON_HEADER = `Compare who the relief wagon protects, exact cost, and what remains exposed. ${FIELD_CHECK_TIMING}`;
-const ALLY_COMPARISON_HEADER = `Compare the second rider's promise, exact cost, and tradeoff. ${FIELD_CHECK_TIMING}`;
 
 const OPENING_DISPATCH_SUPPORT_DISCOVERY_MARKER = " The live dispatch has ";
 
@@ -24,23 +12,9 @@ export function openingDispatchCrisisPreview(discovery: string): string | null {
   return preview.length > 0 && deferredSupport.length > 0 ? preview : null;
 }
 
-const OPENING_DISPATCH_PURPOSE: Readonly<
-  Record<NonNullable<JourneyStoryChoicePrompt["kind"]>, string>
-> = Object.freeze({
-  registration: "Purpose: choose a background; all four field plans stay open.",
-  relief_oath: "Purpose: choose a Wolf-Winter promise; every field plan stays open.",
-  lead_source: "Purpose: choose a report; every field plan stays open.",
-  preparation:
-    "Purpose: optionally choose one field kit; the relief wagon and second rider stay separate.",
-  relief_allocation:
-    "Purpose: optionally send the relief wagon; the field kit and second rider stay separate.",
-  ally: "Purpose: choose a second rider or ride alone; every Wolf-Winter route stays available.",
-});
-
 type OpeningDispatchStage = Readonly<{
   id: string;
   kind: NonNullable<JourneyStoryChoicePrompt["kind"]>;
-  label: string;
 }>;
 
 export type OpeningDispatchManifestChain = Readonly<{
@@ -57,7 +31,6 @@ type OpeningDispatchPlan = Readonly<{
   questTitle: string;
   questCrisisPreview: string;
   allyContactName: string | null;
-  allyTimingSummary: string | null;
   civicStages: readonly OpeningDispatchStage[];
   departureChoices: readonly OpeningDispatchStage[];
   allyChoice: OpeningDispatchStage | null;
@@ -130,37 +103,31 @@ function openingDispatchPlan(world: OverworldManifest): OpeningDispatchPlan | nu
     questTitle: quest.title,
     questCrisisPreview,
     allyContactName: ally && allyContact ? allyContact.name : null,
-    allyTimingSummary: ally && allyContact ? openingAllyTotalTimingSummary(ally) : null,
     civicStages: Object.freeze([
       Object.freeze({
         id: registration.id,
         kind: "registration",
-        label: "background",
       }),
       Object.freeze({
         id: reliefOath.id,
         kind: "relief_oath",
-        label: "Wolf-Winter promise",
       }),
-      Object.freeze({ id: leadSource.id, kind: "lead_source", label: "report" }),
+      Object.freeze({ id: leadSource.id, kind: "lead_source" }),
     ]),
     departureChoices: Object.freeze([
       Object.freeze({
         id: preparation.id,
         kind: "preparation",
-        label: "field kit",
       }),
       Object.freeze({
         id: reliefAllocation.id,
         kind: "relief_allocation",
-        label: "relief wagon",
       }),
     ]),
     allyChoice: ally
       ? Object.freeze({
           id: ally.id,
           kind: "ally",
-          label: "second rider",
         })
       : null,
   };
@@ -186,86 +153,68 @@ export function withOpeningDispatchBriefing(
       : null;
   if (civicStageIndex < 0 && !departureChoice && !allyChoice) return prompt;
   const registration = world.opening_registration;
-  const reliefOath = world.opening_relief_oath;
-  const leadSource = world.opening_lead_source;
-  const preparation = world.opening_preparation;
-  const reliefAllocation = world.opening_relief_allocation;
-  const ally = world.opening_ally;
   const offersStandardPacket =
     prompt.kind === "relief_oath" &&
     (registration?.doctrines?.some((doctrine) =>
       prompt.options.some((option) => option.id === doctrine.id),
     ) ??
       false);
-  const displayMessage =
-    registration && prompt.id === registration.id && prompt.kind === "registration"
-      ? `Choose a background. ${REGISTRATION_COMPARISON_HEADER}`
-      : reliefOath && prompt.id === reliefOath.id && prompt.kind === "relief_oath"
-        ? `Choose a Wolf-Winter promise. ${
-            offersStandardPacket
-              ? STANDARD_PACKET_RELIEF_OATH_COMPARISON_HEADER
-              : RELIEF_OATH_COMPARISON_HEADER
-          }`
-        : leadSource && prompt.id === leadSource.id && prompt.kind === "lead_source"
-          ? `Choose the Wolf-Winter report. ${LEAD_SOURCE_COMPARISON_HEADER}`
-          : preparation && prompt.id === preparation.id && prompt.kind === "preparation"
-            ? `Choose a field kit. ${PREPARATION_COMPARISON_HEADER}`
-            : reliefAllocation &&
-                prompt.id === reliefAllocation.id &&
-                prompt.kind === "relief_allocation"
-              ? `Send Albany's relief wagon. ${RELIEF_ALLOCATION_COMPARISON_HEADER}`
-              : ally && prompt.id === ally.id && prompt.kind === "ally"
-                ? `Choose a second rider or ride alone. ${ALLY_COMPARISON_HEADER}`
-                : prompt.message;
-  const purpose = offersStandardPacket
-    ? "Quick setup: choose the ready-made dispatch or customize it; one Wolf-Winter promise, one report, and all four field plans stay open."
-    : OPENING_DISPATCH_PURPOSE[prompt.kind];
-  if (civicStageIndex >= 0) {
-    const stage = plan.civicStages[civicStageIndex]!;
-    const progress =
-      civicStageIndex === 0
-        ? `${plan.questTitle} · background.`
-        : offersStandardPacket
-          ? `${plan.questTitle} · ready-made dispatch.`
-          : `${plan.questTitle} · ${stage.label}.`;
-    const planningContext =
-      civicStageIndex === 0
-        ? `Mission — ${plan.questCrisisPreview} Next: ready-made promise/report pair or customize.`
-        : civicStageIndex === 1 && offersStandardPacket
-          ? ""
-          : civicStageIndex === 2
-            ? "Albany Station's launch board follows."
-            : "A report follows.";
+  if (civicStageIndex === 0) {
+    const crisis = plan.questCrisisPreview.replace(/\.$/u, "");
     return {
       ...prompt,
-      message: [progress, purpose, planningContext, displayMessage].filter(Boolean).join(" "),
+      message:
+        `${plan.questTitle}: ${crisis}; you must choose one permanent background, then take a ` +
+        "ready-made promise/report pair or customize it; every approach stays open.",
+    };
+  }
+  if (offersStandardPacket) {
+    return {
+      ...prompt,
+      message:
+        `${plan.questTitle}: choose a ready-made promise/report pair or customize; ` +
+        "every approach stays open.",
+    };
+  }
+  if (civicStageIndex >= 0 && prompt.kind === "relief_oath") {
+    return {
+      ...prompt,
+      message:
+        `${plan.questTitle}: choose one promise; your report comes next, and ` +
+        "every approach stays open.",
+    };
+  }
+  if (civicStageIndex >= 0 && prompt.kind === "lead_source") {
+    return {
+      ...prompt,
+      message:
+        `${plan.questTitle}: choose one report; Albany Station comes next, and every ` +
+        "approach stays open.",
+    };
+  }
+  if (departureChoice?.kind === "preparation") {
+    return {
+      ...prompt,
+      message:
+        "Albany Station: ready to depart now, or choose one field kit; relief-wagon and " +
+        "riding choices are separate.",
+    };
+  }
+  if (departureChoice?.kind === "relief_allocation") {
+    return {
+      ...prompt,
+      message:
+        "Albany Station: ready to depart now, or choose the relief wagon's job; field-kit " +
+        "and riding choices are separate.",
     };
   }
   if (allyChoice) {
-    const progress = `${plan.questTitle} · optional ${allyChoice.label}.`;
-    const missionCard = `Route costs and tactics remain on ${plan.questTitle}'s launch card.`;
-    const planningContext = 'Choose "Ride alone" to keep the one-rider launch.';
     return {
       ...prompt,
-      message: `${progress} ${purpose} ${missionCard} ${planningContext} ${displayMessage}`,
+      message:
+        `Albany Station: ready to depart now alone, or ask ${plan.allyContactName ?? "the second rider"} ` +
+        "to ride; field kit and relief wagon choices are separate.",
     };
   }
-  const choice = departureChoice!;
-  const progress =
-    choice.kind === "preparation"
-      ? `${plan.questTitle} · optional ${choice.label}.`
-      : `${plan.questTitle} · optional relief wagon.`;
-  const planningContext =
-    choice.kind === "preparation"
-      ? plan.allyContactName
-        ? `${plan.allyContactName}'s second-rider conversation is separate. ${plan.allyTimingSummary ?? ""}`
-        : ""
-      : plan.allyContactName
-        ? `${plan.allyContactName}'s second-rider conversation is separate; launching now keeps riding alone legal. ${plan.allyTimingSummary ?? ""}`
-        : "";
-  const missionCard = `Route costs and tactics remain on ${plan.questTitle}'s launch card.`;
-  return {
-    ...prompt,
-    message: `${progress} ${purpose} ${missionCard} ${planningContext} ${displayMessage}`,
-  };
+  return prompt;
 }

@@ -213,17 +213,17 @@ type OpeningSourceOption = Readonly<{
 function openingStageDisplayTitle(kind: JourneyStoryChoicePrompt["kind"]): string {
   switch (kind) {
     case "registration":
-      return "Choose a background";
+      return "choose one permanent background";
     case "relief_oath":
-      return "Choose a Wolf-Winter promise";
+      return "choose a ready-made promise/report pair";
     case "lead_source":
-      return "Choose the Wolf-Winter report";
+      return "choose one report";
     case "preparation":
-      return "Choose a field kit";
+      return "choose one field kit";
     case "relief_allocation":
-      return "Send Albany's relief wagon";
+      return "choose the relief wagon's job";
     case "ally":
-      return "Choose a second rider or ride alone";
+      return "ready to depart now alone, or ask";
     case undefined:
       throw new Error("Expected an opening story kind.");
   }
@@ -336,7 +336,14 @@ function expectOpeningPromptExact(
       expect(inspectedJson).not.toContain(sibling.consequence);
     }
 
-    const { checkFit: _checkFit, ...expectedCompactSummary } = canonicalOption!.summary!;
+    const { checkFit, ...withoutCheckFit } = canonicalOption!.summary!;
+    const expectedCompactSummary =
+      prompt.kind === "preparation" && checkFit
+        ? {
+            ...withoutCheckFit,
+            highlights: [{ label: "Governing skill", value: checkFit }],
+          }
+        : withoutCheckFit;
     expect(comparisonOption!.summary).toEqual(expectedCompactSummary);
     expect(comparisonOption!.summary).not.toHaveProperty("checkFit");
     if (registrationDetail) {
@@ -635,10 +642,9 @@ describe("shipped compact prose fidelity", () => {
     moveToArea(session, WORLD, ally.area);
     session.talkToCharacter(ally.contact);
     const allyPrompt = currentStoryChoice(session);
-    expect(allyPrompt.message).toContain(
-      "Purpose: choose a second rider or ride alone; every Wolf-Winter route stays available.",
+    expect(allyPrompt.message).toBe(
+      "Albany Station: ready to depart now alone, or ask June Pike to ride; field kit and relief wagon choices are separate.",
     );
-    expect(allyPrompt.message).toContain('Choose "Ride alone" to keep the one-rider launch.');
     choose(ally, ally.options, allyPrompt, false);
   });
 

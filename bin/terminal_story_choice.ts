@@ -126,13 +126,20 @@ function renderSummaryLines(
 ): string[] {
   const labels = summaryLabels(summary, kind, readyMadeDispatch);
   if (!labels.trigger || summary.fieldTrigger === undefined) {
+    const isAdventureSetupCard =
+      readyMadeDispatch || kind === "registration" || kind === "preparation";
     return [
       `${indent}${labels.commitment}: ${summary.commitment}`,
       ...(summary.highlights ?? []).map(
         (highlight) => `${indent}${highlight.label}: ${highlight.value}`,
       ),
-      ...(summary.checkFit === undefined ? [] : [`${indent}Check fit: ${summary.checkFit}`]),
-      `${indent}Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`,
+      ...(summary.checkFit === undefined ? [] : [`${indent}Governing skill: ${summary.checkFit}`]),
+      ...(isAdventureSetupCard
+        ? [
+            `${indent}Cost: ${summary.immediateCost}`,
+            `${indent}${kind === "registration" ? "Return obligation" : "Give up"}: ${summary.tradeoff}`,
+          ]
+        : [`${indent}Cost / give up: ${summary.immediateCost}; ${summary.tradeoff}`]),
     ];
   }
   return [
@@ -252,7 +259,7 @@ export function renderTerminalStoryChoiceDetail(
           prompt.progressiveDisclosure?.initialOptionIds.includes(option.id) === true,
         )}: ${option.summary.commitment}`,
       );
-      if (option.summary.checkFit !== undefined) {
+      if (option.summary.checkFit !== undefined && prompt.kind !== "preparation") {
         lines.push(`  Check fit: ${option.summary.checkFit}`);
       }
     } else {

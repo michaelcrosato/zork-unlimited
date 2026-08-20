@@ -2089,8 +2089,9 @@ describe("MCP pure play mode", () => {
           }
         ).storyChoice;
         expect(registrationChoice?.kind).toBe("registration");
-        expect(registrationChoice?.message).toContain(
-          "Choose a background. Compare background funds",
+        expect(registrationChoice?.message).toContain("you must choose one permanent background");
+        expect(JSON.stringify(registrationChoice?.options)).not.toMatch(
+          /\b(?:DEF|import|fieldTrigger)\b/i,
         );
         expect(
           registrationChoice?.options?.every(
@@ -2229,9 +2230,8 @@ describe("MCP pure play mode", () => {
         expect(defaultCivicMessages).not.toMatch(/Civic order/i);
         expect(defaultCivicMessages).not.toMatch(/role\s*→\s*duty\s*→\s*evidence/i);
         expect(defaultCivicMessages).not.toMatch(/June Pike|second field seat/i);
-        expect(oathChoice?.message).toContain("The Wolf-Winter · ready-made dispatch.");
-        expect(oathChoice?.message).toContain(
-          "Quick setup: choose the ready-made dispatch or customize it; one Wolf-Winter promise, one report, and all four field plans stay open.",
+        expect(oathChoice?.message).toBe(
+          "The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open.",
         );
         expect(
           oathChoice?.options?.every(
@@ -2394,14 +2394,9 @@ describe("MCP pure play mode", () => {
         const stationedBoard = stationedContext.station_dispatch_board;
         expect(stationedBoard?.slice(0, 2)).toEqual([4, "wolf_winter"]);
         const stationedGuidance = stationedBoard?.[2];
-        expect(stationedGuidance).toMatch(
-          /Already set: background, Wolf-Winter promise, and report/i,
+        expect(stationedGuidance).toBe(
+          "Ready to depart now with background, Wolf-Winter promise, and report set; field kit, one relief wagon, or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.",
         );
-        expect(stationedGuidance).toMatch(
-          /Optional before leaving: field kit, one relief wagon, or second rider/i,
-        );
-        expect(stationedGuidance).toMatch(/Depart now/i);
-        expect(stationedGuidance).toMatch(/not your Wolf-Winter plan/i);
         expect(stationedBoard?.[4]).toEqual(
           expect.arrayContaining([
             [
@@ -2542,6 +2537,9 @@ describe("MCP pure play mode", () => {
         if (!worksFortification)
           throw new Error("expected visible works-fortification preparation");
         expect(worksFortification.summary).not.toHaveProperty("checkFit");
+        expect(worksFortification.summary).toMatchObject({
+          highlights: [{ label: "Governing skill", value: "Repair +4 vs DC 12" }],
+        });
         const detailed = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2588,7 +2586,7 @@ describe("MCP pure play mode", () => {
         );
         const preparedBoard = (prepared.context as CompactAreaContext).station_dispatch_board;
         expect(preparedBoard?.[2]).toBe(
-          "Already set: background, Wolf-Winter promise, report, and field kit. Optional before leaving: one relief wagon or second rider. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.",
+          "Ready to depart now with background, Wolf-Winter promise, report, and field kit set; one relief wagon or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.",
         );
         expect(
           preparedBoard?.[4]
@@ -2718,7 +2716,7 @@ describe("MCP pure play mode", () => {
         );
         const allocatedBoard = (allocated.context as CompactAreaContext).station_dispatch_board;
         expect(allocatedBoard?.[2]).toBe(
-          "Already set: background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice. No optional support remains. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.",
+          "Ready to depart now with background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice set; no optional support remains.",
         );
         expect(allocatedBoard?.[4].filter(([, status]) => status === "open_optional")).toEqual([]);
         expectJuneCattleFirst(allocated);

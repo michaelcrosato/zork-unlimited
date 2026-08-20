@@ -885,20 +885,18 @@ describe("MCP journey surface", () => {
         if (kind === "registration") {
           expect(Object.keys(fullOption.summary).sort()).toEqual([
             "commitment",
-            "fieldTrigger",
-            "fieldTriggerScope",
             "highlights",
             "immediateCost",
             "tradeoff",
           ]);
           expect(fullOption.summary).toMatchObject({
-            fieldTriggerScope: "starter",
-            highlights: expect.arrayContaining([
-              expect.objectContaining({ label: "Permanent background" }),
-              expect.objectContaining({ label: "Return promise — ACTIVE" }),
-              expect.objectContaining({ label: "Wolf-Winter fit" }),
-            ]),
+            commitment: expect.stringMatching(/^Permanent background — /u),
+            highlights: [expect.objectContaining({ label: "Starts with" })],
+            immediateCost: expect.stringMatching(/^no fee or delay; start with \$\d+$/u),
           });
+          expect(JSON.stringify(fullOption.summary)).not.toMatch(
+            /\b(?:DEF|DC|import|fieldTrigger)\b/i,
+          );
         } else {
           expect(Object.keys(fullOption.summary).sort()).toEqual([
             "commitment",
@@ -1021,7 +1019,7 @@ describe("MCP journey surface", () => {
       compactPreparationStory.options.every(
         (option) =>
           JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
-          JSON.stringify(["commitment", "immediateCost", "tradeoff"]),
+          JSON.stringify(["commitment", "highlights", "immediateCost", "tradeoff"]),
       ),
     ).toBe(true);
     expect(
@@ -1030,6 +1028,14 @@ describe("MCP journey surface", () => {
           JSON.stringify(Object.keys(option.summary ?? {}).sort()) ===
           JSON.stringify(["checkFit", "commitment", "immediateCost", "tradeoff"]),
       ),
+    ).toBe(true);
+    expect(compactPreparationStory.options.map((option) => option.summary?.highlights)).toEqual(
+      fullPreparationStory.options.map((option) => [
+        { label: "Governing skill", value: option.summary?.checkFit },
+      ]),
+    );
+    expect(
+      fullPreparationStory.options.every((option) => option.summary?.highlights === undefined),
     ).toBe(true);
 
     a.choose_overworld_session_story({
@@ -1847,6 +1853,12 @@ describe("MCP journey surface", () => {
     )!.summary!;
     expect(firstSummary).not.toHaveProperty("checkFit");
     expect(secondSummary).not.toHaveProperty("checkFit");
+    expect(firstSummary.highlights).toEqual([
+      { label: "Governing skill", value: "Repair +0 vs DC 12" },
+    ]);
+    expect(secondSummary.highlights).toEqual([
+      { label: "Governing skill", value: "Streetwise +0 vs DC 12" },
+    ]);
     const firstReceipt =
       `Benefit: ${firstProfile.trigger_category ?? firstProfile.title} ` +
       `Cost: ${firstSummary.immediateCost}. Boundary: ${firstProfile.tradeoff}`;

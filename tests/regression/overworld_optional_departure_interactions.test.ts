@@ -405,16 +405,9 @@ describe("optional Station departure interactions", () => {
       ...preparationInteraction.inspect.arguments,
     });
     expect(inspected.story).toMatchObject({ id: PREPARATION.id, kind: "preparation" });
-    expect(inspected.story.message).toContain(`${WOLF.title} · optional field kit.`);
-    expect(inspected.story.message).toContain(
-      "Purpose: optionally choose one field kit; the relief wagon and second rider stay separate.",
-    );
-    expect(inspected.story.message).toContain(
-      `Route costs and tactics remain on ${WOLF.title}'s launch card.`,
-    );
-    expect(inspected.story.message).toContain(
-      "Compare field use, exact cost, and tradeoff. " +
-        "Field checks surface with their action before resolution.",
+    expect(inspected.story.message).toBe(
+      "Albany Station: ready to depart now, or choose one field kit; " +
+        "relief-wagon and riding choices are separate.",
     );
     expect(inspected.story.message).not.toMatch(
       /field packet|inspect a card|exact check|recovery/i,
@@ -476,13 +469,9 @@ describe("optional Station departure interactions", () => {
       session_id: sessionId,
       ...allocationInteraction.inspect.arguments,
     });
-    expect(allocationStory.story.message).toContain(`${WOLF.title} · optional relief wagon.`);
-    expect(allocationStory.story.message).toContain(
-      "Purpose: optionally send the relief wagon; the field kit and second rider stay separate.",
-    );
-    expect(allocationStory.story.message).toContain(
-      "Compare who the relief wagon protects, exact cost, and what remains exposed. " +
-        "Field checks surface with their action before resolution.",
+    expect(allocationStory.story.message).toBe(
+      "Albany Station: ready to depart now, or choose the relief wagon's job; " +
+        "field-kit and riding choices are separate.",
     );
     expect(allocationStory.story.message).not.toMatch(/relief-capacity choice|inspect a card/i);
     expect(allocationStory.story.message).not.toMatch(

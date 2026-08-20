@@ -121,6 +121,11 @@ export function JourneyStoryChoiceScreen({
       conciseSummary !== undefined && conciseSummary.fieldTrigger === undefined;
     const usesTriggerCategory = conciseSummary?.fieldTriggerScope === "category";
     const usesStarterPackage = conciseSummary?.fieldTriggerScope === "starter";
+    const usesAdventureSetupCard =
+      usesRoleplayReceipt &&
+      (isRegistration ||
+        isPreparation ||
+        progressiveDisclosure?.initialOptionIds.includes(option.id));
     return (
       <div key={option.id} className="journey-choice-card">
         <button type="button" onClick={() => onChoose(option.id)}>
@@ -156,9 +161,24 @@ export function JourneyStoryChoiceScreen({
               <b>{highlight.label}:</b> {highlight.value}
             </small>
           ))}
-          {conciseSummary && usesRoleplayReceipt && (
+          {isPreparation && conciseSummary?.checkFit && (
+            <small className="journey-choice-highlight">
+              <b>Governing skill:</b> {conciseSummary.checkFit}
+            </small>
+          )}
+          {conciseSummary && usesRoleplayReceipt && !usesAdventureSetupCard && (
             <small className="journey-choice-cost">
               <b>Cost / give up:</b> {conciseSummary.immediateCost}; {conciseSummary.tradeoff}
+            </small>
+          )}
+          {conciseSummary && usesAdventureSetupCard && (
+            <small className="journey-choice-cost">
+              <b>Cost:</b> {conciseSummary.immediateCost}
+            </small>
+          )}
+          {conciseSummary && usesAdventureSetupCard && (
+            <small className="journey-choice-tradeoff">
+              <b>{isRegistration ? "Return obligation:" : "Give up:"}</b> {conciseSummary.tradeoff}
             </small>
           )}
           {conciseSummary && !usesRoleplayReceipt && (
@@ -179,7 +199,7 @@ export function JourneyStoryChoiceScreen({
                 ? `Inspect exact receipt for ${option.label}`
                 : `Full terms and consequence for ${option.label}`}
             </summary>
-            {conciseSummary.checkFit && (
+            {conciseSummary.checkFit && !isPreparation && (
               <p className="journey-choice-check-fit">
                 <b>Check fit:</b> {conciseSummary.checkFit}
               </p>

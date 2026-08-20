@@ -1311,7 +1311,7 @@ describe("OverworldSession", () => {
       session.chooseJourneyStory(preparation.profiles[0]!.id, preparation.id);
       const preparedMarkup = renderCurrentBoard();
       expect(preparedMarkup).toContain(
-        "Already set: background, Wolf-Winter promise, report, and field kit. Optional before leaving: one relief wagon or second rider. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.",
+        "Ready to depart now with background, Wolf-Winter promise, report, and field kit set; one relief wagon or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.",
       );
       expect(preparedMarkup).toContain("Review optional support — relief wagon or second rider");
       expect(preparedMarkup).not.toContain("Review optional support — field kit");
@@ -1334,7 +1334,7 @@ describe("OverworldSession", () => {
       );
       const fullySetMarkup = renderCurrentBoard();
       expect(fullySetMarkup).toContain(
-        "Already set: background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice. No optional support remains. Depart now; support changes cost and aftermath, not your Wolf-Winter plan.",
+        "Ready to depart now with background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice set; no optional support remains.",
       );
       expect(fullySetMarkup).not.toContain("station-dispatch-support-details");
       expect(fullySetMarkup).not.toContain("Review optional support");
@@ -1837,16 +1837,14 @@ describe("OverworldSession", () => {
       const markup = renderStoryScreen(journey, departureRecap, true);
 
       expect(markup).toContain(
-        "Purpose: optionally choose one field kit; the relief wagon and second rider stay separate.",
-      );
-      expect(markup).toContain(
-        "Route costs and tactics remain on The Wolf-Winter&#x27;s launch card.",
+        "Albany Station: ready to depart now, or choose one field kit; relief-wagon and riding choices are separate.",
       );
       expect(markup).not.toContain("Old Cade");
       expect(markup).not.toContain("wolf pack coming down with the weather");
       expect(markup).not.toContain("Take the Exposed Ridge Road");
       expect(markup).not.toContain("Take the Sheltered Stockway");
-      expect(markup).toContain("Cost / give up:");
+      expect(markup).toContain("<b>Cost:</b>");
+      expect(markup).toContain("<b>Give up:</b>");
       expect(markup).toContain("The Wolf-Winter dispatch recap");
       assertRecapRows(markup, departureRecap, 3, 3);
       expect(markup).not.toContain("clean three-cast lure line");
@@ -1876,7 +1874,7 @@ describe("OverworldSession", () => {
       );
       expect(allocationMarkup).toContain("Choose where Albany&#x27;s relief wagon goes");
       expect(allocationMarkup).toContain(
-        "Purpose: optionally send the relief wagon; the field kit and second rider stay separate.",
+        "Albany Station: ready to depart now, or choose the relief wagon&#x27;s job; field-kit and riding choices are separate.",
       );
       assertRecapRows(allocationMarkup, allocationRecap, 4, 2);
 
@@ -1891,7 +1889,7 @@ describe("OverworldSession", () => {
       const allyMarkup = renderStoryScreen(allyJourney, allyRecap, false);
       expect(allyMarkup).toContain("Choose a second rider or ride alone");
       expect(allyMarkup).toContain(
-        "Purpose: choose a second rider or ride alone; every Wolf-Winter route stays available.",
+        "Albany Station: ready to depart now alone, or ask June Pike to ride; field kit and relief wagon choices are separate.",
       );
       assertRecapRows(allyMarkup, allyRecap, 5, 1);
     } finally {

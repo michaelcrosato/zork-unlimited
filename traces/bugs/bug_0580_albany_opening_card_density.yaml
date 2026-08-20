@@ -1,0 +1,143 @@
+id: bug_0580
+title: "Albany's dense setup cards hid a paid field kit's governing check"
+pack: overworld (Albany registration through Station departure)
+reported_by: >
+  Valid ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-8917677-20260820-a on clean 8917677; all ten report
+  digests describe Albany setup density, and seed 2026082108 records the exact S1
+  field-kit reliability defect
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-8917677-20260820-a
+    tested_commit: 89176774739316e45cd8285b61ca576f68dbac07
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017
+    model: gpt-5.6-terra
+    play_mode: pure
+    start_surface: fresh_overworld
+    run_seeds: [2026082100, 2026082101, 2026082102, 2026082103, 2026082104, 2026082105, 2026082106, 2026082107, 2026082108, 2026082109]
+    report_sha256:
+      - 6f295f88dfef657bce89af899fdda5992b6670a7f9218a0714e46ecd2907e1b6
+      - 253e78e8c1bcfeeefceed156d0f5dba5105d37a334fb6dc8c67ea9e7b75739a7
+      - ebb904b6aa8911722e4fb9cf5b7357082356014a9431782896650090e8a120b9
+      - bf1841ad9bf6696ddfc9804a82fc5492bf02aabf7178fd2d22f65cd91f09b434
+      - ed0e8325c71db6b3cf2c8cca85efac916dcd3794b71e72f33a3b66832b75d99f
+      - 3073747ac92ccbf687f95d892ac692cb0a24defff8eb0c8cdc0e9f1521a7188f
+      - 6f738da95ccfce1b42678536210ee8d9b4fa73a1929a1911304b220d269444d3
+      - 5d3bca0490b8ee5d7fcc5582417460fb9c2f38d54eb4137dd467b1aed3f5f986
+      - 03721988eb541c96a05a179727c0d907a7786923d2121969d48cdc0dccd15338
+      - 3b6d1ef903aa6c4656f834e18445b53413b36b3665b50366661023ee9721976e
+    metrics:
+      completed_runs: 10
+      stuck_runs: 0
+      clarity_total: 39
+      enjoyment_total: 40
+      authority_certified: false
+    exact_s1: >
+      Albany Station Quarter preparation → Broken Paling recovery — S1: Emery’s
+      Drover Route did not preview its governing skill or difficulty during selection,
+      then used untrained Streetwise 0 when the recovery scene appeared. This made the
+      paid preparation’s reliability difficult to evaluate.
+    boundary: >
+      The pilot is schema-valid and all ten runs completed, but it failed only the
+      clarity and enjoyment average gates and is not authority-certified. All ten
+      report digests support the Albany setup-density cluster. Seed 2026082108 directly
+      supports the governing-check defect; the other nine do not independently prove
+      that exact field-kit symptom.
+
+symptom: >
+  Registration, promise/report setup, and Station support presented repeated policy and
+  engine language before departure. Registration cards exposed DEF/import fit and duplicate
+  permanence/obligation rows. Ready-made cards projected technical benefits as their main
+  promise. Compact preparation cards removed canonical checkFit entirely, so Emery's paid
+  Drover Route did not disclose the character-relative Streetwise +0 vs DC 12 check until
+  after selection.
+
+root_cause: >
+  First-tier cards reused exact-receipt fields instead of composing the few facts needed
+  for a choice. The compact journey projection treated every checkFit as inspection-only,
+  despite a paid field kit whose later recovery check makes current skill fit material
+  before purchase. Briefing copy accumulated progress, purpose, planning context, and
+  instructions across six successive Albany stages.
+
+fix: >
+  Recompose only the first presentation layer. Registration now shows one permanent
+  background outcome, one starter skill-and-kit fact, starting cash/cost, and the active
+  return obligation; exact DEF/import and field-trigger terms remain in the existing
+  consequence and inspection. Known ready-made dispatches show neutral adventure outcomes,
+  while mapping or mechanics drift falls back to the live promise/report titles and exact
+  benefits remain inspection-only. Canonical preparation remains unchanged; compact
+  preparation alone converts its existing character-relative checkFit into one Governing
+  skill highlight, and UI/terminal render that check once before purchase. Each Albany stage
+  receives one concise required-or-optional sentence, and Station guidance truthfully starts
+  with Ready to depart now. Registration action projection and departure recap explicitly
+  retain their authenticated journal and authored tradeoff sources so the new display copy
+  cannot alter existing receipt or recap bytes.
+
+deterministic_witnesses:
+  - "full, compact MCP, terminal, and UI registration cards preserve all four ids and authored order while showing only background, starts-with, cost/cash, and return obligation facts"
+  - "registration first-tier summaries contain no DEF, import, or fieldTrigger language while exact consequence inspection retains the prior technical terms"
+  - "ready-made dispatch cards use neutral Outcome copy, preserve exact costs and closed alternatives, and keep exact Benefit bytes behind read-only inspection"
+  - "known ready-made prose is gated by profile, oath, source, title, and trigger identity; valid counterfactual drift derives the live promise/report pairing"
+  - "canonical preparation summaries retain one checkFit and no duplicate highlight; compact preparation exposes the same value once as Governing skill"
+  - "Emery's Drover Route shows Streetwise +0 vs DC 12 before selection in compact MCP, CLI, and UI"
+  - "preparation option inspection remains read-only and zero, one, or multiple inspections produce identical action results and snapshot hashes"
+  - "registration, ready-made, custom promise, report, field-kit, relief-wagon, and riding stages each use one concise instruction"
+  - "Station guidance says Ready to depart now, derives selected versus optional support, and agrees grammatically for zero, one, two, or three open support rows"
+  - "registration action entry text remains the durable journal text, while its exact consequence still carries Field trigger and DEF/import terms"
+  - "departure recap role activeFieldTerm remains the authenticated authored profile tradeoff, not the new first-tier obligation copy"
+  - "option ids, order, actions, costs, consequences, mechanics, journal entries, snapshots, and compact Station V4 tuples remain unchanged"
+
+mechanics_unchanged:
+  - "opening ids, story kinds, option order, reveal affordances, action tuples, and Station V4 schema"
+  - "character packages, skills, equipment, cash, promises, checks, DCs, costs, dispatch minutes, and outcomes"
+  - "journal and snapshot evidence, exact selection consequences, departure recap terms, RNG, providers, and seeds"
+
+nonclaims:
+  - "The pilot establishes a repeated clarity complaint and one direct S1 reliability report; it does not establish causal retention or enjoyment lift from this correction."
+  - "This correction is uncommitted focused work after the tested predecessor build, not pilot evidence for the replacement and not starting-slice certification."
+  - "The field-kit check is an intentional first-tier exception: its character-relative modifier and DC remain visible because they determine paid preparation reliability."
+  - "Technical exact terms are staged, not deleted; read-only inspection and receipts retain authored mechanics and consequence text."
+  - "No schema/version, mechanics, content-pack, provider, seed, feedback-selection, or Gallowmere change is included."
+
+production:
+  - bin/terminal_story_choice.ts
+  - src/mcp/journey_projection.ts
+  - src/world/opening_departure_recap.ts
+  - src/world/opening_dispatch_briefing.ts
+  - src/world/opening_registration_presentation.ts
+  - src/world/opening_relief_oath_presentation.ts
+  - src/world/session.ts
+  - src/world/station_dispatch_board.ts
+  - ui/src/JourneyStoryChoiceScreen.tsx
+
+tests:
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/regression/registration_progressive_disclosure.test.ts
+  - tests/regression/shipped_compact_prose_fidelity.test.ts
+  - tests/starting_slice/opening_departure_recap.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/starting_slice/station_dispatch_board.test.ts
+  - tests/unit/compact_journey_projection.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/terminal_story_choice_grouping.test.ts
+  - tests/unit/ui_overworld.test.ts
+  - tests/unit/ui_story_choice_summary_first.test.ts
+  - tests/unit/world_opening_preparation.test.ts
+  - tests/unit/world_opening_registration_doctrine_runtime.test.ts
+  - tests/unit/world_opening_registration_helpers.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/starting_slice/opening_dispatch_briefing.test.ts tests/starting_slice/opening_departure_recap.test.ts tests/starting_slice/station_dispatch_board.test.ts tests/unit/compact_journey_projection.test.ts tests/unit/mcp_journey_surface.test.ts tests/unit/terminal_story_choice_grouping.test.ts tests/unit/ui_story_choice_summary_first.test.ts tests/unit/world_opening_registration_doctrine_runtime.test.ts tests/unit/world_opening_registration_helpers.test.ts
+  - npx vitest run tests/regression/registration_progressive_disclosure.test.ts tests/regression/shipped_compact_prose_fidelity.test.ts tests/unit/ui_overworld.test.ts
+  - npx vitest run tests/regression/overworld_cli.test.ts -t "structured story choices|default Civic briefing compact|structured Station decisions"
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts -t "does not advertise or honor QA-only quest graph and seed overrides"
+  - git diff --check

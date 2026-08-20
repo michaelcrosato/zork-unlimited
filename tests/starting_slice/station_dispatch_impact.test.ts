@@ -157,9 +157,11 @@ describe("Station dispatch impact cards", () => {
     const rendered = renderTerminalStoryChoiceComparison(full);
     expect(rendered).not.toContain("Dispatch: +5m delay → 65m committed (delayed).");
     expect(rendered).toContain(
-      "Purpose: optionally send the relief wagon; the field kit and second rider stay separate.",
+      "Albany Station: ready to depart now, or choose the relief wagon's job; " +
+        "field-kit and riding choices are separate.",
     );
-    expect(rendered.indexOf("Purpose:")).toBeLessThan(rendered.indexOf("Relief wagon:"));
+    expect(rendered).not.toContain("Purpose:");
+    expect(rendered.indexOf("Albany Station:")).toBeLessThan(rendered.indexOf("Relief wagon:"));
     const firstOption = full.options[0]!;
     const stagedDetail = compactJourneyStoryChoiceComparison(full, firstOption.id).inspectedOption;
     expect(stagedDetail).toMatchObject({ dispatchImpact: firstOption.dispatchImpact });

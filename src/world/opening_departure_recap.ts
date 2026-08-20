@@ -160,6 +160,17 @@ function selectedTitle(prompt: JourneyStoryChoicePrompt, selectedId: string): st
   return selectedPresentedOption(prompt, selectedId).label;
 }
 
+function boundedFieldTerm(value: string): string {
+  if (value.length > OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT) {
+    throw new Error(
+      `Opening departure recap field term exceeds ${String(
+        OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
+      )} characters.`,
+    );
+  }
+  return value;
+}
+
 function selectedFieldTerm(prompt: JourneyStoryChoicePrompt, selectedId: string): string {
   const selected = selectedPresentedOption(prompt, selectedId);
   if (!selected.summary) {
@@ -169,14 +180,7 @@ function selectedFieldTerm(prompt: JourneyStoryChoicePrompt, selectedId: string)
     selected.summary.fieldTriggerScope === "category" && selected.summary.fieldTrigger
       ? selected.summary.fieldTrigger
       : selected.summary.tradeoff;
-  if (value.length > OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT) {
-    throw new Error(
-      `Opening departure recap field term exceeds ${String(
-        OPENING_DEPARTURE_RECAP_FIELD_TERM_CHAR_LIMIT,
-      )} characters.`,
-    );
-  }
-  return value;
+  return boundedFieldTerm(value);
 }
 
 /**
@@ -318,7 +322,7 @@ export function deriveOpeningDepartureRecap(
         "Background",
         "selected",
         selectedTitle(registrationPresentation, registrationProof.profile.id),
-        selectedFieldTerm(registrationPresentation, registrationProof.profile.id),
+        boundedFieldTerm(registrationProof.profile.tradeoff),
       ),
       recapEntry(
         "duty",

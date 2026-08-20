@@ -214,6 +214,8 @@ describe("Albany opening departure recap", () => {
       presentOpeningLeadSource(LEAD_SOURCE, beforeSnapshot.character),
       LEAD_SOURCE.options[0]!.id,
     );
+    const registrationCard = presentOpeningRegistration(REGISTRATION).options[0]!;
+    expect(registrationCard.summary?.tradeoff).not.toBe(REGISTRATION.profiles[0]!.tradeoff);
 
     expect(full.departureRecap).toEqual({
       version: 7,

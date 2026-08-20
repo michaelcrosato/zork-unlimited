@@ -392,16 +392,19 @@ export type OverworldJourneyStoryChoiceResult = Readonly<{
 }>;
 
 /**
- * Keep the durable journal mechanically complete while ensuring the immediate
- * choice response does not re-expand a roleplay-first receipt into deferred
- * setup mechanics. Legacy and unfamiliar summaries retain their authored text.
+ * Keep the durable journal mechanically complete while ensuring ordinary
+ * roleplay-first responses do not re-expand deferred setup mechanics. Opening
+ * registration retains its existing presented journal bytes; legacy and
+ * unfamiliar summaries retain their authored text.
  */
 function storyChoiceEntryForPresentation(
   entry: OverworldJournalEntry,
   option: JourneyStoryChoiceOption,
 ): OverworldJournalEntry {
   const presented = redactOverworldJournalEntryForPresentation(entry);
-  return option.summary?.fieldTrigger === undefined && option.summary !== undefined
+  return entry.kind !== "registration" &&
+    option.summary?.fieldTrigger === undefined &&
+    option.summary !== undefined
     ? { ...presented, text: option.consequence }
     : presented;
 }

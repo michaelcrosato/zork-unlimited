@@ -331,6 +331,7 @@ describe("opening preparation authoring", () => {
       "tradeoff",
     ]);
     expect(option.summary?.checkFit).toBe("Repair +4 vs DC 12");
+    expect(option.summary).not.toHaveProperty("highlights");
     expect(option.consequence).toBe(
       "Benefit: Civic works survey Cost: 25 minutes and $4. " +
         "Boundary: The other specialist plans remain behind.",

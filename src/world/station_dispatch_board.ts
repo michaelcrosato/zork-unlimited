@@ -54,14 +54,18 @@ function stationGuidance(recap: OpeningDepartureRecap, canDepart: boolean): stri
         SUPPORT_SLOTS.includes(entry.slot as StationDispatchSupportSlot),
     )
     .map((entry) => OPTIONAL_GUIDANCE_LABELS[entry.slot]);
-  const optional =
-    optionalLabels.length > 0
-      ? `Optional before leaving: ${formatGuidanceList(optionalLabels, "or")}.`
-      : "No optional support remains.";
-  const departure = canDepart
-    ? "Depart now; support changes cost and aftermath, not your Wolf-Winter plan."
-    : "No road is open; support changes cost and aftermath, not your plan.";
-  return `Already set: ${formatGuidanceList(setLabels, "and")}. ${optional} ${departure}`;
+  const set = formatGuidanceList(setLabels, "and");
+  if (optionalLabels.length === 0) {
+    return canDepart
+      ? `Ready to depart now with ${set} set; no optional support remains.`
+      : `No road is open with ${set} set; no optional support remains.`;
+  }
+  const optional = formatGuidanceList(optionalLabels, "or");
+  const remain = optionalLabels.length === 1 ? "remains" : "remain";
+  const change = optionalLabels.length === 1 ? "changes" : "change";
+  return canDepart
+    ? `Ready to depart now with ${set} set; ${optional} ${remain} optional and ${change} cost or aftermath, not your Wolf-Winter approach.`
+    : `No road is open with ${set} set; ${optional} ${remain} optional and ${change} cost or aftermath, not your approach.`;
 }
 
 const SUPPORT_COPY: Readonly<
