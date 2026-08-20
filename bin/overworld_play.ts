@@ -800,7 +800,7 @@ async function controlTerminalStoryChoice(args: {
       chosenResult = args.session.chooseJourneyStory(option.id, args.prompt.id);
     },
     reveal: (revealId) => {
-      args.session.revealJourneyStory(args.prompt.id, revealId);
+      return args.session.revealJourneyStory(args.prompt.id, revealId);
     },
     presentedOptions: () => args.session.journeyStoryOptionsForPresentation(args.prompt.id),
     allowComparisonExit: args.allowComparisonExit,

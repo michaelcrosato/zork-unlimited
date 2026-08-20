@@ -5,6 +5,11 @@ import {
   runTerminalStoryChoiceController,
 } from "../../bin/terminal_story_choice.js";
 import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
+import {
+  OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
+  OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+  OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS,
+} from "../../src/world/opening_relief_oath_presentation.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
@@ -126,17 +131,9 @@ describe("terminal registration story-choice groups", () => {
     const initial = renderTerminalStoryChoiceComparison(prompt);
 
     expect(initial).toContain(
-      "Customize: `customize` — Customize promise and report — compare all four field outcomes.",
+      `Customize: \`customize\` — ${OPENING_RELIEF_OATH_CUSTOMIZE_LABEL}. ${OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION}`,
     );
-    expect(initial).toMatch(/HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die/i);
-    expect(initial).toMatch(/LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed/i);
-    expect(initial).toMatch(
-      /DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading/i,
-    );
-    expect(initial).toMatch(
-      /FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals/i,
-    );
-    expect(initial).toContain("No plan is recommended or committed");
+    expect(initial).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     expect(initial).toContain("1. Ready-made dispatch — Aid-Only promise + Hayden's frost report");
     expect(initial).toContain(
       "Ready-made dispatch: Carry winter-road judgment and flexible, life-first aid to Cade's steading.",
@@ -149,9 +146,16 @@ describe("terminal registration story-choice groups", () => {
     expect(initial).not.toContain("Negotiate Aid-Only Duty\n");
     expect(initial).not.toContain("Remain an Unaffiliated Helper");
 
-    const revealed = renderTerminalStoryChoiceComparison(prompt, {
-      revealId: prompt.progressiveDisclosure!.reveal.id,
-    });
+    const revealSession = new OverworldSession(WORLD);
+    revealSession.scoutPoi(revealSession.view().pois[0]!.id);
+    revealSession.talkToCharacter(WORLD.opening_registration!.contact);
+    revealSession.chooseJourneyStory("albany:road_warden");
+    const revealedPrompt = revealSession.revealJourneyStory(
+      prompt.id,
+      prompt.progressiveDisclosure!.reveal.id,
+    );
+    const revealed = renderTerminalStoryChoiceComparison(revealedPrompt);
+    expect(revealed).toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     expect(revealed).toContain("1. Ready-made dispatch — Aid-Only promise + Hayden's frost report");
     expect(revealed).toContain("2. Take Full Compact Promise");
     expect(revealed).toContain("3. Negotiate Aid-Only Promise");
@@ -204,6 +208,7 @@ describe("terminal registration story-choice groups", () => {
       },
       reject: (message) => customizedRejected.push(message),
       choose: (option) => customizedSelected.push(option.id),
+      reveal: () => revealedPrompt,
     });
     expect(customizedRejected).toEqual([
       "Use `customize` to reveal the individual promises before choosing that card.",

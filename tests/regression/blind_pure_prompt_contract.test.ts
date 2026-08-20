@@ -275,7 +275,13 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("separately read recap or terms");
     expect(prompt).toContain("option detail may");
     expect(prompt).not.toContain("never the exact active terms");
+    expect(prompt).toContain("compact prompt\n  carries one review instruction in its message");
+    expect(prompt).toContain("required per-option `consequence` is intentionally blank");
+    expect(prompt).not.toContain("consequence line stages rather than repeats");
     expect(prompt).toContain("visible `revealOption`");
+    expect(prompt).toContain(
+      "records that the comparison was viewed but accepts no\n  gameplay decision",
+    );
     expect(prompt).toContain("result may include `displaySummary`");
     expect(prompt).toContain("read that concise\n  player-language outcome first");
     expect(prompt).toContain("`consequence` remains the exact\n  authoritative receipt");

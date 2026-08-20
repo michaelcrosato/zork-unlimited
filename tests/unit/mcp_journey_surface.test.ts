@@ -7,12 +7,18 @@ import {
   compactJourneyPresentation,
   compactJourneyStoryChoicePrompt,
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
   type JourneyStoryChoiceDetail,
   type JourneyStoryChoiceRevealAffordance,
   type JourneyStoryChoiceSummaryComparison,
   type EmbeddedJourneyFocus,
 } from "../../src/mcp/journey_projection.js";
+import {
+  OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
+  OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+  OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS,
+} from "../../src/world/opening_relief_oath_presentation.js";
 import {
   INITIAL_JOURNEY_GOAL,
   INITIAL_JOURNEY_GOAL_GUIDANCE,
@@ -872,6 +878,9 @@ describe("MCP journey surface", () => {
       expect(compactJourney.storyChoice).toEqual(compactJourneyStoryChoicePrompt(fullStoryChoice));
       expect(compactJourney.storyChoice).not.toEqual(fullStoryChoice);
       expect(compactJourney.storyChoice).toMatchObject({ kind });
+      expect(compactJourney.storyChoice?.message).toBe(
+        `${fullStoryChoice.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
+      );
       for (const compactOption of compactJourney.storyChoice!.options) {
         const fullOption = fullStoryChoice.options.find((option) => option.id === compactOption.id);
         if (!fullOption?.summary) throw new Error(`expected summary for ${compactOption.id}`);
@@ -879,9 +888,8 @@ describe("MCP journey surface", () => {
           id: fullOption.id,
           label: fullOption.label,
           summary: fullOption.summary,
-          consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
         });
-        expect(compactOption.consequence.length).toBeLessThan(fullOption.consequence.length);
+        expect(compactOption.consequence).toBe("");
         if (kind === "registration") {
           expect(Object.keys(fullOption.summary).sort()).toEqual([
             "commitment",
@@ -916,11 +924,11 @@ describe("MCP journey surface", () => {
             OPENING_SELECTION_RECEIPT_WORD_LIMIT,
           );
         }
-        expect(compactOption.consequence).not.toContain(fullOption.summary.commitment);
-        expect(compactOption.consequence).not.toContain(fullOption.summary.immediateCost);
-        expect(compactOption.consequence).not.toContain(fullOption.summary.tradeoff);
         expect(JSON.stringify(compactJourney.storyChoice)).not.toContain(fullOption.consequence);
       }
+      expect(JSON.stringify(compactJourney.storyChoice)).not.toContain(
+        JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+      );
     };
     const reachRegistration = (sessionId: string, compactResult: boolean) => {
       const observation = a.get_overworld_session({
@@ -1281,11 +1289,8 @@ describe("MCP journey surface", () => {
     }).journey.storyChoice;
     if (!compactPresented) throw new Error("expected a currently presented registration");
     expect(compactPresented).toMatchObject({ id: registration.id, kind: "registration" });
-    expect(
-      compactPresented.options.every(
-        (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
-      ),
-    ).toBe(true);
+    expect(compactPresented.options.every((option) => option.consequence === "")).toBe(true);
+    expect(compactPresented.message).toContain(JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION);
     const canonical = a.get_overworld_session({
       session_id: started.session_id,
       include_observation: true,
@@ -1385,6 +1390,15 @@ describe("MCP journey surface", () => {
     });
     expect(inspectedChoice.snapshot_hash).toBe(directChoice.snapshot_hash);
     expect(inspectedChoice.result).toEqual(directChoice.result);
+    expect(directChoice.result).toMatchObject({
+      displaySummary: expect.stringContaining(`Background chosen — ${selected.label}.`),
+      consequence: selected.consequence,
+    });
+    expect(directChoice.result.displaySummary).not.toContain(selected.consequence);
+    const compactResultJson = JSON.stringify(directChoice.result);
+    expect(compactResultJson.indexOf('"displaySummary"')).toBeLessThan(
+      compactResultJson.indexOf('"consequence"'),
+    );
   });
 
   it("offers the ready-made dispatch immediately and expands custom promises read-only without leaking oath cards", () => {
@@ -1415,11 +1429,10 @@ describe("MCP journey surface", () => {
     >();
     expect(compactOath.revealOption).toMatchObject({
       id: "customize_duty_and_evidence",
-      label: "Customize promise and report — compare all four field outcomes",
-      description: expect.stringMatching(
-        /HUNT[^]*Outcome:[^]*relief stores[^]*wolves may die[^]*LURE[^]*Outcome:[^]*pack beyond (?:the )?breach[^]*Cade's last feed[^]*DRIVE[^]*Outcome:[^]*people and herd clear[^]*abandon the outer steading[^]*FORTIFY[^]*Outcome:[^]*household, herd, and pack[^]*property[^]*public seals[^]*No plan is recommended or committed/i,
-      ),
+      label: OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+      description: OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
     });
+    expect(JSON.stringify(compactOath)).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     const canonical = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,
@@ -1428,6 +1441,11 @@ describe("MCP journey surface", () => {
     expectTypeOf(canonical.progressiveDisclosure).not.toEqualTypeOf<undefined>();
     const disclosure = canonical.progressiveDisclosure;
     if (!disclosure) throw new Error("expected staged custom oath disclosure");
+    expect(disclosure.reveal).toMatchObject({
+      label: OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+      description: OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
+    });
+    expect(JSON.stringify(canonical)).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     const shortcutId = doctrine.id;
     const hiddenId = oath.options[0]!.id;
 
@@ -1462,6 +1480,9 @@ describe("MCP journey surface", () => {
 
     const before = a.export_overworld_session({ session_id: started.session_id });
     if (!before.ok) throw new Error("expected an exportable oath comparison");
+    const beforeRevealJourney = a.get_overworld_session_context({
+      session_id: started.session_id,
+    }).journey;
     const initial = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,
@@ -1494,10 +1515,7 @@ describe("MCP journey surface", () => {
     // Opening the compass is now RECORDED. The gate that gives duty selection its
     // legality reads this, and legality in this engine is a function of state — so the
     // receipt lives in the snapshot and moves the hash, rather than in a WeakMap that a
-    // restore silently empties. The story projection itself is unchanged.
-    expect(expanded.story).toEqual(
-      compactJourneyStoryChoiceComparison(canonical, undefined, disclosure.reveal.id),
-    );
+    // restore silently empties. Only that authenticated boundary adds the full compass.
     const revealedHash = expanded.snapshot_hash;
     expect(revealedHash).not.toBe(before.snapshot_hash);
     expect(expanded.story.options.map((option) => option.id)).toEqual([
@@ -1505,15 +1523,38 @@ describe("MCP journey surface", () => {
       ...disclosure.reveal.optionIds,
     ]);
     expect(expanded.story).not.toHaveProperty("revealOption");
+    expect(expanded.story.message).toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
     const fullReveal = a.inspect_overworld_session_story({
       session_id: started.session_id,
       story_choice_id: oath.id,
       reveal_id: disclosure.reveal.id,
       ...FULL_OVERWORLD,
     });
-    expect(fullReveal.story).toEqual(canonical);
+    const { progressiveDisclosure: _progressiveDisclosure, ...canonicalWithoutDisclosure } =
+      canonical;
+    expect(fullReveal.story).toEqual({
+      ...canonicalWithoutDisclosure,
+      message: `${canonical.message} ${OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS}`,
+    });
+    expect(fullReveal.story).not.toHaveProperty("progressiveDisclosure");
+    expect(expanded.story).toEqual(compactJourneyStoryChoiceComparison(fullReveal.story));
     // Re-opening the same reveal is genuinely idempotent — the receipt is a set.
     expect(fullReveal.snapshot_hash).toBe(revealedHash);
+
+    const refreshedReveal = a.get_overworld_session_context({
+      session_id: started.session_id,
+    });
+    const refreshedStory = refreshedReveal.journey.storyChoice;
+    if (!refreshedStory) throw new Error("expected the revealed oath after compact refresh");
+    expect(refreshedReveal.snapshot_hash).toBe(revealedHash);
+    expect(refreshedReveal.journey.acceptedDecisions).toBe(beforeRevealJourney.acceptedDecisions);
+    expect(refreshedReveal.journey.goal).toEqual(beforeRevealJourney.goal);
+    expect(refreshedStory.options.map((option) => option.id)).toEqual(
+      expanded.story.options.map((option) => option.id),
+    );
+    expect(refreshedStory.options.every((option) => option.consequence === "")).toBe(true);
+    expect(refreshedStory).not.toHaveProperty("revealOption");
+    expect(JSON.stringify(refreshedStory).match(/HUNT — Outcome/gu)).toHaveLength(1);
 
     const detail = a.inspect_overworld_session_story({
       session_id: started.session_id,
@@ -1562,6 +1603,19 @@ describe("MCP journey surface", () => {
     // who opened the compass, exported, and restored could no longer take the choice they
     // had unlocked — an exported session was not fully resumable.
     const resumedRevealed = a.restore_overworld_session({ snapshot: afterReveal.snapshot });
+    expect(resumedRevealed.snapshot_hash).toBe(afterReveal.snapshot_hash);
+    expect(resumedRevealed.journey.storyChoice?.options.map((option) => option.id)).toEqual(
+      expanded.story.options.map((option) => option.id),
+    );
+    expect(resumedRevealed.journey.storyChoice).not.toHaveProperty("revealOption");
+    expect(
+      JSON.stringify(resumedRevealed.journey.storyChoice).match(/HUNT — Outcome/gu),
+    ).toHaveLength(1);
+    const resumedRefresh = a.get_overworld_session_context({
+      session_id: resumedRevealed.session_id,
+    });
+    expect(resumedRefresh.snapshot_hash).toBe(afterReveal.snapshot_hash);
+    expect(resumedRefresh.journey).toEqual(resumedRevealed.journey);
     expect(() =>
       a.inspect_overworld_session_story({
         session_id: resumedRevealed.session_id,

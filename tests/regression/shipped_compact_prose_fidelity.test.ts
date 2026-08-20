@@ -19,7 +19,7 @@ import {
 import {
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
-  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
   type CompactJourneyStoryChoicePrompt,
 } from "../../src/mcp/journey_projection.js";
 import { compactText } from "../../src/mcp/compact_truncation.js";
@@ -247,7 +247,7 @@ function expectOpeningPromptExact(
   expect(prompt.id).toBe(source.id);
   const projected = compactJourneyStoryChoicePrompt(prompt);
   const registrationDetail = prompt.kind === "registration";
-  expectExact(`opening:${source.id}.prompt`, prompt.message, projected.message);
+  expect(projected.message).toBe(`${prompt.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`);
   expect(projected.message).toContain(openingStageDisplayTitle(prompt.kind));
   if (authoredMessageVisible) expect(projected.message).toContain(source.message);
   else expect(projected.message).not.toContain(source.message);
@@ -297,7 +297,7 @@ function expectOpeningPromptExact(
         projectedOption,
         `opening:${source.id}.${sourceOption.id} must be initially compacted`,
       ).toBeDefined();
-      expect(projectedOption!.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      expect(projectedOption!.consequence).toBe("");
     } else {
       expect(projectedOption).toBeUndefined();
       expect(progressiveDisclosure!.reveal.optionIds).toContain(sourceOption.id);

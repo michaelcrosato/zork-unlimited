@@ -25,7 +25,7 @@ import {
 } from "../../src/mcp/server.js";
 import {
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
-  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
 } from "../../src/mcp/journey_projection.js";
 import { OVERWORLD_COMPACT_RESULT_LEGEND } from "../../src/mcp/compact_overworld_result.js";
 import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
@@ -2095,11 +2095,10 @@ describe("MCP pure play mode", () => {
         );
         expect(
           registrationChoice?.options?.every(
-            (option) =>
-              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
-              typeof option.summary?.tradeoff === "string",
+            (option) => option.consequence === "" && typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
+        expect(registrationChoice?.message).toContain(JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION);
         const ironhandsRepairer = registrationChoice?.options?.find(
           (option) => option.id === "albany:ironhands_repairer",
         );
@@ -2231,15 +2230,14 @@ describe("MCP pure play mode", () => {
         expect(defaultCivicMessages).not.toMatch(/role\s*→\s*duty\s*→\s*evidence/i);
         expect(defaultCivicMessages).not.toMatch(/June Pike|second field seat/i);
         expect(oathChoice?.message).toBe(
-          "The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open.",
+          `The Wolf-Winter: choose a ready-made promise/report pair or customize; every approach stays open. ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`,
         );
         expect(
           oathChoice?.options?.every(
-            (option) =>
-              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
-              typeof option.summary?.tradeoff === "string",
+            (option) => option.consequence === "" && typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
+        expect(oathChoice?.message).toContain(JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION);
         expect(oathChoice?.options?.map((option) => option.id)).toEqual([
           "albany:doctrine_fortify_breach",
         ]);
@@ -2335,9 +2333,7 @@ describe("MCP pure play mode", () => {
         expect(sourceChoice?.kind).toBe("lead_source");
         expect(
           sourceChoice?.options?.every(
-            (option) =>
-              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
-              typeof option.summary?.tradeoff === "string",
+            (option) => option.consequence === "" && typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
         const rowanDocket = sourceChoice?.options?.find(
@@ -2634,9 +2630,7 @@ describe("MCP pure play mode", () => {
         });
         expect(
           allyChoice?.options?.every(
-            (option) =>
-              option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE &&
-              typeof option.summary?.tradeoff === "string",
+            (option) => option.consequence === "" && typeof option.summary?.tradeoff === "string",
           ),
         ).toBe(true);
         if (!allyChoice?.id) throw new Error("expected June's active field-team choice");

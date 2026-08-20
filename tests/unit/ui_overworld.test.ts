@@ -1324,14 +1324,20 @@ describe("OverworldSession", () => {
 
       const sentWagonResult = session.chooseJourneyStory(allocation.options[0]!.id, allocation.id);
       expect(module.journeyStoryChoiceLogEntries("relief_allocation", sentWagonResult)[0]).toBe(
-        `Relief wagon choice made: ${sentWagonResult.consequence}`,
+        sentWagonResult.displaySummary,
       );
+      expect(sentWagonResult.displaySummary).toContain(
+        `Relief wagon choice made — ${allocation.options[0]!.title}.`,
+      );
+      expect(sentWagonResult.displaySummary).not.toContain("Relief wagon chosen");
+      expect(sentWagonResult.displaySummary).not.toContain(sentWagonResult.consequence);
       session.talkToCharacter(ally.contact);
       const solo = ally.options.find((option) => option.id === ally.solo_option_id)!;
       const soloResult = session.chooseJourneyStory(solo.id);
       expect(module.journeyStoryChoiceLogEntries("ally", soloResult)[0]).toBe(
-        `Riding choice made: ${soloResult.consequence}`,
+        soloResult.displaySummary,
       );
+      expect(soloResult.displaySummary).not.toContain(soloResult.consequence);
       const fullySetMarkup = renderCurrentBoard();
       expect(fullySetMarkup).toContain(
         "Ready to depart now with background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice set; no optional support remains.",
@@ -1364,7 +1370,10 @@ describe("OverworldSession", () => {
         const supportSession = openStationSupportSession();
         const result = supportSession.chooseJourneyStory(option.id, allocation.id);
         const entry = module.journeyStoryChoiceLogEntries("relief_allocation", result)[0];
-        expect(entry).toBe(`Relief wagon choice made: ${result.consequence}`);
+        expect(entry).toBe(result.displaySummary);
+        expect(entry).toContain(`Relief wagon choice made — ${option.title}.`);
+        expect(entry).not.toContain("Relief wagon chosen");
+        expect(entry).not.toContain(result.consequence);
         expect(entry).not.toContain("Relief wagon sent");
       }
       const relaySession = openStationSupportSession();
@@ -1372,7 +1381,8 @@ describe("OverworldSession", () => {
       const relay = ally.options.find((option) => option.id === "albany:ally_june_relay_only")!;
       const relayResult = relaySession.chooseJourneyStory(relay.id);
       const relayEntry = module.journeyStoryChoiceLogEntries("ally", relayResult)[0];
-      expect(relayEntry).toBe(`Riding choice made: ${relayResult.consequence}`);
+      expect(relayEntry).toBe(relayResult.displaySummary);
+      expect(relayEntry).not.toContain(relayResult.consequence);
       expect(relayEntry).not.toContain("Second rider chosen");
 
       const packetSession = new OverworldSession(world);

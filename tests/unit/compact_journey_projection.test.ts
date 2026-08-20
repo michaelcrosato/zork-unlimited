@@ -5,6 +5,7 @@ import {
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
   embeddedJourneyFocus,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
   type EmbeddedJourneyFocus,
   type JourneyStoryChoiceRevealAffordance,
@@ -123,6 +124,18 @@ function structuredPrompt(option: JourneyStoryChoiceOption): JourneyStoryChoiceP
   });
 }
 
+function expectPromptLevelReview(
+  compact: ReturnType<typeof compactJourneyStoryChoicePrompt>,
+  prompt: JourneyStoryChoicePrompt,
+): void {
+  expect(compact.message).toBe(`${prompt.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`);
+  expect(compact.options.every((option) => option.consequence === "")).toBe(true);
+  expect(
+    JSON.stringify(compact).match(/inspection is read-only and commits nothing/gu),
+  ).toHaveLength(1);
+  expect(JSON.stringify(compact)).not.toContain(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+}
+
 describe("compact journey projection", () => {
   it("preserves the legacy trigger-shaped detail compactor", () => {
     const commitment = "Take the Works charter.";
@@ -189,7 +202,7 @@ describe("compact journey projection", () => {
     expect(compactJourneyStoryChoiceComparison(prompt, option.id).inspectedOption).toEqual(option);
   });
 
-  it("stages an unstructured historic ally prompt without changing its source", () => {
+  it("keeps the legacy staging fallback for an unstructured historic ally prompt", () => {
     const ally = Object.freeze({
       id: "test:ally",
       kind: "ally" as const,
@@ -209,6 +222,7 @@ describe("compact journey projection", () => {
         (option) => option.consequence === JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
       ),
     ).toBe(true);
+    expect(compact.message).toBe(ally.message);
     expect(compactJourneyStoryChoiceComparison(ally, "a").inspectedOption).toEqual(ally.options[0]);
     expect(JSON.stringify(ally)).toBe(before);
   });
@@ -285,8 +299,8 @@ describe("compact journey projection", () => {
     expect(compactJourney.options).toHaveLength(1);
     expect(compactJourney.options[0]).toMatchObject({
       id: "test:standard-packet",
-      consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
     });
+    expectPromptLevelReview(compactJourney, prompt);
     const compactJourneyJson = JSON.stringify(compactJourney);
     expect(compactJourneyJson.indexOf('"revealOption"')).toBeLessThan(
       compactJourneyJson.indexOf('"options"'),
@@ -377,7 +391,7 @@ describe("compact journey projection", () => {
           : undefined,
       );
       expect(option?.summary).not.toHaveProperty("checkFit");
-      expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      expect(option?.consequence).toBe("");
       const detail = compactJourneyStoryChoiceComparison(full, profile.id).inspectedOption;
       expect(detail.consequence).not.toContain(profile.preview);
       expect(detail.consequence).not.toContain(profile.consequence);
@@ -403,7 +417,7 @@ describe("compact journey projection", () => {
         immediateCost: fullOption.summary!.immediateCost,
         giveUp: `Leaves exposed: ${allocationOption.leaves_exposed}`,
       });
-      expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      expect(option?.consequence).toBe("");
       const detail = compactJourneyStoryChoiceComparison(full, allocationOption.id).inspectedOption;
       expect(detail.consequence).not.toContain(allocationOption.preview);
       expect(detail.consequence).not.toContain(allocationOption.consequence);
@@ -469,7 +483,7 @@ describe("compact journey projection", () => {
             },
           ]);
           expect(JSON.stringify(option?.summary)).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
-          expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+          expect(option?.consequence).toBe("");
           const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
           expect(detail.consequence).toContain(sourceOption.preview);
           expect(detail.consequence).toContain(sourceOption.consequence);
@@ -482,7 +496,7 @@ describe("compact journey projection", () => {
           immediateCost: option!.summary!.immediateCost,
           giveUp: sourceOption.tradeoff,
         });
-        expect(option?.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+        expect(option?.consequence).toBe("");
         const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
         expect(detail.consequence).not.toContain(sourceOption.preview);
         expect(detail.consequence).not.toContain(sourceOption.consequence);

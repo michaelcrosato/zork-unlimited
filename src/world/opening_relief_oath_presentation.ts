@@ -18,6 +18,39 @@ export type OpeningReliefOathStandardPacketContext = Readonly<{
   leadSource: OpeningLeadSource;
 }>;
 
+export const OPENING_RELIEF_OATH_CUSTOMIZE_REVEAL_ID = "customize_duty_and_evidence" as const;
+export const OPENING_RELIEF_OATH_CUSTOMIZE_LABEL = "Customize promise and report" as const;
+export const OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION =
+  "Open the four-plan outcome compass; this records only the review, then lets you choose a promise and report separately." as const;
+export const OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS =
+  "HUNT — Outcome: hold Cade's ground, herd, relief stores in combat. Cost or risk: wolves may die; failure risks cattle/line. Later: bloodshed alters Greenway work; damage remains. LURE — Outcome: move pack beyond breach; keep herd. Cost or risk: Cade's last feed, broken paling; first-cast foul risks two cattle. Later: broken boundary or scattered cattle alter Station response. DRIVE — Outcome: move people and herd clear; force the living pack away. Cost or risk: abandon the outer steading; crisis costs a wound, two cattle, or the rig. Later: the line and chosen loss remain. FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost or risk: no retreat; expose property for Cade's help or spend public seals without it. Later: terms remain; a no-loss hold opens no Cade repair dispatch. No plan is recommended or committed. Review recorded; no choice or decision accepted." as const;
+
+/**
+ * Project the authored four-plan compass only after the session has accepted
+ * this prompt's durable reveal receipt. The canonical pre-reveal prompt keeps
+ * only the short affordance, so full, compact, terminal, and UI surfaces share
+ * the same disclosure boundary without placing presentation copy in save data.
+ */
+export function withOpeningReliefOathFieldOutcomeCompass(
+  prompt: JourneyStoryChoicePrompt,
+  revealId: string,
+): JourneyStoryChoicePrompt {
+  const disclosure = prompt.progressiveDisclosure;
+  if (
+    prompt.kind !== "relief_oath" ||
+    !disclosure ||
+    disclosure.reveal.id !== OPENING_RELIEF_OATH_CUSTOMIZE_REVEAL_ID ||
+    revealId !== disclosure.reveal.id
+  ) {
+    return prompt;
+  }
+  const { progressiveDisclosure: _progressiveDisclosure, ...withoutDisclosure } = prompt;
+  return Object.freeze({
+    ...withoutDisclosure,
+    message: `${prompt.message} ${OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS}`,
+  }) as JourneyStoryChoicePrompt;
+}
+
 const STANDARD_PACKET_SUPPORT_COPY: Readonly<
   Record<
     string,
@@ -198,10 +231,9 @@ export function presentOpeningReliefOath(
         return Object.freeze({
           initialOptionIds: Object.freeze([standardPacket.id]),
           reveal: Object.freeze({
-            id: "customize_duty_and_evidence",
-            label: "Customize promise and report — compare all four field outcomes",
-            description:
-              "HUNT — Outcome: hold Cade's ground, herd, relief stores in combat. Cost or risk: wolves may die; failure risks cattle/line. Later: bloodshed alters Greenway work; damage remains. LURE — Outcome: move pack beyond breach; keep herd. Cost or risk: Cade's last feed, broken paling; first-cast foul risks two cattle. Later: broken boundary or scattered cattle alter Station response. DRIVE — Outcome: move people and herd clear; force the living pack away. Cost or risk: abandon the outer steading; crisis costs a wound, two cattle, or the rig. Later: the line and chosen loss remain. FORTIFY — Outcome: keep household, herd, and pack apart until dawn. Cost or risk: no retreat; expose property for Cade's help or spend public seals without it. Later: terms remain; a no-loss hold opens no Cade repair dispatch. No plan is recommended or committed. This read-only comparison changes no state.",
+            id: OPENING_RELIEF_OATH_CUSTOMIZE_REVEAL_ID,
+            label: OPENING_RELIEF_OATH_CUSTOMIZE_LABEL,
+            description: OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
             optionIds,
           }),
         });

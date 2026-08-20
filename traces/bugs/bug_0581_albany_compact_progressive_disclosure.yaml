@@ -1,0 +1,156 @@
+id: bug_0581
+title: "Albany compact setup repeated technical staging and exposed its outcome compass before reveal"
+pack: overworld (Albany registration through Station departure)
+reported_by: >
+  Valid ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-postseal-20260820-b on clean 81903b1; all ten
+  report digests support setup-density repetition, and seven runs directly
+  observed the four-plan outcome matrix before choosing its reveal affordance
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-postseal-20260820-b
+    tested_commit: 81903b1de5c1779b50f05c751610d8bc339c5052
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017
+    model: gpt-5.6-terra
+    play_mode: pure
+    start_surface: fresh_overworld
+    run_seeds: [2026082200, 2026082201, 2026082202, 2026082203, 2026082204, 2026082205, 2026082206, 2026082207, 2026082208, 2026082209]
+    report_sha256:
+      - 5599893977961aa8bfcfd0b6484f0c99a3a3b2d224980de0675c71fb2ea3d94b
+      - 71b605c3cfaa688139fe99b5c3ab76670dc75cf50241feb2dba9b25914eafeb7
+      - 90faa56893cfec59a634c9f85dff716a1611f4a689cebc0e2fdc9e73e121909d
+      - 99867ca81637af110bb000b2191759ef3950ae691e387ee5c42389458e442562
+      - 79170c6f37139d38ee2afd39d60446e16dbc999abcd9e49652b1d08656a4e88d
+      - 1b3971d9a0fadab9ece24091788d046599245b072cf610636bebbd9bc68677b0
+      - e03ef6eead870d1a3f42580a6ecebc6abf144f4da397c42c814fd03b655f9f24
+      - 5179caffc3b9fb861cc1d0a6ace0306ac72486f6926889a3fda917c82e8fc444
+      - 37d5ee60a0abab511653896d67e08ee3cff7cbda5823ffccb693f7e6b16e0a64
+      - a9dc4ebb3fb433953a089a6bae9583a5a94bb2efb0da4259ce26a55cf12a0552
+    pre_reveal_compass_rollouts:
+      - seed: 2026082200
+        provider_rollout_sha256: ee4fcc83d58fe80fa8ebfb390de962ddbed1868786fca21ee626f7aeaa09da22
+      - seed: 2026082201
+        provider_rollout_sha256: b5c07391a2afc3be923f633163d02b32746b871884f1ff24250db341bbca14ec
+      - seed: 2026082202
+        provider_rollout_sha256: ad707e586c218672787307ad59d8259606483a4ce76f0b7e8db0c7778e4cfaa6
+      - seed: 2026082203
+        provider_rollout_sha256: d943eb9c4b024a67076c40215a1cdc660bd4c79cc241128f256eb87ac0e27729
+      - seed: 2026082204
+        provider_rollout_sha256: 7bde8fd11f424b4504052f0756fb21e08c90a7a62a9847748fec56179b65c1c7
+      - seed: 2026082205
+        provider_rollout_sha256: 88f016c89d6031c3ed63fc7b1c960ae1c27a6d436956bbcb90294ebe9f027c32
+      - seed: 2026082209
+        provider_rollout_sha256: a76e12dea94a0e664bb3a957d044375a56206572236b8e1a6ef7623f549a9f82
+    metrics:
+      completed_runs: 10
+      stuck_runs: 0
+      clarity_total: 40
+      enjoyment_total: 40
+      required_total_per_metric: 42
+      setup_density_runs: 10
+      station_density_runs: 9
+      compact_or_legend_density_runs: 7
+      staged_consequence_repetitions_per_run: "5-13"
+      pre_reveal_compass_runs: 7
+      authority_certified: false
+    boundary: >
+      The pilot is schema-valid and all ten runs completed, but both scored gates
+      totalled 40 against the required 42 and the pilot is not authority-certified.
+      Every report digest supports the Albany setup-density cluster. The seven
+      pre-reveal outcome-compass observations come instead from the exact attested raw
+      rollouts listed above; report hashes alone do not prove that transport-level fact.
+      The 5-13 staging-line range is likewise a raw-rollout audit of the ten recorded
+      runs, not a claim about all possible playthroughs.
+
+symptom: >
+  Compact opening prompts repeated the same technical-staging sentence once on every
+  visible card, adding five to thirteen copies during each run. The progressive reveal's
+  description already contained the complete HUNT/LURE/DRIVE/FORTIFY matrix, so compact
+  MCP, terminal, and UI surfaces could show the long comparison before the player opened
+  it. After an accepted ordinary setup choice, the action result immediately reprinted
+  exact engine prose such as Field trigger, imported DEF, or Benefit/Cost/Boundary instead
+  of leading with the player-language card outcome. A revealed compact context also lost
+  its presentation state on refresh and could collapse back to one card.
+
+root_cause: >
+  Compact projection staged exact terms independently on every structured option while
+  the authored progressive-disclosure description doubled as both the short affordance
+  copy and the hidden comparison body. The first reveal response knew the requested id,
+  but rolling MCP context did not project the session's durable reveal receipt. Ordinary
+  accepted results had an optional player-first summary field available, but only the
+  ready-made dispatch populated it.
+
+fix: >
+  Keep each required structured-option consequence key but project it as an empty string,
+  and append one read-only exact-inspection instruction to the existing compact prompt
+  message. Give the initial customize affordance one short honest label and description.
+  After the session records the exact reveal receipt, remove that affordance from the
+  presentation, expose all four authored options, and append the unchanged four-plan
+  compass exactly once; refresh and export/restore derive the same view from that receipt.
+  Add player-first displaySummary to ordinary shipped Albany opening results from the
+  accepted card's human label, plain outcome where needed, and cost while preserving
+  the exact consequence, returned entry, persistent journal, and snapshot bytes.
+
+deterministic_witnesses:
+  - "initial full, compact MCP, terminal, and UI oath surfaces contain the short customize affordance and no four-plan compass text"
+  - "structured compact opening prompts carry one review instruction in message and retain consequence as a required empty-string key on every card"
+  - "legacy unstructured story cards retain their existing per-option staged consequence fallback"
+  - "the exact reveal records one inspectedStoryReveals receipt, changes the receipt-bound snapshot hash, accepts no gameplay decision, and does not advance the goal"
+  - "reveal response, immediate compact refresh, and export/restore refresh expose the same four option ids in authored order, no revealOption, and one compass"
+  - "re-opening the recorded exact reveal is hash-idempotent while forged reveal ids still fail"
+  - "ordinary background, promise, report, field-kit, relief-wagon, and riding results lead with displaySummary before their byte-exact consequence"
+  - "UI and CLI prefer displaySummary and do not immediately print the exact technical consequence when that summary exists"
+  - "full and compact action results preserve exact consequence ordering, and displaySummary is absent from persistent snapshots and journals"
+  - "Station compact context remains v47 and its six-row V4 tuple, actions, legend, departure-first guidance, and size budgets are unchanged"
+
+mechanics_unchanged:
+  - "story ids, kinds, reveal id, option ids, authored order, legal choices, action arguments, and comparison v10 shape"
+  - "costs, tradeoffs, checks, dispatch minutes, consequences, field plans, quest outcomes, and journey decision classifications"
+  - "accepted-choice journal entries, returned entry bytes, post-choice snapshots, content hashes, RNG, providers, and seeds"
+  - "Station V4 rows, tuple slots, actions, legend, v47 context signature, and departure behavior"
+
+nonclaims:
+  - "The failed pilot supports this correction target; it is not evidence that the uncommitted replacement improves clarity, enjoyment, or retention."
+  - "The reveal remains stateful: it durably records disclosure and therefore changes the snapshot hash, although it commits no option or field plan and accepts no journey decision."
+  - "Blank compact consequence values do not delete terms; exact read-only option inspection and the authoritative accepted consequence retain them."
+  - "No journey or comparison version is advanced because required keys and the v10 reviewOption shape remain intact."
+  - "No Station, Gallowmere gameplay/content, new-town, mechanics, content-pack, provider, seed, or feedback-selection change is included; the Gallowmere regression file is only a cross-surface compact-projection witness."
+
+production:
+  - blind-tester/prompt-overworld.md
+  - bin/overworld_play.ts
+  - bin/terminal_story_choice.ts
+  - src/mcp/journey_projection.ts
+  - src/mcp/compact_overworld_result.ts
+  - src/mcp/overworld_tool_handlers.ts
+  - src/world/opening_relief_oath_presentation.ts
+  - src/world/session.ts
+
+tests:
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/regression/gallowmere_starting_knife_truth.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/regression/registration_progressive_disclosure.test.ts
+  - tests/regression/shipped_compact_prose_fidelity.test.ts
+  - tests/starting_slice/lead_source_counterfactual.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/unit/compact_journey_projection.test.ts
+  - tests/unit/compact_overworld_result.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/terminal_story_choice_grouping.test.ts
+  - tests/unit/ui_overworld.test.ts
+  - tests/unit/ui_story_choice_summary_first.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/starting_slice/opening_dispatch_briefing.test.ts tests/starting_slice/lead_source_counterfactual.test.ts tests/unit/compact_journey_projection.test.ts tests/unit/compact_overworld_result.test.ts tests/unit/mcp_journey_surface.test.ts tests/unit/terminal_story_choice_grouping.test.ts tests/unit/ui_overworld.test.ts tests/unit/ui_story_choice_summary_first.test.ts
+  - npx vitest run tests/regression/blind_pure_prompt_contract.test.ts tests/regression/gallowmere_starting_knife_truth.test.ts tests/regression/mcp_pure_play_mode.test.ts tests/regression/overworld_cli.test.ts tests/regression/registration_progressive_disclosure.test.ts tests/regression/shipped_compact_prose_fidelity.test.ts
+  - git diff --check

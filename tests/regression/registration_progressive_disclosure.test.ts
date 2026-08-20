@@ -4,7 +4,7 @@ import { renderTerminalStoryChoiceComparison } from "../../bin/terminal_story_ch
 import {
   compactJourneyStoryChoiceComparison,
   compactJourneyStoryChoicePrompt,
-  JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
+  JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
 } from "../../src/mcp/journey_projection.js";
 import { createToolApi } from "../../src/mcp/tools.js";
 import { OverworldSession } from "../../src/world/session.js";
@@ -67,10 +67,11 @@ describe("Albany registration progressive disclosure", () => {
       expect(option.summary).not.toHaveProperty("fieldTrigger");
       expect(option.summary).not.toHaveProperty("fieldTriggerScope");
       expect(compared.summary).toEqual(option.summary);
-      expect(option.consequence).toBe(JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE);
+      expect(option.consequence).toBe("");
     }
 
     const compactJson = JSON.stringify(compact);
+    expect(compact.message).toBe(`${canonical.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`);
     for (const profile of REGISTRATION.profiles) {
       expect(compactJson).not.toContain(profile.preview);
       expect(compactJson).not.toContain(profile.consequence);

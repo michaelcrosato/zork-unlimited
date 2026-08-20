@@ -23,6 +23,8 @@ const COMPACT_MORE_CHOICES_INDEX = 12;
 export const JOURNEY_STORY_CHOICE_COMPARISON_VERSION = 10 as const;
 export const JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE =
   "Technical detail and complete terms are staged; inspect this exact option before choosing if you need them." as const;
+export const JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION =
+  "Choose from the player-facing summaries, or inspect one visible option for exact terms; inspection is read-only and commits nothing." as const;
 
 export type JourneyStoryChoiceComparisonOption = Readonly<{
   id: string;
@@ -176,6 +178,19 @@ function progressiveDisclosureRevealAffordance(
   });
 }
 
+function storyChoiceReviewAffordance(
+  prompt: JourneyStoryChoicePrompt,
+): JourneyStoryChoiceReviewAffordance {
+  return Object.freeze({
+    tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
+    storyChoiceId: prompt.id,
+    arguments: Object.freeze({ story_choice_id: prompt.id }),
+    argument: "option_id",
+    valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
+    readOnly: true,
+  });
+}
+
 export function journeyBlocksGameplay(
   journey: JourneyPresentation | CompactJourneyPresentation,
 ): boolean {
@@ -264,17 +279,22 @@ function compactJourneyStoryChoiceBriefSummary(
 export function compactJourneyStoryChoicePrompt(
   prompt: JourneyStoryChoicePrompt,
 ): CompactJourneyStoryChoicePrompt {
-  const options = journeyStoryChoiceOptionsForPresentation(prompt).map((option) =>
-    Object.freeze({
+  const usesPromptLevelReview =
+    prompt.kind !== undefined && prompt.options.every((option) => option.summary !== undefined);
+  const options = journeyStoryChoiceOptionsForPresentation(prompt).map((option) => {
+    const projected = {
       id: option.id,
       label: option.label,
       ...(option.group === undefined ? {} : { group: option.group }),
       ...(option.summary
         ? { summary: compactJourneyStoryChoiceBriefSummary(option.summary, prompt.kind) }
         : {}),
-      consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
-    }),
-  );
+      ...(usesPromptLevelReview
+        ? { consequence: "" }
+        : { consequence: JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE }),
+    };
+    return Object.freeze(projected);
+  });
   const {
     progressiveDisclosure: _progressiveDisclosure,
     options: _canonicalOptions,
@@ -283,6 +303,9 @@ export function compactJourneyStoryChoicePrompt(
   const revealOption = progressiveDisclosureRevealAffordance(prompt);
   return Object.freeze({
     ...withoutProgressiveDisclosure,
+    message: usesPromptLevelReview
+      ? `${prompt.message} ${JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION}`
+      : prompt.message,
     ...(revealOption ? { revealOption } : {}),
     options: Object.freeze(options),
   }) as CompactJourneyStoryChoicePrompt;
@@ -372,14 +395,7 @@ export function compactJourneyStoryChoiceComparison(
     message: prompt.message,
     ...(revealOption ? { revealOption } : {}),
     options: Object.freeze(options),
-    reviewOption: Object.freeze({
-      tool: INSPECT_OVERWORLD_SESSION_STORY_TOOL,
-      storyChoiceId: prompt.id,
-      arguments: Object.freeze({ story_choice_id: prompt.id }),
-      argument: "option_id",
-      valuesFrom: OVERWORLD_DEPARTURE_CHOICE_VALUES_FROM,
-      readOnly: true,
-    }),
+    reviewOption: storyChoiceReviewAffordance(prompt),
     inspectedOption: null,
   });
 }

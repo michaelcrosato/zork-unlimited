@@ -169,7 +169,10 @@ import {
   openingReliefOathOfferJournalEntry,
   openingReliefOathOfferJournalId,
 } from "./opening_relief_oath_journal.js";
-import { presentOpeningReliefOath } from "./opening_relief_oath_presentation.js";
+import {
+  presentOpeningReliefOath,
+  withOpeningReliefOathFieldOutcomeCompass,
+} from "./opening_relief_oath_presentation.js";
 import {
   openingRegistrationJournalEntry,
   openingRegistrationJournalId,
@@ -268,6 +271,7 @@ import {
   type JourneyPresentation,
   type JourneyPresentationContext,
   type JourneyStoryChoiceOption,
+  type JourneyStoryChoicePresentationKind,
   type JourneyStoryChoicePrompt,
 } from "./journey_contract.js";
 import {
@@ -407,6 +411,44 @@ function storyChoiceEntryForPresentation(
     option.summary !== undefined
     ? { ...presented, text: option.consequence }
     : presented;
+}
+
+const OPENING_STORY_CHOICE_DISPLAY_PREFIX: Readonly<
+  Record<JourneyStoryChoicePresentationKind, string>
+> = Object.freeze({
+  registration: "Background chosen",
+  relief_oath: "Wolf-Winter promise chosen",
+  lead_source: "Report chosen",
+  preparation: "Field kit chosen",
+  relief_allocation: "Relief wagon choice made",
+  ally: "Riding choice made",
+});
+
+const OPENING_STORY_CHOICE_PLAIN_OUTCOME: Readonly<Record<string, string>> = Object.freeze({
+  "albany:ally_june_cattle_first": "June joined you as the second rider.",
+  "albany:ally_june_relay_only": "June declined the subordinate relay and remained at the Station.",
+  "albany:ally_travel_solo": "June remained at the Station; you will ride alone.",
+});
+
+/**
+ * Lead ordinary Albany opening results with the same player-language terms the
+ * accepted card showed. Exact mechanical consequence and journal bytes remain
+ * separate and unchanged; legacy field-trigger summaries retain their old
+ * response shape rather than receiving an incomplete projection. The accepted
+ * receipt intentionally does not concatenate authored commitments/tradeoffs:
+ * some are exact field mechanics whose proper home is the consequence.
+ */
+function openingStoryChoiceDisplaySummary(
+  kind: JourneyStoryChoicePresentationKind | undefined,
+  option: JourneyStoryChoiceOption,
+): string | undefined {
+  const summary = option.summary;
+  if (kind === undefined || summary === undefined || summary.fieldTrigger !== undefined) {
+    return undefined;
+  }
+  const cost = summary.immediateCost.replace(/\.$/u, "");
+  const plainOutcome = OPENING_STORY_CHOICE_PLAIN_OUTCOME[option.id];
+  return `${OPENING_STORY_CHOICE_DISPLAY_PREFIX[kind]} — ${option.label}. ${plainOutcome ? `${plainOutcome} ` : ""}Cost: ${cost}.`;
 }
 
 const DEFAULT_CAMPAIGN_CHARACTER_SERIALIZED = serializeCampaignCharacterState(
@@ -1448,9 +1490,10 @@ export class OverworldSession {
    */
   revealJourneyStory(storyChoiceId: string, revealId: string): JourneyStoryChoicePrompt {
     const story = this.inspectJourneyStory(storyChoiceId);
+    if (this.storyRevealWasInspected(storyChoiceId, revealId)) return story;
     journeyStoryChoiceOptionsForPresentation(story, revealId);
     this.rememberStoryReveal(storyChoiceId, revealId);
-    return story;
+    return this.inspectJourneyStory(storyChoiceId);
   }
 
   /** Validate an option-detail request against the session's durable reveal receipt. */
@@ -1912,7 +1955,16 @@ export class OverworldSession {
   }
 
   journey(): JourneyPresentation {
-    return journeyPresentation(this.journeyState, this.journeyPresentationContext());
+    const journey = journeyPresentation(this.journeyState, this.journeyPresentationContext());
+    const story = journey.storyChoice;
+    const disclosure = story?.progressiveDisclosure;
+    if (!story || !disclosure || !this.storyRevealWasInspected(story.id, disclosure.reveal.id)) {
+      return journey;
+    }
+    const revealedStory = withOpeningReliefOathFieldOutcomeCompass(story, disclosure.reveal.id);
+    return revealedStory === story
+      ? journey
+      : Object.freeze({ ...journey, storyChoice: revealedStory });
   }
 
   journeyExitReceipt(): JourneyExitReceipt | null {
@@ -2075,6 +2127,7 @@ export class OverworldSession {
     if (!option) {
       throw new Error(`Story choice "${storyChoice.id}" does not offer option "${choiceId}".`);
     }
+    const displaySummary = openingStoryChoiceDisplaySummary(storyChoice.kind, option);
     if (pullBased && storyChoice.kind === "preparation") {
       this.offerOpeningPreparationAtDeparture();
     } else if (pullBased && storyChoice.kind === "relief_allocation") {
@@ -2123,6 +2176,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2217,6 +2271,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2275,6 +2330,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2330,6 +2386,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2377,6 +2434,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),
@@ -2424,6 +2482,7 @@ export class OverworldSession {
       return Object.freeze({
         storyChoiceId: storyChoice.id,
         choiceId,
+        ...(displaySummary ? { displaySummary } : {}),
         consequence: option.consequence,
         goal: this.journey().goal,
         entry: Object.freeze(storyChoiceEntryForPresentation(entry, option)),

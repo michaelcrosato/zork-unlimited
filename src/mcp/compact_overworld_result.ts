@@ -244,7 +244,7 @@ function compactOverworldJournalEntry(entry: {
 }
 
 /**
- * Keep the selected consequence as the authoritative exact receipt. A rare
+ * Keep the selected consequence as the authoritative exact receipt. An optional
  * displaySummary leads with player-language context while preserving that receipt
  * separately and byte-for-byte. Reduce the presented journal record to the same
  * tuple used by rolling compact context.

@@ -974,7 +974,9 @@ export function createOverworldToolHandlers(deps: OverworldToolHandlerDeps) {
           args.option_id !== undefined
             ? compactJourneyStoryChoiceComparison(story, args.option_id)
             : args.reveal_id !== undefined
-              ? compactJourneyStoryChoiceComparison(story, undefined, args.reveal_id)
+              ? story.progressiveDisclosure
+                ? compactJourneyStoryChoiceComparison(story, undefined, args.reveal_id)
+                : compactJourneyStoryChoiceComparison(story)
               : compactJourneyStoryChoiceComparison(story),
       } as OverworldJourneyStoryInspectionResponse<Args>;
       return response;

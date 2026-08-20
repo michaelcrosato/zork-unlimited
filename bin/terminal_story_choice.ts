@@ -303,7 +303,7 @@ export async function runTerminalStoryChoiceController(args: {
   write: (text: string) => void;
   reject: (message: string) => void;
   choose: (option: JourneyStoryChoiceOption) => void;
-  reveal?: (revealId: string) => void;
+  reveal?: (revealId: string) => JourneyStoryChoicePrompt | void;
   presentedOptions?: () => readonly JourneyStoryChoiceOption[];
   allowComparisonExit?: boolean;
   onAuxiliary?: (
@@ -317,6 +317,7 @@ export async function runTerminalStoryChoiceController(args: {
 
   let inspected: StructuredJourneyStoryChoiceOption | null = null;
   let revealedStoryChoiceId: string | undefined;
+  let presentedPrompt = args.prompt;
   const progressiveDisclosure = args.prompt.progressiveDisclosure;
   const requiresComparisonFirst = progressiveDisclosure?.initialOptionIds.length === 0;
   const revealCommand = requiresComparisonFirst ? "compare" : "customize";
@@ -396,12 +397,12 @@ export async function runTerminalStoryChoiceController(args: {
         args.reject("Use `back` before comparing individual promises.");
         continue;
       }
-      args.reveal?.(progressiveDisclosure.reveal.id);
+      presentedPrompt = args.reveal?.(progressiveDisclosure.reveal.id) ?? presentedPrompt;
       revealedStoryChoiceId = progressiveDisclosure.reveal.id;
       args.write(
-        renderTerminalStoryChoiceComparison(args.prompt, {
+        renderTerminalStoryChoiceComparison(presentedPrompt, {
           allowComparisonExit: args.allowComparisonExit === true,
-          revealId: revealedStoryChoiceId,
+          ...(presentedPrompt.progressiveDisclosure ? { revealId: revealedStoryChoiceId } : {}),
         }),
       );
       continue;

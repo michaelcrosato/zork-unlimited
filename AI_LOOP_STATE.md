@@ -169,3 +169,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat: the player never entered Advocate's Case, so Oswin causality remains regression/trace-backed; the run also broke the Full Compact promise through Cade's household-shutter terms, so it proves integration rather than that duty outcome.
 - Feedback/next: pre-seal status is 2/3 with no compile and seal should leave three pending reports; completing visible story-inspection arguments is the strongest repeated affordance seam, while the false carried-charter `ending_expelled` line remains a bounded Advocates follow-up.
 - Guard: 13 focused Advocates tests, exact `c3dd6268…` validation, 557 bug traces, both 6,000-step crawls, exact health (448 files/3,889 tests), UI typecheck, all 12 packs, cycle-start integrity, and pure provenance are green.
+## AFK Cycle 2026-08-20T21-27-30-688Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-20T21-27-30-688Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-06ad0603 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

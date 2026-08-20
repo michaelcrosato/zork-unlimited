@@ -6,6 +6,10 @@ import { describe, expect, it } from "vitest";
 import { createServer } from "vite";
 
 import { OverworldSession } from "../../src/world/session.js";
+import {
+  OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION,
+  OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS,
+} from "../../src/world/opening_relief_oath_presentation.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -46,12 +50,14 @@ function registrationJourney(): ReturnType<OverworldSession["journey"]> {
 
 function reliefOathJourney(
   profileId = WORLD.opening_registration!.profiles[0]!.id,
+  reveal = false,
 ): ReturnType<OverworldSession["journey"]> {
   const session = new OverworldSession(WORLD);
   const registration = WORLD.opening_registration!;
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(registration.contact);
   session.chooseJourneyStory(profileId);
+  if (reveal) revealCurrentStoryOptions(session);
   return session.journey();
 }
 
@@ -445,11 +451,14 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
         );
       }
       const revealRequests: Array<[string, string]> = [];
-      const renderStandardPacket = async (visibleOptionIds?: readonly string[]): Promise<void> => {
+      const renderStandardPacket = async (
+        renderedJourney = standardPacketJourney,
+        visibleOptionIds?: readonly string[],
+      ): Promise<void> => {
         await act!(async () => {
           root!.render(
             react.createElement(module.JourneyStoryChoiceScreen, {
-              journey: standardPacketJourney,
+              journey: renderedJourney,
               onChoose: (choiceId: string) => selected.push(choiceId),
               onReveal: (storyChoiceId: string, revealId: string) => {
                 revealRequests.push([storyChoiceId, revealId]);
@@ -518,9 +527,8 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       const describedBy = rootElement.querySelector(`[id="${descriptionId}"]`) as {
         textContent: string | null;
       } | null;
-      expect(describedBy?.textContent).toBe(
-        standardPacketChoice.progressiveDisclosure.reveal.description,
-      );
+      expect(describedBy?.textContent).toBe(OPENING_RELIEF_OATH_CUSTOMIZE_DESCRIPTION);
+      expect(rootElement.textContent).not.toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
       await act(async () => {
         standardPacketButtons[0]!.click();
       });
@@ -533,39 +541,25 @@ describe("JourneyStoryChoiceScreen summary-first cards", () => {
       expect(revealRequests).toEqual([
         [standardPacketChoice.id, standardPacketChoice.progressiveDisclosure.reveal.id],
       ]);
-      await renderStandardPacket([
+      const revealedStandardPacketJourney = reliefOathJourney("albany:road_warden", true);
+      await renderStandardPacket(revealedStandardPacketJourney, [
         ...standardPacketChoice.progressiveDisclosure.initialOptionIds,
         ...standardPacketChoice.progressiveDisclosure.reveal.optionIds,
       ]);
-      const expandedCustomize = rootElement.querySelector(
-        ".journey-choice-progressive-disclosure > button",
-      ) as { click: () => void; getAttribute: (name: string) => string | null } | null;
-      if (!expandedCustomize) throw new Error("Expected the expanded disclosure button.");
-      expect(expandedCustomize.getAttribute("aria-expanded")).toBe("true");
-      await act(async () => {
-        expandedCustomize.click();
-      });
+      expect(rootElement.textContent).toContain(OPENING_RELIEF_OATH_FIELD_OUTCOME_COMPASS);
+      expect(rootElement.querySelector(".journey-choice-progressive-disclosure")).toBeNull();
       expect(selected).toEqual(selectedBeforeCustomize);
       expect(revealRequests).toHaveLength(1);
       const revealedCards = Array.from(
-        rootElement.querySelectorAll(`[id="${customSectionId}"] .journey-choice-card > button`),
+        rootElement.querySelectorAll(".journey-choice-actions > .journey-choice-card > button"),
       ) as Array<{ textContent: string | null; click: () => void }>;
-      expect(revealedCards).toHaveLength(
-        standardPacketChoice.progressiveDisclosure.reveal.optionIds.length,
-      );
-      expect(revealedCards).toHaveLength(3);
+      expect(revealedCards).toHaveLength(standardPacketChoice.options.length);
+      expect(revealedCards).toHaveLength(4);
       expect(revealedCards.map((card) => card.textContent)).toEqual(
-        standardPacketChoice.progressiveDisclosure.reveal.optionIds.map((optionId) =>
-          expect.stringContaining(
-            standardPacketChoice.options.find((option) => option.id === optionId)!.label,
-          ),
-        ),
-      );
-      expect(revealedCards.map((card) => card.textContent)).not.toEqual(
-        expect.arrayContaining([expect.stringContaining(roleShortcut.label)]),
+        standardPacketChoice.options.map((option) => expect.stringContaining(option.label)),
       );
       await act(async () => {
-        revealedCards[0]!.click();
+        revealedCards[1]!.click();
       });
       expect(selected.at(-1)).toBe(standardPacketChoice.progressiveDisclosure.reveal.optionIds[0]);
 

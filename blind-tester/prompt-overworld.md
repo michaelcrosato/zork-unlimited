@@ -102,18 +102,22 @@ WHEN TO CONTINUE OR END
   `session_id`, passing that option's visible `id` value as the tool's `choice`
   argument.
 - The game may present `journey.storyChoice` after you continue. Choose between
-  its visible comparison cards as you would in the human UI. The compact
-  consequence line stages rather than repeats the complete terms. You may call
+  its visible comparison cards as you would in the human UI. The compact prompt
+  carries one review instruction in its message. On structured opening cards,
+  each required per-option `consequence` is intentionally blank instead of
+  repeating technical staging prose; choose from the summaries or inspect one
+  exact option. You may call
   `mcp__adventureforge__inspect_overworld_session_story` with the visible
   `journey.storyChoice.id` for the comparison, then call it again with one exact
   option `id` as `option_id` to read only that option's new detail. Reading
-  either view does not change the game. A compact inspection does not repeat the
+  either view commits no choice. A compact inspection does not repeat the
   Station board or other world context; retain the current state and comparison
   already shown. A preparation, relief-allocation, or ally option detail may
   include authenticated selected terms. Do not expand every option.
   If a visible `revealOption` is present, it is a read-only comparison expansion,
-  not a choice. You may call its named tool with its exact `story_choice_id` and
-  `reveal_id` arguments, then choose only from the expanded visible
+  not a choice. Opening it records that the comparison was viewed but accepts no
+  gameplay decision. You may call its named tool with its exact `story_choice_id`
+  and `reveal_id` arguments, then choose only from the expanded visible
   `story.options`; never invent a reveal id.
   Then call
   `mcp__adventureforge__choose_overworld_session_story` with the same overworld

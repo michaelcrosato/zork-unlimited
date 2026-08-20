@@ -102,6 +102,7 @@ describe("compactOverworldJourneyStoryChoiceResult", () => {
     const displaySummary =
       "Ready-made dispatch chosen — Background, promise, and report are already set.";
     const result = { ...storyChoiceResult(consequence), displaySummary };
+    const before = structuredClone(result);
 
     const compact = compactOverworldJourneyStoryChoiceResult(result);
     const serialized = JSON.stringify(compact);
@@ -111,6 +112,8 @@ describe("compactOverworldJourneyStoryChoiceResult", () => {
     expect(serialized.indexOf('"displaySummary"')).toBeLessThan(
       serialized.indexOf('"consequence"'),
     );
+    expect(compact.consequence).toBe(result.consequence);
+    expect(result).toEqual(before);
   });
 
   it("preserves distinct campaign journal prose without truncating either receipt", () => {

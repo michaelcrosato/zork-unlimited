@@ -905,7 +905,7 @@ describe("overworld_play CLI (scripted mode)", () => {
     if (!contact || !registration) throw new Error("Expected Albany registration.");
     expected.talkToCharacter(contact.id);
     const option = registration.profiles[1]!;
-    expected.chooseJourneyStory(option.id, registration.id);
+    const expectedResult = expected.chooseJourneyStory(option.id, registration.id);
 
     const inspected = runCli([
       "--commands",
@@ -915,6 +915,11 @@ describe("overworld_play CLI (scripted mode)", () => {
     expect(outputSnapshotHashes(inspected.output)).toEqual([expected.snapshotHash()]);
     expect(inspected.output).toContain(`! Story choice detail — ${option.title}`);
     expect(inspected.output).toContain(`Chosen: ${option.title}.`);
+    const acceptedStart = inspected.output.indexOf(`Chosen: ${option.title}.`);
+    const acceptedEnd = inspected.output.indexOf("\n--- Journey ---", acceptedStart);
+    const acceptedOutput = inspected.output.slice(acceptedStart, acceptedEnd);
+    expect(acceptedOutput).toContain(expectedResult.displaySummary!);
+    expect(acceptedOutput).not.toContain(`Consequence: ${expectedResult.consequence}`);
   });
 
   it("rejects missing and malformed loads inside a mandatory comparison without losing state", () => {
@@ -1023,7 +1028,7 @@ describe("overworld_play CLI (scripted mode)", () => {
       .journey()
       .storyChoice?.options.find((option) => option.id === allyOption.id);
     if (!presentedAllyOption) throw new Error("Expected June's presented cattle-first option.");
-    expected.chooseJourneyStory(allyOption.id, ally.id);
+    const expectedAllyResult = expected.chooseJourneyStory(allyOption.id, ally.id);
     const expectedSnapshot = expected.snapshot();
     expect(expectedSnapshot.character.companions).toContain(ally.ally_npc_id);
     expect(expectedSnapshot.character.promises).toContainEqual({
@@ -1097,7 +1102,12 @@ describe("overworld_play CLI (scripted mode)", () => {
       expect(juneFlowOutput).toContain(`Inspect: \`inspect ${allyOption.id}\``);
       expect(juneFlowOutput).toContain("ready to depart now alone, or ask June Pike to ride");
       expect(run.output).toContain(`Chosen: ${allyOption.title}.`);
-      expect(run.output).toContain(`Consequence: ${presentedAllyOption.consequence}`);
+      const chosenStart = run.output.indexOf(`Chosen: ${allyOption.title}.`);
+      const chosenEnd = run.output.indexOf("\n--- Journey ---", chosenStart);
+      const chosenOutput = run.output.slice(chosenStart, chosenEnd);
+      expect(chosenOutput).toContain(expectedAllyResult.displaySummary!);
+      expect(chosenOutput).not.toContain(`Consequence: ${presentedAllyOption.consequence}`);
+      expect(chosenOutput).not.toMatch(/\b(?:DRIVE|FORTIFY|Overrun|pressure|HP|DEF|import)\b/iu);
       expect(outputSnapshotHashes(run.output)).toEqual([expected.snapshotHash()]);
     } finally {
       rmSync(temp, { recursive: true, force: true });

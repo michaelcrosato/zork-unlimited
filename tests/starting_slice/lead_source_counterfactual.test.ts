@@ -322,6 +322,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(selected.result).toEqual({
       storyChoiceId: LEAD_SOURCE.id,
       choiceId: ROWAN_SOURCE,
+      displaySummary: "Report chosen — Leave on Rowan's Civic Docket. Cost: no added time and $0.",
       consequence: sourceOption.consequence,
       goal: pending.pendingJourney.goal,
       entry: {
@@ -333,6 +334,11 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
       journeyDecision: expectedJourneyDecision,
     });
     expect(selected.journeyDecision).toEqual(expectedJourneyDecision);
+    expect(selected.result.displaySummary).not.toContain(selected.result.consequence);
+    const serializedResult = JSON.stringify(selected.result);
+    expect(serializedResult.indexOf('"displaySummary"')).toBeLessThan(
+      serializedResult.indexOf('"consequence"'),
+    );
     expect(selected.journey.acceptedDecisions).toBe(pending.pendingJourney.acceptedDecisions + 1);
     expect(selected.journey.storyChoice).toBeNull();
     expect(questIds(selected.observation)).toContain(WOLF_ID);
@@ -341,6 +347,7 @@ describe("SS-F03 — Albany lead-source counterfactual", () => {
     expect(
       accepted.snapshot.journalEntries.find((entry) => entry.id === expectedJournal.id)?.text,
     ).toBe(expectedJournal.text);
+    expect(JSON.stringify(accepted.snapshot)).not.toContain(selected.result.displaySummary);
     expect(() =>
       api.choose_overworld_session_story({
         ...FULL_OVERWORLD,
