@@ -80,20 +80,20 @@ const SUPPORT_COPY: Readonly<
     label: "One field kit",
     purpose:
       "Field kit: optionally choose one specialist kit for a named danger at Cade's steading.",
-    inlinePurpose: "Choose one specialist kit for a named danger.",
+    inlinePurpose: "Optional kit: compare without choosing; covers one named danger.",
     detailHint: "Compare kits only if you want their exact cost and field use.",
   },
   relief_allocation: {
     label: "Albany's last relief wagon",
     purpose:
       "Relief wagon: optionally send Albany's last wagon to one crisis; the other two go without it.",
-    inlinePurpose: "Send Albany's last relief wagon to one crisis.",
+    inlinePurpose: "Optional wagon: compare without choosing; send Albany's last to one crisis.",
     detailHint: "Compare destinations only if you want to decide who is protected.",
   },
   field_team: {
     label: "Second rider",
     purpose: "Second rider: optionally ask about cattle-first authority, or ride alone.",
-    inlinePurpose: "Ask about cattle-first help for one line, never combat.",
+    inlinePurpose: "Optional rider: ask June before choosing; one cattle line, never combat.",
     detailHint: "Talk only to compare exact terms; this adds no combat power.",
   },
 });

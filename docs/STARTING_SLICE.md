@@ -237,9 +237,12 @@ it is **not yet milestone-certified**:
   complete canonical response, as do full and non-pure callers; an unexpected
   post-mutation board projection also degrades to that complete response rather
   than turning a successful receipt into an error. After
-  review, the same V5 five-field optional rows, purposes, and authenticated
-  inspect/talk actions return byte-for-byte in their established order. Selected and
-  non-actionable rows remain null/null. The shared authenticated dispatch
+  review, the same V5 five-field optional rows and authenticated inspect/talk
+  actions return in their established order. Each open row now starts its
+  purpose with `Optional kit`, `Optional wagon`, or `Optional rider`, then says
+  that inspection or June's talk happens before choosing; the named danger,
+  one-crisis wagon boundary, one cattle-line boundary, and no-combat boundary
+  remain explicit. Selected and non-actionable rows remain null/null. The shared authenticated dispatch
   briefing appears once on the compact board; only then is that exact prefix
   removed from each compact road, so all route-specific time, supply, fatigue,
   alarm, and weather facts remain. This progressive disclosure is compact-MCP-
@@ -249,9 +252,11 @@ it is **not yet milestone-certified**:
   the aggregate is 34,535 bytes, below sealed V6's 34,868 and V5's 35,207.
   First-Station prompt + catalogue + 4,928-byte context + newly delivered legend
   is 38,162 bytes versus sealed V6's 38,495, V5's 38,619, and the frozen v47/V4
-  baseline 39,261. The exact current V1 reveal envelope is 1,023 bytes under its
-  1,100-byte regression budget; the ten base-bound pilot counterfactuals are
-  1,020–1,034. This is not a global runtime limit, and full detail-expansion
+  baseline 39,261. The exact current V1 reveal envelope is 1,088 bytes under its
+  1,100-byte regression budget. Substituting only the three current row-purpose
+  literals into the ten authenticated `d8bf7d7a` reveal bodies serializes them
+  at 1,097–1,099 bytes; the tested revision itself returned 1,032–1,034 before
+  this correction. This is not a global runtime limit, and full detail-expansion
   responses are intentionally outside that narrow budget. The receipt may change the save
   hash but accepts no gameplay or journey decision. Actions, terms, mechanics,
   costs, gameplay state/effects except that receipt, RNG, outcomes, and
@@ -455,6 +460,22 @@ exact Aid-Only clean-cast boundary and Hayden split-rail sequence remain
 unchanged. No glossary, new choice, mechanic, route, support expansion, or
 decision is added; exact source/presentation matching and the selected-receipt
 regressions keep this a copy-only correction.
+
+The following exact-build pilot diversified that opening into six Road-Wardens
+and four Ledger Advocates while preserving 10/10 Wolf-Winter completion, all
+four strategies, and clean Albany foldback, but it again missed clarity,
+enjoyment, and initial-goal continuation. Every player opened the same Station
+support reveal once; nine reports explicitly named Station, dispatch, or linked
+setup density, while the remaining report named broader comparison and compact
+density. The hidden V6 overview already kept Road-Wardens out of unmatched kit
+comparisons—none of six chose a kit, while all four Mediation-aligned Ledger
+Advocates did—so that overview and its Repair/Streetwise/Mediation scent remain
+byte-identical. Only the three post-reveal purpose cells now lead with the plain
+optional category and make the read-before-commit boundary explicit. Board
+shape/version, receipt/modal envelopes, ids, actions, support breadth, costs,
+checks, effects, roads, strategies, outcomes, Continue/End, and Gallowmere are
+unchanged; this failed AI pilot diagnoses the copy target without validating
+the replacement or constituting human research.
 
 The adjacent-plan-recall follow-up keeps that summary-first boundary while
 removing the remaining cross-screen memory test at Albany Station. Every

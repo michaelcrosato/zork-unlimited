@@ -2980,27 +2980,27 @@ describe("MCP pure play mode", () => {
               "preparation",
               "open_optional",
               null,
-              "Choose one specialist kit for a named danger.",
+              "Optional kit: compare without choosing; covers one named danger.",
               ["inspect", "albany:wolf_preparation"],
             ],
             [
               "relief_allocation",
               "open_optional",
               null,
-              "Send Albany's last relief wagon to one crisis.",
+              "Optional wagon: compare without choosing; send Albany's last to one crisis.",
               ["inspect", "albany:wolf_relief_allocation"],
             ],
             [
               "field_team",
               "open_optional",
               null,
-              "Ask about cattle-first help for one line, never combat.",
+              "Optional rider: ask June before choosing; one cattle line, never combat.",
               ["talk", "albany_city__transport_hub__june_pike", "June Pike"],
             ],
           ]),
         );
         const revealReceiptBytes = Buffer.byteLength(JSON.stringify(revealed), "utf8");
-        expect(revealReceiptBytes).toBe(1_023);
+        expect(revealReceiptBytes).toBe(1_088);
         expect(revealReceiptBytes).toBeLessThanOrEqual(1_100);
         const repeatedReveal = textPayload(
           await client.callTool({

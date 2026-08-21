@@ -329,13 +329,13 @@ describe("Station dispatch board", () => {
     ];
     const frozenV5RowBytes: Readonly<Record<number, number>> = Object.freeze({
       0: 395,
-      1: 451,
-      2: 456,
-      3: 512,
-      4: 478,
-      5: 534,
-      6: 539,
-      7: 595,
+      1: 470,
+      2: 485,
+      3: 560,
+      4: 495,
+      5: 570,
+      6: 585,
+      7: 660,
     });
     expect(PREPARATION.profiles.map((profile) => profile.check_disclosure?.skill_label)).toEqual([
       "Repair",
@@ -398,7 +398,7 @@ describe("Station dispatch board", () => {
               "preparation",
               "open_optional",
               null,
-              "Choose one specialist kit for a named danger.",
+              "Optional kit: compare without choosing; covers one named danger.",
               ["inspect", PREPARATION.id],
             ],
         testCase.selected.includes("relief_allocation")
@@ -407,7 +407,7 @@ describe("Station dispatch board", () => {
               "relief_allocation",
               "open_optional",
               null,
-              "Send Albany's last relief wagon to one crisis.",
+              "Optional wagon: compare without choosing; send Albany's last to one crisis.",
               ["inspect", RELIEF_ALLOCATION.id],
             ],
         testCase.selected.includes("field_team")
@@ -416,7 +416,7 @@ describe("Station dispatch board", () => {
               "field_team",
               "open_optional",
               null,
-              "Ask about cattle-first help for one line, never combat.",
+              "Optional rider: ask June before choosing; one cattle line, never combat.",
               ["talk", ALLY.contact, "June Pike"],
             ],
       ];
@@ -597,21 +597,21 @@ describe("Station dispatch board", () => {
         "preparation",
         "open_optional",
         null,
-        "Choose one specialist kit for a named danger.",
+        "Optional kit: compare without choosing; covers one named danger.",
         ["inspect", PREPARATION.id],
       ],
       [
         "relief_allocation",
         "open_optional",
         null,
-        "Send Albany's last relief wagon to one crisis.",
+        "Optional wagon: compare without choosing; send Albany's last to one crisis.",
         ["inspect", RELIEF_ALLOCATION.id],
       ],
       [
         "field_team",
         "open_optional",
         null,
-        "Ask about cattle-first help for one line, never combat.",
+        "Optional rider: ask June before choosing; one cattle line, never combat.",
         ["talk", ALLY.contact, "June Pike"],
       ],
     ]);

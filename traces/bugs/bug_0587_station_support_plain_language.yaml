@@ -1,0 +1,219 @@
+id: bug_0587
+title: "Name each optional Station support row before its pre-choice action"
+pack: overworld (Albany Station optional support reveal)
+reported_by: >
+  Valid ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-d8bf7d7a-20260821T172508Z on exact clean
+  d8bf7d7a3787d7d38832f0ec1882a9019f9ce4e8; every report, run-evidence,
+  provider-event, rollout, and capture hash below matched its fleet-manifest attestation
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-d8bf7d7a-20260821T172508Z
+    stamp: 20260821T173510Z
+    tested_commit: d8bf7d7a3787d7d38832f0ec1882a9019f9ce4e8
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b
+    model: gpt-5.6-terra
+    provider: codex
+    launcher_kind: official_npm_shim
+    codex_cli_version: 0.146.0
+    codex_client_authority_sha256: a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8
+    play_mode: pure
+    start_surface: fresh_overworld
+    authority_certified: false
+    valid: true
+    passed: false
+    no_retry_or_recovery: true
+    artifact_hashes:
+      manifest_sha256: cb1ec7e74b61903866658c16c64a204556cd4d01ae00fdf650e943ce8eaa2ca4
+      summary_sha256: 0e84b6f4bfa5c1bdd0807cdfb163b7a92562dcb93e1769276f277bc7e872baa2
+      starting_slice_pilot_sha256: 83e01d6d98395dd000fd004bc1036260843e8fa7438711de164c9ac9dc92d20d
+      authority_proof_sha256: 5098ddb038251676586387614a3cf29f61cc0b9ebe5e088278f2e463f38f0078
+    reports:
+      - seed: 821172508000
+        report_sha256: ac03f9bf523a1da770f9848182e508015ee0237700649aebf8d338d5ea55ff79
+        run_evidence_sha256: 05d84e794d2398b92f8e27c0fd2e3fcb15164a2dbc76eaea7b48508732306a89
+        provider_events_sha256: 4e0aa91981c9ccf1b5378553f49b87f2de98ed2492a4ef45408813b8c83c42d6
+        provider_rollout_sha256: 26393c89633d60cd3402490f8b1740fdff9e49a64bf0d1a31a9cf260986ee7c5
+        provider_capture_sha256: ffec9bea9942a15e05d4cc7a8d26ff5a88b6a06ab818cb8b3aa8ffd869c7df7d
+      - seed: 821172508001
+        report_sha256: 63059e0591adae8ad4f45fc0ac1faf5555343b42edd2d3b24c44cd68d960fab0
+        run_evidence_sha256: 75a32fb37b4dc60b5c1fdf7faf4f8237fa590fef9f92645f047b9eb2392afa8f
+        provider_events_sha256: c74b68ea5becbbfde30ca8788da44402c754498bfed98f5fe519f31580e7caa0
+        provider_rollout_sha256: 22583f457fd2d7682ab7a373626b4afe7647942e390dd94f5903ebf0fb80cc89
+        provider_capture_sha256: 743bc6bc000b5ef6417961dec07332aef3dfa077b3d218618116038635f18d2d
+      - seed: 821172508002
+        report_sha256: 915e09ba8257170a022b61e01f9fec93b3b5f00c27c8ddab68881d26056ab224
+        run_evidence_sha256: e7768bf73756ef116059c9b10c31ce5d32ed409ae3e33bdd527af3632d9e7e0f
+        provider_events_sha256: e613e44ab12dcaa2d05e851b0d5a388c6b969d40893705d3b31d39f672976c5e
+        provider_rollout_sha256: 9dd0bf6e1143f2894bcdc12b0c74e414a9b3d42f8b490458412e6e58013beaa4
+        provider_capture_sha256: 4a07f77a79e4b3b85730df759b6b938a5a6e3d27f6cb7cc8354318e04071e66f
+      - seed: 821172508003
+        report_sha256: 1ace7ca4f6cb21a2edfd8149002bf2805aa93929579dfd3ec458c8da9c15a052
+        run_evidence_sha256: 7e5d8f5a87442bc49686cc8916bc18c934864606ae7be0654e9d09f90449af95
+        provider_events_sha256: ef58ef0baee932e893d15897bf7fd86d05436738487ba3efdff1f024c59cde0d
+        provider_rollout_sha256: de6a2cc471e369a05c9a8b2257c2af8d4da5123f6edf6e076670b3a142cf7beb
+        provider_capture_sha256: f93020f2beeaacba06d36dd34d63ec2d1606c4e2c8d7ed5efa1d9d128113ba9e
+      - seed: 821172508004
+        report_sha256: 82cc66b90cc18201ddddf1c0038be99def12c64a419cc320badc00704d48a91e
+        run_evidence_sha256: 8a8df2a8ac27b26896687e7b97ebe740503a67adbc0d77d25d827db75dcc13a6
+        provider_events_sha256: 2c6d3c889eb7b849fb20e4dafee81c0cb39ae51e1c84934fda964495632bd67a
+        provider_rollout_sha256: d0ad4f62af908348c16cb25e1d3e61ac308864c708672a342a3b5492e853f4b8
+        provider_capture_sha256: 115ba04bd95a31bac09c3b2a2f81c4a565b97f2dab0d729e247ccc48e7e928da
+      - seed: 821172508005
+        report_sha256: d5174e8e114a8a96b16687b4880812cf743ad9cdc4ac093c23a6d28d2c31f8d3
+        run_evidence_sha256: 0a1618c63054b2e498bd4bd109b54ef55dadf63a727fbfe047b905fbae7e6369
+        provider_events_sha256: d70c27f580c468d8fdd17ede2ec75dd14de342d6156ca80cbec80516b8efeba9
+        provider_rollout_sha256: 4c0d3f22ca1f47303216840f4e29a5aa1ba39cfea7e303e2cbcc53a65df82aa5
+        provider_capture_sha256: 5ee00b4046337c2af16e84f76c5d481e978eb460ff934eeff646827b5c9d4b58
+      - seed: 821172508006
+        report_sha256: 5b25787c50520fdfff41ebae2b5d6e45d575d228ac84be074d71944fb2d44708
+        run_evidence_sha256: 8b3432e3c64baea563a29de81b88f9a5f86f9134030af25d594ab958d6ce426d
+        provider_events_sha256: e5cfcd574053566dfb24484340446754654f2725ef5872c6378ae897fb5f7d33
+        provider_rollout_sha256: 0c178e08f087c39412f5bd801560c52ced59e3283afd79381176b262a76cc84a
+        provider_capture_sha256: 8b3a6bc28a5fb920fa4e3b4070ded10f3ec54553d3813865c09c9692dea320d9
+      - seed: 821172508007
+        report_sha256: 0448f676b46900017f9ee416fcbbbe1971b8ae57e327da3f1db12ca331babd86
+        run_evidence_sha256: 83fc924053886ea3cf74954c7ee94da96abf174c7b07990f5870513f74f8a642
+        provider_events_sha256: b93bf350dc0535c5516d0c1177211e04d1f35175382fdc086b0ec845dad7fcf7
+        provider_rollout_sha256: 3ed765f3477276f4c1d82e3a6b17f2c682911e842f0b7883ccfbecf1bed9fa54
+        provider_capture_sha256: dae285e82b9b6f512ec5c84c07cc307bd42911ec4179f1b55cba2489f2ef3b68
+      - seed: 821172508008
+        report_sha256: f54b85b2c44d1f1fec3f14cf6f2436f2dba376e3fae4f17d548455aec1630456
+        run_evidence_sha256: ca0735acf4966741d799e23bc02c63bff6a0db1f86ac93b0ca8ffdc7ba0e39a9
+        provider_events_sha256: f84451265df34141d90ced32e84c0da77d1fbc3f1f1be50f92eb1b84434a10c8
+        provider_rollout_sha256: bef721d3790190ee49d65535b858ac62e656c6eb18a9602435fcc7b0c6d3dfdb
+        provider_capture_sha256: a1bab5408d83be82fa996dff6c1da9473635bcfb260b35ede2a42d4767d73e36
+      - seed: 821172508009
+        report_sha256: a287e7d25ca081f3e4226c33b541fd4cd76a724ebb429a73a6c25b1c1c85126a
+        run_evidence_sha256: 94392e964dcccbc12dbd1da6d5f8f2b619a02c6443a46262415dee47fa959723
+        provider_events_sha256: d3822d0b62ce143cbdb7d15041414895fd2a84c8abf8faf9da81dc8445ccb79d
+        provider_rollout_sha256: 99e673dd7d440fd30a2fafcc83fd79815cc0596c0828a7538453b2c04e4fbbd9
+        provider_capture_sha256: 39069f40ca4331241ffd1006aeec7ca5cf6f514f2c9b34e426ac9703f90e1168
+    artifact_bytes:
+      manifest: 36722
+      summary: 2005
+      starting_slice_pilot: 2215
+      authority_proof: 2437
+      reports_total: 59572
+      run_sidecars_total: 23067
+      run_evidence_total: 20867
+      provider_events_total: 2425197
+      provider_rollouts_total: 6839089
+      provider_captures_total: 9697
+    outcome_metrics:
+      completed: 10
+      stuck: 0
+      completion_decision_p50: 23
+      clarity_total: 39
+      enjoyment_total: 40
+      continued_after_initial_goal: 5
+      would_replay: 10
+      strategies: "hunt 1, lure 5, drive 1, fortify 3"
+      in_scope_issue_reports: 0
+      blocking_issue_clusters: 0
+      failed_gates: >
+        clarity average >= 4.2; enjoyment average >= 4.2;
+        initial-goal continuation >= 70 percent
+    exact_public_path:
+      common_calls: >
+        10/10 started fresh, scouted the Albany Notice Hall, talked to Rowan,
+        reached a ready dispatch, moved to Station, opened the exact optional-support
+        reveal once, started Wolf-Winter, and folded back to Albany with goal completed
+        and the real continue/end choice
+      roles: "Road-Warden 6; Ledger Advocate 4"
+      support_selections: "June 7; preparation 4; relief wagon 1"
+      relevance_counter_signal: >
+        None of six Fieldcraft Road-Wardens selected a kit; all four
+        Mediation Ledger Advocates selected Jamie's Relief Protocol.
+      tested_road_warden_response_utf8_bytes: "registration 6,330; ready dispatch 9,195"
+      tested_reveal_response_utf8_bytes: "Road-Warden 1,034; Ledger Advocate 1,032"
+      corrected_literal_substitution_utf8_bytes: "Road-Warden 1,099; Ledger Advocate 1,097"
+      report_cluster: >
+        Nine reports explicitly named Station, dispatch, optional support, or
+        linked setup density. Seed 821172508000 instead named broader comparison
+        and compact-state density. All ten used the reveal; use is not itself a complaint.
+    return_counter_signal: >
+      All ten completed without stuck state, returned five distinct recognized
+      Wolf-Winter outcomes across all four strategies, received goal completed plus continue/end,
+      and said they would replay. The evidence does not identify an Albany-return,
+      strategy, mechanic, or retention-contract defect.
+
+symptom: >
+  After the relevance-first overview, the revealed compact rows begin with raw
+  preparation, relief_allocation, and field_team slot ids. Their short purpose
+  cells describe a kit, wagon, and cattle-first help, but do not state at the
+  beginning that the current inspect or talk action is optional and precedes a
+  later commitment. Nine reports independently described Station or linked setup
+  density; no report claimed a broken action or support mechanic.
+
+root_cause: >
+  Board V6 correctly hides unopened support, retains its authenticated skill
+  scent, and returns the three legal actions through a narrow base-bound reveal.
+  The remaining purpose literals were authored as terse outcome summaries rather
+  than as pre-choice labels, leaving the legend and action tuple to distinguish
+  kit and wagon inspection plus June's substantive conversation from later
+  support commitment.
+
+fix: >
+  Change only SUPPORT_COPY.inlinePurpose for the three open rows. Prefix them
+  Optional kit, Optional wagon, and Optional rider. State that kit and wagon are
+  comparisons without choosing and that June is asked before choosing. Retain
+  one named danger, Albany's last wagon to one crisis, one cattle line, and never
+  combat. Keep the relevance-first overview, skill domains, full purposes,
+  detail hints, labels, ids, row order, actions, version, and envelopes unchanged.
+
+deterministic_witnesses:
+  - "the pre-review V6 board remains exactly 585 UTF-8 bytes and its overview literal is byte-identical"
+  - "fresh/prompt/catalogue/741-byte legend and first-Station aggregate remain exactly 34,535 and 38,162 bytes"
+  - "the all-open revealed row array is 660 bytes; open-mask row bytes are 0:395, 1:470, 2:485, 3:560, 4:495, 5:570, 6:585, 7:660"
+  - "the pure base-bound reveal receipt is exactly 1,088 UTF-8 bytes and remains at or below the unchanged 1,100-byte cap"
+  - "substituting only the three literals into all ten authenticated pilot reveal bodies yields 1,097 or 1,099 bytes"
+  - "the revealed board retains version 6, null overview, exact inspect/talk actions, and the durable base-bound V1 receipt"
+  - "rejected missing/stale/forged reveals, repeat idempotence, refresh, export, and restore retain their existing behavior"
+
+mechanics_unchanged:
+  - "pre-review relevance overview, including Repair, Streetwise, and Mediation skill scent"
+  - "all six board slots, their status/title fields, order, ids, inspect/talk actions, and V6 tuple shape"
+  - "reveal V1 base/hash/receipt behavior, June modal V1, and full canonical/detail responses"
+  - "preparation profiles, relief destinations, ally choices, support order, timing, costs, checks, effects, and aftermath"
+  - "registration, oath, report, roads, ground conditions, all four Wolf-Winter strategies, actions, RNG, and outcomes"
+  - "Albany foldback, Continue/End, accepted decisions, saves, restore, UI, terminal, CLI, and Gallowmere"
+
+nonclaims:
+  - "The pilot was technically valid but failed clarity, enjoyment, and continuation gates; it diagnoses the target and does not validate the replacement."
+  - "Nine AI-player reports are recurring diagnostic evidence, not human research, authority certification, or causal proof that three literals set the ratings."
+  - "The pilot checker recorded zero in-scope issue reports; S1 is the bounded product-friction classification for this trace, not a retroactive player bug label."
+  - "The 1,097–1,099-byte corrected reveal bodies are exact literal substitutions, not responses returned by the tested pilot revision."
+  - "The 65-byte growth is an explicit read-before-commit clarity tradeoff under the existing cap, not a transport optimization or claim that size caused the failure."
+  - "No overview, legend, prompt, catalogue, board/reveal/modal version, support mechanic, route, strategy, return, Continue/End, metric, or threshold changes."
+  - "No Gallowmere content, behavior, checkpoint, conclusion, or expansion is in scope or claimed."
+
+production:
+  - src/world/station_dispatch_board.ts
+  - docs/DECISION_LOG.md
+  - docs/STARTING_SLICE.md
+
+tests:
+  - tests/starting_slice/station_dispatch_board.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/ui_overworld.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/regression/overworld_optional_departure_interactions.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/starting_slice/station_dispatch_board.test.ts
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts -t "advertises only player tools and records exactly one fresh overworld start"
+  - npx vitest run tests/unit/mcp_journey_surface.test.ts tests/starting_slice/opening_dispatch_briefing.test.ts tests/regression/overworld_optional_departure_interactions.test.ts
+  - npx vitest run tests/unit/ui_overworld.test.ts -t "leads the Station board with departure and keeps support and commitments collapsed"
+  - npx vitest run tests/regression/overworld_cli.test.ts -t "inlines each live Station support command and removes it as that row closes"
+  - git diff --check

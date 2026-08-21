@@ -1440,3 +1440,46 @@ costs, actions, decisions, Station V6, reveal V1, June modal V1, support, roads,
 strategies, outcomes, Continue/End, Gallowmere, and quality thresholds do not
 change. This failed AI pilot diagnoses the copy target; deterministic tests do
 not prove a rating, continuation, certification, or human-quality lift.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = d8bf7d7a; next move = pre-choice Station row language)
+
+**Keep the Station overview and transports closed.** The valid, no-retry
+ten-player Terra pilot
+`starting-slice-terra-pilot-d8bf7d7a-20260821T172508Z` bound exact clean
+`d8bf7d7a3787d7d38832f0ec1882a9019f9ce4e8`, official npm-shim Codex
+0.146.0, and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All seventy manifest-bound report, run, evidence, envelope, provider-event,
+rollout, and capture hashes matched. Wolf-Winter completed 10/10 with no stuck
+run, p50 23 accepted decisions, all four strategies, clarity 39/50, enjoyment
+40/50, and 5/10 initial-goal continuation. The same three quality gates failed;
+all ten players nevertheless said they would replay.
+
+The following pilot observed non-universal opening roles: six players chose Road-Warden
+and exercised its exact 6,330-byte registration and 9,195-byte ready dispatch;
+four chose Ledger Advocate. All ten then moved to Station, opened the exact V6
+support reveal once, started Wolf-Winter, and folded back to Albany with a
+completed goal and the real Continue/End choice. Nine reports explicitly named
+Station, dispatch, optional-support, or linked-setup density; seed
+`821172508000` instead named broader comparison and compact density. The
+overview's relevance signal remained useful counter-evidence: none of six
+Fieldcraft Road-Wardens selected a kit, while all four Mediation Ledger
+Advocates did. That supports retaining the overview byte-for-byte, including
+Repair/Streetwise/Mediation, rather than reopening V6, reveal V1, June modal V1,
+or support mechanics.
+
+**Chosen move — identify each optional row before its pre-choice action.** Change
+only the three revealed `purpose` cells. Each now begins `Optional kit`,
+`Optional wagon`, or `Optional rider`; kit and wagon say comparison happens
+without choosing, and June's row says to ask before choosing. Preserve the one
+named danger, Albany's last wagon to one crisis, June's one cattle line, and
+never-combat boundaries. The literals add 65 UTF-8 bytes to an all-open reveal:
+the focused pure fixture is 1,088 bytes under its unchanged 1,100-byte cap, and
+substitution into the ten authenticated pilot bodies is 1,097–1,099. The hidden
+board, overview, fresh response, first-Station context, prompt, catalogue, and
+legend stay byte-identical. IDs, version, shape, row order, actions, durable
+receipt, modal handoff, costs, checks, effects, support breadth, roads, four
+strategies, Albany return, Continue/End, and Gallowmere do not change. The
+failed AI pilot diagnoses this target; deterministic checks do not establish a
+rating lift, continuation lift, certification, causal transport finding, or
+human validation.

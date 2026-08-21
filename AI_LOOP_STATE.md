@@ -169,3 +169,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure audit: 22/22 calls succeeded with no rejection; clarity/enjoyment were 4/4, replay yes, bugs/confusions `[]`, not stuck. Advocate's Case was not entered, so this is exact-build retention evidence only and the lifecycle fix remains regression/trace-backed.
 - Feedback/next: pre-seal status is two actionable reports of three, so no compile runs; the seal will queue this report third. Separately reproduced next focus is an unread charter's post-dismissal READ regressing `case_dismissed` to `charter_read`, not a finding from this pure.
 - Guard: 9 focused Advocate tests, both 6,000-step crawls, exact health (448 files/3,894 tests), UI typecheck, all 12 packs, cycle-start integrity, 563 traces, and exact pure provenance are green.
+## AFK Cycle 2026-08-21T19-29-01-857Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-21T19-29-01-857Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-fc9c25a2 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.
