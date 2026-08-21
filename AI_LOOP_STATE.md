@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 779 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260820T221815Z/hotspots.json","hotspots_sha256":"649f149aef2b7e7880b34939cf7977a4c1f4bd83feba5ee4766c5977d3dea2b4","manifest_path":"ai-runs/feedback/20260820T221815Z/report-manifest.json","manifest_sha256":"47f2f41697cec8db53601e9611c1e2aba39c6b16dc2e29d494440bb33bd5d5c4"},"pending_cycle_reports":[{"evidence_sha256":"e421495403a017c6cccf46c48ed55a687868c24c235592412958984ced59964b","report_id":"pure:f18f0b48b2eba7bcf6f21a1af5e91e8c64c92c950a8465b933c776f779397041","report_sha256":"401bbcc99c422c208a5762db14fc0eeed6cb66dfacf1542ef8f6e93838416d8e","run_id":"2026-08-20T21-27-30-688Z","sidecar_sha256":"968e8a0b076a191927f8fd5a35b38efb0b250742777297b2b60224bb096b6b3d","tested_commit":"37dd3cdd9c230056d5b6ff2c3fb9a8b0c7fbed39"}],"schema_version":1} -->
+<!-- historical_cycle_count: 780 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260821T025227Z/hotspots.json","hotspots_sha256":"c2ae30b4699d5552da387b562b49887b01c900a691766c6e7432f4a5eaa8ef5a","manifest_path":"ai-runs/feedback/20260821T025227Z/report-manifest.json","manifest_sha256":"a39adb295dfad3bca4cceafe22f59587f69a2cc21da0a200ee82dfa55c62c87b"},"pending_cycle_reports":[{"evidence_sha256":"6296e64c09b684114d1e0773b14f0dbb256d4c18905fe87491fb028f37822456","report_id":"pure:a3854c1686c11f1dcb56fc4fc86ffdbb465de61677d79af7be5400f169812f9a","report_sha256":"d08d0250faa5bcd3c5801270468dbee1b6b5e7f4884c15ef9493678911ab9a47","run_id":"2026-08-21T02-02-05-098Z","sidecar_sha256":"a3ba63a2d22d6bf85a250723a1431604c29b6b2a91da10c8edcd0bcf16d15e63","tested_commit":"10107c4562ea0daa7b28f8a6233854285c35f962"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - station_compact_support_disclosure_v5
+
+- Evidence choice: the exact no-retry Terra pilot on `85a8bcf1` completed 10/10 but missed clarity and enjoyment at 40/50 each and continuation at 6/10; all ten reports cited Albany/setup density, nine named Station/dispatch, and two S1s exposed Jamie/June's narrow payoffs. The assessor offered out-of-scope Gallowmere `2d83b9fe`, so selection stays null.
+- Surface/effect: compact v48 / Station V5 replaces three live optional rows with one exact durable review, restores their existing actions after review, emits one authenticated shared dispatch briefing, and limits Jamie/June trigger/no-effect copy to exact inspection. Fresh input is 35,208→35,207 (-1), first Station 39,261→38,619 (-642), worst detail is 2,034/2,048; gameplay, canonical consequences, full UI/CLI, roads, costs, and outcomes are unchanged apart from the read receipt.
+- Counterfactual/recovery: refresh/export-restore/off-area return, exact replay, forgery, seal, launch, End, missing/mismatched route detail, and all 324 legal Station setups pin the boundary. The first `4e8dd057` health run failed closed only on three stale assertions; reset, fresh assessment/smoke, exact replay, repaired witnesses, and source audit produced replacement `10107c45`.
+- Browser: exact desktop/390px Albany→Rowan→Road-Warden→Station interaction kept both roads and all support dialogs usable with no console errors or new overflow; the pre-existing 390px `CHARACTER`/`ATLAS` nav-label collision remains a separate mobile follow-up.
+- Pure evidence: exact-clean Terra seed 821020205098 reviewed then declined support, took Sheltered Stockway LURE, recovered two failed checks with the split-rail guard, and reached Wolf-Winter `ending_pack_diverted_cattle_scattered` 55/60 at decision 28 with every wolf alive and two cattle missing; it continued, completed out-of-scope Gallowmere, then ended at decision 52.
+- Self-critique/feedback: clarity/enjoyment remained 4/4, replay yes, not stuck, bugs `[]`; Station/support and first-LURE risk still felt dense, while the Gallowmere best moment cannot support the bounded claim. Prior 11-report delta compiled at `20260821T025227Z`, recommends `8d097f91`, and excludes this pure until seal; a fresh 10-Terra pilot remains mandatory and 100 stays forbidden.
+- Guard delta: 217/217 recovered tests, exact 461-file/4,095-test health, 6,000-step smoke, 256,000-step truncated deep crawl with zero findings, all 12 packs, exact browser flow, and authenticated pure are green; post-ledger outer gates, start-ref integrity, and seal remain fail-closed.
 
 ### Cycle result - albany_compact_progressive_disclosure
 
@@ -159,19 +169,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat: the player never entered Advocate's Case, so the pure is exact-build integration evidence and deterministic regression remains causal proof; its early Gallowmere detour was recoverable and judged deliberate/fair rather than a mechanics defect.
 - Feedback/next: committed status is 1/3 with no compile; this routine selection leaves accepted `64f5227e` unconsumed and seal should leave two pending reports. Current item 28 narrows that low-severity density seam to duplicated Fodder-Loft “no retreat” copy, not a route rewrite.
 - Guard: exact-pure provenance, 6 focused regressions, 559 bug traces, both 6,000-step crawls, full health (448 files/3,890 tests), UI typecheck, all 12 packs, cycle-start integrity, formatting, and hostile authority review are green.
-
-### Cycle result - story_inspection_parent_binding
-
-- Evidence choice: four retained verified pure runs made seven avoidable read-only story-inspection rejections because the refined `tools/list` schema was empty and its description lacked the complete parent-binding recipe; this shared MCP affordance outranked maintenance-only content rotation and uses an off-list null selection.
-- Surface/effect: the registered inspection description now requires the exact current parent `overworld_session_id`, exact visible story id, merged reveal/review arguments, and exclusive option/reveal detail; runtime validation and gameplay response/world/journey state stay unchanged while the reviewed catalog digest moves `f060157f…` → `0a613ff9…`.
-- Counterfactual: real pure-server and registration tests pin the empty advertised schema plus exact prose, authoritative missing-parent recovery without mutation, unchanged base inspection, durable reveal receipt, and nonmutating option/reveal XOR rejection; no parent inference or automatic story choice was added.
-- Pure evidence: exact-clean Spark seed 7 on `35b1e034` took Ledger/Aid-Only/Rowan through Exposed-Ridge LURE to `ending_pack_diverted`, 50/60, herd and all three wolves alive, then End at decision 23; all 28 MCP calls succeeded, clarity/enjoyment 4/4, replay yes, bugs `[]`, not stuck.
-- Canary caveat: the player chose each story stage directly and never called the inspection tool, so this run is exact-build integration evidence only; historical raws and causal regressions prove the changed affordance, while the reported staged-prompt density was nonblocking.
-- Feedback/next: exact prior pending Cycles 24–26 compiled into four S1 rows at `35b1e034` with recommendation `64f5227e`, excluding this run; that row partly predates the Cycle 25 held-feed yard fix, so revision-filter it before any broader route edit.
-- Guard: 37 focused MCP tests, exact catalog authentication, 558 bug traces, both 6,000-step crawls, full health (448 files/3,889 tests), UI typecheck, all 12 packs, cycle-start integrity, and exact-pure replay are green.
-## AFK Cycle 2026-08-21T02-02-05-098Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-21T02-02-05-098Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-2d83b9fe (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
