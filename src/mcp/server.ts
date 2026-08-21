@@ -26,6 +26,11 @@ import { dirname, resolve } from "node:path";
 import { appendFileSync, mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { createToolApi } from "./tools.js";
+import type {
+  OverworldMcpContextPayload,
+  OverworldMcpReadArgs,
+  OverworldMcpReadUnchanged,
+} from "./overworld_sessions.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
 import { formatSpectateEntry } from "./spectate.js";
@@ -38,6 +43,10 @@ import {
   PureRunBuildSchema,
 } from "../blind/run_evidence.js";
 import { JourneyExitReceiptSchema } from "../blind/exit_interview.js";
+import {
+  STATION_DISPATCH_BOARD_VERSION,
+  type OpeningCompactStationDispatchBoard,
+} from "../world/station_dispatch_board.js";
 
 export type McpPlayMode = "full" | "structural" | "pure";
 
@@ -389,6 +398,155 @@ function pureSessionResponsePayload(name: string, value: unknown): unknown {
         }
       : {}),
   };
+}
+
+export const PURE_STATION_DISPATCH_REVEAL_VERSION = 1 as const;
+
+export type PureStationDispatchRevealResponseV1 = Readonly<{
+  ok: true;
+  overworld_session_id: string;
+  snapshot_hash: string;
+  station_dispatch_reveal: Readonly<{
+    version: typeof PURE_STATION_DISPATCH_REVEAL_VERSION;
+    base_snapshot_hash: string;
+    station_dispatch_board: OpeningCompactStationDispatchBoard;
+  }>;
+}>;
+
+/** The pure wire contract narrows only the exact Station reveal member. */
+type PureOverworldWireHandles = {
+  overworld_session_id: string;
+  rpg_session_id?: string;
+};
+
+type PurePotentialUnchangedWireResponse<Args extends OverworldMcpReadArgs> =
+  "if_snapshot_hash" extends keyof Args
+    ? Args extends { if_snapshot_hash?: undefined }
+      ? never
+      : OverworldMcpReadUnchanged & PureOverworldWireHandles
+    : never;
+
+type PureFullOverworldContextWireResponse<Args extends OverworldMcpReadArgs> =
+  OverworldMcpContextPayload<Args> & PureOverworldWireHandles;
+
+type PureStationExpansionRequest =
+  | { include_departure_recap_terms: true }
+  | { include_station_dispatch_support: true };
+
+type PureNoRevealContextWireResponse<Args extends OverworldMcpReadArgs> =
+  | PureFullOverworldContextWireResponse<Args>
+  | PurePotentialUnchangedWireResponse<Args>;
+
+type PureKnownRevealContextWireResponse<Args extends OverworldMcpReadArgs> =
+  Args extends PureStationExpansionRequest
+    ? PureFullOverworldContextWireResponse<Args>
+    : PureStationDispatchRevealResponseV1 | PureFullOverworldContextWireResponse<Args>;
+
+type PureMaybeRevealContextWireResponse<Args extends OverworldMcpReadArgs> =
+  Args extends PureStationExpansionRequest
+    ? PureNoRevealContextWireResponse<Args>
+    : PureStationDispatchRevealResponseV1 | PureNoRevealContextWireResponse<Args>;
+
+export type PureOverworldContextWireResponse<Args extends OverworldMcpReadArgs> =
+  "reveal_station_dispatch_support" extends keyof Args
+    ? Args extends { reveal_station_dispatch_support?: undefined }
+      ? PureNoRevealContextWireResponse<Args>
+      : Args extends { reveal_station_dispatch_support: string }
+        ? PureKnownRevealContextWireResponse<Args>
+        : PureMaybeRevealContextWireResponse<Args>
+    : PureNoRevealContextWireResponse<Args>;
+
+type PureStationDispatchRevealBase = Readonly<{
+  sessionId: string;
+  snapshotHash: string;
+}>;
+
+function isPureStationRevealDeltaRequest(name: string, args: unknown): boolean {
+  if (PLAY_MODE !== "pure" || name !== "get_overworld_session_context") return false;
+  const input = objectRecord(args);
+  return (
+    typeof input?.reveal_station_dispatch_support === "string" &&
+    input.include_departure_recap_terms !== true &&
+    input.include_station_dispatch_support !== true
+  );
+}
+
+/**
+ * Capture and authenticate the retained compact context before the canonical
+ * reveal mutates its durable receipt. The delta may only be applied to this
+ * exact immediately-prior snapshot.
+ */
+function pureStationDispatchRevealBase(
+  name: string,
+  args: unknown,
+): PureStationDispatchRevealBase | null {
+  if (!isPureStationRevealDeltaRequest(name, args)) return null;
+  const input = objectRecord(args);
+  if (!input) return null;
+  const sessionId = input.session_id;
+  const retainedHash = input.if_snapshot_hash;
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    throw new Error("Pure Station support reveal requires the current parent session_id.");
+  }
+  if (typeof retainedHash !== "string" || retainedHash.length === 0) {
+    throw new Error(
+      "Pure Station support reveal requires if_snapshot_hash from the retained compact context.",
+    );
+  }
+  const exported = objectRecord(api.export_overworld_session({ session_id: sessionId }));
+  const snapshotHash = exported?.snapshot_hash;
+  if (exported?.ok !== true || typeof snapshotHash !== "string" || snapshotHash.length === 0) {
+    throw new Error("Pure Station support reveal could not capture its base snapshot hash.");
+  }
+  if (retainedHash !== snapshotHash) {
+    throw new Error(
+      "Pure Station support reveal base hash is stale; retain a fresh compact context before revealing.",
+    );
+  }
+  return { sessionId, snapshotHash };
+}
+
+/**
+ * Replace the canonical full-context reveal response with one versioned board
+ * delta after the session mutation and pure evidence hooks have succeeded.
+ */
+function pureStationDispatchRevealResponse(
+  name: string,
+  args: unknown,
+  value: unknown,
+  base: PureStationDispatchRevealBase | null,
+): unknown {
+  if (!isPureStationRevealDeltaRequest(name, args)) return value;
+  if (base === null) {
+    throw new Error("Pure Station support reveal has no authenticated base context.");
+  }
+  const response = objectRecord(value);
+  const context = objectRecord(response?.context);
+  const board = context?.station_dispatch_board;
+  if (
+    response?.ok !== true ||
+    typeof response.snapshot_hash !== "string" ||
+    response.snapshot_hash.length === 0 ||
+    !Array.isArray(board) ||
+    board.length !== 6 ||
+    board[0] !== STATION_DISPATCH_BOARD_VERSION ||
+    board[5] !== null
+  ) {
+    // The canonical mutation has already happened. Never turn that success into
+    // an error after the fact: an unexpected projection keeps the complete
+    // canonical response, while only the exact V6 revealed board is narrowed.
+    return value;
+  }
+  const receipt: Omit<PureStationDispatchRevealResponseV1, "overworld_session_id"> = {
+    ok: true,
+    snapshot_hash: response.snapshot_hash,
+    station_dispatch_reveal: {
+      version: PURE_STATION_DISPATCH_REVEAL_VERSION,
+      base_snapshot_hash: base.snapshotHash,
+      station_dispatch_board: board as unknown as OpeningCompactStationDispatchBoard,
+    },
+  };
+  return receipt;
 }
 
 function pureCallPreflight(name: string, args: unknown): void {
@@ -885,9 +1043,16 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
       pureCallPreflight(name, simpleNormalizedArgs);
       const normalizedArgs = normalizeAreaDestinationAlias(name, simpleNormalizedArgs) as A;
       const committedExit = pureCommittedJourneyExitResponse(name, normalizedArgs);
+      const stationDispatchRevealBase = pureStationDispatchRevealBase(name, normalizedArgs);
       const rawValue = committedExit ?? (await handler(normalizedArgs)); // await is a no-op for sync handlers
       const evidencedValue = pureCallEvidence(name, rawValue);
-      const value = pureSessionResponsePayload(name, evidencedValue);
+      const revealValue = pureStationDispatchRevealResponse(
+        name,
+        normalizedArgs,
+        evidencedValue,
+        stationDispatchRevealBase,
+      );
+      const value = pureSessionResponsePayload(name, revealValue);
       result = ok(value);
     } catch (e) {
       // Bound the text on BOTH branches. Trimming only the dev branch leaves the pure
@@ -1282,7 +1447,11 @@ const STATION_SUPPORT = {
   reveal_station_dispatch_support: z
     .string()
     .optional()
-    .describe("Durable read-only reveal; pass the exact Station V6 board [5] id."),
+    .describe(
+      PLAY_MODE === "pure"
+        ? "V6 board [5] id; reveal-only needs latest if_snapshot_hash."
+        : "Durable read-only reveal; pass the exact Station V6 board [5] id.",
+    ),
 };
 const OVERWORLD_READ_DETAILS = PLAY_MODE === "pure" ? {} : { ...S, ...W, ...IDS, ...ROUTES };
 const COMPACT_OVERWORLD_CONTEXT =
@@ -1305,6 +1474,10 @@ const OVERWORLD_ACTION_CONTEXT = {
   ...COMPACT_OVERWORLD_CONTEXT,
   ...COMPACT_OVERWORLD_RESULT,
 };
+const OVERWORLD_CONTEXT_DESCRIPTION =
+  PLAY_MODE === "pure"
+    ? "Read compact context; Station reveal-only yields V1 delta."
+    : "Read compact context; Station support uses the exact V6 board [5] id.";
 
 tool(
   "start_overworld",
@@ -1333,7 +1506,7 @@ tool(
 );
 tool(
   "get_overworld_session_context",
-  "Read compact context; Station support uses the exact V6 board [5] id.",
+  OVERWORLD_CONTEXT_DESCRIPTION,
   {
     ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,

@@ -169,3 +169,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat: the pure route never entered LURE or the Fodder-Loft, so it proves exact-build integration only; causal proof is the four-route regression. Clarity/enjoyment were 5/4, replay yes, bugs `[]`, not stuck.
 - Feedback/next: pre-seal status remained two actionable reports of three, so no compile ran; the seal consumes `64f5227e` and queues this third report. The visible Cade recovery worked immediately, so defer broader FORTIFY density changes to that later compile.
 - Guard: 28 focused tests, Wolf validation at `09bd7660…`, 560 trace files, type/lint/format, exact pure provenance, post-crawl, health, and cycle-start integrity are green.
+## AFK Cycle 2026-08-21T09-27-51-750Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-21T09-27-51-750Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-224fdc21 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

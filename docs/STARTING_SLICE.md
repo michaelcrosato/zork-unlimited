@@ -226,6 +226,17 @@ it is **not yet milestone-certified**:
   `get_overworld_session_context` with that id records a separate durable,
   idempotent receipt; refresh and export/restore retain it, while a forged id
   fails and launch, a fully sealed support plan, or journey End clears it. After
+  the canonical mutation, a pure reveal-only call returns a typed V1
+  `station_dispatch_reveal` delta rather than repeating the full context. It is
+  bound to the immediately retained `if_snapshot_hash` and contains that base
+  hash plus the exact revealed board; the outer response carries the new
+  `snapshot_hash` and `overworld_session_id` and omits `journey` / `context`.
+  The player keeps the prior context, routes, `quests`, and `quest_starts`,
+  replaces only the board, and adopts the outer hash. Missing or stale bases
+  reject before mutation. Explicit Station-detail expansions still receive the
+  complete canonical response, as do full and non-pure callers; an unexpected
+  post-mutation board projection also degrades to that complete response rather
+  than turning a successful receipt into an error. After
   review, the same V5 five-field optional rows, purposes, and authenticated
   inspect/talk actions return byte-for-byte in their established order. Selected and
   non-actionable rows remain null/null. The shared authenticated dispatch
@@ -233,18 +244,22 @@ it is **not yet milestone-certified**:
   removed from each compact road, so all route-specific time, supply, fatigue,
   alarm, and weather facts remain. This progressive disclosure is compact-MCP-
   only; terminal and browser presentation remain unchanged. The initial board
-  is 585 UTF-8 bytes and its legend is 741 bytes. Removing fresh-player legacy
-  version history makes the prompt 16,036 bytes, while the pure tool catalogue
-  remains 16,790 bytes. With the unchanged 2,042-byte fresh context, the aggregate
-  is 34,868 bytes versus V5's 35,207 (-339). First-Station prompt + catalogue +
-  4,928-byte context + newly delivered legend is 38,495 bytes versus V5's 38,619
-  (-124) and the frozen v47/V4 baseline 39,261 (-766). The receipt may change the save
+  is 585 UTF-8 bytes and its legend is 741 bytes. The V1 prompt is 16,027 bytes
+  and the pure catalogue is 16,773. With the unchanged 2,042-byte fresh context,
+  the aggregate is 34,842 bytes, below sealed V6's 34,868 and V5's 35,207.
+  First-Station prompt + catalogue + 4,928-byte context + newly delivered legend
+  is 38,469 bytes versus sealed V6's 38,495, V5's 38,619, and the frozen v47/V4
+  baseline 39,261. The exact current V1 reveal envelope is 1,023 bytes under its
+  1,100-byte regression budget; the ten base-bound pilot counterfactuals are
+  1,020–1,034. This is not a global runtime limit, and full detail-expansion
+  responses are intentionally outside that narrow budget. The receipt may change the save
   hash but accepts no gameplay or journey decision. Actions, terms, mechanics,
   costs, gameplay state/effects except that receipt, RNG, outcomes, and
   accepted-decision counts are unchanged, with
   focused proof in `station_dispatch_board.test.ts`,
   `opening_dispatch_briefing.test.ts`, `opening_departure_recap.test.ts`,
-  `overworld_cli.test.ts`, `mcp_journey_surface.test.ts`,
+  `overworld_cli.test.ts`, `mcp_pure_play_mode.test.ts`,
+  `blind_pure_prompt_contract.test.ts`, `mcp_journey_surface.test.ts`,
   `ui_overworld.test.ts`, and `compact_legend.test.ts`;
 - four early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other

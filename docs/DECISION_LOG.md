@@ -1304,3 +1304,43 @@ costs, timing, checks, gameplay effects, roads, strategies, outcomes, saves apar
 from the existing read receipt, accepted decisions, Continue/End, full UI, and CLI
 remain unchanged. The failed pilot diagnoses this target; only a fresh exact-build
 pilot can show whether clarity or enjoyment improves.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = 06144d52; next move = pure Station reveal V1)
+
+**V6 worked at its chosen boundary; do not reopen its board or mechanics.** The
+valid ten-player, single-attempt Terra pilot `station-v6-sealed-pilot-06144d52`
+bound exact clean `06144d52f333b217230dd23f1bc02393b9102fbc`. It completed
+Wolf-Winter 10/10 with no stuck run, p50 22 accepted decisions, 8/10 initial-goal
+continuation, and three represented strategies, but failed clarity at 40/50 and
+enjoyment at 41/50. Road-Warden preparation inspection fell from 6/7 under V5
+to 2/7 under V6, and total preparation inspection fell from 9/10 to 5/10. That
+is bounded evidence to preserve V6's relevance-first kit/wagon/rider overview,
+not a causal quality-lift claim.
+
+All ten authenticated raw rollouts made exactly one Station reveal. The old
+response repeated `journey` and a 4,257–4,361-byte context even though every
+pre/post context field except `station_dispatch_board` was byte-identical; total
+responses were 5,314–5,418 bytes (53,841 combined) and boards only 788–802.
+Each next call was one support action (four inspect, six talk), so the repeated
+journey/routes were unused on that next turn. Re-serializing the ten exact boards
+inside the chosen V1 envelope, with each actual 24-character retained base hash,
+yields 1,020–1,034 bytes (10,315 combined), 43,526 bytes / 80.84% less. This is
+structural amplification correlated with density
+reports, not proof that repetition caused the two failed ratings.
+
+**Chosen move — a base-bound, versioned pure delta.** Only a reveal-only pure
+`get_overworld_session_context` call specializes. It requires the latest
+`if_snapshot_hash`, captures the manager's immediately prior hash before the
+canonical receipt mutation, and returns outer `ok`, new `snapshot_hash`, and
+`overworld_session_id` plus
+`station_dispatch_reveal:{version:1,base_snapshot_hash,station_dispatch_board}`.
+The delta omits `journey` and `context`; the player keeps the prior context,
+`quests`, and `quest_starts`, replaces only its board when the base matches, and
+uses the outer hash. Missing/stale bases fail before mutation. Exact repeats are
+hash-idempotent. Either explicit detail-expansion flag preserves the full
+canonical response and legacy hash behavior; unexpected post-mutation board
+shape also keeps the full success. Full/non-pure refresh, manager, export, UI,
+CLI, compact v49, board V6, receipt lifecycle, ids, actions, costs, mechanics,
+strategies, outcomes, accepted decisions, and Continue/End remain unchanged.
+The pilot remains non-certified AI evidence, not human validation or support for
+Gallowmere, June-mechanic, retention-metric, or certification claims.

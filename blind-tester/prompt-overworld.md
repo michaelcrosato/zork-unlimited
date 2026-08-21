@@ -132,28 +132,29 @@ WHEN TO CONTINUE OR END
   `session_id` and `expected_snapshot_hash: latest snapshot_hash`; do not invent, infer, or
   substitute a differently named goal tool. The game, not the harness, decides
   where that passage stops.
-- At the Station, compact context v49 uses read-only
-  `station_dispatch_board`: `[6, quest_id, dispatch_status, dispatch, rows, overview|null]`.
-  `dispatch` is `[state, minutes, timing, remaining_optional_count]`; each row is
-  `[slot, status, selected_title|null, purpose|null, action|null]`. Slots
-  `role/duty/evidence/preparation/relief_allocation/field_team` mean
-  background/promise/report/field kit/relief wagon/second rider. Legal roads stay
-  first in `context.quests` plus `context.quest_starts`; you may depart immediately.
-  Before review, open optional rows are omitted and `overview=[id,label]`; its label
-  names only the still-open kit, relief-wagon, and second-rider categories, including
-  the kit skill domains. If one interests you, call
-  `mcp__adventureforge__get_overworld_session_context` with the exact
-  `reveal_station_dispatch_support` id. This records a durable, idempotent read-only
-  receipt through refresh/export/restore. It may change the snapshot hash but accepts
-  no gameplay decision. Otherwise depart without reviewing. After review, `overview` is null
-  and open rows carry their authenticated purpose/action. Support stays optional
-  and changes cost/aftermath, not strategy access. Non-null row action
-  `["inspect", story_choice_id]` authorizes
-  `mcp__adventureforge__inspect_overworld_session_story`; an action
-  `["talk", character_id, contact_name]` authorizes
-  `mcp__adventureforge__talk_overworld_session_contact`. A null action is not
-  legal. If you reviewed, inspect at most one support row; do not enumerate the
-  support rows. Board read changes no state or decision count.
+- Station v49 `station_dispatch_board` is
+  `[6,quest_id,dispatch_status,dispatch,rows,overview|null]`;
+  `dispatch=[state,minutes,timing,remaining_optional_count]`; rows are
+  `[slot,status,selected_title|null,purpose|null,action|null]`.
+  `role/duty/evidence/preparation/relief_allocation/field_team` =
+  background/promise/report/kit/wagon/rider. Roads: `context.quests` plus
+  `context.quest_starts`; depart anytime. Pre-review hides open rows;
+  `overview=[id,label]` names only open kit/wagon/rider categories and kit skill domains.
+  If interested, call
+  `mcp__adventureforge__get_overworld_session_context` with exact
+  `reveal_station_dispatch_support` and latest `if_snapshot_hash`. Pure reply omits
+  `journey`/`context`; it has `overworld_session_id`, outer `snapshot_hash`, and
+  `station_dispatch_reveal:{version:1,base_snapshot_hash,station_dispatch_board}`.
+  Apply only if its base equals your retained hash: keep prior journey/context with
+  `quests`/`quest_starts`, replace only its board, and use the outer hash. Else never
+  splice; refresh without reveal. The durable/idempotent receipt accepts no decision.
+  If no category interests you, depart without reviewing. After review, `overview=null`;
+  open rows expose authenticated purpose/action. Support stays optional; it changes
+  cost/aftermath, not strategy access. `["inspect",story_choice_id]` authorizes
+  `mcp__adventureforge__inspect_overworld_session_story`;
+  `["talk",character_id,contact_name]` authorizes
+  `mcp__adventureforge__talk_overworld_session_contact`; null is illegal. If reviewed,
+  inspect at most one row; never enumerate.
 - You may depart without choosing support. From the board, inspect only the exact
   visible `story_choice_id` you want; the
   versioned comparison contains short option summaries. To compare one candidate,

@@ -1,0 +1,212 @@
+id: bug_0584
+title: "Return the pure Station reveal as a bound V1 delta"
+pack: overworld (pure MCP Albany Station departure)
+reported_by: >
+  Valid ten-player fresh-overworld Terra pilot
+  station-v6-sealed-pilot-06144d52 on exact clean
+  06144d52f333b217230dd23f1bc02393b9102fbc; report, run-evidence,
+  provider-event, rollout, and capture hashes are retained in its manifest
+severity: S1
+
+evidence:
+  pilot:
+    label: station-v6-sealed-pilot-06144d52
+    stamp: 20260821T072624Z
+    tested_commit: 06144d52f333b217230dd23f1bc02393b9102fbc
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017
+    model: gpt-5.6-terra
+    provider: codex
+    launcher_kind: official_npm_shim
+    codex_cli_version: 0.146.0
+    play_mode: pure
+    start_surface: fresh_overworld
+    authority_certified: false
+    valid: true
+    passed: false
+    artifact_hashes:
+      manifest_sha256: 88a71f2a734af3579509bfbdbe77a0a45b568abb54fdff5efe6b909f600e0983
+      starting_slice_pilot_sha256: 5938437ea90921a03e1a68a0264911562154c854abab9caf89d9c7fb3c23cae7
+      summary_sha256: 9ee1fa7e9a681316aea0e3d723cd952764dca32ab23c6c33e41206257136e927
+    reports:
+      - seed: 821061445200
+        report_sha256: 2cd53ab6bae037c8fa89c557036c2a65532704a3108e139c104d01830f2ba1b4
+        run_evidence_sha256: d22011065972fb59a84635c0ad7487ff2264abfadf3a3899fb17602e41ec8bd2
+        provider_events_sha256: 23d8dd47d95f399ae5b8945bfc0b87a07acba81c7d8ab8733ce5ce56f51d92f8
+        provider_rollout_sha256: 25ddf5be887a490ea9fc188dd241d9c89d3e8af090a5be06f84743f47d0d3f6a
+        provider_capture_sha256: 3f267804355b6c5323691d2ef252f0b418eed15752e269e0ea88092bea574226
+      - seed: 821061445201
+        report_sha256: 13998f9f542728baa724c01fe0ad5b071fe5f6a2f110057d840676e04c5381ea
+        run_evidence_sha256: 409171dd10e772a60ac0883eb204f15d4a5847c9eb450f837d1da667823c4d00
+        provider_events_sha256: b15620c64794fa8ebd5c57992840d9acebcaefcc4156c60f0cd5697b4a766511
+        provider_rollout_sha256: 0ed2040c3f2114b233b1625454aee81884b7fe5459b5dafda347917a6b0a6fc5
+        provider_capture_sha256: 8854a04785e17449937eee7c3482b9779fd845dd758a5e5dd683bdc58ebb5e30
+      - seed: 821061445202
+        report_sha256: 603a6e4f2ad35c66189528a5be7463b17f836f6f89e8aba67148b62501fbfbf6
+        run_evidence_sha256: 976f2628fbb276535297ee253dbf8894e2ec97e447e35a8d0082cbc755e8991c
+        provider_events_sha256: f2805dd778da6776326b47d2e73e906da960e4a565c61bc24d24eac091a38256
+        provider_rollout_sha256: e18199519ba633afb77160667fbb8cea8dd20b53eea680ae2811d4a4267fa34b
+        provider_capture_sha256: d1521ff7c6a4d61f3653e3dd4e7d70de9f747f7fe467fbdc396a82be956edbc9
+      - seed: 821061445203
+        report_sha256: 7ff9225a3ef02a774771b711419227b26ed93d0accea9fb78b3f72a2ed37c10d
+        run_evidence_sha256: 872fdb00b7ca2da7bac6cd28a569ce60d8e5c3b06f5de7f2511ce95bab715e99
+        provider_events_sha256: 015b3a8d4e0d81f826ff80cbfcd24b42da92f70f4075e273d1a19332b4e9e28b
+        provider_rollout_sha256: 4d634d4e772b09a5609744995ebab227f0824aad1f428ff665e26d678d4c003a
+        provider_capture_sha256: 7efa1199618fb64c8be8ac34877f2ae4fe83cf5c3ac5a88b9dc7bc32258818a7
+      - seed: 821061445204
+        report_sha256: 5912826fc4efdca2d9a092f20142b4c9d56e64c9ae14eed5cd2a94dcc719512b
+        run_evidence_sha256: 7592a2bd78247b7c059d5cc1702fc8b02e0b1adbf78c1bc0d7110b7bd2f548e1
+        provider_events_sha256: 91d04afd94c35935efb8e42d2a01d244d2a9a9b65e95343bd66b5f6fd926e46c
+        provider_rollout_sha256: a2ca310b9fd530c12842e3ef709e6bfb3afa7833880f73aa4f1334a585243b57
+        provider_capture_sha256: 02899d6ca068efa8b8eb38d4f42dae9db285c9ebdb0e7830c74d3ff9db16dede
+      - seed: 821061445205
+        report_sha256: df62f62a69cb299fa657bbd27beb8f3a834d3806158220eac4111a94ac74161c
+        run_evidence_sha256: d0b1169ab806eb4796f68c50dfc743e8aa574a719ec56e8dbd4318e16dc303dc
+        provider_events_sha256: e961df7304e8558b7e4dc590e2caae5526b97515e900c339184958ecee37f8f9
+        provider_rollout_sha256: cf98e091d3dcdcd0c7dfc91e9586765145de4fa661aec059f26b3dc44c127550
+        provider_capture_sha256: 1865f290ee721e9684cc90e29a260a47089bd8eb7d0cc0aa437521b8617f6e4a
+      - seed: 821061445206
+        report_sha256: 30bba236eb1915abdf09be173c8358a708554ec724f86dbea463e6905ff20353
+        run_evidence_sha256: d029222e6e7745804d70aebec05e6e51801484ac7450f4f8903ebdbc266d46e8
+        provider_events_sha256: afb2b85587067bca86b0748198095a57e19e7d80d74675fb52f426f137b913ad
+        provider_rollout_sha256: f8a6153f0d46cf3e7ed70aa9f78d864b76534862e210c97b3651874be0803c62
+        provider_capture_sha256: c42f60f774528d44618e94d7e8e2a0e191371020ac26bdc7675d918d16d3b182
+      - seed: 821061445207
+        report_sha256: 62d5b5c15dcbeb1ccccfd2bcec4f6592cf974cdbf047703f7e27a7dca9f77896
+        run_evidence_sha256: dfca82e77033288a0fa14063229bbcf5bc41b6871bcc6c0eadfeb735a6707a6d
+        provider_events_sha256: 708f81bc768fb8467e48eaca43f0b6c3531c041692e32f7425cb9f6ddd580df1
+        provider_rollout_sha256: af7591c45a5b09e6f9503dd612c150da6703c6cf2a1f0116e7e46ac4dbaec1b2
+        provider_capture_sha256: f876cf26a50c51ac761285e3293e17f98b63c02ac282a09184fe58a8c75fd8e1
+      - seed: 821061445208
+        report_sha256: 883b08525f60821de731019af63d3a2c989dc69d1bb6bf2dcded9ab75084bb9a
+        run_evidence_sha256: ab86ab33e53b644ae09d44537e9222966c11e9b27530d144baa8a45fe9861802
+        provider_events_sha256: 79b3e1403deba6b84f780136223c3570795add9b39ef70ba72f880f466f4d084
+        provider_rollout_sha256: 5dcc64fa9f3a6faeff33419e0a47a3bd01dffd775ad88bec4b9f3dda7e96fc03
+        provider_capture_sha256: 7903c2c6005abec5364b8bd92f11c1c0eb3ae897f2ea2dde2aba65b1d9aa780c
+      - seed: 821061445209
+        report_sha256: 8fce8a97df68900937bff9721543b4b429ec78adbac2b81e92fc3fe823f86ec4
+        run_evidence_sha256: 5b7fe5518b8d226936bf61676334390f509f1810a8d521166f74e52454b3832f
+        provider_events_sha256: 7c2c1b1eb01c55940a9e64ecccfc16ce4947aa7b38e8eb24b625421559c2a0ba
+        provider_rollout_sha256: c406f70ec3502915cef87c7168d7c094ea2581843f3ccc4b07046d2e958782d6
+        provider_capture_sha256: 8a0fd08dc535f2323912de6409ce302de5fb1199baec5e6ea6f1d5dd66a3df7d
+    outcome_metrics:
+      completed: 10
+      stuck: 0
+      completion_decision_p50: 22
+      clarity_total: 40
+      enjoyment_total: 41
+      continued_after_initial_goal: 8
+      strategies: "hunt 1, lure 5, drive 0, fortify 4"
+      failed_gates: "clarity average >= 4.2; enjoyment average >= 4.2"
+    v6_effect_boundary: >
+      V6 reduced Road-Warden preparation inspection from 6/7 in the V5 pilot
+      to 2/7 and all preparation inspection from 9/10 to 5/10. All ten still
+      chose the single category reveal. This supports preserving V6 relevance
+      scent while examining the reveal transport, not undoing its board copy.
+    raw_rollout_measurements:
+      reveal_calls: "10/10, exactly one per rollout"
+      old_response_own_keys: "ok, snapshot_hash, journey, context, overworld_session_id"
+      old_response_utf8_bytes: "5,314–5,418; sum 53,841; mean 5,384.1"
+      old_context_utf8_bytes: "4,257–4,361"
+      revealed_board_utf8_bytes: "788–802"
+      unchanged_projection: >
+        In all ten raw rollouts, pre/post journey and every compact-context
+        field except station_dispatch_board were byte-identical; only the
+        snapshot hash and board changed.
+      immediate_next_call: >
+        Every reveal was immediately followed by one support action: four
+        inspect calls and six talk calls. The repeated journey/routes were
+        structurally unused on that next turn.
+      reconstructed_v1_utf8_bytes: >
+        1,020–1,034; sum 10,315, using each actual 24-character retained
+        pre-reveal snapshot hash (the original reveal calls omitted that input)
+      reconstructed_savings: "43,526 bytes, 80.84% of the old response sum"
+
+symptom: >
+  The exact pure Station reveal changed one durable receipt, its snapshot hash,
+  and station_dispatch_board, but returned the entire compact context and journey
+  again. The revealed board occupied only 788–802 bytes inside 5,314–5,418-byte
+  responses, amplifying a bounded disclosure with unrelated retained state.
+
+root_cause: >
+  The pure server forwarded the canonical manager's full context response for
+  every get_overworld_session_context call. It had no typed, versioned response
+  member for a single-field context delta and did not bind such a delta to the
+  player's immediately retained snapshot. Narrowing after mutation without a
+  base hash would have made an ambiguous partial context and unsafe splicing.
+
+fix: >
+  Reveal-only pure calls now require the latest if_snapshot_hash. Before the
+  canonical handler runs, the server captures the current manager snapshot hash
+  and rejects a missing or stale retained base without mutation. After the
+  canonical reveal and evidence hooks succeed, an exact six-slot board V6 with
+  null overview becomes V1
+  station_dispatch_reveal:{version,base_snapshot_hash,station_dispatch_board},
+  beside ok, the new outer snapshot_hash, and the canonical pure
+  overworld_session_id. It deliberately omits journey and context. The player
+  retains the prior journey/context/quests/quest_starts, replaces only the board,
+  and adopts the new hash only when the base matches. Unexpected post-mutation
+  projection falls back to the complete canonical success rather than converting
+  a successful mutation into an error. Requests combining reveal with either
+  explicit detail expansion also keep the complete canonical response and their
+  legacy no-hash/stale-if behavior.
+
+deterministic_witnesses:
+  - "missing or stale reveal-only if_snapshot_hash rejects before mutation; the captured manager hash, never caller text, becomes base_snapshot_hash"
+  - "supported reveal-only V6/null-overview returns exactly ok, overworld_session_id, outer snapshot_hash, and station_dispatch_reveal V1; no session_id, journey, context, unchanged, or legend_delta"
+  - "the current Station fixture is exactly 1,023 UTF-8 bytes under a 1,100-byte regression budget; the ten authenticated pilot counterfactual boards are at most 1,034 bytes"
+  - "first reveal binds base to the retained hidden-board hash and returns a different new hash; exact repeat binds to the then-current hash and may return the same new hash"
+  - "explicit false expansion flags remain V1-eligible; either true flag or both true preserve full context, journey, requested fields, and legacy stale-if/no-if compatibility"
+  - "ordinary no-reveal pure reads, full-mode tools/list bytes, canonical manager responses, export/restore, and non-pure responses retain their established shape"
+  - "a dedicated pure server witness retains pre-reveal journey/context/quests/quest_starts, replaces only the board, then starts Wolf-Winter with the returned outer hash without a context refresh"
+  - "the post-launch parent read has no Station board, preserving the established reveal-receipt clear lifecycle"
+  - "board V6 stays length six with overview null after reveal, and its purposes/actions match the canonical full refresh byte-for-byte"
+  - "prompt 16,027 + pure catalogue 16,773 + fresh context 2,042 = 34,842 bytes, below sealed V6's 34,868; first Station aggregate is 38,469 versus 38,495"
+  - "pure get-context catalogue entry is digest-pinned; full catalogue remains exactly 40,374 bytes with its old tool and input descriptions"
+  - "the dual-mode get-context description is selected outside the measured registration block, keeping overworld ToolSearch schema source at 9,192 characters under its unchanged 9,250 ceiling without changing either emitted catalogue"
+
+mechanics_unchanged:
+  - "compact context v49 and Station board V6 version, tuple, reveal id, durable canonical receipt, authentication, persistence, and clear conditions"
+  - "quest, story, option, character, support, action, road, and approach ids; support purposes/actions and all eight overview subsets"
+  - "support order, availability, costs, minutes, money, checks, DCs, effects, RNG, outcomes, selected terms, and accepted-decision counts"
+  - "four Wolf-Winter strategies, legal quest starts, journey checkpoints, Continue/End choices, saves, full UI, terminal, and CLI presentation"
+  - "canonical manager, full/non-pure get-context, refresh, export/restore, and explicit detail expansion response behavior"
+
+nonclaims:
+  - "The valid pilot failed only clarity and enjoyment gates; it diagnoses transport density but does not prove the correction improves either rating, continuation, completion speed, strategy mix, or certification."
+  - "The raw size/repetition relationship is structural amplification correlated with density reports, not causal proof of the failed ratings."
+  - "authority_certified is false; official_npm_shim Codex 0.146.0, Terra identity, and retained per-run hashes authenticate the recorded cohort without turning a ten-player pilot into a 100-player certification fleet."
+  - "The reconstructed 1,020–1,034-byte envelopes use the actual retained 24-character base hashes and exact pilot boards, but are not responses the sealed V6 build returned; the 1,100-byte number is a regression budget, not an exhaustively proven global runtime cap."
+  - "V6's lower preparation-inspection counts support preserving its information scent, not a causal claim that its copy improved ratings or that every reveal was unnecessary."
+  - "June was selected in 8/10 pilot runs, but her clean/stabilized no-benefit boundary and mechanics are unchanged; selection frequency is not a reason to alter her."
+  - "No Gallowmere content, behavior, checkpoint, or conclusion is in scope or claimed, even where a rollout continued there."
+  - "No Continue/End wording, availability, counting, or other retention-metric mechanism changes; this is not metric gaming."
+  - "This is a pure compact-MCP transport correction, not a human UI redesign or parity claim; no browser screenshot or human usability result is claimed."
+  - "This AI pilot is neither human market validation nor authority certification."
+
+production:
+  - blind-tester/codex-pure-envelope.mjs
+  - blind-tester/prompt-overworld.md
+  - docs/DECISION_LOG.md
+  - docs/STARTING_SLICE.md
+  - src/mcp/server.ts
+
+tests:
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/regression/mcp_server_registration.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/starting_slice/station_dispatch_board.test.ts
+  - tests/regression/overworld_optional_departure_interactions.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/regression/mcp_server_registration.test.ts
+  - npx vitest run tests/regression/blind_pure_prompt_contract.test.ts tests/starting_slice/station_dispatch_board.test.ts
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts
+  - npx vitest run tests/unit/mcp_journey_surface.test.ts tests/regression/overworld_optional_departure_interactions.test.ts
+  - git diff --check

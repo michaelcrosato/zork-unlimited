@@ -232,25 +232,25 @@ describe("Station dispatch board", () => {
     });
     expect(composedCompactStation.split(sharedDispatchStatus!).length - 1).toBe(1);
 
-    // Frozen first-contact accounting, all in UTF-8 bytes. V6 keeps the V5 pure
-    // catalogue size, while removing legacy history from the fresh-player prompt.
+    // Frozen first-contact accounting, all in UTF-8 bytes. The V1 pure reveal
+    // contract tightens its catalogue and prompt without changing board V6.
     const promptBytes = readFileSync("blind-tester/prompt-overworld.md").byteLength;
-    const pureCatalogBytes = 16_790;
+    const pureCatalogBytes = 16_773;
     const freshContextBytes = Buffer.byteLength(
       JSON.stringify(new OverworldSession(WORLD).compactView()),
       "utf8",
     );
     const stationContextBytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
-    expect(promptBytes).toBe(16_036);
-    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(34_868);
-    expect(34_868).toBeLessThan(35_207);
+    expect(promptBytes).toBe(16_027);
+    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(34_842);
+    expect(34_842).toBeLessThanOrEqual(34_868);
     const firstStationAggregate =
       promptBytes +
       pureCatalogBytes +
       stationContextBytes +
       Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
-    expect(firstStationAggregate).toBe(38_495);
-    expect(firstStationAggregate).toBeLessThan(38_619);
+    expect(firstStationAggregate).toBe(38_469);
+    expect(firstStationAggregate).toBeLessThanOrEqual(38_495);
 
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });
     expect(fallback.departure_interactions).toEqual([

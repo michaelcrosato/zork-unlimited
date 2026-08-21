@@ -333,7 +333,7 @@ describe("MCP server registration", () => {
 
     // The game-native passage action, optional quest approach, and exact authored
     // job option add bounded schema blocks; retain a tight ceiling around them.
-    expect(overworldSchemaSource.length).toBe(9234);
+    expect(overworldSchemaSource.length).toBe(9192);
     expect(overworldSchemaSource.length).toBeLessThanOrEqual(9250);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");

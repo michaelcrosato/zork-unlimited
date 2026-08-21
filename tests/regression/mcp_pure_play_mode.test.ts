@@ -19,10 +19,14 @@ import { validPureMcpToolCatalogEntry } from "../../blind-tester/codex-pure-enve
 import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import {
   PURE_PLAYER_TOOLS,
+  PURE_STATION_DISPATCH_REVEAL_VERSION,
   resolveAreaMoveSelector,
   resolveVisibleAreaRouteId,
   toolAvailableInPlayMode,
+  type PureOverworldContextWireResponse,
+  type PureStationDispatchRevealResponseV1,
 } from "../../src/mcp/server.js";
+import type { OverworldMcpReadArgs } from "../../src/mcp/overworld_sessions.js";
 import {
   JOURNEY_STORY_CHOICE_COMPARISON_VERSION,
   JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
@@ -253,6 +257,34 @@ async function movePlayerToOpeningPreparation(
     ...parent,
     area_route_id: compactAreaRoute(context, "albany_city__transport_hub"),
   });
+}
+
+async function startPureAtOpeningStation(client: Client): Promise<{
+  sessionId: string;
+  stationed: Record<string, unknown>;
+}> {
+  const started = await callPlayerTool(client, "start_overworld", {});
+  const sessionId = String(started.session_id);
+  const parent = { session_id: sessionId };
+  await callPlayerTool(client, "scout_overworld_session_poi", {
+    ...parent,
+    poi_id: "albany_city__civic_core__poi",
+  });
+  await callPlayerTool(client, "talk_overworld_session_contact", {
+    ...parent,
+    character_id: "albany_city__civic_core__contact",
+  });
+  for (const choice of [
+    "albany:ledger_advocate",
+    "albany:oath_limited_aid_only",
+    "albany:source_rowan_civic_docket",
+  ]) {
+    await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
+  }
+  return {
+    sessionId,
+    stationed: await movePlayerToOpeningPreparation(client, parent),
+  };
 }
 
 async function chooseOpeningDepartureStories(
@@ -860,11 +892,105 @@ describe("MCP pure play mode", () => {
     expect(PURE_PLAYER_TOOLS.has("choose_overworld_session_story")).toBe(true);
   });
 
+  it("types known context requests narrowly and broad callers conservatively", () => {
+    type IncludesV1<Response> = [Extract<Response, PureStationDispatchRevealResponseV1>] extends [
+      never,
+    ]
+      ? false
+      : true;
+    type IncludesUnchanged<Response> = [Extract<Response, { unchanged: true }>] extends [never]
+      ? false
+      : true;
+    type Assert<Condition extends true> = Condition;
+    const compileTimeAssertions: [
+      Assert<
+        IncludesV1<PureOverworldContextWireResponse<{ session_id: string }>> extends false
+          ? true
+          : false
+      >,
+      Assert<
+        IncludesV1<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            reveal_station_dispatch_support: string;
+          }>
+        >
+      >,
+      Assert<
+        IncludesV1<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            reveal_station_dispatch_support: string;
+            include_station_dispatch_support: true;
+          }>
+        > extends false
+          ? true
+          : false
+      >,
+      Assert<
+        IncludesV1<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            reveal_station_dispatch_support: string;
+            include_departure_recap_terms: true;
+          }>
+        > extends false
+          ? true
+          : false
+      >,
+      Assert<IncludesV1<PureOverworldContextWireResponse<OverworldMcpReadArgs>>>,
+    ] = [true, true, true, true, true];
+    expect(compileTimeAssertions).toEqual([true, true, true, true, true]);
+    const unchangedAssertions: [
+      Assert<
+        IncludesUnchanged<PureOverworldContextWireResponse<{ session_id: string }>> extends false
+          ? true
+          : false
+      >,
+      Assert<
+        IncludesUnchanged<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            if_snapshot_hash: string;
+          }>
+        >
+      >,
+      Assert<
+        IncludesUnchanged<
+          PureOverworldContextWireResponse<{
+            session_id: string;
+            if_snapshot_hash: string;
+            reveal_station_dispatch_support: string;
+          }>
+        > extends false
+          ? true
+          : false
+      >,
+      Assert<IncludesUnchanged<PureOverworldContextWireResponse<OverworldMcpReadArgs>>>,
+    ] = [true, true, true, true];
+    expect(unchangedAssertions).toEqual([true, true, true, true]);
+  });
+
   it("keeps singleton recovery handles out of full multi-session errors", async () => {
     await withFullServer(async (client) => {
       const listed = await client.listTools();
       const fullRead = listed.tools.find((tool) => tool.name === "get_overworld_session_context");
       expect(fullRead?.inputSchema.required).toContain("session_id");
+      const fullCatalogProjection = listed.tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: Object.fromEntries(
+          Object.entries(tool.inputSchema).filter(([key]) => key !== "$schema"),
+        ),
+      }));
+      expect(Buffer.byteLength(JSON.stringify(fullCatalogProjection), "utf8")).toBe(40_374);
+      expect(fullRead?.description).toBe(
+        "Read compact context; Station support uses the exact V6 board [5] id.",
+      );
+      expect(
+        (fullRead?.inputSchema.properties as Record<string, { description?: string }> | undefined)
+          ?.reveal_station_dispatch_support?.description,
+      ).toBe("Durable read-only reveal; pass the exact Station V6 board [5] id.");
 
       const first = textPayload(await client.callTool({ name: "start_overworld", arguments: {} }));
       const second = textPayload(await client.callTool({ name: "start_overworld", arguments: {} }));
@@ -1746,6 +1872,77 @@ describe("MCP pure play mode", () => {
     }
   }, 60_000);
 
+  it("launches from retained Station context after applying only the V1 reveal delta", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-pure-station-delta-"));
+    const evidence = join(dir, "run.jsonl");
+    try {
+      await withPureServer(evidence, async (client) => {
+        const { sessionId, stationed } = await startPureAtOpeningStation(client);
+        const retainedJourney = structuredClone(stationed.journey);
+        const retainedContext = structuredClone(stationed.context) as {
+          quest_starts?: [string, string][];
+          station_dispatch_board?: OpeningCompactStationDispatchBoard;
+          [key: string]: unknown;
+        };
+        const hiddenBoard = retainedContext.station_dispatch_board;
+        expect(hiddenBoard?.[0]).toBe(6);
+        expect(hiddenBoard?.[5]).toEqual([STATION_DISPATCH_SUPPORT_REVEAL_ID, expect.any(String)]);
+        const retainedHash = String(stationed.snapshot_hash);
+        const revealed = await callPlayerTool(client, "get_overworld_session_context", {
+          session_id: sessionId,
+          if_snapshot_hash: retainedHash,
+          reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+        });
+        expect(revealed).not.toHaveProperty("journey");
+        expect(revealed).not.toHaveProperty("context");
+        const delta = revealed.station_dispatch_reveal as {
+          version: number;
+          base_snapshot_hash: string;
+          station_dispatch_board: OpeningCompactStationDispatchBoard;
+        };
+        expect(delta).toMatchObject({
+          version: PURE_STATION_DISPATCH_REVEAL_VERSION,
+          base_snapshot_hash: retainedHash,
+        });
+        expect(delta.station_dispatch_board[0]).toBe(6);
+        expect(delta.station_dispatch_board[5]).toBeNull();
+        const { station_dispatch_board: _hiddenBoard, ...retainedOtherContext } = retainedContext;
+        const appliedContext = {
+          ...retainedContext,
+          station_dispatch_board: delta.station_dispatch_board,
+        };
+        const { station_dispatch_board: appliedBoard, ...appliedOtherContext } = appliedContext;
+        expect(appliedOtherContext).toEqual(retainedOtherContext);
+        expect(appliedBoard).toEqual(delta.station_dispatch_board);
+        expect(stationed.journey).toEqual(retainedJourney);
+
+        const launchTuple = retainedContext.quest_starts?.[0];
+        if (!launchTuple) throw new Error("expected a retained Station quest-start tuple");
+        const [quest_id, approach_id] = launchTuple;
+        const launched = await callPlayerTool(client, "start_overworld_session_quest", {
+          session_id: sessionId,
+          quest_id,
+          approach_id,
+          expected_snapshot_hash: revealed.snapshot_hash,
+        });
+        expect(launched).toMatchObject({
+          ok: true,
+          overworld_session_id: sessionId,
+          rpg_session_id: expect.any(String),
+        });
+        expect((launched.quest as unknown[])[0]).toBe("wolf_winter");
+        const afterLaunch = await callPlayerTool(client, "get_overworld_session_context", {
+          session_id: sessionId,
+        });
+        expect(
+          (afterLaunch.context as { station_dispatch_board?: unknown }).station_dispatch_board,
+        ).toBeUndefined();
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   it("advertises only player tools and records exactly one fresh overworld start", async () => {
     const dir = mkdtempSync(join(tmpdir(), "mcp-pure-"));
     const evidence = join(dir, "run.jsonl");
@@ -1762,10 +1959,10 @@ describe("MCP pure play mode", () => {
           ),
         }));
         const pureCatalogBytes = Buffer.byteLength(JSON.stringify(pureCatalogProjection), "utf8");
-        expect(pureCatalogBytes).toBe(16_790);
-        expect(pureCatalogBytes - 16_694).toBe(96);
-        expect(16_036 + 2_042 + pureCatalogBytes).toBe(34_868);
-        expect(16_036 + 2_042 + pureCatalogBytes).toBeLessThan(35_207);
+        expect(pureCatalogBytes).toBe(16_773);
+        expect(pureCatalogBytes - 16_694).toBe(79);
+        expect(16_027 + 2_042 + pureCatalogBytes).toBe(34_842);
+        expect(16_027 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(34_868);
         for (const tool of listed.tools) {
           expect(
             validPureMcpToolCatalogEntry({ name: tool.name }),
@@ -1794,6 +1991,9 @@ describe("MCP pure play mode", () => {
         const contextTool = listed.tools.find(
           (tool) => tool.name === "get_overworld_session_context",
         );
+        expect(contextTool?.description).toBe(
+          "Read compact context; Station reveal-only yields V1 delta.",
+        );
         expect(contextTool?.inputSchema.properties).toHaveProperty(
           "include_departure_recap_terms",
           expect.objectContaining({
@@ -1805,7 +2005,7 @@ describe("MCP pure play mode", () => {
           "reveal_station_dispatch_support",
           expect.objectContaining({
             type: "string",
-            description: expect.stringMatching(/exact Station V6 board \[5\] id/i),
+            description: "V6 board [5] id; reveal-only needs latest if_snapshot_hash.",
           }),
         );
 
@@ -1974,6 +2174,7 @@ describe("MCP pure play mode", () => {
         string,
       ][];
       departure_recap?: unknown;
+      departure_recap_terms?: unknown;
       station_dispatch_board?: OpeningCompactStationDispatchBoard;
       station_dispatch_support?: readonly OpeningCompactStationDispatchBoardSupport[];
     };
@@ -2463,6 +2664,35 @@ describe("MCP pure play mode", () => {
         expect(
           (supportReview.legend_delta as Record<string, string>).station_dispatch_support,
         ).toMatch(/explicit read-only Station support detail/i);
+        const missingRevealBase = await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: {
+            session_id: sessionId,
+            reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+          },
+        });
+        expect(missingRevealBase.isError).toBe(true);
+        expect(textResult(missingRevealBase)).toMatch(/requires if_snapshot_hash/i);
+        const staleRevealBase = await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: {
+            session_id: sessionId,
+            if_snapshot_hash: "0".repeat(24),
+            reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+          },
+        });
+        expect(staleRevealBase.isError).toBe(true);
+        expect(textResult(staleRevealBase)).toMatch(/base hash is stale/i);
+        const afterRejectedReveal = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(afterRejectedReveal.snapshot_hash).toBe(stationed.snapshot_hash);
+        expect((afterRejectedReveal.context as CompactAreaContext).station_dispatch_board).toEqual(
+          stationedBoard,
+        );
         const revealed = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",
@@ -2473,10 +2703,33 @@ describe("MCP pure play mode", () => {
             },
           }),
         );
-        expect(revealed.unchanged).toBeUndefined();
+        expect(Object.keys(revealed).sort()).toEqual(
+          ["ok", "overworld_session_id", "snapshot_hash", "station_dispatch_reveal"].sort(),
+        );
+        expect(revealed).toMatchObject({
+          ok: true,
+          overworld_session_id: sessionId,
+          snapshot_hash: expect.any(String),
+        });
+        expect(revealed).not.toHaveProperty("session_id");
+        expect(revealed).not.toHaveProperty("unchanged");
+        expect(revealed).not.toHaveProperty("journey");
+        expect(revealed).not.toHaveProperty("context");
+        expect(revealed).not.toHaveProperty("legend_delta");
         expect(revealed.snapshot_hash).not.toBe(stationed.snapshot_hash);
-        expect(revealed.journey).toEqual(stationed.journey);
-        const revealedBoard = (revealed.context as CompactAreaContext).station_dispatch_board;
+        const stationDispatchReveal = revealed.station_dispatch_reveal as {
+          version: number;
+          base_snapshot_hash: string;
+          station_dispatch_board: OpeningCompactStationDispatchBoard;
+        };
+        expect(Object.keys(stationDispatchReveal).sort()).toEqual(
+          ["version", "base_snapshot_hash", "station_dispatch_board"].sort(),
+        );
+        expect(stationDispatchReveal.version).toBe(PURE_STATION_DISPATCH_REVEAL_VERSION);
+        expect(stationDispatchReveal.base_snapshot_hash).toBe(stationed.snapshot_hash);
+        const revealedBoard = stationDispatchReveal.station_dispatch_board;
+        expect(revealedBoard).toHaveLength(6);
+        expect(revealedBoard?.[0]).toBe(6);
         expect(revealedBoard?.[3]).toEqual(["committed", 5, null, 3]);
         expect(revealedBoard?.[5]).toBeNull();
         expect(revealedBoard?.[4]).toEqual(
@@ -2504,6 +2757,9 @@ describe("MCP pure play mode", () => {
             ],
           ]),
         );
+        const revealReceiptBytes = Buffer.byteLength(JSON.stringify(revealed), "utf8");
+        expect(revealReceiptBytes).toBe(1_023);
+        expect(revealReceiptBytes).toBeLessThanOrEqual(1_100);
         const repeatedReveal = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",
@@ -2511,13 +2767,19 @@ describe("MCP pure play mode", () => {
               session_id: sessionId,
               if_snapshot_hash: revealed.snapshot_hash,
               reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+              include_departure_recap_terms: false,
+              include_station_dispatch_support: false,
             },
           }),
         );
         expect(repeatedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
-        expect((repeatedReveal.context as CompactAreaContext).station_dispatch_board).toEqual(
-          revealedBoard,
-        );
+        expect(repeatedReveal).not.toHaveProperty("journey");
+        expect(repeatedReveal).not.toHaveProperty("context");
+        expect(repeatedReveal.station_dispatch_reveal).toEqual({
+          version: PURE_STATION_DISPATCH_REVEAL_VERSION,
+          base_snapshot_hash: revealed.snapshot_hash,
+          station_dispatch_board: revealedBoard,
+        });
         const refreshedReveal = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",
@@ -2528,10 +2790,15 @@ describe("MCP pure play mode", () => {
         expect((refreshedReveal.context as CompactAreaContext).station_dispatch_board).toEqual(
           revealedBoard,
         );
+        expect(refreshedReveal.journey).toEqual(stationed.journey);
+        expect((refreshedReveal.context as CompactAreaContext).quest_starts).toEqual(
+          stationedContext.quest_starts,
+        );
         const forgedReveal = await client.callTool({
           name: "get_overworld_session_context",
           arguments: {
             session_id: sessionId,
+            if_snapshot_hash: revealed.snapshot_hash,
             reveal_station_dispatch_support: "forged:station-support",
           },
         });
@@ -2665,6 +2932,59 @@ describe("MCP pure play mode", () => {
         expect(Object.keys(detailedPreparation.inspectedOption ?? {}).sort()).toEqual(
           ["checkFit", "consequence", "dispatchForecast", "id", "label"].sort(),
         );
+        for (const expansion of [
+          {
+            arguments: { include_departure_recap_terms: true },
+            departureTerms: true,
+            stationSupport: false,
+          },
+          {
+            arguments: {
+              include_station_dispatch_support: true,
+              if_snapshot_hash: "0".repeat(24),
+            },
+            departureTerms: false,
+            stationSupport: true,
+          },
+          {
+            arguments: {
+              include_departure_recap_terms: true,
+              include_station_dispatch_support: true,
+              if_snapshot_hash: "0".repeat(24),
+            },
+            departureTerms: true,
+            stationSupport: true,
+          },
+        ] as const) {
+          const expandedReveal = textPayload(
+            await client.callTool({
+              name: "get_overworld_session_context",
+              arguments: {
+                session_id: sessionId,
+                reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+                ...expansion.arguments,
+              },
+            }),
+          );
+          expect(expandedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+          expect(expandedReveal).toHaveProperty("journey");
+          expect(expandedReveal).toHaveProperty("context");
+          expect(expandedReveal).not.toHaveProperty("station_dispatch_reveal");
+          const expandedContext = expandedReveal.context as CompactAreaContext;
+          expect(expandedContext.station_dispatch_board).toEqual(revealedBoard);
+          if (expansion.departureTerms) {
+            expect(expandedContext.departure_recap_terms).toEqual(expect.any(Array));
+          } else {
+            expect(expandedContext.departure_recap_terms).toBeUndefined();
+          }
+          if (expansion.stationSupport) {
+            expect(expandedContext.station_dispatch_support).toEqual(
+              supportContext.station_dispatch_support,
+            );
+          } else {
+            expect(expandedContext.station_dispatch_support).toBeUndefined();
+          }
+        }
         const prepared = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",
