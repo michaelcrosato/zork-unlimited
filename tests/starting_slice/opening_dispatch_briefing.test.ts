@@ -104,7 +104,14 @@ function expectSummaryFirstOptions(storyChoice: JourneyStoryChoicePrompt): void 
     expect(option.summary).not.toHaveProperty("fieldTrigger");
     if (storyChoice.kind === "registration") {
       expect(option.consequence).toContain("Field trigger:");
-      expect(option.consequence).toMatch(/\b(?:DEF|import)\b/i);
+      if (option.id === "albany:road_warden") {
+        expect(option.consequence).toContain(
+          "your Fieldcraft 4 sets its defense at 4 instead of 3",
+        );
+        expect(option.consequence).not.toMatch(/\bDEF\b|imported starting/iu);
+      } else {
+        expect(option.consequence).toMatch(/\b(?:DEF|import)\b/i);
+      }
       expect(JSON.stringify(option.summary)).not.toMatch(/\b(?:DEF|import|fieldTrigger)\b/i);
       continue;
     }
@@ -345,6 +352,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       optionId: REGISTRATION.profiles[0]!.id,
       result: registrationResult,
     });
+    expect(registrationResult.consequence).toContain(
+      "When Wolf-Winter starts from this journey, your Fieldcraft 4 sets its defense at 4 instead of 3.",
+    );
+    expect(registrationResult.consequence).not.toMatch(
+      /\b(?:DEF|LURE|HUNT)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation/gu,
+    );
     const oath = currentStoryChoice(session);
     expect(oath).toMatchObject({ id: RELIEF_OATH.id, kind: "relief_oath" });
     expect(oath.message).toBe(MATCHED_OATH_MESSAGE);
@@ -375,7 +388,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(roadWardenPacket.summary?.tradeoff).toBe("Other promise/report pairs close.");
     expect(roadWardenPacket.consequence).toContain("Boundary: Other duty/evidence pairs close.");
     expect(roadWardenPacket.consequence).toContain(
-      "Benefit: Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
+      "Benefit: Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
     );
     expect(JSON.stringify(roadWardenPacket.summary)).not.toMatch(
       /\b(?:DEF|DC|import|fieldTrigger)\b/i,

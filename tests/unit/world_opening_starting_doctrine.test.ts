@@ -36,6 +36,11 @@ describe("opening starting doctrines", () => {
         profile_id: "albany:road_warden",
         relief_oath_option_id: "albany:oath_limited_aid_only",
         lead_source_option_id: "albany:source_hayden_frost_report",
+        trigger_category:
+          "Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
+        preview:
+          "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3. After a clean first feed cast, Aid-Only prevents only the final ordinary +1 increase to cattle alarm; a foul keeps it (LURE). Hayden helps only when you hold the ground (HUNT): try the public fence brace; if frost splits it, leave it loose, kill the yearling, and take the bare spear north. Skip the brace, bind the rail, or use Works and the route closes; it never helps a lure.",
+        consequence: "Preparation, the relief wagon, June's offer, and both roads remain open.",
         immediate_cost: "10 minutes and $0",
       },
       {
@@ -53,9 +58,14 @@ describe("opening starting doctrines", () => {
     expect(doctrines[1]!.trigger_category).toContain("Fieldcraft 4");
     expect(doctrines[1]!.trigger_category).toContain("Aid-Only");
     expect(doctrines[1]!.trigger_category).toContain("HUNT");
+    expect(`${doctrines[1]!.preview} ${doctrines[1]!.consequence}`).not.toMatch(
+      /\bDEF\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation|clean LURE|split-rail HUNT/gu,
+    );
     expect(doctrines[2]!.tradeoff).toContain("No drover packet");
     expect(doctrines.map((doctrine) => doctrine.id)).not.toContain("albany:doctrine_bounded_aid");
-    for (const doctrine of doctrines) {
+    for (const doctrine of doctrines.filter(
+      (candidate) => candidate.id !== "albany:doctrine_road_warden_aid_route",
+    )) {
       expect(doctrine.consequence).toContain("relief allocation");
       expect(doctrine.consequence).toContain("June's field-team commitment");
       expect(doctrine.consequence).toContain("road approach remain unselected");

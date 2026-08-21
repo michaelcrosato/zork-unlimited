@@ -84,7 +84,7 @@ const STANDARD_PACKET_SUPPORT_COPY: Readonly<
     expectedLeadSourceOptionId: "albany:source_hayden_frost_report",
     expectedLeadSourceTitle: "Take Hayden's Frost-Heave Report",
     expectedTriggerCategory:
-      "Fieldcraft 4 sets DEF 4; Aid-Only skips clean LURE's last alarm; Hayden conditionally braces split-rail HUNT.",
+      "Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
     outcome: "Carry winter-road judgment and flexible, life-first aid to Cade's steading.",
   }),
   "albany:doctrine_independent_drive": Object.freeze({

@@ -710,6 +710,103 @@ describe("MCP pure play mode", () => {
     }
   }, 120_000);
 
+  it("keeps the universal Road-Warden receipts narrative-first and no larger than the failed pilot", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-road-warden-receipt-"));
+    const evidence = join(dir, "run.jsonl");
+    try {
+      await withPureServer(evidence, async (client) => {
+        const started = await callPlayerTool(client, "start_overworld", {});
+        const sessionId = String(started.session_id);
+        const parent = { session_id: sessionId };
+        const scouted = await callPlayerTool(client, "scout_overworld_session_poi", {
+          ...parent,
+          poi_id: "albany_city__civic_core__poi",
+          expected_snapshot_hash: started.snapshot_hash,
+        });
+        const registration = await callPlayerTool(client, "talk_overworld_session_contact", {
+          ...parent,
+          character_id: "albany_city__civic_core__contact",
+          expected_snapshot_hash: scouted.snapshot_hash,
+        });
+        await callPlayerTool(client, "inspect_overworld_session_story", {
+          ...parent,
+          story_choice_id: "albany:relief_registration",
+          option_id: "albany:road_warden",
+          if_snapshot_hash: registration.snapshot_hash,
+        });
+
+        const selectedRoleCall = await client.callTool({
+          name: "choose_overworld_session_story",
+          arguments: {
+            ...parent,
+            choice: "albany:road_warden",
+            expected_snapshot_hash: registration.snapshot_hash,
+          },
+        });
+        const selectedRoleText = textResult(selectedRoleCall);
+        const selectedRole = textPayload(selectedRoleCall);
+        expect(selectedRoleCall.isError).not.toBe(true);
+        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBe(6_330);
+        expect(Buffer.byteLength(selectedRoleText, "utf8")).toBeLessThanOrEqual(6_400);
+        expect((selectedRole.result as { consequence?: string }).consequence).toContain(
+          "When Wolf-Winter starts from this journey, your Fieldcraft 4 sets its defense at 4 instead of 3.",
+        );
+        expect((selectedRole.result as { consequence?: string }).consequence).not.toMatch(
+          /\b(?:DEF|LURE|HUNT)\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation/gu,
+        );
+
+        const readyDetail = await callPlayerTool(client, "inspect_overworld_session_story", {
+          ...parent,
+          story_choice_id: "albany:wolf_relief_oath",
+          option_id: "albany:doctrine_road_warden_aid_route",
+          if_snapshot_hash: selectedRole.snapshot_hash,
+        });
+        expect(
+          (
+            readyDetail.story as {
+              inspectedOption?: { consequence?: string };
+            }
+          ).inspectedOption?.consequence,
+        ).toContain(
+          "Benefit: Fieldcraft 4 means defense 4. Aid-Only blocks final +1 cattle alarm after clean first feed (LURE). Loose frost-split rail aids HUNT.",
+        );
+
+        const selectedDispatchCall = await client.callTool({
+          name: "choose_overworld_session_story",
+          arguments: {
+            ...parent,
+            choice: "albany:doctrine_road_warden_aid_route",
+            expected_snapshot_hash: selectedRole.snapshot_hash,
+          },
+        });
+        const selectedDispatchText = textResult(selectedDispatchCall);
+        const selectedDispatch = textPayload(selectedDispatchCall);
+        expect(selectedDispatchCall.isError).not.toBe(true);
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(9_195);
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBeLessThanOrEqual(9_250);
+        const consequence = (selectedDispatch.result as { consequence?: string }).consequence;
+        expect(consequence).toContain("Fieldcraft 4 starts Wolf-Winter at defense 4, not 3.");
+        expect(consequence).toContain(
+          "After a clean first feed cast, Aid-Only prevents only the final ordinary +1 increase to cattle alarm; a foul keeps it (LURE).",
+        );
+        expect(consequence).toContain(
+          "Hayden helps only when you hold the ground (HUNT): try the public fence brace; if frost splits it, leave it loose, kill the yearling, and take the bare spear north.",
+        );
+        expect(consequence).toContain(
+          "Skip the brace, bind the rail, or use Works and the route closes; it never helps a lure.",
+        );
+        expect(consequence).not.toMatch(
+          /\bDEF\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation|clean LURE|split-rail HUNT/gu,
+        );
+        expect((selectedDispatch.journey as { acceptedDecisions?: number }).acceptedDecisions).toBe(
+          5,
+        );
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   it("keeps area-alias normalization from consuming progressive definitions", async () => {
     await withFullServer(async (client) => {
       const started = await callPlayerTool(client, "start_overworld", {

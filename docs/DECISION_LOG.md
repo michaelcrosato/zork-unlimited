@@ -1400,3 +1400,43 @@ full, as do generic/non-pure contacts. Board V6, reveal V1, all ids, content,
 costs, checks, mechanics, effects, outcomes, decisions, strategies, Continue/End,
 and Gallowmere remain unchanged. This ten-player AI pilot does not establish a
 quality lift, human validation, retention improvement, or certification.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = bfccce6a; next move = narrative-first Road-Warden receipt)
+
+**The Station transport contracts remain closed.** The valid, single-attempt
+ten-player Terra pilot
+`starting-slice-terra-pilot-bfccce6a-20260821T141909Z` bound exact clean
+`bfccce6a58414a99806edf2cfdcd12d263d24e14`, official npm-shim Codex 0.146.0,
+and the unchanged world hash
+`ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017`.
+It completed Wolf-Winter 10/10 with no stuck run, p50 24 accepted decisions,
+four strategies, clarity 40/50, enjoyment 40/50, and 5/10 initial-goal
+continuation. It therefore failed three quality gates while remaining valid
+technical evidence. Nine players used reveal V1, eight used June modal V1, all
+gameplay calls succeeded, and those surfaces are counter-signals against
+reopening board V6, either V1 envelope, or support breadth.
+
+Every player independently chose Road-Warden, then the ready-made Aid-Only and
+Hayden dispatch. The shared chronology was start at decision 0, scout at 1,
+talk to Rowan at 2, choose Road-Warden at 3, and use one 9,196-byte dispatch
+selection call to record the oath and report at decisions 4 and 5. All ten
+reports described dense or front-loaded Albany terminology. Seed
+`821141909005` specifically named `DEF`, `LURE`, `HUNT`, `DRIVE`, and `FORTIFY`
+before the quest introduced the plans in player language; seed
+`821141909009` recorded an in-scope S1 on the relief-registration choice chain.
+This locates one universal selected-receipt correction before Station rather
+than another June-only or support-flow change.
+
+**Chosen move — explain the Road-Warden result before its plan aliases.** Rewrite
+only the Road-Warden registration consequence and the matched Aid-Only/Hayden
+doctrine trigger, preview, and consequence. Say that Fieldcraft starts Wolf-Winter at defense
+4 instead of 3; describe the later bait-and-redirect and hold-the-ground
+benefits before attaching their `LURE` and `HUNT` names; retain the exact clean
+first-cast/fouled-cast boundary and Hayden's ordinary split, unbound rail,
+fallen-yearling, bare-spear, and Works/skipping/binding exclusions. Mirror the
+exact trigger literal in the known-doctrine presentation guard so ordinary
+fallback remains honest if content diverges. IDs, numbers, predicates, effects,
+costs, actions, decisions, Station V6, reveal V1, June modal V1, support, roads,
+strategies, outcomes, Continue/End, Gallowmere, and quality thresholds do not
+change. This failed AI pilot diagnoses the copy target; deterministic tests do
+not prove a rating, continuation, certification, or human-quality lift.

@@ -443,6 +443,19 @@ provenance warning, after ordinary replay and integrity checks. Contract proof l
 [`mcp_journey_surface.test.ts`](../tests/unit/mcp_journey_surface.test.ts), and
 [`world_session_snapshot.test.ts`](../tests/unit/world_session_snapshot.test.ts).
 
+The narrative-first selected-receipt follow-up leaves that disclosure boundary
+intact. The next valid ten-player pilot put every player through the same
+Road-Warden and ready-made Aid-Only/Hayden setup before four different
+Wolf-Winter strategies, yet every report still described front-loaded Albany
+terminology and the cohort missed clarity, enjoyment, and initial-goal
+continuation. The Road-Warden confirmation and matched dispatch now lead with
+the plain result—Wolf-Winter starts at defense 4 instead of 3—and explain the
+two later plan benefits before attaching their `LURE` and `HUNT` aliases. The
+exact Aid-Only clean-cast boundary and Hayden split-rail sequence remain
+unchanged. No glossary, new choice, mechanic, route, support expansion, or
+decision is added; exact source/presentation matching and the selected-receipt
+regressions keep this a copy-only correction.
+
 The adjacent-plan-recall follow-up keeps that summary-first boundary while
 removing the remaining cross-screen memory test at Albany Station. Every
 Preparation, Relief Allocation, and June comparison now carries the same

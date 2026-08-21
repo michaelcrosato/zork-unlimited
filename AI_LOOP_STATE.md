@@ -169,3 +169,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure audit: 29/30 calls succeeded; one mistyped state hash rejected without mutation, refreshed, and retried. Clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck; the optional quick-lesson return caused mild reselection friction even though its LURE dialogue had disclosed the return.
 - Feedback/next: pre-seal status stayed one actionable report of three, so no compile ran; the seal consumes `bd527711` and queues this run second. The changed copy was a direct canary, not proof of reduced attention cost; prefer routine rotation unless lesson-return friction recurs.
 - Guard: 35 focused tests, both 6,000-step crawls, exact health, cycle-start integrity, 562 traces, Wolf validation, and exact pure provenance are green.
+## AFK Cycle 2026-08-21T15-40-26-071Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-21T15-40-26-071Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-347a8372 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

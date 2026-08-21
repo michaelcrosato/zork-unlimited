@@ -249,6 +249,23 @@ describe("Albany background-first ready-made dispatch runtime", () => {
         `Packet commitments: duty — ${oathTitle}; source — ${sourceTitle}.`;
       expect(receipt.consequence).toBe(exactReceipt);
       expect(receipt.entry.text).toBe(exactReceipt);
+      if (doctrine.id === "albany:doctrine_road_warden_aid_route") {
+        expect(receipt.consequence).toContain(
+          "Fieldcraft 4 starts Wolf-Winter at defense 4, not 3.",
+        );
+        expect(receipt.consequence).toContain(
+          "After a clean first feed cast, Aid-Only prevents only the final ordinary +1 increase to cattle alarm; a foul keeps it (LURE).",
+        );
+        expect(receipt.consequence).toContain(
+          "Hayden helps only when you hold the ground (HUNT): try the public fence brace; if frost splits it, leave it loose, kill the yearling, and take the bare spear north.",
+        );
+        expect(receipt.consequence).toContain(
+          "Skip the brace, bind the rail, or use Works and the route closes; it never helps a lure.",
+        );
+        expect(receipt.consequence).not.toMatch(
+          /\bDEF\b|imported starting|ordinary-hunt|frost[- ](?:brace|jamb)|public wedge|field-team|relief allocation|clean LURE|split-rail HUNT/gu,
+        );
+      }
       expect(receipt.displaySummary).toBe(
         `Ready-made dispatch chosen — Background: ${profileTitle}; ` +
           `Wolf-Winter promise: ${oathTitle.replace(/\bDuty\b/gu, "Promise")}; ` +
