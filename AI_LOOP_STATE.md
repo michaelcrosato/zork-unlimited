@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 782 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260821T101544Z/hotspots.json","hotspots_sha256":"bf6bc80d9b81479acbe18192d363fa8d6191fc5991db4e263b2a3276cdf3ac1c","manifest_path":"ai-runs/feedback/20260821T101544Z/report-manifest.json","manifest_sha256":"58b14a97e7e6a525ececd3dbd4f6ccdbc36d520cb38547a3e915590650f14092"},"pending_cycle_reports":[{"evidence_sha256":"90e09bfaecd402a4cf1cda7700a31f271a2a9ec3ae9bd43b2e554794ff79db10","report_id":"pure:ce094cc3ba78a1499266216234380dbb82717e87bf7b1b30764b9f3dd3835562","report_sha256":"8970a36ec017e5ab71ddd3dcfb01b54f90cca031fe17340fde3aa5a632e444af","run_id":"2026-08-21T09-27-51-750Z","sidecar_sha256":"6796e2eb2f92c435934387719a51bebd40841306d7179d2b67c284dd338586b5","tested_commit":"b78aae0bd940f7f904fd82cc412fc2abea4cb1b7"}],"schema_version":1} -->
+<!-- historical_cycle_count: 783 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260821T133438Z/hotspots.json","hotspots_sha256":"38d2cbf6bb7774213dd40774cc304428441973c0ef8e0d8972b3d24d486c074b","manifest_path":"ai-runs/feedback/20260821T133438Z/report-manifest.json","manifest_sha256":"0a5f2fe27d7c9410c1ce459a5f5aea4125ab28e56249c6a45c010a4f0c7870ef"},"pending_cycle_reports":[{"evidence_sha256":"2948ead48247e3d8fdc32aabb43bb044976c104d71fc514a993eee5767f0a575","report_id":"pure:46f28e46a4361bb18db9d41f3dbfe177e781416774dc6d0abc7adf2df56b3c56","report_sha256":"9fd7c13918b869f5fa6297c4730d12d60672d7d6eb4a17434144c224732dc029","run_id":"2026-08-21T11-43-21-608Z","sidecar_sha256":"3b3d2e0e9f594517b0500ccd9e5a60a0bb24f78d59a3fedbdf6988c9cd419e57","tested_commit":"a8b34b11485bfd5571e7ff35108ef12d7ebaac26"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - station_june_modal_bound_delta_v1
+
+- Evidence choice: accepted `hotspot-cba015b4` named difficulty assessing June's cattle-first value; the fresh clean no-retry 10-Terra pilot completed 10/10 but missed clarity 39/50 and enjoyment 40/50, while eight June modal handoffs immediately preceded mandatory choices and replayed 71,191 bytes. This bounded correction targets that exact handoff, not June's terms or mechanics.
+- Surface/effect: pure exact-ready June talks now authenticate the durable V6 reveal receipt and retained hash, then return a typed V1 modal with full journey, decision, result, and complete legend patch when present plus new/base hashes but no repeated context or raw session id; the eight exact counterfactuals are 31,264 bytes (-39,927 / -56.08%), and the current envelope is 3,908/4,000. Full mode, board/context/save versions, mechanics, support choices/costs, routes, UI, and CLI remain unchanged.
+- Counterfactual: missing/stale hashes reject before mutation; no receipt, another contact, a pending modal, or a selected field team stays canonical; read-only inspection preserves the hash, the exact ally choice fully resynchronizes context, and receipt-persistent later June talk plus unexpected post-shape fall back to canonical handling.
+- Browser: exact desktop and 390px Albany→Rowan→Road-Warden→Station flows kept both roads and all three support groups usable; desktop pinned count 3→0 and mobile June 3→2 with no console error or new horizontal overflow. Pre-existing modal scroll retention and floating mobile controls remain separate follow-ups.
+- Pure evidence: exact-clean Terra 0.146 seed 821114321608 used the V1 June Cattle-First modal and its new hash, took Sheltered LURE to Wolf-Winter `ending_pack_diverted` at decision 27 with herd and wolves alive, explicitly returned to Albany, then voluntarily continued through out-of-scope Gallowmere `ending_hunt_won` and ended at decision 50.
+- Self-critique/feedback: clarity/enjoyment were 4/4, replay yes, not stuck, bugs `[]`; compact state, parent/child concepts, kit compatibility, and post-Wolf leads still caused friction, while the Gallowmere best moment and one AI route cannot prove V1 causality, human validation, or certification. Compile `20260821T133438Z` admitted the prior 11 verified/actionable reports with no mocks and excludes this pure until seal; exact selection should consume `hotspot-cba015b4` only at seal, while new `347a8372` is a separate Gallowmere follow-up.
+- Guard delta: 70 focused tests, exact 461-file/4,099-test candidate health, two 6,000-step smokes, 384,000-step truncated deep crawl with zero findings, all 12 packs, real browser flow, start-ref integrity, authenticated pure, and deterministic compile are green; post-ledger rotation, smoke/health, integrity, pure reverify, seal, and final ledger commit remain fail-closed.
 
 ### Cycle result - station_reveal_bound_delta_v1
 
@@ -159,19 +169,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure audit: 29/30 calls succeeded; one mistyped state hash rejected without mutation, refreshed, and retried. Clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck; the optional quick-lesson return caused mild reselection friction even though its LURE dialogue had disclosed the return.
 - Feedback/next: pre-seal status stayed one actionable report of three, so no compile ran; the seal consumes `bd527711` and queues this run second. The changed copy was a direct canary, not proof of reduced attention cost; prefer routine rotation unless lesson-return friction recurs.
 - Guard: 35 focused tests, both 6,000-step crawls, exact health, cycle-start integrity, 562 traces, Wolf validation, and exact pure provenance are green.
-
-### Cycle result - rpg_terminal_state_coherence
-
-- Evidence choice: the saturation ultraplan proved that hash-recomputed public saves accepted both `ended=true`/no ending and active state/a declared ending even though runtime writers only produce false/null or true/id; this off-list restore-boundary invariant therefore kept the frozen null selection.
-- Surface/effect: well-formed RPG state now requires `ended === (endingId !== null)` before normalized load acceptance; valid active/terminal saves, content, mechanics, envelope/version, digest, and authorization stay unchanged.
-- Counterfactual: hostile current-save pairs now fail with exact integrity diagnostics, valid active and ended controls still round-trip, and a coherent fabricated ending still reaches the later pack-aware unknown-ending gate; save/trace suites cover 108 cases.
-- Red-gate correction: the first provisional pure exhausted provider context after gameplay and published no canonical report/evidence/sidecar; it was reset and quarantined, while fresh `05a1d680` alone binds this cycle's successful evidence.
-- Pure evidence: exact-clean Spark seed 7 chose Road-Warden/Aid-Only/Hayden, completed sheltered LURE as `ending_pack_diverted` at 50/60 with herd and all wolves alive, then End at decision 24; 28/29 calls succeeded and one malformed parent handle recovered unchanged, with 4/4, replay yes, bugs `[]`, and no stuck state.
-- Canary/feedback: no save/load/trace call exposed the invariant, so regressions remain causal; the exact prior three reports compiled to revision-live S1 FORTIFY-attention row `bd527711` while excluding this run, and null selection promotes it unconsumed for bounded action-first copy triage rather than mechanics churn.
-- Guard: both 6,000-step crawls, full health (448 files/3,891 tests), 561 traces, UI typecheck, all 12 packs, reviewed cycle-start integrity, exact pure provenance, deterministic compile, formatting, and hostile authority review are green.
-## AFK Cycle 2026-08-21T11-43-21-608Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-21T11-43-21-608Z","selected_recommendation_id":"hotspot-cba015b4"} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-cba015b4 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
