@@ -73,7 +73,9 @@ export const OVERWORLD_COMPACT_SERVICE_SUMMARY_CHAR_LIMIT = 512;
 // Station board tuples remain V4 and keep their exact slots and actions.
 // v48: Station board V5 stages the three optional support purposes/actions behind one
 // exact, durable read-only reveal while keeping legal Wolf-Winter roads first.
-export const OVERWORLD_COMPACT_VIEW_VERSION = 48 as const;
+// v49: Station board V6 makes that reveal relevance-first by naming only the
+// still-open kit, wagon, and rider categories before any support comparison.
+export const OVERWORLD_COMPACT_VIEW_VERSION = 49 as const;
 
 export type OverworldCompactRef = readonly [id: string, name: string];
 export type OverworldCompactOpportunityLead = readonly [
@@ -471,7 +473,7 @@ export const OVERWORLD_COMPACT_LEGEND = {
   departure_recap_terms:
     "[version,quest_id,[[slot,active_field_term],...]] exact selected Station terms. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Via include_departure_recap_terms or support-option detail; no alternatives/outcomes/actions.",
   station_dispatch_board:
-    "[5,quest_id,dispatch_status,dispatch|null,rows,reveal|null];dispatch=[state,minutes,timing|null,remaining_optional_count];row=[slot,status,selected_title|null,purpose|null,action|null]. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Pre-review hides open_optional;reveal=[id,label]. Call get-context(reveal_station_dispatch_support=exact id);read-only receipt survives refresh/export/restore. Then reveal=null;rows restore purpose/action:['inspect',story_choice_id]|['talk',character_id,contact_name]. Support optional;strategy unchanged. Terms=departure_recap_terms;roads=quests+quest_starts.",
+    "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null];dispatch=[state,minutes,timing|null,remaining_optional_count];row=[slot,status,selected_title|null,purpose|null,action|null]. role/duty/evidence/preparation/relief_allocation/field_team=background/promise/report/kit/wagon/rider. Pre-review hides open_optional;overview=[id,label] names only open kit/wagon/rider categories and kit skills Repair/Streetwise/Mediation. Call get-context(reveal_station_dispatch_support=exact id);read-only receipt survives refresh/export/restore. Then overview=null;rows restore purpose/action:['inspect',story_choice_id]|['talk',character_id,contact_name]. Support optional;strategy unchanged. Terms=departure_recap_terms;roads=quests+quest_starts.",
   station_dispatch_support:
     "[[support_slot, purpose, action|null], ...] explicit read-only Station support detail; preparation=field kit, relief_allocation=relief wagon, field_team=second rider. Returned only by get_overworld_session_context(include_station_dispatch_support:true). action is ['inspect', story_choice_id] for inspect_overworld_session_story or ['talk', character_id, contact_name] for talk_overworld_session_contact; inspect reveals legal story.options[*].id choices. Support remains optional and changes dispatch cost and aftermath, not which Wolf-Winter strategy is offered.",
   opportunity_guidance:

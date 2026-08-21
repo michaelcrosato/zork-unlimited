@@ -860,11 +860,11 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(mcpStation.context.station_dispatch_board).toEqual(
       ui.compactView().station_dispatch_board,
     );
-    expect(mcpStation.context.station_dispatch_board?.[0]).toBe(5);
+    expect(mcpStation.context.station_dispatch_board?.[0]).toBe(6);
     expect(mcpStation.context.station_dispatch_board?.[4]).toHaveLength(3);
     expect(mcpStation.context.station_dispatch_board?.[5]).toEqual([
       "station_dispatch:review_optional_support",
-      "Review optional support (3 choices)",
+      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
     ]);
     expect(mcpStation.context).not.toHaveProperty("departure_recap");
     expect(mcpStation.context).not.toHaveProperty("departure_interactions");

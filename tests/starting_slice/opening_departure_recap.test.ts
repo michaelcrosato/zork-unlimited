@@ -279,7 +279,7 @@ describe("Albany opening departure recap", () => {
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.departure_recap).toBeUndefined();
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
-      5,
+      6,
       WOLF.id,
       expect.any(String),
       ["committed", 10, null, 3],

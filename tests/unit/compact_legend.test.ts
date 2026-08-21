@@ -63,6 +63,7 @@ describe("compact legends", () => {
       46: "b93524fb7e965a094bf2dfb1909f901c339e8fcd1018ee5dccaeb072c82e2ac5",
       47: "04e4a1a44b2ce7e3131a09e143add5fd5b599502715f901758da3ca681ccc1e6",
       48: "8c7f281cab4e663cc1fc0fac73d0af68e26499ff5bf67bfb63a7a74b240aa838",
+      49: "ff1e6f0fa60641609dacce89ea162da62ead7952dd1c27818ba78452c033487d",
     } as const;
     const signature = createHash("sha256")
       .update(
@@ -73,7 +74,7 @@ describe("compact legends", () => {
       )
       .digest("hex");
 
-    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(48);
+    expect(OVERWORLD_COMPACT_VIEW_VERSION).toBe(49);
     expect(signature).toBe(expectedSignatureByVersion[OVERWORLD_COMPACT_VIEW_VERSION]);
   });
 

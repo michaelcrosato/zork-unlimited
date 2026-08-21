@@ -1282,7 +1282,7 @@ const STATION_SUPPORT = {
   reveal_station_dispatch_support: z
     .string()
     .optional()
-    .describe("Durable read-only reveal; pass the exact Station V5 board [5] id."),
+    .describe("Durable read-only reveal; pass the exact Station V6 board [5] id."),
 };
 const OVERWORLD_READ_DETAILS = PLAY_MODE === "pure" ? {} : { ...S, ...W, ...IDS, ...ROUTES };
 const COMPACT_OVERWORLD_CONTEXT =
@@ -1333,7 +1333,7 @@ tool(
 );
 tool(
   "get_overworld_session_context",
-  "Read compact context; Station support uses the exact V5 board [5] id.",
+  "Read compact context; Station support uses the exact V6 board [5] id.",
   {
     ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,

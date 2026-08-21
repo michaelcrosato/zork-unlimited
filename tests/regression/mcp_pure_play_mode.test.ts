@@ -1764,8 +1764,8 @@ describe("MCP pure play mode", () => {
         const pureCatalogBytes = Buffer.byteLength(JSON.stringify(pureCatalogProjection), "utf8");
         expect(pureCatalogBytes).toBe(16_790);
         expect(pureCatalogBytes - 16_694).toBe(96);
-        expect(16_375 + 2_042 + pureCatalogBytes).toBe(35_207);
-        expect(16_375 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(16_472 + 2_042 + 16_694);
+        expect(16_036 + 2_042 + pureCatalogBytes).toBe(34_868);
+        expect(16_036 + 2_042 + pureCatalogBytes).toBeLessThan(35_207);
         for (const tool of listed.tools) {
           expect(
             validPureMcpToolCatalogEntry({ name: tool.name }),
@@ -1805,7 +1805,7 @@ describe("MCP pure play mode", () => {
           "reveal_station_dispatch_support",
           expect.objectContaining({
             type: "string",
-            description: expect.stringMatching(/exact Station V5 board \[5\] id/i),
+            description: expect.stringMatching(/exact Station V6 board \[5\] id/i),
           }),
         );
 
@@ -2400,10 +2400,12 @@ describe("MCP pure play mode", () => {
         const stationLegend = (stationed.legend_delta as Record<string, string>)
           .station_dispatch_board;
         expect(stationLegend).toContain(
-          "[5,quest_id,dispatch_status,dispatch|null,rows,reveal|null]",
+          "[6,quest_id,dispatch_status,dispatch|null,rows,overview|null]",
         );
         expect(stationLegend).toContain("remaining_optional_count");
-        expect(stationLegend).toContain("Pre-review hides open_optional;reveal=[id,label]");
+        expect(stationLegend).toContain("Pre-review hides open_optional;overview=[id,label]");
+        expect(stationLegend).toContain("names only open kit/wagon/rider categories");
+        expect(stationLegend).toContain("Repair/Streetwise/Mediation");
         expect(stationLegend).toContain("get-context(reveal_station_dispatch_support=exact id)");
         expect(stationLegend).toContain("receipt survives refresh/export/restore");
         expect(stationLegend).toContain("['inspect',story_choice_id]");
@@ -2413,7 +2415,7 @@ describe("MCP pure play mode", () => {
         expect(stationedContext.departure_contact_leads).toBeUndefined();
         expect(stationedContext.departure_recap).toBeUndefined();
         const stationedBoard = stationedContext.station_dispatch_board;
-        expect(stationedBoard?.slice(0, 2)).toEqual([5, "wolf_winter"]);
+        expect(stationedBoard?.slice(0, 2)).toEqual([6, "wolf_winter"]);
         const stationedGuidance = stationedBoard?.[2];
         expect(stationedGuidance).toBe(
           "Dispatch 5m committed; optional Station support remains (final 5–55m). Every remaining support combination stays on time; starting now declines them.",
@@ -2423,7 +2425,7 @@ describe("MCP pure play mode", () => {
         expect(stationedBoard?.[4].every((row) => row[3] === null && row[4] === null)).toBe(true);
         expect(stationedBoard?.[5]).toEqual([
           STATION_DISPATCH_SUPPORT_REVEAL_ID,
-          "Review optional support (3 choices)",
+          "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
         ]);
         const hiddenStationJson = JSON.stringify(stationedBoard);
         expect(hiddenStationJson).not.toContain("albany:wolf_preparation");
@@ -2676,7 +2678,7 @@ describe("MCP pure play mode", () => {
           }),
         );
         const preparedBoard = (prepared.context as CompactAreaContext).station_dispatch_board;
-        expect(preparedBoard?.[0]).toBe(5);
+        expect(preparedBoard?.[0]).toBe(6);
         expect(preparedBoard?.[2]).toMatch(
           /^Dispatch \d+m committed; optional Station support remains \(final \d+–\d+m\)\./,
         );
@@ -2788,7 +2790,7 @@ describe("MCP pure play mode", () => {
         ]);
         const wolfWinter = areaView(prepared).quests.find((quest) => quest.id === "wolf_winter");
         if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
-        expect((allied.context as CompactAreaContext).station_dispatch_board?.[0]).toBe(5);
+        expect((allied.context as CompactAreaContext).station_dispatch_board?.[0]).toBe(6);
         const inspectedAllocation = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",

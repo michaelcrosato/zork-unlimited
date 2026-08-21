@@ -11,7 +11,7 @@ import type {
 } from "./session_departure_interactions.js";
 
 /** A read-only, coverage-complete index of the current Station dispatch. */
-export const STATION_DISPATCH_BOARD_VERSION = 5 as const;
+export const STATION_DISPATCH_BOARD_VERSION = 6 as const;
 export const STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT = 240;
 export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
 export const STATION_DISPATCH_SUPPORT_REVEAL_ID =
@@ -176,7 +176,7 @@ export type OpeningCompactStationDispatchBoardDispatch = readonly [
   remainingOptionalCount: number,
 ];
 
-export type OpeningCompactStationDispatchBoardReveal = readonly [
+export type OpeningCompactStationDispatchBoardOverview = readonly [
   id: typeof STATION_DISPATCH_SUPPORT_REVEAL_ID,
   label: string,
 ];
@@ -187,7 +187,7 @@ export type OpeningCompactStationDispatchBoard = readonly [
   guidance: string,
   dispatch: OpeningCompactStationDispatchBoardDispatch | null,
   rows: readonly OpeningCompactStationDispatchBoardPlanRow[],
-  reveal: OpeningCompactStationDispatchBoardReveal | null,
+  overview: OpeningCompactStationDispatchBoardOverview | null,
 ];
 
 /** Backward-compatible explicit detail for clients that request Station support separately. */
@@ -523,16 +523,26 @@ function compactStationDispatchGuidance(
   );
 }
 
-function compactStationDispatchReveal(
-  openOptionalCount: number,
+function compactStationDispatchOverview(
+  openSupport: readonly StationDispatchBoardSupport[],
   supportRevealed: boolean,
-): OpeningCompactStationDispatchBoardReveal | null {
+): OpeningCompactStationDispatchBoardOverview | null {
   if (supportRevealed) return null;
-  if (openOptionalCount === 0) return null;
-  const choices = openOptionalCount === 1 ? "choice" : "choices";
+  if (openSupport.length === 0) return null;
+  const openSlots = new Set(openSupport.map((entry) => entry.slot));
+  const kit = openSlots.has("preparation") ? "kits use Repair, Streetwise, or Mediation" : null;
+  const wagon = openSlots.has("relief_allocation") ? "Albany's last relief wagon" : null;
+  const rider = openSlots.has("field_team") ? "a cattle-first second rider" : null;
+  const other = [wagon, rider].filter((entry): entry is string => entry !== null);
+  const categories = kit
+    ? `${kit}${other.length > 0 ? `; plus ${formatGuidanceList(other, "or")}` : ""}`
+    : formatGuidanceList(other, "or");
   return [
     STATION_DISPATCH_SUPPORT_REVEAL_ID,
-    `Review optional support (${String(openOptionalCount)} ${choices})`,
+    bounded(
+      `Optional support: ${categories}. Review only if one interests you.`,
+      "compact overview",
+    ),
   ];
 }
 
@@ -541,14 +551,17 @@ export function compactStationDispatchBoard(
   supportRevealed = false,
   sharedDispatchStatus?: string,
 ): OpeningCompactStationDispatchBoard {
-  const openOptionalCount = board.support.filter(
-    (entry) => entry.status === "open_optional",
-  ).length;
+  const openSupport = board.support.filter((entry) => entry.status === "open_optional");
+  const openOptionalCount = openSupport.length;
   if (openOptionalCount > SUPPORT_SLOTS.length) {
     throw new Error("Station dispatch board has too many optional support rows.");
   }
-  if (board.dispatch && board.dispatch.remainingOptional.length !== openOptionalCount) {
-    throw new Error("Station dispatch board optional support count is inconsistent.");
+  if (
+    board.dispatch &&
+    (board.dispatch.remainingOptional.length !== openOptionalCount ||
+      board.dispatch.remainingOptional.some((slot, index) => slot !== openSupport[index]?.slot))
+  ) {
+    throw new Error("Station dispatch board optional support set is inconsistent.");
   }
   return [
     board.version,
@@ -586,7 +599,7 @@ export function compactStationDispatchBoard(
           openSupport ? compactAction(openSupport.action) : null,
         ] as const;
       }),
-    compactStationDispatchReveal(openOptionalCount, supportRevealed),
+    compactStationDispatchOverview(openSupport, supportRevealed),
   ];
 }
 

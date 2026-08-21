@@ -1281,3 +1281,26 @@ unchanged; only the additive read receipt changes snapshot bytes/hash until supp
 seals, launch, or End. The
 failed pilot identifies this correction target; it does not validate the
 replacement, certify authority, or support any unrelated content or metric claim.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = 766bad57; next move = compact Station V6)
+
+**Chosen move — make the optional-support reveal relevance-first.** The valid but
+non-certified no-retry Terra pilot `station-v5-sealed-pilot-766bad57` completed
+Wolf-Winter 10/10 but missed clarity at 40/50 and enjoyment at 41/50. All ten
+players opened the Station support reveal, nine inspected the field-kit comparison,
+and six Road-Warden players made that comparison even though their Fieldcraft
+background matched none of the three kit checks (Repair, Streetwise, Mediation).
+Those authenticated calls support a bounded information-scent correction, not a
+claim that the existing actions or mechanics failed.
+
+Compact v49 / board V6 keeps V5's exact reveal id, durable receipt, hidden pre-review
+rows, and byte-identical post-review purposes/actions, but replaces the generic
+choice count with one dynamic overview naming only the still-open kit, relief-wagon,
+and second-rider categories. The all-open copy names the three kit skill domains so
+an uninterested or unmatched player can depart without drilling into support. The
+pure prompt makes review conditional and removes V2/V3 history; the compatible
+explicit-detail flag and runtime responses remain available. IDs, support order,
+costs, timing, checks, gameplay effects, roads, strategies, outcomes, saves apart
+from the existing read receipt, accepted decisions, Continue/End, full UI, and CLI
+remain unchanged. The failed pilot diagnoses this target; only a fresh exact-build
+pilot can show whether clarity or enjoyment improves.

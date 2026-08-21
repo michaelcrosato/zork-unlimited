@@ -1134,7 +1134,7 @@ describe("MCP journey surface", () => {
         if (!sourceBoard) throw new Error("expected full Station dispatch board");
         const compactBoard = compact.context.station_dispatch_board;
         if (!compactBoard) throw new Error("expected compact Station dispatch board");
-        expect(compactBoard[0]).toBe(5);
+        expect(compactBoard[0]).toBe(6);
         expect(compactBoard[3]?.[3]).toBe(
           sourceBoard.support.filter((entry) => entry.status === "open_optional").length,
         );
@@ -1146,11 +1146,21 @@ describe("MCP journey surface", () => {
               .map((entry) => entry.slot),
           ),
         );
+        const openSupportKey = sourceBoard.support
+          .filter((entry) => entry.status === "open_optional")
+          .map((entry) => entry.slot)
+          .join("|");
+        const expectedOverviewByOpenSupport: Readonly<Record<string, string>> = {
+          "preparation|relief_allocation|field_team":
+            "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+          "relief_allocation|field_team":
+            "Optional support: Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+          field_team:
+            "Optional support: a cattle-first second rider. Review only if one interests you.",
+        };
         expect(compactBoard[5]).toEqual([
           STATION_DISPATCH_SUPPORT_REVEAL_ID,
-          `Review optional support (${String(compactBoard[3]![3])} ${
-            compactBoard[3]![3] === 1 ? "choice" : "choices"
-          })`,
+          expectedOverviewByOpenSupport[openSupportKey],
         ]);
         // An explicitly requested verbose observation remains the complete data
         // surface; progressive disclosure applies to compact/pure presentation.

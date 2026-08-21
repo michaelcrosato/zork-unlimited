@@ -210,32 +210,35 @@ it is **not yet milestone-certified**:
   removed;
 - the launch-first Station follow-up preserves the existing terminal/browser
   road and support order while changing only the compact MCP hierarchy. The
-  authenticated full board V5 carries the dispatch clock, all six selected/open plan rows, mapped
-  support actions, and launch card; compact v48 emits
-  `[5, questId, dispatchStatus, dispatch|null, rows, reveal|null]`, with
+  authenticated full board V6 carries the dispatch clock, all six selected/open plan rows, mapped
+  support actions, and launch card; compact v49 emits
+  `[6, questId, dispatchStatus, dispatch|null, rows, overview|null]`, with
   `dispatch=[state, minutes, timing|null, remainingOptionalCount]`, and retains
   canonical road detail in `quests` / `quest_starts`. It omits redundant compact
   `departure_recap`, `departure_interactions`, and `departure_contact_leads`
   only when every current action and status is exactly indexed; malformed or
   unmapped sources fall back to the established surfaces. Before review, the
   compact board omits all current `open_optional` rows and exposes one exact
-  `[id, label]` read-only review affordance. Calling
+  `[id, label]` read-only overview. Its label names only the support categories
+  still open: specialist kits disclose their authenticated Repair, Streetwise,
+  and Mediation domains; the relief wagon and cattle-first second rider appear
+  only while their rows remain open. Calling
   `get_overworld_session_context` with that id records a separate durable,
   idempotent receipt; refresh and export/restore retain it, while a forged id
   fails and launch, a fully sealed support plan, or journey End clears it. After
-  review, the same existing five-field optional rows, purposes, and authenticated
-  inspect/talk actions return in their established order. Selected and
+  review, the same V5 five-field optional rows, purposes, and authenticated
+  inspect/talk actions return byte-for-byte in their established order. Selected and
   non-actionable rows remain null/null. The shared authenticated dispatch
   briefing appears once on the compact board; only then is that exact prefix
   removed from each compact road, so all route-specific time, supply, fatigue,
   alarm, and weather facts remain. This progressive disclosure is compact-MCP-
   only; terminal and browser presentation remain unchanged. The initial board
-  is 462 UTF-8 bytes and its legend is 649 bytes. The 16,375-byte prompt is 97
-  bytes below v47, while the pure tool catalogue is 16,790 bytes (+96); with the
-  unchanged 2,042-byte fresh context, the aggregate is 35,207 bytes versus the
-  frozen 35,208-byte v47/V4 baseline (-1). First-Station prompt + catalogue +
-  context + newly delivered legend is 38,619 bytes versus the frozen 39,261-byte
-  baseline (-642). The receipt may change the save
+  is 585 UTF-8 bytes and its legend is 741 bytes. Removing fresh-player legacy
+  version history makes the prompt 16,036 bytes, while the pure tool catalogue
+  remains 16,790 bytes. With the unchanged 2,042-byte fresh context, the aggregate
+  is 34,868 bytes versus V5's 35,207 (-339). First-Station prompt + catalogue +
+  4,928-byte context + newly delivered legend is 38,495 bytes versus V5's 38,619
+  (-124) and the frozen v47/V4 baseline 39,261 (-766). The receipt may change the save
   hash but accepts no gameplay or journey decision. Actions, terms, mechanics,
   costs, gameplay state/effects except that receipt, RNG, outcomes, and
   accepted-decision counts are unchanged, with

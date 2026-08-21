@@ -67,7 +67,7 @@ describe("Station dispatch board", () => {
     if (!board || !view.departureRecap) throw new Error("Expected the Station dispatch board.");
 
     expect(board).toMatchObject({
-      version: 5,
+      version: 6,
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
@@ -156,15 +156,15 @@ describe("Station dispatch board", () => {
     expect(cloneOverworldCompactView(compact).station_dispatch_board).toEqual(
       compact.station_dispatch_board,
     );
-    // V5 presents the legal roads and selected core first, with one read-only
-    // affordance standing in for all three unopened optional-support rows.
-    expect(Buffer.byteLength(JSON.stringify(compact.station_dispatch_board), "utf8")).toBe(462);
-    expect(Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8")).toBe(649);
+    // V6 presents the legal roads and selected core first, with one relevance-first
+    // overview standing in for all three unopened optional-support rows.
+    expect(Buffer.byteLength(JSON.stringify(compact.station_dispatch_board), "utf8")).toBe(585);
+    expect(Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8")).toBe(741);
     expect(OVERWORLD_COMPACT_LEGEND.station_dispatch_board).toContain(
       "Pre-review hides open_optional",
     );
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
-      5,
+      6,
       WOLF.id,
       sharedDispatchStatus,
       ["committed", board.dispatch?.minutes, null, 3],
@@ -182,11 +182,13 @@ describe("Station dispatch board", () => {
     ]);
     expect(compact.station_dispatch_board?.[5]).toEqual([
       STATION_DISPATCH_SUPPORT_REVEAL_ID,
-      "Review optional support (3 choices)",
+      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
     ]);
     expect(JSON.stringify(compact.station_dispatch_board)).not.toContain(PREPARATION.id);
     expect(JSON.stringify(compact.station_dispatch_board)).not.toContain(RELIEF_ALLOCATION.id);
     expect(JSON.stringify(compact.station_dispatch_board)).not.toContain(ALLY.contact);
+    expect(compact.contacts).toContainEqual([ALLY.contact, "June Pike"]);
+    expect(compactOverworldView(view).contacts).toEqual(compact.contacts);
     expect(compact.station_dispatch_support).toBeUndefined();
     expect(compactStationDispatchBoardSupport(board)).toEqual([
       [
@@ -230,9 +232,8 @@ describe("Station dispatch board", () => {
     });
     expect(composedCompactStation.split(sharedDispatchStatus!).length - 1).toBe(1);
 
-    // Frozen V47/V4 first-contact accounting, all in UTF-8 bytes. The pure tool
-    // catalogue grows by 96 bytes, so the prompt shrinks by 97 and both the fresh
-    // and first-Station aggregate remain net-reductive.
+    // Frozen first-contact accounting, all in UTF-8 bytes. V6 keeps the V5 pure
+    // catalogue size, while removing legacy history from the fresh-player prompt.
     const promptBytes = readFileSync("blind-tester/prompt-overworld.md").byteLength;
     const pureCatalogBytes = 16_790;
     const freshContextBytes = Buffer.byteLength(
@@ -240,16 +241,16 @@ describe("Station dispatch board", () => {
       "utf8",
     );
     const stationContextBytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
-    expect(promptBytes).toBe(16_375);
-    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(35_207);
-    expect(35_207).toBeLessThan(35_208);
+    expect(promptBytes).toBe(16_036);
+    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(34_868);
+    expect(34_868).toBeLessThan(35_207);
     const firstStationAggregate =
       promptBytes +
       pureCatalogBytes +
       stationContextBytes +
       Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
-    expect(firstStationAggregate).toBe(38_619);
-    expect(firstStationAggregate).toBeLessThan(39_261);
+    expect(firstStationAggregate).toBe(38_495);
+    expect(firstStationAggregate).toBeLessThan(38_619);
 
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });
     expect(fallback.departure_interactions).toEqual([
@@ -263,14 +264,182 @@ describe("Station dispatch board", () => {
     const clonedReveal = cloneOverworldCompactView(compact).station_dispatch_board?.[5];
     if (!clonedReveal) throw new Error("Expected a cloned support reveal.");
     (clonedReveal as [string, string])[1] = "Forged label";
-    expect(compact.station_dispatch_board?.[5]?.[1]).toBe("Review optional support (3 choices)");
+    expect(compact.station_dispatch_board?.[5]?.[1]).toBe(
+      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+    );
 
     expect(session.snapshot()).toEqual(before);
     expect(session.snapshotHash()).toBe(beforeHash);
     expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
   });
 
-  it("reveals exact V4 support-row bytes, removes handles as rows close, and re-derives V5 on restore", () => {
+  it("names all eight remaining-support subsets before review", () => {
+    type SupportSlot = "preparation" | "relief_allocation" | "field_team";
+    const cases: readonly {
+      selected: readonly SupportSlot[];
+      openMask: number;
+      overview: string | null;
+    }[] = [
+      {
+        selected: [],
+        openMask: 7,
+        overview:
+          "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+      },
+      {
+        selected: ["preparation"],
+        openMask: 6,
+        overview:
+          "Optional support: Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
+      },
+      {
+        selected: ["relief_allocation"],
+        openMask: 5,
+        overview:
+          "Optional support: kits use Repair, Streetwise, or Mediation; plus a cattle-first second rider. Review only if one interests you.",
+      },
+      {
+        selected: ["field_team"],
+        openMask: 3,
+        overview:
+          "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon. Review only if one interests you.",
+      },
+      {
+        selected: ["preparation", "relief_allocation"],
+        openMask: 4,
+        overview:
+          "Optional support: a cattle-first second rider. Review only if one interests you.",
+      },
+      {
+        selected: ["preparation", "field_team"],
+        openMask: 2,
+        overview: "Optional support: Albany's last relief wagon. Review only if one interests you.",
+      },
+      {
+        selected: ["relief_allocation", "field_team"],
+        openMask: 1,
+        overview:
+          "Optional support: kits use Repair, Streetwise, or Mediation. Review only if one interests you.",
+      },
+      {
+        selected: ["preparation", "relief_allocation", "field_team"],
+        openMask: 0,
+        overview: null,
+      },
+    ];
+    const frozenV5RowBytes: Readonly<Record<number, number>> = Object.freeze({
+      0: 395,
+      1: 451,
+      2: 456,
+      3: 512,
+      4: 478,
+      5: 534,
+      6: 539,
+      7: 595,
+    });
+    expect(PREPARATION.profiles.map((profile) => profile.check_disclosure?.skill_label)).toEqual([
+      "Repair",
+      "Streetwise",
+      "Mediation",
+    ]);
+
+    for (const testCase of cases) {
+      const session = stationedSession();
+      if (testCase.selected.includes("preparation")) {
+        session.chooseJourneyStory(PREPARATION.profiles[0]!.id, PREPARATION.id);
+      }
+      if (testCase.selected.includes("relief_allocation")) {
+        session.chooseJourneyStory(RELIEF_ALLOCATION.options[0]!.id, RELIEF_ALLOCATION.id);
+      }
+      if (testCase.selected.includes("field_team")) {
+        session.talkToCharacter(ALLY.contact);
+        session.chooseJourneyStory(ALLY.options[0]!.id);
+      }
+      const board = session.compactView().station_dispatch_board;
+      expect(board?.[0]).toBe(6);
+      expect(board?.[3]?.[3]).toBe(3 - testCase.selected.length);
+      expect(board?.[5]).toEqual(
+        testCase.overview ? [STATION_DISPATCH_SUPPORT_REVEAL_ID, testCase.overview] : null,
+      );
+      if (board?.[5]) expect(board[5][1].length).toBeLessThanOrEqual(160);
+      expect(board?.[4].map(([slot]) => slot)).toEqual([
+        "role",
+        "duty",
+        "evidence",
+        ...(["preparation", "relief_allocation", "field_team"] as const).filter((slot) =>
+          testCase.selected.includes(slot),
+        ),
+      ]);
+      expect(board?.[4].every((row) => row[3] === null && row[4] === null)).toBe(true);
+      const hiddenBoard = JSON.stringify(board);
+      expect(hiddenBoard).not.toContain(PREPARATION.id);
+      expect(hiddenBoard).not.toContain(RELIEF_ALLOCATION.id);
+      expect(hiddenBoard).not.toContain(ALLY.contact);
+
+      if (testCase.openMask === 0) {
+        expect(Buffer.byteLength(JSON.stringify(board?.[4]), "utf8")).toBe(frozenV5RowBytes[0]);
+        const sealedSnapshot = session.snapshot();
+        const sealedHash = session.snapshotHash();
+        const sealedDecisions = session.journey().acceptedDecisions;
+        expect(() =>
+          session.revealStationDispatchSupport(STATION_DISPATCH_SUPPORT_REVEAL_ID),
+        ).toThrow(/already sealed/u);
+        expect(session.snapshot()).toEqual(sealedSnapshot);
+        expect(session.snapshotHash()).toBe(sealedHash);
+        expect(session.journey().acceptedDecisions).toBe(sealedDecisions);
+        continue;
+      }
+      session.revealStationDispatchSupport(STATION_DISPATCH_SUPPORT_REVEAL_ID);
+      const revealedRows = session.compactView().station_dispatch_board?.[4];
+      const supportRows = [
+        testCase.selected.includes("preparation")
+          ? ["preparation", "selected", PREPARATION.profiles[0]!.title, null, null]
+          : [
+              "preparation",
+              "open_optional",
+              null,
+              "Choose one specialist kit for a named danger.",
+              ["inspect", PREPARATION.id],
+            ],
+        testCase.selected.includes("relief_allocation")
+          ? ["relief_allocation", "selected", RELIEF_ALLOCATION.options[0]!.title, null, null]
+          : [
+              "relief_allocation",
+              "open_optional",
+              null,
+              "Send Albany's last relief wagon to one crisis.",
+              ["inspect", RELIEF_ALLOCATION.id],
+            ],
+        testCase.selected.includes("field_team")
+          ? ["field_team", "selected", ALLY.options[0]!.title, null, null]
+          : [
+              "field_team",
+              "open_optional",
+              null,
+              "Ask about cattle-first help for one line, never combat.",
+              ["talk", ALLY.contact, "June Pike"],
+            ],
+      ];
+      expect(revealedRows).toEqual([
+        ["role", "selected", REGISTRATION.profiles[0]!.title, null, null],
+        [
+          "duty",
+          "selected",
+          RELIEF_OATH.options[0]!.title.replace(/\bDuty\b/gu, "Promise"),
+          null,
+          null,
+        ],
+        ["evidence", "selected", LEAD_SOURCE.options[0]!.title, null, null],
+        ...supportRows,
+      ]);
+      expect(Buffer.byteLength(JSON.stringify(revealedRows), "utf8")).toBe(
+        frozenV5RowBytes[testCase.openMask],
+      );
+      expect(session.compactView().station_dispatch_board?.[5]).toBeNull();
+    }
+  });
+
+  it("reveals exact V5 support-row bytes, removes handles as rows close, and re-derives V6 on restore", () => {
     const session = stationedSession();
     const row = (
       slot: "role" | "duty" | "evidence" | "preparation" | "relief_allocation" | "field_team",
@@ -359,7 +528,7 @@ describe("Station dispatch board", () => {
     expect(restored.compactView().station_dispatch_board).toEqual(
       session.compactView().station_dispatch_board,
     );
-    expect(restored.compactView().station_dispatch_board?.[0]).toBe(5);
+    expect(restored.compactView().station_dispatch_board?.[0]).toBe(6);
     expect(restored.snapshot()).toEqual(snapshot);
   });
 
@@ -631,6 +800,19 @@ describe("Station dispatch board", () => {
     if (!recap) throw new Error("Expected Station recap.");
     const fieldLead = view.departureContactLeads[0];
     if (!fieldLead) throw new Error("Expected the Station field-team lead.");
+    const board = view.stationDispatchBoard;
+    if (!board?.dispatch) throw new Error("Expected the Station dispatch state.");
+    for (const remainingOptional of [
+      ["field_team", "relief_allocation", "preparation"],
+      ["preparation", "relief_allocation", "preparation"],
+    ] as const) {
+      expect(() =>
+        compactStationDispatchBoard({
+          ...board,
+          dispatch: { ...board.dispatch!, remainingOptional },
+        }),
+      ).toThrow(/optional support set is inconsistent/u);
+    }
     expect(
       deriveStationDispatchBoard({
         recap,

@@ -1,0 +1,139 @@
+id: bug_0583
+title: "Name relevant Station support before its compact review"
+pack: overworld (Albany Station departure)
+reported_by: >
+  Valid ten-player fresh-overworld Terra pilot station-v5-sealed-pilot-766bad57
+  on exact clean 766bad5701070601182e6edf7a056c05e36de0f4; all ten report
+  bytes match the SHA-256 values bound by their fleet rows
+severity: S1
+
+evidence:
+  pilot:
+    label: station-v5-sealed-pilot-766bad57
+    stamp: 20260821T035634Z
+    tested_commit: 766bad5701070601182e6edf7a056c05e36de0f4
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017
+    model: gpt-5.6-terra
+    play_mode: pure
+    start_surface: fresh_overworld
+    authority_certified: false
+    reports:
+      - seed: 821766570100
+        report_sha256: ad7ff68633595b48f08e3bf7b98de5a5970249e58b425d4a6b3aca8a2392f0df
+      - seed: 821766570101
+        report_sha256: e2de84579727346b0d54b12bb9012d2131fb0d37e68c78eeb3cb6fc7710c075c
+      - seed: 821766570102
+        report_sha256: 6185ce23ab88410460228c6206c91635896eec8a4a87cf72fe3b1557580bf72c
+      - seed: 821766570103
+        report_sha256: 3619ef1f2efd2a41ad4dc6d8b2bbd2a61b8ecc4242cead7e43e3438566767dea
+      - seed: 821766570104
+        report_sha256: 00fb89e1103047ffc585176bf538e43cf30e6bfaf6f78e9aecf7e6fe34a2b5b2
+      - seed: 821766570105
+        report_sha256: d7974ce3685537b61d4f425b9f63016c92e2c447858e973478956ba7e914e179
+      - seed: 821766570106
+        report_sha256: 8629f82e9dcf7bb6e4eb746760cf84b7b10714b44ab49a9af06c22b86225dce2
+      - seed: 821766570107
+        report_sha256: 017573933686f5335ae5c0206c14c3c08dd3a4a47f33f6c4dcad3e074c80120b
+      - seed: 821766570108
+        report_sha256: a2daa9a1bdabdd6e8295ea25c9ad8686636b589b0bbde6bd7050d3d5457cad9d
+      - seed: 821766570109
+        report_sha256: 6cff5a3e0d45cec54d4aa459136c8078c178aae607b3163d42f5535cca1a5e3f
+    finding_boundary: >
+      All ten authenticated raw direct-MCP rollouts called the exact Station
+      optional-support reveal. Nine then inspected the field-kit comparison.
+      Six of those nine were Road-Warden players whose only background skill was
+      Fieldcraft, while the three authored kit checks name Repair, Streetwise,
+      and Mediation. This is repeated unnecessary comparison work and weak
+      information scent; it is not evidence that a kit could never help or that
+      the underlying support mechanics failed.
+
+symptom: >
+  Station board V5 replaced three first-level support rows with the generic label
+  "Review optional support (3 choices)." A fresh player could not know whether
+  the hidden support was a kit, wagon, or rider, nor that kit fit was governed by
+  Repair, Streetwise, or Mediation, without first opening the reveal and then
+  opening the preparation comparison.
+
+root_cause: >
+  The durable reveal boundary carried only a count, and the pure prompt told the
+  player to review one support row after presenting the reveal as the Station
+  workflow. Neither surface made the review conditional on relevance. The
+  compacter also checked only the remaining-support count, which was insufficient
+  once the overview's category names depended on the exact remaining slot set.
+
+fix: >
+  Compact v49 emits Station board V6 in the same six slots as
+  [6, quest_id, dispatch_status, dispatch, rows, overview|null]. Before review,
+  overview keeps the exact existing reveal id but names only the still-open
+  categories. The all-open label says kits use Repair, Streetwise, or Mediation,
+  plus Albany's last relief wagon or a cattle-first second rider, and tells the
+  player to review only if one interests them. Closed categories disappear from
+  every subset label. After review, overview is null and the existing V5
+  five-field rows, purposes, and actions return unchanged. The pure prompt makes
+  review conditional and removes V2/V3 history while retaining a version-neutral
+  fail-closed fallback for explicitly returned support detail. Remaining slot
+  identity and order must now match the dispatch receipt exactly.
+
+deterministic_witnesses:
+  - "all eight kit/wagon/rider open-slot subsets pin an exact overview label or null, truthful remaining count, canonical order, and omitted open rows"
+  - "the three advertised kit domains are bound directly to the authored preparation check_disclosure skill labels: Repair, Streetwise, and Mediation"
+  - "before review the board contains no preparation, relief-allocation, or June support action handle; ordinary compact contacts, including June, remain unchanged"
+  - "after review every subset restores the frozen V5 five-field row bytes: 395, 451, 456, 512, 478, 534, 539, or 595 bytes by open-slot mask"
+  - "the exact reveal id and persisted receipt lifecycle remain unchanged across repeat, refresh, export/restore, area return, support seal, launch, End, and forged receipt rejection"
+  - "a same-count reordered or duplicated remaining-support receipt now rejects rather than naming the wrong category"
+  - "the pure prompt says review only when an overview category interests the player, does not enumerate V2/V3 history, and retains a version-neutral exact-action fallback"
+  - "the normalized pure tools/list catalogue remains 16,790 bytes and its changed get-context entry is hash-pinned"
+  - "UTF-8 accounting is exact: prompt 16,036; fresh context 2,042; board 585; first-Station context 4,928; Station legend 741"
+  - "prompt + catalogue + fresh context is 34,868 versus V5's 35,207 (-339); first Station plus its delivered legend is 38,495 versus V5's 38,619 (-124)"
+
+mechanics_unchanged:
+  - "existing quest, story, option, character, support, action, road, approach, and reveal ids"
+  - "the disclosure receipt schema, persistence, authentication, clear conditions, and accepted-decision behavior"
+  - "support order, availability, costs, minutes, money, checks, DCs, gameplay effects, RNG, outcomes, and selected terms"
+  - "canonical route detail, four Wolf-Winter strategies, Continue/End choices, saves, full UI, and CLI presentation"
+  - "legacy include_station_dispatch_support request and response compatibility"
+
+nonclaims:
+  - "The failed pilot identifies a correction target; it is not evidence that V6 improves clarity, enjoyment, continuation, or any certification metric."
+  - "The standalone board plus legend grows from V5's 1,111 bytes to 1,326; the aggregate reduction comes from removing fresh-player legacy prompt history."
+  - "Six Road-Warden comparisons show avoidable review work, not that a mismatched kit has zero possible utility or that players chose irrationally."
+  - "The board hides support action/story/contact handles before review; it does not remove June from the ordinary contacts list or claim whole-response id suppression."
+  - "Report hashes authenticate report bytes; the 10/10 reveal and 9/10 preparation counts come from the retained authenticated raw rollout call records."
+  - "No Gallowmere content, behavior, checkpoint, or conclusion is in scope or claimed."
+  - "This correction is compact-MCP-only; it makes no human UI redesign or parity claim and changes no terminal or browser presentation."
+  - "This AI pilot is neither authority certification nor human market validation."
+
+production:
+  - blind-tester/codex-pure-envelope.mjs
+  - blind-tester/prompt-overworld.md
+  - docs/DECISION_LOG.md
+  - docs/STARTING_SLICE.md
+  - src/mcp/server.ts
+  - src/world/compact_view.ts
+  - src/world/station_dispatch_board.ts
+
+tests:
+  - tests/regression/blind_pure_prompt_contract.test.ts
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/overworld_cli.test.ts
+  - tests/regression/overworld_optional_departure_interactions.test.ts
+  - tests/starting_slice/opening_departure_recap.test.ts
+  - tests/starting_slice/opening_dispatch_briefing.test.ts
+  - tests/starting_slice/station_dispatch_board.test.ts
+  - tests/unit/campaign_character_view.test.ts
+  - tests/unit/compact_legend.test.ts
+  - tests/unit/mcp_journey_surface.test.ts
+  - tests/unit/ui_overworld.test.ts
+  - tests/unit/world_quest_launch.test.ts
+
+verification:
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - npm run verify:bug-traces
+  - npx vitest run tests/starting_slice/station_dispatch_board.test.ts tests/starting_slice/opening_departure_recap.test.ts tests/starting_slice/opening_dispatch_briefing.test.ts tests/unit/compact_legend.test.ts tests/unit/mcp_journey_surface.test.ts tests/unit/campaign_character_view.test.ts tests/unit/world_quest_launch.test.ts
+  - npx vitest run tests/regression/blind_pure_prompt_contract.test.ts tests/regression/mcp_pure_play_mode.test.ts tests/regression/overworld_optional_departure_interactions.test.ts
+  - npx vitest run tests/regression/overworld_cli.test.ts tests/unit/ui_overworld.test.ts
+  - git diff --check

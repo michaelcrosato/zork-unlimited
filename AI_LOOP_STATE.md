@@ -169,3 +169,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat: the player never entered Advocate's Case, so the pure is exact-build integration evidence and deterministic regression remains causal proof; its early Gallowmere detour was recoverable and judged deliberate/fair rather than a mechanics defect.
 - Feedback/next: committed status is 1/3 with no compile; this routine selection leaves accepted `64f5227e` unconsumed and seal should leave two pending reports. Current item 28 narrows that low-severity density seam to duplicated Fodder-Loft “no retreat” copy, not a route rewrite.
 - Guard: exact-pure provenance, 6 focused regressions, 559 bug traces, both 6,000-step crawls, full health (448 files/3,890 tests), UI typecheck, all 12 packs, cycle-start integrity, formatting, and hostile authority review are green.
+## AFK Cycle 2026-08-21T05-48-59-268Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-21T05-48-59-268Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-8d097f91 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

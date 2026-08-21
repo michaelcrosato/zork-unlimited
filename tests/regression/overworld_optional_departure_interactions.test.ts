@@ -168,14 +168,14 @@ describe("optional Station departure interactions", () => {
     ]);
     const compact = session.compactView();
     expect(compact.departure_interactions).toBeUndefined();
-    expect(compact.station_dispatch_board?.[0]).toBe(5);
+    expect(compact.station_dispatch_board?.[0]).toBe(6);
     expect(compact.station_dispatch_board?.[3]?.[3]).toBe(3);
     expect(compact.station_dispatch_board?.[4].map(([slot]) => slot)).not.toEqual(
       expect.arrayContaining(["preparation", "relief_allocation", "field_team"]),
     );
     expect(compact.station_dispatch_board?.[5]).toEqual([
       "station_dispatch:review_optional_support",
-      "Review optional support (3 choices)",
+      "Optional support: kits use Repair, Streetwise, or Mediation; plus Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
     ]);
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toEqual(
       expect.arrayContaining([
@@ -250,7 +250,7 @@ describe("optional Station departure interactions", () => {
     );
     expect(afterPreparationBoard?.[5]).toEqual([
       "station_dispatch:review_optional_support",
-      "Review optional support (2 choices)",
+      "Optional support: Albany's last relief wagon or a cattle-first second rider. Review only if one interests you.",
     ]);
 
     session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
