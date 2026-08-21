@@ -6,6 +6,8 @@ import {
   compactJourneyStoryChoicePrompt,
   embeddedJourneyFocus,
   JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
+  JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT,
+  JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT,
   JOURNEY_STORY_CHOICE_STAGED_CONSEQUENCE,
   type EmbeddedJourneyFocus,
   type JourneyStoryChoiceRevealAffordance,
@@ -360,6 +362,15 @@ describe("compact journey projection", () => {
     }
     const full = presentOpeningPreparation(preparation, character);
     const compact = compactJourneyStoryChoicePrompt(full);
+    const summary = compactJourneyStoryChoiceComparison(full);
+    for (const option of compact.options) {
+      expect(option).not.toHaveProperty("situationalBoundary");
+    }
+    expect(summary.options.every((option) => !("situationalBoundary" in option))).toBe(true);
+    expect(JSON.stringify([compact, summary])).not.toContain("May never trigger");
+    expect(JSON.stringify([compact, summary])).not.toContain(
+      "spend the split-rail guard to redirect the yearling alive",
+    );
 
     for (const profile of preparation.profiles) {
       const option = compact.options.find((candidate) => candidate.id === profile.id);
@@ -393,9 +404,57 @@ describe("compact journey projection", () => {
       expect(option?.summary).not.toHaveProperty("checkFit");
       expect(option?.consequence).toBe("");
       const detail = compactJourneyStoryChoiceComparison(full, profile.id).inspectedOption;
+      expect(detail.consequence).toBe(fullOption.consequence);
       expect(detail.consequence).not.toContain(profile.preview);
       expect(detail.consequence).not.toContain(profile.consequence);
+      if (profile.id === "albany:prep_relief_protocol") {
+        expect(Object.keys(detail)).toEqual([
+          "id",
+          "label",
+          "checkFit",
+          "situationalBoundary",
+          "consequence",
+        ]);
+        expect(detail.situationalBoundary).toBe(
+          "May never trigger. In LURE, foul the first feed cast, fail the public wedge, spend the split-rail guard to redirect the yearling alive, then return to Cade before the loft cast. A clean cast, braced rail, or other recovery gets no benefit.",
+        );
+        expect(detail.situationalBoundary!.length).toBeLessThanOrEqual(
+          JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT,
+        );
+        expect(detail.situationalBoundary!.trim().split(/\s+/u).length).toBeLessThanOrEqual(
+          JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT,
+        );
+        expect(JSON.stringify(detail).length).toBeLessThanOrEqual(800);
+      } else {
+        expect(detail).not.toHaveProperty("situationalBoundary");
+      }
     }
+  });
+
+  it("does not attach Station boundaries to a reused option id outside its exact card", () => {
+    const reused: JourneyStoryChoicePrompt = {
+      id: "test:unrelated",
+      message: "Unrelated historical card.",
+      options: [
+        {
+          id: "albany:prep_relief_protocol",
+          label: "Jamie's Relief Protocol",
+          consequence: "Unrelated consequence.",
+        },
+        {
+          id: "test:other",
+          label: "Other option",
+          consequence: "Other consequence.",
+        },
+      ],
+    };
+
+    const detail = compactJourneyStoryChoiceComparison(
+      reused,
+      "albany:prep_relief_protocol",
+    ).inspectedOption;
+    expect(detail.consequence).toBe("Unrelated consequence.");
+    expect(detail).not.toHaveProperty("situationalBoundary");
   });
 
   it("keeps exact Relief Allocation receipts behind the concise compact comparison", () => {
@@ -509,6 +568,14 @@ describe("compact journey projection", () => {
     const character = WORLD.opening_registration?.profiles[0]?.character;
     if (!ally || !character) throw new Error("Albany must retain its ally commitment.");
     const full = presentOpeningAlly(ally, character);
+    const compact = compactJourneyStoryChoicePrompt(full);
+    const summary = compactJourneyStoryChoiceComparison(full);
+    for (const option of compact.options) {
+      expect(option).not.toHaveProperty("situationalBoundary");
+    }
+    expect(summary.options.every((option) => !("situationalBoundary" in option))).toBe(true);
+    expect(JSON.stringify([compact, summary])).not.toContain("May never trigger");
+    expect(JSON.stringify([compact, summary])).not.toContain("first wolf death ends her help");
     const benefits: Readonly<Record<string, string>> = {
       "albany:ally_june_cattle_first": "Independent cattle-pressure ally",
       "albany:ally_june_relay_only": "No companion; relay terms refused",
@@ -523,6 +590,23 @@ describe("compact journey projection", () => {
         immediateCost: option.summary!.immediateCost,
         giveUp: sourceOption.tradeoff,
       });
+      const detail = compactJourneyStoryChoiceComparison(full, sourceOption.id).inspectedOption;
+      expect(detail.consequence).toBe(option.consequence);
+      if (sourceOption.id === "albany:ally_june_cattle_first") {
+        expect(Object.keys(detail)).toEqual(["id", "label", "situationalBoundary", "consequence"]);
+        expect(detail.situationalBoundary).toBe(
+          "May never trigger. June lowers cattle alarm when a recovered LURE leaves the herd pressing, or prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized failed first FORTIFY seal at pressure 3+. Clean DRIVE, pressure-2/mobile-stabilized FORTIFY gain nothing; no combat help; first wolf death ends her help.",
+        );
+        expect(detail.situationalBoundary!.length).toBeLessThanOrEqual(
+          JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_CHAR_LIMIT,
+        );
+        expect(detail.situationalBoundary!.trim().split(/\s+/u).length).toBeLessThanOrEqual(
+          JOURNEY_STORY_CHOICE_SITUATIONAL_BOUNDARY_WORD_LIMIT,
+        );
+        expect(JSON.stringify(detail).length).toBeLessThanOrEqual(800);
+      } else {
+        expect(detail).not.toHaveProperty("situationalBoundary");
+      }
     }
   });
 

@@ -188,6 +188,7 @@ import {
   deriveOpeningDepartureRecap,
   type OpeningDepartureRecap,
 } from "./opening_departure_recap.js";
+import { STATION_DISPATCH_SUPPORT_REVEAL_ID } from "./station_dispatch_board.js";
 import {
   clearOverworldSessionCaches,
   type OverworldSessionCaches,
@@ -584,6 +585,8 @@ export class OverworldSession {
    * Persisting it makes an exported session fully resumable and keeps legality derivable.
    */
   private inspectedStoryReveals = new Map<string, Set<string>>();
+  /** Read-only compact Station support reveals, persisted independently of story legality. */
+  private stationDispatchSupportReveals = new Map<string, string>();
   private restoreWarningList: readonly string[] = Object.freeze([]);
   private readonly journeyGoalBaseRouteByEndpoints = new Map<string, OverworldRoutePlan>();
   private readonly journeyGoalGuidanceByRoute = new Map<string, string>();
@@ -1401,6 +1404,40 @@ export class OverworldSession {
     return this.inspectedStoryReveals.get(storyChoiceId)?.has(revealId) === true;
   }
 
+  private stationDispatchSupportWasRevealed(questId: string): boolean {
+    return this.stationDispatchSupportReveals.get(questId) === STATION_DISPATCH_SUPPORT_REVEAL_ID;
+  }
+
+  private currentStationDispatchSupportWasRevealed(): boolean {
+    const chain = resolveOpeningDispatchManifestChain(this.world);
+    return chain ? this.stationDispatchSupportWasRevealed(chain.quest.id) : false;
+  }
+
+  /**
+   * Record the exact compact Station disclosure without accepting a decision.
+   * The current authenticated hub supplies the quest key; unknown or stale ids fail closed.
+   */
+  revealStationDispatchSupport(revealId: string): void {
+    const chain = this.openingDispatchHubAvailable();
+    const board = chain ? this.view().stationDispatchBoard : null;
+    if (!chain || !board || board.questId !== chain.quest.id) {
+      throw new Error("Station optional support is not reviewable at the current boundary.");
+    }
+    if (revealId !== STATION_DISPATCH_SUPPORT_REVEAL_ID) {
+      throw new Error(`Unknown Station optional-support reveal "${revealId}".`);
+    }
+    if (!board.support.some((entry) => entry.status === "open_optional")) {
+      throw new Error("Station optional support is already sealed.");
+    }
+    const prior = this.stationDispatchSupportReveals.get(chain.quest.id);
+    if (prior === revealId) return;
+    if (prior !== undefined) {
+      throw new Error(`Station dispatch "${chain.quest.id}" has a different reveal receipt.`);
+    }
+    this.stationDispatchSupportReveals.set(chain.quest.id, revealId);
+    this.clearSessionCaches();
+  }
+
   /**
    * Reveal receipts are authority for hidden story options, so restoring them
    * requires more than schema-valid strings. Every tuple must name a story that
@@ -1441,6 +1478,53 @@ export class OverworldSession {
         );
       }
     }
+  }
+
+  /** Authenticate additive compact Station receipts against the exact opening lifecycle. */
+  private assertSnapshotStationDispatchSupportReveals(snapshot: OverworldSessionSnapshot): void {
+    const receipts = snapshot.stationDispatchSupportReveals ?? [];
+    if (new Set(receipts.map(([questId]) => questId)).size !== receipts.length) {
+      throw new Error("Overworld session snapshot repeats a Station support reveal receipt.");
+    }
+    if (receipts.length === 0) return;
+    const chain = resolveOpeningDispatchManifestChain(this.world);
+    const supportStillOpen =
+      !this.openingPreparationResolved() ||
+      !this.openingReliefAllocationResolved() ||
+      (chain?.ally !== null && !this.openingAllyResolved());
+    const exactLifecycle =
+      chain !== null &&
+      this.journeyState.status !== "ended" &&
+      this.discoveredQuestIds.has(chain.quest.id) &&
+      !this.startedQuestIds.has(chain.quest.id) &&
+      !this.completedQuestIds.has(chain.quest.id) &&
+      supportStillOpen;
+    if (
+      receipts.length !== 1 ||
+      !chain ||
+      !exactLifecycle ||
+      receipts[0]![0] !== chain.quest.id ||
+      receipts[0]![1] !== STATION_DISPATCH_SUPPORT_REVEAL_ID
+    ) {
+      throw new Error(
+        "Overworld session snapshot Station support reveal must match its exact open dispatch.",
+      );
+    }
+  }
+
+  private forgetStationDispatchSupportReveal(questId: string): void {
+    if (!this.stationDispatchSupportReveals.delete(questId)) return;
+    this.clearSessionCaches();
+  }
+
+  private forgetSealedStationDispatchSupportReveal(): void {
+    const chain = resolveOpeningDispatchManifestChain(this.world);
+    if (!chain) return;
+    const supportSealed =
+      this.openingPreparationResolved() &&
+      this.openingReliefAllocationResolved() &&
+      (chain.ally === null || this.openingAllyResolved());
+    if (supportSealed) this.forgetStationDispatchSupportReveal(chain.quest.id);
   }
 
   /** Drop every reveal receipt — the story is decided, so the gate has no more work. */
@@ -2037,6 +2121,9 @@ export class OverworldSession {
   chooseJourney(choice: JourneyChoice): JourneyChoiceResult {
     const chosen = chooseJourneyContract(this.journeyState, choice);
     this.journeyState = chosen.state;
+    if (choice === "end" && this.stationDispatchSupportReveals.size > 0) {
+      this.stationDispatchSupportReveals.clear();
+    }
     if (
       choice === "continue" &&
       chosen.result.retentionEvent.reasons.includes("goal_completed") &&
@@ -2088,6 +2175,7 @@ export class OverworldSession {
     // also keeps a revealed branch and an unrevealed one converging on the same snapshot
     // hash once both have chosen, which several parity proofs depend on.
     this.forgetStoryReveals();
+    this.forgetSealedStationDispatchSupportReveal();
     return result;
   }
 
@@ -2546,6 +2634,7 @@ export class OverworldSession {
       openingLeadSourceDecisionTrail: this.openingLeadSourceDecisionTrail,
       questCharacterDeathBoundary: this.questCharacterDeathBoundary,
       inspectedStoryReveals: this.inspectedStoryReveals,
+      stationDispatchSupportReveals: this.stationDispatchSupportReveals,
       journey: this.journeyState,
     };
   }
@@ -2578,12 +2667,14 @@ export class OverworldSession {
     this.assertQuestCharacterDeathBoundary();
     this.clearSessionCaches();
     this.assertSnapshotStoryRevealReceipts(snapshot);
+    this.assertSnapshotStationDispatchSupportReveals(snapshot);
     this.inspectedStoryReveals = new Map(
       (snapshot.inspectedStoryReveals ?? []).map(([storyChoiceId, revealIds]) => [
         storyChoiceId,
         new Set(revealIds),
       ]),
     );
+    this.stationDispatchSupportReveals = new Map(snapshot.stationDispatchSupportReveals ?? []);
     this.restoreWarningList = applied.restoreWarnings;
     this.clearSessionCaches();
   }
@@ -3096,6 +3187,7 @@ export class OverworldSession {
       departureInteractions: this.departureInteractions(),
       departureContactLeads: this.departureContactLeads(),
       departureRecap: this.departureRecap(),
+      stationDispatchSupportRevealed: this.currentStationDispatchSupportWasRevealed(),
       roads: this.roadsFrom(this.currentId),
       areaExits: visibleOverworldSessionAreaExits(localState, currentArea),
       localState,
@@ -3419,6 +3511,7 @@ export class OverworldSession {
         ...(dispatchSeal ? { dispatchSeal } : {}),
       };
     }
+    this.forgetStationDispatchSupportReveal(canonicalPlan.quest.id);
     this.clearSessionCaches();
     return withJourneyDecision(cloneOverworldQuestView(applied.quest), journeyDecision);
   }

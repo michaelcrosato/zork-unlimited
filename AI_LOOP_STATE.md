@@ -169,3 +169,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Canary caveat: the player chose each story stage directly and never called the inspection tool, so this run is exact-build integration evidence only; historical raws and causal regressions prove the changed affordance, while the reported staged-prompt density was nonblocking.
 - Feedback/next: exact prior pending Cycles 24–26 compiled into four S1 rows at `35b1e034` with recommendation `64f5227e`, excluding this run; that row partly predates the Cycle 25 held-feed yard fix, so revision-filter it before any broader route edit.
 - Guard: 37 focused MCP tests, exact catalog authentication, 558 bug traces, both 6,000-step crawls, full health (448 files/3,889 tests), UI typecheck, all 12 packs, cycle-start integrity, and exact-pure replay are green.
+## AFK Cycle 2026-08-21T02-02-05-098Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-21T02-02-05-098Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-2d83b9fe (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

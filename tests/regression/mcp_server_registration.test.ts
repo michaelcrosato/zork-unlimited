@@ -333,13 +333,12 @@ describe("MCP server registration", () => {
 
     // The game-native passage action, optional quest approach, and exact authored
     // job option add bounded schema blocks; retain a tight ceiling around them.
+    expect(overworldSchemaSource.length).toBe(9234);
     expect(overworldSchemaSource.length).toBeLessThanOrEqual(9250);
     expect(overworldSchemaSource).not.toContain("Session id returned by start_overworld");
     expect(overworldSchemaSource).not.toContain("returns compact context by default");
     expect(overworldSchemaSource).not.toContain("from the session observation");
-    expect(serverSource).toContain(
-      '"Legacy V3 Station support detail; V4 already inlines current open support."',
-    );
+    expect(serverSource).toContain('"Legacy support detail."');
     expect(serverSource).not.toContain("Optional Station support purposes and action handles.");
   });
 

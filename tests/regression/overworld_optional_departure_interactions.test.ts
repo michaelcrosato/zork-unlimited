@@ -168,19 +168,15 @@ describe("optional Station departure interactions", () => {
     ]);
     const compact = session.compactView();
     expect(compact.departure_interactions).toBeUndefined();
-    expect(compact.station_dispatch_board?.[0]).toBe(4);
-    expect(compact.station_dispatch_board?.[4]).toEqual(
-      expect.arrayContaining([
-        ["preparation", "open_optional", null, expect.any(String), ["inspect", PREPARATION.id]],
-        [
-          "relief_allocation",
-          "open_optional",
-          null,
-          expect.any(String),
-          ["inspect", ALLOCATION.id],
-        ],
-      ]),
+    expect(compact.station_dispatch_board?.[0]).toBe(5);
+    expect(compact.station_dispatch_board?.[3]?.[3]).toBe(3);
+    expect(compact.station_dispatch_board?.[4].map(([slot]) => slot)).not.toEqual(
+      expect.arrayContaining(["preparation", "relief_allocation", "field_team"]),
     );
+    expect(compact.station_dispatch_board?.[5]).toEqual([
+      "station_dispatch:review_optional_support",
+      "Review optional support (3 choices)",
+    ]);
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toEqual(
       expect.arrayContaining([
         ["preparation", expect.any(String), ["inspect", PREPARATION.id]],
@@ -247,16 +243,14 @@ describe("optional Station departure interactions", () => {
       ALLOCATION.id,
     ]);
     expect(session.compactView().departure_interactions).toBeUndefined();
-    expect(
-      session
-        .compactView()
-        .station_dispatch_board?.[4].find(([slot]) => slot === "relief_allocation"),
-    ).toEqual([
-      "relief_allocation",
-      "open_optional",
-      null,
-      expect.any(String),
-      ["inspect", ALLOCATION.id],
+    const afterPreparationBoard = session.compactView().station_dispatch_board;
+    expect(afterPreparationBoard?.[3]?.[3]).toBe(2);
+    expect(afterPreparationBoard?.[4].find(([slot]) => slot === "relief_allocation")).toBe(
+      undefined,
+    );
+    expect(afterPreparationBoard?.[5]).toEqual([
+      "station_dispatch:review_optional_support",
+      "Review optional support (2 choices)",
     ]);
 
     session.chooseJourneyStory(ALLOCATION.options[0]!.id, ALLOCATION.id);
@@ -293,13 +287,7 @@ describe("optional Station departure interactions", () => {
     expect(session.compactView().departure_contact_leads).toBeUndefined();
     expect(
       session.compactView().station_dispatch_board?.[4].find(([slot]) => slot === "field_team"),
-    ).toEqual([
-      "field_team",
-      "open_optional",
-      null,
-      expect.any(String),
-      ["talk", june.id, june.name],
-    ]);
+    ).toBeUndefined();
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toContainEqual(
       ["field_team", expect.any(String), ["talk", june.id, june.name]],
     );
@@ -321,10 +309,8 @@ describe("optional Station departure interactions", () => {
     const ready = session.view().departureContactLeads[0];
     expect(ready).toEqual(beforePreparation[0]);
     expect(
-      session
-        .compactView()
-        .station_dispatch_board?.[4].find(([slot]) => slot === "field_team")?.[4],
-    ).toEqual(["talk", june.id, june.name]);
+      session.compactView().station_dispatch_board?.[4].find(([slot]) => slot === "field_team"),
+    ).toBeUndefined();
     expect(compactStationDispatchBoardSupport(session.view().stationDispatchBoard!)).toContainEqual(
       ["field_team", expect.any(String), ["talk", june.id, june.name]],
     );

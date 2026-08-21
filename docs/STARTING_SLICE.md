@@ -201,30 +201,45 @@ it is **not yet milestone-certified**:
   declined seal tied to the actual hill approach. Current v11 saves reject a
   stripped or altered seal; the sole supported structural predecessor, v10,
   upgrades without authored-copy rewriting. The
-  human, CLI, and compact Station surfaces now use the same two-tier briefing:
+  human and CLI Station surfaces keep their established two-tier briefing:
   direct launch, one compressed selected-plan clock, and the three optional
   spoke names lead; opening a spoke shows human stakes, cost, and give-up, while
   check math, authenticated timing proof, and full consequence stay behind an
-  exact read-only expansion. No action, outcome, or meaningful decision is
+  exact read-only expansion. Compact MCP now stages those same optional spokes
+  separately as described below. No action, outcome, or meaningful decision is
   removed;
-- the launch-first Station follow-up now keeps both legal hill roads ahead of
-  optional support in terminal and browser clients. The authenticated full
-  board v4 carries the dispatch clock, all six selected/open plan rows, mapped
-  support actions, and launch card; compact v47 emits
-  `[4, questId, guidance, dispatch|null, rows]` and retains canonical road
-  detail in `quests` / `quest_starts`. It omits redundant compact
+- the launch-first Station follow-up preserves the existing terminal/browser
+  road and support order while changing only the compact MCP hierarchy. The
+  authenticated full board V5 carries the dispatch clock, all six selected/open plan rows, mapped
+  support actions, and launch card; compact v48 emits
+  `[5, questId, dispatchStatus, dispatch|null, rows, reveal|null]`, with
+  `dispatch=[state, minutes, timing|null, remainingOptionalCount]`, and retains
+  canonical road detail in `quests` / `quest_starts`. It omits redundant compact
   `departure_recap`, `departure_interactions`, and `departure_contact_leads`
   only when every current action and status is exactly indexed; malformed or
-  unmapped sources fall back to the established surfaces. Each live optional
-  support row now carries one short purpose and its existing authenticated
-  inspect/talk handle; selected and non-actionable rows stay null. The exact
-  current Station compact slice therefore grows from v3's 1,989 to 2,158 UTF-8
-  bytes (+8.5%) while remaining 7.5% below the remeasured 2,333-byte fallback.
-  When support is
-  wanted, the board/detail objects contract from 1,161 bytes across v3's
-  board-plus-detail detour to 844 bytes in the single v4 board (-27.3%). Actions, terms,
-  state, saves, hashes, RNG, outcomes, and accepted-decision counts are
-  unchanged, with focused proof in `station_dispatch_board.test.ts`,
+  unmapped sources fall back to the established surfaces. Before review, the
+  compact board omits all current `open_optional` rows and exposes one exact
+  `[id, label]` read-only review affordance. Calling
+  `get_overworld_session_context` with that id records a separate durable,
+  idempotent receipt; refresh and export/restore retain it, while a forged id
+  fails and launch, a fully sealed support plan, or journey End clears it. After
+  review, the same existing five-field optional rows, purposes, and authenticated
+  inspect/talk actions return in their established order. Selected and
+  non-actionable rows remain null/null. The shared authenticated dispatch
+  briefing appears once on the compact board; only then is that exact prefix
+  removed from each compact road, so all route-specific time, supply, fatigue,
+  alarm, and weather facts remain. This progressive disclosure is compact-MCP-
+  only; terminal and browser presentation remain unchanged. The initial board
+  is 462 UTF-8 bytes and its legend is 649 bytes. The 16,375-byte prompt is 97
+  bytes below v47, while the pure tool catalogue is 16,790 bytes (+96); with the
+  unchanged 2,042-byte fresh context, the aggregate is 35,207 bytes versus the
+  frozen 35,208-byte v47/V4 baseline (-1). First-Station prompt + catalogue +
+  context + newly delivered legend is 38,619 bytes versus the frozen 39,261-byte
+  baseline (-642). The receipt may change the save
+  hash but accepts no gameplay or journey decision. Actions, terms, mechanics,
+  costs, gameplay state/effects except that receipt, RNG, outcomes, and
+  accepted-decision counts are unchanged, with
+  focused proof in `station_dispatch_board.test.ts`,
   `opening_dispatch_briefing.test.ts`, `opening_departure_recap.test.ts`,
   `overworld_cli.test.ts`, `mcp_journey_surface.test.ts`,
   `ui_overworld.test.ts`, and `compact_legend.test.ts`;

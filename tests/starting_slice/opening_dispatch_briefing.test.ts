@@ -860,7 +860,12 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
     expect(mcpStation.context.station_dispatch_board).toEqual(
       ui.compactView().station_dispatch_board,
     );
-    expect(mcpStation.context.station_dispatch_board?.[4]).toHaveLength(6);
+    expect(mcpStation.context.station_dispatch_board?.[0]).toBe(5);
+    expect(mcpStation.context.station_dispatch_board?.[4]).toHaveLength(3);
+    expect(mcpStation.context.station_dispatch_board?.[5]).toEqual([
+      "station_dispatch:review_optional_support",
+      "Review optional support (3 choices)",
+    ]);
     expect(mcpStation.context).not.toHaveProperty("departure_recap");
     expect(mcpStation.context).not.toHaveProperty("departure_interactions");
     expect(mcpStation.context).not.toHaveProperty("departure_contact_leads");
@@ -899,7 +904,7 @@ describe("Albany Wolf-Winter dispatch briefing", () => {
       "committed",
       35,
       null,
-      ["relief_allocation", "field_team"],
+      2,
     ]);
     const uiAllocation = ui.inspectJourneyStory(RELIEF_ALLOCATION.id);
     const mcpAllocation = api.inspect_overworld_session_story({

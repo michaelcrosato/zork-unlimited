@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Buffer } from "node:buffer";
-
+import { readFileSync } from "node:fs";
 import {
   cloneOverworldCompactView,
   compactOverworldView,
@@ -11,14 +11,19 @@ import {
   compactStationDispatchBoardSupport,
   deriveStationDispatchBoard,
   STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+  STATION_DISPATCH_SUPPORT_REVEAL_ID,
 } from "../../src/world/station_dispatch_board.js";
-import {
-  compactOverworldDepartureContactLeads,
-  compactOverworldDepartureInteractions,
-} from "../../src/world/session_departure_interactions.js";
-import { compactOpeningDepartureRecap } from "../../src/world/opening_departure_recap.js";
 import { OverworldSession } from "../../src/world/session.js";
+import {
+  buildOverworldSessionCompactViewFromState,
+  buildOverworldSessionViewModelState,
+  type OverworldSessionViewModelSourceState,
+} from "../../src/world/session_view_state.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import {
+  sharedWolfHillRouteDispatchStatus,
+  wolfHillRouteTradeoffParts,
+} from "../../src/world/wolf_hill_route_presentation.js";
 import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
 const WORLD = loadOverworldManifest(process.cwd());
@@ -30,7 +35,7 @@ const RELIEF_ALLOCATION = WORLD.opening_relief_allocation!;
 const ALLY = WORLD.opening_ally!;
 const WOLF = WORLD.quests.find((quest) => quest.id === LEAD_SOURCE.target_quest)!;
 
-function stationedSession(): OverworldSession {
+function stationReadySession(): OverworldSession {
   const session = new OverworldSession(WORLD);
   session.scoutPoi(session.view().pois[0]!.id);
   session.talkToCharacter(REGISTRATION.contact);
@@ -38,6 +43,11 @@ function stationedSession(): OverworldSession {
   revealCurrentJourneyStoryOptions(session, RELIEF_OATH.id);
   session.chooseJourneyStory(RELIEF_OATH.options[0]!.id);
   session.chooseJourneyStory(LEAD_SOURCE.options[0]!.id);
+  return session;
+}
+
+function stationedSession(): OverworldSession {
+  const session = stationReadySession();
   const route = session
     .view()
     .areaExits.find((candidate) => candidate.destination.id === PREPARATION.area);
@@ -57,7 +67,7 @@ describe("Station dispatch board", () => {
     if (!board || !view.departureRecap) throw new Error("Expected the Station dispatch board.");
 
     expect(board).toMatchObject({
-      version: 4,
+      version: 5,
       questId: WOLF.id,
       questTitle: WOLF.title,
       guidance:
@@ -128,32 +138,36 @@ describe("Station dispatch board", () => {
       })),
     );
 
+    const fullRouteSummaries = quest.launch.options.flatMap((option) =>
+      option.tradeoffSummary ? [option.tradeoffSummary] : [],
+    );
+    const sharedDispatchStatus = sharedWolfHillRouteDispatchStatus(fullRouteSummaries);
+    expect(sharedDispatchStatus).toBe(
+      "Dispatch 10m committed; optional Station support remains (final 10–60m). Every remaining support combination stays on time; starting now declines them.",
+    );
+
     const compact = session.compactView();
-    expect(compact.station_dispatch_board).toEqual(compactStationDispatchBoard(board));
+    expect(compact.station_dispatch_board).toEqual(
+      compactStationDispatchBoard(board, false, sharedDispatchStatus ?? undefined),
+    );
     expect(compactOverworldView(view).station_dispatch_board).toEqual(
       compact.station_dispatch_board,
     );
     expect(cloneOverworldCompactView(compact).station_dispatch_board).toEqual(
       compact.station_dispatch_board,
     );
-    // V4 keeps the first compact Station view launch-first while putting one
-    // bounded purpose and an already-authenticated handle on each live support row.
-    expect(JSON.stringify(compact.station_dispatch_board).length).toBe(882);
-    expect(JSON.stringify(compact.station_dispatch_board).length).toBeLessThanOrEqual(1_000);
-    expect(
-      JSON.stringify(compact.station_dispatch_board).length +
-        OVERWORLD_COMPACT_LEGEND.station_dispatch_board.length,
-    ).toBe(1_443);
+    // V5 presents the legal roads and selected core first, with one read-only
+    // affordance standing in for all three unopened optional-support rows.
+    expect(Buffer.byteLength(JSON.stringify(compact.station_dispatch_board), "utf8")).toBe(462);
+    expect(Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8")).toBe(649);
+    expect(OVERWORLD_COMPACT_LEGEND.station_dispatch_board).toContain(
+      "Pre-review hides open_optional",
+    );
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
-      4,
+      5,
       WOLF.id,
-      board.guidance,
-      [
-        "committed",
-        board.dispatch?.minutes,
-        null,
-        ["preparation", "relief_allocation", "field_team"],
-      ],
+      sharedDispatchStatus,
+      ["committed", board.dispatch?.minutes, null, 3],
     ]);
     expect(compact.station_dispatch_board?.[4]).toEqual([
       ["role", "selected", REGISTRATION.profiles[0]!.title, null, null],
@@ -165,28 +179,14 @@ describe("Station dispatch board", () => {
         null,
       ],
       ["evidence", "selected", LEAD_SOURCE.options[0]!.title, null, null],
-      [
-        "preparation",
-        "open_optional",
-        null,
-        "Choose one specialist kit for a named danger.",
-        ["inspect", PREPARATION.id],
-      ],
-      [
-        "relief_allocation",
-        "open_optional",
-        null,
-        "Send Albany's last relief wagon to one crisis.",
-        ["inspect", RELIEF_ALLOCATION.id],
-      ],
-      [
-        "field_team",
-        "open_optional",
-        null,
-        "Ask about cattle-first help for one line, never combat.",
-        ["talk", ALLY.contact, "June Pike"],
-      ],
     ]);
+    expect(compact.station_dispatch_board?.[5]).toEqual([
+      STATION_DISPATCH_SUPPORT_REVEAL_ID,
+      "Review optional support (3 choices)",
+    ]);
+    expect(JSON.stringify(compact.station_dispatch_board)).not.toContain(PREPARATION.id);
+    expect(JSON.stringify(compact.station_dispatch_board)).not.toContain(RELIEF_ALLOCATION.id);
+    expect(JSON.stringify(compact.station_dispatch_board)).not.toContain(ALLY.contact);
     expect(compact.station_dispatch_support).toBeUndefined();
     expect(compactStationDispatchBoardSupport(board)).toEqual([
       [
@@ -208,85 +208,69 @@ describe("Station dispatch board", () => {
     expect(compact).not.toHaveProperty("departure_recap");
     expect(compact).not.toHaveProperty("departure_interactions");
     expect(compact).not.toHaveProperty("departure_contact_leads");
-    const legacyStationBlock = JSON.stringify({
-      station_dispatch_board: [
-        1,
-        board.guidance,
-        board.support.map((entry) => [entry.slot, entry.purpose]),
-      ],
-      departure_recap: compactOpeningDepartureRecap(view.departureRecap),
-      departure_interactions: compactOverworldDepartureInteractions(view.departureInteractions),
-      departure_contact_leads: compactOverworldDepartureContactLeads(view.departureContactLeads),
-    });
-    const v4StationBlock = JSON.stringify({
-      station_dispatch_board: compact.station_dispatch_board,
-    });
-    expect(v4StationBlock.length).toBeLessThan(legacyStationBlock.length);
-    const v3StationBoard = [
-      3,
-      compact.station_dispatch_board![1],
-      "Cade's herd is under pressure. Depart now, or review support: a field kit for a named danger; Albany's last wagon serves one crisis; June can help one cattle line, never combat. Support changes cost/aftermath, not strategy legality.",
-      compact.station_dispatch_board![3],
-      compact.station_dispatch_board![4].map(
-        ([slot, status, selectedTitle]) =>
-          [
-            slot,
-            status,
-            slot === "duty" ? RELIEF_OATH.options[0]!.title : selectedTitle,
-            null,
-            null,
-          ] as const,
-      ),
-    ] as const;
-    const v3BoardAndExplicitSupport = JSON.stringify({
-      station_dispatch_board: v3StationBoard,
-      station_dispatch_support: compactStationDispatchBoardSupport(board),
-    });
-    expect(JSON.stringify(v3StationBoard).length).toBe(648);
-    expect(v3BoardAndExplicitSupport.length).toBe(1_161);
-    expect(v4StationBlock.length).toBe(909);
-    expect(v4StationBlock.length).toBeLessThan(v3BoardAndExplicitSupport.length);
-    const v4LaunchSlice = JSON.stringify({
+    const compactQuest = compact.quests?.find(([questId]) => questId === WOLF.id);
+    const compactRouteSummaries = compactQuest?.[3]?.[2].map((option) => option[13]);
+    const routeOnlySummaries = fullRouteSummaries.map(
+      (summary) => wolfHillRouteTradeoffParts(summary).routeSummary,
+    );
+    expect(compactRouteSummaries).toEqual(routeOnlySummaries);
+    expect(routeOnlySummaries).toEqual([
+      "Open crest: 30m, 1 supply, fatigue +25; cattle alarm starts at 1; clear sight of the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.",
+      "Sheltered lee: 75m, 2 supplies, fatigue +10; cattle alarm starts at 0; hedges conceal the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.",
+    ]);
+    for (let index = 0; index < fullRouteSummaries.length; index += 1) {
+      expect(fullRouteSummaries[index]).toBe(
+        `${sharedDispatchStatus} ${routeOnlySummaries[index]}`,
+      );
+    }
+    const composedCompactStation = JSON.stringify({
       quests: compact.quests,
       quest_starts: compact.quest_starts,
       station_dispatch_board: compact.station_dispatch_board,
     });
-    const v3LaunchSlice = JSON.stringify({
-      quests: compact.quests,
-      quest_starts: compact.quest_starts,
-      station_dispatch_board: v3StationBoard,
-    });
+    expect(composedCompactStation.split(sharedDispatchStatus!).length - 1).toBe(1);
+
+    // Frozen V47/V4 first-contact accounting, all in UTF-8 bytes. The pure tool
+    // catalogue grows by 96 bytes, so the prompt shrinks by 97 and both the fresh
+    // and first-Station aggregate remain net-reductive.
+    const promptBytes = readFileSync("blind-tester/prompt-overworld.md").byteLength;
+    const pureCatalogBytes = 16_790;
+    const freshContextBytes = Buffer.byteLength(
+      JSON.stringify(new OverworldSession(WORLD).compactView()),
+      "utf8",
+    );
+    const stationContextBytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
+    expect(promptBytes).toBe(16_375);
+    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(35_207);
+    expect(35_207).toBeLessThan(35_208);
+    const firstStationAggregate =
+      promptBytes +
+      pureCatalogBytes +
+      stationContextBytes +
+      Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
+    expect(firstStationAggregate).toBe(38_619);
+    expect(firstStationAggregate).toBeLessThan(39_261);
+
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });
     expect(fallback.departure_interactions).toEqual([
       [PREPARATION.id, "preparation", "Field kit"],
       [RELIEF_ALLOCATION.id, "relief_allocation", "Relief wagon"],
     ]);
     expect(fallback.departure_contact_leads?.[0]?.[2]).toBe("Second rider");
-    const fallbackLaunchSlice = JSON.stringify({
-      quests: fallback.quests,
-      quest_starts: fallback.quest_starts,
-      departure_recap: fallback.departure_recap,
-      departure_interactions: fallback.departure_interactions,
-      departure_contact_leads: fallback.departure_contact_leads,
-    });
-    expect(Buffer.byteLength(v3LaunchSlice, "utf8")).toBe(1_989);
-    expect(Buffer.byteLength(v4LaunchSlice, "utf8")).toBe(2_223);
-    expect(Buffer.byteLength(fallbackLaunchSlice, "utf8")).toBe(2_247);
+    const fallbackQuest = fallback.quests?.find(([questId]) => questId === WOLF.id);
+    expect(fallbackQuest?.[3]?.[2].map((option) => option[13])).toEqual(fullRouteSummaries);
 
-    const clonedBoard = cloneOverworldCompactView(compact).station_dispatch_board;
-    const clonedAction = clonedBoard?.[4].find(([slot]) => slot === "preparation")?.[4];
-    if (!clonedAction) throw new Error("Expected a cloned preparation action.");
-    (clonedAction as [string, string])[1] = "forged:story";
-    expect(
-      compact.station_dispatch_board?.[4].find(([slot]) => slot === "preparation")?.[4],
-    ).toEqual(["inspect", PREPARATION.id]);
+    const clonedReveal = cloneOverworldCompactView(compact).station_dispatch_board?.[5];
+    if (!clonedReveal) throw new Error("Expected a cloned support reveal.");
+    (clonedReveal as [string, string])[1] = "Forged label";
+    expect(compact.station_dispatch_board?.[5]?.[1]).toBe("Review optional support (3 choices)");
 
     expect(session.snapshot()).toEqual(before);
     expect(session.snapshotHash()).toBe(beforeHash);
     expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
   });
 
-  it("removes each inline handle as its independent support row closes and re-derives V4 on restore", () => {
+  it("reveals exact V4 support-row bytes, removes handles as rows close, and re-derives V5 on restore", () => {
     const session = stationedSession();
     const row = (
       slot: "role" | "duty" | "evidence" | "preparation" | "relief_allocation" | "field_team",
@@ -296,6 +280,12 @@ describe("Station dispatch board", () => {
     for (const slot of ["role", "duty", "evidence"] as const) {
       expect(row(slot)?.slice(3)).toEqual([null, null]);
     }
+    expect(row("preparation")).toBeUndefined();
+    expect(row("relief_allocation")).toBeUndefined();
+    expect(row("field_team")).toBeUndefined();
+
+    session.revealStationDispatchSupport(STATION_DISPATCH_SUPPORT_REVEAL_ID);
+    expect(session.compactView().station_dispatch_board?.[5]).toBeNull();
     expect(row("preparation")?.[4]).toEqual(["inspect", PREPARATION.id]);
     expect(row("relief_allocation")?.[4]).toEqual(["inspect", RELIEF_ALLOCATION.id]);
     expect(row("field_team")?.[4]).toEqual(["talk", ALLY.contact, "June Pike"]);
@@ -304,7 +294,13 @@ describe("Station dispatch board", () => {
     const preparedGuidance =
       "Ready to depart now with background, Wolf-Winter promise, report, and field kit set; one relief wagon or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.";
     expect(session.view().stationDispatchBoard?.guidance).toBe(preparedGuidance);
-    expect(session.compactView().station_dispatch_board?.[2]).toBe(preparedGuidance);
+    expect(session.compactView().station_dispatch_board?.[2]).toMatch(
+      new RegExp(
+        `^Dispatch ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m committed;`,
+        "u",
+      ),
+    );
+    expect(session.compactView().station_dispatch_board?.[3]?.[3]).toBe(2);
     expect(JSON.stringify(session.compactView().station_dispatch_board).length).toBeLessThanOrEqual(
       1_000,
     );
@@ -330,7 +326,7 @@ describe("Station dispatch board", () => {
     const riderOnlyGuidance =
       "Ready to depart now with background, Wolf-Winter promise, report, field kit, and relief wagon set; second rider remains optional and changes cost or aftermath, not your Wolf-Winter approach.";
     expect(session.view().stationDispatchBoard?.guidance).toBe(riderOnlyGuidance);
-    expect(session.compactView().station_dispatch_board?.[2]).toBe(riderOnlyGuidance);
+    expect(session.compactView().station_dispatch_board?.[3]?.[3]).toBe(1);
 
     session.talkToCharacter(ALLY.contact);
     session.chooseJourneyStory(ALLY.options[0]!.id);
@@ -347,7 +343,10 @@ describe("Station dispatch board", () => {
     const fullySetGuidance =
       "Ready to depart now with background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice set; no optional support remains.";
     expect(session.view().stationDispatchBoard?.guidance).toBe(fullySetGuidance);
-    expect(session.compactView().station_dispatch_board?.[2]).toBe(fullySetGuidance);
+    expect(session.compactView().station_dispatch_board?.[2]).toMatch(/^Dispatch \d+m—on time;/u);
+    expect(session.compactView().station_dispatch_board?.[3]?.[3]).toBe(0);
+    expect(session.compactView().station_dispatch_board?.[5]).toBeNull();
+    expect(session.snapshot().stationDispatchSupportReveals).toBeUndefined();
     expect(JSON.stringify(session.compactView().station_dispatch_board).length).toBeLessThanOrEqual(
       1_000,
     );
@@ -360,7 +359,7 @@ describe("Station dispatch board", () => {
     expect(restored.compactView().station_dispatch_board).toEqual(
       session.compactView().station_dispatch_board,
     );
-    expect(restored.compactView().station_dispatch_board?.[0]).toBe(4);
+    expect(restored.compactView().station_dispatch_board?.[0]).toBe(5);
     expect(restored.snapshot()).toEqual(snapshot);
   });
 
@@ -373,11 +372,256 @@ describe("Station dispatch board", () => {
         "Ready to depart now with background, Wolf-Winter promise, report, and riding choice set; field kit or one relief wagon remain optional and change cost or aftermath, not your Wolf-Winter approach.";
 
       expect(session.view().stationDispatchBoard?.guidance).toBe(guidance);
-      expect(session.compactView().station_dispatch_board?.[2]).toBe(guidance);
+      expect(session.compactView().station_dispatch_board?.[2]).toMatch(
+        new RegExp(
+          `^Dispatch ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m committed;`,
+          "u",
+        ),
+      );
+      expect(
+        session.compactView().station_dispatch_board?.[4].find(([slot]) => slot === "field_team"),
+      ).toEqual(["field_team", "selected", expect.any(String), null, null]);
+      expect(session.compactView().station_dispatch_board?.[3]?.[3]).toBe(2);
       expect(session.view().stationDispatchBoard?.guidance).not.toContain(
         "background, Wolf-Winter promise, report, and second rider set",
       );
     }
+  });
+
+  it("persists one exact read-only disclosure receipt across refresh and restore", () => {
+    const session = stationedSession();
+    const beforeSnapshot = session.snapshot();
+    const beforeHash = session.snapshotHash();
+    const beforeDecisions = session.journey().acceptedDecisions;
+    const board = session.view().stationDispatchBoard;
+    const quest = session.view().quests.find((candidate) => candidate.id === WOLF.id);
+    if (!board || !quest?.launch) throw new Error("Expected the Station launch projection.");
+    const sharedDispatchStatus = sharedWolfHillRouteDispatchStatus(
+      quest.launch.options.flatMap((option) =>
+        option.tradeoffSummary ? [option.tradeoffSummary] : [],
+      ),
+    );
+
+    expect(() => session.revealStationDispatchSupport("forged:reveal")).toThrow(
+      /Unknown Station optional-support reveal/u,
+    );
+    expect(session.snapshot()).toEqual(beforeSnapshot);
+    expect(session.snapshotHash()).toBe(beforeHash);
+
+    session.revealStationDispatchSupport(STATION_DISPATCH_SUPPORT_REVEAL_ID);
+    const revealedSnapshot = session.snapshot();
+    const revealedHash = session.snapshotHash();
+    expect(revealedSnapshot.stationDispatchSupportReveals).toEqual([
+      [WOLF.id, STATION_DISPATCH_SUPPORT_REVEAL_ID],
+    ]);
+    expect(revealedHash).not.toBe(beforeHash);
+    expect(session.journey().acceptedDecisions).toBe(beforeDecisions);
+    const { stationDispatchSupportReveals: _receipt, ...revealedGameplay } = revealedSnapshot;
+    expect(revealedGameplay).toEqual(beforeSnapshot);
+
+    const postReveal = session.compactView().station_dispatch_board;
+    expect(postReveal?.[4]).toEqual(
+      compactStationDispatchBoard(board, true, sharedDispatchStatus ?? undefined)[4],
+    );
+    expect(postReveal?.[4].slice(3)).toEqual([
+      [
+        "preparation",
+        "open_optional",
+        null,
+        "Choose one specialist kit for a named danger.",
+        ["inspect", PREPARATION.id],
+      ],
+      [
+        "relief_allocation",
+        "open_optional",
+        null,
+        "Send Albany's last relief wagon to one crisis.",
+        ["inspect", RELIEF_ALLOCATION.id],
+      ],
+      [
+        "field_team",
+        "open_optional",
+        null,
+        "Ask about cattle-first help for one line, never combat.",
+        ["talk", ALLY.contact, "June Pike"],
+      ],
+    ]);
+    expect(postReveal?.[5]).toBeNull();
+
+    session.revealStationDispatchSupport(STATION_DISPATCH_SUPPORT_REVEAL_ID);
+    expect(session.snapshot()).toEqual(revealedSnapshot);
+    expect(session.snapshotHash()).toBe(revealedHash);
+    expect(session.compactView().station_dispatch_board).toEqual(postReveal);
+    expect(() => session.revealStationDispatchSupport("forged:after-review")).toThrow(
+      /Unknown Station optional-support reveal/u,
+    );
+    expect(session.snapshotHash()).toBe(revealedHash);
+
+    const restored = OverworldSession.restore(WORLD, revealedSnapshot);
+    expect(restored.snapshotHash()).toBe(revealedHash);
+    expect(restored.compactView().station_dispatch_board).toEqual(postReveal);
+
+    const civicExit = session
+      .view()
+      .areaExits.find((candidate) => candidate.destination.id === "albany_city__civic_core");
+    if (!civicExit) throw new Error("Expected the route away from Station.");
+    session.moveArea(civicExit.id);
+    const awaySnapshot = session.snapshot();
+    const restoredAway = OverworldSession.restore(WORLD, awaySnapshot);
+    expect(restoredAway.snapshot()).toEqual(awaySnapshot);
+    expect(restoredAway.compactView().station_dispatch_board).toBeUndefined();
+    const stationReturn = restoredAway
+      .view()
+      .areaExits.find((candidate) => candidate.destination.id === PREPARATION.area);
+    if (!stationReturn) throw new Error("Expected the return route to Station.");
+    restoredAway.moveArea(stationReturn.id);
+    expect(restoredAway.compactView().station_dispatch_board).toEqual(postReveal);
+
+    const forgedSnapshot = structuredClone(revealedSnapshot);
+    forgedSnapshot.stationDispatchSupportReveals = [[WOLF.id, "forged:receipt"]];
+    expect(() => OverworldSession.restore(WORLD, forgedSnapshot)).toThrow(
+      /must match its exact open dispatch/u,
+    );
+  });
+
+  it("keeps full route briefings when either compact builder lacks exact Station consensus", () => {
+    const session = stationedSession();
+    const view = session.view();
+    const quest = view.quests.find((candidate) => candidate.id === WOLF.id);
+    if (!quest?.launch || !view.stationDispatchBoard) {
+      throw new Error("Expected the complete Station launch projection.");
+    }
+    const fullSummaries = quest.launch.options.map((option) => option.tradeoffSummary!);
+    const parts = fullSummaries.map(wolfHillRouteTradeoffParts);
+    const mismatchedQuests = view.quests.map((candidate) =>
+      candidate.id === WOLF.id && candidate.launch
+        ? {
+            ...candidate,
+            launch: {
+              ...candidate.launch,
+              options: candidate.launch.options.map((option, index) =>
+                index === 1
+                  ? {
+                      ...option,
+                      tradeoffSummary: `Dispatch mismatch. ${parts[index]!.routeSummary}`,
+                    }
+                  : option,
+              ),
+            },
+          }
+        : candidate,
+    );
+    const missingQuests = view.quests.map((candidate) =>
+      candidate.id === WOLF.id && candidate.launch
+        ? {
+            ...candidate,
+            launch: {
+              ...candidate.launch,
+              options: candidate.launch.options.map((option, index) => {
+                if (index !== 1) return option;
+                const { tradeoffSummary: _tradeoffSummary, ...withoutTradeoffSummary } = option;
+                return withoutTradeoffSummary;
+              }),
+            },
+          }
+        : candidate,
+    );
+    const summaries = (compact: ReturnType<OverworldSession["compactView"]>) =>
+      compact.quests
+        ?.find(([questId]) => questId === WOLF.id)?.[3]?.[2]
+        .map((option) => option[13]);
+
+    const genericNoBoard = compactOverworldView({ ...view, stationDispatchBoard: null });
+    expect(summaries(genericNoBoard)).toEqual(fullSummaries);
+    for (const alteredQuests of [mismatchedQuests, missingQuests]) {
+      const generic = compactOverworldView({ ...view, quests: alteredQuests });
+      expect(generic.station_dispatch_board?.[2]).toBe(
+        "Dispatch 10m committed; ready to depart now.",
+      );
+      expect(summaries(generic)).toEqual(
+        alteredQuests
+          .find((candidate) => candidate.id === WOLF.id)!
+          .launch!.options.map((option) =>
+            "tradeoffSummary" in option ? (option.tradeoffSummary ?? null) : null,
+          ),
+      );
+    }
+
+    type ViewStateProbe = {
+      viewModelSourceState(): OverworldSessionViewModelSourceState;
+    };
+    const source = (session as unknown as ViewStateProbe).viewModelSourceState();
+    const state = buildOverworldSessionViewModelState(source);
+    const sessionNoBoard = buildOverworldSessionCompactViewFromState({
+      ...state,
+      stationDispatchBoard: null,
+    });
+    expect(summaries(sessionNoBoard)).toEqual(fullSummaries);
+    for (const alteredQuests of [mismatchedQuests, missingQuests]) {
+      const sessionCompact = buildOverworldSessionCompactViewFromState({
+        ...state,
+        localView: { ...state.localView, quests: alteredQuests },
+      });
+      expect(sessionCompact.station_dispatch_board?.[2]).toBe(
+        "Dispatch 10m committed; ready to depart now.",
+      );
+      expect(summaries(sessionCompact)).toEqual(
+        alteredQuests
+          .find((candidate) => candidate.id === WOLF.id)!
+          .launch!.options.map((option) =>
+            "tradeoffSummary" in option ? (option.tradeoffSummary ?? null) : null,
+          ),
+      );
+    }
+  });
+
+  it("clears the disclosure receipt on launch and preserves every deep launch receipt", () => {
+    const unrevealed = stationedSession();
+    const revealed = stationedSession();
+    revealed.revealStationDispatchSupport(STATION_DISPATCH_SUPPORT_REVEAL_ID);
+    const questStart = unrevealed.view().questStarts.find(([questId]) => questId === WOLF.id);
+    if (!questStart?.[1]) throw new Error("Expected a legal Wolf-Winter road.");
+
+    const controlLaunch = unrevealed.startQuest(questStart[0], questStart[1]);
+    const revealedLaunch = revealed.startQuest(questStart[0], questStart[1]);
+    expect(revealedLaunch).toEqual(controlLaunch);
+    expect(revealed.snapshot()).toEqual(unrevealed.snapshot());
+    expect(revealed.snapshot().stationDispatchSupportReveals).toBeUndefined();
+    expect(OverworldSession.restore(WORLD, revealed.snapshot()).snapshot()).toEqual(
+      revealed.snapshot(),
+    );
+    const forgedStarted = structuredClone(revealed.snapshot());
+    forgedStarted.stationDispatchSupportReveals = [[WOLF.id, STATION_DISPATCH_SUPPORT_REVEAL_ID]];
+    expect(() => OverworldSession.restore(WORLD, forgedStarted)).toThrow(
+      /must match its exact open dispatch/u,
+    );
+  });
+
+  it("restores an awaiting-choice receipt and clears it before an ended save", () => {
+    const session = stationedSession();
+    session.revealStationDispatchSupport(STATION_DISPATCH_SUPPORT_REVEAL_ID);
+    while (session.journey().pendingChoice === null) {
+      const view = session.view();
+      if (view.pendingRoadEncounter) session.resolveRoadEncounter("press_on");
+      else session.travel(view.exits[0]!.id);
+    }
+    expect(session.journey().status).toBe("awaiting_choice");
+    const awaitingSnapshot = session.snapshot();
+    expect(awaitingSnapshot.stationDispatchSupportReveals).toEqual([
+      [WOLF.id, STATION_DISPATCH_SUPPORT_REVEAL_ID],
+    ]);
+    const restoredAwaiting = OverworldSession.restore(WORLD, awaitingSnapshot);
+    expect(restoredAwaiting.snapshot()).toEqual(awaitingSnapshot);
+
+    restoredAwaiting.chooseJourney("end");
+    const endedSnapshot = restoredAwaiting.snapshot();
+    expect(endedSnapshot.stationDispatchSupportReveals).toBeUndefined();
+    expect(OverworldSession.restore(WORLD, endedSnapshot).snapshot()).toEqual(endedSnapshot);
+    const forgedEnded = structuredClone(endedSnapshot);
+    forgedEnded.stationDispatchSupportReveals = [[WOLF.id, STATION_DISPATCH_SUPPORT_REVEAL_ID]];
+    expect(() => OverworldSession.restore(WORLD, forgedEnded)).toThrow(
+      /must match its exact open dispatch/u,
+    );
   });
 
   it("withholds malformed pairings and does not leak unselected support alternatives", () => {

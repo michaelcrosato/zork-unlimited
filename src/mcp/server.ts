@@ -1278,9 +1278,11 @@ const S = {
   include_session_id: B("Echo the session id."),
 };
 const STATION_SUPPORT = {
-  include_station_dispatch_support: B(
-    "Legacy V3 Station support detail; V4 already inlines current open support.",
-  ),
+  include_station_dispatch_support: B("Legacy support detail."),
+  reveal_station_dispatch_support: z
+    .string()
+    .optional()
+    .describe("Durable read-only reveal; pass the exact Station V5 board [5] id."),
 };
 const OVERWORLD_READ_DETAILS = PLAY_MODE === "pure" ? {} : { ...S, ...W, ...IDS, ...ROUTES };
 const COMPACT_OVERWORLD_CONTEXT =
@@ -1331,7 +1333,7 @@ tool(
 );
 tool(
   "get_overworld_session_context",
-  "Read compact context; if_snapshot_hash detects changes.",
+  "Read compact context; Station support uses the exact V5 board [5] id.",
   {
     ...OVERWORLD_SESSION,
     ...IF_SNAPSHOT_HASH,

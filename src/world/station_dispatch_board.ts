@@ -11,9 +11,11 @@ import type {
 } from "./session_departure_interactions.js";
 
 /** A read-only, coverage-complete index of the current Station dispatch. */
-export const STATION_DISPATCH_BOARD_VERSION = 4 as const;
+export const STATION_DISPATCH_BOARD_VERSION = 5 as const;
 export const STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT = 240;
 export const STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT = 160;
+export const STATION_DISPATCH_SUPPORT_REVEAL_ID =
+  "station_dispatch:review_optional_support" as const;
 
 const SUPPORT_SLOTS = ["preparation", "relief_allocation", "field_team"] as const;
 type StationDispatchSupportSlot = (typeof SUPPORT_SLOTS)[number];
@@ -171,7 +173,12 @@ export type OpeningCompactStationDispatchBoardDispatch = readonly [
   state: StationDispatchBoardDispatch["state"],
   minutes: number,
   timing: StationDispatchBoardDispatch["timing"],
-  remainingOptional: readonly StationDispatchSupportSlot[],
+  remainingOptionalCount: number,
+];
+
+export type OpeningCompactStationDispatchBoardReveal = readonly [
+  id: typeof STATION_DISPATCH_SUPPORT_REVEAL_ID,
+  label: string,
 ];
 
 export type OpeningCompactStationDispatchBoard = readonly [
@@ -180,6 +187,7 @@ export type OpeningCompactStationDispatchBoard = readonly [
   guidance: string,
   dispatch: OpeningCompactStationDispatchBoardDispatch | null,
   rows: readonly OpeningCompactStationDispatchBoardPlanRow[],
+  reveal: OpeningCompactStationDispatchBoardReveal | null,
 ];
 
 /** Backward-compatible explicit detail for clients that request Station support separately. */
@@ -480,44 +488,105 @@ function compactAction(
     : ["talk", action.characterId, action.contactName];
 }
 
+function compactStationDispatchGuidance(
+  board: StationDispatchBoard,
+  sharedDispatchStatus?: string,
+): string {
+  if (sharedDispatchStatus) {
+    return bounded(
+      sharedDispatchStatus,
+      "compact guidance",
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    );
+  }
+  const departure = board.launch.approaches.some((approach) => approach.availableNow)
+    ? "ready to depart now"
+    : "no road is ready now";
+  if (!board.dispatch) {
+    return bounded(
+      `Dispatch unverified; ${departure}.`,
+      "compact guidance",
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    );
+  }
+  if (board.dispatch.state === "sealed" && board.dispatch.timing) {
+    return bounded(
+      `Dispatch ${String(board.dispatch.minutes)}m ${board.dispatch.timing.replace("_", "-")}; ${departure}.`,
+      "compact guidance",
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    );
+  }
+  return bounded(
+    `Dispatch ${String(board.dispatch.minutes)}m committed; ${departure}.`,
+    "compact guidance",
+    STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+  );
+}
+
+function compactStationDispatchReveal(
+  openOptionalCount: number,
+  supportRevealed: boolean,
+): OpeningCompactStationDispatchBoardReveal | null {
+  if (supportRevealed) return null;
+  if (openOptionalCount === 0) return null;
+  const choices = openOptionalCount === 1 ? "choice" : "choices";
+  return [
+    STATION_DISPATCH_SUPPORT_REVEAL_ID,
+    `Review optional support (${String(openOptionalCount)} ${choices})`,
+  ];
+}
+
 export function compactStationDispatchBoard(
   board: StationDispatchBoard,
+  supportRevealed = false,
+  sharedDispatchStatus?: string,
 ): OpeningCompactStationDispatchBoard {
+  const openOptionalCount = board.support.filter(
+    (entry) => entry.status === "open_optional",
+  ).length;
+  if (openOptionalCount > SUPPORT_SLOTS.length) {
+    throw new Error("Station dispatch board has too many optional support rows.");
+  }
+  if (board.dispatch && board.dispatch.remainingOptional.length !== openOptionalCount) {
+    throw new Error("Station dispatch board optional support count is inconsistent.");
+  }
   return [
     board.version,
     board.questId,
-    compactText(board.guidance, STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT),
+    compactText(
+      compactStationDispatchGuidance(board, sharedDispatchStatus),
+      STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT,
+    ),
     board.dispatch
-      ? [
-          board.dispatch.state,
-          board.dispatch.minutes,
-          board.dispatch.timing,
-          [...board.dispatch.remainingOptional],
-        ]
+      ? [board.dispatch.state, board.dispatch.minutes, board.dispatch.timing, openOptionalCount]
       : null,
-    board.plan.map((entry) => {
-      const support = board.support.find((candidate) => candidate.slot === entry.slot);
-      const openSupport =
-        entry.status === "open_optional" &&
-        entry.selectedTitle === null &&
-        support?.status === entry.status &&
-        support.selectedTitle === entry.selectedTitle &&
-        support.action !== null
-          ? support
-          : null;
-      return [
-        entry.slot,
-        entry.status,
-        entry.selectedTitle,
-        openSupport
-          ? compactText(
-              SUPPORT_COPY[openSupport.slot].inlinePurpose,
-              STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT,
-            )
-          : null,
-        openSupport ? compactAction(openSupport.action) : null,
-      ] as const;
-    }),
+    board.plan
+      .filter((entry) => supportRevealed || entry.status !== "open_optional")
+      .map((entry) => {
+        const support = board.support.find((candidate) => candidate.slot === entry.slot);
+        const openSupport =
+          supportRevealed &&
+          entry.status === "open_optional" &&
+          entry.selectedTitle === null &&
+          support?.status === entry.status &&
+          support.selectedTitle === entry.selectedTitle &&
+          support.action !== null
+            ? support
+            : null;
+        return [
+          entry.slot,
+          entry.status,
+          entry.selectedTitle,
+          openSupport
+            ? compactText(
+                SUPPORT_COPY[openSupport.slot].inlinePurpose,
+                STATION_DISPATCH_BOARD_SUPPORT_COPY_CHAR_LIMIT,
+              )
+            : null,
+          openSupport ? compactAction(openSupport.action) : null,
+        ] as const;
+      }),
+    compactStationDispatchReveal(openOptionalCount, supportRevealed),
   ];
 }
 
@@ -541,7 +610,7 @@ export function cloneCompactStationDispatchBoard(
     board[0],
     board[1],
     board[2],
-    board[3] ? [board[3][0], board[3][1], board[3][2], [...board[3][3]]] : null,
+    board[3] ? [board[3][0], board[3][1], board[3][2], board[3][3]] : null,
     board[4].map(
       (row) =>
         [
@@ -552,6 +621,7 @@ export function cloneCompactStationDispatchBoard(
           row[4] ? [...row[4]] : null,
         ] as OpeningCompactStationDispatchBoardPlanRow,
     ),
+    board[5] ? [board[5][0], board[5][1]] : null,
   ];
 }
 

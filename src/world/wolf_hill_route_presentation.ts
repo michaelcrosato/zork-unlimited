@@ -23,6 +23,37 @@ const ROUTE_SUMMARIES = Object.freeze({
     "Sheltered lee: 75m, 2 supplies, fatigue +10; cattle alarm starts at 0; hedges conceal the byre and weather. No plan is chosen. Cade discloses the ground for tonight before commitment.",
 });
 
+const ROUTE_SUMMARY_MARKERS = Object.freeze([
+  ROUTE_SUMMARIES.exposedRidge,
+  ROUTE_SUMMARIES.shelteredStockway,
+]);
+
+export type WolfHillRouteTradeoffParts = Readonly<{
+  dispatchStatus: string | null;
+  routeSummary: string;
+}>;
+
+/** Split only the two authenticated hill-road summaries; unknown prose stays intact. */
+export function wolfHillRouteTradeoffParts(summary: string): WolfHillRouteTradeoffParts {
+  for (const marker of ROUTE_SUMMARY_MARKERS) {
+    const routeIndex = summary.indexOf(marker);
+    if (routeIndex < 0) continue;
+    return Object.freeze({
+      dispatchStatus: routeIndex === 0 ? null : summary.slice(0, routeIndex).trim(),
+      routeSummary: summary.slice(routeIndex),
+    });
+  }
+  return Object.freeze({ dispatchStatus: null, routeSummary: summary });
+}
+
+/** Return one shared dispatch line only when every shown hill road agrees exactly. */
+export function sharedWolfHillRouteDispatchStatus(summaries: readonly string[]): string | null {
+  const statuses = summaries.map((summary) => wolfHillRouteTradeoffParts(summary).dispatchStatus);
+  const first = statuses[0];
+  if (!first || statuses.length === 0 || statuses.some((status) => status !== first)) return null;
+  return first;
+}
+
 export type WolfHillRoutePresentation = Readonly<{
   tradeoffSummary: string;
 }>;

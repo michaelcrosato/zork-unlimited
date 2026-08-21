@@ -842,9 +842,13 @@ describe("MCP tools — validate / load (§9.4)", () => {
     expect(
       a.get_overworld_session({ session_id: started.session_id }).journey.storyChoice?.kind,
     ).not.toBe("relief_allocation");
-    expect(
-      a.get_overworld_session_context({ session_id: started.session_id }).context.quests?.[0],
-    ).toEqual(compactOverworldQuestRef(discoveredQuest, true));
+    const compactContext = a.get_overworld_session_context({ session_id: started.session_id });
+    const sharedDispatchStatus = compactContext.context.station_dispatch_board?.[2];
+    expect(sharedDispatchStatus).toMatch(/^Dispatch 35m committed;/);
+    expect(compactContext.context.quests?.[0]).toEqual(
+      compactOverworldQuestRef(discoveredQuest, true, false, false, sharedDispatchStatus),
+    );
+    expect(JSON.stringify(compactContext.context.quests?.[0])).not.toContain(sharedDispatchStatus);
     const routeAwayFromQuest = sourced.areaExits.find(
       (exit) => exit.destination.id !== discoveredQuest.area,
     );

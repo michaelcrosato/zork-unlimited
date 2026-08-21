@@ -24,6 +24,7 @@ import { presentOpeningRegistration } from "../../src/world/opening_registration
 import { presentOpeningReliefAllocation } from "../../src/world/opening_relief_allocation_presentation.js";
 import { presentOpeningReliefOath } from "../../src/world/opening_relief_oath_presentation.js";
 import { deriveQuestDispatchPresentationWindow } from "../../src/world/quest_dispatch_window.js";
+import { wolfHillRouteTradeoffParts } from "../../src/world/wolf_hill_route_presentation.js";
 import { OverworldSession } from "../../src/world/session.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
 import type { JourneyStoryChoicePrompt } from "../../src/world/journey_contract.js";
@@ -278,13 +279,15 @@ describe("Albany opening departure recap", () => {
     expect(compact.v).toBe(OVERWORLD_COMPACT_VIEW_VERSION);
     expect(compact.departure_recap).toBeUndefined();
     expect(compact.station_dispatch_board?.slice(0, 4)).toEqual([
-      4,
+      5,
       WOLF.id,
       expect.any(String),
-      ["committed", 10, null, ["preparation", "relief_allocation", "field_team"]],
+      ["committed", 10, null, 3],
     ]);
     expect(compact.station_dispatch_board?.[4].map((row) => row.slice(0, 3))).toEqual(
-      full.departureRecap!.entries.map((entry) => [entry.slot, entry.status, entry.title]),
+      full
+        .departureRecap!.entries.filter((entry) => entry.status !== "open_optional")
+        .map((entry) => [entry.slot, entry.status, entry.title]),
     );
     expect(compact).not.toHaveProperty("departure_interactions");
     expect(compact).not.toHaveProperty("departure_contact_leads");
@@ -322,7 +325,12 @@ describe("Albany opening departure recap", () => {
     expect(focusedWolfRef[3][2].every((option) => option[11] === null)).toBe(true);
     expect(focusedWolfRef[3][2].every((option) => option[12] === null)).toBe(true);
     expect(focusedWolfRef[3][2].map((option) => option[13])).toEqual(
-      wolfQuest.launch.options.map((option) => option.tradeoffSummary ?? option.summary),
+      wolfQuest.launch.options.map((option) =>
+        option.tradeoffSummary
+          ? (wolfHillRouteTradeoffParts(option.tradeoffSummary)?.routeSummary ??
+            option.tradeoffSummary)
+          : option.summary,
+      ),
     );
     expect(
       JSON.stringify(defaultWolfRef).length - JSON.stringify(focusedWolfRef).length,
@@ -689,12 +697,12 @@ describe("Albany opening departure recap", () => {
       "committed",
       recap.dispatch.minutes,
       null,
-      ["field_team"],
+      1,
     ]);
     const sealedCompact = open.compactView();
     const sealedCompactDispatch = sealedCompact.station_dispatch_board?.[3];
     if (!sealedCompactDispatch) throw new Error("Expected a compact sealed dispatch line.");
-    (sealedCompactDispatch as unknown as [string, number, string, string[]])[1] = 999;
+    (sealedCompactDispatch as unknown as [string, number, string | null, number])[1] = 999;
     expect(open.compactView().station_dispatch_board?.[3]?.[1]).toBe(recap.dispatch.minutes);
 
     const forged = open.snapshot();
@@ -843,7 +851,9 @@ describe("Albany opening departure recap", () => {
       } else {
         expect(stage.compact.departure_recap).toBeUndefined();
         expect(stage.compact.station_dispatch_board?.[4].map((row) => row.slice(0, 3))).toEqual(
-          recap.entries.map((entry) => [entry.slot, entry.status, entry.title]),
+          recap.entries
+            .filter((entry) => entry.status !== "open_optional")
+            .map((entry) => [entry.slot, entry.status, entry.title]),
         );
         expect(stage.terminal).not.toContain(`${WOLF.title} dispatch recap:`);
         expect(stage.terminal).toContain("Already set: `review dispatch`.");

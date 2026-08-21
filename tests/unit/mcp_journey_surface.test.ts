@@ -31,7 +31,11 @@ import {
   openingSelectionReceiptWordCount,
 } from "../../src/world/opening_choice_receipt.js";
 import { compactOpeningDepartureRecapTerms } from "../../src/world/opening_departure_recap.js";
-import { compactStationDispatchBoardSupport } from "../../src/world/station_dispatch_board.js";
+import {
+  compactStationDispatchBoard,
+  compactStationDispatchBoardSupport,
+  STATION_DISPATCH_SUPPORT_REVEAL_ID,
+} from "../../src/world/station_dispatch_board.js";
 import {
   TANNERS_FEVER_ACCOUNTABILITY_CHOICE_IDS,
   TANNERS_FEVER_ACCOUNTABILITY_ID,
@@ -1107,9 +1111,12 @@ describe("MCP journey surface", () => {
           expect(payload).not.toHaveProperty("station_dispatch_board");
         }
       };
-      const expectInspectionRecall = (payload: Record<string, unknown>): void => {
+      const expectInspectionRecall = (
+        payload: Record<string, unknown>,
+        exactTerms = false,
+      ): void => {
         expect(payload).not.toHaveProperty("station_dispatch_board");
-        if (expectedBoard) {
+        if (expectedBoard || exactTerms) {
           expect(payload).not.toHaveProperty("departure_recap");
         } else {
           expect(payload.departure_recap).toEqual(expectedRecap);
@@ -1125,6 +1132,26 @@ describe("MCP journey surface", () => {
       if (expectedBoard) {
         const sourceBoard = source.view().stationDispatchBoard;
         if (!sourceBoard) throw new Error("expected full Station dispatch board");
+        const compactBoard = compact.context.station_dispatch_board;
+        if (!compactBoard) throw new Error("expected compact Station dispatch board");
+        expect(compactBoard[0]).toBe(5);
+        expect(compactBoard[3]?.[3]).toBe(
+          sourceBoard.support.filter((entry) => entry.status === "open_optional").length,
+        );
+        expect(compactBoard[4].every((row) => row[3] === null && row[4] === null)).toBe(true);
+        expect(compactBoard[4].map(([slot]) => slot)).not.toEqual(
+          expect.arrayContaining(
+            sourceBoard.support
+              .filter((entry) => entry.status === "open_optional")
+              .map((entry) => entry.slot),
+          ),
+        );
+        expect(compactBoard[5]).toEqual([
+          STATION_DISPATCH_SUPPORT_REVEAL_ID,
+          `Review optional support (${String(compactBoard[3]![3])} ${
+            compactBoard[3]![3] === 1 ? "choice" : "choices"
+          })`,
+        ]);
         // An explicitly requested verbose observation remains the complete data
         // surface; progressive disclosure applies to compact/pure presentation.
         expect(full.observation.stationDispatchBoard).toEqual(sourceBoard);
@@ -1145,6 +1172,84 @@ describe("MCP journey surface", () => {
         );
         expect(supportReview.legend_delta).toHaveProperty("station_dispatch_support");
         expect(supportReview.snapshot_hash).toBe(compact.snapshot_hash);
+        const afterLegacyReview = a.export_overworld_session({
+          session_id: compact.session_id,
+        });
+        expect(afterLegacyReview.ok).toBe(true);
+        if (!afterLegacyReview.ok) throw new Error(`expected export after ${kind} support review`);
+        expect(afterLegacyReview.snapshot).toEqual(snapshot);
+        expect(afterLegacyReview.snapshot_hash).toBe(compact.snapshot_hash);
+
+        const revealProbe = a.restore_overworld_session({ compact_context: true, snapshot });
+        const beforeReveal = a.export_overworld_session({ session_id: revealProbe.session_id });
+        if (!beforeReveal.ok) throw new Error(`expected export before ${kind} Station reveal`);
+        const revealed = a.get_overworld_session_context({
+          session_id: revealProbe.session_id,
+          if_snapshot_hash: revealProbe.snapshot_hash,
+          reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+        });
+        expect(revealed).not.toHaveProperty("unchanged");
+        if (!("context" in revealed)) {
+          throw new Error(`expected revealed Station support before ${kind}`);
+        }
+        const revealedBoard = revealed.context.station_dispatch_board;
+        if (!revealedBoard) throw new Error("expected revealed compact Station board");
+        expect(revealed.snapshot_hash).not.toBe(revealProbe.snapshot_hash);
+        expect(revealed.journey).toEqual(revealProbe.journey);
+        expect(revealedBoard[3]?.[3]).toBe(compactBoard[3]?.[3]);
+        expect(revealedBoard[4]).toHaveLength(sourceBoard.plan.length);
+        expect(revealedBoard[5]).toBeNull();
+        expect(revealedBoard[4]).toEqual(compactStationDispatchBoard(sourceBoard, true)[4]);
+        const afterReveal = a.export_overworld_session({ session_id: revealProbe.session_id });
+        if (!afterReveal.ok) throw new Error(`expected export after ${kind} Station reveal`);
+        expect(afterReveal.snapshot.stationDispatchSupportReveals).toEqual([
+          [sourceBoard.questId, STATION_DISPATCH_SUPPORT_REVEAL_ID],
+        ]);
+        const { stationDispatchSupportReveals: _revealedReceipt, ...revealedGameplaySnapshot } =
+          afterReveal.snapshot;
+        expect(revealedGameplaySnapshot).toEqual(beforeReveal.snapshot);
+
+        const repeatedReveal = a.get_overworld_session_context({
+          session_id: revealProbe.session_id,
+          if_snapshot_hash: revealed.snapshot_hash,
+          reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+        });
+        expect(repeatedReveal).not.toHaveProperty("unchanged");
+        if (!("context" in repeatedReveal)) {
+          throw new Error(`expected repeated Station support before ${kind}`);
+        }
+        expect(repeatedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect(repeatedReveal.context.station_dispatch_board).toEqual(revealedBoard);
+        expect(a.export_overworld_session({ session_id: revealProbe.session_id })).toEqual(
+          afterReveal,
+        );
+
+        const refreshedReveal = a.get_overworld_session_context({
+          session_id: revealProbe.session_id,
+        });
+        if (!("context" in refreshedReveal)) {
+          throw new Error(`expected refreshed Station support before ${kind}`);
+        }
+        expect(refreshedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect(refreshedReveal.context.station_dispatch_board).toEqual(revealedBoard);
+        const restoredReveal = a.restore_overworld_session({
+          compact_context: true,
+          snapshot: afterReveal.snapshot,
+        });
+        expect(restoredReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect(restoredReveal.context.station_dispatch_board).toEqual(revealedBoard);
+
+        const forgedProbe = a.restore_overworld_session({ compact_context: true, snapshot });
+        const beforeForgery = a.export_overworld_session({ session_id: forgedProbe.session_id });
+        expect(() =>
+          a.get_overworld_session_context({
+            session_id: forgedProbe.session_id,
+            reveal_station_dispatch_support: "forged:station-support",
+          }),
+        ).toThrow(/Unknown Station optional-support reveal/i);
+        expect(a.export_overworld_session({ session_id: forgedProbe.session_id })).toEqual(
+          beforeForgery,
+        );
       }
       const inspection = a.restore_overworld_session({ compact_context: true, snapshot });
       const reviewed = a.get_overworld_session_context({
@@ -1199,30 +1304,58 @@ describe("MCP journey surface", () => {
         argument: "option_id",
         readOnly: true,
       });
+      for (const option of compactInspection.story.options) {
+        expect(option).not.toHaveProperty("situationalBoundary");
+      }
+      expect(JSON.stringify(compactInspection.story)).not.toContain("May never trigger");
+      const exactCandidateId =
+        kind === "preparation"
+          ? "albany:prep_relief_protocol"
+          : kind === "ally"
+            ? "albany:ally_june_cattle_first"
+            : compactInspection.story.options[0]!.id;
       const optionInspection = a.inspect_overworld_session_story({
         session_id: inspection.session_id,
         ...compactInspection.story.reviewOption.arguments,
-        option_id: compactInspection.story.options[0]!.id,
+        option_id: exactCandidateId,
         compact_context: true,
         compact_result: true,
       });
-      expectInspectionRecall(optionInspection);
+      expectInspectionRecall(optionInspection, true);
+      const canonicalOption = fullInspection.story.options.find(
+        (option) => option.id === exactCandidateId,
+      );
+      if (!canonicalOption) throw new Error(`expected canonical ${kind} option`);
+      expect(optionInspection.story.inspectedOption?.consequence).toBe(canonicalOption.consequence);
+      if (kind === "preparation") {
+        expect(optionInspection.story.inspectedOption?.situationalBoundary).toBe(
+          "May never trigger. In LURE, foul the first feed cast, fail the public wedge, spend the split-rail guard to redirect the yearling alive, then return to Cade before the loft cast. A clean cast, braced rail, or other recovery gets no benefit.",
+        );
+      } else if (kind === "ally") {
+        expect(optionInspection.story.inspectedOption?.situationalBoundary).toBe(
+          "May never trigger. June lowers cattle alarm when a recovered LURE leaves the herd pressing, or prevents 2 HP after failed-signal DRIVE Overrun or an unstabilized failed first FORTIFY seal at pressure 3+. Clean DRIVE, pressure-2/mobile-stabilized FORTIFY gain nothing; no combat help; first wolf death ends her help.",
+        );
+      } else {
+        expect(optionInspection.story.inspectedOption).not.toHaveProperty("situationalBoundary");
+      }
       expect(optionInspection.departure_recap_terms).toEqual(
         compactOpeningDepartureRecapTerms(expectedFull),
       );
+      expect(optionInspection).not.toHaveProperty("departure_recap");
       expect(optionInspection.legend_delta).toHaveProperty("departure_recap_terms");
       expect(JSON.stringify(optionInspection).length).toBeLessThanOrEqual(2_048);
       expect(optionInspection.snapshot_hash).toBe(compactInspection.snapshot_hash);
       const repeatedOptionInspection = a.inspect_overworld_session_story({
         session_id: inspection.session_id,
         ...compactInspection.story.reviewOption.arguments,
-        option_id: compactInspection.story.options[0]!.id,
+        option_id: exactCandidateId,
         compact_context: true,
         compact_result: true,
       });
       expect(repeatedOptionInspection.departure_recap_terms).toEqual(
         compactOpeningDepartureRecapTerms(expectedFull),
       );
+      expect(repeatedOptionInspection).not.toHaveProperty("departure_recap");
       expect(repeatedOptionInspection).not.toHaveProperty("legend_delta");
       const afterInspection = a.export_overworld_session({ session_id: inspection.session_id });
       expect(afterInspection.ok).toBe(true);
@@ -1252,11 +1385,18 @@ describe("MCP journey surface", () => {
       compact_context: true,
       snapshot: source.snapshot(),
     });
-    const directTalkAction = directTalkSession.context.station_dispatch_board?.[4].find(
+    const directTalkReview = a.get_overworld_session_context({
+      session_id: directTalkSession.session_id,
+      reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+    });
+    if (!("context" in directTalkReview)) {
+      throw new Error("expected revealed Station support for the field-team action");
+    }
+    const directTalkAction = directTalkReview.context.station_dispatch_board?.[4].find(
       ([slot]) => slot === "field_team",
     )?.[4];
     if (directTalkAction?.[0] !== "talk") {
-      throw new Error("expected an authenticated V4 field-team action");
+      throw new Error("expected an authenticated revealed field-team action");
     }
     const directTalk = a.talk_overworld_session_contact({
       session_id: directTalkSession.session_id,
@@ -2122,6 +2262,50 @@ describe("MCP journey surface", () => {
         OPENING_SELECTION_RECEIPT_WORD_LIMIT,
       );
     }
+  });
+
+  it("bounds the exhaustive-audit worst-case exact June inspection", () => {
+    const registration = WORLD.opening_registration;
+    const oath = WORLD.opening_relief_oath;
+    const source = WORLD.opening_lead_source;
+    const preparation = WORLD.opening_preparation;
+    const allocation = WORLD.opening_relief_allocation;
+    const ally = WORLD.opening_ally;
+    if (!registration || !oath || !source || !preparation || !allocation || !ally) {
+      throw new Error("expected the complete Albany Station setup");
+    }
+    const session = new OverworldSession(WORLD);
+    session.scoutPoi(session.view().pois[0]!.id);
+    session.talkToCharacter(registration.contact);
+    session.chooseJourneyStory("albany:unaffiliated_courier", registration.id);
+    revealCurrentJourneyStoryOptions(session, oath.id);
+    session.chooseJourneyStory("albany:oath_limited_aid_only", oath.id);
+    session.chooseJourneyStory("albany:source_hayden_frost_report", source.id);
+    moveUiSessionToArea(session, preparation.area);
+    session.chooseJourneyStory("albany:prep_relief_protocol", preparation.id);
+    session.chooseJourneyStory("albany:relief_cade_fodder", allocation.id);
+    session.talkToCharacter(ally.contact);
+
+    const a = api();
+    const restored = a.restore_overworld_session({
+      compact_context: true,
+      snapshot: session.snapshot(),
+    });
+    const inspected = a.inspect_overworld_session_story({
+      session_id: restored.session_id,
+      story_choice_id: ally.id,
+      option_id: "albany:ally_june_cattle_first",
+      compact_context: true,
+      compact_result: true,
+    });
+
+    expect(inspected).not.toHaveProperty("departure_recap");
+    expect(inspected.departure_recap_terms).toBeDefined();
+    expect(inspected.story.inspectedOption?.situationalBoundary).toContain("May never trigger.");
+    // An exhaustive audit covered all 4*3*3*3*3 = 324 legal Station setups;
+    // this setup was the largest exact June response.
+    expect(JSON.stringify(inspected).length).toBe(2_034);
+    expect(JSON.stringify(inspected).length).toBeLessThanOrEqual(2_048);
   });
 
   it("makes a pending parent choice the only legal move inside an embedded quest", () => {

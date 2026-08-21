@@ -29,9 +29,10 @@ import {
 } from "../../src/mcp/journey_projection.js";
 import { OVERWORLD_COMPACT_RESULT_LEGEND } from "../../src/mcp/compact_overworld_result.js";
 import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
-import type {
-  OpeningCompactStationDispatchBoard,
-  OpeningCompactStationDispatchBoardSupport,
+import {
+  STATION_DISPATCH_SUPPORT_REVEAL_ID,
+  type OpeningCompactStationDispatchBoard,
+  type OpeningCompactStationDispatchBoardSupport,
 } from "../../src/world/station_dispatch_board.js";
 import {
   INSPECT_OVERWORLD_SESSION_STORY_TOOL,
@@ -1753,6 +1754,18 @@ describe("MCP pure play mode", () => {
       await withPureServer(evidence, async (client) => {
         const listed = await client.listTools();
         expect(new Set(listed.tools.map((tool) => tool.name))).toEqual(PURE_PLAYER_TOOLS);
+        const pureCatalogProjection = listed.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          input_schema: Object.fromEntries(
+            Object.entries(tool.inputSchema).filter(([key]) => key !== "$schema"),
+          ),
+        }));
+        const pureCatalogBytes = Buffer.byteLength(JSON.stringify(pureCatalogProjection), "utf8");
+        expect(pureCatalogBytes).toBe(16_790);
+        expect(pureCatalogBytes - 16_694).toBe(96);
+        expect(16_375 + 2_042 + pureCatalogBytes).toBe(35_207);
+        expect(16_375 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(16_472 + 2_042 + 16_694);
         for (const tool of listed.tools) {
           expect(
             validPureMcpToolCatalogEntry({ name: tool.name }),
@@ -1786,6 +1799,13 @@ describe("MCP pure play mode", () => {
           expect.objectContaining({
             type: "boolean",
             description: "Exact selected plan terms.",
+          }),
+        );
+        expect(contextTool?.inputSchema.properties).toHaveProperty(
+          "reveal_station_dispatch_support",
+          expect.objectContaining({
+            type: "string",
+            description: expect.stringMatching(/exact Station V5 board \[5\] id/i),
           }),
         );
 
@@ -2377,72 +2397,43 @@ describe("MCP pure play mode", () => {
         );
         mergeLegendAndExpectContextCoverage(cumulativeLegend, stationed, "Station");
         expect((stationed.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
-        expect((stationed.legend_delta as Record<string, string>).station_dispatch_board).toMatch(
-          /Only open_optional rows have purpose\/action.*null authorizes nothing/i,
+        const stationLegend = (stationed.legend_delta as Record<string, string>)
+          .station_dispatch_board;
+        expect(stationLegend).toContain(
+          "[5,quest_id,dispatch_status,dispatch|null,rows,reveal|null]",
         );
-        expect((stationed.legend_delta as Record<string, string>).station_dispatch_board).toContain(
-          "role=background; duty=Wolf-Winter promise; evidence=report; preparation=field kit; relief_allocation=relief wagon; field_team=second rider",
-        );
+        expect(stationLegend).toContain("remaining_optional_count");
+        expect(stationLegend).toContain("Pre-review hides open_optional;reveal=[id,label]");
+        expect(stationLegend).toContain("get-context(reveal_station_dispatch_support=exact id)");
+        expect(stationLegend).toContain("receipt survives refresh/export/restore");
+        expect(stationLegend).toContain("['inspect',story_choice_id]");
+        expect(stationLegend).toContain("['talk',character_id,contact_name]");
         expect(JSON.stringify(cumulativeLegend).length).toBeLessThanOrEqual(7_200);
         const stationedContext = stationed.context as CompactAreaContext;
         expect(stationedContext.departure_contact_leads).toBeUndefined();
         expect(stationedContext.departure_recap).toBeUndefined();
         const stationedBoard = stationedContext.station_dispatch_board;
-        expect(stationedBoard?.slice(0, 2)).toEqual([4, "wolf_winter"]);
+        expect(stationedBoard?.slice(0, 2)).toEqual([5, "wolf_winter"]);
         const stationedGuidance = stationedBoard?.[2];
         expect(stationedGuidance).toBe(
-          "Ready to depart now with background, Wolf-Winter promise, and report set; field kit, one relief wagon, or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.",
+          "Dispatch 5m committed; optional Station support remains (final 5–55m). Every remaining support combination stays on time; starting now declines them.",
         );
-        expect(stationedBoard?.[4]).toEqual(
-          expect.arrayContaining([
-            [
-              "preparation",
-              "open_optional",
-              null,
-              "Choose one specialist kit for a named danger.",
-              ["inspect", "albany:wolf_preparation"],
-            ],
-            [
-              "relief_allocation",
-              "open_optional",
-              null,
-              "Send Albany's last relief wagon to one crisis.",
-              ["inspect", "albany:wolf_relief_allocation"],
-            ],
-            [
-              "field_team",
-              "open_optional",
-              null,
-              "Ask about cattle-first help for one line, never combat.",
-              ["talk", "albany_city__transport_hub__june_pike", "June Pike"],
-            ],
-          ]),
-        );
+        expect(stationedBoard?.[3]).toEqual(["committed", 5, null, 3]);
+        expect(stationedBoard?.[4].map(([slot]) => slot)).toEqual(["role", "duty", "evidence"]);
+        expect(stationedBoard?.[4].every((row) => row[3] === null && row[4] === null)).toBe(true);
+        expect(stationedBoard?.[5]).toEqual([
+          STATION_DISPATCH_SUPPORT_REVEAL_ID,
+          "Review optional support (3 choices)",
+        ]);
+        const hiddenStationJson = JSON.stringify(stationedBoard);
+        expect(hiddenStationJson).not.toContain("albany:wolf_preparation");
+        expect(hiddenStationJson).not.toContain("albany:wolf_relief_allocation");
+        expect(hiddenStationJson).not.toContain("albany_city__transport_hub__june_pike");
         expect((stationed.context as CompactAreaContext).quest_starts).toContainEqual([
           "wolf_winter",
           expect.any(String),
         ]);
         expect(stationedContext.station_dispatch_support).toBeUndefined();
-        const directPreparationAction = stationedBoard?.[4].find(
-          ([slot]) => slot === "preparation",
-        )?.[4];
-        if (directPreparationAction?.[0] !== "inspect") {
-          throw new Error("expected a directly actionable V4 preparation row");
-        }
-        const directInspection = textPayload(
-          await client.callTool({
-            name: "inspect_overworld_session_story",
-            arguments: {
-              session_id: sessionId,
-              story_choice_id: directPreparationAction[1],
-              compact_context: false,
-              compact_result: false,
-            },
-          }),
-        );
-        expectPureStoryInspectionEnvelope(directInspection, sessionId);
-        expect((directInspection.story as { kind?: string }).kind).toBe("preparation");
-        expect(directInspection.snapshot_hash).toBe(stationed.snapshot_hash);
         const supportReview = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",
@@ -2470,6 +2461,110 @@ describe("MCP pure play mode", () => {
         expect(
           (supportReview.legend_delta as Record<string, string>).station_dispatch_support,
         ).toMatch(/explicit read-only Station support detail/i);
+        const revealed = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: {
+              session_id: sessionId,
+              if_snapshot_hash: stationed.snapshot_hash,
+              reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+            },
+          }),
+        );
+        expect(revealed.unchanged).toBeUndefined();
+        expect(revealed.snapshot_hash).not.toBe(stationed.snapshot_hash);
+        expect(revealed.journey).toEqual(stationed.journey);
+        const revealedBoard = (revealed.context as CompactAreaContext).station_dispatch_board;
+        expect(revealedBoard?.[3]).toEqual(["committed", 5, null, 3]);
+        expect(revealedBoard?.[5]).toBeNull();
+        expect(revealedBoard?.[4]).toEqual(
+          expect.arrayContaining([
+            [
+              "preparation",
+              "open_optional",
+              null,
+              "Choose one specialist kit for a named danger.",
+              ["inspect", "albany:wolf_preparation"],
+            ],
+            [
+              "relief_allocation",
+              "open_optional",
+              null,
+              "Send Albany's last relief wagon to one crisis.",
+              ["inspect", "albany:wolf_relief_allocation"],
+            ],
+            [
+              "field_team",
+              "open_optional",
+              null,
+              "Ask about cattle-first help for one line, never combat.",
+              ["talk", "albany_city__transport_hub__june_pike", "June Pike"],
+            ],
+          ]),
+        );
+        const repeatedReveal = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: {
+              session_id: sessionId,
+              if_snapshot_hash: revealed.snapshot_hash,
+              reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+            },
+          }),
+        );
+        expect(repeatedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect((repeatedReveal.context as CompactAreaContext).station_dispatch_board).toEqual(
+          revealedBoard,
+        );
+        const refreshedReveal = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(refreshedReveal.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect((refreshedReveal.context as CompactAreaContext).station_dispatch_board).toEqual(
+          revealedBoard,
+        );
+        const forgedReveal = await client.callTool({
+          name: "get_overworld_session_context",
+          arguments: {
+            session_id: sessionId,
+            reveal_station_dispatch_support: "forged:station-support",
+          },
+        });
+        expect(forgedReveal.isError).toBe(true);
+        expect(textResult(forgedReveal)).toMatch(/Unknown Station optional-support reveal/i);
+        const afterForgery = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: { session_id: sessionId },
+          }),
+        );
+        expect(afterForgery.snapshot_hash).toBe(revealed.snapshot_hash);
+        expect((afterForgery.context as CompactAreaContext).station_dispatch_board).toEqual(
+          revealedBoard,
+        );
+        const directPreparationAction = revealedBoard?.[4].find(
+          ([slot]) => slot === "preparation",
+        )?.[4];
+        if (directPreparationAction?.[0] !== "inspect") {
+          throw new Error("expected an authenticated revealed preparation row");
+        }
+        const directInspection = textPayload(
+          await client.callTool({
+            name: "inspect_overworld_session_story",
+            arguments: {
+              session_id: sessionId,
+              story_choice_id: directPreparationAction[1],
+              compact_context: false,
+              compact_result: false,
+            },
+          }),
+        );
+        expectPureStoryInspectionEnvelope(directInspection, sessionId);
+        expect((directInspection.story as { kind?: string }).kind).toBe("preparation");
+        expect(directInspection.snapshot_hash).toBe(revealed.snapshot_hash);
         const inspected = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2513,7 +2608,7 @@ describe("MCP pure play mode", () => {
           ].sort(),
         );
         expect(preparationChoice?.comparisonVersion).toBe(JOURNEY_STORY_CHOICE_COMPARISON_VERSION);
-        expect(JOURNEY_STORY_CHOICE_COMPARISON_VERSION).toBe(10);
+        expect(JOURNEY_STORY_CHOICE_COMPARISON_VERSION).toBe(11);
         expect(preparationChoice?.kind).toBe("preparation");
         expect(preparationChoice?.inspectedOption).toBeNull();
         expect(preparationChoice?.reviewOption).toEqual({
@@ -2581,14 +2676,23 @@ describe("MCP pure play mode", () => {
           }),
         );
         const preparedBoard = (prepared.context as CompactAreaContext).station_dispatch_board;
-        expect(preparedBoard?.[2]).toBe(
-          "Ready to depart now with background, Wolf-Winter promise, report, and field kit set; one relief wagon or second rider remain optional and change cost or aftermath, not your Wolf-Winter approach.",
+        expect(preparedBoard?.[0]).toBe(5);
+        expect(preparedBoard?.[2]).toMatch(
+          /^Dispatch \d+m committed; optional Station support remains \(final \d+–\d+m\)\./,
         );
+        expect(preparedBoard?.[3]?.[3]).toBe(2);
         expect(
           preparedBoard?.[4]
             .filter(([, status]) => status === "open_optional")
             .map(([slot]) => slot),
         ).toEqual(["relief_allocation", "field_team"]);
+        expect(preparedBoard?.[4].find(([slot]) => slot === "preparation")).toMatchObject([
+          "preparation",
+          "selected",
+          expect.any(String),
+          null,
+          null,
+        ]);
         const readyFieldTeam = (preparedBoard?.[4] ?? []).find(
           ([slot]) => slot === "field_team",
         )?.[4];
@@ -2684,7 +2788,7 @@ describe("MCP pure play mode", () => {
         ]);
         const wolfWinter = areaView(prepared).quests.find((quest) => quest.id === "wolf_winter");
         if (!wolfWinter) throw new Error("expected selected preparation to reveal Wolf-Winter");
-        expect((allied.context as CompactAreaContext).station_dispatch_board?.[0]).toBe(4);
+        expect((allied.context as CompactAreaContext).station_dispatch_board?.[0]).toBe(5);
         const inspectedAllocation = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
@@ -2710,9 +2814,11 @@ describe("MCP pure play mode", () => {
         );
         const allocatedBoard = (allocated.context as CompactAreaContext).station_dispatch_board;
         expect(allocatedBoard?.[2]).toBe(
-          "Ready to depart now with background, Wolf-Winter promise, report, field kit, relief wagon, and riding choice set; no optional support remains.",
+          "Dispatch 35m—on time; roads change arrival, not dispatch. No opening-delay failure pressure.",
         );
+        expect(allocatedBoard?.[3]?.[3]).toBe(0);
         expect(allocatedBoard?.[4].filter(([, status]) => status === "open_optional")).toEqual([]);
+        expect(allocatedBoard?.[5]).toBeNull();
         expectJuneCattleFirst(allocated);
         view = areaView(allocated);
         const marketRoute = view.areaExits.find(

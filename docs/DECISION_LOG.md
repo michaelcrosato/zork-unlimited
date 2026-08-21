@@ -1263,3 +1263,21 @@ objects and eliminates a repeated full-context hop. The legacy detail flag and r
 unchanged. This is presentation and projection only: ids, mechanics, costs, roads, choices, outcomes,
 checkpoints, saves, hashes, decision counts, and support authority do not change. The failed pilot is
 diagnostic evidence, not certification; a fresh exact-build cohort must judge whether V4 helps.
+
+### Ultraplan re-aim — 2026-08-20 (HEAD = 85a8bcf1; next move = compact Station V5)
+
+**Chosen move — one durable compact-MCP support review.** The valid but
+non-certified pilot `starting-slice-terra-pilot-85a8bcf1-20260820-c` reported a
+broad Albany/setup/compact-density cluster in 10/10 reports, with 9/10 explicitly
+naming Station or dispatch density; its two in-scope S1 findings were Jamie's
+narrow Relief Protocol trigger and June Pike's situational payoff. Compact v48
+therefore moves board V5's three open optional-support rows behind one exact
+read-only reveal receipt, restores their existing actions unchanged after review,
+and adds narrowly keyed no-effect/trigger boundaries only to exact Jamie and June
+option inspection. It also emits the complete shared dispatch briefing once while
+preserving every route-specific fact. Human UI and CLI behavior, ids, costs,
+mechanics, gameplay state/effects, save version, decisions, and outcomes remain
+unchanged; only the additive read receipt changes snapshot bytes/hash until support
+seals, launch, or End. The
+failed pilot identifies this correction target; it does not validate the
+replacement, certify authority, or support any unrelated content or metric claim.

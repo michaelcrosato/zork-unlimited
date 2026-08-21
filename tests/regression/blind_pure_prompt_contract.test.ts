@@ -225,33 +225,38 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("context.quest_starts");
     expect(prompt).toContain("pass those values unchanged");
     expect(prompt).toContain("read-only\n  `station_dispatch_board`");
-    expect(prompt).toContain("compact context v47");
-    expect(prompt).toContain("`[4, quest_id, guidance, dispatch, rows]`");
+    expect(prompt).toContain("compact context v48");
+    expect(prompt).toContain("`[5, quest_id, dispatch_status, dispatch, rows, reveal|null]`");
+    expect(prompt).toContain("remaining_optional_count");
     expect(prompt).toContain("`[slot, status, selected_title|null, purpose|null, action|null]`");
-    expect(prompt).toContain("`role` is background");
-    expect(prompt).toContain("`duty` is\n  current-quest promise");
-    expect(prompt).toContain("`evidence` is report");
-    expect(prompt).toContain("`preparation` is field kit");
-    expect(prompt).toContain("`relief_allocation` is relief wagon");
-    expect(prompt).toContain("`field_team` is second rider");
-    expect(prompt).toContain("The live\n  departure and its legal roads remain");
-    expect(prompt).toContain("one deliberate,\n  planning affordance");
-    expect(prompt).toContain("role, duty,\n  and evidence always have null `purpose` and `action`");
-    expect(prompt).toContain("Only an `open_optional`\n  support row carries");
-    expect(prompt).toContain("existing authenticated action");
-    expect(prompt).toContain("Use only the support row you actually want");
-    expect(prompt).toContain("do not enumerate\n  all three");
-    expect(prompt).toContain("Support rows are independent and optional");
+    expect(prompt).toContain(
+      "`role/duty/evidence/preparation/relief_allocation/field_team` mean\n  background/promise/report/field kit/relief wagon/second rider",
+    );
+    expect(prompt).toContain(
+      "Legal roads stay\n  first in `context.quests` plus `context.quest_starts`",
+    );
+    expect(prompt).toContain("open optional rows are omitted");
+    expect(prompt).toContain("`reveal=[id,label]`");
+    expect(prompt).toContain("`reveal_station_dispatch_support`");
+    expect(prompt).toMatch(
+      /durable, idempotent read-only\s+receipt through refresh\/export\/restore/,
+    );
+    expect(prompt).toContain("It may change the\n  snapshot hash but accepts no gameplay decision");
+    expect(prompt).toContain("After review, `reveal` is null");
+    expect(prompt).toContain("open rows carry their authenticated purpose/action");
+    expect(prompt).toContain("Review one support row; do not enumerate all three");
+    expect(prompt).toContain("Support stays optional");
+    expect(prompt).toContain("changes cost/aftermath, not strategy access");
     expect(prompt).toContain('`["inspect", story_choice_id]`');
     expect(prompt).toContain('`["talk", character_id, contact_name]`');
     expect(prompt).toContain("A null action is not");
     expect(prompt).toContain("mcp__adventureforge__talk_overworld_session_contact");
-    expect(prompt).toContain("A talk action alone can present the actual");
+    expect(prompt).toContain("A talk action alone can present the");
     expect(prompt).toContain("second-rider choice (`field_team` slot)");
-    expect(prompt).toContain("reading the board changes no state");
-    expect(prompt).toContain("or decision count");
+    expect(prompt).toContain("Board read changes\n  no state or decision count");
+    expect(Buffer.byteLength(promptTemplate, "utf8")).toBe(16_375);
     expect(prompt).toMatch(
-      /older session cannot produce the v4 board, the compact\s+fallback may instead expose `departure_recap`/,
+      /older session cannot produce the v5 board, the compact\s+fallback may instead expose `departure_recap`/,
     );
     expect(prompt).toMatch(/legacy v3 board has null row\s+actions, which authorize nothing/);
     expect(prompt).toContain("mcp__adventureforge__get_overworld_session_context");

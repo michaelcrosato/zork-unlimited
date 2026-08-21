@@ -132,27 +132,26 @@ WHEN TO CONTINUE OR END
   `session_id` and `expected_snapshot_hash: latest snapshot_hash`; do not invent, infer, or
   substitute a differently named goal tool. The game, not the harness, decides
   where that passage stops.
-- At the Station, compact context v47 consolidates optional planning into read-only
-  `station_dispatch_board`: `[4, quest_id, guidance, dispatch, rows]`.
-  `dispatch` is `[state, minutes, timing, remaining_optional_slots]`; each row is
-  `[slot, status, selected_title|null, purpose|null, action|null]`. The live
-  tuple keys map to player labels as follows: `role` is background, `duty` is
-  current-quest promise, `evidence` is report, `preparation` is field kit,
-  `relief_allocation` is relief wagon, and `field_team` is second rider. The live
-  departure and its legal roads remain in `context.quests` plus
-  `context.quest_starts` and come first. Treat optional support as one deliberate,
-  planning affordance: you may depart immediately. In the v4 board, role, duty,
-  and evidence always have null `purpose` and `action`. Only an `open_optional`
-  support row carries its concise purpose and existing authenticated action.
-  Support rows are independent and optional; they change dispatch cost and
-  aftermath, not which quest strategy you may choose after arriving. A non-null
-  row action
+- At the Station, compact context v48 uses read-only
+  `station_dispatch_board`: `[5, quest_id, dispatch_status, dispatch, rows, reveal|null]`.
+  `dispatch` is `[state, minutes, timing, remaining_optional_count]`; each row is
+  `[slot, status, selected_title|null, purpose|null, action|null]`. Slots
+  `role/duty/evidence/preparation/relief_allocation/field_team` mean
+  background/promise/report/field kit/relief wagon/second rider. Legal roads stay
+  first in `context.quests` plus `context.quest_starts`; you may depart immediately.
+  Before review, open optional rows are omitted and `reveal=[id,label]`. Call
+  `mcp__adventureforge__get_overworld_session_context` with the exact
+  `reveal_station_dispatch_support` id; this records a durable, idempotent read-only
+  receipt through refresh/export/restore. It may change the
+  snapshot hash but accepts no gameplay decision. After review, `reveal` is null
+  and open rows carry their authenticated purpose/action. Support stays optional
+  and changes cost/aftermath, not strategy access. Non-null row action
   `["inspect", story_choice_id]` authorizes
   `mcp__adventureforge__inspect_overworld_session_story`; an action
   `["talk", character_id, contact_name]` authorizes
   `mcp__adventureforge__talk_overworld_session_contact`. A null action is not
-  currently legal. Use only the support row you actually want; do not enumerate
-  all three. Merely reading the board changes no state or decision count.
+  legal. Review one support row; do not enumerate all three. Board read changes
+  no state or decision count.
 - You may depart without choosing support. From the board, inspect only the exact
   visible `story_choice_id` you want; the
   versioned comparison contains short option summaries. To compare one candidate,
@@ -162,14 +161,14 @@ WHEN TO CONTINUE OR END
   and do not expand every option. If you choose it, call
   `mcp__adventureforge__choose_overworld_session_story` with its visible option
   `id` as `choice`; pass the inspected `story_choice_id` only when needed to
-  disambiguate a shared option id. A talk action alone can present the actual
+  disambiguate a shared option id. A talk action alone can present the
   second-rider choice (`field_team` slot).
-- If a malformed or older session cannot produce the v4 board, the compact
+- If a malformed or older session cannot produce the v5 board, the compact
   fallback may instead expose `departure_recap`, `departure_interactions`, and
   `departure_contact_leads`; those carry the same read-only plan, inspect, and
   talk semantics rather than extra choices. A legacy v3 board has null row
-  actions, which authorize nothing; only for that legacy response, an explicit
-  `mcp__adventureforge__get_overworld_session_context` call with
+  actions, which authorize nothing; only for that legacy response, a call to
+  `mcp__adventureforge__get_overworld_session_context` with
   `include_station_dispatch_support: true` may return its separate
   `station_dispatch_support`: `[[slot, purpose, action], ...]`; only a visible
   non-null detail action authorizes its exact call. A legacy v2 board can instead

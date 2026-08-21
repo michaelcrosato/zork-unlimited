@@ -29,6 +29,7 @@ import { OverworldSession } from "../../src/world/session.js";
 import {
   WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT,
   wolfHillRoutePresentation,
+  wolfHillRouteTradeoffParts,
 } from "../../src/world/wolf_hill_route_presentation.js";
 import { revealCurrentJourneyStoryOptions } from "../regression/support/journey_story.js";
 
@@ -245,6 +246,30 @@ function compactSummaries(session: OverworldSession): Record<string, string | nu
   return Object.fromEntries(launch[2].map((option) => [option[0], option[13]]));
 }
 
+function expectCompactSharedDispatchOnce(
+  session: OverworldSession,
+  full: Record<string, string | undefined>,
+  briefing: string,
+): Record<string, string | null> {
+  const compact = session.compactView();
+  expect(compact.station_dispatch_board?.[2]).toBe(briefing);
+  const summaries = compactSummaries(session);
+  for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
+    const canonical = full[optionId];
+    if (!canonical) throw new Error(`Expected canonical route summary ${optionId}.`);
+    expect(canonical.startsWith(`${briefing} `)).toBe(true);
+    expect(summaries[optionId]).toBe(wolfHillRouteTradeoffParts(canonical)?.routeSummary);
+  }
+  expect(
+    JSON.stringify({
+      quests: compact.quests,
+      quest_starts: compact.quest_starts,
+      station_dispatch_board: compact.station_dispatch_board,
+    }).split(briefing).length - 1,
+  ).toBe(1);
+  return summaries;
+}
+
 function compactPreview(session: OverworldSession, optionId: string): string | null {
   const compactQuest = (session.compactView().quests ?? []).find(
     ([questId]) => questId === WOLF_ID,
@@ -425,7 +450,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       const expectedStockwaySummary = `${briefing} ${NEUTRAL_STOCKWAY_SUMMARY}`;
       const snapshotBeforeProjection = session.snapshot();
       const full = fullSummaries(quest);
-      const compact = compactSummaries(session);
+      const compact = expectCompactSharedDispatchOnce(session, fullSummaries(quest), briefing);
       const api = createToolApi({ root: ROOT });
       const restored = api.restore_overworld_session({
         compact_context: false,
@@ -445,8 +470,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         [STOCKWAY_ID]: expectedStockwaySummary,
       });
       expect(compact).toEqual({
-        [RIDGE_ID]: expectedRidgeSummary,
-        [STOCKWAY_ID]: expectedStockwaySummary,
+        [RIDGE_ID]: NEUTRAL_RIDGE_SUMMARY,
+        [STOCKWAY_ID]: NEUTRAL_STOCKWAY_SUMMARY,
       });
       expect(fullSummaries(mcpQuest)).toMatchObject({
         [RIDGE_ID]: expectedRidgeSummary,
@@ -576,7 +601,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     expect(dispatchBriefing(session)).toBe(expectedBriefing);
 
     const full = fullSummaries(quest);
-    const compact = compactSummaries(session);
+    const compact = expectCompactSharedDispatchOnce(session, full, expectedBriefing);
     const ridgeFailure = playForecastedFailedFirstCast(session, RIDGE_ID);
     const stockwayFailure = playForecastedFailedFirstCast(session, STOCKWAY_ID);
     expect(ridgeFailure).toEqual({ alarm: 4, recoveryAction: "set_paling_rail" });
@@ -614,7 +639,9 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     expect(new Set(delayedSummariesBySupport[STOCKWAY_ID])).toHaveLength(1);
     for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
       expect(full[optionId]?.startsWith(expectedBriefing)).toBe(true);
-      expect(compact[optionId]).toBe(full[optionId]);
+      expect(compact[optionId]).toBe(
+        optionId === RIDGE_ID ? NEUTRAL_RIDGE_SUMMARY : NEUTRAL_STOCKWAY_SUMMARY,
+      );
     }
 
     const api = createToolApi({ root: ROOT });
@@ -659,6 +686,27 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     const cli = renderQuestLaunch(quest);
     expect(markup.split(expectedBriefing)).toHaveLength(3);
     expect(cli.split(expectedBriefing)).toHaveLength(3);
+  });
+
+  it("keeps a sealed on-time dispatch briefing once in the compact Station projection", () => {
+    const { session, quest } = routeCard(
+      "albany:oath_full_compact_duty",
+      "albany:relief_resident_shelter",
+      {
+        registrationId: "albany:road_warden",
+        sourceId: "albany:source_rowan_civic_docket",
+        preparationId: "albany:prep_works_fortification",
+        allyId: "albany:ally_june_cattle_first",
+      },
+    );
+    const briefing =
+      "Dispatch 55m—on time; roads change arrival, not dispatch. " +
+      "No opening-delay failure pressure.";
+    expect(dispatchBriefing(session)).toBe(briefing);
+    const full = fullSummaries(quest);
+    expectCompactSharedDispatchOnce(session, full, briefing);
+    expect(full[RIDGE_ID]).toBe(`${briefing} ${NEUTRAL_RIDGE_SUMMARY}`);
+    expect(full[STOCKWAY_ID]).toBe(`${briefing} ${NEUTRAL_STOCKWAY_SUMMARY}`);
   });
 
   it("keeps the exact 65m open-support → 80m sealed dispatch trace truthful on every surface", () => {
@@ -814,6 +862,12 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         sourceId,
         preparationId,
       });
+      const boardQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
+      if (!boardQuest?.launch) throw new Error("Expected the open-support route card.");
+      const briefing = dispatchBriefing(session);
+      expect(briefing).toContain(pressureCopy);
+      expectCompactSharedDispatchOnce(session, fullSummaries(boardQuest), briefing);
+
       session.talkToCharacter(WORLD.opening_ally!.contact);
       const pendingWindow = deriveQuestDispatchPresentationWindow({
         questId: WOLF_ID,
@@ -831,6 +885,11 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
         finalMinutes: { minimum: committedMinutes, maximum: maximumMinutes },
         receipt: { juneCommitment: { kind: "open_optional" } },
       });
+      const pendingQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
+      if (!pendingQuest?.launch) throw new Error("Expected the pending field-team route card.");
+      for (const summary of Object.values(fullSummaries(pendingQuest))) {
+        expect(summary?.startsWith(briefing)).toBe(true);
+      }
       for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
         const summary = wolfHillRoutePresentation({
           launchId: "albany:wolf_hill_approach",

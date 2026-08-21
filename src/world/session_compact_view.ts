@@ -4,6 +4,7 @@ import {
   OVERWORLD_COMPACT_VIEW_VERSION,
   compactCampaignServiceOffers,
   compactOverworldServiceActions,
+  compactStationSharedDispatchStatus,
   compactCampaignCharacterView,
   compactJourneyOpportunityLeads,
   compactOverworldEventChoices,
@@ -98,6 +99,7 @@ export type OverworldSessionCompactViewState = {
   departureContactLeads?: readonly OverworldDepartureContactLead[];
   departureRecap?: OpeningDepartureRecap | null;
   stationDispatchBoard?: StationDispatchBoard | null;
+  stationDispatchSupportRevealed?: boolean;
   roads: readonly OverworldExit[];
   directRoadTravelLegs?: ReadonlyMap<string, OverworldTravelLegResult>;
   areaExits: readonly OverworldAreaExit[];
@@ -145,11 +147,18 @@ export function buildOverworldSessionCompactView(
   const rememberedJobs = compactOverworldJobLeadRefs(state.rememberedJobs);
   const sites = compactOverworldTitleRefs(state.sites);
   const questStarts = compactOverworldQuestStarts(state.questStarts);
+  const stationDispatchStatus = compactStationSharedDispatchStatus(
+    state.quests,
+    state.stationDispatchBoard,
+  );
   const quests = compactOverworldQuestRefs(
     state.quests,
     OVERWORLD_COMPACT_LOCAL_REF_LIMIT,
     new Set(questStarts.map(([questId]) => questId)),
     state.ids.startedQuestIds,
+    stationDispatchStatus && state.stationDispatchBoard
+      ? new Map([[state.stationDispatchBoard.questId, stationDispatchStatus]])
+      : undefined,
   );
   const questStartLocations = compactOverworldQuestStartLocations(
     state.quests,
@@ -206,7 +215,11 @@ export function buildOverworldSessionCompactView(
     ? compactOpeningDepartureRecap(state.departureRecap)
     : null;
   const stationDispatchBoard = state.stationDispatchBoard
-    ? compactStationDispatchBoard(state.stationDispatchBoard)
+    ? compactStationDispatchBoard(
+        state.stationDispatchBoard,
+        state.stationDispatchSupportRevealed === true,
+        stationDispatchStatus,
+      )
     : null;
   const hasStationDispatchBoard = stationDispatchBoard !== null;
   const departureQuestId = hasStationDispatchBoard ? stationDispatchBoard[1] : departureRecap?.[1];
