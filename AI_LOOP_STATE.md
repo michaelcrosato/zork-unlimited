@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 783 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260821T133438Z/hotspots.json","hotspots_sha256":"38d2cbf6bb7774213dd40774cc304428441973c0ef8e0d8972b3d24d486c074b","manifest_path":"ai-runs/feedback/20260821T133438Z/report-manifest.json","manifest_sha256":"0a5f2fe27d7c9410c1ce459a5f5aea4125ab28e56249c6a45c010a4f0c7870ef"},"pending_cycle_reports":[{"evidence_sha256":"2948ead48247e3d8fdc32aabb43bb044976c104d71fc514a993eee5767f0a575","report_id":"pure:46f28e46a4361bb18db9d41f3dbfe177e781416774dc6d0abc7adf2df56b3c56","report_sha256":"9fd7c13918b869f5fa6297c4730d12d60672d7d6eb4a17434144c224732dc029","run_id":"2026-08-21T11-43-21-608Z","sidecar_sha256":"3b3d2e0e9f594517b0500ccd9e5a60a0bb24f78d59a3fedbdf6988c9cd419e57","tested_commit":"a8b34b11485bfd5571e7ff35108ef12d7ebaac26"}],"schema_version":1} -->
+<!-- historical_cycle_count: 784 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260821T163533Z/hotspots.json","hotspots_sha256":"284876277d05103dc83ab120254c7af3e1cbc2b569c9f2a00a98c511efb8c1d3","manifest_path":"ai-runs/feedback/20260821T163533Z/report-manifest.json","manifest_sha256":"130ed7c25ed64e0f40e6362f42f6f2c2eb1ad510c48f90c2f37c5da8ea10dc8a"},"pending_cycle_reports":[{"evidence_sha256":"fdaa185c03dd931de1eff902eac217a52187f0ae8f17f2245ae0c07c81db5d6f","report_id":"pure:1b3504e2b06e9e8c87e48bde5810f27ee31d930b3efe52520d28dc904e82c5a7","report_sha256":"60ee9df9821a81a5752119034bae1bd5dec67f50e88f6aca0738e2f32841438a","run_id":"2026-08-21T15-40-26-071Z","sidecar_sha256":"0b5969088b96262b3272f2df076f4da6fac6bafcb154b1ddf31d3b1c73fc7efc","tested_commit":"7135ce27e32837b258e6915261415419ba921989"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,16 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+
+### Cycle result - road_warden_receipt_narrative_first_v1
+
+- Surface: Road-Warden registration plus the matched Aid-Only/Hayden trigger, preview, and consequence now state defense 4 and ordinary plan effects before `LURE`/`HUNT`; mechanics, choices, routes, Station, June, Continue/End, and Gallowmere are unchanged.
+- Measured delta: the exact registration receipt fell 6,414→6,330 bytes and the ready-made dispatch 9,196→9,195; the new trigger is 132 characters/21 words and remains below both old responses.
+- Pure evidence: exact-clean no-retry Terra seed `821154026071` on `7135ce27` exercised both receipts, took June cattle-first and Sheltered HUNT to Wolf-Winter `ending_held` at decision 30, explicitly returned to Albany, then voluntarily completed out-of-scope Gallowmere and ended at decision 53.
+- Pure audit: clarity 3/5, enjoyment 4/5, replay yes, not stuck; Station terms stayed dense and an S1 `ask_prepare_hunt`/missable `ask_byre` label mismatch caused backtracking, with no rejected call, broken state, loop, or soft-lock.
+- Evidence limit: the LURE alarm suppression and failed-brace Hayden contingency were presented but not behaviorally exercised on this firm-rail HUNT path; one AI canary is not causal, human, pilot, or certification proof.
+- Feedback/next: exact 11/11 actionable delta `20260821T163533Z` excludes this pure until seal; selection remains off-list `null`, and a fresh no-retry 10-Terra pilot is mandatory before any 100-player spend.
+- Guard: 119 focused tests, real desktop/390px flow, zero-finding 6,000/384,000-step crawls, exact 461-file/4,100-test health, 70/70 pure calls, and candidate-bound compile are green; post-ledger outer gates, integrity, pure reverify, seal, and final commit remain fail-closed.
 
 ### Cycle result - station_june_modal_bound_delta_v1
 
@@ -159,19 +169,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure audit: 22/22 calls succeeded with no rejection; clarity/enjoyment were 4/4, replay yes, bugs/confusions `[]`, not stuck. Advocate's Case was not entered, so this is exact-build retention evidence only and the lifecycle fix remains regression/trace-backed.
 - Feedback/next: pre-seal status is two actionable reports of three, so no compile runs; the seal will queue this report third. Separately reproduced next focus is an unread charter's post-dismissal READ regressing `case_dismissed` to `charter_read`, not a finding from this pure.
 - Guard: 9 focused Advocate tests, both 6,000-step crawls, exact health (448 files/3,894 tests), UI typecheck, all 12 packs, cycle-start integrity, 563 traces, and exact pure provenance are green.
-
-### Cycle result - wolf_byre_route_action_handoff
-
-- Evidence choice: accepted `bd527711` recorded minor staged-prompt attention on a failed-seal Cade FORTIFY route; exact `hotspot-bd527711` was selected for the shared final-room handoff, not for mechanics or recovery changes.
-- Surface/effect: the byre-mouth north lock now follows the route actions actually shown and distinguishes direct finishes from routes that open north; exit predicates/destination, actions, checks, pressure, score, and endings are unchanged.
-- Counterfactual: full/compact HUNT and four LURE states retain blocked→open north, DRIVE retains crisis priority→evacuation, and Cade/Albany FORTIFY retain direct dawn-watch finishes; Wolf hash advances `09bd7660…` → `95a44131…` with current-save/replay acceptance and exact-predecessor rejection.
-- Pure evidence: exact-clean Spark seed 7 on `f941d934` chose Road-Warden/Aid-Only, Exposed-Ridge LURE, directly saw the new 98-character lock beside the final scent cast, took that shown cast, then went north to `ending_pack_diverted` at 55/60 and ended at goal decision 24.
-- Pure audit: 29/30 calls succeeded; one mistyped state hash rejected without mutation, refreshed, and retried. Clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck; the optional quick-lesson return caused mild reselection friction even though its LURE dialogue had disclosed the return.
-- Feedback/next: pre-seal status stayed one actionable report of three, so no compile ran; the seal consumes `bd527711` and queues this run second. The changed copy was a direct canary, not proof of reduced attention cost; prefer routine rotation unless lesson-return friction recurs.
-- Guard: 35 focused tests, both 6,000-step crawls, exact health, cycle-start integrity, 562 traces, Wolf validation, and exact pure provenance are green.
-## AFK Cycle 2026-08-21T15-40-26-071Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-21T15-40-26-071Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-347a8372 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
