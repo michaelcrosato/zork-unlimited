@@ -1,7 +1,7 @@
 # AI Loop State
 
-<!-- historical_cycle_count: 784 -->
-<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260821T163533Z/hotspots.json","hotspots_sha256":"284876277d05103dc83ab120254c7af3e1cbc2b569c9f2a00a98c511efb8c1d3","manifest_path":"ai-runs/feedback/20260821T163533Z/report-manifest.json","manifest_sha256":"130ed7c25ed64e0f40e6362f42f6f2c2eb1ad510c48f90c2f37c5da8ea10dc8a"},"pending_cycle_reports":[{"evidence_sha256":"fdaa185c03dd931de1eff902eac217a52187f0ae8f17f2245ae0c07c81db5d6f","report_id":"pure:1b3504e2b06e9e8c87e48bde5810f27ee31d930b3efe52520d28dc904e82c5a7","report_sha256":"60ee9df9821a81a5752119034bae1bd5dec67f50e88f6aca0738e2f32841438a","run_id":"2026-08-21T15-40-26-071Z","sidecar_sha256":"0b5969088b96262b3272f2df076f4da6fac6bafcb154b1ddf31d3b1c73fc7efc","tested_commit":"7135ce27e32837b258e6915261415419ba921989"}],"schema_version":1} -->
+<!-- historical_cycle_count: 785 -->
+<!-- feedback_acceptance: {"accepted_compile":{"consumed_by_run_id":null,"hotspots_path":"ai-runs/feedback/20260821T205800Z/hotspots.json","hotspots_sha256":"8e3845284d8d4d58e83b677ad29f9bc11c246b42e0c140f99742d8e64394c8f3","manifest_path":"ai-runs/feedback/20260821T205800Z/report-manifest.json","manifest_sha256":"447b18ef18562e7e425b9798772bbb12c4c1200de605c1016f7636749fcdbb67"},"pending_cycle_reports":[{"evidence_sha256":"fe92ad8b828e274e78dd96462eb09a74dedc036fa71088fa839d10231c29414e","report_id":"pure:3e419b989ab6bc540cf771e9be159e88b7babc7e8abefcbe114e9478d14344e2","report_sha256":"2862b86985069a6392869b3df9249cea718a5cc19d46a6159c446f09e8aa77f9","run_id":"2026-08-21T19-29-01-857Z","sidecar_sha256":"4a6aa809bf1e2fac602fd8913b5301857a43a84166f2e9a9f2d2bb24c9ea52fb","tested_commit":"fe2976789b42c52b98ea68bd56e6fb3807c6652f"}],"schema_version":1} -->
 
 This live file is intentionally token-small. Detailed cycle prose before the
 token-efficiency cleanup (14621c7a) was removed from the working tree; rotation
@@ -18,6 +18,14 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - The current feedback_cycle_selection marker records the actual chosen candidate before the provisional commit; set its id exactly (or null only for off-list work), then never change it after the freeze. The post-gate seal removes it.
 - Keep entries terse (≤8 lines): the surface changed, the measured effect, the self-critique verdict, and the guard. The invariant gates (agent-cleaner pre-gates where the operator machine has them, the full `npm run health` bar) are assumed on every cycle — record deltas and exceptions, not the standard VERIFY litany.
 
+### Cycle result - station_support_prechoice_plain_language
+
+- Evidence choice: a valid no-retry ten-Terra pilot on `d8bf7d7a` completed Wolf-Winter 10/10 but failed clarity 39/50, enjoyment 40/50, and continuation 5/10; all ten opened Station support and nine named Station/dispatch/setup density, while 0/6 Road-Wardens versus 4/4 Ledger Advocates choosing a kit proved the existing overview's relevance scent should stay byte-identical. The three-row correction is deliberately off-list, so the frozen selection is `null`, not June-only `fc9c25a2` or out-of-scope Gallowmere `a57b918b`.
+- Surface/effect: only the three revealed Station `inlinePurpose` cells now lead with Optional kit/wagon/rider and distinguish comparison or conversation from later commitment; overview, V6/V1/modal shapes, ids, actions, costs, mechanics, support breadth, roads, four strategies, Albany return, Continue/End, and Gallowmere remain unchanged. The pure fixture is 1,088 bytes under 1,100; authenticated pilot substitutions are 1,097/1,099.
+- Counterfactual/recovery: all eight support masks, hidden board, base/hash receipt, missing/stale/idempotent paths, restore, UI, CLI, and full/pure MCP are pinned. An earlier `5b7230b0` provisional was invalidated after an omitted model flag launched Spark; it published no sidecar, was reset to `d8bf7d7a`, and the six byte-identical candidate blobs plus every gate were rebuilt under fresh cycle `fe297678` before the only accepted evidence.
+- Pure evidence: exact-clean Terra 0.146 seed `821192901857` returned the live 1,097-byte V1 with all three new strings, inspected preparation read-only, chose Jamie and June cattle-first, completed sheltered Wolf-Winter as `ending_pack_diverted` at decision 30, continued at checkpoint 40, completed Gallowmere `ending_hunt_won`, and ended at decision 54; 67/67 calls succeeded with no rejected action.
+- Self-critique: clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck; the report still flags Station's multi-step support comparison as S1 and separately flags a Gallowmere retry-stakes impression outside this correction. One AI canary proves the exact wire path, not a causal quality lift, human validation, pilot pass, or certification.
+- Feedback/guard: candidate-bound compile `20260821T205800Z` admits the prior 11 verified/actionable reports with zero mocks and excludes this pure until seal. Seventy-three focused checks, both 6,000-step crawls, a 224,000-step deep crawl, desktop/390 browser QA, 578 traces, full health (461 files/4,100 tests), and exact pure provenance are green; rotation, start-ref integrity, outer reverify, seal, and the ledger-only commit remain fail-closed.
 
 ### Cycle result - road_warden_receipt_narrative_first_v1
 
@@ -159,19 +167,3 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure audit: 53/57 calls succeeded; four mistyped-parent/snapshot, missing-parent, and premature-End rejections recovered unchanged. Clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck; Advocate's Case was never entered, so this is exact-build canary evidence only.
 - Feedback/next: the prior three reports compiled to revision-live one-report S1 cue `f75b8f23` while excluding this pure. Its checkpoint-friction claim followed a voluntary Continue at decision 38; current FORTIFY exposure does not corroborate the older LURE commit-cue report.
 - Guard: 11 focused tests, 564 traces, both 6,000-step crawls, full health (448 files/3,896 tests), UI typecheck, all 12 packs, cycle-start integrity, and exact pure/compile provenance are green.
-
-### Cycle result - advocates_case_record_lifecycle_truth
-
-- Evidence choice: Cycle 32's maintenance rotation selected exact `playtest-advocates_case`; deterministic current-pack routes found the case slate contradicting the appeal state, while accepted `bd527711` was already consumed and supplied no authority for this fix.
-- Surface/effect: `case_record` now distinguishes untouched, adjourned, and discharged presentations for EXAMINE, while READ transcribes the original filing without freezing the current disposition; actions, checks, effects, score, combat, exits, and endings are unchanged.
-- Counterfactual: untouched and Craf-only states remain pending; EXAMINE renders a failed prepared appeal as adjourned and primary plus recovery successes as discharged. Three lifecycle regressions pin full/compact/nonmutation behavior and `36350b77…` → `d8b85620…` lineage.
-- Pure evidence: exact-clean Spark seed 7 on `67cf4018` chose Road-Warden/Aid-Only, Exposed-Ridge HUNT, killed all three wolves, reached `ending_held` at 45/60 with the herd whole, and ended at goal decision 19.
-- Pure audit: 22/22 calls succeeded with no rejection; clarity/enjoyment were 4/4, replay yes, bugs/confusions `[]`, not stuck. Advocate's Case was not entered, so this is exact-build retention evidence only and the lifecycle fix remains regression/trace-backed.
-- Feedback/next: pre-seal status is two actionable reports of three, so no compile runs; the seal will queue this report third. Separately reproduced next focus is an unread charter's post-dismissal READ regressing `case_dismissed` to `charter_read`, not a finding from this pure.
-- Guard: 9 focused Advocate tests, both 6,000-step crawls, exact health (448 files/3,894 tests), UI typecheck, all 12 packs, cycle-start integrity, 563 traces, and exact pure provenance are green.
-## AFK Cycle 2026-08-21T19-29-01-857Z
-<!-- feedback_cycle_selection: {"run_id":"2026-08-21T19-29-01-857Z","selected_recommendation_id":null} -->
-- Assess: rpg=12; world=12; candidates=16.
-- Rec: hotspot-fc9c25a2 (content_fix/M; score=2.5).
-- Playtest: overworld.
-- Guard: blind report + health + verify:integrity before commit.
