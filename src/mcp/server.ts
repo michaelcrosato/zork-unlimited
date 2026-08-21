@@ -28,9 +28,16 @@ import { isDeepStrictEqual } from "node:util";
 import { createToolApi } from "./tools.js";
 import type {
   OverworldMcpContextPayload,
+  OverworldMcpLegendPatch,
   OverworldMcpReadArgs,
   OverworldMcpReadUnchanged,
+  OverworldMcpResponseOptions,
+  OverworldMcpSessionResponse,
 } from "./overworld_sessions.js";
+import type { OverworldCompactActionResult } from "./compact_overworld_result.js";
+import type { CompactJourneyPresentation } from "./journey_projection.js";
+import type { JourneyDecisionClassification } from "../world/journey_contract.js";
+import type { OverworldActionResult } from "../world/session.js";
 import { TRANSCRIPT_TURN_LIMIT_DEFAULT } from "./transcript_projection.js";
 import { isGeneratedRpgSeed as genSeed } from "../gen/seed.js";
 import { formatSpectateEntry } from "./spectate.js";
@@ -45,6 +52,7 @@ import {
 import { JourneyExitReceiptSchema } from "../blind/exit_interview.js";
 import {
   STATION_DISPATCH_BOARD_VERSION,
+  STATION_DISPATCH_SUPPORT_REVEAL_ID,
   type OpeningCompactStationDispatchBoard,
 } from "../world/station_dispatch_board.js";
 
@@ -413,6 +421,66 @@ export type PureStationDispatchRevealResponseV1 = Readonly<{
   }>;
 }>;
 
+export const PURE_STATION_JUNE_MODAL_VERSION = 1 as const;
+
+export type PureStationJuneModalResponseV1 = Readonly<{
+  ok: true;
+  overworld_session_id: string;
+  snapshot_hash: string;
+  journey: CompactJourneyPresentation;
+  journeyDecision: JourneyDecisionClassification;
+  legend_delta?: OverworldMcpLegendPatch;
+  result: OverworldCompactActionResult;
+  station_dispatch_modal: Readonly<{
+    version: typeof PURE_STATION_JUNE_MODAL_VERSION;
+    base_snapshot_hash: string;
+  }>;
+}>;
+
+type PureCompactOverworldTalkArgs<Args extends OverworldMcpResponseOptions> =
+  ("expected_snapshot_hash" extends keyof Args
+    ? { expected_snapshot_hash: string }
+    : Record<never, never>) & {
+    compact_context: true;
+    compact_result: true;
+    include_ids: false;
+    include_route_options: false;
+  };
+
+type PureFullOverworldTalkWireResponse<Args extends OverworldMcpResponseOptions> =
+  OverworldMcpSessionResponse<
+    "result",
+    OverworldActionResult,
+    PureCompactOverworldTalkArgs<Args>,
+    OverworldCompactActionResult
+  > &
+    PureOverworldWireHandles;
+
+type PureOverworldTalkAddress =
+  | { character_id: string; contact_id?: string }
+  | { character_id?: undefined; contact_id: string };
+
+export type PureOverworldTalkArgs = { session_id: string } & PureOverworldTalkAddress &
+  OverworldMcpResponseOptions;
+
+type PureOverworldTalkCharacterId<Args extends PureOverworldTalkArgs> = Args extends {
+  character_id: string;
+}
+  ? Args["character_id"]
+  : Args extends { contact_id: string }
+    ? Args["contact_id"]
+    : never;
+
+type PureStationJuneModalForArgs<Args extends PureOverworldTalkArgs> =
+  typeof PURE_STATION_JUNE_CONTACT_ID extends PureOverworldTalkCharacterId<Args>
+    ? PureStationJuneModalResponseV1
+    : never;
+
+/** Exact non-June literals stay full; June-capable callers model V1 plus safe fallback. */
+export type PureOverworldTalkWireResponse<Args extends PureOverworldTalkArgs> =
+  | PureFullOverworldTalkWireResponse<Args>
+  | PureStationJuneModalForArgs<Args>;
+
 /** The pure wire contract narrows only the exact Station reveal member. */
 type PureOverworldWireHandles = {
   overworld_session_id: string;
@@ -544,6 +612,176 @@ function pureStationDispatchRevealResponse(
       version: PURE_STATION_DISPATCH_REVEAL_VERSION,
       base_snapshot_hash: base.snapshotHash,
       station_dispatch_board: board as unknown as OpeningCompactStationDispatchBoard,
+    },
+  };
+  return receipt;
+}
+
+export const PURE_STATION_JUNE_CONTACT_ID = "albany_city__transport_hub__june_pike" as const;
+const PURE_STATION_JUNE_STORY_ID = "albany:wolf_ally_commitment";
+const PURE_STATION_JUNE_OPTION_IDS = new Set([
+  "albany:ally_june_cattle_first",
+  "albany:ally_june_relay_only",
+  "albany:ally_travel_solo",
+]);
+
+type PureStationJuneModalBase = Readonly<{
+  sessionId: string;
+  snapshotHash: string;
+}>;
+
+function isPureStationJuneTalk(name: string, args: unknown): boolean {
+  if (PLAY_MODE !== "pure" || name !== "talk_overworld_session_contact") return false;
+  const input = objectRecord(args);
+  return input?.character_id === PURE_STATION_JUNE_CONTACT_ID;
+}
+
+function hasExactStationDispatchRevealReceipt(snapshot: Record<string, unknown>): boolean {
+  const receipts = snapshot.stationDispatchSupportReveals;
+  return (
+    Array.isArray(receipts) &&
+    receipts.length === 1 &&
+    Array.isArray(receipts[0]) &&
+    receipts[0].length === 2 &&
+    receipts[0][0] === "wolf_winter" &&
+    receipts[0][1] === STATION_DISPATCH_SUPPORT_REVEAL_ID
+  );
+}
+
+/**
+ * Authenticate June's revealed Station modal against the player's retained
+ * compact snapshot before the canonical talk mutates time, journal, and story.
+ * Ordinary contacts and June outside this exact reveal lifecycle remain full.
+ */
+function pureStationJuneModalBase(name: string, args: unknown): PureStationJuneModalBase | null {
+  if (!isPureStationJuneTalk(name, args)) return null;
+  const input = objectRecord(args);
+  if (!input) return null;
+  const sessionId = input.session_id;
+  if (typeof sessionId !== "string" || sessionId.length === 0) return null;
+  const exported = objectRecord(api.export_overworld_session({ session_id: sessionId }));
+  const snapshot = objectRecord(exported?.snapshot);
+  if (
+    exported?.ok !== true ||
+    snapshot === null ||
+    !hasExactStationDispatchRevealReceipt(snapshot)
+  ) {
+    return null;
+  }
+  const snapshotHash = exported.snapshot_hash;
+  if (typeof snapshotHash !== "string" || snapshotHash.length === 0) {
+    throw new Error("Pure Station June talk could not capture its base snapshot hash.");
+  }
+  const current = objectRecord(
+    api.get_overworld_session({ session_id: sessionId, include_observation: true }),
+  );
+  const observation = objectRecord(current?.observation);
+  const currentJourney = objectRecord(current?.journey);
+  if (
+    current === null ||
+    current.session_id !== sessionId ||
+    current.snapshot_hash !== snapshotHash ||
+    currentJourney?.storyChoice !== null ||
+    !exactReadyStationJuneBoard(observation?.stationDispatchBoard)
+  ) {
+    return null;
+  }
+  const retainedHash = input.expected_snapshot_hash;
+  if (typeof retainedHash !== "string" || retainedHash.length === 0) {
+    throw new Error(
+      "Pure Station June talk requires expected_snapshot_hash from the revealed Station board.",
+    );
+  }
+  if (retainedHash !== snapshotHash) {
+    throw new Error(
+      "Pure Station June talk base hash is stale; retain the latest Station response before talking.",
+    );
+  }
+  return { sessionId, snapshotHash };
+}
+
+function exactReadyStationJuneBoard(value: unknown): boolean {
+  const board = objectRecord(value);
+  if (board?.version !== STATION_DISPATCH_BOARD_VERSION || board.questId !== "wolf_winter") {
+    return false;
+  }
+  const support = board.support;
+  if (!Array.isArray(support)) return false;
+  const fieldTeamRows = support.map(objectRecord).filter((row) => row?.slot === "field_team");
+  if (fieldTeamRows.length !== 1) return false;
+  const fieldTeam = fieldTeamRows[0];
+  const action = objectRecord(fieldTeam?.action);
+  return (
+    fieldTeam?.status === "open_optional" &&
+    fieldTeam.selectedTitle === null &&
+    action?.kind === "talk" &&
+    action.tool === "talk_overworld_session_contact" &&
+    action.characterId === PURE_STATION_JUNE_CONTACT_ID &&
+    action.contactName === "June Pike"
+  );
+}
+
+function hasExactStationJuneOptions(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length !== PURE_STATION_JUNE_OPTION_IDS.size) return false;
+  const optionIds = value.map((option) => objectRecord(option)?.id);
+  return (
+    optionIds.every((optionId): optionId is string => typeof optionId === "string") &&
+    new Set(optionIds).size === PURE_STATION_JUNE_OPTION_IDS.size &&
+    optionIds.every((optionId) => PURE_STATION_JUNE_OPTION_IDS.has(optionId))
+  );
+}
+
+/**
+ * Narrow only the exact June story-modal transition. If the canonical success
+ * ever changes shape, preserve it whole because the mutation has already landed.
+ */
+function pureStationJuneModalResponse(
+  name: string,
+  args: unknown,
+  value: unknown,
+  base: PureStationJuneModalBase | null,
+): unknown {
+  if (!isPureStationJuneTalk(name, args) || base === null) return value;
+  const response = objectRecord(value);
+  const journey = objectRecord(response?.journey);
+  const storyChoice = objectRecord(journey?.storyChoice);
+  const options = storyChoice?.options;
+  const journeyDecision = objectRecord(response?.journeyDecision);
+  const result = objectRecord(response?.result);
+  const context = objectRecord(response?.context);
+  const legendDelta =
+    response?.legend_delta === undefined ? undefined : objectRecord(response.legend_delta);
+  if (
+    response?.ok !== true ||
+    response.session_id !== base.sessionId ||
+    typeof response.snapshot_hash !== "string" ||
+    response.snapshot_hash.length === 0 ||
+    response.snapshot_hash === base.snapshotHash ||
+    storyChoice?.id !== PURE_STATION_JUNE_STORY_ID ||
+    storyChoice.kind !== "ally" ||
+    !hasExactStationJuneOptions(options) ||
+    journeyDecision?.countsTowardJourney !== true ||
+    journeyDecision.reason !== "substantive_dialogue" ||
+    typeof result?.m !== "number" ||
+    !Array.isArray(result.entry) ||
+    typeof result.text !== "string" ||
+    context === null ||
+    (legendDelta !== undefined &&
+      (legendDelta === null ||
+        Object.values(legendDelta).some((entry) => typeof entry !== "string")))
+  ) {
+    return value;
+  }
+  const receipt: Omit<PureStationJuneModalResponseV1, "overworld_session_id"> = {
+    ok: true,
+    snapshot_hash: response.snapshot_hash,
+    journey: journey as unknown as CompactJourneyPresentation,
+    journeyDecision: journeyDecision as JourneyDecisionClassification,
+    ...(legendDelta ? { legend_delta: legendDelta as OverworldMcpLegendPatch } : {}),
+    result: result as OverworldCompactActionResult,
+    station_dispatch_modal: {
+      version: PURE_STATION_JUNE_MODAL_VERSION,
+      base_snapshot_hash: base.snapshotHash,
     },
   };
   return receipt;
@@ -1044,6 +1282,7 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
       const normalizedArgs = normalizeAreaDestinationAlias(name, simpleNormalizedArgs) as A;
       const committedExit = pureCommittedJourneyExitResponse(name, normalizedArgs);
       const stationDispatchRevealBase = pureStationDispatchRevealBase(name, normalizedArgs);
+      const stationJuneModalBase = pureStationJuneModalBase(name, normalizedArgs);
       const rawValue = committedExit ?? (await handler(normalizedArgs)); // await is a no-op for sync handlers
       const evidencedValue = pureCallEvidence(name, rawValue);
       const revealValue = pureStationDispatchRevealResponse(
@@ -1052,7 +1291,13 @@ function wrap<A>(name: string, handler: (args: A) => unknown) {
         evidencedValue,
         stationDispatchRevealBase,
       );
-      const value = pureSessionResponsePayload(name, revealValue);
+      const stationJuneValue = pureStationJuneModalResponse(
+        name,
+        normalizedArgs,
+        revealValue,
+        stationJuneModalBase,
+      );
+      const value = pureSessionResponsePayload(name, stationJuneValue);
       result = ok(value);
     } catch (e) {
       // Bound the text on BOTH branches. Trimming only the dev branch leaves the pure

@@ -1344,3 +1344,59 @@ CLI, compact v49, board V6, receipt lifecycle, ids, actions, costs, mechanics,
 strategies, outcomes, accepted decisions, and Continue/End remain unchanged.
 The pilot remains non-certified AI evidence, not human validation or support for
 Gallowmere, June-mechanic, retention-metric, or certification claims.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = 3da05f64; next move = pure June modal V1)
+
+**V6 relevance and the reveal V1 remain closed.** The valid, clean, no-retry
+ten-player Terra pilot
+`starting-slice-terra-pilot-3da05f64-20260821T110413Z` bound exact commit
+`3da05f6481aece49d088b9132271ae79d97fae15`, official npm-shim Codex 0.146.0,
+and world hash `ef907fe6e3f81af9fed7c36a2dfe528fc6999481323ce4ade064f1ec66dd4017`.
+Its manifest, summary, pilot-result, and authority-proof SHA-256 values are
+`7ff590a0a0741a724f6c09ae58c2f54467e1ddb29aa59d0c88ff79f492189cb0`,
+`265ba0f3bf12f2369752b565753ce18985cb8b01f41c1c47b231dc629bea2362`,
+`efa0a0471b8c8b223b9805186a5f8011863fa40b33a05f8241ee2f9a3d964e07`, and
+`5098ddb038251676586387614a3cf29f61cc0b9ebe5e088278f2e463f38f0078`.
+All ten report and rollout hashes matched their manifest rows. The cohort had no
+stuck player, p50 23 accepted decisions, 8/10 initial-goal continuation, and all
+four Wolf-Winter strategies (HUNT 1, LURE 4, DRIVE 3, FORTIFY 2), but failed
+clarity at 39/50 and enjoyment at 40/50. It carried four S1 report findings and
+no repeated blocking cluster. These are valid technical and diagnostic results,
+not a quality pass or authority certification.
+
+Nine players used the existing reveal V1 at 1,032–1,034 bytes and one used the
+canonical exact-detail path. That supports preserving board V6's relevance-first
+overview and reveal V1's narrow board delta. Eight players then took the revealed
+June action. Its canonical full compact responses were seven 8,873-byte members
+and one 9,080-byte member: 71,191 bytes total. Every one was immediately followed
+by the mandatory ally choice. Reconstructing the eight exact responses as the
+chosen complete-legend V1 modal envelope yields 3,908 bytes each, 31,264 total,
+for 39,927 bytes / 56.08% less. This is structural repetition evidence correlated
+with the cohort's density reports, not proof that transport size caused either
+failed rating. Seven of those players chose June immediately after the reveal;
+seed `821110413000` chose relief first, then June. The focused regression takes
+preparation first. These cover three observed order shapes, not every permutation.
+
+**Chosen move — authenticate and narrow only the exact pure June modal handoff.**
+After an exact persisted Station reveal receipt and matching public snapshot, a
+non-consuming full observation must show board V6, exactly one open `field_team`
+row whose action talks to June, and no current story modal. Only that member
+requires `expected_snapshot_hash` before mutation. Its versioned response carries
+outer `overworld_session_id`, a distinct new `snapshot_hash`, the complete compact
+`journey` and ally `storyChoice`, `journeyDecision`, compact `result`, the complete
+canonical `legend_delta` when present, and
+`station_dispatch_modal:{version:1,base_snapshot_hash}`; it omits raw `session_id`
+and repeated `context`. The new story modal supersedes retained board actions.
+Read-only story inspection keeps the hash unchanged, and the mandatory exact ally
+choice remains full and re-synchronizes context. Missing/stale bases fail before
+mutation; an ineligible contact or post-shape mismatch retains canonical behavior.
+
+The broader support-commit idea is rejected for this move. Nine players selected
+support, but order-neutral play produced thirteen separate mutations (eight ally,
+four wagon, one preparation), with 6,268–6,746-byte responses and 85,882 bytes
+total. A partial state patch would need stronger merge proof for time, character,
+services, journal, discovery, and selected support. Those commits therefore stay
+full, as do generic/non-pure contacts. Board V6, reveal V1, all ids, content,
+costs, checks, mechanics, effects, outcomes, decisions, strategies, Continue/End,
+and Gallowmere remain unchanged. This ten-player AI pilot does not establish a
+quality lift, human validation, retention improvement, or certification.

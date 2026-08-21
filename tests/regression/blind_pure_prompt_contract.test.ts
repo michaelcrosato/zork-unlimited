@@ -229,59 +229,58 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("remaining_optional_count");
     expect(prompt).toContain("`[slot,status,selected_title|null,purpose|null,action|null]`");
     expect(prompt).toContain(
-      "`role/duty/evidence/preparation/relief_allocation/field_team` =\n  background/promise/report/kit/wagon/rider",
+      "`role/duty/evidence/preparation/relief_allocation/field_team` mean\n  background/promise/report/kit/wagon/rider",
     );
     expect(prompt).toContain(
-      "Roads: `context.quests` plus\n  `context.quest_starts`; depart anytime",
+      "`context.quests` plus\n  `context.quest_starts` are the roads; you may depart with support unfinished",
     );
-    expect(prompt).toContain("Pre-review hides open rows");
+    expect(prompt).toContain("Before review, hidden open rows are summarized");
     expect(prompt).toContain("`overview=[id,label]`");
-    expect(prompt).toContain("names only open kit/wagon/rider categories and kit skill domains");
-    expect(prompt).toContain("If interested");
+    expect(prompt).toContain("If a\n  category interests you");
     expect(prompt).toContain("`reveal_station_dispatch_support`");
     expect(prompt).toContain("latest `if_snapshot_hash`");
-    expect(prompt).toContain("Pure reply omits\n  `journey`/`context`");
-    expect(prompt).toContain("`overworld_session_id`, outer `snapshot_hash`");
+    expect(prompt).toContain("pure delta has outer `overworld_session_id`/`snapshot_hash`");
     expect(prompt).toContain(
       "`station_dispatch_reveal:{version:1,base_snapshot_hash,station_dispatch_board}`",
     );
-    expect(prompt).toContain("base equals your retained hash");
-    expect(prompt).toContain("keep prior journey/context with\n  `quests`/`quest_starts`");
-    expect(prompt).toContain("replace only its board, and use the outer hash");
-    expect(prompt).toContain("Else never\n  splice; refresh without reveal");
-    expect(prompt).toContain("durable/idempotent receipt accepts no decision");
-    expect(prompt).toContain("If no category interests you, depart without reviewing");
-    expect(prompt).toContain("After review, `overview=null`");
-    expect(prompt).toContain("open rows expose authenticated purpose/action");
-    expect(prompt).toContain("inspect at most one row; never enumerate");
-    expect(prompt).toContain("Support stays optional");
-    expect(prompt).toMatch(/changes\s+cost\/aftermath, not strategy access/u);
-    expect(prompt).toContain('`["inspect",story_choice_id]`');
-    expect(prompt).toContain('`["talk",character_id,contact_name]`');
+    expect(prompt).toContain("base matches your retained hash");
+    expect(prompt).toContain("keep journey/context and replace\n  the board and hash");
+    expect(prompt).toContain("otherwise refresh without reveal");
+    expect(prompt).toContain("After review `overview=null`");
+    expect(prompt).toContain("open rows expose purpose/action");
+    expect(prompt).toContain("Support changes cost/aftermath, not access");
+    expect(prompt).toContain("Inspect at most one desired row");
+    expect(prompt).toContain("never enumerate");
+    expect(prompt).toContain("`['inspect',story_choice_id]`");
+    expect(prompt).toContain("`['talk',character_id,contact_name]`");
     expect(prompt).toContain("null is illegal");
-    expect(prompt).toContain("mcp__adventureforge__talk_overworld_session_contact");
-    expect(prompt).toContain("A talk action alone can present the");
-    expect(prompt).toContain("second-rider choice (`field_team` slot)");
-    expect(Buffer.byteLength(promptTemplate, "utf8")).toBe(16_027);
+    expect(prompt).toContain("revealed field-team talk can present a mandatory ally modal");
+    expect(prompt).toContain("`expected_snapshot_hash:latest snapshot_hash`");
+    expect(prompt).toContain("pure delta omits raw\n  session/context");
+    expect(prompt).toContain("outer `overworld_session_id`/`snapshot_hash`, full");
+    expect(prompt).toContain("`journey`/`storyChoice`");
+    expect(prompt).toContain("`journeyDecision`, compact `result`, any `legend_delta`");
+    expect(prompt).toContain("`station_dispatch_modal:{version:1,base_snapshot_hash}`");
+    expect(prompt).toContain("base matches\n  retained state, keep context and adopt those fields");
+    expect(prompt).toContain("modal voids old board\n  actions");
+    expect(prompt).toContain("do not repeat the talk");
+    expect(prompt).toContain("inspect it or choose a visible ally option");
+    expect(prompt).toContain("Missing/stale bases do not mutate");
+    expect(prompt).toContain("choice returns full context to resync");
+    expect(Buffer.byteLength(promptTemplate, "utf8")).toBe(15_720);
     expect(prompt).not.toMatch(/legacy v[23]/iu);
     expect(prompt).not.toContain("older session");
     expect(prompt).not.toContain("`include_station_dispatch_support: true`");
-    expect(prompt).toContain("If `station_dispatch_board` is absent");
-    expect(prompt).toContain("or explicitly returned\n  `station_dispatch_support`");
-    expect(prompt).toContain("only exact non-null actions authorize calls");
-    expect(prompt).toMatch(
-      /`departure_interactions`,\s+`departure_contact_leads`, or explicitly returned/u,
-    );
+    expect(prompt).toContain("Without `station_dispatch_board`");
+    expect(prompt).toContain("only exact actions are legal");
     expect(prompt).toContain("context.job_scenes");
     expect(prompt).toContain("context.job_choices");
     expect(prompt).toContain("exact `[job_id, option_id]` tuple");
     expect(prompt).toMatch(/passing\s+both values unchanged/);
-    expect(prompt).toContain("versioned comparison contains short option summaries");
     expect(prompt).toContain("visible `reviewOption`");
-    expect(prompt).toMatch(/that option's\s+exact `id` at the declared\s+argument/);
-    expect(prompt).toMatch(/candidate's new\s+consequence\/timing/);
-    expect(prompt).toContain("authenticated already-selected terms");
-    expect(prompt).toContain("separately read recap or terms");
+    expect(prompt).toContain("one exact\n  option `id` as `option_id`");
+    expect(prompt).toContain("authenticated selected terms");
+    expect(prompt).toMatch(/separately read recap,\s+or expand every option/u);
     expect(prompt).toContain("option detail may");
     expect(prompt).not.toContain("never the exact active terms");
     expect(prompt).toContain("compact prompt\n  carries one review instruction in its message");
@@ -296,9 +295,8 @@ describe("pure blind prompt + runner contract", () => {
     expect(prompt).toContain("`consequence` remains the exact\n  authoritative receipt");
     expect(prompt).toContain("`reveal_id`");
     expect(prompt).toContain("then choose only from the expanded visible");
-    expect(prompt).toMatch(/do not expand every\s+option/);
-    expect(prompt).toContain("pass the inspected `story_choice_id` only when needed");
-    expect(prompt).toMatch(/to\s+disambiguate a shared\s+option id/);
+    expect(prompt).toMatch(/expand every\s+option/);
+    expect(prompt).toContain("add `story_choice_id`\n  only to disambiguate a shared id");
     expect(prompt).not.toContain("with both that\n  `story_choice_id`");
     expect(prompt).toContain("does not repeat the\n  Station board or other world context");
     expect(prompt).not.toContain("mcp__adventureforge__start_world_quest");

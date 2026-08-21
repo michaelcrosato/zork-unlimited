@@ -241,15 +241,15 @@ describe("Station dispatch board", () => {
       "utf8",
     );
     const stationContextBytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
-    expect(promptBytes).toBe(16_027);
-    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(34_842);
-    expect(34_842).toBeLessThanOrEqual(34_868);
+    expect(promptBytes).toBe(15_720);
+    expect(promptBytes + pureCatalogBytes + freshContextBytes).toBe(34_535);
+    expect(34_535).toBeLessThanOrEqual(34_868);
     const firstStationAggregate =
       promptBytes +
       pureCatalogBytes +
       stationContextBytes +
       Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
-    expect(firstStationAggregate).toBe(38_469);
+    expect(firstStationAggregate).toBe(38_162);
     expect(firstStationAggregate).toBeLessThanOrEqual(38_495);
 
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });

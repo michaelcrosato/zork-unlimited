@@ -169,3 +169,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 chose Road-Warden/Aid-Only/Hayden, completed sheltered LURE as `ending_pack_diverted` at 50/60 with herd and all wolves alive, then End at decision 24; 28/29 calls succeeded and one malformed parent handle recovered unchanged, with 4/4, replay yes, bugs `[]`, and no stuck state.
 - Canary/feedback: no save/load/trace call exposed the invariant, so regressions remain causal; the exact prior three reports compiled to revision-live S1 FORTIFY-attention row `bd527711` while excluding this run, and null selection promotes it unconsumed for bounded action-first copy triage rather than mechanics churn.
 - Guard: both 6,000-step crawls, full health (448 files/3,891 tests), 561 traces, UI typecheck, all 12 packs, reviewed cycle-start integrity, exact pure provenance, deterministic compile, formatting, and hostile authority review are green.
+## AFK Cycle 2026-08-21T11-43-21-608Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-21T11-43-21-608Z","selected_recommendation_id":"hotspot-cba015b4"} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-cba015b4 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

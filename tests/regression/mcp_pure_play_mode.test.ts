@@ -20,11 +20,15 @@ import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import {
   PURE_PLAYER_TOOLS,
   PURE_STATION_DISPATCH_REVEAL_VERSION,
+  PURE_STATION_JUNE_CONTACT_ID,
+  PURE_STATION_JUNE_MODAL_VERSION,
   resolveAreaMoveSelector,
   resolveVisibleAreaRouteId,
   toolAvailableInPlayMode,
   type PureOverworldContextWireResponse,
+  type PureOverworldTalkWireResponse,
   type PureStationDispatchRevealResponseV1,
+  type PureStationJuneModalResponseV1,
 } from "../../src/mcp/server.js";
 import type { OverworldMcpReadArgs } from "../../src/mcp/overworld_sessions.js";
 import {
@@ -32,7 +36,10 @@ import {
   JOURNEY_STORY_CHOICE_REVIEW_INSTRUCTION,
 } from "../../src/mcp/journey_projection.js";
 import { OVERWORLD_COMPACT_RESULT_LEGEND } from "../../src/mcp/compact_overworld_result.js";
-import type { OverworldCompactCampaignCharacter } from "../../src/world/compact_view.js";
+import {
+  OVERWORLD_COMPACT_LEGEND,
+  type OverworldCompactCampaignCharacter,
+} from "../../src/world/compact_view.js";
 import {
   STATION_DISPATCH_SUPPORT_REVEAL_ID,
   type OpeningCompactStationDispatchBoard,
@@ -969,6 +976,67 @@ describe("MCP pure play mode", () => {
       Assert<IncludesUnchanged<PureOverworldContextWireResponse<OverworldMcpReadArgs>>>,
     ] = [true, true, true, true];
     expect(unchangedAssertions).toEqual([true, true, true, true]);
+
+    type IncludesJuneModal<Response> = [Extract<Response, PureStationJuneModalResponseV1>] extends [
+      never,
+    ]
+      ? false
+      : true;
+    type IncludesCanonicalTalk<Response> = [Extract<Response, { session_id: string }>] extends [
+      never,
+    ]
+      ? false
+      : true;
+    const talkAssertions: [
+      Assert<
+        IncludesJuneModal<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            character_id: typeof PURE_STATION_JUNE_CONTACT_ID;
+          }>
+        >
+      >,
+      Assert<
+        IncludesJuneModal<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            contact_id: typeof PURE_STATION_JUNE_CONTACT_ID;
+          }>
+        >
+      >,
+      Assert<
+        IncludesJuneModal<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            character_id: "some_other_contact";
+          }>
+        > extends false
+          ? true
+          : false
+      >,
+      Assert<
+        IncludesJuneModal<
+          PureOverworldTalkWireResponse<{ session_id: string; character_id: string }>
+        >
+      >,
+      Assert<
+        IncludesCanonicalTalk<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            character_id: typeof PURE_STATION_JUNE_CONTACT_ID;
+          }>
+        >
+      >,
+      Assert<
+        IncludesCanonicalTalk<
+          PureOverworldTalkWireResponse<{
+            session_id: string;
+            character_id: "some_other_contact";
+          }>
+        >
+      >,
+    ] = [true, true, true, true, true, true];
+    expect(talkAssertions).toEqual([true, true, true, true, true, true]);
   });
 
   it("keeps singleton recovery handles out of full multi-session errors", async () => {
@@ -1877,7 +1945,35 @@ describe("MCP pure play mode", () => {
     const evidence = join(dir, "run.jsonl");
     try {
       await withPureServer(evidence, async (client) => {
-        const { sessionId, stationed } = await startPureAtOpeningStation(client);
+        const { sessionId, stationed: beforeJune } = await startPureAtOpeningStation(client);
+        const noReceiptJune = await callPlayerTool(client, "talk_overworld_session_contact", {
+          session_id: sessionId,
+          character_id: PURE_STATION_JUNE_CONTACT_ID,
+        });
+        expect(noReceiptJune).toMatchObject({
+          ok: true,
+          session_id: sessionId,
+          overworld_session_id: sessionId,
+          snapshot_hash: expect.any(String),
+          context: expect.any(Object),
+          journey: {
+            storyChoice: {
+              id: "albany:wolf_ally_commitment",
+              kind: "ally",
+            },
+          },
+        });
+        expect(noReceiptJune.snapshot_hash).not.toBe(beforeJune.snapshot_hash);
+        expect(noReceiptJune).not.toHaveProperty("station_dispatch_modal");
+        await callPlayerTool(client, "choose_overworld_session_story", {
+          session_id: sessionId,
+          story_choice_id: "albany:wolf_ally_commitment",
+          choice: "albany:ally_travel_solo",
+          expected_snapshot_hash: noReceiptJune.snapshot_hash,
+        });
+        const stationed = await callPlayerTool(client, "get_overworld_session_context", {
+          session_id: sessionId,
+        });
         const retainedJourney = structuredClone(stationed.journey);
         const retainedContext = structuredClone(stationed.context) as {
           quest_starts?: [string, string][];
@@ -1943,6 +2039,55 @@ describe("MCP pure play mode", () => {
     }
   }, 120_000);
 
+  it("keeps full-mode June talk on the canonical verbose response", async () => {
+    await withFullServer(async (client) => {
+      const { sessionId, stationed } = await startPureAtOpeningStation(client);
+      const revealed = await callPlayerTool(client, "get_overworld_session_context", {
+        session_id: sessionId,
+        if_snapshot_hash: stationed.snapshot_hash,
+        reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+      });
+      const prepared = await callPlayerTool(client, "choose_overworld_session_story", {
+        session_id: sessionId,
+        story_choice_id: "albany:wolf_preparation",
+        choice: "albany:prep_works_fortification",
+        expected_snapshot_hash: revealed.snapshot_hash,
+      });
+      const fullJune = await callPlayerTool(client, "talk_overworld_session_contact", {
+        session_id: sessionId,
+        character_id: PURE_STATION_JUNE_CONTACT_ID,
+        expected_snapshot_hash: prepared.snapshot_hash,
+      });
+      expect(Object.keys(fullJune).sort()).toEqual(
+        [
+          "journey",
+          "journeyDecision",
+          "legend_delta",
+          "ok",
+          "result",
+          "session_id",
+          "snapshot_hash",
+          "context",
+        ].sort(),
+      );
+      expect(fullJune).toMatchObject({
+        ok: true,
+        session_id: sessionId,
+        snapshot_hash: expect.any(String),
+        journey: { storyChoice: { id: "albany:wolf_ally_commitment", kind: "ally" } },
+        journeyDecision: { countsTowardJourney: true, reason: "substantive_dialogue" },
+        context: expect.any(Object),
+        result: expect.any(Object),
+      });
+      expect(fullJune.legend_delta).toEqual({
+        departure_recap: OVERWORLD_COMPACT_LEGEND.departure_recap,
+      });
+      expect(fullJune).not.toHaveProperty("overworld_session_id");
+      expect(fullJune).not.toHaveProperty("station_dispatch_modal");
+      expect(Buffer.byteLength(JSON.stringify(fullJune), "utf8")).toBe(8_930);
+    });
+  }, 120_000);
+
   it("advertises only player tools and records exactly one fresh overworld start", async () => {
     const dir = mkdtempSync(join(tmpdir(), "mcp-pure-"));
     const evidence = join(dir, "run.jsonl");
@@ -1961,8 +2106,8 @@ describe("MCP pure play mode", () => {
         const pureCatalogBytes = Buffer.byteLength(JSON.stringify(pureCatalogProjection), "utf8");
         expect(pureCatalogBytes).toBe(16_773);
         expect(pureCatalogBytes - 16_694).toBe(79);
-        expect(16_027 + 2_042 + pureCatalogBytes).toBe(34_842);
-        expect(16_027 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(34_868);
+        expect(15_720 + 2_042 + pureCatalogBytes).toBe(34_535);
+        expect(15_720 + 2_042 + pureCatalogBytes).toBeLessThanOrEqual(34_868);
         for (const tool of listed.tools) {
           expect(
             validPureMcpToolCatalogEntry({ name: tool.name }),
@@ -3027,20 +3172,89 @@ describe("MCP pure play mode", () => {
           throw new Error("expected June's ready Station board action");
         }
         const juneContactId = readyFieldTeam[1];
+        const missingJuneBase = await client.callTool({
+          name: "talk_overworld_session_contact",
+          arguments: {
+            session_id: sessionId,
+            character_id: juneContactId,
+          },
+        });
+        expect(missingJuneBase.isError).toBe(true);
+        expect(textResult(missingJuneBase)).toMatch(/requires expected_snapshot_hash/i);
+        const staleJuneBase = await client.callTool({
+          name: "talk_overworld_session_contact",
+          arguments: {
+            session_id: sessionId,
+            character_id: juneContactId,
+            expected_snapshot_hash: "0".repeat(24),
+          },
+        });
+        expect(staleJuneBase.isError).toBe(true);
+        expect(textResult(staleJuneBase)).toMatch(/base hash is stale/i);
+        const afterRejectedJune = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: {
+              session_id: sessionId,
+              if_snapshot_hash: prepared.snapshot_hash,
+            },
+          }),
+        );
+        expect(afterRejectedJune.snapshot_hash).toBe(prepared.snapshot_hash);
+        expect(afterRejectedJune.unchanged).toBe(true);
+        expect(afterRejectedJune).not.toHaveProperty("context");
         const juneConversation = textPayload(
           await client.callTool({
             name: "talk_overworld_session_contact",
             arguments: {
               session_id: sessionId,
-              character_id: juneContactId,
+              contact_id: juneContactId,
+              expected_snapshot_hash: prepared.snapshot_hash,
               compact_context: false,
               compact_result: false,
             },
           }),
         );
-        expect(
-          (juneConversation.context as CompactAreaContext).departure_contact_leads,
-        ).toBeUndefined();
+        expect(Object.keys(juneConversation).sort()).toEqual(
+          [
+            "journey",
+            "journeyDecision",
+            "legend_delta",
+            "ok",
+            "overworld_session_id",
+            "result",
+            "snapshot_hash",
+            "station_dispatch_modal",
+          ].sort(),
+        );
+        expect(juneConversation).toMatchObject({
+          ok: true,
+          overworld_session_id: sessionId,
+          snapshot_hash: expect.any(String),
+          journeyDecision: {
+            countsTowardJourney: true,
+            reason: "substantive_dialogue",
+          },
+          result: {
+            m: expect.any(Number),
+            entry: expect.any(Array),
+            text: expect.any(String),
+          },
+          station_dispatch_modal: {
+            version: PURE_STATION_JUNE_MODAL_VERSION,
+            base_snapshot_hash: prepared.snapshot_hash,
+          },
+        });
+        expect(juneConversation.snapshot_hash).not.toBe(prepared.snapshot_hash);
+        expect(juneConversation).not.toHaveProperty("session_id");
+        expect(juneConversation).not.toHaveProperty("context");
+        expect(juneConversation.legend_delta).toEqual({
+          departure_recap: OVERWORLD_COMPACT_LEGEND.departure_recap,
+        });
+        const typedJuneConversation = juneConversation as unknown as PureStationJuneModalResponseV1;
+        expect(typedJuneConversation.station_dispatch_modal.version).toBe(
+          PURE_STATION_JUNE_MODAL_VERSION,
+        );
         const allyChoice = (
           juneConversation.journey as {
             storyChoice?: {
@@ -3064,21 +3278,53 @@ describe("MCP pure play mode", () => {
           (option) => option.id === "albany:ally_june_cattle_first",
         );
         if (!cattleFirst) throw new Error("expected June's visible cattle-first option");
-        const allyDepartureRecap = (juneConversation.context as CompactAreaContext).departure_recap;
-        if (!allyDepartureRecap) {
-          throw new Error("expected the authenticated recap beside June's choice");
-        }
+        const juneModalBytes = Buffer.byteLength(JSON.stringify(juneConversation), "utf8");
+        expect(juneModalBytes).toBe(3_908);
+        expect(juneModalBytes).toBeLessThanOrEqual(4_000);
         const inspectedAlly = textPayload(
           await client.callTool({
             name: "inspect_overworld_session_story",
             arguments: {
               session_id: sessionId,
               story_choice_id: allyChoice.id,
+              expected_snapshot_hash: juneConversation.snapshot_hash,
             },
           }),
         );
-        expectPureStoryInspectionEnvelope(inspectedAlly, sessionId, allyDepartureRecap);
+        const inspectedAllyRecap = inspectedAlly.departure_recap as unknown[];
+        expect(inspectedAllyRecap?.[0]).toBe(7);
+        expect(inspectedAllyRecap?.[1]).toBe("wolf_winter");
+        expect(inspectedAllyRecap?.[2]).toEqual(expect.any(String));
+        expect(inspectedAllyRecap?.[3]).toEqual(expect.any(Array));
+        expectPureStoryInspectionEnvelope(inspectedAlly, sessionId, inspectedAllyRecap);
+        expect(inspectedAlly.snapshot_hash).toBe(juneConversation.snapshot_hash);
         expect((inspectedAlly.story as { kind?: string }).kind).toBe("ally");
+        const repeatedJune = await client.callTool({
+          name: "talk_overworld_session_contact",
+          arguments: {
+            session_id: sessionId,
+            character_id: juneContactId,
+            expected_snapshot_hash: juneConversation.snapshot_hash,
+          },
+        });
+        expect(repeatedJune.isError).toBe(true);
+        expect(textResult(repeatedJune)).toMatch(
+          /choose the presented story consequence|finish.*story choice|gameplay.*paused/i,
+        );
+        const afterRepeatedJune = textPayload(
+          await client.callTool({
+            name: "get_overworld_session_context",
+            arguments: {
+              session_id: sessionId,
+              if_snapshot_hash: juneConversation.snapshot_hash,
+            },
+          }),
+        );
+        expect(afterRepeatedJune.snapshot_hash).toBe(juneConversation.snapshot_hash);
+        expect(afterRepeatedJune.unchanged).toBe(true);
+        expect(
+          (afterRepeatedJune.journey as { storyChoice?: { id?: string } }).storyChoice?.id,
+        ).toBe(allyChoice.id);
         const allied = textPayload(
           await client.callTool({
             name: "choose_overworld_session_story",
@@ -3086,14 +3332,38 @@ describe("MCP pure play mode", () => {
               session_id: sessionId,
               story_choice_id: allyChoice.id,
               choice: cattleFirst.id,
+              expected_snapshot_hash: juneConversation.snapshot_hash,
               compact_context: false,
               compact_result: false,
             },
           }),
         );
+        expect(allied.session_id).toBe(sessionId);
+        expect(allied.overworld_session_id).toBe(sessionId);
+        expect(allied).toHaveProperty("context");
+        expect(allied).not.toHaveProperty("station_dispatch_modal");
         expect((allied.context as CompactAreaContext).departure_contact_leads).toBeUndefined();
         expectJuneCattleFirst(allied);
         expect((allied.journey as { storyChoice?: unknown }).storyChoice).toBeNull();
+        const postChoiceJune = textPayload(
+          await client.callTool({
+            name: "talk_overworld_session_contact",
+            arguments: {
+              session_id: sessionId,
+              character_id: juneContactId,
+            },
+          }),
+        );
+        expect(postChoiceJune).toMatchObject({
+          ok: true,
+          session_id: sessionId,
+          overworld_session_id: sessionId,
+          snapshot_hash: expect.any(String),
+          context: expect.any(Object),
+        });
+        expect(postChoiceJune.snapshot_hash).not.toBe(allied.snapshot_hash);
+        expect(postChoiceJune).not.toHaveProperty("station_dispatch_modal");
+        expectJuneCattleFirst(postChoiceJune);
         const persistedAlly = textPayload(
           await client.callTool({
             name: "get_overworld_session_context",

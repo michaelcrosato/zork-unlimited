@@ -244,11 +244,11 @@ it is **not yet milestone-certified**:
   removed from each compact road, so all route-specific time, supply, fatigue,
   alarm, and weather facts remain. This progressive disclosure is compact-MCP-
   only; terminal and browser presentation remain unchanged. The initial board
-  is 585 UTF-8 bytes and its legend is 741 bytes. The V1 prompt is 16,027 bytes
+  is 585 UTF-8 bytes and its legend is 741 bytes. The pure prompt is 15,720 bytes
   and the pure catalogue is 16,773. With the unchanged 2,042-byte fresh context,
-  the aggregate is 34,842 bytes, below sealed V6's 34,868 and V5's 35,207.
+  the aggregate is 34,535 bytes, below sealed V6's 34,868 and V5's 35,207.
   First-Station prompt + catalogue + 4,928-byte context + newly delivered legend
-  is 38,469 bytes versus sealed V6's 38,495, V5's 38,619, and the frozen v47/V4
+  is 38,162 bytes versus sealed V6's 38,495, V5's 38,619, and the frozen v47/V4
   baseline 39,261. The exact current V1 reveal envelope is 1,023 bytes under its
   1,100-byte regression budget; the ten base-bound pilot counterfactuals are
   1,020–1,034. This is not a global runtime limit, and full detail-expansion
@@ -261,6 +261,27 @@ it is **not yet milestone-certified**:
   `overworld_cli.test.ts`, `mcp_pure_play_mode.test.ts`,
   `blind_pure_prompt_contract.test.ts`, `mcp_journey_surface.test.ts`,
   `ui_overworld.test.ts`, and `compact_legend.test.ts`;
+- the exact pure June talk authorized by a revealed V6 `field_team` row now has
+  its own base-bound V1 modal transport. A non-consuming full observation first
+  proves one open June talk row and no active story modal; only then does the
+  server require the latest `expected_snapshot_hash`, before mutation. The
+  response keeps outer `overworld_session_id` / new `snapshot_hash`, the full
+  current compact `journey` including the mandatory ally `storyChoice`,
+  `journeyDecision`, compact `result`, and the complete canonical
+  `legend_delta` when present, then adds
+  `station_dispatch_modal:{version:1,base_snapshot_hash}`. It omits raw
+  `session_id` and repeated `context`. The retained context stays authoritative
+  except that the new story modal supersedes its old board actions; the following
+  exact ally choice remains a full canonical response and re-synchronizes
+  context. Missing or stale bases reject before mutation, while an ineligible or
+  unexpectedly shaped call stays canonical. The current deterministic envelope
+  is exactly 3,908 UTF-8 bytes under a 4,000-byte budget. In the fresh exact-build
+  pilot, the eight June responses were 71,191 bytes (seven 8,873 and one 9,080);
+  replaying their exact fields through this complete-legend envelope is 31,264
+  bytes, 39,927 / 56.08% less. The pure tool catalogue remains 16,773 bytes and
+  every entry digest remains unchanged because no tool description or schema
+  changed. All support commits, generic contacts, and full/non-pure June talks
+  retain their complete canonical responses;
 - four early decisions now drive replay-bound services through reusable
   world-fact, story-choice, companion, and promise predicates, but the other
   return facts still lack mechanical NPC and opportunity consumers.

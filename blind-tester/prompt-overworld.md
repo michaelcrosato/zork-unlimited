@@ -134,41 +134,36 @@ WHEN TO CONTINUE OR END
   where that passage stops.
 - Station v49 `station_dispatch_board` is
   `[6,quest_id,dispatch_status,dispatch,rows,overview|null]`;
-  `dispatch=[state,minutes,timing,remaining_optional_count]`; rows are
-  `[slot,status,selected_title|null,purpose|null,action|null]`.
-  `role/duty/evidence/preparation/relief_allocation/field_team` =
-  background/promise/report/kit/wagon/rider. Roads: `context.quests` plus
-  `context.quest_starts`; depart anytime. Pre-review hides open rows;
-  `overview=[id,label]` names only open kit/wagon/rider categories and kit skill domains.
-  If interested, call
-  `mcp__adventureforge__get_overworld_session_context` with exact
-  `reveal_station_dispatch_support` and latest `if_snapshot_hash`. Pure reply omits
-  `journey`/`context`; it has `overworld_session_id`, outer `snapshot_hash`, and
+  `dispatch=[state,minutes,timing,remaining_optional_count]`; each row is
+  `[slot,status,selected_title|null,purpose|null,action|null]`. Slots
+  `role/duty/evidence/preparation/relief_allocation/field_team` mean
+  background/promise/report/kit/wagon/rider. `context.quests` plus
+  `context.quest_starts` are the roads; you may depart with support unfinished.
+  Before review, hidden open rows are summarized by `overview=[id,label]`. If a
+  category interests you, call `mcp__adventureforge__get_overworld_session_context`
+  with that exact `reveal_station_dispatch_support` and latest `if_snapshot_hash`.
+  Its pure delta has outer `overworld_session_id`/`snapshot_hash` plus
   `station_dispatch_reveal:{version:1,base_snapshot_hash,station_dispatch_board}`.
-  Apply only if its base equals your retained hash: keep prior journey/context with
-  `quests`/`quest_starts`, replace only its board, and use the outer hash. Else never
-  splice; refresh without reveal. The durable/idempotent receipt accepts no decision.
-  If no category interests you, depart without reviewing. After review, `overview=null`;
-  open rows expose authenticated purpose/action. Support stays optional; it changes
-  cost/aftermath, not strategy access. `["inspect",story_choice_id]` authorizes
-  `mcp__adventureforge__inspect_overworld_session_story`;
-  `["talk",character_id,contact_name]` authorizes
-  `mcp__adventureforge__talk_overworld_session_contact`; null is illegal. If reviewed,
-  inspect at most one row; never enumerate.
-- You may depart without choosing support. From the board, inspect only the exact
-  visible `story_choice_id` you want; the
-  versioned comparison contains short option summaries. To compare one candidate,
-  use its visible `reviewOption` with that option's exact `id` at the declared
-  argument. It returns only that candidate's new consequence/timing and
-  authenticated already-selected terms. Do not separately read recap or terms,
-  and do not expand every option. If you choose it, call
-  `mcp__adventureforge__choose_overworld_session_story` with its visible option
-  `id` as `choice`; pass the inspected `story_choice_id` only when needed to
-  disambiguate a shared option id. A talk action alone can present the
-  second-rider choice (`field_team` slot).
-- If `station_dispatch_board` is absent, use only visible `departure_recap`,
-  `departure_interactions`, `departure_contact_leads`, or explicitly returned
-  `station_dispatch_support`; only exact non-null actions authorize calls.
+  Only when its base matches your retained hash, keep journey/context and replace
+  the board and hash; otherwise refresh without reveal. After review `overview=null`
+  and open rows expose purpose/action. Support changes cost/aftermath, not access.
+  `['inspect',story_choice_id]` and `['talk',character_id,contact_name]` alone
+  authorize their named tools; null is illegal. Inspect at most one desired row,
+  optionally one visible `reviewOption`; never enumerate, separately read recap,
+  or expand every option. Choose a visible option with
+  `mcp__adventureforge__choose_overworld_session_story`; add `story_choice_id`
+  only to disambiguate a shared id.
+- The revealed field-team talk can present a mandatory ally modal. Pass
+  `expected_snapshot_hash:latest snapshot_hash`. Its pure delta omits raw
+  session/context and has outer `overworld_session_id`/`snapshot_hash`, full
+  `journey`/`storyChoice`,
+  `journeyDecision`, compact `result`, any `legend_delta`, and
+  `station_dispatch_modal:{version:1,base_snapshot_hash}`. If its base matches
+  retained state, keep context and adopt those fields. The modal voids old board
+  actions: do not repeat the talk; inspect it or choose a visible ally option.
+  Missing/stale bases do not mutate. The choice returns full context to resync.
+- Without `station_dispatch_board`, use only visible departure recap,
+  interactions, contact leads, or explicit support; only exact actions are legal.
 - Do not impose your own tool-call, turn, route, content, or coverage budget.
   Never stop merely because you think a test has run long enough.
 - After the game confirms the end and returns its journey exit receipt, normally
