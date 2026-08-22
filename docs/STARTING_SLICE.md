@@ -242,22 +242,34 @@ it is **not yet milestone-certified**:
   purpose with `Optional kit`, `Optional wagon`, or `Optional rider`, then says
   that inspection or June's talk happens before choosing; the named danger,
   one-crisis wagon boundary, one cattle-line boundary, and no-combat boundary
-  remain explicit. Selected and non-actionable rows remain null/null. The shared authenticated dispatch
-  briefing appears once on the compact board; only then is that exact prefix
-  removed from each compact road, so all route-specific time, supply, fatigue,
-  alarm, and weather facts remain. This progressive disclosure is compact-MCP-
-  only; terminal and browser presentation remain unchanged. The initial board
-  is 585 UTF-8 bytes and its legend is 741 bytes. The pure prompt is 15,720 bytes
+  remain explicit. Selected and non-actionable rows remain null/null. The shared
+  authenticated dispatch briefing now separates the already-set background,
+  promise, and report from support: support can be compared before a named choice
+  commits, and starting Wolf-Winter declines everything still open. Its dynamic
+  timing clause says exactly `all on time`, `support can delay dispatch`, or
+  `already late`. The briefing appears once on the compact board; only then is
+  that exact prefix removed from each compact road, so all route-specific time,
+  supply, fatigue, alarm, and weather facts remain. Row staging is compact-MCP-
+  only; full route cards, terminal, and browser share the same status line. The
+  initial board is 578 UTF-8 bytes and its legend is 741 bytes. The pure prompt is 15,720 bytes
   and the pure catalogue is 16,773. With the unchanged 2,042-byte fresh context,
   the aggregate is 34,535 bytes, below sealed V6's 34,868 and V5's 35,207.
-  First-Station prompt + catalogue + 4,928-byte context + newly delivered legend
-  is 38,162 bytes versus sealed V6's 38,495, V5's 38,619, and the frozen v47/V4
-  baseline 39,261. The exact current V1 reveal envelope is 1,088 bytes under its
-  1,100-byte regression budget. Substituting only the three current row-purpose
-  literals into the ten authenticated `d8bf7d7a` reveal bodies serializes them
-  at 1,097–1,099 bytes; the tested revision itself returned 1,032–1,034 before
-  this correction. This is not a global runtime limit, and full detail-expansion
-  responses are intentionally outside that narrow budget. The receipt may change the save
+  First-Station prompt + catalogue + 4,921-byte context + newly delivered legend
+  is 38,155 bytes versus sealed V6's 38,495, V5's 38,619, and the frozen v47/V4
+  baseline 39,261. The exact current common V1 reveal fixture is 1,081 bytes;
+  a natural Ledger Advocate / Aid-Only / Jamie threshold fixture is exactly
+  1,098, both under the unchanged 1,100-byte regression budget. Substituting
+  only the current shared briefing into the ten authenticated `e5310845` reveal
+  bodies likewise serializes them at 1,083–1,098 bytes; the tested revision
+  itself returned 1,090–1,099 before this correction. Those pilot substitutions
+  are counterfactual exact-byte calculations, not live player responses. This
+  is not a global runtime limit, and full detail-expansion
+  responses are intentionally outside that narrow budget. The complete
+  Road-Warden ready-dispatch response and canonical full-mode June response each
+  carry the shared open status twice; replacing its old 153-byte form with the
+  current 146-byte form reduces those fixtures by exactly 14
+  bytes, to 9,181 and 8,916 respectively. Their fields and response shapes are
+  unchanged. The receipt may change the save
   hash but accepts no gameplay or journey decision. Actions, terms, mechanics,
   costs, gameplay state/effects except that receipt, RNG, outcomes, and
   accepted-decision counts are unchanged, with

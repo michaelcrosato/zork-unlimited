@@ -549,7 +549,10 @@ describe("Albany opening departure recap", () => {
     const openTerminal = render(first.view());
     expect(openTerminal).not.toContain("Second rider: Open (optional)");
     expect(openTerminal).toContain(
-      `Dispatch ${String(openWindow.committedMinutes)}m committed; optional Station support remains`,
+      `Set: background, promise, report. Dispatch ${String(openWindow.committedMinutes)}m;`,
+    );
+    expect(openTerminal).toContain(
+      "Compare; named choice commits. Start Wolf-Winter to decline the rest.",
     );
     expect(openTerminal).toContain("Already set: `review dispatch`.");
     first.talkToCharacter(ALLY.contact);

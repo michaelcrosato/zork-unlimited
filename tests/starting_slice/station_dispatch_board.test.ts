@@ -143,7 +143,7 @@ describe("Station dispatch board", () => {
     );
     const sharedDispatchStatus = sharedWolfHillRouteDispatchStatus(fullRouteSummaries);
     expect(sharedDispatchStatus).toBe(
-      "Dispatch 10m committed; optional Station support remains (final 10–60m). Every remaining support combination stays on time; starting now declines them.",
+      "Set: background, promise, report. Dispatch 10m; final 10–60m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
     );
 
     const compact = session.compactView();
@@ -158,7 +158,7 @@ describe("Station dispatch board", () => {
     );
     // V6 presents the legal roads and selected core first, with one relevance-first
     // overview standing in for all three unopened optional-support rows.
-    expect(Buffer.byteLength(JSON.stringify(compact.station_dispatch_board), "utf8")).toBe(585);
+    expect(Buffer.byteLength(JSON.stringify(compact.station_dispatch_board), "utf8")).toBe(578);
     expect(Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8")).toBe(741);
     expect(OVERWORLD_COMPACT_LEGEND.station_dispatch_board).toContain(
       "Pre-review hides open_optional",
@@ -249,7 +249,7 @@ describe("Station dispatch board", () => {
       pureCatalogBytes +
       stationContextBytes +
       Buffer.byteLength(OVERWORLD_COMPACT_LEGEND.station_dispatch_board, "utf8");
-    expect(firstStationAggregate).toBe(38_162);
+    expect(firstStationAggregate).toBe(38_155);
     expect(firstStationAggregate).toBeLessThanOrEqual(38_495);
 
     const fallback = compactOverworldView({ ...view, stationDispatchBoard: null });
@@ -465,7 +465,7 @@ describe("Station dispatch board", () => {
     expect(session.view().stationDispatchBoard?.guidance).toBe(preparedGuidance);
     expect(session.compactView().station_dispatch_board?.[2]).toMatch(
       new RegExp(
-        `^Dispatch ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m committed;`,
+        `^Set: background, promise, report\\. Dispatch ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m;`,
         "u",
       ),
     );
@@ -543,7 +543,7 @@ describe("Station dispatch board", () => {
       expect(session.view().stationDispatchBoard?.guidance).toBe(guidance);
       expect(session.compactView().station_dispatch_board?.[2]).toMatch(
         new RegExp(
-          `^Dispatch ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m committed;`,
+          `^Set: background, promise, report\\. Dispatch ${String(session.view().stationDispatchBoard?.dispatch?.minutes)}m;`,
           "u",
         ),
       );

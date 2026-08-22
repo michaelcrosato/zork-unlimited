@@ -167,3 +167,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure audit: 53/57 calls succeeded; four mistyped-parent/snapshot, missing-parent, and premature-End rejections recovered unchanged. Clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck; Advocate's Case was never entered, so this is exact-build canary evidence only.
 - Feedback/next: the prior three reports compiled to revision-live one-report S1 cue `f75b8f23` while excluding this pure. Its checkpoint-friction claim followed a voluntary Continue at decision 38; current FORTIFY exposure does not corroborate the older LURE commit-cue report.
 - Guard: 11 focused tests, 564 traces, both 6,000-step crawls, full health (448 files/3,896 tests), UI typecheck, all 12 packs, cycle-start integrity, and exact pure/compile provenance are green.
+## AFK Cycle 2026-08-21T22-27-12-381Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-21T22-27-12-381Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-a57b918b (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

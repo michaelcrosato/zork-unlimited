@@ -844,7 +844,7 @@ describe("MCP tools — validate / load (§9.4)", () => {
     ).not.toBe("relief_allocation");
     const compactContext = a.get_overworld_session_context({ session_id: started.session_id });
     const sharedDispatchStatus = compactContext.context.station_dispatch_board?.[2];
-    expect(sharedDispatchStatus).toMatch(/^Dispatch 35m committed;/);
+    expect(sharedDispatchStatus).toMatch(/^Set: background, promise, report\. Dispatch 35m;/);
     expect(compactContext.context.quests?.[0]).toEqual(
       compactOverworldQuestRef(discoveredQuest, true, false, false, sharedDispatchStatus),
     );

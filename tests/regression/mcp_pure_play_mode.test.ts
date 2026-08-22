@@ -123,6 +123,25 @@ function textResult(result: Awaited<ReturnType<Client["callTool"]>>): string {
   return first.text ?? "";
 }
 
+function stringsContaining(value: unknown, needle: string): string[] {
+  const matches: string[] = [];
+  const visit = (candidate: unknown): void => {
+    if (typeof candidate === "string") {
+      if (candidate.includes(needle)) matches.push(candidate);
+      return;
+    }
+    if (Array.isArray(candidate)) {
+      for (const entry of candidate) visit(entry);
+      return;
+    }
+    if (candidate && typeof candidate === "object") {
+      for (const entry of Object.values(candidate)) visit(entry);
+    }
+  };
+  visit(value);
+  return matches;
+}
+
 function mergeLegendAndExpectContextCoverage(
   accumulated: Record<string, string>,
   payload: Record<string, unknown>,
@@ -266,7 +285,10 @@ async function movePlayerToOpeningPreparation(
   });
 }
 
-async function startPureAtOpeningStation(client: Client): Promise<{
+async function startPureAtOpeningStation(
+  client: Client,
+  sourceId = "albany:source_rowan_civic_docket",
+): Promise<{
   sessionId: string;
   stationed: Record<string, unknown>;
 }> {
@@ -281,11 +303,7 @@ async function startPureAtOpeningStation(client: Client): Promise<{
     ...parent,
     character_id: "albany_city__civic_core__contact",
   });
-  for (const choice of [
-    "albany:ledger_advocate",
-    "albany:oath_limited_aid_only",
-    "albany:source_rowan_civic_docket",
-  ]) {
+  for (const choice of ["albany:ledger_advocate", "albany:oath_limited_aid_only", sourceId]) {
     await callPlayerTool(client, "choose_overworld_session_story", { ...parent, choice });
   }
   return {
@@ -782,7 +800,16 @@ describe("MCP pure play mode", () => {
         const selectedDispatchText = textResult(selectedDispatchCall);
         const selectedDispatch = textPayload(selectedDispatchCall);
         expect(selectedDispatchCall.isError).not.toBe(true);
-        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(9_195);
+        const readyDispatchStatus =
+          "Set: background, promise, report. Dispatch 10m; final 10–60m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+        const readyDispatchSummaries = stringsContaining(selectedDispatch, readyDispatchStatus);
+        expect(readyDispatchSummaries).toHaveLength(2);
+        expect(
+          readyDispatchSummaries.every((summary) => summary.startsWith(readyDispatchStatus)),
+        ).toBe(true);
+        expect(selectedDispatchText.split(readyDispatchStatus)).toHaveLength(3);
+        expect(selectedDispatchText).not.toContain("optional Station support remains");
+        expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBe(9_181);
         expect(Buffer.byteLength(selectedDispatchText, "utf8")).toBeLessThanOrEqual(9_250);
         const consequence = (selectedDispatch.result as { consequence?: string }).consequence;
         expect(consequence).toContain("Fieldcraft 4 starts Wolf-Winter at defense 4, not 3.");
@@ -2136,6 +2163,47 @@ describe("MCP pure play mode", () => {
     }
   }, 120_000);
 
+  it("keeps the legal threshold Station reveal below its pure envelope limit", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mcp-pure-station-threshold-"));
+    const evidence = join(dir, "run.jsonl");
+    try {
+      await withPureServer(evidence, async (client) => {
+        const { sessionId, stationed } = await startPureAtOpeningStation(
+          client,
+          "albany:source_jamie_market_testimony",
+        );
+        const expectedGuidance =
+          "Set: background, promise, report. Dispatch 20m; final 20–65m; support can delay dispatch. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+        const stationedBoard = (
+          stationed.context as { station_dispatch_board?: OpeningCompactStationDispatchBoard }
+        ).station_dispatch_board;
+        expect(stationedBoard?.[2]).toBe(expectedGuidance);
+        const revealed = await callPlayerTool(client, "get_overworld_session_context", {
+          session_id: sessionId,
+          if_snapshot_hash: stationed.snapshot_hash,
+          reveal_station_dispatch_support: STATION_DISPATCH_SUPPORT_REVEAL_ID,
+        });
+        expect(revealed).not.toHaveProperty("journey");
+        expect(revealed).not.toHaveProperty("context");
+        const delta = revealed.station_dispatch_reveal as {
+          version: number;
+          base_snapshot_hash: string;
+          station_dispatch_board: OpeningCompactStationDispatchBoard;
+        };
+        expect(delta).toMatchObject({
+          version: PURE_STATION_DISPATCH_REVEAL_VERSION,
+          base_snapshot_hash: stationed.snapshot_hash,
+        });
+        expect(delta.station_dispatch_board[2]).toBe(expectedGuidance);
+        const revealBytes = Buffer.byteLength(JSON.stringify(revealed), "utf8");
+        expect(revealBytes).toBe(1_098);
+        expect(revealBytes).toBeLessThanOrEqual(1_100);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   it("keeps full-mode June talk on the canonical verbose response", async () => {
     await withFullServer(async (client) => {
       const { sessionId, stationed } = await startPureAtOpeningStation(client);
@@ -2181,7 +2249,17 @@ describe("MCP pure play mode", () => {
       });
       expect(fullJune).not.toHaveProperty("overworld_session_id");
       expect(fullJune).not.toHaveProperty("station_dispatch_modal");
-      expect(Buffer.byteLength(JSON.stringify(fullJune), "utf8")).toBe(8_930);
+      const fullJuneText = JSON.stringify(fullJune);
+      const preparedDispatchStatus =
+        "Set: background, promise, report. Dispatch 30m; final 30–50m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.";
+      const fullJuneSummaries = stringsContaining(fullJune, preparedDispatchStatus);
+      expect(fullJuneSummaries).toHaveLength(2);
+      expect(fullJuneSummaries.every((summary) => summary.startsWith(preparedDispatchStatus))).toBe(
+        true,
+      );
+      expect(fullJuneText.split(preparedDispatchStatus)).toHaveLength(3);
+      expect(fullJuneText).not.toContain("optional Station support remains");
+      expect(Buffer.byteLength(fullJuneText, "utf8")).toBe(8_916);
     });
   }, 120_000);
 
@@ -2861,7 +2939,7 @@ describe("MCP pure play mode", () => {
         expect(stationedBoard?.slice(0, 2)).toEqual([6, "wolf_winter"]);
         const stationedGuidance = stationedBoard?.[2];
         expect(stationedGuidance).toBe(
-          "Dispatch 5m committed; optional Station support remains (final 5–55m). Every remaining support combination stays on time; starting now declines them.",
+          "Set: background, promise, report. Dispatch 5m; final 5–55m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
         );
         expect(stationedBoard?.[3]).toEqual(["committed", 5, null, 3]);
         expect(stationedBoard?.[4].map(([slot]) => slot)).toEqual(["role", "duty", "evidence"]);
@@ -3000,7 +3078,7 @@ describe("MCP pure play mode", () => {
           ]),
         );
         const revealReceiptBytes = Buffer.byteLength(JSON.stringify(revealed), "utf8");
-        expect(revealReceiptBytes).toBe(1_088);
+        expect(revealReceiptBytes).toBe(1_081);
         expect(revealReceiptBytes).toBeLessThanOrEqual(1_100);
         const repeatedReveal = textPayload(
           await client.callTool({
@@ -3242,7 +3320,7 @@ describe("MCP pure play mode", () => {
         const preparedBoard = (prepared.context as CompactAreaContext).station_dispatch_board;
         expect(preparedBoard?.[0]).toBe(6);
         expect(preparedBoard?.[2]).toMatch(
-          /^Dispatch \d+m committed; optional Station support remains \(final \d+–\d+m\)\./,
+          /^Set: background, promise, report\. Dispatch \d+m; final \d+–\d+m; (?:all on time|support can delay dispatch|already late)\. Compare; named choice commits\. Start Wolf-Winter to decline the rest\.$/,
         );
         expect(preparedBoard?.[3]?.[3]).toBe(2);
         expect(

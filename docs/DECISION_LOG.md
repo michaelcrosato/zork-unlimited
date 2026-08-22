@@ -1483,3 +1483,48 @@ strategies, Albany return, Continue/End, and Gallowmere do not change. The
 failed AI pilot diagnoses this target; deterministic checks do not establish a
 rating lift, continuation lift, certification, causal transport finding, or
 human validation.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = e5310845; next move = shared Station choice boundary)
+
+**The row labels worked mechanically, but the same-model pilot still failed the
+quality gate.** The fresh, homogeneous, single-attempt Terra pilot
+`starting-slice-terra-pilot-e5310845-20260821T215622Z` bound exact clean
+`e5310845c50c0377205cb3bb39634ba7c69f0d59`, official npm-shim Codex 0.146.0,
+and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All seventy manifest-bound report, run, evidence, envelope, provider-event,
+rollout, and capture files plus all ten fleet attestations rehashed exactly. The
+cohort completed Wolf-Winter 10/10 with no stuck run, p50 23 accepted decisions,
+8/10 initial-goal continuation, and three strategies (LURE 5, DRIVE 2, FORTIFY
+3). It failed only clarity at 39/50 and enjoyment at 40/50, carried four
+in-scope issue reports, and therefore prohibits the 100-player cohort.
+
+All ten reports named Station, dispatch, support, or pre-departure density in a
+confusion or worst moment; nine put it directly in `confusions`. All ten
+authenticated streams received board V6 and the three corrected optional-row
+labels. Eight players then staged support (June 6, kit 1, wagon 1), two declined
+it, and no gameplay call was rejected. That is counter-evidence against
+reopening the reveal, actions, or mechanics, while the repeated comparison /
+commit / launch boundary identifies the one shared line every route and compact
+Station board already carries.
+
+**Chosen move — translate the shared state machine in place.** Rewrite only the
+`support_choices_open` dispatch briefing. It now names background, promise, and
+report as set; presents support as comparison before a named choice commits; and
+says that starting Wolf-Winter declines the rest. The dynamic clause remains
+truthful for all three existing pressure states: `all on time`, `support can
+delay dispatch`, or `already late`. No other status, row, overview, action,
+receipt, modal, route fact, version, limit, mechanic, strategy, outcome, or
+return changes. The all-on-time, threshold, and delayed strings are 146, 161,
+and 147 UTF-8 bytes; the largest complete route summary is 343 characters under
+the unchanged 360-character limit. The initial board is 578 bytes, the fresh
+aggregate remains 34,535, the first-Station aggregate is 38,155, and the focused
+common reveal is 1,081. A natural Ledger Advocate / Aid-Only / Jamie threshold
+reveal is exactly 1,098, while exact substitution into the ten authenticated
+pilot reveal bodies yields 1,083–1,098, below the unchanged 1,100-byte cap. The
+complete Road-Warden ready-dispatch and canonical full-mode June fixtures each
+contain the shared status twice, so the seven-byte substitution reduces them by
+exactly fourteen bytes to 9,181 and 8,916 without changing their fields. The
+pilot substitutions are deterministic counterfactuals, not responses seen by
+the failed pilot; only a new exact-build pilot can test clarity, enjoyment, or
+certification.

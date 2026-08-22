@@ -24,6 +24,7 @@ import {
 import { loadRpgSourceFile } from "../../src/rpg/source.js";
 import { deriveQuestDispatchPresentationWindow } from "../../src/world/quest_dispatch_window.js";
 import { loadOverworldManifest } from "../../src/world/source.js";
+import { STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT } from "../../src/world/station_dispatch_board.js";
 import type { OverworldQuestView } from "../../src/world/session_local_discovery.js";
 import { OverworldSession } from "../../src/world/session.js";
 import {
@@ -205,13 +206,13 @@ function dispatchBriefing(session: OverworldSession): string {
     const { minimum, maximum } = presentation.finalMinutes;
     const finalRange =
       minimum === maximum ? `${String(minimum)}m` : `${String(minimum)}–${String(maximum)}m`;
-    const pressure =
-      minimum > 60
-        ? "Delay is already certain; starting now seals the current total."
-        : maximum <= 60
-          ? "Every remaining support combination stays on time; starting now declines them."
-          : "Starting now seals the current total; optional support can cross the delay threshold.";
-    return `Dispatch ${String(presentation.committedMinutes)}m committed; optional Station support remains (final ${finalRange}). ${pressure}`;
+    const timing =
+      minimum > 60 ? "already late" : maximum <= 60 ? "all on time" : "support can delay dispatch";
+    return (
+      `Set: background, promise, report. Dispatch ${String(presentation.committedMinutes)}m; ` +
+      `final ${finalRange}; ${timing}. Compare; named choice commits. ` +
+      "Start Wolf-Winter to decline the rest."
+    );
   }
   if (ridge.status === "delayed" && ridge.ledgerMinutes !== undefined) {
     return (
@@ -720,8 +721,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       },
     );
     const beforeBriefing =
-      "Dispatch 65m committed; optional Station support remains (final 65–80m). " +
-      "Delay is already certain; starting now seals the current total.";
+      "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. " +
+      "Compare; named choice commits. Start Wolf-Winter to decline the rest.";
     for (const summary of Object.values(fullSummaries(beforeJune))) {
       expect(summary?.startsWith(beforeBriefing)).toBe(true);
     }
@@ -732,8 +733,8 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
     const pendingQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
     if (!pendingQuest?.launch) throw new Error("Expected the pending-June Wolf route card.");
     const pendingBriefing =
-      "Dispatch 65m committed; optional Station support remains (final 65–80m). " +
-      "Delay is already certain; starting now seals the current total.";
+      "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. " +
+      "Compare; named choice commits. Start Wolf-Winter to decline the rest.";
     const pendingFull = fullSummaries(pendingQuest);
     const pendingCompact = compactSummaries(session);
     for (const optionId of [RIDGE_ID, STOCKWAY_ID]) {
@@ -786,9 +787,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
 
     const pendingMarkup = renderQuestNotice(pendingQuest);
     const pendingCli = renderQuestLaunch(pendingQuest);
-    expect(pendingMarkup.match(/Dispatch 65m committed; optional Station support/g)).toHaveLength(
-      2,
-    );
+    expect(pendingMarkup.match(/Start Wolf-Winter to decline the rest\./g)).toHaveLength(2);
     expect(pendingCli.split(pendingBriefing)).toHaveLength(3);
     const api = createToolApi({ root: ROOT });
     const restored = api.restore_overworld_session({
@@ -832,8 +831,9 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_works_fortification",
       committedMinutes: 40,
       maximumMinutes: 55,
-      pressureCopy:
-        "Every remaining support combination stays on time; starting now declines them.",
+      expectedBriefing:
+        "Set: background, promise, report. Dispatch 40m; final 40–55m; all on time. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
+      expectedBytes: 146,
     },
     {
       label: "threshold crossing",
@@ -842,8 +842,9 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_drover_route",
       committedMinutes: 60,
       maximumMinutes: 75,
-      pressureCopy:
-        "Starting now seals the current total; optional support can cross the delay threshold.",
+      expectedBriefing:
+        "Set: background, promise, report. Dispatch 60m; final 60–75m; support can delay dispatch. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
+      expectedBytes: 161,
     },
     {
       label: "guaranteed delayed",
@@ -852,11 +853,21 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       preparationId: "albany:prep_drover_route",
       committedMinutes: 65,
       maximumMinutes: 80,
-      pressureCopy: "Delay is already certain; starting now seals the current total.",
+      expectedBriefing:
+        "Set: background, promise, report. Dispatch 65m; final 65–80m; already late. Compare; named choice commits. Start Wolf-Winter to decline the rest.",
+      expectedBytes: 147,
     },
   ])(
     "classifies an open field-team range that is $label without inventing a final forecast",
-    ({ oathId, sourceId, preparationId, committedMinutes, maximumMinutes, pressureCopy }) => {
+    ({
+      oathId,
+      sourceId,
+      preparationId,
+      committedMinutes,
+      maximumMinutes,
+      expectedBriefing,
+      expectedBytes,
+    }) => {
       const { session } = routeCard(oathId, "albany:relief_resident_shelter", {
         registrationId: "albany:road_warden",
         sourceId,
@@ -865,7 +876,9 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
       const boardQuest = session.view().quests.find((candidate) => candidate.id === WOLF_ID);
       if (!boardQuest?.launch) throw new Error("Expected the open-support route card.");
       const briefing = dispatchBriefing(session);
-      expect(briefing).toContain(pressureCopy);
+      expect(briefing).toBe(expectedBriefing);
+      expect(Buffer.byteLength(briefing, "utf8")).toBe(expectedBytes);
+      expect(briefing.length).toBeLessThanOrEqual(STATION_DISPATCH_BOARD_GUIDANCE_CHAR_LIMIT);
       expectCompactSharedDispatchOnce(session, fullSummaries(boardQuest), briefing);
 
       session.talkToCharacter(WORLD.opening_ally!.contact);
@@ -896,7 +909,7 @@ describe("Wolf-Winter conditional route tradeoff projection", () => {
           optionId,
           dispatchWindow: pendingWindow,
         })?.tradeoffSummary;
-        expect(summary).toContain(pressureCopy);
+        expect(summary).toContain(expectedBriefing);
         expect(summary).not.toMatch(/unverified|fouled first cast/i);
         expect(summary?.length).toBeLessThanOrEqual(WOLF_HILL_ROUTE_TRADEOFF_SUMMARY_CHAR_LIMIT);
       }

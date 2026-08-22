@@ -73,15 +73,16 @@ function dispatchBriefing(window: QuestDispatchPresentationWindow | undefined): 
     const { minimum, maximum } = window.finalMinutes;
     const finalRange =
       minimum === maximum ? `${String(minimum)}m` : `${String(minimum)}–${String(maximum)}m`;
-    const pressure =
+    const timing =
       minimum > WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES
-        ? "Delay is already certain; starting now seals the current total."
+        ? "already late"
         : maximum <= WOLF_WINTER_DISPATCH_ON_TIME_MAX_MINUTES
-          ? "Every remaining support combination stays on time; starting now declines them."
-          : "Starting now seals the current total; optional support can cross the delay threshold.";
+          ? "all on time"
+          : "support can delay dispatch";
     return (
-      `Dispatch ${String(window.committedMinutes)}m committed; optional Station support remains ` +
-      `(final ${finalRange}). ${pressure}`
+      `Set: background, promise, report. Dispatch ${String(window.committedMinutes)}m; ` +
+      `final ${finalRange}; ${timing}. Compare; named choice commits. ` +
+      "Start Wolf-Winter to decline the rest."
     );
   }
   if (window.status === "delayed" && window.ledgerMinutes !== undefined) {
