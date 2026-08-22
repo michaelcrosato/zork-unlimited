@@ -24,9 +24,9 @@ const FULL = { compact_context: false, compact_result: false } as const;
 const LIVING_BOUNDARY =
   /(?:name hunt[^]*cross uncommitted|cross (?:north )?uncommitted[^]*hunt|hunt commits[^]*north crossing)[^]*(?:others (?:shut|close)|other plans close|closing lure\/drive\/fortify|retires[^]*feed lure[^]*signal drive[^]*seal-and-outlast|closes[^]*(?:other plans|other three))/i;
 const ROOT_COMMITMENT_MODEL =
-  /Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*PREPARE SUPPORT grants tactics, not a plan[^]*HUNT commits on a north crossing or RELEASE JUNE if offered[^]*other plans commit only at labeled actions/i;
+  /Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Other plans begin only when you choose them[^]*Choosing one closes the rest[^]*Preparation helps without choosing/i;
 const HUNT_BOUNDARY =
-  /COMPARE[^]*HUNT[^]*read-only[^]*hold ground[^]*wolves may die[^]*risk cattle\/line[^]*FINAL COMMITMENT[^]*cross north or RELEASE JUNE if offered[^]*closes other plans/i;
+  /HUNT[^]*hold ground[^]*herd[^]*stores[^]*wolves may die[^]*failure risks cattle or outer defense[^]*ask only[^]*north crossing or RELEASE JUNE if offered/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string, forcedRoll?: number): GameState {
@@ -159,13 +159,13 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootCommands = rootPlanActions.map((action) => action.command).join("\n");
     expect(rootCommands).toMatch(HUNT_BOUNDARY);
     expect(rootCommands).toMatch(
-      /COMPARE[^]*LURE[^]*read-only[^]*keep herd[^]*move pack past breach[^]*FINAL COMMITMENT[^]*last feed spent[^]*paling broken[^]*ordinary first-cast foul risks two cattle/i,
+      /LURE[^]*move pack beyond breach[^]*keep the herd[^]*spend Cade's last feed[^]*leave fence broken[^]*first-cast roll failure risks two cattle[^]*ask only/i,
     );
     expect(rootCommands).toMatch(
-      /COMPARE[^]*DRIVE[^]*read-only[^]*evacuate people\/herd[^]*clear pack[^]*FINAL COMMITMENT[^]*abandons outer defense[^]*crisis costs wound, two cattle, or rig/i,
+      /DRIVE[^]*move people and herd clear[^]*force pack away[^]*lose outer defense[^]*crisis costs a wound, two cattle, or the rig[^]*ask only/i,
     );
     expect(rootCommands).toMatch(
-      /COMPARE[^]*FORTIFY[^]*read-only[^]*household\/herd\/pack apart[^]*FINAL COMMITMENT[^]*no retreat[^]*expose property\/gain aid[^]*spend seals\/no aid/i,
+      /FORTIFY[^]*keep home, herd, and pack apart to dawn[^]*no retreat[^]*expose property for Cade's help[^]*cover it with Albany's seals[^]*Cade won't help[^]*ask only/i,
     );
     expect(`${rootDialogue.dialogue?.npc_text}\n${rootCommands}`).not.toMatch(
       /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b|\bDC\s*\d/i,

@@ -1,0 +1,258 @@
+id: bug_0589
+title: "Present Cade's four plan questions in plain language before commitment"
+pack: content/rpg/quests/wolf_winter.yaml
+reported_by: >
+  Valid failed ten-player fresh-overworld Terra pilot
+  starting-slice-terra-pilot-2c07598a-20260822T023646Z plus the candidate-bound
+  feedback compile 20260822T030213Z; all listed report, run-evidence,
+  provider-event, rollout, and capture hashes matched the fleet manifest
+severity: S1
+
+evidence:
+  pilot:
+    label: starting-slice-terra-pilot-2c07598a-20260822T023646Z
+    stamp: 20260822T024030Z
+    tested_commit: 2c07598ab4b1a12545e3b078e78f326d9ced1fea
+    tracked_worktree_clean: true
+    world_id: new_york_overworld
+    world_hash: aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b
+    model: gpt-5.6-terra
+    provider: codex
+    codex_cli_version: 0.146.0
+    codex_client_authority_sha256: a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8
+    play_mode: pure
+    start_surface: fresh_overworld
+    no_retry_or_recovery: true
+    receipt_binding:
+      seed: 822023646007
+      report_recovered: false
+      initial_report_sha256: a6d4bd92ef6baa95dad3f6e07ff1762dd01794ca01c8f9f0dc52e0e3df88e599
+      final_bound_report_sha256: 811684e0daf1f8f0544d2454b4032636d7984013ebc0f3c17c7169379a27351a
+      binding_sha256: e9e83b9405e050c0440b6f219b1e53b17c3cae9b278a554bfe8ed269fffd15f6
+      receipt_sha256: 94adeb831625897fcc8078059974c23fd80a3983a8ba93b88503e70873adbce8
+      boundary: >
+        Runner-owned deterministic journey-receipt binding inserted the exact
+        receipt into seed 007 after provider completion. It was not report
+        recovery, a model retry, or a resumed turn; subjective prose and the
+        4/5 clarity plus 4/5 enjoyment ratings remained unchanged.
+    valid: true
+    passed: false
+    authority_certified: false
+    artifact_hashes:
+      manifest_sha256: ecd4886b51c6b4d194253286aff5fcef5b8655436f8815773506ac50eea30298
+      summary_sha256: f1a94e1cb6e0158ebd3d1b068af4465bbcb7390792674cb4de70d391942d9fc0
+      starting_slice_pilot_sha256: 79e4bc9a4d1a183f1e98525ae236cffb951193cfd023a6737ea5117ba94a12ab
+      authority_proof_sha256: 5098ddb038251676586387614a3cf29f61cc0b9ebe5e088278f2e463f38f0078
+    artifact_bytes:
+      manifest: 36800
+      summary: 2005
+      starting_slice_pilot: 2215
+      authority_proof: 2437
+    outcome_metrics:
+      completed: 10
+      stuck: 0
+      completion_decision_p50: 24
+      clarity_total: 40
+      enjoyment_total: 41
+      continued_after_initial_goal: 5
+      strategies: "hunt 1, lure 6, drive 1, fortify 2"
+      in_scope_issue_reports: 5
+      blocking_issue_clusters: 0
+      failed_gates: >
+        clarity average >= 4.2; enjoyment average >= 4.2; initial-goal
+        continuation >= 70%
+    reports:
+      - seed: 822023646000
+        report_sha256: 0056db11c6e8584d1b77f8f9c124a3cd0626b74d2fea516e1f78010269d787ae
+        run_evidence_sha256: c8ba3cc7991c46903a25dab76a8b7168a4d8f9665a6ec87a2d8de1ea3ad6eb8f
+        provider_events_sha256: 4d1d49fd0593222d5f306019d74d0e844f63c58339485f87b9773bb36799796e
+        provider_rollout_sha256: ef81813faebc4de5c3abf971790347276d6b9b59f5d4f429fc39563ee95a0e68
+        provider_capture_sha256: 865ddb996153b7cb522eac6ac26af7cbb42b9fad28c6754984b728071574fb62
+      - seed: 822023646001
+        report_sha256: 0b73546ef8c744f9902509bcbe016bd2f0335a2482127be005f762861375d484
+        run_evidence_sha256: 13b74b3b40b6b69a83a4d7c5dbb9ad7e6649248b0fc882023eb75bc979caaf5f
+        provider_events_sha256: a1483419d13e562a17795b691ea6b7446b4d3574d2418d93783712c44293d761
+        provider_rollout_sha256: 3b1516b2921b5a142e5b0af43c8d3ef26b8f0cced9eeb3a416011d75dc86a3cb
+        provider_capture_sha256: 3e5e1be39aca46443f8e7c6b8ac7730d47cd164e606c9545d7dd35385df4a2a1
+      - seed: 822023646002
+        report_sha256: 486b6e3f73561156436eb7d77da7562097cabdbd2ebc63dca0f675f17ee9a84a
+        run_evidence_sha256: d71b124fd63c87d803310b7cc568e350ba5543d9a36d0f2dc18013fe88392ef6
+        provider_events_sha256: 64372cc4ba45b3872a7f5371d266e17c38fa153d96af29ca62abc28595b25db4
+        provider_rollout_sha256: b5473622f16d34080745d4f48bd012ee11238db68f51583263bdac0fa6820b27
+        provider_capture_sha256: b8fb9786c1106d204fa04a3d54ebdafa02f29987b12ab422078675913228fd96
+      - seed: 822023646003
+        report_sha256: 04638f6fa93bef3616eccebd7df552ee12a4d1568b0a4cec891fe240bd9428c6
+        run_evidence_sha256: 4ccf53c29dba4d007dbd3fd331815473f177249b20cef439743a5b0026aafa16
+        provider_events_sha256: 688361b0a0537fed3e554768774d903b92ba18f147d051282d9b8f3b82f1c1d0
+        provider_rollout_sha256: 8d1f654ef115f97e9566a269dfdb29b15ca0fb86c98f70afc064a0d5042fb116
+        provider_capture_sha256: f5e1828919919438f85412eb15db5092a3f291e952b18fde0943150c2ae3ba6c
+      - seed: 822023646004
+        report_sha256: 3dec82bd5729efdb3a51a4a5242aa2e6d581ff77bbb43042d327f39a7d54306d
+        run_evidence_sha256: b2337b1f93a57496a4a7168c80e3342ac849f280a1425ec1c78609ad0e0441a0
+        provider_events_sha256: 54e6fc34962ea627cd18a5da31a54c9311bdbfaee55d79f65e080cb8e33aea72
+        provider_rollout_sha256: c1f8745172335ebb486a7ab1a6432249687cb4f0e199a72f79c03e7b751fef03
+        provider_capture_sha256: 415ec8c5cb75adbed65c09cfe840014a7027f6573f0fe9745964c0509f77815b
+      - seed: 822023646005
+        report_sha256: f311f60d7495ade331036b5d16736fd463bfe76bf0161b72e1e1eb6d007b0c3a
+        run_evidence_sha256: 89e7e3bfe8a01bd13681b46eb2901e6be3a98128a3d5446313ff598a91628d6b
+        provider_events_sha256: fc46156b2981597458d0c5a3714b7046ecd5d11a4df6d1e6e8c8b6b5f1d61c4e
+        provider_rollout_sha256: b47716b9e3d82703ed3bb12f6ddd47d7ec2079c9e4f6778e247988c0eedb685d
+        provider_capture_sha256: 38a5f5ffe845d3dd8011efa11069a613c71c8091ea08ddff7d14197f6278da3d
+      - seed: 822023646006
+        report_sha256: b8aa31c8f5c07312026e598292e48d11b4e3198d056c246dd0dd5bdecf7d10e6
+        run_evidence_sha256: dd89f93381f076aaa7732f162c02ca7e46e4cfa53073236ea56d275d6b725df5
+        provider_events_sha256: f079db73c3888e22188bef1610de5500140f5a94032b9492037dcf3f5a0699f8
+        provider_rollout_sha256: bb2496ee34d14f46727c581511d7142e552cf23f1fc384bae01afd875ae4eb45
+        provider_capture_sha256: ac6d1bdf315c0299459c5f315859f664ff28483968b410560fd20419c881abd9
+      - seed: 822023646007
+        report_sha256: 811684e0daf1f8f0544d2454b4032636d7984013ebc0f3c17c7169379a27351a
+        run_evidence_sha256: 16cda321a340ba793f670ecc5918e2d515f838c4be832618c2f57118ce782d4d
+        provider_events_sha256: 1e61d4c52c8475b76a058ad2711eda1e43b768c427db8b89d0d29c136bc19897
+        provider_rollout_sha256: 2f1dc5461e4a31301c6e8253c65b9034b52fab2b5a6cde79dbdcfe445cdb8e6d
+        provider_capture_sha256: 1237dc8350189ad1b62957c17f466e7cb637a68ea706818b1891774a0f48f0a4
+      - seed: 822023646008
+        report_sha256: 65bac5fa5a73226910f65b0d3d4b1ec18a35a7e55cac3fcdad91f4a1742ac09d
+        run_evidence_sha256: a7b3c2198190c412f197f046bdd741384dff61282e2c9b169fa4b9122517d572
+        provider_events_sha256: 981a7d183e7d361a833114ec2608685c928788cfa3ac2572ff748008f8fd60b6
+        provider_rollout_sha256: 5a43143a4c8b29748ef07f49f37fc0cf2fa6e08f590a85540fff1acc8415ce94
+        provider_capture_sha256: 5cc43649b4452ede567a1f5e22b703beb7525e0fbc3d8c5c21d252a1b1d10174
+      - seed: 822023646009
+        report_sha256: 941900f509407d1f153e583bcd87d7c7c61f9cc70487996e652e5aee06cf3500
+        run_evidence_sha256: bc2246c94ccdf618e6f1c44c8f214466b4b0caa3717e9471729205f7b11ca858
+        provider_events_sha256: e3ce47ad812368c569f480ed8db29f5fad001bd57c8e5d1f16326018adf9b0fb
+        provider_rollout_sha256: 94e6ae796a9a2fe1df37bfa65051b95dbf9e5c67c4b03ae3f855bb389b889831
+        provider_capture_sha256: cd4b8769b461d7e4dda65d53917a194fd5c07be2e261b9f29096c88d90a2b1ce
+  compile:
+    run: 20260822T030213Z
+    candidate_commit: 2c07598ab4b1a12545e3b078e78f326d9ced1fea
+    verified_reports: 11
+    actionable_reports: 11
+    hotspot_count: 10
+    hotspot_score_tie: "all ten are singleton S1 findings at score 2"
+    recommended_hotspot_id: 5b9a9a66
+    artifact_hashes:
+      report_manifest_sha256: a0aed96c2b01c885694e836eea40c16a5cd8e79813846a8b7b511ce7795f63c6
+      hotspots_json_sha256: 61c170b63fe917225e35c4de21a038835264b95449905eb4c656b376cefeec1c
+      hotspots_md_sha256: 363de8bacc17a02accb9b762da317f6af40a8abf1dcd194da7741b17fb5e90ee
+      retention_sha256: c8fb7d4775ac53edadeec769f49a81de73497df2fac77661601ae1654dca58d5
+    artifact_bytes:
+      report_manifest: 217023
+      hotspots_json: 7349
+      hotspots_md: 7279
+      retention: 757
+  exposure:
+    cade_first_root: "10/10 authenticated chronologies reached Cade's first root and all 10 opened one plan detail"
+    plan_details: "HUNT 1, LURE 6, DRIVE 1, FORTIFY 2"
+    station_comparison: "8/10 revealed the Station support board and 7/10 inspected kit detail"
+    direct_cade_friction: >
+      Seeds 001 and 008 produced compiled Cade/plan-density hotspots; seeds 006
+      and 009 independently named dense plan terms, and seed 007 distinguished
+      support comparison from the later committing choice.
+    counter_signal: >
+      Station kit inspection was mechanically successful: Mediation characters
+      selected Jamie while +0 road-role characters declined mismatched kits.
+
+symptom: >
+  Cade's first root explained four peer COMPARE cards, PREPARE SUPPORT, and FINAL
+  COMMITMENT, while each first-level action repeated those terms around compressed
+  outcome and cost clauses. All ten pilot players had to cross this seven-action
+  menu, and several independently described its labels and conditional plan terms
+  as dense before choosing a strategy.
+
+root_cause: >
+  The first menu mixed player instructions with author-facing state-machine
+  vocabulary. Its four opt-in detail bodies already contain the exact ground,
+  oath, preparation, June, recovery, and commitment truth, so copying condensed
+  versions of that terminology into every peer label made the required first
+  comparison harder to scan without adding mechanical information.
+
+fix: >
+  Rewrite only Cade's first-root explanation and the four peer plan labels. Say
+  that asking and preparation choose nothing, identify HUNT's north-crossing or
+  offered-June-release boundary, and say choosing one plan closes the rest. Lead
+  each peer label with its stable plan name, ordinary-language goal, material
+  cost, and `Ask only`. Keep HUNT at the root once; mirror byte-identical LURE,
+  DRIVE, and FORTIFY labels at cade_root, cade_wolves, and cade_byre.
+
+source_hash_boundary:
+  predecessor_content_hash: 8981df5bb46a5173e1dcc43b4560f07042e4e9a338e885433a68089fec328038
+  replacement_content_hash: 99afa4a376f7c18a6871a784473d375773661032000cabe7171bfbe1742755fa
+  predecessor_file_sha256: ae6a56f2ac20ee2ee6372054676892f8f63cb89f15307ff526c6e4fe2808c3b6
+  replacement_file_sha256: 0e981cac00b6e03a66c6cb6bb9666deca0d14847f73ea96690b7923c0a35007f
+  predecessor_git_blob: a7a61e144d6d7d3e036acb988ae9cb09a28748cd
+  replacement_git_blob: a29def4722672e5b505d7e7f1d6638867253c37a
+  predecessor_relabeled_twin_hash: bd6d0d98c27012fe1d766f75ed6bc921c84c6b9ede907165deec4a2bb4763eab
+  replacement_relabeled_twin_hash: c12a5fe2c3557cc81709eaf377fda13ec663aaae5078550b0e328a279ec6d56b
+
+deterministic_witnesses:
+  - "the exact trimmed first-root explanation is 231 ASCII bytes"
+  - "unchanged firm/scent/ash/frame suffixes produce complete roots of 343/340/343/336 characters and 345/342/345/338 UTF-8 bytes under the existing 360-character boundary"
+  - "rendered HUNT/LURE/DRIVE/FORTIFY commands are exactly 159/151/143/159 characters under the unchanged 160-character MCP limit"
+  - "HUNT appears with its exact peer label once; LURE, DRIVE, and FORTIFY each appear byte-identically at cade_root, cade_wolves, and cade_byre"
+  - "fixed seed 541 open-ash full observation is 5,162 UTF-8 JSON bytes; compact is 2,584 bytes and its choice array is 963 bytes"
+  - "the exact terminal LURE line, including aliases and presentation dash, is 193 characters / 195 UTF-8 bytes"
+  - "full observation, compact MCP, terminal, and browser retain the same four action ids and authored order"
+  - "asking every plan detail remains noncommitting; HUNT still commits only on north crossing or offered June release, while LURE/DRIVE/FORTIFY still commit only through their existing final actions"
+  - "the exact compiled hash advances from 8981df5b to 99afa4a3 and the reviewed relabeled certificate advances from bd6d0d98 to c12a5fe2"
+
+mechanics_unchanged:
+  - "npc id, dialogue-node ids, topic ids, every alias, authored order, condition, goto, end marker, and effect"
+  - "all opt-in HUNT/LURE/DRIVE/FORTIFY bodies and variants, including ground, oath, preparation, June, support, recovery, and failure truth"
+  - "all final commitment, back, leave, and support labels and their commitment boundaries"
+  - "strategy flags, resources, checks, rolls, RNG, damage, cattle, alarm, pressure, gear, journal, score, decisions, and outcomes"
+  - "Albany registration, Station board/reveal/modal/support, hill routes, quest launch, foldback, Continue/End, Gallowmere, and checkpoints"
+  - "save schema, MCP schema and limits, terminal command parser, browser action ids, validators, and certification gates"
+
+counterevidence:
+  - >
+    The compiler's 5b9a9a66 Station-overview recommendation is a real S1 finding
+    and remains a possible follow-up. It is first only within a ten-way score tie;
+    the wider 10/10 Cade exposure and direct reports justify this bounded off-list
+    correction without deleting or declaring that Station finding false.
+  - >
+    Every player completed Wolf-Winter, none was stuck, all four strategies
+    appeared, all understood the goal, and all would replay. This supports a
+    presentation correction, not a mechanics, strategy-balance, or route rewrite.
+
+nonclaims:
+  - "The failed pilot tested exact predecessor 2c07598a / 8981df5b, not this 99afa4a3 replacement; it diagnoses the target and does not validate the new copy."
+  - "Ten AI-player reports are diagnostic evidence, not human research, certification authority, or causal proof that Cade's menu set any rating or continuation choice."
+  - "No clarity, enjoyment, continuation, replay, completion, strategy-balance, certification, or human-quality lift is claimed before a fresh exact-build pilot."
+  - "This off-list correction does not claim the compiler was wrong, that 5b9a9a66 is disposable, or that Station relevance and density are solved."
+  - "The copy neither recommends a plan nor claims HUNT, LURE, DRIVE, or FORTIFY is best for any character, support package, oath, route, or seeded ground."
+  - "The opt-in plan bodies remain intentionally detailed. This increment does not claim to remove every specialized term such as foul, recovery, pressure, charges, or public seals."
+  - "`Ask only` means the plan-question action does not choose a strategy; it does not assert that every support conversation, quest action, or review elsewhere costs zero world time."
+  - "Albany's-seals wording excludes only Cade's help; it does not exclude Works, June, or the existing emergency-strip recovery where their predicates apply."
+  - "The exact byte measurements are deterministic fixture facts and limit checks, not global response budgets or evidence that byte count alone caused the reported friction."
+  - "The browser uses its existing generic `Ask` verb before these authored labels; no browser production code, screenshot review, responsive audit, or visual-quality claim is part of this correction."
+  - "The content-hash change intentionally invalidates exact predecessor-hash saves/replays under the existing integrity policy; no compatibility relaxation is claimed or added."
+  - "No Gallowmere content, road encounter, checkpoint, second-goal boundary, or expansion is in scope or claimed."
+
+production:
+  - content/rpg/quests/wolf_winter.yaml
+  - docs/STARTING_SLICE.md
+  - docs/DECISION_LOG.md
+
+tests:
+  - tests/regression/mcp_pure_play_mode.test.ts
+  - tests/regression/wolf_winter_compact_surface.test.ts
+  - tests/regression/wolf_winter_dialogue_surface.test.ts
+  - tests/regression/wolf_winter_seeded_field_conditions.test.ts
+  - tests/regression/wolf_winter_uncommitted_living_boundary.test.ts
+  - tests/regression/wolf_winter_complementary_clues.test.ts
+  - tests/regression/wolf_winter_cli_command_projection.test.ts
+  - tests/regression/wolf_winter_paling_stage_actions.test.ts
+  - tests/regression/support/seeded_opening_transfer.ts
+  - tests/regression/support/seeded_opening_transfer.test.ts
+  - tests/unit/ui_engine.test.ts
+  - tests/unit/ui_active_quest_persistence.test.ts
+
+verification:
+  - npm run validate -- wolf_winter
+  - npx vitest run tests/regression/wolf_winter_compact_surface.test.ts tests/regression/wolf_winter_dialogue_surface.test.ts tests/regression/wolf_winter_seeded_field_conditions.test.ts tests/regression/wolf_winter_uncommitted_living_boundary.test.ts tests/regression/wolf_winter_complementary_clues.test.ts tests/regression/wolf_winter_cli_command_projection.test.ts tests/regression/wolf_winter_paling_stage_actions.test.ts tests/regression/support/seeded_opening_transfer.test.ts tests/unit/ui_engine.test.ts tests/unit/ui_active_quest_persistence.test.ts
+  - npx vitest run tests/regression/mcp_pure_play_mode.test.ts -t "advertises only player tools and records exactly one fresh overworld start"
+  - npm run verify:bug-traces
+  - npm run typecheck
+  - npm run lint
+  - npm run format:check
+  - git diff --check

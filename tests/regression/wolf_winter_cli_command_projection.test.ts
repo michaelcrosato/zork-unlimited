@@ -389,7 +389,7 @@ describe("Wolf-Winter terminal dialogue commands", () => {
     let state = atCade();
     const rootHelp = renderActionHelp(index, state);
     expect(rootHelp.split("\n")).toContain(
-      "  lure (also: ask lure, ask feed, ask alive) — COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle.",
+      "  lure (also: ask lure, ask feed, ask alive) — LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only.",
     );
 
     state = act(state, "lure");

@@ -410,7 +410,7 @@ describe("player-facing action presentation", () => {
     expect(playerActionLabel({ kind: "ASK", title: "  " })).toBe("Ask");
   });
 
-  it("renders Wolf-Winter's authored decision stages without inventing a browser-only label", () => {
+  it("renders Wolf-Winter's authored plan summaries with the browser's ordinary Ask verb", () => {
     const prepared = preparedWolf();
     for (const actionId of ["use_sheltered_stockway_last_mile", "talk_houndsman"] as const) {
       const result = prepared.child.choose(actionId);
@@ -429,8 +429,9 @@ describe("player-facing action presentation", () => {
     ]);
     for (const choice of planCards) {
       const authored = choice.title.replace(/^ask:\s*/i, "");
-      expect(authored).toMatch(/^COMPARE — \w+ \(read-only\):/);
-      expect(playerActionLabel(choice)).toBe(authored);
+      expect(authored).toMatch(/^(?:HUNT|LURE|DRIVE|FORTIFY):/);
+      expect(authored).toMatch(/Ask only\.$|Ask only\.[^]*Choose by/i);
+      expect(playerActionLabel(choice)).toBe(`Ask ${authored}`);
     }
     expect(root.publicState.flags).not.toEqual(
       expect.arrayContaining([
@@ -471,10 +472,10 @@ describe("player-facing action presentation", () => {
 
     const comparison = prepared.child.view();
     expect(comparison.dialogue?.text).toMatch(
-      /HUNT commits on a north crossing or RELEASE JUNE if offered/i,
+      /Cross north or RELEASE JUNE, if offered, to choose HUNT/i,
     );
     const hunt = comparison.choices.find((choice) => choice.id === "ask_hunt");
-    expect(hunt?.title).toMatch(/FINAL COMMITMENT[^]*cross north or RELEASE JUNE if offered/i);
+    expect(hunt?.title).toMatch(/Ask only[^]*north crossing or RELEASE JUNE if offered/i);
 
     const guarded = prepared.child.choose("ask_byre");
     expect(guarded.ok, guarded.rejection ?? "guarded support rejected").toBe(true);

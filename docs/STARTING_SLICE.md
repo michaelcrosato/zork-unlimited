@@ -530,6 +530,27 @@ launch fixture, the launch response falls from 11,044 to 6,724 UTF-8 JSON bytes
 state hashes, pressure, vitals, inventory, consequences, RNG, decisions,
 foldback, and truthful parent return remain unchanged.
 
+The current first Cade menu now explains the boundary in ordinary player
+language: asking about a plan does not choose it, preparation helps without
+choosing, HUNT begins only on the north crossing or an offered `RELEASE JUNE`,
+and the other plans begin only when explicitly chosen. Choosing any plan still
+closes the rest. Its four peer labels then state each goal and material cost in
+the same grammar and all state `Ask only`; the stable HUNT, LURE, DRIVE, and
+FORTIFY ids and aliases remain unchanged. LURE, DRIVE, and FORTIFY use the exact
+same label at the first menu and after either support lesson. The opt-in plan
+bodies, ground/oath/preparation/June variants, final commitment actions,
+back/leave actions, and support actions retain their detailed terms.
+
+The base explanation is exactly 231 ASCII bytes. With the unchanged four
+seeded-ground suffixes, complete first-root scorecards remain 343/340/343/336
+characters (345/342/345/338 UTF-8 bytes), below the existing 360-character
+boundary. Rendered `ask: ` commands are HUNT 159, LURE 151, DRIVE 143, and
+FORTIFY 159 characters under the unchanged 160-character MCP limit. In the
+fixed seed-541 open-ash witness, the complete full observation is 5,162 UTF-8
+JSON bytes, its compact projection is 2,584, the compact choice array is 963,
+and the exact terminal LURE line is 195 bytes. These are deterministic
+projection measurements, not global response limits or new player evidence.
+
 The stage-purpose follow-up keeps those six Albany comparisons intact while
 making the current commitment explicit in the vocabulary the cards already use.
 Registration, duty, evidence, preparation, relief priority, and June's

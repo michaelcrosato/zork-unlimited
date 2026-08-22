@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { makeStep } from "../../src/core/engine.js";
 import type { GameState } from "../../src/core/state.js";
+import { MCP_ACTION_LABEL_CHAR_LIMIT } from "../../src/mcp/action_labels.js";
 import { activeDialogue } from "../../src/rpg/model.js";
 import { buildRpgObservation } from "../../src/rpg/observation.js";
 import {
@@ -25,6 +26,16 @@ const index = indexRpgPack(pack);
 const step = makeStep(buildRpgRules(index));
 const cade = pack.npcs.find((npc) => npc.id === "houndsman");
 const node = (id: string) => cade?.dialogue.nodes.find((entry) => entry.id === id);
+const CADE_ROOT_PLAIN_LANGUAGE =
+  "Albany sent you. Ask about any plan; asking does not choose it. Cross north or RELEASE JUNE, if offered, to choose HUNT. Other plans begin only when you choose them. Choosing one closes the rest. Preparation helps without choosing.";
+const CADE_PEER_PLAN_LABELS = {
+  hunt: "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered.",
+  lure: "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only.",
+  drive:
+    "DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only.",
+  fortify:
+    "FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only.",
+} as const;
 
 function takeAction(state: GameState, id: string) {
   const actions = enumerateRpgActions(index, state);
@@ -120,9 +131,12 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       ...(root?.topics.map((topic) => topic.prompt) ?? []),
     ].join("\n");
 
+    expect(root?.npc_text.trimEnd()).toBe(CADE_ROOT_PLAIN_LANGUAGE);
+    expect(root?.npc_text.trimEnd().length).toBe(231);
+    expect(Buffer.byteLength(root?.npc_text.trimEnd() ?? "", "utf8")).toBe(231);
     expect(root?.npc_text.trimEnd().length).toBeLessThanOrEqual(360);
     expect(root?.npc_text).toMatch(
-      /Albany sent you[^]*Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*PREPARE SUPPORT grants tactics, not a plan[^]*HUNT commits on a north crossing or RELEASE JUNE if offered/i,
+      /Albany sent you[^]*Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Other plans begin only when you choose them[^]*Choosing one closes the rest[^]*Preparation helps without choosing/i,
     );
     expect(root?.topics.slice(0, 4).map((topic) => topic.id)).toEqual([
       "hunt",
@@ -131,17 +145,52 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       "fortify",
     ]);
     expect(rootPrompt("hunt")).toMatch(
-      /^COMPARE[^]*HUNT[^]*read-only[^]*hold ground[^]*wolves may die[^]*risk cattle\/line[^]*FINAL COMMITMENT[^]*cross north or RELEASE JUNE if offered[^]*closes other plans/i,
+      /^HUNT[^]*hold ground[^]*herd[^]*stores[^]*wolves may die[^]*failure risks cattle or outer defense[^]*ask only[^]*north crossing or RELEASE JUNE if offered/i,
     );
     expect(rootPrompt("lure")).toMatch(
-      /^COMPARE[^]*LURE[^]*read-only[^]*keep herd[^]*move pack past breach[^]*FINAL COMMITMENT[^]*last feed spent[^]*paling broken[^]*ordinary first-cast foul risks two cattle/i,
+      /^LURE[^]*move pack beyond breach[^]*keep the herd[^]*spend Cade's last feed[^]*leave fence broken[^]*first-cast roll failure risks two cattle[^]*ask only/i,
     );
     expect(rootPrompt("drive")).toMatch(
-      /^COMPARE[^]*DRIVE[^]*read-only[^]*evacuate people\/herd[^]*clear pack[^]*FINAL COMMITMENT[^]*abandons outer defense[^]*crisis costs wound, two cattle, or rig/i,
+      /^DRIVE[^]*move people and herd clear[^]*force pack away[^]*lose outer defense[^]*crisis costs a wound, two cattle, or the rig[^]*ask only/i,
     );
     expect(rootPrompt("fortify")).toMatch(
-      /^COMPARE[^]*FORTIFY[^]*read-only[^]*household\/herd\/pack apart to dawn[^]*FINAL COMMITMENT[^]*no retreat[^]*expose property\/gain aid[^]*spend seals\/no aid/i,
+      /^FORTIFY[^]*keep home, herd, and pack apart to dawn[^]*no retreat[^]*expose property for Cade's help[^]*cover it with Albany's seals[^]*Cade won't help[^]*ask only/i,
     );
+    expect(rootPrompt("hunt")).toBe(CADE_PEER_PLAN_LABELS.hunt);
+    for (const nodeId of ["cade_root", "cade_wolves", "cade_byre"] as const) {
+      const prompts = Object.fromEntries(
+        node(nodeId)?.topics.map((topic) => [topic.id, topic.prompt]) ?? [],
+      );
+      expect(prompts).toMatchObject({
+        lure: CADE_PEER_PLAN_LABELS.lure,
+        drive: CADE_PEER_PLAN_LABELS.drive,
+        fortify: CADE_PEER_PLAN_LABELS.fortify,
+      });
+    }
+    const everyPeerPrompt =
+      cade?.dialogue.nodes.flatMap((dialogueNode) =>
+        dialogueNode.topics.map((topic) => topic.prompt),
+      ) ?? [];
+    expect(everyPeerPrompt.filter((prompt) => prompt === CADE_PEER_PLAN_LABELS.hunt)).toHaveLength(
+      1,
+    );
+    for (const plan of ["lure", "drive", "fortify"] as const) {
+      expect(
+        everyPeerPrompt.filter((prompt) => prompt === CADE_PEER_PLAN_LABELS[plan]),
+      ).toHaveLength(3);
+    }
+    expect(MCP_ACTION_LABEL_CHAR_LIMIT).toBe(160);
+    expect(
+      Object.fromEntries(
+        Object.entries(CADE_PEER_PLAN_LABELS).map(([plan, prompt]) => [
+          plan,
+          `ask: ${prompt}`.length,
+        ]),
+      ),
+    ).toEqual({ hunt: 159, lure: 151, drive: 143, fortify: 159 });
+    for (const prompt of Object.values(CADE_PEER_PLAN_LABELS)) {
+      expect(`ask: ${prompt}`.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
+    }
     expect(rootPrompt("wolves")).toMatch(
       /^PREPARE SUPPORT[^]*HUNT quick line[^]*\+2 attack\/\+5 tally[^]*tactics only[^]*no plan commitment/i,
     );
@@ -230,7 +279,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
     let state = startCadeDialogue(930014);
     let observation = buildRpgObservation(index, state);
     expect(observation.dialogue?.npc_text).toMatch(
-      /Albany sent you[^]*Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*HUNT commits on a north crossing or RELEASE JUNE if offered[^]*other plans commit only at labeled actions/i,
+      /Albany sent you[^]*asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Other plans begin only when you choose them[^]*Choosing one closes the rest/i,
     );
     expect(dialogueActionIds(state)).toEqual([
       "ask_hunt",

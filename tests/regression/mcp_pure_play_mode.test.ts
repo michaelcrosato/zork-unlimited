@@ -56,7 +56,7 @@ const MCP_SERVER = join(ROOT, "src", "mcp", "server.ts");
 const TEST_RUN_SEED = 2731;
 const TEST_BUILD_COMMIT = "b".repeat(40);
 const CADE_HUNT_INSPECT_LABEL =
-  "COMPARE — HUNT (read-only): hold ground; wolves may die; risk cattle/line. FINAL COMMITMENT: cross north or RELEASE JUNE if offered; closes other plans.";
+  "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered.";
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =
@@ -3860,7 +3860,7 @@ describe("MCP pure play mode", () => {
         const talkContext = talked.context as RpgCompactContext;
         const talkActions = talkContext.actions;
         expect(talkContext.dialogue?.[1]).toMatch(
-          /Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*PREPARE SUPPORT grants tactics, not a plan[^]*HUNT commits on a north crossing or RELEASE JUNE if offered[^]*TONIGHT'S GROUND —/i,
+          /Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Choosing one closes the rest[^]*Preparation helps without choosing[^]*TONIGHT'S GROUND —/i,
         );
         expect(talkContext.dialogue?.[1].length).toBeLessThanOrEqual(360);
         expect(talkActions).toEqual(

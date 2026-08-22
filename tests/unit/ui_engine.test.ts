@@ -226,14 +226,13 @@ describe("GameSession — RPG-only structured play", () => {
       npc: "old Cade the houndsman",
       text: mcpRead.observation.dialogue?.npc_text,
     });
+    expect(uiView.dialogue?.text).toContain("Ask about any plan; asking does not choose it");
+    expect(uiView.dialogue?.text).toContain("Preparation helps without choosing");
     expect(uiView.dialogue?.text).toContain(
-      "Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT",
+      "Cross north or RELEASE JUNE, if offered, to choose HUNT",
     );
-    expect(uiView.dialogue?.text).toContain("PREPARE SUPPORT grants tactics, not a plan");
-    expect(uiView.dialogue?.text).toContain(
-      "HUNT commits on a north crossing or RELEASE JUNE if offered",
-    );
-    expect(uiView.dialogue?.text).toContain("other plans commit only at labeled actions");
+    expect(uiView.dialogue?.text).toContain("Other plans begin only when you choose them");
+    expect(uiView.dialogue?.text).toContain("Choosing one closes the rest");
     expect(talkNarration).toEqual([`old Cade the houndsman: "${uiView.dialogue?.text}"`]);
     expect(talkNarration.join(" ")).not.toContain("Save/cost—HUNT");
     expect(uiView.choices.map((choice) => choice.id)).toEqual(

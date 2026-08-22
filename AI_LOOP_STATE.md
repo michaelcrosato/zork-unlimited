@@ -168,3 +168,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Pure evidence: exact-clean Spark seed 7 chose Ledger/Aid-Only/Rowan, entered sheltered Wolf-Winter, rendered the new LURE cue once, chose Cade FORTIFY, recovered one failed seal, and reached `ending_fortified_cade_terms` at 40/60 before End at decision 18.
 - Pure audit: 24/25 calls succeeded and one mistyped parent recovered unchanged; clarity/enjoyment were 4/4, replay yes, bugs `[]`, not stuck. The cue was a direct render canary only—the player never entered LURE—and the report omitted the rejection and conflated foldback with the separate End choice.
 - Feedback/guard: status remains 1/3 with no compile; seal consumes `f75b8f23` and queues this pure second. Both 6,000-step crawls, full health (448 files/3,896 tests), 565 traces, cycle-start integrity, and exact pure provenance are green.
+## AFK Cycle 2026-08-22T03-00-51-815Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-22T03-00-51-815Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-5b1405e1 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

@@ -4271,9 +4271,9 @@ npcs:
       nodes:
         - id: cade_root
           npc_text: >
-            Albany sent you. Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT.
-            PREPARE SUPPORT grants tactics, not a plan. HUNT commits on a north crossing or
-            RELEASE JUNE if offered; other plans commit only at labeled actions.
+            Albany sent you. Ask about any plan; asking does not choose it. Cross north or
+            RELEASE JUNE, if offered, to choose HUNT. Other plans begin only when you choose
+            them. Choosing one closes the rest. Preparation helps without choosing.
           append_variants:
             - when:
                 - { has_flag: opening_condition_firm_frozen_rail }
@@ -4417,7 +4417,7 @@ npcs:
           topics:
             - id: hunt
               aliases: [commit_hunt_and_hold, choose_hunt_and_hold, commit_hunt, inspect_hunt]
-              prompt: "COMPARE — HUNT (read-only): hold ground; wolves may die; risk cattle/line. FINAL COMMITMENT: cross north or RELEASE JUNE if offered; closes other plans."
+              prompt: "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4427,7 +4427,7 @@ npcs:
               goto: cade_hunt
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle."
+              prompt: "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4437,7 +4437,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "COMPARE — DRIVE (read-only): evacuate people/herd; clear pack. FINAL COMMITMENT abandons outer defense; Crisis costs wound, two cattle, or rig."
+              prompt: "DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4447,7 +4447,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "COMPARE — FORTIFY (read-only): keep household/herd/pack apart to dawn. FINAL COMMITMENT means no retreat; expose property/gain aid or spend seals/no aid."
+              prompt: "FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4636,7 +4636,7 @@ npcs:
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle."
+              prompt: "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4646,7 +4646,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "COMPARE — DRIVE (read-only): evacuate people/herd; clear pack. FINAL COMMITMENT abandons outer defense; Crisis costs wound, two cattle, or rig."
+              prompt: "DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4656,7 +4656,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "COMPARE — FORTIFY (read-only): keep household/herd/pack apart to dawn. FINAL COMMITMENT means no retreat; expose property/gain aid or spend seals/no aid."
+              prompt: "FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4693,7 +4693,7 @@ npcs:
               goto: cade_wolves
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle."
+              prompt: "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4703,7 +4703,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "COMPARE — DRIVE (read-only): evacuate people/herd; clear pack. FINAL COMMITMENT abandons outer defense; Crisis costs wound, two cattle, or rig."
+              prompt: "DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4713,7 +4713,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "COMPARE — FORTIFY (read-only): keep household/herd/pack apart to dawn. FINAL COMMITMENT means no retreat; expose property/gain aid or spend seals/no aid."
+              prompt: "FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }

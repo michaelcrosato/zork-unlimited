@@ -743,7 +743,7 @@ describe("Wolf-Winter seeded field conditions", () => {
     );
     scent = act(scent, "use_exposed_ridge_last_mile");
     scent = act(scent, "talk_houndsman");
-    expect(action(scent, "ask_lure").command).toMatch(/ordinary first-cast foul/i);
+    expect(action(scent, "ask_lure").command).toMatch(/first-cast roll failure risks two cattle/i);
     scent = act(scent, "ask_lure");
     const scentPlan = dialogueSurface(scent);
     expect(scentPlan.text).toMatch(/Tonight's steady scent channel[^]*cannot foul[^]*no roll/i);

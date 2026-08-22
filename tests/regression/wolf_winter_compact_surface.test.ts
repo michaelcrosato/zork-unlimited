@@ -80,13 +80,15 @@ const COMMITMENT_LABELS_SOURCE_HASH =
   "76e01d88be2d5268e11b349796740a4599d26995156fb566acd251f4ec2d1024";
 const OPENING_CLARITY_SOURCE_HASH =
   "8981df5bb46a5173e1dcc43b4560f07042e4e9a338e885433a68089fec328038";
+const CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH =
+  "99afa4a376f7c18a6871a784473d375773661032000cabe7171bfbe1742755fa";
 const YEARLING_DEFEAT_JOURNAL =
   "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 const CADE_HUNT_INSPECT_LABEL =
-  "COMPARE — HUNT (read-only): hold ground; wolves may die; risk cattle/line. FINAL COMMITMENT: cross north or RELEASE JUNE if offered; closes other plans.";
+  "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered.";
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const CADE_LURE_ROOT_LABEL =
-  "COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle.";
+  "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only.";
 const JUNE_HUNT_ACKNOWLEDGEMENT_LABEL =
   "PREPARE — HUNT / KEEP JUNE: keep cattle-first aid; first wolf death breaks agreement. North crossing is FINAL COMMITMENT; closes other plans.";
 
@@ -332,7 +334,7 @@ describe("Wolf-Winter compact authored prose", () => {
     if (!root) throw new Error("expected Cade's root node");
     expect(root.npc_text.trimEnd().length).toBeLessThanOrEqual(360);
     expect(root.npc_text).toMatch(
-      /Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT[^]*PREPARE SUPPORT grants tactics, not a plan[^]*HUNT commits on a north crossing or RELEASE JUNE if offered/i,
+      /Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Choosing one closes the rest[^]*Preparation helps without choosing/i,
     );
 
     const rules = buildRpgRules(index);
@@ -387,10 +389,10 @@ describe("Wolf-Winter compact authored prose", () => {
     );
     expect(talked.context.choices).toEqual(
       expect.arrayContaining([
-        expect.arrayContaining(["ask_hunt", expect.stringMatching(/^COMPARE — HUNT/)]),
-        expect.arrayContaining(["ask_lure", expect.stringMatching(/^COMPARE — LURE/)]),
-        expect.arrayContaining(["ask_drive", expect.stringMatching(/^COMPARE — DRIVE/)]),
-        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^COMPARE — FORTIFY/)]),
+        expect.arrayContaining(["ask_hunt", expect.stringMatching(/^HUNT:/)]),
+        expect.arrayContaining(["ask_lure", expect.stringMatching(/^LURE:/)]),
+        expect.arrayContaining(["ask_drive", expect.stringMatching(/^DRIVE:/)]),
+        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^FORTIFY:/)]),
       ]),
     );
     expect(talked.context.choices?.some(([id]) => id === "go_west")).toBe(false);
@@ -449,9 +451,7 @@ describe("Wolf-Winter compact authored prose", () => {
     state = actById(state, "talk_houndsman");
 
     const cade = compactWithActions(state);
-    expect(cade.dialogue?.[1]).toMatch(
-      /HUNT commits on a north crossing or RELEASE JUNE if offered/i,
-    );
+    expect(cade.dialogue?.[1]).toMatch(/Cross north or RELEASE JUNE, if offered, to choose HUNT/i);
     expect(cade.choices).toContainEqual(["ask_hunt", CADE_HUNT_INSPECT_LABEL]);
 
     state = actById(state, "ask_byre");
@@ -556,7 +556,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(OPENING_CLARITY_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(OPENING_CLARITY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(COMMITMENT_LABELS_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(REACTIVE_TRUTH_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(LURE_ROOT_COMMIT_CUE_SOURCE_HASH);

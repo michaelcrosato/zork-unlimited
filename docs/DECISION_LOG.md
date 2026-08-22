@@ -1528,3 +1528,47 @@ exactly fourteen bytes to 9,181 and 8,916 without changing their fields. The
 pilot substitutions are deterministic counterfactuals, not responses seen by
 the failed pilot; only a new exact-build pilot can test clarity, enjoyment, or
 certification.
+
+### Ultraplan re-aim — 2026-08-21 (HEAD = 2c07598a; next move = plain-language Cade plan comparison)
+
+**The corrected Station boundary worked mechanically, but the fresh pilot still
+failed the certification quality bar.** The homogeneous, single-attempt Terra
+pilot `starting-slice-terra-pilot-2c07598a-20260822T023646Z` bound exact clean
+`2c07598ab4b1a12545e3b078e78f326d9ced1fea`, official Codex 0.146.0,
+authority `a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8`,
+and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All ten fresh default-persona runs completed Wolf-Winter, none got stuck, p50
+was 24 accepted decisions, all four strategies appeared, and all ten players
+understood the goal and would replay. Clarity was 40/50, enjoyment 41/50, and
+initial-goal continuation 5/10, so the pilot validly failed three required gates
+and cannot authorize the 100-player cohort.
+
+The candidate-bound compile `20260822T030213Z` verified eleven actionable
+reports and returned ten new S1 hotspots tied at score 2. Its mechanically first
+recommendation, `5b9a9a66`, asks the Station overview to predict character
+relevance. That overview was reached by eight players and its kit detail by
+seven; the observed players then chose matching Mediation support or declined
+the mismatched +0 kits correctly. Cade's first menu instead reached all ten
+players, every player selected one of its four details, and several reports
+independently described its route/oath/plan labels or specialized conditional
+terms as dense. This is stronger exposure evidence for a bounded off-list copy
+correction, not evidence that the compiler is wrong or that Station relevance
+is solved forever.
+
+**Chosen move — make Cade's first comparison a question before a choice.** Change
+only the first-root explanation and the four peer plan labels. The root says
+asking and preparation choose nothing, identifies HUNT's north-crossing / offered
+June-release boundary, and says one choice closes the rest. Each label states
+its goal and material cost in ordinary language and says `Ask only`. Preserve
+HUNT once and mirror byte-identical LURE, DRIVE, and FORTIFY labels at the root
+and after both support lessons. IDs, aliases, order, conditions, gotos, effects,
+commitment points, resources, rolls, outcomes, and every detailed plan/final/
+back/leave/support surface remain unchanged. The base root is 231 bytes; complete
+seeded roots remain 343/340/343/336 characters. Rendered plan commands are
+159/151/143/159 characters under the unchanged 160-character limit. The exact
+compiled Wolf-Winter hash advances from `8981df5b` to `99afa4a3`, and its reviewed
+relabeled twin advances from `bd6d0d98` to `c12a5fe2`. The failed pilot tested
+the predecessor only. Deterministic tests can prove projection parity and
+mechanical invariants, but not clarity, enjoyment, continuation, human
+validation, or certification lift.

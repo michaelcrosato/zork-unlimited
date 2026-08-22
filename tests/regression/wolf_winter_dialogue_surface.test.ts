@@ -42,10 +42,10 @@ const wolfImportContract = campaignCharacterImportPlayerStateContract(wolfCampai
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 const CADE_LURE_ROOT_LABEL =
-  "COMPARE — LURE (read-only): keep herd; move pack past breach. FINAL COMMITMENT: last feed spent, paling broken; ordinary first-cast foul risks two cattle.";
+  "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only.";
 const CADE_LURE_ROOT_COMMAND = `ask: ${CADE_LURE_ROOT_LABEL}`;
 const CADE_HUNT_ROOT_LABEL =
-  "COMPARE — HUNT (read-only): hold ground; wolves may die; risk cattle/line. FINAL COMMITMENT: cross north or RELEASE JUNE if offered; closes other plans.";
+  "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered.";
 const CADE_HUNT_PREPARE_LABEL =
   "LEAVE REVIEW — HUNT: exit with no state change. FINAL COMMITMENT: cross north, or RELEASE JUNE if offered; wolves may die and other plans close.";
 
@@ -275,9 +275,10 @@ describe("Wolf-Winter dialogue surface", () => {
     const observation = buildRpgObservation(index, state);
     const scorecard = observation.dialogue?.npc_text;
 
-    expect(scorecard).toContain("Four peer COMPARE cards name outcome, cost, and FINAL COMMITMENT");
-    expect(scorecard).toContain("PREPARE SUPPORT grants tactics, not a plan");
-    expect(scorecard).toContain("HUNT commits on a north crossing or RELEASE JUNE if offered");
+    expect(scorecard).toContain("Ask about any plan; asking does not choose it");
+    expect(scorecard).toContain("Preparation helps without choosing");
+    expect(scorecard).toContain("Cross north or RELEASE JUNE, if offered, to choose HUNT");
+    expect(scorecard).toContain("Choosing one closes the rest");
     expect(scorecard).toContain(
       "TONIGHT'S GROUND — open ash lane. DRIVE's first signal runs clean without a roll; charge two and Crisis remain.",
     );
@@ -291,9 +292,9 @@ describe("Wolf-Winter dialogue surface", () => {
         "ask: PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; tactics only, no plan commitment.",
       ask_lure: CADE_LURE_ROOT_COMMAND,
       ask_drive:
-        "ask: COMPARE — DRIVE (read-only): evacuate people/herd; clear pack. FINAL COMMITMENT abandons outer defense; Crisis costs wound, two cattle, or rig.",
+        "ask: DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only.",
       ask_fortify:
-        "ask: COMPARE — FORTIFY (read-only): keep household/herd/pack apart to dawn. FINAL COMMITMENT means no retreat; expose property/gain aid or spend seals/no aid.",
+        "ask: FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only.",
     });
     expect(dialogueActionIds(idsBefore).slice(0, 4)).toEqual([
       "ask_hunt",
@@ -599,11 +600,11 @@ describe("Wolf-Winter dialogue surface", () => {
     state = act(state, { type: "TALK", npc: "houndsman" });
     const cadeWithJune = buildRpgObservation(index, state);
     expect(cadeWithJune.dialogue?.npc_text).toMatch(
-      /HUNT commits on a north crossing or RELEASE JUNE if offered/i,
+      /Cross north or RELEASE JUNE, if offered, to choose HUNT/i,
     );
     expect(
       cadeWithJune.available_actions.find((action) => action.id === "ask_hunt")?.command,
-    ).toMatch(/FINAL COMMITMENT[^]*cross north or RELEASE JUNE if offered/i);
+    ).toMatch(/Ask only[^]*north crossing or RELEASE JUNE if offered/i);
     expect(legalActionIds(state)).toEqual(
       expect.arrayContaining(["ask_wolves", "ask_lure", "ask_drive", "ask_fortify"]),
     );
@@ -767,7 +768,7 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(stepAction("go_north").ok).toBe(true);
     expect(stepAction("talk_houndsman").ok).toBe(true);
     expect(listed().actions.find((action) => action.id === "ask_hunt")?.command).toMatch(
-      /FINAL COMMITMENT[^]*cross north or RELEASE JUNE if offered/i,
+      /Ask only[^]*north crossing or RELEASE JUNE if offered/i,
     );
     expect(listed().actions.find((action) => action.id === "ask_byre")?.command).toMatch(
       /PREPARE SUPPORT[^]*grants the safer combat tactic[^]*no plan commitment/i,

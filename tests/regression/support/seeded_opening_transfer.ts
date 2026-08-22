@@ -199,9 +199,9 @@ const WOLF_WINTER_CERTIFICATE: TransferCertificate = {
  * consequence of editing Wolf-Winter or the deterministic relabel oracle.
  */
 const CERTIFIED_WOLF_WINTER_PACK_HASH =
-  "8981df5bb46a5173e1dcc43b4560f07042e4e9a338e885433a68089fec328038";
+  "99afa4a376f7c18a6871a784473d375773661032000cabe7171bfbe1742755fa";
 const CERTIFIED_WOLF_WINTER_RELABELED_PACK_HASH =
-  "bd6d0d98c27012fe1d766f75ed6bc921c84c6b9ede907165deec4a2bb4763eab";
+  "c12a5fe2c3557cc81709eaf377fda13ec663aaae5078550b0e328a279ec6d56b";
 
 const pathText = (path: readonly PathPart[]): string =>
   path
