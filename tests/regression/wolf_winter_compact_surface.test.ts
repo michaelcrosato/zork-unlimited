@@ -82,13 +82,15 @@ const OPENING_CLARITY_SOURCE_HASH =
   "8981df5bb46a5173e1dcc43b4560f07042e4e9a338e885433a68089fec328038";
 const CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH =
   "99afa4a376f7c18a6871a784473d375773661032000cabe7171bfbe1742755fa";
+const CADE_PEER_PLAN_PARITY_SOURCE_HASH =
+  "08ddb7ce41d319fa34db896ba032cbf69edcf0b0d2a5fd413c457b28091be777";
 const YEARLING_DEFEAT_JOURNAL =
   "You take the yearling on its rush as it commits, and it goes down in the snow of the breach.";
 const CADE_HUNT_INSPECT_LABEL =
-  "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered.";
+  "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.";
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const CADE_LURE_ROOT_LABEL =
-  "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only.";
+  "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details.";
 const JUNE_HUNT_ACKNOWLEDGEMENT_LABEL =
   "PREPARE — HUNT / KEEP JUNE: keep cattle-first aid; first wolf death breaks agreement. North crossing is FINAL COMMITMENT; closes other plans.";
 
@@ -389,10 +391,10 @@ describe("Wolf-Winter compact authored prose", () => {
     );
     expect(talked.context.choices).toEqual(
       expect.arrayContaining([
-        expect.arrayContaining(["ask_hunt", expect.stringMatching(/^HUNT:/)]),
-        expect.arrayContaining(["ask_lure", expect.stringMatching(/^LURE:/)]),
-        expect.arrayContaining(["ask_drive", expect.stringMatching(/^DRIVE:/)]),
-        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^FORTIFY:/)]),
+        expect.arrayContaining(["ask_hunt", expect.stringMatching(/^HUNT — Goal:/)]),
+        expect.arrayContaining(["ask_lure", expect.stringMatching(/^LURE — Goal:/)]),
+        expect.arrayContaining(["ask_drive", expect.stringMatching(/^DRIVE — Goal:/)]),
+        expect.arrayContaining(["ask_fortify", expect.stringMatching(/^FORTIFY — Goal:/)]),
       ]),
     );
     expect(talked.context.choices?.some(([id]) => id === "go_west")).toBe(false);
@@ -556,7 +558,8 @@ describe("Wolf-Winter compact authored prose", () => {
   );
 
   it("keeps each revision distinct at the gauntlet and source-hash boundaries", () => {
-    expect(loaded.compiled.contentHash).toBe(CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).toBe(CADE_PEER_PLAN_PARITY_SOURCE_HASH);
+    expect(loaded.compiled.contentHash).not.toBe(CADE_PLAN_COMPARE_PLAIN_LANGUAGE_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(OPENING_CLARITY_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(COMMITMENT_LABELS_SOURCE_HASH);
     expect(loaded.compiled.contentHash).not.toBe(REACTIVE_TRUTH_SOURCE_HASH);

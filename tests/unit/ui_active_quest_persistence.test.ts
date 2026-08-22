@@ -29,6 +29,16 @@ const wolf = (() => {
   return quest;
 })();
 const wolfSource = readFileSync(wolf.source, "utf8");
+const CADE_PEER_PLAN_LABELS: Readonly<Record<string, string>> = {
+  ask_hunt:
+    "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.",
+  ask_lure:
+    "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details.",
+  ask_drive:
+    "DRIVE — Goal: evacuate people/herd; wolves live. Cost: no retreat; outer defense + wound/two cattle/rig. Help: Fieldcraft. Ask only; choose after details.",
+  ask_fortify:
+    "FORTIFY — Goal: keep home/herd; wolves live. Cost: no retreat; expose property for Cade aid or spend seals. Help: Repair. Ask only; choose inside.",
+};
 
 type Trail = ActiveQuestSaveState["trail"];
 
@@ -429,8 +439,7 @@ describe("player-facing action presentation", () => {
     ]);
     for (const choice of planCards) {
       const authored = choice.title.replace(/^ask:\s*/i, "");
-      expect(authored).toMatch(/^(?:HUNT|LURE|DRIVE|FORTIFY):/);
-      expect(authored).toMatch(/Ask only\.$|Ask only\.[^]*Choose by/i);
+      expect(authored).toBe(CADE_PEER_PLAN_LABELS[choice.id]);
       expect(playerActionLabel(choice)).toBe(`Ask ${authored}`);
     }
     expect(root.publicState.flags).not.toEqual(
@@ -475,7 +484,7 @@ describe("player-facing action presentation", () => {
       /Cross north or RELEASE JUNE, if offered, to choose HUNT/i,
     );
     const hunt = comparison.choices.find((choice) => choice.id === "ask_hunt");
-    expect(hunt?.title).toMatch(/Ask only[^]*north crossing or RELEASE JUNE if offered/i);
+    expect(hunt?.title).toBe(`ask: ${CADE_PEER_PLAN_LABELS.ask_hunt}`);
 
     const guarded = prepared.child.choose("ask_byre");
     expect(guarded.ok, guarded.rejection ?? "guarded support rejected").toBe(true);

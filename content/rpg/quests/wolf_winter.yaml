@@ -4417,7 +4417,7 @@ npcs:
           topics:
             - id: hunt
               aliases: [commit_hunt_and_hold, choose_hunt_and_hold, commit_hunt, inspect_hunt]
-              prompt: "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered."
+              prompt: "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4427,7 +4427,7 @@ npcs:
               goto: cade_hunt
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only."
+              prompt: "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4437,7 +4437,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only."
+              prompt: "DRIVE — Goal: evacuate people/herd; wolves live. Cost: no retreat; outer defense + wound/two cattle/rig. Help: Fieldcraft. Ask only; choose after details."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4447,7 +4447,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only."
+              prompt: "FORTIFY — Goal: keep home/herd; wolves live. Cost: no retreat; expose property for Cade aid or spend seals. Help: Repair. Ask only; choose inside."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4636,7 +4636,7 @@ npcs:
               goto: cade_byre
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only."
+              prompt: "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4646,7 +4646,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only."
+              prompt: "DRIVE — Goal: evacuate people/herd; wolves live. Cost: no retreat; outer defense + wound/two cattle/rig. Help: Fieldcraft. Ask only; choose after details."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4656,7 +4656,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only."
+              prompt: "FORTIFY — Goal: keep home/herd; wolves live. Cost: no retreat; expose property for Cade aid or spend seals. Help: Repair. Ask only; choose inside."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4693,7 +4693,7 @@ npcs:
               goto: cade_wolves
             - id: lure
               aliases: [ask_lure, ask_feed, ask_alive]
-              prompt: "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only."
+              prompt: "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4703,7 +4703,7 @@ npcs:
               goto: cade_lure
             - id: drive
               aliases: [ask_drive, ask_evacuate, ask_signal]
-              prompt: "DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only."
+              prompt: "DRIVE — Goal: evacuate people/herd; wolves live. Cost: no retreat; outer defense + wound/two cattle/rig. Help: Fieldcraft. Ask only; choose after details."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }
@@ -4713,7 +4713,7 @@ npcs:
               goto: cade_drive
             - id: fortify
               aliases: [ask_fortify, ask_outlast, ask_seal]
-              prompt: "FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only."
+              prompt: "FORTIFY — Goal: keep home/herd; wolves live. Cost: no retreat; expose property for Cade aid or spend seals. Help: Repair. Ask only; choose inside."
               conditions:
                 - { not_flag: june_hunt_released }
                 - { not_flag: strategy_lure_committed }

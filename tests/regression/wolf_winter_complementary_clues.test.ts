@@ -29,12 +29,12 @@ const node = (id: string) => cade?.dialogue.nodes.find((entry) => entry.id === i
 const CADE_ROOT_PLAIN_LANGUAGE =
   "Albany sent you. Ask about any plan; asking does not choose it. Cross north or RELEASE JUNE, if offered, to choose HUNT. Other plans begin only when you choose them. Choosing one closes the rest. Preparation helps without choosing.";
 const CADE_PEER_PLAN_LABELS = {
-  hunt: "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered.",
-  lure: "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only.",
+  hunt: "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.",
+  lure: "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details.",
   drive:
-    "DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only.",
+    "DRIVE — Goal: evacuate people/herd; wolves live. Cost: no retreat; outer defense + wound/two cattle/rig. Help: Fieldcraft. Ask only; choose after details.",
   fortify:
-    "FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only.",
+    "FORTIFY — Goal: keep home/herd; wolves live. Cost: no retreat; expose property for Cade aid or spend seals. Help: Repair. Ask only; choose inside.",
 } as const;
 
 function takeAction(state: GameState, id: string) {
@@ -145,16 +145,16 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
       "fortify",
     ]);
     expect(rootPrompt("hunt")).toMatch(
-      /^HUNT[^]*hold ground[^]*herd[^]*stores[^]*wolves may die[^]*failure risks cattle or outer defense[^]*ask only[^]*north crossing or RELEASE JUNE if offered/i,
+      /^HUNT — Goal: hold home\/herd\/stores[^]*Cost: wolves may die; cattle\/outer defense at risk[^]*Help: Cade lessons \+ jerkin[^]*Ask only; choose north\/RELEASE JUNE/i,
     );
     expect(rootPrompt("lure")).toMatch(
-      /^LURE[^]*move pack beyond breach[^]*keep the herd[^]*spend Cade's last feed[^]*leave fence broken[^]*first-cast roll failure risks two cattle[^]*ask only/i,
+      /^LURE — Goal: move wolves alive; keep herd[^]*Cost: last feed \+ fence; first foul risks two cattle[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
     );
     expect(rootPrompt("drive")).toMatch(
-      /^DRIVE[^]*move people and herd clear[^]*force pack away[^]*lose outer defense[^]*crisis costs a wound, two cattle, or the rig[^]*ask only/i,
+      /^DRIVE — Goal: evacuate people\/herd; wolves live[^]*Cost: no retreat; outer defense \+ wound\/two cattle\/rig[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
     );
     expect(rootPrompt("fortify")).toMatch(
-      /^FORTIFY[^]*keep home, herd, and pack apart to dawn[^]*no retreat[^]*expose property for Cade's help[^]*cover it with Albany's seals[^]*Cade won't help[^]*ask only/i,
+      /^FORTIFY — Goal: keep home\/herd; wolves live[^]*Cost: no retreat; expose property for Cade aid or spend seals[^]*Help: Repair[^]*Ask only; choose inside/i,
     );
     expect(rootPrompt("hunt")).toBe(CADE_PEER_PLAN_LABELS.hunt);
     for (const nodeId of ["cade_root", "cade_wolves", "cade_byre"] as const) {
@@ -187,7 +187,7 @@ describe("bug_0504 — Wolf-Winter clues are complementary rather than contradic
           `ask: ${prompt}`.length,
         ]),
       ),
-    ).toEqual({ hunt: 159, lure: 151, drive: 143, fortify: 159 });
+    ).toEqual({ hunt: 158, lure: 151, drive: 159, fortify: 151 });
     for (const prompt of Object.values(CADE_PEER_PLAN_LABELS)) {
       expect(`ask: ${prompt}`.length).toBeLessThanOrEqual(MCP_ACTION_LABEL_CHAR_LIMIT);
     }

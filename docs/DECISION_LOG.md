@@ -1572,3 +1572,68 @@ relabeled twin advances from `bd6d0d98` to `c12a5fe2`. The failed pilot tested
 the predecessor only. Deterministic tests can prove projection parity and
 mechanical invariants, but not clarity, enjoyment, continuation, human
 validation, or certification lift.
+
+### Ultraplan re-aim — 2026-08-22 (HEAD = e14e4208; next move = Cade peer-card parity)
+
+**The plain-language Cade comparison remained mechanically sound, but its peer
+cards did not expose equivalent decision facts.** The fresh, homogeneous,
+single-attempt Terra pilot
+`starting-slice-terra-pilot-e14e4208-20260822T061631Z` bound exact clean
+`e14e4208b2e1fa9eac03a66ce83bba7d727eac00`, official Codex 0.146.0,
+authority `a773a40d40f5b286d1ed16e10f99c06c5b194779c8d9203ad54a0b07f3315ff8`,
+and world hash
+`aa805dfa462a7d2aae81d81412b0b3b7fbe52f945a69e6615ec182f2823f734b`.
+All ten no-retry runs completed Wolf-Winter with no stuck player, p50 26
+accepted decisions, enjoyment 42/50, 9/10 initial-goal continuation, and
+unanimous replay intent. Clarity remained 40/50. Only LURE and FORTIFY appeared
+(8/2), so clarity, three-strategy diversity, and the 75% concentration gate
+failed and the 100-player cohort remains prohibited.
+
+All ten authenticated chronologies reached Cade's first root and opened a plan
+detail. Their deterministic seeded grounds favored HUNT/LURE/DRIVE/FORTIFY
+5/3/1/1, while their outcomes were 0/8/0/2. That mismatch is exposure evidence,
+not proof that the cards caused preference or that LURE is mechanically too
+strong. The candidate-bound compile `20260822T065131Z` verified eleven
+actionable reports and returned ten singleton S1 hotspots tied at score 2. Its
+first recommendation, `ea53b6c1`, is a legitimate Gallowmere retry-consequence
+finding outside the bounded Albany / Wolf-Winter / Albany certification slice.
+Six separate Wolf-Winter hotspots preserve the wider opening, Station,
+pressure, and commitment-density evidence; seed `822061631004` specifically
+asked for a concise summary of the advantages currently relevant to commitment.
+
+**Chosen move — give all four peer cards the same decision fields.** Change only
+the one HUNT prompt and the three byte-identical copies each of LURE, DRIVE, and
+FORTIFY. Each now reads in the exact order `Goal`, `Cost`, `Help`, then its
+ask-only choice boundary. HUNT names Cade lessons plus jerkin; LURE and DRIVE
+name Fieldcraft; FORTIFY names Repair. LURE, DRIVE, and FORTIFY now say plainly
+that the wolves live, while HUNT retains its wolf-death risk. Cade's root and
+every detail body, id, alias, order, predicate, goto, effect, final commitment,
+resource, roll, outcome, and return remain unchanged. Rendered commands are
+152/151/147/157 characters under the unchanged 160-character cap. The exact
+compiled hash advances from `99afa4a3` to `86659867`, and the reviewed relabeled
+twin from `c12a5fe2` to `4b9b5857`. The failed AI pilot tested only the
+predecessor; deterministic parity checks cannot establish a rating, diversity,
+balance, certification, causal, or human-quality lift.
+
+### Semantic review correction — 2026-08-22 (draft 86659867 superseded by truthful 08ddb7ce)
+
+**Pre-freeze semantic review rejected three compressed cost claims in the first
+peer-card draft.** HUNT's `cattle/defense` shorthand did not identify the outer
+defense actually at risk. DRIVE omitted its no-retreat commitment. FORTIFY also
+omitted no retreat and said `get Cade's aid`, which could read as a guarantee
+even though the detailed plan retains predicates and a roll-required failure
+boundary. The draft `86659867` / relabeled `4b9b5857` was never committed,
+certified, or tested by the failed pilot; it remains audit history, not an
+accepted evidence boundary.
+
+**Correction — restore the exact costs without reopening mechanics.** HUNT now
+says `cattle/outer defense at risk`. DRIVE now says `Cost: no retreat; outer
+defense + wound/two cattle/rig.` FORTIFY now says `Cost: no retreat; expose
+property for Cade aid or spend seals.` LURE remains byte-identical. Only the one
+HUNT scalar and three DRIVE plus three FORTIFY mirrors change from the rejected
+draft. Cade's root, details, ids, order, predicates, gotos, effects, resources,
+checks, outcomes, and commitments remain unchanged. The final commands are
+158/151/159/151 characters under the unchanged 160-character limit. The exact
+compiled hash is `08ddb7ce`, its relabeled twin is `fe16b368`, and only a fresh
+exact-build pilot can test clarity, strategy diversity, certification, causal,
+or human-quality lift.

@@ -56,7 +56,7 @@ const MCP_SERVER = join(ROOT, "src", "mcp", "server.ts");
 const TEST_RUN_SEED = 2731;
 const TEST_BUILD_COMMIT = "b".repeat(40);
 const CADE_HUNT_INSPECT_LABEL =
-  "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered.";
+  "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.";
 const CADE_HUNT_INSPECT_COMMAND = `ask: ${CADE_HUNT_INSPECT_LABEL}`;
 const ACTION_TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 const PARENT_BOUND_STORY_INSPECTION_DESCRIPTION =

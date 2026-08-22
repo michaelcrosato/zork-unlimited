@@ -26,7 +26,7 @@ const LIVING_BOUNDARY =
 const ROOT_COMMITMENT_MODEL =
   /Ask about any plan; asking does not choose it[^]*Cross north or RELEASE JUNE, if offered, to choose HUNT[^]*Other plans begin only when you choose them[^]*Choosing one closes the rest[^]*Preparation helps without choosing/i;
 const HUNT_BOUNDARY =
-  /HUNT[^]*hold ground[^]*herd[^]*stores[^]*wolves may die[^]*failure risks cattle or outer defense[^]*ask only[^]*north crossing or RELEASE JUNE if offered/i;
+  /HUNT — Goal: hold home\/herd\/stores[^]*Cost: wolves may die; cattle\/outer defense at risk[^]*Help: Cade lessons \+ jerkin[^]*Ask only; choose north\/RELEASE JUNE/i;
 const TRUNCATION_MARKER = /(?:\.\.\.\(\+\d+ chars\)|#[0-9a-f]{12}\b)/i;
 
 function act(state: GameState, actionId: string, forcedRoll?: number): GameState {
@@ -159,13 +159,13 @@ describe("Wolf-Winter uncommitted living-plan boundary", () => {
     const rootCommands = rootPlanActions.map((action) => action.command).join("\n");
     expect(rootCommands).toMatch(HUNT_BOUNDARY);
     expect(rootCommands).toMatch(
-      /LURE[^]*move pack beyond breach[^]*keep the herd[^]*spend Cade's last feed[^]*leave fence broken[^]*first-cast roll failure risks two cattle[^]*ask only/i,
+      /LURE — Goal: move wolves alive; keep herd[^]*Cost: last feed \+ fence; first foul risks two cattle[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
     );
     expect(rootCommands).toMatch(
-      /DRIVE[^]*move people and herd clear[^]*force pack away[^]*lose outer defense[^]*crisis costs a wound, two cattle, or the rig[^]*ask only/i,
+      /DRIVE — Goal: evacuate people\/herd; wolves live[^]*Cost: no retreat; outer defense \+ wound\/two cattle\/rig[^]*Help: Fieldcraft[^]*Ask only; choose after details/i,
     );
     expect(rootCommands).toMatch(
-      /FORTIFY[^]*keep home, herd, and pack apart to dawn[^]*no retreat[^]*expose property for Cade's help[^]*cover it with Albany's seals[^]*Cade won't help[^]*ask only/i,
+      /FORTIFY — Goal: keep home\/herd; wolves live[^]*Cost: no retreat; expose property for Cade aid or spend seals[^]*Help: Repair[^]*Ask only; choose inside/i,
     );
     expect(`${rootDialogue.dialogue?.npc_text}\n${rootCommands}`).not.toMatch(
       /\bset\b[^]*\bdrive\b[^]*\bwheel\b[^]*\bturn\b|\b(?:close|wait)\b[^]*\b(?:feint|rush)\b|\bDC\s*\d/i,

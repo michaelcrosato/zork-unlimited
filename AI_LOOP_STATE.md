@@ -168,3 +168,9 @@ Entry contract (machine-parsed by src/afk/loop_state.ts and src/afk/assessor.ts)
 - Self-critique: post-quest contact freshness was rejected as unstated chronology that would reinterpret authored scenes/saves; decorator-object cloning and evidence temp-link hardening remain lower-risk follow-ups. The pre-edit pure is baseline only and cannot causally attest this verifier repair.
 - Feedback/next: committed status is 2 verified/actionable reports of 3, so no compile runs and this evidence-only report is not sealed into pending authority; next structural review should compare the shallow decoration snapshot with exclusive evidence publication rather than revive frozen content.
 - Guard: 4 focused matrix tests, 566 bug traces/1,945 references, 6,000-step post-crawl, full health (448 files/3,897 tests), UI typecheck, all 12 packs, exact pure provenance, independent hostile review, and `1fde4cdc` cycle-start integrity are green.
+## AFK Cycle 2026-08-22T06-50-22-164Z
+<!-- feedback_cycle_selection: {"run_id":"2026-08-22T06-50-22-164Z","selected_recommendation_id":null} -->
+- Assess: rpg=12; world=12; candidates=16.
+- Rec: hotspot-5b9a9a66 (content_fix/M; score=2.5).
+- Playtest: overworld.
+- Guard: blind report + health + verify:integrity before commit.

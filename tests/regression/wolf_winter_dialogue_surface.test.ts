@@ -42,10 +42,10 @@ const wolfImportContract = campaignCharacterImportPlayerStateContract(wolfCampai
 const NORTH_PENDING_GUIDANCE =
   "North waits. Follow this room's cue: talk to June before HUNT; LURE: call any shown docket, fetch feed west, or go west/up for the second cast; DRIVE/FORTIFY: take named gear.";
 const CADE_LURE_ROOT_LABEL =
-  "LURE: Move pack beyond breach; keep the herd. Spend Cade's last feed and leave fence broken. A first-cast roll failure risks two cattle. Ask only.";
+  "LURE — Goal: move wolves alive; keep herd. Cost: last feed + fence; first foul risks two cattle. Help: Fieldcraft. Ask only; choose after details.";
 const CADE_LURE_ROOT_COMMAND = `ask: ${CADE_LURE_ROOT_LABEL}`;
 const CADE_HUNT_ROOT_LABEL =
-  "HUNT: Hold ground, herd, and stores. Wolves may die; failure risks cattle or outer defense. Ask only. Choose by north crossing or RELEASE JUNE if offered.";
+  "HUNT — Goal: hold home/herd/stores. Cost: wolves may die; cattle/outer defense at risk. Help: Cade lessons + jerkin. Ask only; choose north/RELEASE JUNE.";
 const CADE_HUNT_PREPARE_LABEL =
   "LEAVE REVIEW — HUNT: exit with no state change. FINAL COMMITMENT: cross north, or RELEASE JUNE if offered; wolves may die and other plans close.";
 
@@ -292,9 +292,9 @@ describe("Wolf-Winter dialogue surface", () => {
         "ask: PREPARE SUPPORT — HUNT quick line: +2 attack/+5 tally; tactics only, no plan commitment.",
       ask_lure: CADE_LURE_ROOT_COMMAND,
       ask_drive:
-        "ask: DRIVE: Move people and herd clear; force pack away. Lose outer defense. Later, the crisis costs a wound, two cattle, or the rig. Ask only.",
+        "ask: DRIVE — Goal: evacuate people/herd; wolves live. Cost: no retreat; outer defense + wound/two cattle/rig. Help: Fieldcraft. Ask only; choose after details.",
       ask_fortify:
-        "ask: FORTIFY: Keep home, herd, and pack apart to dawn. No retreat. Expose property for Cade's help, or cover it with Albany's seals; Cade won't help. Ask only.",
+        "ask: FORTIFY — Goal: keep home/herd; wolves live. Cost: no retreat; expose property for Cade aid or spend seals. Help: Repair. Ask only; choose inside.",
     });
     expect(dialogueActionIds(idsBefore).slice(0, 4)).toEqual([
       "ask_hunt",
@@ -602,9 +602,9 @@ describe("Wolf-Winter dialogue surface", () => {
     expect(cadeWithJune.dialogue?.npc_text).toMatch(
       /Cross north or RELEASE JUNE, if offered, to choose HUNT/i,
     );
-    expect(
-      cadeWithJune.available_actions.find((action) => action.id === "ask_hunt")?.command,
-    ).toMatch(/Ask only[^]*north crossing or RELEASE JUNE if offered/i);
+    expect(cadeWithJune.available_actions.find((action) => action.id === "ask_hunt")?.command).toBe(
+      `ask: ${CADE_HUNT_ROOT_LABEL}`,
+    );
     expect(legalActionIds(state)).toEqual(
       expect.arrayContaining(["ask_wolves", "ask_lure", "ask_drive", "ask_fortify"]),
     );
@@ -767,8 +767,8 @@ describe("Wolf-Winter dialogue surface", () => {
 
     expect(stepAction("go_north").ok).toBe(true);
     expect(stepAction("talk_houndsman").ok).toBe(true);
-    expect(listed().actions.find((action) => action.id === "ask_hunt")?.command).toMatch(
-      /Ask only[^]*north crossing or RELEASE JUNE if offered/i,
+    expect(listed().actions.find((action) => action.id === "ask_hunt")?.command).toBe(
+      `ask: ${CADE_HUNT_ROOT_LABEL}`,
     );
     expect(listed().actions.find((action) => action.id === "ask_byre")?.command).toMatch(
       /PREPARE SUPPORT[^]*grants the safer combat tactic[^]*no plan commitment/i,
